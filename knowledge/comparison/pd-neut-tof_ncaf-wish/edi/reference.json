@@ -1,0 +1,40 @@
+{
+  "program": "edi",
+  "crysta_sdk": "build-baeb5984b282e727b2366cbddc0938f1ddb88cb9",
+  "banks": [
+    "wish_1_10",
+    "wish_2_9",
+    "wish_3_8",
+    "wish_4_7",
+    "wish_5_6"
+  ],
+  "n_free": 193,
+  "status": "done",
+  "converged": true,
+  "iterations": 16,
+  "rwp": 0.07694104319333507,
+  "reduced_chi_square": 9.496660898289115,
+  "cells": {
+    "ncaf": {
+      "a": [
+        10.250256,
+        0.0
+      ],
+      "b": [
+        10.250256,
+        0.0
+      ],
+      "c": [
+        10.250256,
+        0.0
+      ]
+    }
+  },
+  "artifacts_sha256": {
+    "wish_1_10.csv": "848ceb2963c338aacce98f3348887d4d319dbf63fbb6b9ff841a2319a4ec2389",
+    "wish_2_9.csv": "9d60bda863d32d252555f42be1cbee286e98efdf2cf964c991ca45c4555f2cd5",
+    "wish_3_8.csv": "80ef8e8fb15a20f15d4d9b1c823c1d205db0d2951032ccfd190769de80b88fbf",
+    "wish_4_7.csv": "ec09b804c2e2b09a5b96970a6e0ca09d00bf486e1d620ffc456e135b7088c9c6",
+    "wish_5_6.csv": "541e0c938a35afe9a814692ca6f117bf5c1ad6553069590d4ab6219ccb261de2"
+  }
+}

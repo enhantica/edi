@@ -1,0 +1,39 @@
+{
+  "source": {
+    "path": "knowledge/analysis/e04-t45-assistant-prompt-trials.md",
+    "sha256": "85b40bef0e02d3b13b077e5d056c3d51cfc6f70f88072f8d1dec96a48a5da0ff",
+    "commit": "37e53a6cf1e38b88549a241717f1eb49d57499bb"
+  },
+  "records": [
+    {
+      "interface": "python",
+      "model": "GPT-6 (Codex; exact backend variant not exposed)",
+      "date": "2026-11-09",
+      "prompt_sha256": "a5d78847928809368f87ed8260439bc4218fd1837248fc678b03dbac0eb84e1c",
+      "prompt_commit": "557d6e703",
+      "status": "failed",
+      "findings": [
+        "The literal published python tutorials index and closest LBCO tutorial both return HTTP 404.",
+        "Documentation root, llms.txt and both collection downloads return HTTP 200.",
+        "Stopped at the missing required worked references; no checkout substitution, artifact execution or LBCO regression-pin comparison."
+      ],
+      "artifact": null,
+      "pin_comparison": "not reached"
+    },
+    {
+      "interface": "cli",
+      "model": "GPT-6 (Codex; exact backend variant not exposed)",
+      "date": "2026-11-09",
+      "prompt_sha256": "e958568b03ff3447ab6ed7394fc6cfb5544ddcdd08dde7555f63b56cd18c521c",
+      "prompt_commit": "557d6e703",
+      "status": "failed",
+      "findings": [
+        "The literal published cli tutorials index and closest LBCO tutorial both return HTTP 404.",
+        "Documentation root, llms.txt and both collection downloads return HTTP 200.",
+        "Stopped at the missing required worked references; no checkout substitution, artifact execution or LBCO regression-pin comparison."
+      ],
+      "artifact": null,
+      "pin_comparison": "not reached"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "source": "diffraction-lib/docs/docs/verification/fullprof/pd-neut-tof_diamond_dream",
+  "commit": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+  "objects": {
+    "diamond.bac": "fd60097d70194dc43e9e2b7c9c363dfc1483cf15",
+    "diamond.dat": "d3a408110ed9f31c9417abcee24b66b9d3641836",
+    "diamond.pcr": "fb09ddc659663adb6e62d649262fa5253c83092c",
+    "diamond.prf": "e7cfb23a06197701c608eed3d7838d2eb2351f08",
+    "diamond.sum": "0f05c568a5fee9083be17db0c4ce75473542ca54"
+  }
+}

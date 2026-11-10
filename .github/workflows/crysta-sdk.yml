@@ -1,0 +1,80 @@
+name: crysta SDK
+
+# The crysta SDK edi builds against (edi ADR-0083): pixi.toml's CRYSTA_COMMIT, built here once per commit and
+# platform and kept in the cache under that commit, with crysta's source at the same commit. Every edi job and
+# product takes it from there (.github/actions/crysta-sdk). Only this workflow reads crysta, with the app's
+# read-only token. Windows follows in a later change.
+
+on:
+  workflow_call:
+    outputs:
+      sha:
+        description: The crysta commit built
+        value: ${{ jobs.build.outputs.sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: crysta SDK · ${{ matrix.platform }}
+    environment: crysta-sdk
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-64
+            runner: ubuntu-24.04
+          - platform: osx-arm64
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    outputs:
+      sha: ${{ steps.pin.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: pin
+        run: bash tools/ci/crysta-source.sh
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: crysta-sdk-archives
+          key: crysta-sdk-${{ matrix.platform }}-${{ steps.pin.outputs.sha }}
+      - name: Mint a crysta read token
+        if: steps.cache.outputs.cache-hit != 'true'
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: crysta
+          permission-contents: read
+      - name: Check out crysta at the pinned commit
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          TOKEN: ${{ steps.token.outputs.token }}
+          SHA: ${{ steps.pin.outputs.sha }}
+        run: |
+          git init -q "$RUNNER_TEMP/crysta"
+          git -C "$RUNNER_TEMP/crysta" fetch -q --depth 1 "https://x-access-token:$TOKEN@github.com/enhantica/crysta" "$SHA"
+          git -C "$RUNNER_TEMP/crysta" checkout -q --detach "$SHA"
+      - name: Set up pixi for crysta
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-pixi
+        with:
+          manifest-path: ${{ runner.temp }}/crysta/pixi.toml
+      - name: Build, test and pack the SDK, and archive the source
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          SHA: ${{ steps.pin.outputs.sha }}
+        run: |
+          out="$GITHUB_WORKSPACE/crysta-sdk-archives"
+          mkdir -p "$out"
+          (cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci sdk-pack "$SHA" "${{ matrix.platform }}" "$out")
+          git -C "$RUNNER_TEMP/crysta" archive --format=tar.gz -o "$out/crysta-src-$SHA.tar.gz" "$SHA"
+          ls -l "$out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crysta-sdk-${{ matrix.platform }}
+          path: crysta-sdk-archives
+          retention-days: 30

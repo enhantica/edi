@@ -1,0 +1,102 @@
+  
+ =>         **********************************************************
+ =>         ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+ =>         **********************************************************
+ =>                        M U L T I -- P A T T E R N
+ =>             Rietveld, Profile Matching & Integrated Intensity
+ =>                  Refinement of X-ray and/or Neutron Data
+ =>                      (Multi_Pattern: Linux-version)
+  
+  ==> Give the code of the files (xx for xx.pcr):   
+ => START Date:05/10/2026  Time => 15:59:21.698
+ => Reading control file *.PCR ... duplex_mode6-IRF
+ => Reading intensity file of pattern  1  Duplex_in_HR_for_IRF_S2.dat
+ => Reading intensity file of pattern  2  Duplex_in_HR_for_IRF_N2.dat
+ => Generating reflections for pattern:       1
+ =>                       Phase number:       1
+ => Generating reflections for pattern:       2
+ =>                       Phase number:       1
+ => Generating reflections for pattern:       1
+ =>                       Phase number:       2
+ => Generating reflections for pattern:       2
+ =>                       Phase number:       2
+ => end of preliminary calculations !
+  
+    ===================>>> CYCLE:       1
+  
+ => Control file *.pcr: duplex_mode6-IRF
+ => Pattern:   1  Duplex_in_HR_for_IRF_S2
+ => Pattern:   2  Duplex_in_HR_for_IRF_N2
+ => Ordering reflections contributing to each point for pattern:       1
+ => Ordering reflections contributing to each point for pattern:       2
+ => Calculation of Yi for all points + Normal Matrix & Vector...
+ => Calculation for pattern:       1
+ => Calculation for pattern:       2
+ =>  Solving L.S. equations...
+ => Writing results for cycle       1
+ => R-Factors:   5.17      7.20     Chi2:  14.1     DW-Stat.:  0.3292   Patt#:  1
+ => Expected :            1.92                                1.9095
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  5.53     Rwp:  7.56     Rexp:    2.01                        Chi2:  14.1
+ => R-Factors:   4.80      7.06     Chi2:  13.5     DW-Stat.:  0.3498   Patt#:  2
+ => Expected :            1.92                                1.9095
+ => Conventional Rietveld R-factors for Pattern:       2
+ => Rp:  5.14     Rwp:  7.42     Rexp:    2.02                        Chi2:  13.5
+    => Global user-weigthed Chi2 (Bragg contrib.):   24.58
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    Bragg R-factor:   4.329
+    =>    RF-factor     :   4.458
+    => Phase:       2
+    =>    Bragg R-factor:   2.712
+    =>    RF-factor     :   4.389
+    => ---------> Pattern#       2
+    => Phase:       1
+    =>    Bragg R-factor:   4.269
+    =>    RF-factor     :   5.272
+    => Phase:       2
+    =>    Bragg R-factor:   2.097
+    =>    RF-factor     :   3.858
+  
+ => Convergence reached at this CYCLE !!!!: CYCLE No.       1
+ => R-Factors:   5.17      7.20     Chi2:  14.1     DW-Stat.:  0.3292   Patt#:  1
+ => Expected :            1.92                                1.9095
+ => Conventional Rietveld R-factors for Pattern:       1
+ => Rp:  5.53     Rwp:  7.56     Rexp:    2.01                        Chi2:  14.1
+ => R-Factors:   4.80      7.06     Chi2:  13.5     DW-Stat.:  0.3498   Patt#:  2
+ => Expected :            1.92                                1.9095
+ => Conventional Rietveld R-factors for Pattern:       2
+ => Rp:  5.14     Rwp:  7.42     Rexp:    2.02                        Chi2:  13.5
+    => Global user-weigthed Chi2 (Bragg contrib.):   27.03
+    => ---------> Pattern#       1
+    => Phase:       1
+    =>    Bragg R-factor:   4.329
+    =>    RF-factor     :   4.458
+    => Phase:       2
+    =>    Bragg R-factor:   2.712
+    =>    RF-factor     :   4.389
+    => ---------> Pattern#       2
+    => Phase:       1
+    =>    Bragg R-factor:   4.269
+    =>    RF-factor     :   5.272
+    => Phase:       2
+    =>    Bragg R-factor:   2.097
+    =>    RF-factor     :   3.858
+ => Normal end, final calculations and writing...
+ => Contribution to Yi for phase:       1
+ => Contribution to Yi for phase:       2
+ => Contribution to Yi for phase:       1
+ => Contribution to Yi for phase:       2
+  
+  
+ =>               CPU Time:     0.984 seconds
+ =>                             0.016 minutes
+  
+ => END   Date:05/10/2026  Time => 15:59:22.674
+  
+ => Data Files :
+ =>             - Duplex_in_HR_for_IRF_S2.dat
+ =>             - Duplex_in_HR_for_IRF_N2.dat
+ => PCR  File  : duplex_mode6-IRF
+ => Do you want to continue (<cr>=N)? 
+         (s:same, a:another problem):  => END

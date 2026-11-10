@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: BSD-3-Clause
+# Pack the web app's site (edi ADR-0023): both wasm builds (tools/ci/wasm-build.sh), the start page, the
+# service-worker shim, the README naming the hosting requirement and the licence texts, into build/wasm/site
+# and one archive, build/wasm/edi-webapp.zip, laid out to be unpacked as the site's folder
+# (`enhantica.github.io/edi/webapp/`). Prints each build's size.
+#
+# Each build goes into a folder named by a hash of its files (`multithread-<hash>/`), and build.json names the two
+# folders; the start page reads build.json past every cache. So a redeploy never pairs one build's script with
+# another's module, whatever the host or the browser caches (the owner's LinkError, 2026-10-03), and a pair whose
+# script and module come from different links is refused here (tools/ci/wasm_import_check.mjs).
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$ROOT"
+# shellcheck source=tools/ci/wasm-env.sh
+. "$ROOT/tools/ci/wasm-env.sh"
+OUT="$ROOT/build/wasm"
+SITE="$OUT/site"
+SIZE_MODE="${EDI_WASM_OPTIMIZE_SIZE:-0}"
+case "$SIZE_MODE" in
+  0|1) ;;
+  *) echo "wasm-pack: EDI_WASM_OPTIMIZE_SIZE must be 0 or 1" >&2; exit 2 ;;
+esac
+OPT="$EDI_WASM_TOOLCHAIN/emsdk-$EDI_WASM_EMSDK/upstream/bin/wasm-opt"
+if [ "$SIZE_MODE" = 1 ] && [ ! -x "$OPT" ]; then
+  echo "wasm-pack: the pinned wasm-opt is missing" >&2
+  exit 1
+fi
+rm -rf "$SITE" "$OUT/edi-webapp.zip"
+mkdir -p "$SITE"
+{
+  echo "EasyDiffraction web app"
+  echo "edi: $(git describe --tags --always --dirty 2>/dev/null || echo unknown)"
+  echo "Qt: $EDI_WASM_QT (wasm_multithread, wasm_singlethread); Emscripten: $EDI_WASM_EMSDK"
+  echo "Size optimization: $SIZE_MODE"
+} >"$SITE/BUILD-INFO.txt"
+NODE="$(ls "$EDI_WASM_TOOLCHAIN/emsdk-$EDI_WASM_EMSDK"/node/*/bin/node 2>/dev/null | head -n 1)"
+[ -x "$NODE" ] || { echo "wasm-pack: no Node.js in the Emscripten toolchain — run: pixi run -e app wasm-toolchain" >&2; exit 1; }
+for build in multithread singlethread; do
+  app="$OUT/$build/app/app"
+  for file in edi_app.js edi_app.wasm qtloader.js CRYSTA_SOURCE_SHA; do
+    [ -f "$app/$file" ] || { echo "wasm-pack: $app/$file is missing — run: pixi run -e app wasm-build $build" >&2; exit 1; }
+  done
+  stage="$SITE/$build"
+  mkdir -p "$stage"
+  cp "$app/edi_app.js" "$app/qtloader.js" "$stage/"
+  if [ "$SIZE_MODE" = 1 ]; then
+    flags=()
+    if [ "$build" = multithread ]; then flags+=(--enable-threads); fi
+    BINARYEN_CORES="${BINARYEN_CORES:-4}" "$OPT" "$app/edi_app.wasm" -Oz \
+      --mvp-features --enable-mutable-globals --enable-nontrapping-float-to-int \
+      --enable-sign-ext --enable-simd --enable-bulk-memory --enable-bulk-memory-opt \
+      --enable-reference-types --enable-multivalue "${flags[@]}" -o "$stage/edi_app.wasm"
+    if [ "$(wc -c <"$stage/edi_app.wasm")" -ge "$(wc -c <"$app/edi_app.wasm")" ]; then
+      echo "wasm-pack: size optimization did not shrink $build" >&2
+      exit 1
+    fi
+  else
+    cp "$app/edi_app.wasm" "$stage/"
+  fi
+  "$NODE" tools/ci/wasm_import_check.mjs "$stage"
+  hash="$(cat "$stage/edi_app.js" "$stage/edi_app.wasm" "$stage/qtloader.js" | sha256sum | cut -c1-12)"
+  folder="$build-$hash"
+  mv "$stage" "$SITE/$folder"
+  printf -v "folder_$build" '%s' "$folder"
+  raw=$(wc -c <"$SITE/$folder/edi_app.wasm")
+  gz=$(gzip -9 -c "$SITE/$folder/edi_app.wasm" | wc -c)
+  echo "$build ($folder/): crysta $(cat "$app/CRYSTA_SOURCE_SHA"); edi_app.wasm $raw bytes ($gz gzip -9)" >>"$SITE/BUILD-INFO.txt"
+done
+printf '{"multithread": "%s", "singlethread": "%s"}\n' "$folder_multithread" "$folder_singlethread" >"$SITE/build.json"
+cp app/web/index.html app/web/coi-serviceworker.js app/web/README.md app/web/logo.svg app/web/logo-dark.svg \
+  app/web/mark.svg app/web/name.svg app/web/name-dark.svg app/web/splash.css "$SITE/"
+cp -R app/web/LICENSES "$SITE/LICENSES"
+# The HTML report's chart libraries, which a report saved with them embedded reads from the site.
+mkdir -p "$SITE/report/vendor"
+cp data/report/vendor/*.js "$SITE/report/vendor/"
+# The licence files the desktop app ships too: the app's GPL-3.0 (COPYING), the source's licence and the notices.
+cp DEPENDENCIES.md LICENSE COPYING THIRD-PARTY-NOTICES "$SITE/LICENSES/"
+(cd "$SITE" && python -c 'import os, sys, zipfile
+with zipfile.ZipFile(sys.argv[1], "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    for top, dirs, files in os.walk("."):
+        dirs.sort()
+        for name in sorted(files):
+            path = os.path.join(top, name)
+            z.write(path, os.path.relpath(path, "."))' "$OUT/edi-webapp.zip")
+cat "$SITE/BUILD-INFO.txt"
+echo "zip: $OUT/edi-webapp.zip $(wc -c <"$OUT/edi-webapp.zip") bytes"

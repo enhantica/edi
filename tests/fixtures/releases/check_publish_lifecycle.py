@@ -1,0 +1,462 @@
+# SPDX-License-Identifier: BSD-3-Clause
+"""Release publication against a model of GitHub's documented draft behaviour, offline.
+
+GitHub's ``releases/tags/{tag}`` route answers only for published releases; a draft is visible
+in the release list and by its ID, and its tag exists only once it is published
+(docs.github.com/en/rest/releases/releases, "Get a release by tag name" and "List releases").
+``gh release upload`` finds a draft by tag the same way, by listing. An edit of a draft that
+leaves ``tag_name`` out drops its tag to ``untagged-...``, as the claim of v2026.11.10 did on
+run 42415725958 (release 437853611), after which the upload by tag answers "release not found".
+"""
+
+import datetime
+import hashlib
+import importlib.util
+import json
+import subprocess
+import sys
+from pathlib import Path
+from unittest import mock
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[3]
+REPO = 'enhantica/edi'
+
+
+def module(name):
+    spec = importlib.util.spec_from_file_location(name, ROOT / 'tools/release' / (name + '.py'))
+    result = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(result)
+    return result
+
+
+PLAN = module('plan')
+with mock.patch.dict(sys.modules, {'plan': PLAN}):
+    PROMOTE = module('promote')
+    PREPARE = module('prepare')
+    with mock.patch.dict(sys.modules, {'prepare': PREPARE}):
+        PUBLISH = module('publish_assets')
+    with mock.patch.dict(sys.modules, {'publish_assets': PUBLISH, 'promote': PROMOTE}):
+        PREVIEW = module('preview_draft')
+
+RELEASE = {
+    'version': '2026.11.0',
+    'commit': 'a' * 40,
+    'date': '2026-11-05',
+    'notes': {
+        'Added': [],
+        'Fixed': [{'title': 'Fix plot zoom', 'pull_request': 1}],
+        'Changed': [],
+    },
+}
+HISTORY = {'schema': 'edi.releases/1', 'baseline_commit': 'b' * 40, 'releases': [RELEASE]}
+
+
+class GitHub:
+    """The release endpoints publication uses, with drafts hidden from the tag route."""
+
+    def __init__(self):
+        self.releases, self.tags, self.next_id, self.fail_after_create = {}, set(), 1, False
+        self.rival_before_create = None
+        # How many release listings still miss the newest release, as GitHub's list can lag a
+        # moment behind a draft just created (seen on run 42400403926).
+        self.listing_lag = 0
+
+    def run(self, command, *, check=False, input=None, **_):
+        code, out = self.answer(command[1:], input)
+        if check and code:
+            raise subprocess.CalledProcessError(code, command)
+        stderr = b'HTTP 404' if code == 404 else b''
+        return subprocess.CompletedProcess(command, 1 if code else 0, out, stderr)
+
+    def check_output(self, command, *, input=None, **_):
+        return self.run(command, check=True, input=input).stdout
+
+    def add(self, payload):
+        release = {
+            **payload,
+            'id': self.next_id,
+            'assets': [],
+            'html_url': 'u',
+            # GitHub's created_at is the date of the source commit, not of the draft.
+            'created_at': '2026-10-20T08:00:00Z',
+        }
+        self.releases[self.next_id] = release
+        self.next_id += 1
+        return release
+
+    def listing(self):
+        listed = list(self.releases.values())
+        if self.listing_lag and listed:
+            self.listing_lag -= 1
+            listed = [r for r in listed if r['id'] != max(self.releases)]
+        return listed
+
+    def by_tag_with_drafts(self, tag):
+        return next((r for r in self.releases.values() if r['tag_name'] == tag), None)
+
+    def upload(self, tag, path):
+        release = self.by_tag_with_drafts(tag)
+        if release is None:
+            return 1, b''  # gh: release not found
+        digest = 'sha256:' + hashlib.sha256(path.read_bytes()).hexdigest()
+        release['assets'] = [a for a in release['assets'] if a['name'] != path.name]
+        release['assets'].append({'name': path.name, 'digest': digest})
+        return 0, b''
+
+    @staticmethod
+    def edit(release, fields):
+        if release['draft'] and 'tag_name' not in fields:
+            fields = {**fields, 'tag_name': f'untagged-{release["id"]:020x}'}
+        release.update(fields)
+        return 0, b'{}'
+
+    def answer(self, args, data):  # noqa: PLR0911 - one return per modelled endpoint
+        if args[0] == 'release' and args[1] == 'upload':
+            return self.upload(args[2], Path(args[3]))
+        assert args[0] == 'api', (
+            'The recorded release API must receive only the expected requests.',
+            args,
+        )
+        method = args[args.index('--method') + 1] if '--method' in args else 'GET'
+        path = next(a for a in args[1:] if a.startswith('repos/'))[len(f'repos/{REPO}/') :]
+        if method == 'POST' and path == 'releases':
+            payload = json.loads(data)
+            if self.rival_before_create:
+                rival, self.rival_before_create = self.rival_before_create, None
+                self.add({**payload, 'target_commitish': rival})
+            release = self.add(payload)
+            if self.fail_after_create:
+                return 1, b''
+            return 0, json.dumps(release).encode()
+        if method == 'DELETE':
+            del self.releases[int(path.rsplit('/', 1)[1])]
+            return 0, b''
+        if method == 'PATCH' and '--input' in args:
+            return self.edit(self.releases[int(path.rsplit('/', 1)[1])], json.loads(data))
+        if method == 'PATCH':
+            release = self.releases[int(path.rsplit('/', 1)[1])]
+            release['draft'] = False
+            release['make_latest'] = 'true' if 'make_latest=true' in args else 'false'
+            self.tags.add(release['tag_name'])
+            return 0, b'{}'
+        if path == 'git/matching-refs/tags/v':
+            return 0, json.dumps([[{'ref': 'refs/tags/' + tag} for tag in self.tags]]).encode()
+        if path.startswith('releases?'):
+            return 0, json.dumps([self.listing()]).encode()
+        if path.startswith('releases/tags/'):
+            found = self.by_tag_with_drafts(path.rsplit('/', 1)[1])
+            return (0, json.dumps(found).encode()) if found and not found['draft'] else (404, b'')
+        if path.startswith('git/ref/tags/'):
+            return (0, b'{}') if path.rsplit('/', 1)[1] in self.tags else (404, b'')
+        if path.startswith('releases/'):
+            found = self.releases.get(int(path.rsplit('/', 1)[1]))
+            return (0, json.dumps(found).encode()) if found else (404, b'')
+        raise AssertionError(args)
+
+
+@pytest.fixture
+def github():
+    model = GitHub()
+    fake = mock.Mock(
+        run=model.run,
+        check_output=model.check_output,
+        CalledProcessError=subprocess.CalledProcessError,
+    )
+    with (
+        mock.patch.object(PUBLISH, 'subprocess', fake),
+        mock.patch.object(PREVIEW, 'subprocess', fake),
+        mock.patch.object(PREPARE, 'subprocess', fake),
+        mock.patch.object(PUBLISH, 'published_history', return_value={**HISTORY, 'releases': []}),
+    ):
+        yield model
+
+
+@pytest.fixture
+def folder(tmp_path):
+    (tmp_path / 'assets').mkdir()
+    (tmp_path / 'release.json').write_text(json.dumps(RELEASE))
+    (tmp_path / 'assets/release-history.json').write_text(json.dumps(HISTORY))
+    (tmp_path / 'assets/installer.zip').write_bytes(b'qualified installer')
+    (tmp_path / 'notes.md').write_text(PLAN.markdown_notes(RELEASE))
+    return tmp_path
+
+
+def test_first_stable_publication_creates_uploads_and_finalizes_its_own_draft(github, folder):
+    PUBLISH.publish(REPO, folder)
+    (release,) = github.releases.values()
+    assert release['draft'] and [a['name'] for a in release['assets']] == [
+        'installer.zip',
+        'release-history.json',
+    ], 'First stable publication creates uploads and finalizes its own draft.'
+    PUBLISH.publish(REPO, folder, finalize=True)
+    assert (
+        not release['draft'] and release['make_latest'] == 'true' and 'v2026.11.0' in github.tags
+    ), 'First stable publication creates uploads and finalizes its own draft.'
+    assert len(github.releases) == 1, (
+        'First stable publication creates uploads and finalizes its own draft.'
+    )
+
+
+def test_a_retry_after_creation_resumes_the_same_draft(github, folder):
+    github.fail_after_create = True
+    with pytest.raises(subprocess.CalledProcessError):
+        PUBLISH.publish(REPO, folder)
+    github.fail_after_create = False
+    PUBLISH.publish(REPO, folder)
+    PUBLISH.publish(REPO, folder)
+    (release,) = github.releases.values()
+    assert len(release['assets']) == 2 and release['draft'], (
+        'A retry after creation resumes the same draft.'
+    )
+
+
+def test_finalizing_without_a_draft_refuses(github, folder):
+    with pytest.raises(ValueError, match='Create and verify the draft'):
+        PUBLISH.publish(REPO, folder, finalize=True)
+    assert github.releases == {}, 'Finalizing without a draft refuses.'
+
+
+def test_a_tag_without_its_release_and_duplicate_drafts_refuse(github, folder):
+    github.tags.add('v2026.11.0')
+    with pytest.raises(ValueError, match='tag already exists'):
+        PUBLISH.publish(REPO, folder)
+    github.tags.clear()
+    for _ in range(2):
+        github.run(
+            ['gh', 'api', '--method', 'POST', f'repos/{REPO}/releases'],
+            input=json.dumps({'tag_name': 'v2026.11.0', 'draft': True}).encode(),
+        )
+    with pytest.raises(ValueError, match='Multiple releases'):
+        PUBLISH.publish(REPO, folder)
+
+
+def test_preview_drafts_are_found_through_the_same_lookup(github, tmp_path):
+    archive = tmp_path / 'installer.zip'
+    archive.write_bytes(b'preview installer')
+    archives = [(archive, hashlib.sha256(archive.read_bytes()).hexdigest())]
+    PREVIEW.publish(REPO, RELEASE, 'Notes\n', archives)
+    PREVIEW.publish(REPO, RELEASE, 'Notes\n', archives)
+    (release,) = github.releases.values()
+    assert release['draft'] and release['prerelease'] and len(release['assets']) == 1, (
+        'Preview drafts are found through the same lookup.'
+    )
+
+
+TODAY = datetime.date(2026, 11, 7)
+
+
+def reserve(commit, *, prerelease=True, today=TODAY):
+    return PREPARE.reserve_identity(REPO, commit, today, prerelease=prerelease)
+
+
+def test_a_retry_of_the_same_source_keeps_its_reserved_version_and_date(github):
+    github.tags.add('v2026.11.0')
+    assert reserve('a' * 40) == ('2026.11.1', TODAY), (
+        'A retry of the same source keeps its reserved version and date.'
+    )
+    later = datetime.date(2026, 11, 9)
+    assert reserve('a' * 40, today=later) == ('2026.11.1', TODAY), (
+        'A retry of the same source keeps its reserved version and date.'
+    )
+    assert reserve('c' * 40)[0] == '2026.11.2', (
+        'A retry of the same source keeps its reserved version and date.'
+    )
+    assert reserve('a' * 40, prerelease=False)[0] == '2026.11.3', (
+        'A retry of the same source keeps its reserved version and date.'
+    )
+    assert len(github.releases) == 3, (
+        'A retry of the same source keeps its reserved version and date.'
+    )
+
+
+def test_a_simultaneous_allocator_keeps_the_number_and_the_later_one_moves_on(github):
+    github.rival_before_create = 'd' * 40
+    assert reserve('a' * 40)[0] == '2026.11.1', (
+        'A simultaneous allocator keeps the number and the later one moves on.'
+    )
+    owners = {r['target_commitish']: r['tag_name'] for r in github.releases.values()}
+    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}, (
+        'A simultaneous allocator keeps the number and the later one moves on.'
+    )
+
+
+def test_a_lost_creation_response_is_settled_on_the_retry(github):
+    github.rival_before_create = 'd' * 40
+    github.fail_after_create = True
+    with pytest.raises(subprocess.CalledProcessError):
+        reserve('a' * 40)
+    github.fail_after_create = False
+    assert reserve('a' * 40) == ('2026.11.1', TODAY), (
+        'A lost creation response is settled on the retry.'
+    )
+    owners = {r['target_commitish']: r['tag_name'] for r in github.releases.values()}
+    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}, (
+        'A lost creation response is settled on the retry.'
+    )
+
+
+def test_a_published_preview_is_not_rebuilt_under_a_new_number(github, tmp_path):
+    version, date = reserve('a' * 40)
+    preview = {**RELEASE, 'version': version, 'commit': 'a' * 40, 'date': date.isoformat()}
+    archive = tmp_path / 'installer.zip'
+    archive.write_bytes(b'preview installer')
+    PREVIEW.publish(
+        REPO, preview, 'Notes\n', [(archive, hashlib.sha256(b'preview installer').hexdigest())]
+    )
+    (release,) = github.releases.values()
+    assert PLAN.release_date(release['body']) == date.isoformat() and release['assets'], (
+        'A published preview is not rebuilt under a new number.'
+    )
+    assert reserve('a' * 40) == (version, date), (
+        'A published preview is not rebuilt under a new number.'
+    )
+    github.run(['gh', 'api', '--method', 'PATCH', f'repos/{REPO}/releases/{release["id"]}'])
+    with pytest.raises(ValueError, match=f'already published as v{version}'):
+        reserve('a' * 40, today=datetime.date(2026, 11, 8))
+    assert len(github.releases) == 1, 'A published preview is not rebuilt under a new number.'
+
+
+def test_publishers_claim_their_reservation_and_refuse_another_source_or_date(
+    github, folder, tmp_path
+):
+    version, date = reserve(RELEASE['commit'], prerelease=False, today=datetime.date(2026, 11, 5))
+    assert (version, date.isoformat()) == (RELEASE['version'], RELEASE['date']), (
+        'Publishers claim their reservation and refuse another source or date.'
+    )
+    PUBLISH.publish(REPO, folder)
+    (release,) = github.releases.values()
+    assert release['body'] == PLAN.release_body(PLAN.markdown_notes(RELEASE), RELEASE['date']), (
+        'Publishers claim their reservation and refuse another source or date.'
+    )
+    assert len(release['assets']) == 2, (
+        'Publishers claim their reservation and refuse another source or date.'
+    )
+
+    github.releases.clear()
+    reserve(RELEASE['commit'], prerelease=False)
+    with pytest.raises(ValueError, match='another date'):
+        PUBLISH.publish(REPO, folder)
+
+    github.releases.clear()
+    preview = {**RELEASE, 'commit': 'e' * 40}
+    reserve('f' * 40, today=datetime.date(2026, 11, 5))
+    archive = tmp_path / 'installer.zip'
+    archive.write_bytes(b'preview installer')
+    with pytest.raises(ValueError, match='another source'):
+        PREVIEW.publish(REPO, preview, 'Notes\n', [(archive, 'x' * 64)])
+
+
+def test_a_lost_response_with_a_same_source_rival_keeps_the_first_reservation(github):
+    github.rival_before_create = 'a' * 40
+    github.fail_after_create = True
+    with pytest.raises(subprocess.CalledProcessError):
+        reserve('a' * 40)
+    github.fail_after_create = False
+    assert reserve('a' * 40) == ('2026.11.0', TODAY), (
+        'A lost response must retain the first reservation for the same source.'
+    )
+    ((release_id, release),) = github.releases.items()
+    assert release_id == 1 and release['body'] == '<!-- edi release date 2026-11-07 -->\n', (
+        'A lost response must retain the first reservation for the same source.'
+    )
+
+
+def test_two_claimed_drafts_for_one_source_stay_refused(github):
+    for tag in ('v2026.11.0', 'v2026.11.1'):
+        github.add({
+            'tag_name': tag,
+            'target_commitish': 'a' * 40,
+            'name': 'edi ' + tag[1:],
+            'body': 'Notes\n<!-- edi release date 2026-11-07 -->\n',
+            'draft': True,
+            'prerelease': True,
+        })
+    with pytest.raises(ValueError, match='Several drafts claim this source'):
+        reserve('a' * 40)
+    assert len(github.releases) == 2, 'Two claimed drafts for one source must remain refused.'
+
+
+def test_an_only_own_draft_is_reserved_although_the_list_lags_behind_it(github):
+    github.tags.add('v2026.11.6')
+    github.listing_lag = 2
+    waits = []
+    version = PREPARE.reserve_identity(REPO, 'a' * 40, TODAY, prerelease=True, wait=waits.append)
+    assert version == ('2026.11.7', TODAY), (
+        'A new draft with no rival keeps its version once the release list shows it.'
+    )
+    assert waits == [2.0, 2.0], 'The list is read again, with a pause, until the draft is in it.'
+    (release,) = github.releases.values()
+    assert release['draft'] and release['tag_name'] == 'v2026.11.7', 'The one draft is kept.'
+
+
+def test_a_draft_the_list_never_shows_is_left_for_the_next_run_to_reuse(github):
+    github.tags.add('v2026.11.6')
+    github.listing_lag = 10
+    with pytest.raises(RuntimeError, match='not in the release list yet'):
+        PREPARE.reserve_identity(REPO, 'a' * 40, TODAY, prerelease=True, wait=lambda _: None)
+    (release,) = github.releases.values()
+    assert release['draft'] and release['tag_name'] == 'v2026.11.7', (
+        'The unconfirmed draft stays as the reservation.'
+    )
+    github.listing_lag = 0
+    later = datetime.date(2026, 11, 8)
+    assert reserve('a' * 40, today=later) == ('2026.11.7', TODAY), (
+        'The next run reuses that draft with its version and recorded date.'
+    )
+    assert len(github.releases) == 1, 'The next run creates no second draft.'
+
+
+def test_a_claimed_reservation_keeps_its_tag_and_takes_its_installers(github, tmp_path):
+    version, date = reserve('a' * 40)
+    preview = {**RELEASE, 'version': version, 'commit': 'a' * 40, 'date': date.isoformat()}
+    archive = tmp_path / 'installer.zip'
+    archive.write_bytes(b'preview installer')
+    PREVIEW.publish(
+        REPO, preview, 'Notes\n', [(archive, hashlib.sha256(b'preview installer').hexdigest())]
+    )
+    (release,) = github.releases.values()
+    assert release['tag_name'] == 'v' + version and len(release['assets']) == 1, (
+        'A claimed reservation keeps its tag and takes its installers.'
+    )
+
+
+def untagged_claimed_draft(github, commit, version, date):
+    """A claimed draft whose tag an edit dropped, as release 437853611 was left."""
+    return github.add({
+        'tag_name': 'untagged-ec5a9be5487f108b68a4',
+        'target_commitish': commit,
+        'name': 'edi ' + version,
+        'body': PLAN.release_body('Notes\n', date),
+        'draft': True,
+        'prerelease': True,
+        'make_latest': 'false',
+    })
+
+
+def test_a_draft_that_lost_its_tag_is_retagged_and_takes_its_installers(github, tmp_path):
+    preview = {**RELEASE, 'version': '2026.11.10', 'commit': 'a' * 40, 'date': '2026-11-07'}
+    untagged_claimed_draft(github, 'a' * 40, '2026.11.10', '2026-11-07')
+    archive = tmp_path / 'installer.zip'
+    archive.write_bytes(b'preview installer')
+    PREVIEW.publish(
+        REPO, preview, 'Notes\n', [(archive, hashlib.sha256(b'preview installer').hexdigest())]
+    )
+    (release,) = github.releases.values()
+    assert release['tag_name'] == 'v2026.11.10' and len(release['assets']) == 1, (
+        'A draft that lost its tag is re-tagged and takes its installers.'
+    )
+
+
+def test_an_untagged_draft_of_another_source_is_not_taken(github, tmp_path):
+    preview = {**RELEASE, 'version': '2026.11.10', 'commit': 'a' * 40, 'date': '2026-11-07'}
+    untagged_claimed_draft(github, 'f' * 40, '2026.11.10', '2026-11-07')
+    archive = tmp_path / 'installer.zip'
+    archive.write_bytes(b'preview installer')
+    with pytest.raises(ValueError, match='another source'):
+        PREVIEW.publish(REPO, preview, 'Notes\n', [(archive, 'x' * 64)])
+    (release,) = github.releases.values()
+    assert release['tag_name'].startswith('untagged-'), (
+        'An untagged draft of another source is not taken.'
+    )

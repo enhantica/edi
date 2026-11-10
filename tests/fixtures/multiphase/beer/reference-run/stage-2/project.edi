@@ -1,0 +1,36 @@
+_edi.schema_version 1
+
+_metadata.name             beer_mcstas
+_metadata.title            "Untitled Project"
+_metadata.description      ?
+_metadata.created          "05 Oct 2026 09:24:57"
+_metadata.last_modified    "05 Oct 2026 09:25:37"
+_metadata.timestamp        2026-10-05T09:25:44+00:00
+
+_rendering_plot.type auto
+
+_report.cif false
+_report.html true
+_report.tex false
+_report.pdf false
+_report.html_offline false
+
+_rendering_table.type auto
+
+_rendering_structure.type auto
+
+_structure_view.show_labels false
+_structure_view.show_moments true
+_structure_view.range_a_min 0.
+_structure_view.range_a_max 1.
+_structure_view.range_b_min 0.
+_structure_view.range_b_max 1.
+_structure_view.range_c_min 0.
+_structure_view.range_c_max 1.
+
+_structure_style.atom_view covalent
+_structure_style.color_scheme jmol
+_structure_style.adp_probability 0.99
+_structure_style.atom_scale 0.3
+
+_verbosity.fit full

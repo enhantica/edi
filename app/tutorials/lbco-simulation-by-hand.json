@@ -1,0 +1,497 @@
+{
+  "note": "The LBCO simulation built by hand (owner record 70c8d4339): the steps between Start and the calculated pattern.",
+  "steps": [
+    {
+      "title": "New project",
+      "text": "Create a new project with Create a new project.",
+      "page": "project",
+      "target": "project.create",
+      "expected": "The Create project dialog is open.",
+      "check": "creating"
+    },
+    {
+      "title": "Name the project",
+      "text": "Give the project a name, for example lbco: type it in Name, or press Next.",
+      "page": "project",
+      "target": "createProject.name",
+      "expected": "The project has a name.",
+      "check": "text:createProject.name=lbco"
+    },
+    {
+      "title": "Create it",
+      "text": "Click OK to create the project. It is not saved: at the end you keep working on it or return to your own project.",
+      "page": "project",
+      "target": "createProject.accept",
+      "expected": "A new project is open.",
+      "check": "project"
+    },
+    {
+      "title": "Open Structure",
+      "text": "This is the Structure page, where structures are defined. Open the Structure page with its tab, or press Next.",
+      "page": "project",
+      "target": "appBar.tab.structure",
+      "expected": "The Structure page is open.",
+      "check": "page:structure"
+    },
+    {
+      "title": "New structure",
+      "text": "Create a structure.",
+      "page": "structure",
+      "target": "structures.create",
+      "expected": "A structure is in the list.",
+      "check": "structures:1"
+    },
+    {
+      "title": "Name it",
+      "text": "A new structure is called structure1. Click its name and type lbco, the name this tutorial uses from here on.",
+      "page": "structure",
+      "target": "structures.name.0",
+      "expected": "The structure is called lbco.",
+      "check": "structure:lbco"
+    },
+    {
+      "title": "Open Space group",
+      "text": "Open the Space group group to see the structure's symmetry.",
+      "page": "structure",
+      "target": "group.space_group",
+      "expected": "The Space group group is open.",
+      "check": "open:group.space_group"
+    },
+    {
+      "title": "Space group",
+      "text": "A new structure starts in P b n m. Choose the space group P m -3 m for lbco.",
+      "page": "structure",
+      "target": "spaceGroup.nameHM",
+      "expected": "The space group is P m -3 m, number 221.",
+      "check": "space-group:221"
+    },
+    {
+      "title": "Open Cell",
+      "text": "Open the Cell group to see the cell lengths and angles.",
+      "page": "structure",
+      "target": "group.cell",
+      "expected": "The Cell group is open.",
+      "check": "open:group.cell"
+    },
+    {
+      "title": "Cell length",
+      "text": "Set the cell length a to 3.89 Å. In a cubic cell b and c follow it.",
+      "page": "structure",
+      "target": "cell.length_a",
+      "expected": "a, b and c are 3.89 Å.",
+      "check": "cell-a:3.89"
+    },
+    {
+      "title": "Open Atom sites",
+      "text": "Open the Atom sites group to see the structure's atoms.",
+      "page": "structure",
+      "target": "group.atom_site",
+      "expected": "The Atom sites group is open.",
+      "check": "open:group.atom_site"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **La** as the label of site 1.",
+      "target": "atomSite.label.0",
+      "check": "field:atomSite.label.0=La"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Choose **La** as the element of site 1.",
+      "target": "atomSite.typeSymbol.0",
+      "check": "pick:atomSite.typeSymbol.0=La"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0** as x of site 1.",
+      "target": "atomSite.fractX.0",
+      "check": "field:atomSite.fractX.0=0"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0** as y of site 1.",
+      "target": "atomSite.fractY.0",
+      "check": "field:atomSite.fractY.0=0"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0** as z of site 1.",
+      "target": "atomSite.fractZ.0",
+      "check": "field:atomSite.fractZ.0=0"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0.5** as the occupancy of site 1: La and Ba share the site.",
+      "target": "atomSite.occupancy.0",
+      "check": "field:atomSite.occupancy.0=0.5"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Click **+** under **Atom sites** to add site 2.",
+      "target": "atomSites.append",
+      "check": "rows:atomSites.append=2"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **Ba** as the label of site 2.",
+      "target": "atomSite.label.1",
+      "check": "field:atomSite.label.1=Ba"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Choose **Ba** as the element of site 2.",
+      "target": "atomSite.typeSymbol.1",
+      "check": "pick:atomSite.typeSymbol.1=Ba"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0** as x of site 2.",
+      "target": "atomSite.fractX.1",
+      "check": "field:atomSite.fractX.1=0"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0** as y of site 2.",
+      "target": "atomSite.fractY.1",
+      "check": "field:atomSite.fractY.1=0"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0** as z of site 2.",
+      "target": "atomSite.fractZ.1",
+      "check": "field:atomSite.fractZ.1=0"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0.5** as the occupancy of site 2: La and Ba share the site.",
+      "target": "atomSite.occupancy.1",
+      "check": "field:atomSite.occupancy.1=0.5"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Click **+** under **Atom sites** to add site 3.",
+      "target": "atomSites.append",
+      "check": "rows:atomSites.append=3"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **Co** as the label of site 3.",
+      "target": "atomSite.label.2",
+      "check": "field:atomSite.label.2=Co"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Choose **Co** as the element of site 3.",
+      "target": "atomSite.typeSymbol.2",
+      "check": "pick:atomSite.typeSymbol.2=Co"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0.5** as x of site 3.",
+      "target": "atomSite.fractX.2",
+      "check": "field:atomSite.fractX.2=0.5"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0.5** as y of site 3.",
+      "target": "atomSite.fractY.2",
+      "check": "field:atomSite.fractY.2=0.5"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0.5** as z of site 3.",
+      "target": "atomSite.fractZ.2",
+      "check": "field:atomSite.fractZ.2=0.5"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Click **+** under **Atom sites** to add site 4.",
+      "target": "atomSites.append",
+      "check": "rows:atomSites.append=4"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **O** as the label of site 4.",
+      "target": "atomSite.label.3",
+      "check": "field:atomSite.label.3=O"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Choose **O** as the element of site 4.",
+      "target": "atomSite.typeSymbol.3",
+      "check": "pick:atomSite.typeSymbol.3=O"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0** as x of site 4.",
+      "target": "atomSite.fractX.3",
+      "check": "field:atomSite.fractX.3=0"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0.5** as y of site 4.",
+      "target": "atomSite.fractY.3",
+      "check": "field:atomSite.fractY.3=0.5"
+    },
+    {
+      "page": "structure",
+      "expected": "The four atom sites are in the table and the structure view shows them.",
+      "title": "Atom sites",
+      "text": "Enter **0.5** as z of site 4.",
+      "target": "atomSite.fractZ.3",
+      "check": "field:atomSite.fractZ.3=0.5"
+    },
+    {
+      "title": "Open Experiment",
+      "text": "Open the Experiment page with its tab, or press Next.",
+      "page": "structure",
+      "target": "appBar.tab.experiment",
+      "expected": "The Experiment page is open.",
+      "check": "page:experiment"
+    },
+    {
+      "title": "New experiment",
+      "text": "Open the Experiment page and create an experiment.",
+      "page": "experiment",
+      "target": "experiments.create",
+      "expected": "The new experiment is in the list.",
+      "check": "experiment"
+    },
+    {
+      "title": "Experiment type",
+      "text": "Powder, constant wavelength and neutrons are selected by default. For your own data you can change them here; in this tutorial keep the defaults.",
+      "page": "experiment",
+      "target": "experimentType",
+      "expected": "The experiment type is powder, constant wavelength, neutron."
+    },
+    {
+      "title": "Open Instrument",
+      "text": "Open the Instrument group to see the wavelength and the zero shift.",
+      "page": "experiment",
+      "target": "group.instrument",
+      "expected": "The Instrument group is open.",
+      "check": "open:group.instrument"
+    },
+    {
+      "title": "Wavelength",
+      "text": "A new experiment starts at 1 Å, because every experiment has its own wavelength. Set it to 1.494 Å, HRPT's, the one this tutorial uses.",
+      "page": "experiment",
+      "target": "instrument.setup_wavelength",
+      "expected": "The wavelength is 1.494 Å.",
+      "check": "param:instrument.setup_wavelength=1.494"
+    },
+    {
+      "title": "Open Linked structures",
+      "text": "Open the Linked structures group to see the structures in this pattern.",
+      "page": "experiment",
+      "target": "group.linked_structure",
+      "expected": "The Linked structures group is open.",
+      "check": "open:group.linked_structure"
+    },
+    {
+      "title": "Scale",
+      "text": "Every structure is linked to a new experiment automatically, so lbco is here with scale 1. Here you can change a scale or weight fraction, switch a link off or add another.",
+      "page": "experiment",
+      "target": "linkedStructure.scale.0",
+      "expected": "lbco is linked with scale 1."
+    },
+    {
+      "title": "The pattern",
+      "text": "The calculated pattern of lbco is in the main area. Change the cell length or a position and watch the peaks move.",
+      "page": "experiment",
+      "target": "workflow.experiment.mainContent",
+      "expected": "The main area shows the calculated pattern."
+    },
+    {
+      "title": "Open Analysis",
+      "text": "Parameters can be changed on the Structure and Experiment pages, in their groups, and also here on the Analysis page, in one table that holds all of them. Open the Analysis page with its tab, or press Next.",
+      "page": "experiment",
+      "target": "appBar.tab.analysis",
+      "expected": "The Analysis page is open.",
+      "check": "page:analysis"
+    },
+    {
+      "title": "Show the cell",
+      "text": "The table holds every parameter; its filters find the one to change. Choose Cell in the category filter.",
+      "page": "analysis",
+      "target": "parameters.category",
+      "expected": "The table lists the cell length a.",
+      "check": "category:Cell"
+    },
+    {
+      "title": "Select cell a",
+      "text": "Click the row of the cell length a to select it: the slider below the table now changes a.",
+      "page": "analysis",
+      "target": "parameters.name@cell.length_a",
+      "expected": "The cell length a is selected.",
+      "check": "selected:cell.length_a"
+    },
+    {
+      "title": "Change cell a",
+      "text": "Drag the slider or type a new value, and watch the peaks shift: a larger cell moves them to lower angles.",
+      "page": "analysis",
+      "target": "parameters.slider",
+      "expected": "The cell length a has changed.",
+      "check": "changed:cell.length_a=3.95"
+    },
+    {
+      "title": "Clear filters",
+      "text": "Clear the filters with the eraser.",
+      "page": "analysis",
+      "target": "parameters.clearFilters",
+      "expected": "Every parameter is listed.",
+      "check": "filters-clear"
+    },
+    {
+      "title": "Filter by name",
+      "text": "Type wave in the name filter to show the wavelength.",
+      "page": "analysis",
+      "target": "parameters.nameFilter",
+      "expected": "The table lists the wavelength.",
+      "check": "name-filter:wave"
+    },
+    {
+      "title": "Select wavelength",
+      "text": "Click the row of the wavelength to select it: the slider below the table now changes the wavelength.",
+      "page": "analysis",
+      "target": "parameters.name@instrument.setup_wavelength",
+      "expected": "The wavelength is selected.",
+      "check": "selected:instrument.setup_wavelength"
+    },
+    {
+      "title": "Change wavelength",
+      "text": "Drag the slider or type a new value, and watch the peaks spread out to higher angles as it grows.",
+      "page": "analysis",
+      "target": "parameters.slider",
+      "expected": "The wavelength has changed.",
+      "check": "changed:instrument.setup_wavelength=1.6"
+    },
+    {
+      "title": "Clear filters",
+      "text": "Clear the filters with the eraser.",
+      "page": "analysis",
+      "target": "parameters.clearFilters",
+      "expected": "Every parameter is listed.",
+      "check": "filters-clear"
+    },
+    {
+      "title": "Show B iso",
+      "text": "Choose Atomic displacement in the category filter.",
+      "page": "analysis",
+      "target": "parameters.category",
+      "expected": "The table lists the sites' B_iso.",
+      "check": "category:Atomic displacement"
+    },
+    {
+      "title": "Select B iso",
+      "text": "Click the row of La's B_iso to select it: the slider below the table now changes La's B_iso.",
+      "page": "analysis",
+      "target": "parameters.name@La.adp_iso",
+      "expected": "La's B_iso is selected.",
+      "check": "selected:La.adp_iso"
+    },
+    {
+      "title": "Change B iso",
+      "text": "Drag the slider or type a new value, and watch the peaks at high angles weaken most as it grows.",
+      "page": "analysis",
+      "target": "parameters.slider",
+      "expected": "La's B_iso has changed.",
+      "check": "changed:La.adp_iso=2"
+    },
+    {
+      "title": "Clear filters",
+      "text": "Clear the filters with the eraser.",
+      "page": "analysis",
+      "target": "parameters.clearFilters",
+      "expected": "Every parameter is listed.",
+      "check": "filters-clear"
+    },
+    {
+      "title": "Show the peak",
+      "text": "Choose Peak profile in the category filter.",
+      "page": "analysis",
+      "target": "parameters.category",
+      "expected": "The table lists the peak profile.",
+      "check": "category:Peak profile"
+    },
+    {
+      "title": "Select peak width",
+      "text": "Click the row of the peak width W to select it: the slider below the table now changes W.",
+      "page": "analysis",
+      "target": "parameters.name@peak.broad_gauss_w",
+      "expected": "The peak width W is selected.",
+      "check": "selected:peak.broad_gauss_w"
+    },
+    {
+      "title": "Change peak width",
+      "text": "Drag the slider or type a new value, and watch the peaks broaden as it grows.",
+      "page": "analysis",
+      "target": "parameters.slider",
+      "expected": "The peak width W has changed.",
+      "check": "changed:peak.broad_gauss_w=0.5"
+    },
+    {
+      "title": "Clear filters",
+      "text": "Clear the filters with the eraser.",
+      "page": "analysis",
+      "target": "parameters.clearFilters",
+      "expected": "Every parameter is listed.",
+      "check": "filters-clear"
+    },
+    {
+      "title": "Free column",
+      "text": "With measured data, the free column is where fitting chooses the parameters it may change. A simulation has nothing to fit, so here they all stay fixed.",
+      "page": "analysis",
+      "target": "parameters.list",
+      "expected": "The free column is in the table."
+    }
+  ]
+}

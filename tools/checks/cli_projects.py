@@ -1,0 +1,540 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
+"""Execute the CLI projects and compare each against its expected.json.
+
+The projects live under ``docs/user/cli/<id>/`` — a ``project/`` directory ``python -m edi``
+fits and an ``expected.json`` of the quantities it must reproduce — and the registry
+``docs/user/cli/projects.yml`` declares which of them are in the EXECUTING set. Without a
+selection this runs the executing set's CI part: CI and ``pixi run verify`` call it that way, so a
+project in it cannot drift unnoticed. A project also marked ``offline: true`` (owner: a slow check
+does not go into CI) stays executing but runs only when asked for explicitly —
+``--offline`` runs every offline project, ``--project <id>`` any executing one. ``--project``
+otherwise narrows the run for diagnosis.
+
+Per project, every unit in its ``expected.json`` runs ``python -m edi`` on a disposable copy
+(the project tree is never written) with ``--report machine --verbosity full``:
+
+- a top-level ``quantities`` block — the default invocation;
+- each ``variants.<name>`` block — the descent ``<name>`` with ``-`` spelled ``_`` (the corpus
+  names its variants after the descent they pin), DECLARED as ``_minimizer.descent`` in the
+  copy's ``analysis/analysis.edi`` (the CLI carries no minimization condition); or
+  ``asymmetry-off``, the copy with every Bérar-Baldinozzi coefficient fixed at 0, which compares
+  a model whose asymmetry form differs between programs on everything else; or ``form-factor-j0``,
+  the copy with every magnetic form factor at <j0> alone, as FullProf's are; any other name fails;
+- an ``edi`` block — the default invocation (the corpus's per-entry-point overlay);
+- a ``calc`` block — ``python -m edi calc`` instead, for a simulation, which has no data to fit.
+
+A record with ``"template": true`` belongs to a scan and fits its template file alone, as a single
+fit, in every unit: the scan's experiment already holds that file's points. A variant block may
+name the status its fit ends with (``"status": "max_iter"``): a fit the engine stops after its
+allowed resumes, though every value has settled. Every other fit must end ``done``.
+
+A quantity is a key of the machine record (``param.<label>.value`` included), or
+``results[<x>].<column>`` — the ``analysis/results.csv`` row a scan wrote whose ``diffrn.*`` value
+is ``<x>``, or, when ``<x>`` is not a number, the row of the data file named ``<x>``. Every
+non-null ``tol_abs``/``tol_rel`` bound must hold; a fit's record must say ``status=done``. Every
+deviation is reported, never only the first, and any deviation is red.
+
+``--settings <project-dir>`` prints :func:`loaded_settings` as JSON instead: an external shipment
+check reads a project's settings through edi's own loader this way, never by scanning text.
+"""
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import csv
+import io
+import json
+import math
+import os
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from collections.abc import Callable
+from pathlib import Path
+
+import yaml
+
+ROOT = Path(__file__).resolve().parents[2]
+CLI_DIR = Path('docs') / 'user' / 'cli'
+REGISTRY = CLI_DIR / 'projects.yml'
+# <technique>_<sample>[-<instrument>][_<variant>], two or three kebab-case parts: a variant only
+# when it tells the user something, such as simulation or scan.
+PROJECT_ID = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*(?:_[a-z0-9]+(?:-[a-z0-9]+)*){1,2}')
+RESULTS_KEY = re.compile(r'results\[(?P<key>[^\]]+)\]\.(?P<column>.+)')
+FIT_TIMEOUT_S = 900
+
+# Settings the loaded model does not own as physics: file bookkeeping, free text and data.
+_SKIPPED_CATEGORIES = frozenset({'edi', 'metadata', 'data', 'refln'})
+_NUMBER = re.compile(r'(?P<value>[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)(?P<esd>\(\d*\))?')
+
+
+# ----------------------------------------------------------------------
+#  Registry
+# ----------------------------------------------------------------------
+
+
+# A case's record keys in the registry (ADR-0080): its diffraction-lib tutorial, and how its
+# tutorials get their inputs.
+RECORD_NAMES = ('diffraction-lib', 'follows-diffraction-lib')
+RECORD_TEXT = ('title', 'short-name')
+RECORD_FLAGS = ('structure-by-hand', 'data-from-file')
+
+
+def check_record_names(path: Path, pid: str, row: dict) -> None:
+    """Refuse a row naming two diffraction-lib tutorials, or a name that is not text."""
+    named = [name for name in RECORD_NAMES if name in row]
+    if len(named) > 1:
+        raise ValueError(
+            f'{path}: {pid}: give diffraction-lib or follows-diffraction-lib, not both'
+        )
+    if named and not (isinstance(row[named[0]], str) and row[named[0]]):
+        raise TypeError(f'{path}: {pid}: {named[0]} must be a tutorial name')
+    for key in RECORD_TEXT:
+        if key in row and not (isinstance(row[key], str) and row[key].strip()):
+            raise TypeError(f'{path}: {pid}: {key} must be text')
+
+
+def registry(root: Path) -> list[dict]:
+    """The registered projects, fail-closed: ``[{'id': str, 'executing': bool}]``.
+
+    An optional boolean ``offline`` is only meaningful on an executing project; an optional boolean
+    ``user-facing`` puts the project in the app's example list, and an optional ``app-only`` reason
+    lists it there before it has its catalogue form (ADR-0048; example_catalogue.py holds the set).
+    An optional boolean ``verification`` marks a verification project (ADR-0031), which is never an
+    app example. A case's record keys (ADR-0080): ``diffraction-lib`` or
+    ``follows-diffraction-lib``, the tutorial's name, and the booleans ``structure-by-hand`` and
+    ``data-from-file``.
+    """
+    path = root / REGISTRY
+    data = yaml.safe_load(path.read_text(encoding='utf-8'))
+    if not isinstance(data, dict) or data.get('schema') != 1:
+        raise ValueError(f'{path}: expected a mapping with schema: 1')
+    projects = data.get('projects')
+    if not isinstance(projects, list) or not projects:
+        raise ValueError(f'{path}: projects must be a non-empty list')
+    seen: set[str] = set()
+    for row in projects:
+        keys = {'id', 'executing', 'offline', 'user-facing', 'app-only', 'verification'}
+        keys |= set(RECORD_FLAGS) | set(RECORD_NAMES) | set(RECORD_TEXT)
+        if not isinstance(row, dict) or set(row) - keys:
+            raise ValueError(
+                f'{path}: each project is {{id, executing[, offline][, user-facing]'
+                f'[, app-only][, verification][, the case record keys]}}, got {row!r}'
+            )
+        pid = row.get('id')
+        if not isinstance(pid, str) or not PROJECT_ID.fullmatch(pid):
+            raise ValueError(f'{path}: project id {pid!r} is not <technique>_<sample>[_<variant>]')
+        if not isinstance(row.get('executing'), bool):
+            raise TypeError(f'{path}: {pid}: executing must be true or false')
+        for flag in ('offline', 'user-facing', 'verification', *RECORD_FLAGS):
+            if flag in row and not isinstance(row[flag], bool):
+                raise TypeError(f'{path}: {pid}: {flag} must be true or false')
+        check_record_names(path, pid, row)
+        if 'app-only' in row and not (isinstance(row['app-only'], str) and row['app-only']):
+            raise TypeError(f'{path}: {pid}: app-only must be its reason')
+        if row.get('offline') and not row['executing']:
+            raise ValueError(f'{path}: {pid}: offline applies only to an executing project')
+        if row.get('verification') and (row.get('user-facing') or 'app-only' in row):
+            raise ValueError(f'{path}: {pid}: a verification project is not an app example')
+        if pid in seen:
+            raise ValueError(f'{path}: duplicate project id {pid!r}')
+        seen.add(pid)
+    return projects
+
+
+def ci_projects(projects: list[dict]) -> list[str]:
+    """The ids CI and ``pixi run verify`` execute: executing and not offline."""
+    return [row['id'] for row in projects if row['executing'] and not row.get('offline')]
+
+
+def offline_projects(projects: list[dict]) -> list[str]:
+    """The executing ids run only on explicit request (``--offline``) — slow checks."""
+    return [row['id'] for row in projects if row['executing'] and row.get('offline')]
+
+
+# ----------------------------------------------------------------------
+#  Loaded settings (the shipment check's token source)
+# ----------------------------------------------------------------------
+
+
+def _tokens(line: str) -> list[str]:
+    lexer = shlex.shlex(line, posix=True)
+    lexer.whitespace_split = True
+    lexer.commenters = '#'
+    return list(lexer)
+
+
+def _parse_edi(text: str) -> list[tuple[str, str, str, str | None]]:
+    """``(category, attribute, raw value, loop row id)`` for every item of one .edi file."""
+    items: list[tuple[str, str, str, str | None]] = []
+    lines = text.splitlines()
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        index += 1
+        if line.startswith(';'):  # a multi-line text field: skip to its closing ';'
+            while index < len(lines) and not lines[index].startswith(';'):
+                index += 1
+            index += 1
+            continue
+        tokens = _tokens(line)
+        if not tokens or tokens[0].startswith('data_'):
+            continue
+        if tokens[0] == 'loop_':
+            names: list[str] = []
+            while index < len(lines) and lines[index].strip().startswith('_'):
+                names.append(lines[index].strip())
+                index += 1
+            values: list[str] = []
+            while index < len(lines):
+                row = lines[index].strip()
+                if not row or row.startswith(('_', 'loop_', 'data_')):
+                    break
+                values.extend(_tokens(row))
+                index += 1
+            for start in range(0, len(values) - len(names) + 1, len(names) or 1):
+                row_values = values[start : start + len(names)]
+                row_id = row_values[0] if row_values else None
+                for name, value in zip(names, row_values, strict=True):
+                    category, _, attribute = name[1:].partition('.')
+                    items.append((category, attribute, value, row_id))
+            continue
+        if tokens[0].startswith('_') and len(tokens) >= 2:
+            category, _, attribute = tokens[0][1:].partition('.')
+            items.append((category, attribute, ' '.join(tokens[1:]), None))
+    return items
+
+
+def _settings_of_saved_tree(tree: Path) -> dict[str, dict[str, dict]]:
+    settings: dict[str, dict[str, dict]] = {}
+    for path in sorted(tree.rglob('*.edi')):
+        relative = path.relative_to(tree).as_posix()
+        for category, attribute, raw, row_id in _parse_edi(path.read_text(encoding='utf-8')):
+            if category in _SKIPPED_CATEGORIES or raw in {'?', '.'} or attribute == 'id':
+                continue
+            where = f'{relative}:_{category}.{attribute}' + (f'[{row_id}]' if row_id else '')
+            number = _NUMBER.fullmatch(raw)
+            if number:
+                setting = {'value': float(number['value']), 'refined': number['esd'] is not None}
+                settings.setdefault(attribute, {})[where] = setting
+            elif attribute.endswith('type') or category == 'experiment_type':
+                settings.setdefault(raw, {})[where] = {'value': raw}
+            elif category in {'minimizer', 'sequential_fit'}:
+                # A declared fit condition that is a name, not a number
+                # (`_minimizer.descent`, `_sequential_fit.template_file`), is exercised
+                # under its item name.
+                settings.setdefault(attribute, {})[where] = {'value': raw}
+    return settings
+
+
+def loaded_settings(project_dir: str | Path) -> dict[str, dict[str, dict]]:
+    """Every exercise token the LOADED model consumes, with each occurrence's setting.
+
+    The project is loaded through edi's own loader and re-saved, and only that canonical output is
+    read — so a word in a comment, in ``PROVENANCE.md``, on the docs page or in any field the
+    loader ignores is not a token. A token is a numeric setting's name (``broad_gauss_sigma_0``,
+    ``scale``), a type value (``tof-jorgensen``) or the item name of a fit condition that is a
+    name (``descent``, ``template_file``). Returns
+    ``{token: {occurrence: setting}}``: the occurrence names the file, item and loop row, so the
+    same parameter in two experiments stays two entries; a numeric setting is
+    ``{'value': float, 'refined': bool}``, a type value ``{'value': str}``.
+    """
+    import edi  # noqa: PLC0415 — the compiled loader, imported only where a project is loaded
+
+    with tempfile.TemporaryDirectory(
+        prefix='edi-cli-settings-', dir=os.environ.get('RUNNER_TEMP') or None
+    ) as scratch:
+        saved = Path(scratch) / 'project'
+        # save_as narrates on stdout; --settings prints JSON there, so the narration is dropped.
+        with contextlib.redirect_stdout(io.StringIO()):
+            edi.Project.load(str(project_dir)).save_as(str(saved))
+        return _settings_of_saved_tree(saved)
+
+
+# ----------------------------------------------------------------------
+#  Execution
+# ----------------------------------------------------------------------
+
+
+_ASYMMETRY = re.compile(r'(?m)^(_peak\.asym_(?:beba_(?:a0|b0|a1|b1)|fcj_1|fcj_2)) .*$')
+
+
+def fix_asymmetry_off(project: Path) -> None:
+    """Fix every Bérar-Baldinozzi or FCJ asymmetry coefficient of the project copy at 0."""
+    changed = 0
+    for path in sorted((project / 'experiments').glob('*.edi')):
+        text, count = _ASYMMETRY.subn(r'\1 0', path.read_text(encoding='utf-8'))
+        changed += count
+        path.write_text(text, encoding='utf-8')
+    if not changed:
+        raise ValueError('asymmetry-off: the project has no asymmetry coefficients')
+
+
+def fit_template_only(project: Path) -> None:
+    """Make a scan copy fit its template file alone, as a single fit."""
+    analysis = project / 'analysis' / 'analysis.edi'
+    text = analysis.read_text(encoding='utf-8')
+    if not re.search(r'(?m)^_fitting_mode\.type sequential$', text):
+        raise ValueError('template: the project is not a scan')
+    text = re.sub(r'(?m)^_sequential_fit\.\S+ .*\n', '', text)
+    text = re.sub(r'(?m)^_fitting_mode\.type sequential$', '_fitting_mode.type single', text)
+    analysis.write_text(text, encoding='utf-8')
+
+
+def form_factor_j0(project: Path) -> None:
+    """Set every magnetic form factor of the project copy to <j0> alone, as FullProf's are.
+
+    Its coefficients are fixed, as a coefficient the approximation does not use cannot be free.
+    """
+    changed = 0
+    for path in sorted((project / 'structures').glob('*.edi')):
+        lines = path.read_text(encoding='utf-8').split('\n')
+        out: list[str] = []
+        index = 0
+        while index < len(lines):
+            out.append(lines[index])
+            if lines[index].strip() != 'loop_' or index + 1 >= len(lines):
+                index += 1
+                continue
+            header: list[str] = []
+            index += 1
+            while index < len(lines) and lines[index].startswith('_'):
+                header.append(lines[index].strip())
+                out.append(lines[index])
+                index += 1
+            if '_magnetic_form_factor.approximation' not in header:
+                continue
+            column = header.index('_magnetic_form_factor.approximation')
+            coefficients = [k for k, name in enumerate(header) if name.endswith('_coefficient')]
+            while (
+                index < len(lines)
+                and lines[index].strip()
+                and not lines[index].startswith(('_', 'loop_'))
+            ):
+                cells = lines[index].split()
+                cells[column] = 'j0'
+                # A coefficient <j0> does not use cannot be free.
+                for k in coefficients:
+                    cells[k] = re.sub(r'\(.*\)$', '', cells[k])
+                out.append(' '.join(cells))
+                changed += 1
+                index += 1
+        path.write_text('\n'.join(out), encoding='utf-8')
+    if not changed:
+        raise ValueError('form-factor-j0: the project declares no form-factor approximation')
+
+
+# A variant names a registered descent, or one of these changes to the project copy.
+PROJECT_VARIANTS = {'asymmetry-off': fix_asymmetry_off, 'form-factor-j0': form_factor_j0}
+
+Unit = tuple[str, dict[str, str], dict, Callable[[Path], None] | None, str]
+
+
+def _units(expected: dict) -> list[Unit]:
+    """``(label, conditions, quantities, change, status)`` for every unit of an expected.json.
+
+    The conditions are ``_minimizer.<item>`` values the unit's project copy declares on top of
+    the project's own analysis.edi — a variant's descent; empty for the project as committed.
+    The change edits the copy for a project variant; None otherwise. The status is the one its
+    fit must end with.
+    """
+    import edi  # noqa: PLC0415
+
+    units: list[Unit] = []
+    if 'quantities' in expected:
+        units.append(('default', {}, expected['quantities'], None, 'done'))
+    descents = set(edi._descent_ids())
+    for name, block in expected.get('variants', {}).items():
+        status = block.get('status', 'done')
+        if name in PROJECT_VARIANTS:
+            units.append((name, {}, block['quantities'], PROJECT_VARIANTS[name], status))
+            continue
+        descent = name.replace('-', '_')
+        if descent not in descents:
+            raise ValueError(
+                f'variant {name!r} names no registered descent {sorted(descents)} and no '
+                f'project variant {sorted(PROJECT_VARIANTS)}'
+            )
+        units.append((name, {'descent': descent}, block['quantities'], None, status))
+    if 'edi' in expected:
+        units.append(('edi', {}, expected['edi']['quantities'], None, 'done'))
+    # A simulation has no data to fit: its unit runs `python -m edi calc` instead.
+    if 'calc' in expected:
+        units.append(('calc', {}, expected['calc']['quantities'], None, 'done'))
+    if not units or not all(unit[2] for unit in units):
+        raise ValueError('expected.json declares no quantities to compare')
+    return units
+
+
+def declare_conditions(project: Path, conditions: dict[str, str]) -> None:
+    """Declare ``conditions`` as ``_minimizer.<item>`` lines in the project's analysis.edi.
+
+    Each declared item replaces any line already declaring it, so the project states every
+    condition exactly once; the rest of the file is kept byte for byte.
+    """
+    if not conditions:
+        return
+    analysis = project / 'analysis' / 'analysis.edi'
+    lines = analysis.read_text(encoding='utf-8').splitlines() if analysis.exists() else []
+    tags = {f'_minimizer.{item}' for item in conditions}
+    kept = [line for line in lines if not line.split() or line.split()[0] not in tags]
+    declared = [f'_minimizer.{item} {value}' for item, value in conditions.items()]
+    analysis.parent.mkdir(parents=True, exist_ok=True)
+    analysis.write_text('\n'.join([*kept, '', *declared]) + '\n', encoding='utf-8')
+
+
+def _results_row(project: Path, key: str) -> dict[str, str]:
+    path = project / 'analysis' / 'results.csv'
+    with path.open(encoding='utf-8', newline='') as handle:
+        rows = list(csv.DictReader(handle))
+    target = _float_or_none(key)
+    if target is None:
+        # A scan whose files carry no diffrn.* value names its row by the data file.
+        matches = [row for row in rows if Path(row.get('file_path', '')).name == key]
+        if len(matches) != 1:
+            raise KeyError(f'{len(matches)} results.csv rows fit the file {key}')
+        return matches[0]
+    matches = [
+        row
+        for row in rows
+        if any(
+            name.startswith('diffrn.') and _float_or_none(value) == target
+            for name, value in row.items()
+        )
+    ]
+    if len(matches) != 1:
+        raise KeyError(f'{len(matches)} results.csv rows have a diffrn.* value of {key}')
+    return matches[0]
+
+
+def _float_or_none(value: str | None) -> float | None:
+    try:
+        return float(value) if value is not None else None
+    except ValueError:
+        return None
+
+
+def _measured(name: str, record: dict[str, str], project: Path) -> float:
+    match = RESULTS_KEY.fullmatch(name)
+    if match:
+        return float(_results_row(project, match['key'])[match['column']])
+    return float(record[name])
+
+
+def _deviations(name: str, spec: dict, measured: float) -> list[str]:
+    # Negate the PASS predicate so a NaN measurement fails every bound (as crysta's runner does).
+    delta = abs(measured - spec['value'])
+    out = []
+    compared = f'{name}: {measured} vs {spec["value"]} (|d| {delta:.3g}'
+    if spec.get('tol_abs') is not None and not delta <= spec['tol_abs']:
+        out.append(f'{compared} > tol_abs {spec["tol_abs"]})')
+    if spec.get('tol_rel') is not None and not delta <= spec['tol_rel'] * abs(spec['value']):
+        out.append(f'{compared} > tol_rel {spec["tol_rel"]})')
+    if spec.get('tol_abs') is None and spec.get('tol_rel') is None and not math.isfinite(measured):
+        out.append(f'{name}: {measured} is not finite')
+    return out
+
+
+def run_project(root: Path, pid: str) -> list[str]:
+    """Run every unit of one project; return its deviations (empty ⇒ it agrees)."""
+    source = root / CLI_DIR / pid
+    expected = json.loads((source / 'expected.json').read_text(encoding='utf-8'))
+    deviations: list[str] = []
+    for label, conditions, quantities, change, status in _units(expected):
+        with tempfile.TemporaryDirectory(
+            prefix=f'edi-cli-{pid}-', dir=os.environ.get('RUNNER_TEMP') or None
+        ) as scratch:
+            project = Path(scratch) / 'project'
+            shutil.copytree(source / 'project', project, symlinks=True)
+            if expected.get('template') is True:
+                fit_template_only(project)
+            if change is not None:
+                change(project)
+            declare_conditions(project, conditions)
+            command = 'calc' if label == 'calc' else 'fit'
+            argv = [sys.executable, '-m', 'edi', command, str(project), '--report', 'machine']
+            argv += ['--verbosity', 'full']
+            result = subprocess.run(
+                argv, capture_output=True, text=True, timeout=FIT_TIMEOUT_S, check=False
+            )
+            if result.returncode != 0:
+                deviations.append(f'{label}: rc={result.returncode}: {result.stderr[-400:]}')
+                continue
+            record = dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
+            if command == 'fit' and record.get('status') != status:
+                deviations.append(f'{label}: status={record.get("status")!r}, expected {status}')
+            for name, spec in quantities.items():
+                try:
+                    measured = _measured(name, record, project)
+                except (KeyError, ValueError, OSError) as exc:
+                    deviations.append(f'{label}: {name}: not measured ({exc})')
+                    continue
+                deviations.extend(f'{label}: {line}' for line in _deviations(name, spec, measured))
+    return deviations
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
+    parser.add_argument('--root', type=Path, default=ROOT, help='the edi tree (default: this one)')
+    parser.add_argument(
+        '--project', action='append', help='run only this registered id (diagnostics)'
+    )
+    parser.add_argument(
+        '--offline',
+        action='store_true',
+        help='run the offline executing projects (slow; never part of CI or pixi run verify)',
+    )
+    parser.add_argument('--bank', type=Path, help='write per-project elapsed seconds (TSV) here')
+    parser.add_argument(
+        '--settings', type=Path, metavar='PROJECT_DIR', help='print loaded_settings() as JSON'
+    )
+    args = parser.parse_args(argv)
+    if args.settings is not None:
+        print(json.dumps(loaded_settings(args.settings), indent=1, sort_keys=True))
+        return 0
+
+    root = args.root.resolve()
+    try:
+        projects = registry(root)
+    except (OSError, ValueError, TypeError, yaml.YAMLError) as exc:
+        print(f'cli-projects: REFUSED — {exc}', file=sys.stderr)
+        return 1
+    executing = [row['id'] for row in projects if row['executing']]
+    selected = offline_projects(projects) if args.offline else ci_projects(projects)
+    if args.project:
+        unknown = sorted(set(args.project) - set(executing))
+        if unknown:
+            print(f'cli-projects: REFUSED — not in the executing set: {unknown}', file=sys.stderr)
+            return 1
+        selected = [pid for pid in executing if pid in args.project]
+
+    failed, timings = [], []
+    for pid in selected:
+        start = time.monotonic()
+        try:
+            deviations = run_project(root, pid)
+        except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+            deviations = [f'unrunnable: {exc}']
+        elapsed = time.monotonic() - start
+        timings.append((pid, elapsed))
+        print(f'{"ok  " if not deviations else "FAIL"} {pid}  {elapsed:.1f} s', flush=True)
+        for line in deviations:
+            print(f'       {line}', flush=True)
+        if deviations:
+            failed.append(pid)
+    if args.bank is not None:
+        rows = ''.join(f'{pid}\t{elapsed:.2f}\n' for pid, elapsed in timings)
+        args.bank.write_text('project\tseconds\n' + rows, encoding='utf-8')
+    total = sum(elapsed for _, elapsed in timings)
+    print(f'cli-projects: {len(selected) - len(failed)}/{len(selected)} agree ({total:.1f} s)')
+    return 1 if failed else 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

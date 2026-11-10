@@ -1,0 +1,28 @@
+{
+  "claim": "Only header text changed; original measured numeric input is byte unchanged.",
+  "command": [
+    "fp2k",
+    "<scale-fit-or-full-fit>",
+    "<scale-fit-or-full-fit>"
+  ],
+  "engine": "FullProf.2k 8.40",
+  "executable_sha256": "b8cb5cdb00ef55f2fef9004ef070324a459f2fcc92ad5c4613f2ea06118c9f1f",
+  "files": {
+    "knowledge/fitting/fullprof/pd-neut-tof_ceo2-pearl_polynomial/Ceo2_PEARL.dat": {
+      "after_sha256": "ceb04a9ff25422f194e85ff07fd579c8570d86015fa5dd844de8232f5c765df1",
+      "before_sha256": "a3bdc3cc7c7fa8a6b2fe26f8fdfaed709a9bc13dd504406862b33883dd6ba79f"
+    },
+    "knowledge/fitting/fullprof/pd-neut-tof_ceo2-pearl_polynomial/full-fit.out": {
+      "after_sha256": "1de8ce0089fa0903754a52052f6d406446b5e138d22ad3f8942fcee1c1c46d8d",
+      "before_sha256": "20b024191d42c43c9fd39c9ef8f3ec62e5f8813bdd4c19f688a46a390f163a3e"
+    },
+    "knowledge/verification/fullprof/pd-neut-tof_ceo2-pearl_polynomial/Ceo2_PEARL.dat": {
+      "after_sha256": "ceb04a9ff25422f194e85ff07fd579c8570d86015fa5dd844de8232f5c765df1",
+      "before_sha256": "a3bdc3cc7c7fa8a6b2fe26f8fdfaed709a9bc13dd504406862b33883dd6ba79f"
+    },
+    "knowledge/verification/fullprof/pd-neut-tof_ceo2-pearl_polynomial/scale-fit.out": {
+      "after_sha256": "2a2d32de565d2e9f76c803ae4708a5efdc9f396e769d110cc761929f5df0ef7b",
+      "before_sha256": "fec198fa22163feaf857e7849f7ec9fc9aedc7807541acfc517019ccf1da73cd"
+    }
+  }
+}

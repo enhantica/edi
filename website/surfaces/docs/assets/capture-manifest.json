@@ -1,0 +1,1285 @@
+{
+ "command": [
+  "pixi",
+  "run",
+  "-e",
+  "app",
+  "python",
+  "tools/docs/capture_all.py",
+  "OUTPUT"
+ ],
+ "images": [
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/01-home.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/01-home.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/02-project-start.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/02-project-start.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/03-project-details.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/03-project-details.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/04-project-created.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/04-project-created.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/05-project-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/05-project-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/05-project-extras.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/05-project-extras.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/05-project-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/05-project-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/06-structure-import.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/06-structure-import.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/07-structure-loaded.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/07-structure-loaded.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/08-structure-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/08-structure-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/08-structure-extras.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/08-structure-extras.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/08-structure-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/08-structure-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/09-experiment-import.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/09-experiment-import.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/09-experiment-type.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/09-experiment-type.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-calculation-range.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-calculation-range.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/09-experiment-data.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/09-experiment-data.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/09-wavelength.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/09-wavelength.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/09-profile.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/09-profile.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/09-profile-broad-gauss-u.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/09-profile-broad-gauss-u.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/09-profile-broad-gauss-v.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/09-profile-broad-gauss-v.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/09-profile-broad-gauss-w.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/09-profile-broad-gauss-w.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/09-exclusion-0.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/09-exclusion-0.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/09-exclusion-1.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/09-exclusion-1.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/09-background-settings.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/09-background-settings.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/09-background-estimate.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/09-background-estimate.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/10-experiment-loaded.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/10-experiment-loaded.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/11-experiment-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/11-experiment-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/11-experiment-extras.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/11-experiment-extras.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/11-experiment-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/11-experiment-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/11-experiment-settings.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/11-experiment-settings.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/12-analysis-choose.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/12-analysis-choose.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/12-fit-scale-cell.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/12-fit-scale-cell.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/12-fit-profile.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/12-fit-profile.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/12-correlations.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/12-correlations.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/13-analysis-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/13-analysis-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/13-analysis-extras.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/13-analysis-extras.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/13-analysis-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/13-analysis-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/13-analysis-settings.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/13-analysis-settings.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/14-report-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/14-report-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/14-report-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/14-report-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/15-project-examples.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/15-project-examples.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-project-actions.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-project-actions.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-project-open.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-project-open.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-project-save.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-project-save.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-project-recent.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-project-recent.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-structure-symmetry.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-structure-symmetry.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-structure-cell.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-structure-cell.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-structure-atoms.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-structure-atoms.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-structure-displacement.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-structure-displacement.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-structure-create.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-structure-create.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-data.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-data.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-data-source.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-data-source.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-create.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-create.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-instrument.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-instrument.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-profile.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-profile.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-background.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-background.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-exclusions.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-exclusions.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-links.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-links.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-estimation.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-estimation.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-analysis-modes.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-analysis-modes.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-analysis-minimizer.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-analysis-minimizer.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-analysis-constraints.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-analysis-constraints.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-report-contents.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-report-contents.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-report-export.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-report-export.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-report-saved.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-report-saved.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-structure-appearance.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-structure-appearance.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-structure-scattering.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-structure-scattering.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-absorption.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-absorption.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-orientation.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-orientation.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-scattering.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-scattering.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-analysis-aliases.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-analysis-aliases.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-analysis-correlations.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-analysis-correlations.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-project-uncertainties.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-project-uncertainties.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-data-settings.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-data-settings.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-experiment-cutoff.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-experiment-cutoff.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-analysis-start-values.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-analysis-start-values.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-analysis-shown-parameters.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-analysis-shown-parameters.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/guide-analysis-pattern-updates.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/guide-analysis-pattern-updates.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-experiment-before.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-experiment-before.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-project-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-project-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-project-extras.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-project-extras.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-project-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-project-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-structure-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-structure-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-structure-extras.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-structure-extras.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-structure-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-structure-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-experiment-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-experiment-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-experiment-extras.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-experiment-extras.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-experiment-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-experiment-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-experiment-settings.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-experiment-settings.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-analysis-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-analysis-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-analysis-extras.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-analysis-extras.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-analysis-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-analysis-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-analysis-settings.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-analysis-settings.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-report-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-report-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-report-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-report-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-mode.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-mode.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-performance-analysis.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-performance-analysis.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-declaration.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-declaration.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-extraction.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-extraction.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-experiment-stacked.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-experiment-stacked.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-experiment-map.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-experiment-map.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-analysis-stacked.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-analysis-stacked.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-analysis-map.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-analysis-map.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-evolution.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-evolution.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-progress-controls.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-progress-controls.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-correlations.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-correlations.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-experiment-before.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-experiment-before.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-project-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-project-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-project-extras.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-project-extras.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-project-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-project-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-structure-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-structure-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-structure-extras.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-structure-extras.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-structure-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-structure-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-experiment-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-experiment-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-experiment-extras.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-experiment-extras.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-experiment-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-experiment-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-experiment-settings.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-experiment-settings.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-analysis-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-analysis-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-analysis-extras.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-analysis-extras.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-analysis-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-analysis-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-analysis-settings.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-analysis-settings.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-report-basic.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-report-basic.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-report-text.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-report-text.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-mode.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-mode.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-weights.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-weights.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-result.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-result.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-experiment-results.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-experiment-results.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-structure-results.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-structure-results.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-experiment-stacked.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-experiment-stacked.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-experiment-map.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-experiment-map.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-analysis-stacked.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-analysis-stacked.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-analysis-map.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-analysis-map.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-correlations.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-correlations.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/sc/group-open.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/sc/dark/group-open.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/sc/group-extinction.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/sc/dark/group-extinction.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/sc/group-reflns.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/sc/dark/group-reflns.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/sc/group-refln.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/sc/dark/group-refln.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/sc/group-refine-ls.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/sc/dark/group-refine-ls.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/magnetic/group-open.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/magnetic/dark/group-open.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/magnetic/group-space-group-magn.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/magnetic/dark/group-space-group-magn.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/magnetic/group-propagation.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/magnetic/dark/group-propagation.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/magnetic/group-moments.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/magnetic/dark/group-moments.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/magnetic/group-symop.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/magnetic/dark/group-symop.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/magnetic/group-magn-operators.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/magnetic/dark/group-magn-operators.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/magnetic/group-expanded-atoms.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/magnetic/dark/group-expanded-atoms.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/magnetic/group-expanded-moments.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/magnetic/dark/group-expanded-moments.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/magnetic/group-bonds.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/magnetic/dark/group-bonds.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/magnetic/group-form-factors.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/magnetic/dark/group-form-factors.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/interfaces/command-line.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/interfaces/dark/command-line.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/interfaces/python-notebook.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/interfaces/dark/python-notebook.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/learning/gui/initial.svg"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/learning/gui/dark/initial.svg"
+  },
+  {
+   "theme": "light",
+   "path": "assets/learning/gui/refined.svg"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/learning/gui/dark/refined.svg"
+  },
+  {
+   "theme": "light",
+   "path": "assets/learning/initial.svg"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/learning/dark/initial.svg"
+  },
+  {
+   "theme": "light",
+   "path": "assets/learning/refined.svg"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/learning/dark/refined.svg"
+  },
+  {
+   "theme": "light",
+   "path": "assets/concepts/data-acquisition_2d-raw-data.jpg"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/concepts/data-acquisition_2d-raw-data.jpg"
+  },
+  {
+   "theme": "light",
+   "path": "assets/concepts/data-acquisition_instrument.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/concepts/data-acquisition_instrument.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/concepts/data-analysis_model.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/concepts/data-analysis_model.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/concepts/data-analysis_refinement.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/concepts/data-analysis_refinement.png"
+  },
+  {
+   "theme": "light",
+   "path": "assets/concepts/data-reduction_1d-pattern.png"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/concepts/data-reduction_1d-pattern.png"
+  }
+ ]
+}

@@ -1,0 +1,57 @@
+# Unit-tier coverage of both languages, by dispatch: the text reports are uploaded and summarised.
+name: Coverage (C++ and Python)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The crysta SDK, built once per crysta commit (edi ADR-0083).
+  crysta-sdk:
+    uses: ./.github/workflows/crysta-sdk.yml
+    secrets: inherit
+
+  coverage:
+    needs: crysta-sdk
+    name: unit coverage, both languages (Linux)
+    if: github.event_name == 'workflow_dispatch'
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-pixi
+      - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - name: C++ unit coverage (clang -O0 + LLVM source-based)
+        run: pixi run cpp-coverage-unit
+      - name: Python coverage (pytest-cov over lib/edi, unit tier)
+        run: pixi run py-cov-unit | tee build/py-coverage-report.txt
+      - name: Upload both reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage
+          path: |
+            build/coverage-unit/coverage-report.txt
+            build/py-coverage-report.txt
+          if-no-files-found: error
+      - name: Job summary
+        run: |
+          {
+            echo '## C++ unit-tier coverage'
+            echo '```'
+            cat build/coverage-unit/coverage-report.txt
+            echo '```'
+            echo '## Python coverage (lib/edi)'
+            echo '```'
+            tail -n 40 build/py-coverage-report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

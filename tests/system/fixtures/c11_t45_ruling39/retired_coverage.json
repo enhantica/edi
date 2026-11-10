@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "disposition": "ruling-39 marker-mechanism retirement ()",
+  "reason": "The  owner directive (2026-08-25) retired the measured-heavy marker; the one test whose entire claim was a property OF that marker (a module fixture cost cannot escape the per-PR exclusion via a cheap sibling) became vacuous with it \u2014 -m heavy collects nothing, so the assertion could no longer fail. Surviving coverage: module fixture costs stay recorded in the manifest (# module-cost: rows), printed in the per-tier audit totals, and inside the ratchet accounting.",
+  "retired_tests": [
+    {
+      "consumer": "tests/integration/py/test_c06_t2_suite_scheduling.py",
+      "test": "test_c06_t2_module_fixture_cost_cannot_move_to_a_nonheavy_sibling"
+    }
+  ]
+}

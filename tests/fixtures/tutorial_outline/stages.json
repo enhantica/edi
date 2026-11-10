@@ -1,0 +1,2631 @@
+{
+  "commit": "cb2cda7be6117199be8f8cac0a666a7bccd32d90",
+  "source": "e04-t45-tutorial-gap-20261108.md",
+  "original_matched": 17,
+  "adaptation": "Retired simulations are omitted; YAP counterpart follows the folded case.",
+  "cases": {
+    "pd-neut-cwl_cosio-d20": {
+      "source_blob": "1f847445a0c2151c5bd511d3d1ec08f3b6236eff",
+      "source_sha256": "bc53fdd0871aeb8b5c00259d9c989da008deb24f4794cb8af1bb7a867154fcac",
+      "events": [
+        {
+          "kind": "pattern",
+          "line": 209
+        },
+        {
+          "kind": "pattern",
+          "line": 212
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 218
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 219
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 220
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 224
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 227
+        },
+        {
+          "kind": "free",
+          "group": "occupancies",
+          "line": 231
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 234
+        },
+        {
+          "kind": "free",
+          "group": "zero shift",
+          "line": 236
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 238
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 239
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 240
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 241
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 243
+        },
+        {
+          "kind": "free",
+          "group": "background",
+          "line": 246
+        },
+        {
+          "kind": "constraint",
+          "line": 273,
+          "expression": "biso_Co2 = biso_Co1"
+        },
+        {
+          "kind": "fit",
+          "line": 283
+        },
+        {
+          "kind": "results",
+          "line": 286
+        },
+        {
+          "kind": "correlations",
+          "line": 289
+        },
+        {
+          "kind": "pattern",
+          "line": 295
+        },
+        {
+          "kind": "pattern",
+          "line": 298
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "occupancies",
+            "peak widths",
+            "positions",
+            "scale",
+            "zero shift"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "occupancies",
+            "peak widths",
+            "positions",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 1
+        }
+      ],
+      "free_before": [
+        [
+          "expt.background[*].intensity",
+          "expt.instrument.calib_twotheta_offset",
+          "expt.linked_structures['cosio'].scale",
+          "expt.peak.asym_beba_b0",
+          "expt.peak.broad_gauss_u",
+          "expt.peak.broad_gauss_v",
+          "expt.peak.broad_gauss_w",
+          "expt.peak.broad_lorentz_y",
+          "getattr(structure.atom_sites[*], ('fract_x', 'fract_y', 'fract_z')[*])",
+          "structure.atom_sites[('O1', 'O2', 'O3')[*]].occupancy",
+          "structure.atom_sites[*].adp_iso",
+          "structure.cell.length_a",
+          "structure.cell.length_b",
+          "structure.cell.length_c"
+        ]
+      ]
+    },
+    "pd-neut-cwl_cosio-d20_scan-213f": {
+      "source_blob": "5e0f0729298ea8270453ee2f9e21791f1c8d7b69",
+      "source_sha256": "7f65e671f2f14bed994410be20b11f8f6e639a52e27f7bfdc544bceb4fd393c8",
+      "events": [
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 213
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 214
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 215
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 217
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 218
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 219
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 220
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 221
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 222
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 223
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 224
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 225
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 226
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 227
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 229
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 230
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 231
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 232
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 233
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 234
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 237
+        },
+        {
+          "kind": "free",
+          "group": "zero shift",
+          "line": 239
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 241
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 242
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 243
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 244
+        },
+        {
+          "kind": "free",
+          "group": "background",
+          "line": 247
+        },
+        {
+          "kind": "constraint",
+          "line": 268,
+          "expression": "biso_Co2 = biso_Co1"
+        },
+        {
+          "kind": "fit",
+          "line": 288
+        },
+        {
+          "kind": "fit",
+          "line": 351
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "peak widths",
+            "positions",
+            "scale",
+            "zero shift"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "peak widths",
+            "positions",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 1
+        },
+        {
+          "freed": [],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "peak widths",
+            "positions",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        }
+      ],
+      "free_before": [
+        [
+          "project.experiments['d20'].background[*].intensity",
+          "project.experiments['d20'].instrument.calib_twotheta_offset",
+          "project.experiments['d20'].linked_structures['cosio'].scale",
+          "project.experiments['d20'].peak.broad_gauss_u",
+          "project.experiments['d20'].peak.broad_gauss_v",
+          "project.experiments['d20'].peak.broad_gauss_w",
+          "project.experiments['d20'].peak.broad_lorentz_y",
+          "project.structures['cosio'].atom_sites['Co1'].adp_iso",
+          "project.structures['cosio'].atom_sites['Co2'].adp_iso",
+          "project.structures['cosio'].atom_sites['Co2'].fract_x",
+          "project.structures['cosio'].atom_sites['Co2'].fract_z",
+          "project.structures['cosio'].atom_sites['O1'].adp_iso",
+          "project.structures['cosio'].atom_sites['O1'].fract_x",
+          "project.structures['cosio'].atom_sites['O1'].fract_z",
+          "project.structures['cosio'].atom_sites['O2'].adp_iso",
+          "project.structures['cosio'].atom_sites['O2'].fract_x",
+          "project.structures['cosio'].atom_sites['O2'].fract_z",
+          "project.structures['cosio'].atom_sites['O3'].adp_iso",
+          "project.structures['cosio'].atom_sites['O3'].fract_x",
+          "project.structures['cosio'].atom_sites['O3'].fract_y",
+          "project.structures['cosio'].atom_sites['O3'].fract_z",
+          "project.structures['cosio'].atom_sites['Si'].adp_iso",
+          "project.structures['cosio'].atom_sites['Si'].fract_x",
+          "project.structures['cosio'].atom_sites['Si'].fract_z",
+          "project.structures['cosio'].cell.length_a",
+          "project.structures['cosio'].cell.length_b",
+          "project.structures['cosio'].cell.length_c"
+        ],
+        [
+          "project.experiments['d20'].background[*].intensity",
+          "project.experiments['d20'].instrument.calib_twotheta_offset",
+          "project.experiments['d20'].linked_structures['cosio'].scale",
+          "project.experiments['d20'].peak.broad_gauss_u",
+          "project.experiments['d20'].peak.broad_gauss_v",
+          "project.experiments['d20'].peak.broad_gauss_w",
+          "project.experiments['d20'].peak.broad_lorentz_y",
+          "project.structures['cosio'].atom_sites['Co1'].adp_iso",
+          "project.structures['cosio'].atom_sites['Co2'].adp_iso",
+          "project.structures['cosio'].atom_sites['Co2'].fract_x",
+          "project.structures['cosio'].atom_sites['Co2'].fract_z",
+          "project.structures['cosio'].atom_sites['O1'].adp_iso",
+          "project.structures['cosio'].atom_sites['O1'].fract_x",
+          "project.structures['cosio'].atom_sites['O1'].fract_z",
+          "project.structures['cosio'].atom_sites['O2'].adp_iso",
+          "project.structures['cosio'].atom_sites['O2'].fract_x",
+          "project.structures['cosio'].atom_sites['O2'].fract_z",
+          "project.structures['cosio'].atom_sites['O3'].adp_iso",
+          "project.structures['cosio'].atom_sites['O3'].fract_x",
+          "project.structures['cosio'].atom_sites['O3'].fract_y",
+          "project.structures['cosio'].atom_sites['O3'].fract_z",
+          "project.structures['cosio'].atom_sites['Si'].adp_iso",
+          "project.structures['cosio'].atom_sites['Si'].fract_x",
+          "project.structures['cosio'].atom_sites['Si'].fract_z",
+          "project.structures['cosio'].cell.length_a",
+          "project.structures['cosio'].cell.length_b",
+          "project.structures['cosio'].cell.length_c"
+        ]
+      ]
+    },
+    "pd-neut-cwl_hs-hrpt": {
+      "source_blob": "646fc3cc5ce5b915cadfd242c968a0408d2717a8",
+      "source_sha256": "d5f601fcad9727f5a3f8874c09bf728d7a6e1b387ebeeab90e52fbae8662d21d",
+      "events": [
+        {
+          "kind": "pattern",
+          "line": 181
+        },
+        {
+          "kind": "pattern",
+          "line": 184
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 192
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 193
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 195
+        },
+        {
+          "kind": "free",
+          "group": "zero shift",
+          "line": 196
+        },
+        {
+          "kind": "fit",
+          "line": 211
+        },
+        {
+          "kind": "results",
+          "line": 214
+        },
+        {
+          "kind": "pattern",
+          "line": 220
+        },
+        {
+          "kind": "pattern",
+          "line": 223
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 231
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 232
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 233
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 234
+        },
+        {
+          "kind": "free",
+          "group": "background",
+          "line": 237
+        },
+        {
+          "kind": "fit",
+          "line": 249
+        },
+        {
+          "kind": "results",
+          "line": 252
+        },
+        {
+          "kind": "pattern",
+          "line": 258
+        },
+        {
+          "kind": "pattern",
+          "line": 261
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 269
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 270
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 271
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 272
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 273
+        },
+        {
+          "kind": "fit",
+          "line": 285
+        },
+        {
+          "kind": "results",
+          "line": 288
+        },
+        {
+          "kind": "pattern",
+          "line": 294
+        },
+        {
+          "kind": "pattern",
+          "line": 297
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 305
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 306
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 307
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 308
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 309
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 311
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 312
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 313
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 314
+        },
+        {
+          "kind": "fit",
+          "line": 326
+        },
+        {
+          "kind": "results",
+          "line": 329
+        },
+        {
+          "kind": "correlations",
+          "line": 332
+        },
+        {
+          "kind": "pattern",
+          "line": 338
+        },
+        {
+          "kind": "pattern",
+          "line": 341
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "cell",
+            "scale",
+            "zero shift"
+          ],
+          "fixed": [],
+          "active": [
+            "cell",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        },
+        {
+          "freed": [
+            "background",
+            "peak widths"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "peak widths",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        },
+        {
+          "freed": [
+            "positions"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "peak widths",
+            "positions",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        },
+        {
+          "freed": [
+            "isotropic displacement",
+            "peak widths"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "peak widths",
+            "positions",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        }
+      ],
+      "free_before": [
+        [
+          "expt.instrument.calib_twotheta_offset",
+          "expt.linked_structures['hs'].scale",
+          "structure.cell.length_a",
+          "structure.cell.length_c"
+        ],
+        [
+          "expt.background[*].intensity",
+          "expt.instrument.calib_twotheta_offset",
+          "expt.linked_structures['hs'].scale",
+          "expt.peak.broad_gauss_u",
+          "expt.peak.broad_gauss_v",
+          "expt.peak.broad_gauss_w",
+          "expt.peak.broad_lorentz_y",
+          "structure.cell.length_a",
+          "structure.cell.length_c"
+        ],
+        [
+          "expt.background[*].intensity",
+          "expt.instrument.calib_twotheta_offset",
+          "expt.linked_structures['hs'].scale",
+          "expt.peak.broad_gauss_u",
+          "expt.peak.broad_gauss_v",
+          "expt.peak.broad_gauss_w",
+          "expt.peak.broad_lorentz_y",
+          "structure.atom_sites['Cl'].fract_z",
+          "structure.atom_sites['H'].fract_x",
+          "structure.atom_sites['H'].fract_z",
+          "structure.atom_sites['O'].fract_x",
+          "structure.atom_sites['O'].fract_z",
+          "structure.cell.length_a",
+          "structure.cell.length_c"
+        ],
+        [
+          "expt.background[*].intensity",
+          "expt.instrument.calib_twotheta_offset",
+          "expt.linked_structures['hs'].scale",
+          "expt.peak.asym_beba_a0",
+          "expt.peak.asym_beba_a1",
+          "expt.peak.asym_beba_b0",
+          "expt.peak.asym_beba_b1",
+          "expt.peak.broad_gauss_u",
+          "expt.peak.broad_gauss_v",
+          "expt.peak.broad_gauss_w",
+          "expt.peak.broad_lorentz_y",
+          "structure.atom_sites['Cl'].adp_iso",
+          "structure.atom_sites['Cl'].fract_z",
+          "structure.atom_sites['Cu'].adp_iso",
+          "structure.atom_sites['H'].adp_iso",
+          "structure.atom_sites['H'].fract_x",
+          "structure.atom_sites['H'].fract_z",
+          "structure.atom_sites['O'].adp_iso",
+          "structure.atom_sites['O'].fract_x",
+          "structure.atom_sites['O'].fract_z",
+          "structure.atom_sites['Zn'].adp_iso",
+          "structure.cell.length_a",
+          "structure.cell.length_c"
+        ]
+      ]
+    },
+    "pd-neut-cwl_lbco-hrpt": {
+      "source_blob": "deec055fe8c878bb3283c29aa460a0d69bd49ed3",
+      "source_sha256": "2c4423d80d5be021b11693db8205f047507aca0e7c5a2b9744a407980eb291b9",
+      "events": [
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 136
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 138
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 139
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 140
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 141
+        },
+        {
+          "kind": "free",
+          "group": "zero shift",
+          "line": 144
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 146
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 147
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 148
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 149
+        },
+        {
+          "kind": "free",
+          "group": "background",
+          "line": 152
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 154
+        },
+        {
+          "kind": "fit",
+          "line": 160
+        },
+        {
+          "kind": "results",
+          "line": 163
+        },
+        {
+          "kind": "correlations",
+          "line": 166
+        },
+        {
+          "kind": "pattern",
+          "line": 169
+        },
+        {
+          "kind": "constraint",
+          "line": 190,
+          "expression": "biso_Ba = biso_La"
+        },
+        {
+          "kind": "fit",
+          "line": 197
+        },
+        {
+          "kind": "results",
+          "line": 200
+        },
+        {
+          "kind": "correlations",
+          "line": 203
+        },
+        {
+          "kind": "pattern",
+          "line": 206
+        },
+        {
+          "kind": "fit",
+          "line": 218
+        },
+        {
+          "kind": "results",
+          "line": 221
+        },
+        {
+          "kind": "correlations",
+          "line": 224
+        },
+        {
+          "kind": "pattern",
+          "line": 227
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "peak widths",
+            "scale",
+            "zero shift"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "peak widths",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        },
+        {
+          "freed": [],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "peak widths",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 1
+        },
+        {
+          "freed": [],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "peak widths",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        }
+      ],
+      "free_before": [
+        [
+          "experiment.background[*].intensity",
+          "project.experiments['hrpt'].instrument.calib_twotheta_offset",
+          "project.experiments['hrpt'].linked_structures['lbco'].scale",
+          "project.experiments['hrpt'].peak.broad_gauss_u",
+          "project.experiments['hrpt'].peak.broad_gauss_v",
+          "project.experiments['hrpt'].peak.broad_gauss_w",
+          "project.experiments['hrpt'].peak.broad_lorentz_y",
+          "project.structures['lbco'].atom_sites['Ba'].adp_iso",
+          "project.structures['lbco'].atom_sites['Co'].adp_iso",
+          "project.structures['lbco'].atom_sites['La'].adp_iso",
+          "project.structures['lbco'].atom_sites['O'].adp_iso",
+          "project.structures['lbco'].cell.length_a"
+        ],
+        [
+          "experiment.background[*].intensity",
+          "project.experiments['hrpt'].instrument.calib_twotheta_offset",
+          "project.experiments['hrpt'].linked_structures['lbco'].scale",
+          "project.experiments['hrpt'].peak.broad_gauss_u",
+          "project.experiments['hrpt'].peak.broad_gauss_v",
+          "project.experiments['hrpt'].peak.broad_gauss_w",
+          "project.experiments['hrpt'].peak.broad_lorentz_y",
+          "project.structures['lbco'].atom_sites['Ba'].adp_iso",
+          "project.structures['lbco'].atom_sites['Co'].adp_iso",
+          "project.structures['lbco'].atom_sites['La'].adp_iso",
+          "project.structures['lbco'].atom_sites['O'].adp_iso",
+          "project.structures['lbco'].cell.length_a"
+        ],
+        [
+          "experiment.background[*].intensity",
+          "project.experiments['hrpt'].instrument.calib_twotheta_offset",
+          "project.experiments['hrpt'].linked_structures['lbco'].scale",
+          "project.experiments['hrpt'].peak.broad_gauss_u",
+          "project.experiments['hrpt'].peak.broad_gauss_v",
+          "project.experiments['hrpt'].peak.broad_gauss_w",
+          "project.experiments['hrpt'].peak.broad_lorentz_y",
+          "project.structures['lbco'].atom_sites['Ba'].adp_iso",
+          "project.structures['lbco'].atom_sites['Co'].adp_iso",
+          "project.structures['lbco'].atom_sites['La'].adp_iso",
+          "project.structures['lbco'].atom_sites['O'].adp_iso",
+          "project.structures['lbco'].cell.length_a"
+        ]
+      ]
+    },
+    "pd-neut-cwl_lmo-echidna": {
+      "source_blob": "5d4d77b51640c18b70ec4f0796ef5a631fe5e72b",
+      "source_sha256": "a1281d987354f44d3912ce5f00b31081d4af63d90c9f6156a63a25148a1f3333",
+      "events": [
+        {
+          "kind": "pattern",
+          "line": 245
+        },
+        {
+          "kind": "constraint",
+          "line": 295,
+          "expression": "biso_Ni1 = biso_Li1"
+        },
+        {
+          "kind": "constraint",
+          "line": 299,
+          "expression": "biso_Li2 = biso_Ni2"
+        },
+        {
+          "kind": "constraint",
+          "line": 303,
+          "expression": "occ_Ni1 = 1 - occ_Li1"
+        },
+        {
+          "kind": "constraint",
+          "line": 307,
+          "expression": "occ_Li2 = 1 - occ_Li1"
+        },
+        {
+          "kind": "constraint",
+          "line": 311,
+          "expression": "occ_Ni2 = occ_Li1"
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 326
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 327
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 329
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 330
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 331
+        },
+        {
+          "kind": "free",
+          "group": "occupancies",
+          "line": 332
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 340
+        },
+        {
+          "kind": "free",
+          "group": "zero shift",
+          "line": 342
+        },
+        {
+          "kind": "free",
+          "group": "calibration",
+          "line": 343
+        },
+        {
+          "kind": "free",
+          "group": "calibration",
+          "line": 344
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 346
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 347
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 348
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 349
+        },
+        {
+          "kind": "free",
+          "group": "background",
+          "line": 352
+        },
+        {
+          "kind": "fit",
+          "line": 378
+        },
+        {
+          "kind": "results",
+          "line": 387
+        },
+        {
+          "kind": "correlations",
+          "line": 390
+        },
+        {
+          "kind": "pattern",
+          "line": 393
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "background",
+            "calibration",
+            "cell",
+            "isotropic displacement",
+            "occupancies",
+            "peak widths",
+            "positions",
+            "scale",
+            "zero shift"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "calibration",
+            "cell",
+            "isotropic displacement",
+            "occupancies",
+            "peak widths",
+            "positions",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 5
+        }
+      ],
+      "free_before": [
+        [
+          "experiment.background[*].intensity",
+          "project.experiments['echidna'].instrument.calib_sample_displacement",
+          "project.experiments['echidna'].instrument.calib_sample_transparency",
+          "project.experiments['echidna'].instrument.calib_twotheta_offset",
+          "project.experiments['echidna'].linked_structures['lmo'].scale",
+          "project.experiments['echidna'].peak.broad_gauss_u",
+          "project.experiments['echidna'].peak.broad_gauss_v",
+          "project.experiments['echidna'].peak.broad_gauss_w",
+          "project.experiments['echidna'].peak.broad_lorentz_y",
+          "project.structures['lmo'].atom_sites['Li1'].adp_iso",
+          "project.structures['lmo'].atom_sites['Li1'].occupancy",
+          "project.structures['lmo'].atom_sites['Ni2'].adp_iso",
+          "project.structures['lmo'].atom_sites['O'].fract_z",
+          "project.structures['lmo'].cell.length_a",
+          "project.structures['lmo'].cell.length_c"
+        ]
+      ]
+    },
+    "pd-neut-cwl_yalo3-al2o3-spodi": {
+      "source_blob": "bf411e986346b3f0eae18267d420b44f6a55c3bc",
+      "source_sha256": "40d4580d5356fe35f531dcb4b3a6beb59583b66d3c86693bc8190eb09387ae72",
+      "events": [
+        {
+          "kind": "pattern",
+          "line": 271
+        },
+        {
+          "kind": "pattern",
+          "line": 275
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 308
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 309
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 310
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 312
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 313
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 315
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 316
+        },
+        {
+          "kind": "free",
+          "group": "zero shift",
+          "line": 318
+        },
+        {
+          "kind": "free",
+          "group": "background",
+          "line": 321
+        },
+        {
+          "kind": "fit",
+          "line": 327
+        },
+        {
+          "kind": "results",
+          "line": 330
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 339
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 340
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 341
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 342
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 344
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 347
+        },
+        {
+          "kind": "fit",
+          "line": 353
+        },
+        {
+          "kind": "results",
+          "line": 356
+        },
+        {
+          "kind": "free",
+          "group": "background",
+          "line": 373
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 383
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 384
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 385
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 386
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 387
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 388
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 389
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 391
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 392
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 396
+        },
+        {
+          "kind": "fit",
+          "line": 402
+        },
+        {
+          "kind": "results",
+          "line": 411
+        },
+        {
+          "kind": "correlations",
+          "line": 414
+        },
+        {
+          "kind": "pattern",
+          "line": 417
+        },
+        {
+          "kind": "pattern",
+          "line": 420
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "background",
+            "cell",
+            "scale",
+            "zero shift"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        },
+        {
+          "freed": [
+            "peak widths"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "peak widths",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        },
+        {
+          "freed": [
+            "background",
+            "isotropic displacement",
+            "positions"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "peak widths",
+            "positions",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        }
+      ],
+      "free_before": [
+        [
+          "alumina.cell.length_a",
+          "alumina.cell.length_c",
+          "project.experiments['yap_3k'].background[*].intensity",
+          "project.experiments['yap_3k'].instrument.calib_twotheta_offset",
+          "project.experiments['yap_3k'].linked_structures['alumina'].scale",
+          "project.experiments['yap_3k'].linked_structures['project.structures['yap']'].scale",
+          "project.structures['yap'].cell.length_a",
+          "project.structures['yap'].cell.length_b",
+          "project.structures['yap'].cell.length_c"
+        ],
+        [
+          "alumina.cell.length_a",
+          "alumina.cell.length_c",
+          "project.experiments['yap_3k'].background[*].intensity",
+          "project.experiments['yap_3k'].instrument.calib_twotheta_offset",
+          "project.experiments['yap_3k'].linked_structures['alumina'].scale",
+          "project.experiments['yap_3k'].linked_structures['project.structures['yap']'].scale",
+          "project.experiments['yap_3k'].peak.asym_beba_a0",
+          "project.experiments['yap_3k'].peak.asym_beba_b1",
+          "project.experiments['yap_3k'].peak.broad_gauss_u",
+          "project.experiments['yap_3k'].peak.broad_gauss_v",
+          "project.experiments['yap_3k'].peak.broad_gauss_w",
+          "project.experiments['yap_3k'].peak.broad_lorentz_y",
+          "project.structures['yap'].cell.length_a",
+          "project.structures['yap'].cell.length_b",
+          "project.structures['yap'].cell.length_c"
+        ],
+        [
+          "alumina.atom_sites['Al1'].fract_z",
+          "alumina.atom_sites['O1'].fract_x",
+          "alumina.cell.length_a",
+          "alumina.cell.length_c",
+          "project.experiments['yap_3k'].background[*].intensity",
+          "project.experiments['yap_3k'].instrument.calib_twotheta_offset",
+          "project.experiments['yap_3k'].linked_structures['alumina'].scale",
+          "project.experiments['yap_3k'].linked_structures['project.structures['yap']'].scale",
+          "project.experiments['yap_3k'].peak.asym_beba_a0",
+          "project.experiments['yap_3k'].peak.asym_beba_b1",
+          "project.experiments['yap_3k'].peak.broad_gauss_u",
+          "project.experiments['yap_3k'].peak.broad_gauss_v",
+          "project.experiments['yap_3k'].peak.broad_gauss_w",
+          "project.experiments['yap_3k'].peak.broad_lorentz_y",
+          "project.structures['yap'].atom_sites['O1'].fract_x",
+          "project.structures['yap'].atom_sites['O1'].fract_y",
+          "project.structures['yap'].atom_sites['O2'].fract_x",
+          "project.structures['yap'].atom_sites['O2'].fract_y",
+          "project.structures['yap'].atom_sites['O2'].fract_z",
+          "project.structures['yap'].atom_sites['Y'].fract_x",
+          "project.structures['yap'].atom_sites['Y'].fract_y",
+          "project.structures['yap'].cell.length_a",
+          "project.structures['yap'].cell.length_b",
+          "project.structures['yap'].cell.length_c",
+          "structure.atom_sites[*].adp_iso"
+        ]
+      ]
+    },
+    "pd-neut-tof_lbco-si-mcstas": {
+      "source_blob": "b0db3d1874bc26ada0443cb282c2bfe70d44359d",
+      "source_sha256": "b813e92b3516375c47e10720dbb81283f4b23ddb3413d89e806bf7fd76c3c714",
+      "events": [
+        {
+          "kind": "pattern",
+          "line": 233
+        },
+        {
+          "kind": "pattern",
+          "line": 252
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 271
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 272
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 273
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 275
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 281
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 282
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 284
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 285
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 286
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 288
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 289
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 290
+        },
+        {
+          "kind": "free",
+          "group": "background",
+          "line": 293
+        },
+        {
+          "kind": "fit",
+          "line": 302
+        },
+        {
+          "kind": "results",
+          "line": 303
+        },
+        {
+          "kind": "correlations",
+          "line": 304
+        },
+        {
+          "kind": "pattern",
+          "line": 310
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "peak widths",
+            "scale"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "isotropic displacement",
+            "peak widths",
+            "scale"
+          ],
+          "constraints": 0
+        }
+      ],
+      "free_before": [
+        [
+          "experiment.background[*].intensity",
+          "experiment.linked_structures['lbco'].scale",
+          "experiment.linked_structures['si'].scale",
+          "experiment.peak.broad_gauss_sigma_0",
+          "experiment.peak.broad_gauss_sigma_1",
+          "experiment.peak.broad_gauss_sigma_2",
+          "experiment.peak.decay_beta_0",
+          "experiment.peak.decay_beta_1",
+          "experiment.peak.rise_alpha_1",
+          "structure_1.atom_sites['Co'].adp_iso",
+          "structure_1.atom_sites['O'].adp_iso",
+          "structure_1.cell.length_a",
+          "structure_2.cell.length_a"
+        ]
+      ]
+    },
+    "pd-neut-tof_ncaf-wish": {
+      "source_blob": "46ee490023fcdd2e67e057af635b1a46e6882054",
+      "source_sha256": "d7e283a6334444ad713cfd5c4b3564580690daceb579ae3852b228a14508c18b",
+      "events": [
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 304
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 305
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 306
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 307
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 308
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 309
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 312
+        },
+        {
+          "kind": "free",
+          "group": "calibration",
+          "line": 313
+        },
+        {
+          "kind": "free",
+          "group": "calibration",
+          "line": 314
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 315
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 316
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 317
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 318
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 320
+        },
+        {
+          "kind": "free",
+          "group": "calibration",
+          "line": 321
+        },
+        {
+          "kind": "free",
+          "group": "calibration",
+          "line": 322
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 323
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 324
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 325
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 326
+        },
+        {
+          "kind": "pattern",
+          "line": 338
+        },
+        {
+          "kind": "pattern",
+          "line": 341
+        },
+        {
+          "kind": "fit",
+          "line": 350
+        },
+        {
+          "kind": "results",
+          "line": 351
+        },
+        {
+          "kind": "correlations",
+          "line": 352
+        },
+        {
+          "kind": "pattern",
+          "line": 358
+        },
+        {
+          "kind": "pattern",
+          "line": 361
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "calibration",
+            "isotropic displacement",
+            "peak widths",
+            "scale"
+          ],
+          "fixed": [],
+          "active": [
+            "calibration",
+            "isotropic displacement",
+            "peak widths",
+            "scale"
+          ],
+          "constraints": 0
+        }
+      ],
+      "free_before": [
+        [
+          "expt47.instrument.calib_d_to_tof_linear",
+          "expt47.instrument.calib_d_to_tof_offset",
+          "expt47.linked_structures['ncaf'].scale",
+          "expt47.peak.broad_gauss_sigma_2",
+          "expt47.peak.decay_beta_0",
+          "expt47.peak.decay_beta_1",
+          "expt47.peak.rise_alpha_1",
+          "expt56.instrument.calib_d_to_tof_linear",
+          "expt56.instrument.calib_d_to_tof_offset",
+          "expt56.linked_structures['ncaf'].scale",
+          "expt56.peak.broad_gauss_sigma_2",
+          "expt56.peak.decay_beta_0",
+          "expt56.peak.decay_beta_1",
+          "expt56.peak.rise_alpha_1",
+          "structure.atom_sites['Al'].adp_iso",
+          "structure.atom_sites['Ca'].adp_iso",
+          "structure.atom_sites['F1'].adp_iso",
+          "structure.atom_sites['F2'].adp_iso",
+          "structure.atom_sites['F3'].adp_iso",
+          "structure.atom_sites['Na'].adp_iso"
+        ]
+      ]
+    },
+    "pd-neut-tof_si-sepd": {
+      "source_blob": "f16f42ce1a8af5e0c24ed7428b89623c28d43221",
+      "source_sha256": "2ac21df6e95a33238e99dda487249324d1235b4f1e412ff81f847ac5dc2c6d91",
+      "events": [
+        {
+          "kind": "pattern",
+          "line": 160
+        },
+        {
+          "kind": "pattern",
+          "line": 161
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 169
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 171
+        },
+        {
+          "kind": "free",
+          "group": "calibration",
+          "line": 172
+        },
+        {
+          "kind": "fit",
+          "line": 190
+        },
+        {
+          "kind": "results",
+          "line": 191
+        },
+        {
+          "kind": "pattern",
+          "line": 197
+        },
+        {
+          "kind": "pattern",
+          "line": 200
+        },
+        {
+          "kind": "free",
+          "group": "background",
+          "line": 209
+        },
+        {
+          "kind": "fit",
+          "line": 221
+        },
+        {
+          "kind": "results",
+          "line": 222
+        },
+        {
+          "kind": "pattern",
+          "line": 228
+        },
+        {
+          "kind": "pattern",
+          "line": 231
+        },
+        {
+          "kind": "fix",
+          "group": "background",
+          "line": 240
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 246
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 247
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 248
+        },
+        {
+          "kind": "fit",
+          "line": 260
+        },
+        {
+          "kind": "results",
+          "line": 261
+        },
+        {
+          "kind": "pattern",
+          "line": 267
+        },
+        {
+          "kind": "pattern",
+          "line": 270
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 278
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 280
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 281
+        },
+        {
+          "kind": "fit",
+          "line": 293
+        },
+        {
+          "kind": "results",
+          "line": 294
+        },
+        {
+          "kind": "correlations",
+          "line": 300
+        },
+        {
+          "kind": "pattern",
+          "line": 306
+        },
+        {
+          "kind": "pattern",
+          "line": 309
+        },
+        {
+          "kind": "pattern",
+          "line": 312
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "calibration",
+            "cell",
+            "scale"
+          ],
+          "fixed": [],
+          "active": [
+            "calibration",
+            "cell",
+            "scale"
+          ],
+          "constraints": 0
+        },
+        {
+          "freed": [
+            "background"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "calibration",
+            "cell",
+            "scale"
+          ],
+          "constraints": 0
+        },
+        {
+          "freed": [
+            "peak widths"
+          ],
+          "fixed": [
+            "background"
+          ],
+          "active": [
+            "calibration",
+            "cell",
+            "peak widths",
+            "scale"
+          ],
+          "constraints": 0
+        },
+        {
+          "freed": [
+            "isotropic displacement",
+            "peak widths"
+          ],
+          "fixed": [],
+          "active": [
+            "calibration",
+            "cell",
+            "isotropic displacement",
+            "peak widths",
+            "scale"
+          ],
+          "constraints": 0
+        }
+      ],
+      "free_before": [
+        [
+          "expt.instrument.calib_d_to_tof_offset",
+          "expt.linked_structures['si'].scale",
+          "structure.cell.length_a"
+        ],
+        [
+          "expt.background[*].intensity",
+          "expt.instrument.calib_d_to_tof_offset",
+          "expt.linked_structures['si'].scale",
+          "structure.cell.length_a"
+        ],
+        [
+          "expt.instrument.calib_d_to_tof_offset",
+          "expt.linked_structures['si'].scale",
+          "expt.peak.broad_gauss_sigma_0",
+          "expt.peak.broad_gauss_sigma_1",
+          "expt.peak.broad_lorentz_gamma_1",
+          "structure.cell.length_a"
+        ],
+        [
+          "expt.instrument.calib_d_to_tof_offset",
+          "expt.linked_structures['si'].scale",
+          "expt.peak.broad_gauss_sigma_0",
+          "expt.peak.broad_gauss_sigma_1",
+          "expt.peak.broad_lorentz_gamma_1",
+          "expt.peak.decay_beta_0",
+          "expt.peak.decay_beta_1",
+          "structure.atom_sites['Si'].adp_iso",
+          "structure.cell.length_a"
+        ]
+      ]
+    },
+    "pd-neut-xray-cwl_pbso4-d1a-lab": {
+      "source_blob": "55c2c6967fedcfeff2a292573bef134c85b11017",
+      "source_sha256": "61707246a93a66ac08a598e16c05690fb10014e6dfeeb781498b2671e0f84684",
+      "events": [
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 304
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 305
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 306
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 310
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 316
+        },
+        {
+          "kind": "free",
+          "group": "zero shift",
+          "line": 317
+        },
+        {
+          "kind": "free",
+          "group": "other: expt1.instrument.setup_wavelength ",
+          "line": 318
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 321
+        },
+        {
+          "kind": "free",
+          "group": "zero shift",
+          "line": 322
+        },
+        {
+          "kind": "fit",
+          "line": 331
+        },
+        {
+          "kind": "results",
+          "line": 334
+        },
+        {
+          "kind": "correlations",
+          "line": 340
+        },
+        {
+          "kind": "pattern",
+          "line": 346
+        },
+        {
+          "kind": "pattern",
+          "line": 349
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "cell",
+            "isotropic displacement",
+            "other: expt1.instrument.setup_wavelength ",
+            "scale",
+            "zero shift"
+          ],
+          "fixed": [],
+          "active": [
+            "cell",
+            "isotropic displacement",
+            "other: expt1.instrument.setup_wavelength",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        }
+      ],
+      "free_before": [
+        [
+          "expt1.instrument.calib_twotheta_offset",
+          "expt1.instrument.setup_wavelength",
+          "expt1.linked_structures['pbso4'].scale",
+          "expt2.instrument.calib_twotheta_offset",
+          "expt2.linked_structures['pbso4'].scale",
+          "struct.atom_sites[('Pb', 'S', 'O1', 'O2', 'O3')[*]].adp_iso",
+          "struct.cell.length_a",
+          "struct.cell.length_b",
+          "struct.cell.length_c"
+        ]
+      ]
+    },
+    "pd-xray-cwl_lam7o3-p021": {
+      "source_blob": "26fec6d65be7f5fbefef328138f4978c7b059223",
+      "source_sha256": "5cc4f576bcfebe6340e5e6e104f289fe4bc544f577f5b667d96f19a5db783242",
+      "events": [
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 232
+        },
+        {
+          "kind": "free",
+          "group": "zero shift",
+          "line": 234
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 236
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 237
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 238
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 239
+        },
+        {
+          "kind": "free",
+          "group": "background",
+          "line": 242
+        },
+        {
+          "kind": "constraint",
+          "line": 302,
+          "expression": "biso_Cr = biso_Ti"
+        },
+        {
+          "kind": "constraint",
+          "line": 303,
+          "expression": "biso_Mn = biso_Ti"
+        },
+        {
+          "kind": "constraint",
+          "line": 304,
+          "expression": "biso_Fe = biso_Ti"
+        },
+        {
+          "kind": "constraint",
+          "line": 305,
+          "expression": "biso_Co = biso_Ti"
+        },
+        {
+          "kind": "constraint",
+          "line": 306,
+          "expression": "biso_Ni = biso_Ti"
+        },
+        {
+          "kind": "constraint",
+          "line": 307,
+          "expression": "biso_Cu = biso_Ti"
+        },
+        {
+          "kind": "constraint",
+          "line": 309,
+          "expression": "biso_O2 = biso_O1"
+        },
+        {
+          "kind": "pattern",
+          "line": 329
+        },
+        {
+          "kind": "pattern",
+          "line": 332
+        },
+        {
+          "kind": "fit",
+          "line": 341
+        },
+        {
+          "kind": "results",
+          "line": 348
+        },
+        {
+          "kind": "correlations",
+          "line": 351
+        },
+        {
+          "kind": "pattern",
+          "line": 360
+        },
+        {
+          "kind": "pattern",
+          "line": 363
+        },
+        {
+          "kind": "free",
+          "group": "background",
+          "line": 381
+        },
+        {
+          "kind": "fit",
+          "line": 387
+        },
+        {
+          "kind": "results",
+          "line": 390
+        },
+        {
+          "kind": "correlations",
+          "line": 393
+        },
+        {
+          "kind": "pattern",
+          "line": 399
+        },
+        {
+          "kind": "pattern",
+          "line": 402
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "background",
+            "peak widths",
+            "scale",
+            "zero shift"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "peak widths",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 7
+        },
+        {
+          "freed": [
+            "background"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "peak widths",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        }
+      ],
+      "free_before": [
+        [
+          "experiment.background[*].intensity",
+          "project.experiments['p021'].instrument.calib_twotheta_offset",
+          "project.experiments['p021'].linked_structures['lam7o3'].scale",
+          "project.experiments['p021'].peak.broad_gauss_u",
+          "project.experiments['p021'].peak.broad_gauss_v",
+          "project.experiments['p021'].peak.broad_gauss_w",
+          "project.experiments['p021'].peak.broad_lorentz_x"
+        ],
+        [
+          "experiment.background[*].intensity",
+          "project.experiments['p021'].instrument.calib_twotheta_offset",
+          "project.experiments['p021'].linked_structures['lam7o3'].scale",
+          "project.experiments['p021'].peak.broad_gauss_u",
+          "project.experiments['p021'].peak.broad_gauss_v",
+          "project.experiments['p021'].peak.broad_gauss_w",
+          "project.experiments['p021'].peak.broad_lorentz_x"
+        ]
+      ]
+    },
+    "pd-xray-cwl_pbso4-lab": {
+      "source_blob": "9cd7518c6fc9b635f8fe10fb0fbafdc8b2e3050b",
+      "source_sha256": "9f10fab73e478dfaae8cf250a59cdfa4db19ebdd1500ac2c7531e6ececbbf385",
+      "events": [
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 223
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 224
+        },
+        {
+          "kind": "free",
+          "group": "cell",
+          "line": 225
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 231
+        },
+        {
+          "kind": "free",
+          "group": "zero shift",
+          "line": 233
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 235
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 236
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 237
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 238
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 240
+        },
+        {
+          "kind": "free",
+          "group": "peak widths",
+          "line": 241
+        },
+        {
+          "kind": "free",
+          "group": "background",
+          "line": 244
+        },
+        {
+          "kind": "fit",
+          "line": 253
+        },
+        {
+          "kind": "results",
+          "line": 256
+        },
+        {
+          "kind": "correlations",
+          "line": 262
+        },
+        {
+          "kind": "pattern",
+          "line": 268
+        },
+        {
+          "kind": "pattern",
+          "line": 271
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "background",
+            "cell",
+            "peak widths",
+            "scale",
+            "zero shift"
+          ],
+          "fixed": [],
+          "active": [
+            "background",
+            "cell",
+            "peak widths",
+            "scale",
+            "zero shift"
+          ],
+          "constraints": 0
+        }
+      ],
+      "free_before": [
+        [
+          "expt.background[*].coef",
+          "expt.instrument.calib_twotheta_offset",
+          "expt.linked_structures['pbso4'].scale",
+          "expt.peak.asym_beba_a0",
+          "expt.peak.asym_beba_b0",
+          "expt.peak.broad_gauss_u",
+          "expt.peak.broad_gauss_v",
+          "expt.peak.broad_gauss_w",
+          "expt.peak.broad_lorentz_y",
+          "struct.cell.length_a",
+          "struct.cell.length_b",
+          "struct.cell.length_c"
+        ]
+      ]
+    },
+    "sc-neut-cwl_tb2ti2o7-heidi": {
+      "source_blob": "f053dbedcfaccd8f75c25e4d24c24006c412374f",
+      "source_sha256": "fb612ebe872a9f2ea4fc1f045f9747d7931891d28bf9cd93cb6d877002941871",
+      "events": [
+        {
+          "kind": "pattern",
+          "line": 110
+        },
+        {
+          "kind": "free",
+          "group": "positions",
+          "line": 113
+        },
+        {
+          "kind": "free",
+          "group": "occupancies",
+          "line": 115
+        },
+        {
+          "kind": "free",
+          "group": "occupancies",
+          "line": 116
+        },
+        {
+          "kind": "free",
+          "group": "occupancies",
+          "line": 117
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 119
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 120
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 121
+        },
+        {
+          "kind": "free",
+          "group": "isotropic displacement",
+          "line": 122
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 125
+        },
+        {
+          "kind": "free",
+          "group": "extinction",
+          "line": 126
+        },
+        {
+          "kind": "fit",
+          "line": 134
+        },
+        {
+          "kind": "results",
+          "line": 138
+        },
+        {
+          "kind": "pattern",
+          "line": 150
+        },
+        {
+          "kind": "free",
+          "group": "anisotropic displacement",
+          "line": 165
+        },
+        {
+          "kind": "free",
+          "group": "anisotropic displacement",
+          "line": 166
+        },
+        {
+          "kind": "free",
+          "group": "anisotropic displacement",
+          "line": 167
+        },
+        {
+          "kind": "free",
+          "group": "anisotropic displacement",
+          "line": 168
+        },
+        {
+          "kind": "free",
+          "group": "anisotropic displacement",
+          "line": 169
+        },
+        {
+          "kind": "free",
+          "group": "anisotropic displacement",
+          "line": 170
+        },
+        {
+          "kind": "free",
+          "group": "anisotropic displacement",
+          "line": 171
+        },
+        {
+          "kind": "fit",
+          "line": 175
+        },
+        {
+          "kind": "results",
+          "line": 178
+        },
+        {
+          "kind": "correlations",
+          "line": 181
+        },
+        {
+          "kind": "pattern",
+          "line": 184
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "extinction",
+            "isotropic displacement",
+            "occupancies",
+            "positions",
+            "scale"
+          ],
+          "fixed": [],
+          "active": [
+            "extinction",
+            "isotropic displacement",
+            "occupancies",
+            "positions",
+            "scale"
+          ],
+          "constraints": 0
+        },
+        {
+          "freed": [
+            "anisotropic displacement"
+          ],
+          "fixed": [],
+          "active": [
+            "anisotropic displacement",
+            "extinction",
+            "isotropic displacement",
+            "occupancies",
+            "positions",
+            "scale"
+          ],
+          "constraints": 0
+        }
+      ],
+      "free_before": [
+        [
+          "project.experiments['heidi'].extinction.radius",
+          "project.experiments['heidi'].linked_structure.scale",
+          "project.structures['tbti'].atom_sites['O1'].adp_iso",
+          "project.structures['tbti'].atom_sites['O1'].fract_x",
+          "project.structures['tbti'].atom_sites['O1'].occupancy",
+          "project.structures['tbti'].atom_sites['O2'].adp_iso",
+          "project.structures['tbti'].atom_sites['O2'].occupancy",
+          "project.structures['tbti'].atom_sites['Tb'].adp_iso",
+          "project.structures['tbti'].atom_sites['Ti'].adp_iso",
+          "project.structures['tbti'].atom_sites['Ti'].occupancy"
+        ],
+        [
+          "project.experiments['heidi'].extinction.radius",
+          "project.experiments['heidi'].linked_structure.scale",
+          "project.structures['tbti'].atom_site_aniso['O1'].adp_11",
+          "project.structures['tbti'].atom_site_aniso['O1'].adp_22",
+          "project.structures['tbti'].atom_site_aniso['O1'].adp_23",
+          "project.structures['tbti'].atom_site_aniso['Tb'].adp_11",
+          "project.structures['tbti'].atom_site_aniso['Tb'].adp_12",
+          "project.structures['tbti'].atom_site_aniso['Ti'].adp_11",
+          "project.structures['tbti'].atom_site_aniso['Ti'].adp_12",
+          "project.structures['tbti'].atom_sites['O1'].adp_iso",
+          "project.structures['tbti'].atom_sites['O1'].fract_x",
+          "project.structures['tbti'].atom_sites['O1'].occupancy",
+          "project.structures['tbti'].atom_sites['O2'].adp_iso",
+          "project.structures['tbti'].atom_sites['O2'].occupancy",
+          "project.structures['tbti'].atom_sites['Tb'].adp_iso",
+          "project.structures['tbti'].atom_sites['Ti'].adp_iso",
+          "project.structures['tbti'].atom_sites['Ti'].occupancy"
+        ]
+      ]
+    },
+    "sc-neut-tof_taurine-senju": {
+      "source_blob": "ca1e093d6b65e3ba70eb6518e2b82a7e49ffe44b",
+      "source_sha256": "f51a1d0a6dcd2869a82ea67a1aa239edbd22d322bf4e48b96916481540320162",
+      "events": [
+        {
+          "kind": "pattern",
+          "line": 76
+        },
+        {
+          "kind": "free",
+          "group": "scale",
+          "line": 79
+        },
+        {
+          "kind": "free",
+          "group": "extinction",
+          "line": 80
+        },
+        {
+          "kind": "fit",
+          "line": 98
+        },
+        {
+          "kind": "results",
+          "line": 102
+        },
+        {
+          "kind": "pattern",
+          "line": 111
+        },
+        {
+          "kind": "free",
+          "group": "anisotropic displacement",
+          "line": 124
+        },
+        {
+          "kind": "fit",
+          "line": 133
+        },
+        {
+          "kind": "results",
+          "line": 136
+        },
+        {
+          "kind": "correlations",
+          "line": 139
+        },
+        {
+          "kind": "pattern",
+          "line": 142
+        }
+      ],
+      "cycles": [
+        {
+          "freed": [
+            "extinction",
+            "scale"
+          ],
+          "fixed": [],
+          "active": [
+            "extinction",
+            "scale"
+          ],
+          "constraints": 0
+        },
+        {
+          "freed": [
+            "anisotropic displacement"
+          ],
+          "fixed": [],
+          "active": [
+            "anisotropic displacement",
+            "extinction",
+            "scale"
+          ],
+          "constraints": 0
+        }
+      ],
+      "free_before": [
+        [
+          "project.experiments['senju'].extinction.radius",
+          "project.experiments['senju'].linked_structure.scale"
+        ],
+        [
+          "getattr(structure.atom_site_aniso[*], adp_components[*])",
+          "project.experiments['senju'].extinction.radius",
+          "project.experiments['senju'].linked_structure.scale"
+        ]
+      ]
+    }
+  }
+}

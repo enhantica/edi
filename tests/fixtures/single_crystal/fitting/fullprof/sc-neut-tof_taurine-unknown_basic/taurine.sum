@@ -1,0 +1,98 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 22/10/2026  Time: 23:06:31.168                              
+
+ => PCR file code: taurine
+ => DAT file code: taurine              -> Relative contribution: 1.0000                                                            
+ => Title: Taurine
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Refinement/Calculation of Neutron integrated intensity(Laue or monochromatic) data or Flipping Ratios                           
+ => Neutron Time-Of-Flight data                                                                                                     
+ =>-------> Pattern#  1
+ => Integrated intensities or Flipping Ratios as observations for phase: 1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    1.730 g/cm3
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    1
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 taurine                                 P 21/c              
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   171  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ S1      0.19448(   0)  0.35173(   0)  0.34730(   0)  1.370(  0)  1.000(  0)    4
+ O1      0.31207(   0)  0.23951(   0)  0.35143(   0)  2.680(  0)  1.000(  0)    4
+ O2     -0.05909(   0)  0.33563(   0)  0.29636(   0)  3.505(  0)  1.000(  0)    4
+ O3      0.22105(   0)  0.41215(   0)  0.50573(   0)  1.835(  0)  1.000(  0)    4
+ N1      0.26340(   0)  0.62808(   0)  0.33048(   0)  2.074(  0)  1.000(  0)    4
+ H1      0.12861(   0)  0.58669(   0)  0.41769(   0)  3.315(  0)  1.000(  0)    4
+ H2      0.18953(   0)  0.71385(   0)  0.31124(   0)  4.470(  0)  1.000(  0)    4
+ H3      0.43970(   0)  0.62023(   0)  0.34592(   0)  4.342(  0)  1.000(  0)    4
+ C1      0.34384(   0)  0.44116(   0)  0.20155(   0)  1.737(  0)  1.000(  0)    4
+ H11     0.55246(   0)  0.43345(   0)  0.24304(   0)  3.323(  0)  1.000(  0)    4
+ H12     0.32537(   0)  0.38970(   0)  0.08264(   0)  3.057(  0)  1.000(  0)    4
+ C2      0.20029(   0)  0.55716(   0)  0.18272(   0)  1.660(  0)  1.000(  0)    4
+ H21     0.27650(   0)  0.60004(   0)  0.07688(   0)  2.154(  0)  1.000(  0)    4
+ H22    -0.00383(   0)  0.54767(   0)  0.15762(   0)  4.713(  0)  1.000(  0)    4
+
+ ==> SCALE, EXTINCTION, CELL PARAMETERS FOR PATTERN#  1
+
+ ==> OVERALL PARAMETERS:
+
+
+
+ => Scale factors ( 1: 6): 
+             2.688664        0.025837
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+
+
+ => Extinction parameters: 
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+             0.000000        0.000000
+
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   24.3    
+
+     -----------------------------------------------------
+     R-Factors and Chi2 for Integrated Intensity Pattern #  1
+     -----------------------------------------------------
+ => Phase:  1
+ =>    RF2 -factor :   18.4    
+ =>    RF2w-factor :   12.5    
+ =>    RF  -factor :   14.4    
+ =>    Chi2(Intens):   24.3    
+ =>  N_eff Reflect.:    171 with I >  3.00 sigma
+
+ 
+              CPU Time:     0.094 seconds
+                            0.002 minutes
+
+ => Run finished at:     Date: 22/10/2026  Time: 23:06:31.265                              

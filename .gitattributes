@@ -1,0 +1,2 @@
+# Preserve committed bytes on every checkout, including checksum-bound text.
+* -text

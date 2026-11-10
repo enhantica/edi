@@ -1,0 +1,20 @@
+data_phase_m
+_edi.schema_version 3
+_space_group.name_h_m "P 1"
+_cell.length_a 5.1
+_cell.length_b 6.2
+_cell.length_c 7.3
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.wyckoff_letter
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.occupancy
+_atom_site.adp_type
+_atom_site.adp_iso
+Ni Ni a 0.23 .27 .39 .47() Biso .41

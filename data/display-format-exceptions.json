@@ -1,0 +1,421 @@
+{
+ "exceptions": [
+  {
+   "file": "app/qml/Components/CorrelationChart.qml",
+   "match": "text: modelData.toFixed(1)",
+   "reason": "the colour bar tick labels (1, 0.5, 0, -0.5, -1), not a value of an item"
+  },
+  {
+   "file": "app/src/scan_view_model.cpp",
+   "match": "QString::number(values_[i], 'g', 6)",
+   "reason": "a scan row's value read from a dataset title, shown only when its text as the file writes it was not kept; not a value of an item"
+  },
+  {
+   "file": "app/tools/chart_bench.cpp",
+   "match": "std::printf(\"%s\\t%d\\t%d\\t%.2f\\t%.2f\\t%.2f\\t%s\\t%s\\n\"",
+   "reason": "a developer benchmark printing timings, not part of the app"
+  },
+  {
+   "file": "app/tools/scan_bench.cpp",
+   "match": "std::printf(\"%s\\t%d\\t%zu\\t%zu\\t%d\\t%.2f",
+   "reason": "a developer benchmark printing timings, not part of the app"
+  },
+  {
+   "file": "app/tools/ui_compare.cpp",
+   "match": "std::printf(\"%s %s: min tile %.4f, image %.4f\\n\"",
+   "reason": "a test tool printing image similarity scores, not part of the app"
+  },
+  {
+   "file": "core/include/edi/display.hpp",
+   "match": "std::string fixed_text(double value, int decimals);",
+   "reason": "the bridge's own declaration of fixed decimals for a table column"
+  },
+  {
+   "file": "core/src/duration_text.cpp",
+   "match": "\"%.0f\", seconds",
+   "reason": "a duration, which has no dictionary item"
+  },
+  {
+   "file": "core/src/duration_text.cpp",
+   "match": "\"%.2g\", seconds",
+   "reason": "a duration, which has no dictionary item"
+  },
+  {
+   "file": "core/src/fit_job.cpp",
+   "match": "settings << std::setprecision(17)",
+   "reason": "a fingerprint of the fit settings that tells two fits apart; never shown"
+  },
+  {
+   "file": "core/src/presentation.cpp",
+   "match": "stream << std::setprecision(6) << value;",
+   "reason": "the chart axis tick labels, and a value no dictionary item names; point labels and read-outs take their items' formats"
+  },
+  {
+   "file": "core/src/report.cpp",
+   "match": "out << std::fixed << std::setprecision(precision) << value;",
+   "reason": "the CLI fit table's time and change columns, which have no dictionary item, and a parameter path the dictionary has no item for; Rwp and the reduced chi-square take their items' formats"
+  },
+  {
+   "file": "core/src/report_html.cpp",
+   "match": "std::chars_format::fixed, 2);",
+   "reason": "style sheet lengths in px, and the correlation heatmap's cell numbers, which follow diffraction-lib's heatmap (owner decision 2026-10-11)"
+  },
+  {
+   "file": "core/src/report_model.cpp",
+   "match": "fixed_text(column[row], decimals)",
+   "reason": "the report's data table keeps one number of decimals per intensity column, chosen from its largest measured value (owner, 2026-10-13)"
+  },
+  {
+   "file": "core/src/report_model.cpp",
+   "match": "fixed_text((meas - calc[row]) / su, 2)",
+   "reason": "a single crystal's normalised residual (F\u00b2 meas - F\u00b2 calc)/s.u., no item's value, to two decimals as the app's reflection table shows it"
+  },
+  {
+   "file": "core/src/selectors.cpp",
+   "match": "text << std::fixed << std::setprecision(places) << position;",
+   "reason": "a background point id spelled from its position and written to the file, not a display"
+  },
+  {
+   "file": "core/src/su_text.cpp",
+   "match": "std::to_chars(buffer, buffer + sizeof(buffer), value, std::chars_format::fixed, decimals);",
+   "reason": "a build against a crysta SDK without its s.u. rule; the branch goes when the pin moves"
+  },
+  {
+   "file": "lib/edi/verification.py",
+   "match": "metrics.profile_difference_percent:.2f",
+   "reason": "the verification report profile difference against a reference engine, not a value of an item"
+  },
+  {
+   "file": "lib/edi/verification.py",
+   "match": "metrics.max_deviation_percent:.2f",
+   "reason": "the verification report maximum deviation against a reference engine, not a value of an item"
+  },
+  {
+   "file": "lib/edi/verification.py",
+   "match": "tolerances.min_intensity_ratio:.10g",
+   "reason": "the verification report intensity ratio bounds against a reference engine, not a value of an item"
+  },
+  {
+   "file": "lib/edi/verification.py",
+   "match": "metrics.intensity_ratio:.6f",
+   "reason": "the verification report intensity ratio against a reference engine, not a value of an item"
+  },
+  {
+   "file": "lib/edi/verification.py",
+   "match": "tolerances.min_correlation:.12g",
+   "reason": "the verification report correlation bound against a reference engine, not a value of an item"
+  },
+  {
+   "file": "lib/edi/verification.py",
+   "match": "metrics.correlation:.9f",
+   "reason": "the verification report correlation against a reference engine, not a value of an item"
+  },
+  {
+   "file": "app/src/structure_view_options.cpp",
+   "match": "QString::number(options_.atom_scale, 'g', 6)",
+   "reason": "the `_structure_view.atom_scale` value a save writes, not a displayed value"
+  },
+  {
+   "file": "app/src/structure_view_options.cpp",
+   "match": "QString::number(options_.adp_probability, 'g', 6)",
+   "reason": "the `_structure_view.adp_probability` value a save writes, not a displayed value"
+  },
+  {
+   "file": "app/src/run_log.cpp",
+   "match": "QString::number(seconds, 'f', decimals)",
+   "reason": "the run log's seconds-since-the-previous-record column (ADR-0062), a duration rounded to five characters, not a value of an item"
+  },
+  {
+   "file": "app/src/run_log.cpp",
+   "match": "QString::number(seconds, 'f', 0)",
+   "reason": "the run log's seconds-since-the-previous-record column (ADR-0062), a duration rounded to five characters, not a value of an item"
+  },
+  {
+   "file": "app/src/assistant_markdown.cpp",
+   "match": "QString::number(dpr,'g',16)",
+   "reason": "part of a cache key for a rendered formula picture, never shown"
+  },
+  {
+   "file": "app/src/assistant_view_model.cpp",
+   "match": "QString::number(value,'g',std::numeric_limits<double>::max_digits10)",
+   "reason": "the exact text typed into a setup control, which the control parses back to the same double; not a displayed value"
+  },
+  {
+   "file": "app/src/codex_agent.cpp",
+   "match": "QStringLiteral(\"n:\") + QString::number(number, 'f', 0)",
+   "reason": "a lookup key for a JSON-RPC request id, never shown"
+  },
+  {
+   "file": "core/src/fit_inputs.hpp",
+   "match": "settings << std::setprecision(17)",
+   "reason": "an identity key of the fit settings, compared and never shown"
+  },
+  {
+   "file": "app/qml/Components/OnlineLoadDialog.qml",
+   "match": "row.cellA.toFixed(2), row.cellB.toFixed(2), row.cellC.toFixed(2), row.cellAlpha.toFixed(1), row.cellBeta.toFixed(1), row.cellGamma.toFixed(1)",
+   "reason": "the search results' compact cell column, lengths with two decimals and angles with one (the owner, 2026-11-04); a listing of entries found online, not a value of the project's items"
+  },
+  {
+   "file": "app/qml/Components/StatusBar.qml",
+   "match": "(Session.exampleDownloadReceived / 1024).toFixed(1)",
+   "reason": "an example's download progress in KB while it opens, not a value of an item"
+  },
+  {
+   "file": "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
+   "match": "const text = String(Number(value.toPrecision(6)));",
+   "reason": "counts the decimals a crystal-axis cell shows, to match a derived value to them; the text itself is never shown"
+  },
+  {
+   "file": "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
+   "match": "return value.toFixed(decimals);",
+   "reason": "a derived moment value without an s.u. (|M|, a Cartesian or spherical component), which has no dictionary item, to the decimals of the crystal-axis components (the owner, 2026-11-03)"
+  },
+  {
+   "file": "app/qml/Pages/Structure/MagneticFormFactorsGroup.qml",
+   "match": "return Number((2 / (1 + value)).toPrecision(4)).toString();",
+   "reason": "the Landé g a C2 coefficient stands for, g = 2 / (1 + C2), derived for display and not an item"
+  },
+  {
+   "file": "app/src/structure_view_options.cpp",
+   "match": "QString::number(options_.moment_scale, 'g', 6)",
+   "reason": "the `_structure_view.moment_scale` value a save writes, not a displayed value"
+  }
+ ],
+ "names": [
+  {
+   "file": "app/qml/Base/Gui/Elements/ParamTextField.qml",
+   "literal": "s.u.",
+   "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
+  },
+  {
+   "file": "app/qml/Components/PaletteStrip.qml",
+   "literal": "calculator",
+   "reason": "the Font Awesome icon's name, not the calculator category's title"
+  },
+  {
+   "file": "app/qml/Components/ParameterCell.qml",
+   "literal": "s.u.",
+   "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
+  },
+  {
+   "file": "app/qml/Components/ScanViewChart.qml",
+   "literal": "file",
+   "reason": "the scan view's rows in the order of their files, its own word; not a selector token"
+  },
+  {
+   "file": "app/qml/Components/SingleCrystalChart.qml",
+   "literal": "F",
+   "reason": "the chart's plotted quantity, the structure-factor amplitude, not the observed threshold's basis option"
+  },
+  {
+   "file": "app/qml/Components/StructureToolbar.qml",
+   "literal": "Bonds",
+   "reason": "a view toggle tooltip, an app-only setting (I1)"
+  },
+  {
+   "file": "app/qml/Components/StructureToolbar.qml",
+   "literal": "Cell",
+   "reason": "a view toggle tooltip, an app-only setting (I1)"
+  },
+  {
+   "file": "app/qml/Main.qml",
+   "literal": "Project",
+   "reason": "a page name (edi ADR-0017), not the _metadata category"
+  },
+  {
+   "file": "app/qml/Main.qml",
+   "literal": "Report",
+   "reason": "a page name (edi ADR-0017), not the _report category"
+  },
+  {
+   "file": "app/qml/Pages/Analysis/AnalysisPage.qml",
+   "literal": "Correlations",
+   "reason": "a main-area tab name beside Pattern and Evolution (edi ADR-0017), not the correlation loop"
+  },
+  {
+   "file": "app/qml/Pages/Analysis/ParametersGroup.qml",
+   "literal": "s.u.",
+   "reason": "the parameter table column of parameter s.u., not the measured-data s.u. item"
+  },
+  {
+   "file": "app/qml/Pages/Experiment/InstrumentGroup.qml",
+   "literal": "Instrument",
+   "reason": "the instrument that measured the experiment, a selector label, not the instrument category's title"
+  },
+  {
+   "file": "app/qml/Pages/Experiment/LinkedStructureGroup.qml",
+   "literal": "s.u.",
+   "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
+  },
+  {
+   "file": "app/qml/Pages/Project/ProjectPage.qml",
+   "literal": "Project",
+   "reason": "a page name (edi ADR-0017), not the _metadata category"
+  },
+  {
+   "file": "app/qml/Pages/Project/RecentProjectsGroup.qml",
+   "literal": "Project",
+   "reason": "the recent projects list's column of places, not the _metadata category"
+  },
+  {
+   "file": "app/qml/Pages/Report/ReportPage.qml",
+   "literal": "Report",
+   "reason": "a page name (edi ADR-0017), not the _report category"
+  },
+  {
+   "file": "app/qml/Pages/Report/ReportPreview.qml",
+   "literal": "Correlations",
+   "reason": "a report section heading (edi ADR-0036), not the correlation loop"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "literal": "Auto",
+   "reason": "an app preference (engine threads) in the About details, outside the dictionary (I1)"
+  },
+  {
+   "file": "app/src/example_list_model.cpp",
+   "literal": "Fitting mode",
+   "reason": "an example filter facet title; the facets move to experiment items with the metadata move"
+  },
+  {
+   "file": "core/src/adapter.cpp",
+   "literal": "TOF",
+   "reason": "the beam mode abbreviation in a diagnostic, not a label"
+  },
+  {
+   "file": "core/src/scan_views.cpp",
+   "literal": "Auto",
+   "reason": "the Map's direction choice, a view setting outside the dictionary"
+  },
+  {
+   "file": "data/report/report.js",
+   "literal": "Bonds",
+   "reason": "the exported structure view's toggle for its bonds, a view setting, not the bond category"
+  },
+  {
+   "file": "data/report/report.js",
+   "literal": "Cell",
+   "reason": "the exported structure view's toggle for its unit-cell box, a view setting, not the cell category"
+  },
+  {
+   "file": "lib/src/bindings.cpp",
+   "literal": "Alias",
+   "reason": "the name of a Python class, as diffraction-lib names it; not a displayed label"
+  },
+  {
+   "file": "lib/src/bindings.cpp",
+   "literal": "Aliases",
+   "reason": "the name of a Python class, as diffraction-lib names it; not a displayed label"
+  },
+  {
+   "file": "lib/src/bindings.cpp",
+   "literal": "Constraint",
+   "reason": "the name of a Python class, as diffraction-lib names it; not a displayed label"
+  },
+  {
+   "file": "lib/src/bindings.cpp",
+   "literal": "Constraints",
+   "reason": "the name of a Python class, as diffraction-lib names it; not a displayed label"
+  },
+  {
+   "file": "lib/src/bindings.cpp",
+   "literal": "Cell",
+   "reason": "the name of a Python class, as diffraction-lib names it; not a displayed label"
+  },
+  {
+   "file": "lib/src/bindings.cpp",
+   "literal": "Project",
+   "reason": "the name of a Python class, as diffraction-lib names it; not a displayed label"
+  },
+  {
+   "file": "app/qml/Pages/Report/ReportTable.qml",
+   "literal": ".",
+   "reason": "the decimal point of a number aligned on its point, not the inapplicable polarisation token"
+  },
+  {
+   "file": "app/qml/Components/AppPreferencesDialog.qml",
+   "literal": "All",
+   "reason": "the tooltip level that shows every tooltip (ADR-0076), not a dictionary name"
+  },
+  {
+   "file": "app/qml/Components/AppPreferencesDialog.qml",
+   "literal": "Appearance",
+   "reason": "the preferences page of the app's look, not the structure view category"
+  },
+  {
+   "file": "app/qml/Pages/Analysis/RefinementGroup.qml",
+   "literal": "all",
+   "reason": "the empty threshold's placeholder: every reflection is used, not the atoms option"
+  },
+  {
+   "file": "app/src/run_log.cpp",
+   "literal": "Auto",
+   "reason": "the run log header's engine-threads preference, outside the dictionary (I1)"
+  },
+  {
+   "file": "app/src/session.cpp",
+   "literal": "project saved",
+   "reason": "a run-log record of a save (ADR-0062), not a name shown to the user"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "literal": "Project",
+   "reason": "a page name (edi ADR-0017), not the _metadata category"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "literal": "Report",
+   "reason": "a page name (edi ADR-0017), not the _report category"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "literal": "None",
+   "reason": "the assistant's reasoning-effort choice, an app preference outside the dictionary (I1)"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "literal": "WP",
+   "reason": "the sample text that measures the Wyckoff column's header width, not the item's label"
+  },
+  {
+   "file": "core/src/assistant.cpp",
+   "literal": "\u00b5s",
+   "reason": "the axis unit in the assistant's read result for the model, a data field and not a label"
+  },
+  {
+   "file": "app/qml/Pages/Structure/AtomSiteMomentGroup.qml",
+   "literal": "My",
+   "reason": "the Cartesian y component's header beside Mx and Mz, not the crystal-axis component"
+  },
+  {
+   "file": "app/src/run_log.cpp",
+   "literal": "All",
+   "reason": "the stored tooltip level that shows every tooltip (ADR-0076), not a dictionary name"
+  },
+  {
+   "file": "app/src/assistant_native_create.cpp",
+   "literal": "Uiso",
+   "reason": "the ADP type token in the assistant's tool schema, not the expanded-site U iso column name"
+  },
+  {
+   "file": "app/src/structure_view_model.cpp",
+   "literal": "Uiso",
+   "reason": "the ADP type token a site's selector offers, not the expanded-site U iso column name"
+  },
+  {
+   "file": "core/include/edi/model.hpp",
+   "literal": "Uiso",
+   "reason": "the ADP type token a site declares, not the expanded-site U iso column name"
+  },
+  {
+   "file": "app/qml/Components/AppPreferencesDialog.qml",
+   "literal": "Auto",
+   "reason": "the engine thread count chosen by the machine, not the background estimate's auto choice"
+  },
+  {
+   "file": "app/qml/Components/PerformanceGroup.qml",
+   "literal": "Auto",
+   "reason": "the engine thread count chosen by the machine, not the background estimate's auto choice"
+  }
+ ]
+}

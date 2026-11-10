@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "FullProf 8.40 (references); edi (regression pins)",
+    "artifact": "fullprof/scale-fit.out",
+    "provenance": "PROVENANCE.md"
+  },
+  "quantities": {
+    "n_free": {
+      "value": 1.0,
+      "kind": "reference",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "n_points_fitted": {
+      "value": 2821.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "param.scale.value": {
+      "value": 403.07244873,
+      "kind": "reference",
+      "tol_abs": 3.384167194,
+      "tol_rel": null
+    },
+    "iterations": {
+      "value": 2.0,
+      "kind": "regression-pin",
+      "tol_abs": 0.0,
+      "tol_rel": null
+    },
+    "reduced_chi_square": {
+      "value": 1426.708991,
+      "kind": "regression-pin",
+      "tol_abs": 1e-06,
+      "tol_rel": null
+    },
+    "rwp": {
+      "value": 0.7289898949,
+      "kind": "regression-pin",
+      "tol_abs": 1e-09,
+      "tol_rel": null
+    }
+  }
+}

@@ -1,0 +1,1164 @@
+{
+    "actions": [
+        {
+            "action": "platform:light",
+            "scene": "home"
+        },
+        {
+            "action": "theme:light",
+            "scene": "home"
+        },
+        {
+            "action": "home.start",
+            "scene": "project-details"
+        },
+        {
+            "action": "project.create",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.name=pd-neut-tof_cecoal-polaris",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.title=CeCoAl₃ [Pmma] - POLARIS @ ISIS",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-ViVYNf/pd-neut-tof_cecoal-polaris",
+            "scene": "project-details"
+        },
+        {
+            "action": "createProject.accept",
+            "scene": "project-created"
+        },
+        {
+            "action": "pin-time:01 Jan 2026 12:00:00",
+            "scene": "project-created"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "expand:group.structures",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "structures.load",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "structures.load.web",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.source",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "choose:EasyDiffraction Database",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=pd-neut-tof_cecoal-polaris-cecoal",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "structure-loaded-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-loaded-0"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "expand:group.experiments",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "experiments.load",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "experiments.load.experimentWeb",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=pd-neut-tof_cecoal-polaris-polaris",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "experiment-loaded-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-loaded-0"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.instrument.calib_d_to_tof_offset",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.instrument.calib_d_to_tof_quadratic",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.linked_structures[cecoal].scale",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.cell.length_a",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.cell.length_b",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.cell.length_c",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.background[10].coef",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.background[11].coef",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.background[12].coef",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.background[1].coef",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.background[2].coef",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.background[3].coef",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.background[4].coef",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.background[5].coef",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.background[6].coef",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.background[7].coef",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.background[8].coef",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.background[9].coef",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.peak.broad_gauss_sigma_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.peak.broad_lorentz_gamma_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Al2].fract_z",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Al3].fract_x",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Al3].fract_z",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Ce].fract_z",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Co].fract_z",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Al1].adp_iso",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Al2].adp_iso",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Al3].adp_iso",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Ce].adp_iso",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Co].adp_iso",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiment.absorption.abscor1",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Al3].occupancy",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-7-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-7-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-7-fit"
+        },
+        {
+            "action": "mainArea.analysis.tab.correlations",
+            "scene": "correlations"
+        },
+        {
+            "action": "mainArea.analysis.tab.fitting",
+            "scene": "report"
+        },
+        {
+            "action": "appBar.tab.report",
+            "scene": "report"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "report"
+        }
+    ],
+    "binary_sha256": "b5cc90a1c3fb05fa5f5729aa7e3a496252546936ddc5ac49724bc250094c5fe4",
+    "dependencies": [
+        {
+            "file": "inputs/analysis/analysis.edi",
+            "sha256": "4407d1054bf8a7aa7d7ca39a67adcb9555a9bac20b7bea41c4696d3b26904237"
+        }
+    ],
+    "error": "",
+    "example": "pd-neut-tof_cecoal-polaris",
+    "fixture": {
+        "detail": "Structure and time-of-flight profile fit · 24-term Chebyshev background",
+        "id": "pd-neut-tof_cecoal-polaris",
+        "origin": "POLARIS @ ISIS",
+        "samples": [
+            "CeCoAl₃ [Pmma]"
+        ],
+        "searchAliases": [
+            "pd-neut-tof_cecoal-polaris",
+            "CeCoAl₃ [Pmma] · POLARIS @ ISIS",
+            "Structure and time-of-flight profile fit · 24-term Chebyshev background"
+        ],
+        "sources": [
+            "docs/user/cli/pd-neut-tof_cecoal-polaris/project/project.edi",
+            "docs/user/cli/pd-neut-tof_cecoal-polaris/project/analysis/analysis.edi",
+            "docs/user/cli/pd-neut-tof_cecoal-polaris/project/experiments/polaris.edi",
+            "docs/user/cli/pd-neut-tof_cecoal-polaris/project/structures/cecoal.edi"
+        ],
+        "values": {
+            "beamMode": [
+                "time-of-flight"
+            ],
+            "dimensionality": [
+                "1d"
+            ],
+            "facilities": [
+                "ISIS"
+            ],
+            "fittingMode": [
+                "single"
+            ],
+            "instruments": [
+                "POLARIS"
+            ],
+            "polarisation": [
+                "unpolarised"
+            ],
+            "probe": [
+                "neutron"
+            ],
+            "purpose": [
+                "refinement"
+            ],
+            "sampleForm": [
+                "powder"
+            ],
+            "scatteringType": [
+                "bragg"
+            ],
+            "structure": [
+                "crystal"
+            ]
+        }
+    },
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "inputs": {
+        "experiment": {
+            "file": "inputs/experiments/polaris.edi",
+            "sha256": "fed88393498ca5c5bbb0310e90a03553d497717adb8f093f2a9b39262f1423d0"
+        },
+        "structure": {
+            "file": "inputs/structures/cecoal.edi",
+            "sha256": "def09ded57c181a601e481deef7bf49b135374646e4b05a7e6939e44a5a6acf4"
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "scenes": [
+        {
+            "description": "Create the project",
+            "id": "project-created",
+            "image": "project-created.webp",
+            "metadata": "project-created.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Find the structure cecoal in the EasyDiffraction collection",
+            "id": "structure-web-0",
+            "image": "structure-web-0.webp",
+            "metadata": "structure-web-0.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Load the structure cecoal",
+            "id": "structure-loaded-0",
+            "image": "structure-loaded-0.webp",
+            "metadata": "structure-loaded-0.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Find the experiment polaris in the EasyDiffraction collection",
+            "id": "experiment-web-0",
+            "image": "experiment-web-0.webp",
+            "metadata": "experiment-web-0.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Load the experiment polaris",
+            "id": "experiment-loaded-0",
+            "image": "experiment-loaded-0.webp",
+            "metadata": "experiment-loaded-0.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Start with every parameter fixed",
+            "id": "nothing-free",
+            "image": "nothing-free.webp",
+            "metadata": "nothing-free.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Scale, time-of-flight calibration and cell",
+            "id": "stage-1-fit",
+            "image": "stage-1-fit.webp",
+            "metadata": "stage-1-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Background",
+            "id": "stage-2-fit",
+            "image": "stage-2-fit.webp",
+            "metadata": "stage-2-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Peak widths",
+            "id": "stage-3-fit",
+            "image": "stage-3-fit.webp",
+            "metadata": "stage-3-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Atom positions",
+            "id": "stage-4-fit",
+            "image": "stage-4-fit.webp",
+            "metadata": "stage-4-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Displacements",
+            "id": "stage-5-fit",
+            "image": "stage-5-fit.webp",
+            "metadata": "stage-5-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Absorption",
+            "id": "stage-6-fit",
+            "image": "stage-6-fit.webp",
+            "metadata": "stage-6-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Al3 occupancy",
+            "id": "stage-7-fit",
+            "image": "stage-7-fit.webp",
+            "metadata": "stage-7-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the correlations",
+            "id": "correlations",
+            "image": "correlations.webp",
+            "metadata": "correlations.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Review the report",
+            "id": "report",
+            "image": "report.webp",
+            "metadata": "report.json",
+            "page": "report",
+            "sidebar": "Main",
+            "status": "captured"
+        }
+    ],
+    "schema": 1,
+    "script_sha256": "02d223c7553eadd6b5065fe70a14f6293d16bab26cc75207ce1154719f9354dc",
+    "source_revision": "a4b6be4f6926cc6b17811f3263d7a34afff75a6d",
+    "status": "complete",
+    "workflow": "tutorial"
+}

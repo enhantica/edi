@@ -1,0 +1,61 @@
+{
+  "source": "Owner records 7836b4a78, e1f08e42b, 67999d34e and 9a3e5e7bc, 2026-11-08; newest record replaces the hidden-tags/header-tags arrangement.",
+  "sections": [
+    [
+      "Getting started",
+      "rocket"
+    ],
+    [
+      "Powder",
+      "chart-area"
+    ],
+    [
+      "Single crystal",
+      "cube"
+    ],
+    [
+      "Simulation",
+      "calculator"
+    ],
+    [
+      "Multiple datasets",
+      "layer-group"
+    ]
+  ],
+  "kinds": [
+    "Powder fit",
+    "Single-crystal fit",
+    "Magnetic structure fit",
+    "Joint fit",
+    "Sequential fit",
+    "Simulation"
+  ],
+  "interfaces": [
+    [
+      "Application",
+      "application",
+      "desktop"
+    ],
+    [
+      "Python",
+      "python",
+      "python"
+    ],
+    [
+      "Command line",
+      "cli",
+      "terminal"
+    ]
+  ],
+  "filters": [
+    "purpose",
+    "fittingMode",
+    "sampleForm",
+    "probe",
+    "beamMode"
+  ],
+  "layout": "Two equal slots per row; the last row pairs beam mode with the search/reset group. The reset is square and shares the search height.",
+  "builtins": {
+    "interface": "Interface tour"
+  }
+}

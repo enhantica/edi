@@ -1,0 +1,111 @@
+"""Live controls for the current scan header and scene-graph projection consumers."""
+
+import pytest
+
+from tests.integration.py import test_scan_extended_contract as contract
+from tests.integration.py.test_scan_app_contract import item, property_value, source
+
+
+@pytest.mark.parametrize('channel', ['model', 'labels', 'table', 'number-width', 'number-label'])
+def test_header_observer_rejects_disconnected_model_and_displayed_labels(monkeypatch, channel):
+    path = 'qml/Pages/Experiment/ExperimentsGroup.qml'
+    good = source(path)
+    contract.test_scan_explorer_header_has_declared_columns_in_order()
+    old, new = {
+        'model': ('model: group.scanColumns', 'model: []'),
+        'labels': ('text: column.modelData', 'text: "unused"'),
+        'table': (
+            'sourceModel: group.project ? group.project.experiments : null',
+            'sourceModel: null',
+        ),
+        'number-width': ('columns: [numberColumnWidth,', 'columns: [0,'),
+        'number-label': (
+            'header: EaComponents.ListViewHeader {\n                EaComponents.ListViewLabel {',
+            (
+                'header: EaComponents.ListViewHeader {\n'
+                '                EaComponents.ListViewLabel {\n'
+                '                    text: "unexpected"'
+            ),
+        ),
+    }[channel]
+    changed = good.replace(old, new)
+    assert changed != good, (
+        'Dataset list wiring: each escape reaches the current displayed header or table'
+    )
+    monkeypatch.setattr(contract, 'source', lambda name: changed if name == path else source(name))
+    with pytest.raises(AssertionError):
+        contract.test_scan_explorer_header_has_declared_columns_in_order()
+
+
+@pytest.mark.parametrize(
+    'channel', ['target', 'layer', 'coordinates', 'selection', 'low', 'high', 'axis-bounds']
+)
+def test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty(monkeypatch, channel):
+    good = contract.evolution_component()
+    contract.assert_evolution_bindings(good)
+    if channel in {'low', 'high'}:
+        path = 'src/evolution_view_model.cpp'
+        native = source(path)
+        old = 'point.y - point.error' if channel == 'low' else 'point.y + point.error'
+        changed = native.replace(old, 'point.y')
+        assert changed != native, (
+            'Evolution wiring: the uncertainty escape reaches the actual drawing operation'
+        )
+        monkeypatch.setattr(
+            contract, 'source', lambda name: changed if name == path else source(name)
+        )
+        with pytest.raises(AssertionError):
+            contract.assert_evolution_bindings(good)
+        return
+    old, new = {
+        'target': ('target: chart.evolution', 'target: unrelated.evolution'),
+        'layer': ('value: chart.shown ? layer : null', 'value: null'),
+        'coordinates': ('axisY.max - mouse.y / height', 'axisY.min + mouse.y / height'),
+        'selection': ('currentExperimentIndex = dataset', 'currentExperimentIndex = 0'),
+        'axis-bounds': ('chart.evolution ? chart.evolution.xMin : 0', 'chart.evolution ? 2 : 0'),
+    }[channel]
+    changed = good.replace(old, new)
+    assert changed != good, (
+        'Evolution wiring: each escape reaches the actual rendered layer or point event'
+    )
+    with pytest.raises(AssertionError):
+        contract.assert_evolution_bindings(changed)
+
+
+@pytest.mark.parametrize('_consumer', ['chart'])
+def test_actual_stale_markers_reject_constant_or_other_result_state(_consumer):
+    good = contract.evolution_component()
+    contract.assert_stale_marker(good)
+    marker = item(good, 'evolution.outOfDate')
+    visible = property_value(marker, 'visible')
+    for wrong in (
+        'true',
+        'false',
+        visible.replace('chart.evolution', 'other.evolution').replace('bar.fit', 'other.fit'),
+    ):
+        changed = good.replace(marker, marker.replace(visible, wrong))
+        assert changed != good, (
+            'Stale-result wiring: the escape changes the current retained-results marker'
+        )
+        with pytest.raises(AssertionError):
+            contract.assert_stale_marker(changed)
+
+
+@pytest.mark.parametrize('composition', ['direct-model', 'project-alias'])
+def test_scene_graph_observer_accepts_equivalent_model_and_axis_bindings(composition):
+    good = contract.evolution_component()
+    if composition == 'direct-model':
+        changed = good
+        for prop, axis in [
+            ('xMin', 'axisX.min'),
+            ('xMax', 'axisX.max'),
+            ('yMin', 'axisY.min'),
+            ('yMax', 'axisY.max'),
+        ]:
+            changed = changed.replace(prop + ': ' + axis, prop + ': chart.evolution.' + prop)
+    else:
+        changed = good.replace('target: chart.evolution', 'target: chart.project.evolution')
+    assert changed != good, (
+        'Evolution wiring: the supported composition changes its actual consumer binding'
+    )
+    contract.assert_evolution_bindings(changed)

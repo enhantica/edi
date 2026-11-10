@@ -1,0 +1,182 @@
+/* One frame for every docs image: a small step from the page colour, darker on the light page and lighter on the
+   dark one, so it follows the scheme. App captures draw the same colour as their SVG frame (gui-capture.css). */
+[data-md-color-scheme="default"]{--ed-image-border:color-mix(in srgb,var(--md-default-bg-color) 92%,#000)}
+[data-md-color-scheme="slate"]{--ed-image-border:color-mix(in srgb,var(--md-default-bg-color) 93%,#fff)}
+/* A drawing or chart on a white background sits inside that frame with room around it; a full-colour picture that
+   fills its area (`ed-image-full`) keeps its edges and has no frame, so the two never mix. An inline icon has neither
+   (owner, 2026-11-09). */
+.md-typeset img:not([src^="data:"]){border:1px solid var(--ed-image-border);padding:.6rem;background:#fff;box-sizing:border-box}
+.md-typeset img.ed-image-full,.md-typeset img[src^="data:"]{border:0;padding:0;background:none}
+/* One picture per scheme: the theme's light/dark image switch, which no component's display rule may undo. */
+[data-md-color-scheme="slate"] img[src$="#only-light"],[data-md-color-scheme="default"] img[src$="#only-dark"]{display:none!important}
+/* Shared components. The homepage is the visual reference (ADR-0005). */
+:root {
+  --ed-button-radius: .4rem;
+  --ed-screenshot-radius: 1.2%;
+}
+.md-typeset .md-button,
+.md-typeset .md-button:hover,
+.md-typeset .md-button:focus,
+.md-typeset .md-button:active {
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.3rem;
+  margin: 0;
+  padding: .6rem 1.05rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: var(--ed-button-radius);
+  font-size: .8rem;
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+  transform: none;
+  scale: 1;
+  box-shadow: none;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.md-typeset .md-button { background: transparent; color: var(--md-default-fg-color); }
+.md-typeset .md-button--primary { background: var(--md-primary-fg-color); border-color: transparent; color: var(--md-primary-bg-color); }
+.md-typeset .md-button:not(:disabled):hover,
+.md-typeset .md-button:not(:disabled):focus-visible { background: var(--md-accent-fg-color--transparent); border-color: var(--md-primary-fg-color); color: var(--md-primary-fg-color); }
+.md-typeset .md-button--primary:not(:disabled):hover,
+.md-typeset .md-button--primary:not(:disabled):focus-visible { background: var(--md-primary-fg-color--dark); border-color: transparent; color: var(--md-primary-bg-color); }
+.md-typeset .md-button:focus-visible { outline: 2px solid var(--md-primary-fg-color); outline-offset: 3px; }
+.md-typeset .md-button:disabled { opacity: .5; cursor: default; }
+.md-typeset p:has(> .md-button) { display: flex; flex-wrap: wrap; gap: .65rem; }
+.md-typeset .tabbed-labels > label,
+.md-typeset .tabbed-labels > label > a { display: flex; align-items: center; gap: .3em; }
+.md-typeset .tabbed-labels .twemoji { display: inline-flex; flex: none; align-items: center; margin: 0; width: 1em; height: 1em; line-height: 1; }
+.md-typeset .tabbed-labels .gui-fa { flex: none; margin-right: 0; }
+@media (prefers-reduced-motion: reduce) { .md-typeset .md-button { transition: none; } }
+
+.md-typeset ol.ed-workflow-diagram {display:grid;grid-template-columns:repeat(var(--ed-flow-columns,5),minmax(0,1fr));gap:1rem;list-style:none;margin:1.5rem 0;padding:0}
+.md-typeset ol.ed-workflow-diagram > li {position:relative;margin:0;padding:0}
+.md-typeset .ed-workflow-diagram li:not(:last-child)::after {content:"→";position:absolute;inset-inline-end:-.5rem;top:50%;transform:translate(50%,-50%);color:var(--md-primary-fg-color)}
+.md-typeset .ed-workflow-diagram a {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;padding:.5rem .2rem;border:1px solid var(--md-primary-fg-color);border-radius:.25rem;background:var(--md-accent-fg-color--transparent);font-size:.75rem;white-space:nowrap;text-decoration:none}
+.md-typeset .ed-workflow-diagram svg {width:1.1rem;height:1.1rem;fill:currentColor;flex:none}
+.md-typeset .ed-workflow-diagram a:hover {background:var(--md-primary-fg-color);color:var(--md-primary-bg-color)}
+.md-typeset .ed-workflow-diagram a:focus-visible {outline:2px solid var(--md-primary-fg-color);outline-offset:3px}
+.md-typeset .ed-workflow-stage-table :is(th,td):first-child {width:1%;white-space:nowrap}
+.md-typeset .ed-workflow-stage-table td:first-child a {display:inline-flex;align-items:center;gap:.3em;white-space:nowrap}
+.md-typeset .ed-workflow-stage-table td:first-child .twemoji {margin:0;flex:none}
+.ed-interface-link {display:inline-flex;align-items:center;gap:.3em;white-space:nowrap}
+.md-typeset .ed-interface-link .twemoji {margin:0;flex:none}
+.ed-interface-icons {display:inline-flex;align-items:center;gap:.18em;vertical-align:middle;flex:none}
+.md-tabs__link:has(.ed-interface-icons) {display:inline-flex;align-items:center;gap:.3em}
+.md-tabs__link .ed-interface-icons svg {margin:0}
+.ed-interface-icons svg {width:1em;height:1em;fill:currentColor;flex:none}
+/* Font Awesome fills its box, so it draws at text size inside the theme's 1.3em icon slot. */
+.md-nav__link > svg {width:1em;height:1em;margin-inline:.15em;align-self:center;flex:none}
+.md-nav__link > .ed-interface-icons {inline-size:1.3em;justify-content:center;align-self:center}
+.md-typeset .ed-interface-icons svg[fill="none"], .ed-interface-icons svg[fill="none"] {fill:none}
+@media (max-width: 600px) {
+  .md-typeset ol.ed-workflow-diagram {grid-template-columns:1fr;gap:1rem}
+  .md-typeset .ed-workflow-diagram a {flex-direction:row;padding:.4rem}
+  .md-typeset .ed-workflow-diagram li:not(:last-child)::after {content:"↓";inset-inline-end:50%;top:auto;bottom:-1rem;transform:translateX(50%);line-height:1rem}
+}
+
+/* Navigation symbols use the adjacent label colour, including active links. */
+.md-nav__link svg, .md-nav__link .twemoji, .md-nav__link .ed-reference-icon, .md-tabs__link .ed-interface-icons {color:inherit;opacity:1}
+
+/* Concept figures supplement short explanations; they are not application captures. */
+.md-typeset .ed-concept-flow a {height:100%;box-sizing:border-box;white-space:normal;text-align:center;min-height:4.2rem;padding:.5rem}
+.md-typeset .ed-concept-flow a .twemoji {display:block;width:1.1rem;height:1.1rem;margin:0}
+.ed-concept-figures {margin-block:.8rem 1.2rem}
+.md-typeset .ed-concept-figures figure {display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin:1.2rem auto;text-align:center}
+.md-typeset .ed-concept-figures figcaption {order:2;max-width:none;margin:.5rem 0 0;font-size:.7rem;font-style:normal;text-align:center}
+.ed-concept-figures img {order:1;display:block;width:100%;height:auto;border-radius:var(--ed-screenshot-radius)}
+.ed-concept-figures--single {max-width:360px;margin-inline:auto}
+@media (max-width:600px) {
+  .md-typeset .ed-concept-flow a {min-height:0}
+}
+
+.md-typeset .ed-concept-flow > li > p {margin:0;height:100%}
+
+/* Keep symbols together; a constrained table cell puts the label below them. */
+.md-typeset td .ed-icon-label {display:inline-flex;flex-wrap:wrap;align-items:center;gap:.2em .3em;max-inline-size:100%;white-space:normal;vertical-align:middle}
+.md-typeset td :is(.ed-icon-group,.ed-interface-icons) {display:inline-flex;align-items:center;gap:.18em;flex:none}
+.md-typeset td .ed-icon-text {flex:0 1 auto;min-inline-size:0;max-inline-size:100%;overflow-wrap:anywhere}
+.md-typeset td .ed-icon-group :is(.twemoji,.ed-reference-icon) {margin:0;flex:none}
+@media (min-width:601px) {
+  .md-typeset .ed-workflow-stage-table td:first-child .ed-icon-label {flex-wrap:nowrap;inline-size:max-content;max-inline-size:none}
+  .md-typeset .ed-workflow-stage-table td:first-child .ed-icon-text {flex:none;white-space:nowrap}
+}
+
+/* Keep page navigation; hide only the credits strip below it. */
+.md-footer-meta {
+  display: none;
+}
+
+.md-typeset .ed-release-interface {
+  display: inline-block;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.45rem;
+  padding: 0 0.35rem;
+  font-size: 0.72em;
+  white-space: nowrap;
+}
+
+/* Get-in-touch form (about/community.md). Frontend only; the action is wired to the mailer later. */
+.md-typeset .ed-contact-form{display:flex;flex-direction:column;gap:.9rem;margin:1.2rem 0 2rem}
+.md-typeset .ed-contact-row{display:flex;flex-wrap:wrap;gap:.9rem}
+.md-typeset .ed-contact-row>*{flex:1 1 12rem;min-width:0}
+/* One box for every field, the reason included, as the app's form draws them. */
+.md-typeset .ed-contact-form input,.md-typeset .ed-contact-form select,.md-typeset .ed-contact-form textarea{box-sizing:border-box;width:100%;margin:0;font-family:inherit;font-size:.8rem;font-weight:400;line-height:1.4;padding:.5rem .6rem;border:1px solid color-mix(in srgb,var(--md-default-fg-color) 14%,var(--md-default-bg-color));border-radius:.2rem;background-color:var(--md-default-bg-color);color:var(--md-default-fg-color)}
+.md-typeset .ed-contact-form select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:2rem;background-image:linear-gradient(45deg,transparent 50%,var(--md-default-fg-color--light) 50%),linear-gradient(135deg,var(--md-default-fg-color--light) 50%,transparent 50%);background-position:calc(100% - 1.05rem) 52%,calc(100% - .75rem) 52%;background-size:.3rem .3rem;background-repeat:no-repeat}
+.md-typeset .ed-contact-form ::placeholder{color:var(--md-default-fg-color--light);opacity:1}
+.md-typeset .ed-contact-form textarea{min-height:8rem;resize:vertical}
+.md-typeset .ed-contact-form button{align-self:flex-start;font:inherit;font-weight:700;cursor:pointer;padding:.55rem 1.4rem;border:none;border-radius:.2rem;background:var(--md-primary-fg-color);color:var(--md-primary-bg-color)}
+.md-typeset .ed-contact-status:empty{display:none}
+.md-typeset .ed-contact-note{font-size:.7rem;color:var(--md-default-fg-color--light);margin-top:-.2rem}
+/* The answer to a sent message, over the page as in the app: a check or a warning colour along its top. */
+.ed-contact-notice{max-width:26rem;padding:1.4rem 1.6rem 1.2rem;border:none;border-top:.25rem solid var(--md-accent-fg-color);border-radius:.3rem;background:var(--md-default-bg-color);color:var(--md-default-fg-color);font-size:.85rem;box-shadow:0 .4rem 1.6rem rgba(0,0,0,.35)}
+.ed-contact-notice[data-outcome="sent"]{border-top-color:#2e9e5b}
+.ed-contact-notice[data-outcome="failed"]{border-top-color:#d9534f}
+.ed-contact-notice::backdrop{background:rgba(0,0,0,.45)}
+.ed-contact-notice p{margin:0 0 1.1rem;line-height:1.5}
+.ed-contact-notice button{display:block;margin-left:auto;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer;padding:.45rem 1.2rem;border:none;border-radius:.2rem;background:var(--md-primary-fg-color);color:var(--md-primary-bg-color)}
+
+/* Three-interface illustration on the introduction page (one product, several ways to work). */
+.md-typeset p.ed-group-tags {margin-block:-.4rem .8rem}
+/* A tutorial page's Colab and Download buttons: a gap between the icon and the text. */
+.md-typeset .ed-tutorial-button .twemoji {margin-inline-end:.45em}
+/* A tutorial's buttons stack in one column at every width, Colab on top, left-aligned and equally wide. */
+.md-typeset .ed-tutorial-buttons > p {display:inline-grid;grid-template-columns:max-content;gap:.5em;margin:0}
+/* The title is as far below the buttons as the tags are below the title. */
+.md-typeset .ed-tutorial-buttons {margin-bottom:1rem}
+.md-typeset .ed-tutorial-buttons + h1 {margin:0 0 1rem}
+.md-typeset .ed-tutorial-buttons + h1 + * {margin-top:0}
+.md-typeset .ed-tutorial-buttons .ed-tutorial-button {margin:0;text-align:left}
+/* The User guide's How you want to work table: full width, each interface's screenshot under its row's text,
+   one width for the three, small enough that the table fits the content width with Start here and First fit on one
+   line each (owner records 2026-11-09). */
+.md-typeset .ed-howto .md-typeset__scrollwrap,.md-typeset .ed-howto .md-typeset__table{margin:0;padding:0}
+/* Start here and First fit stay on one line, icon beside its text, and take only their width; the screenshot's column
+   takes the rest. */
+.md-typeset .ed-howto :is(th,td):not(:first-child){white-space:nowrap;width:1%}
+.md-typeset .ed-howto .ed-icon-label{white-space:nowrap;flex-wrap:nowrap}
+.md-typeset .ed-howto .ed-interface-preview{width:340px;margin:.5rem 0 0}
+.md-typeset .ed-howto .ed-interface-preview svg{display:block;width:100%;height:auto}
+/* Every docs table fills the content width (owner record 2026-11-09): Zensical wraps each table in an inline-block
+   .md-typeset__table inside a scroll wrapper whose negative margins and equal padding cancel out. The wrapper keeps
+   its automatic width, so its content box is the content column; a 100 % width would take the padding out of the
+   table. Text wraps; a number has no space to wrap at. Tables with the same columns on one page share one column
+   split (example-catalogue.js). */
+.md-typeset .md-typeset__scrollwrap{display:block;width:auto}
+.md-typeset .md-typeset__table{display:block;width:100%}
+.md-typeset table:not([class]){display:table;width:100%}
+
+/* CIF and Edi blocks in the app's Text-view colours (AppColors.qml), light and dark (owner record 2026-11-09):
+   datablock name, item name, loop column, loop_. */
+.md-typeset :is(.language-edi,.language-cif) .nn{color:#B3540B}
+.md-typeset :is(.language-edi,.language-cif) .nt{color:#1C5DB8}
+.md-typeset :is(.language-edi,.language-cif) .na{color:#2B7A30}
+.md-typeset :is(.language-edi,.language-cif) .k{color:#6E6E6E}
+[data-md-color-scheme="slate"] .md-typeset :is(.language-edi,.language-cif) .nn{color:#F2A65A}
+[data-md-color-scheme="slate"] .md-typeset :is(.language-edi,.language-cif) .nt{color:#79AEF2}
+[data-md-color-scheme="slate"] .md-typeset :is(.language-edi,.language-cif) .na{color:#82C886}
+[data-md-color-scheme="slate"] .md-typeset :is(.language-edi,.language-cif) .k{color:#A6A6A6}

@@ -1,0 +1,52 @@
+{
+  "fit": [
+    "#",
+    "datablock",
+    "category",
+    "entry",
+    "parameter",
+    "units",
+    "start",
+    "value",
+    "s.u.",
+    "change"
+  ],
+  "free": [
+    "#",
+    "datablock",
+    "category",
+    "entry",
+    "parameter",
+    "value",
+    "s.u.",
+    "min",
+    "max",
+    "units"
+  ],
+  "commit": "cb2cda7be6117199be8f8cac0a666a7bccd32d90",
+  "source_sha256": {
+    "src/easydiffraction/analysis/fit_helpers/reporting.py": "dbf1d4d1efe8cd0848f1ee602b8d359b6907250920b7a97817dc3e7fb4abc190",
+    "src/easydiffraction/analysis/analysis.py": "33ebeb33087364524f4fdb7a0b7049889e3f5a6e5cf908dd17435dff54b73344"
+  },
+  "explanation_terms": {
+    "start": [
+      "before",
+      "fit"
+    ],
+    "value": [
+      "fit",
+      "least"
+    ],
+    "s.u.": [
+      "standard",
+      "uncertainty",
+      "covariance"
+    ],
+    "change": [
+      "relative",
+      "%",
+      "↑",
+      "↓"
+    ]
+  }
+}

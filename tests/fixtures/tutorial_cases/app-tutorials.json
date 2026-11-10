@@ -1,0 +1,33 @@
+{
+  "source": "The Interface tour and one built-in tutorial per declared app case.",
+  "required": [
+    "interface",
+    "pd-neut-cwl_lbco_simulation",
+    "sc-neut-cwl_tb2ti2o7-heidi_simulation",
+    "pd-neut-cwl_lbco-hrpt",
+    "pd-neut-cwl_hs-hrpt",
+    "pd-neut-cwl_cosio-d20",
+    "pd-neut-cwl_cosio-d20_2k",
+    "pd-neut-cwl_lmo-echidna",
+    "pd-neut-cwl_y2o3-spodi",
+    "pd-neut-cwl_yalo3-al2o3-spodi",
+    "pd-neut-tof_si-sepd",
+    "pd-neut-tof_cecoal-polaris",
+    "pd-neut-tof_ceo2-pearl",
+    "pd-neut-tof_lbco-si-mcstas",
+    "pd-neut-tof_ncaf-wish",
+    "pd-neut-tof_ferrite-austenite-beer",
+    "pd-xray-cwl_pbso4-lab",
+    "pd-xray-cwl_lam7o3-p021",
+    "pd-neut-xray-cwl_pbso4-d1a-lab",
+    "pd-neut-cwl_cosio-d20_scan-213f",
+    "pd-xray-cwl_latp-bm01_scan",
+    "sc-neut-cwl_tb2ti2o7-heidi",
+    "sc-neut-cwl_pr2nio4-5c2",
+    "sc-neut-tof_taurine-senju",
+    "sc-neut-cwl_cosio-heidi"
+  ],
+  "auxiliary": {
+    "interface": "Interface tour"
+  }
+}

@@ -1,0 +1,89 @@
+// SPDX-License-Identifier: BSD-3-Clause
+pragma Singleton
+
+import QtQuick
+
+import EasyApplication.Gui.Style as EaStyle
+
+// edi's own layout values, in one place: each is taken from easydiffractionbeta's QML and expressed in
+// the base's font size, so the pages carry no bare numbers. Fonts come only from the base's EaStyle
+// tokens, colours from those and AppColors.
+QtObject {
+    readonly property real unit: EaStyle.Sizes.fontPixelSize
+    readonly property real assistantDefaultWidth: unit * 30
+    readonly property real assistantMinimumWidth: unit * 23
+    readonly property real assistantMaximumWidth: unit * 48
+    readonly property real assistantMainMinimumWidth: unit * 40
+    // The original composer's Stop circle, shared by the status controls.
+    readonly property real assistantIconExtent: EaStyle.Sizes.toolButtonHeight * 0.75
+    readonly property real assistantControlBorderWidth: 1 // The existing status eye/Success outline.
+    // Borderless working glyphs match the eye circle's inner diameter.
+    readonly property real assistantIndicatorExtent: Math.max(0, assistantIconExtent - 2 * assistantControlBorderWidth)
+    // The original composer Stop/eye font size, shared by their status-bar copies.
+    readonly property real assistantControlIconSize: unit * 0.75 * 1.25
+    // Stop square only: keep the existing eye, circle paint and full hit target.
+    readonly property real assistantStopIconSize: assistantControlIconSize * 0.85
+
+    // The wordmark's mark (Components/Wordmark.qml; its name is 0.4309 of it): easydiffractionbeta's 5 units,
+    // the same on Home and in About (WordmarkWithVersion, edi ADR-0017 §1).
+    readonly property real homeMarkDiameter: unit * 5
+
+    // The smallest app area every page is made for (the owner, 2026-10-25): the desktop window cannot be made smaller,
+    // and the browser's page shows only a request to make it larger below it (Main.qml). In logical pixels.
+    readonly property int minimumAppWidth: 1024
+    readonly property int minimumAppHeight: 640
+
+    // Home page (easydiffractionbeta Pages/Home/Page.qml)
+    readonly property real homeBlockSpacer: unit * 2.5
+    readonly property real homeLinkColumnsSpacing: unit * 3
+    readonly property real homeLinkSpacing: unit
+    readonly property real homeBranchTopPadding: unit * 0.5
+
+    // Workflow pages (easydiffractionbeta Pages/*)
+    readonly property real fieldSpacing: unit * 0.5           // a table column's padding and a tag's
+    readonly property real groupContentSpacing: unit          // between rows inside a group
+    readonly property real indexColumnWidth: unit * 2.5       // a table's row-number column
+    readonly property real iconColumnWidth: EaStyle.Sizes.tableRowHeight        // a table's action-button column
+    readonly property real iconOnlyColumnWidth: unit * 2      // an icon-only display column: the icon and a margin (note 19)
+    readonly property real dataIndexColumnWidth: unit * 3.5   // a data table's row number (up to 5 digits)
+    readonly property real dataColumnWidth: unit * 6          // a data table's value column
+    readonly property real fileColumnWidth: unit * 7          // an explorer table's file column
+    readonly property real datasetFileColumnWidth: unit * 11  // a scan's data file name (01_101_101p9130.dat)
+    readonly property real descriptionNameColumnWidth: unit * 10
+    readonly property real descriptionInnerSpacing: unit * 0.85
+    readonly property real descriptionOuterSpacing: unit * 1.5
+    readonly property real descriptionTitleFontPixelSize: unit * 3
+    readonly property real textViewPadding: unit
+    // A Text tab's text view fills the tab down to the sidebar's bottom, under the Continue pill, which floats
+    // over it (edi ADR-0017 §7), never below the minimum. Its last lines can scroll clear of the pill: the
+    // pill, one unit above the sidebar's bottom (the text's own padding), and half a unit's gap above it.
+    readonly property real textViewMinimumHeight: unit * 5
+    readonly property real textViewContinueClearance: EaStyle.Sizes.sideBarButtonHeight + unit * 0.5
+    readonly property real reportPadding: unit * 2.5
+    // A chart toolbar's controls (ChartToolButton, ToolbarComboBox) are this tall, and this far apart within a
+    // group; the block selector row and the structure legend take the same values (edi ADR-0017 §7, §15, §16).
+    readonly property real toolbarControlSize: Math.round(unit * 2.5)
+    // The main area's side margin (the owner, 2026-10-05): the pattern chart's room right of its plot areas, which
+    // is also where the selector row and the chart toolbars start on the left, the structure view's toolbar
+    // inset on the right, and the pattern chart's gap from its toolbar down to the main plot area.
+    readonly property real mainAreaMargin: unit * 2
+    readonly property real toolbarSpacing: unit * 0.25
+    // One row of a legend (the pattern chart's, the structure view's): one text line's height, the pattern
+    // legend's spacing (the owner, 2026-10-11).
+    readonly property real legendRowHeight: Math.round(unit * 1.3)
+    // The structure view's legend rows: halfway between a legend row and a combo box list entry (the owner,
+    // 2026-10-11).
+    readonly property real structureLegendRowHeight: Math.round((legendRowHeight + EaStyle.Sizes.comboBoxHeight) / 2)
+    // A combo box list entry's side padding: the base MenuItem's (a literal 16 there).
+    readonly property real listItemPadding: 16
+    // Between the input boxes of one group, as between a chart toolbar's buttons (the owner's note 23).
+    readonly property real inputSpacing: toolbarSpacing
+    // The messages dialog's fixed width (edi ADR-0017 §14): about the Preferences dialog's.
+    readonly property real messagesDialogContentWidth: unit * 38
+    // The padding of a dialog's choice rows that read as one group (Save project as: Folder, Zip archive), closer
+    // together than the usual rows (owner, 2026-10-25).
+    readonly property real choiceRowPadding: Math.round(unit * 0.35)
+    // The About window's content: room for the third-party table's columns and a licence text below it.
+    readonly property real aboutWidth: unit * 52
+    readonly property real aboutHeight: unit * 32
+}

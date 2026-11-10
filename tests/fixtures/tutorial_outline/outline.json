@@ -1,0 +1,295 @@
+{
+  "reference": "https://github.com/easyscience/diffraction-lib",
+  "commit": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+  "scope": "Corresponding technique; unmatched material uses its technique outline",
+  "notebooks": {
+    "pd-neut-cwl_cosio-d20": {
+      "blob": "c90ac0f98f73bf3c0ef2ffdae72378409103c2c5",
+      "sha256": "d7e86fbeb3c33511044595ba339850e26a8bb5de908a703940d248c2dff3e626",
+      "sections": [
+        "Import Library",
+        "Define Structure",
+        "Define Experiment",
+        "Define Project",
+        "Perform Analysis",
+        "Report"
+      ]
+    },
+    "pd-neut-cwl_cosio-d20_2k": {
+      "blob": "c90ac0f98f73bf3c0ef2ffdae72378409103c2c5",
+      "sha256": "d7e86fbeb3c33511044595ba339850e26a8bb5de908a703940d248c2dff3e626",
+      "sections": [
+        "Import Library",
+        "Define Structure",
+        "Define Experiment",
+        "Define Project",
+        "Perform Analysis",
+        "Report"
+      ]
+    },
+    "pd-neut-cwl_cosio-d20_scan-213f": {
+      "blob": "7aad643deaeb738adc93fd9818fa07f358f02e76",
+      "sha256": "fc48f7a8f60c3c960314de8b7800223220f1cae06a27fb5a202db166c13b5966",
+      "sections": [
+        "Import Library",
+        "Define Project",
+        "Define Structure",
+        "Define Experiment",
+        "Perform Analysis"
+      ]
+    },
+    "pd-neut-cwl_hs-hrpt": {
+      "blob": "7c52569fb8cf8928d6ba174f60bdb58be3a4c58d",
+      "sha256": "10d27c4f863ba919e9524cd41abbe604480e7f14d58f8de73abc68289b43e141",
+      "sections": [
+        "Import Library",
+        "Define Structure",
+        "Define Experiment",
+        "Define Project",
+        "Perform Analysis",
+        "Report",
+        "Save Project"
+      ]
+    },
+    "pd-neut-cwl_lbco-hrpt": {
+      "blob": "5b63954627e45393f3194d92ce3fd33c4b1fdbef",
+      "sha256": "506126a789d632c7a7cee8d0a80c1847278895cb8722a929d85d297468cb1208",
+      "sections": [
+        "Import Library",
+        "Load Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "pd-neut-cwl_lbco_simulation": {
+      "blob": "3f4be8f86e12a718968321d4a08c7e637d6945ce",
+      "sha256": "9bb0c25665dfe30181f18560e2a47f3f4f6ac9fa29152e5aacf1087b3d9add69",
+      "sections": [
+        "Import Library",
+        "Define Project",
+        "Define Structure",
+        "Define Experiment",
+        "Perform Calculation",
+        "Save Project"
+      ]
+    },
+    "pd-neut-cwl_lmo-echidna": {
+      "blob": "5b63954627e45393f3194d92ce3fd33c4b1fdbef",
+      "sha256": "506126a789d632c7a7cee8d0a80c1847278895cb8722a929d85d297468cb1208",
+      "sections": [
+        "Import Library",
+        "Load Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "pd-neut-cwl_y2o3-spodi": {
+      "blob": "5b63954627e45393f3194d92ce3fd33c4b1fdbef",
+      "sha256": "506126a789d632c7a7cee8d0a80c1847278895cb8722a929d85d297468cb1208",
+      "sections": [
+        "Import Library",
+        "Load Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "pd-neut-cwl_yalo3-al2o3-spodi": {
+      "blob": "5b63954627e45393f3194d92ce3fd33c4b1fdbef",
+      "sha256": "506126a789d632c7a7cee8d0a80c1847278895cb8722a929d85d297468cb1208",
+      "sections": [
+        "Import Library",
+        "Load Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "pd-neut-cwl_yap-spodi_3k": {
+      "blob": "5b63954627e45393f3194d92ce3fd33c4b1fdbef",
+      "sha256": "506126a789d632c7a7cee8d0a80c1847278895cb8722a929d85d297468cb1208",
+      "sections": [
+        "Import Library",
+        "Load Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "pd-neut-tof_cecoal-polaris": {
+      "blob": "afd072b0e42576505959e3282895a5cdb712bc7c",
+      "sha256": "1009ffaf756a67973fd33483e10f2131bcc3208f476bbe9243384d1f897f1acb",
+      "sections": [
+        "Import Library",
+        "Define Structure",
+        "Define Experiment",
+        "Define Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "pd-neut-tof_ceo2-pearl": {
+      "blob": "afd072b0e42576505959e3282895a5cdb712bc7c",
+      "sha256": "1009ffaf756a67973fd33483e10f2131bcc3208f476bbe9243384d1f897f1acb",
+      "sections": [
+        "Import Library",
+        "Define Structure",
+        "Define Experiment",
+        "Define Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "pd-neut-tof_ferrite-austenite-beer": {
+      "blob": "afd072b0e42576505959e3282895a5cdb712bc7c",
+      "sha256": "1009ffaf756a67973fd33483e10f2131bcc3208f476bbe9243384d1f897f1acb",
+      "sections": [
+        "Import Library",
+        "Define Structure",
+        "Define Experiment",
+        "Define Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "pd-neut-tof_lbco-si-mcstas": {
+      "blob": "44704828ed5d9c27ed24463d2bf004999329dd91",
+      "sha256": "0d3e165f7f7af8c2154367cea19f22fccf78305ce963f5864921840c193adf98",
+      "sections": [
+        "Import Library",
+        "Define Structures",
+        "Define Experiment",
+        "Define Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "pd-neut-tof_ncaf-wish": {
+      "blob": "cab0e5a2bf3cb2b7b951b097f6dd3d9f9fcd2530",
+      "sha256": "8bfa1e6d27547a2e5e914dea10a4db6db18c8aba4616dadcc80f1b8f64291d4c",
+      "sections": [
+        "Import Library",
+        "Define Structure",
+        "Define Experiment",
+        "Define Project",
+        "Perform Analysis",
+        "Report",
+        "Save Project"
+      ]
+    },
+    "pd-neut-tof_si-sepd": {
+      "blob": "afd072b0e42576505959e3282895a5cdb712bc7c",
+      "sha256": "1009ffaf756a67973fd33483e10f2131bcc3208f476bbe9243384d1f897f1acb",
+      "sections": [
+        "Import Library",
+        "Define Structure",
+        "Define Experiment",
+        "Define Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "pd-neut-tof_si_simulation": {
+      "blob": "36fe007e8b51ce09da2cf572111cda243e69ba8a",
+      "sha256": "5e011daa00f71a6982bb5d365c54ba870e6b06674d1fa5104b5f70712d54c101",
+      "sections": [
+        "Import Library",
+        "Define Project",
+        "Define Structure",
+        "Define Experiment",
+        "Perform Calculation",
+        "Save Project"
+      ]
+    },
+    "pd-neut-xray-cwl_pbso4-d1a-lab": {
+      "blob": "8424411683a4e4b7a44795584294c470216b9bbf",
+      "sha256": "bbe09699211871aba7226d0d1abe8792734fb69140e5e8f6d85d56db2b524e31",
+      "sections": [
+        "Import Library",
+        "Define Structure",
+        "Define Experiments",
+        "Define Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "pd-xray-cwl_lam7o3-p021": {
+      "blob": "5b63954627e45393f3194d92ce3fd33c4b1fdbef",
+      "sha256": "506126a789d632c7a7cee8d0a80c1847278895cb8722a929d85d297468cb1208",
+      "sections": [
+        "Import Library",
+        "Load Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "pd-xray-cwl_latp-bm01_scan": {
+      "blob": "7aad643deaeb738adc93fd9818fa07f358f02e76",
+      "sha256": "fc48f7a8f60c3c960314de8b7800223220f1cae06a27fb5a202db166c13b5966",
+      "sections": [
+        "Import Library",
+        "Define Project",
+        "Define Structure",
+        "Define Experiment",
+        "Perform Analysis"
+      ]
+    },
+    "pd-xray-cwl_nacl_simulation": {
+      "blob": "4e089d466cadfed032db8ae220543e1e8f26a804",
+      "sha256": "a62ccc8424b4c5d92d6890674f928b0e43f7d5f174d06638d1f7d05d875c0bdd",
+      "sections": [
+        "Import Library",
+        "Define Project",
+        "Define Structure",
+        "Define Experiment",
+        "Perform Calculation",
+        "Save Project"
+      ]
+    },
+    "pd-xray-cwl_pbso4-lab": {
+      "blob": "49e79309c47e166b650e3842da334efcd6f2a014",
+      "sha256": "b4ff2a9344364b7515cc35e9221e5f3d90038a6b7732bd58b9195e0d966c0d67",
+      "sections": [
+        "Import Library",
+        "Define Structure",
+        "Define Experiments",
+        "Define Project",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    },
+    "sc-neut-cwl_pr2nio4-5c2": {
+      "blob": "ded14b307a86c9a095f1f316bdae659b75687848",
+      "sha256": "f63b004e34db56e2adbe5468d89e1f8ef70cb365644c67c3f1fe78a248af9b3f",
+      "sections": [
+        "Import Library",
+        "Define Project",
+        "Define Structure",
+        "Define Experiment",
+        "Perform Analysis",
+        "Report"
+      ]
+    },
+    "sc-neut-cwl_tb2ti2o7-heidi": {
+      "blob": "ded14b307a86c9a095f1f316bdae659b75687848",
+      "sha256": "f63b004e34db56e2adbe5468d89e1f8ef70cb365644c67c3f1fe78a248af9b3f",
+      "sections": [
+        "Import Library",
+        "Define Project",
+        "Define Structure",
+        "Define Experiment",
+        "Perform Analysis",
+        "Report"
+      ]
+    },
+    "sc-neut-tof_taurine-senju": {
+      "blob": "6a331b8a73d09f8db598e90442f4ed00677ee12b",
+      "sha256": "fc2f732240d9f21037144b55ca950bbd38f78282060858baa942ee183694f55f",
+      "sections": [
+        "Import Library",
+        "Define Project",
+        "Define Structure",
+        "Define Experiment",
+        "Perform Analysis",
+        "Save Project"
+      ]
+    }
+  }
+}

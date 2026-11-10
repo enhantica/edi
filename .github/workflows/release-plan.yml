@@ -1,0 +1,33 @@
+name: Prepare calendar release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  plan:
+    if: github.event.pull_request.head.repo.fork == false
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Prepare the source-bound identity and user notes
+        run: python tools/release/prepare.py --repo "$GITHUB_REPOSITORY" --output release-plan
+        env:
+          # Preparation reserves the version as an empty draft, made with the release token.
+          GH_TOKEN: ${{ secrets.GH_API_PERSONAL_ACCESS_TOKEN }}
+      - name: Upload the release inputs for review and qualification
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-plan-${{ github.run_attempt }}
+          path: release-plan
+          if-no-files-found: error
+          retention-days: 90

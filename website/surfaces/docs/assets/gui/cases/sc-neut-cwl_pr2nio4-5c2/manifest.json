@@ -1,0 +1,533 @@
+{
+    "actions": [
+        {
+            "action": "platform:light",
+            "scene": "home"
+        },
+        {
+            "action": "theme:light",
+            "scene": "home"
+        },
+        {
+            "action": "home.start",
+            "scene": "project-details"
+        },
+        {
+            "action": "project.create",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.name=sc-neut-cwl_pr2nio4-5c2",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.title=Pr₂NiO₄ [Fmmm] - 5C2 @ LLB",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-Nluchb/sc-neut-cwl_pr2nio4-5c2",
+            "scene": "project-details"
+        },
+        {
+            "action": "createProject.accept",
+            "scene": "project-created"
+        },
+        {
+            "action": "pin-time:01 Jan 2026 12:00:00",
+            "scene": "project-created"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "expand:group.structures",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "structures.load",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "structures.load.web",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.source",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "choose:EasyDiffraction Database",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=sc-neut-cwl_pr2nio4-5c2-pr2nio4",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "structure-loaded-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-loaded-0"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "expand:group.experiments",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "experiments.load",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "experiments.load.experimentWeb",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=sc-neut-cwl_pr2nio4-5c2-llb_5c2",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "experiment-loaded-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-loaded-0"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:Linked structures",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "choose:Atomic coordinates",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "choose:Atomic displacement",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "choose:Atomic displacement",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "mainArea.analysis.tab.correlations",
+            "scene": "correlations"
+        },
+        {
+            "action": "mainArea.analysis.tab.fitting",
+            "scene": "report"
+        },
+        {
+            "action": "appBar.tab.report",
+            "scene": "report"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "report"
+        }
+    ],
+    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "dependencies": [
+        {
+            "file": "inputs/analysis/analysis.edi",
+            "sha256": "644b5b39dbbcab56ae47564c9ccced7acfe37956c62d1c3eea9e2f63d57a05bb"
+        }
+    ],
+    "error": "",
+    "example": "sc-neut-cwl_pr2nio4-5c2",
+    "fixture": {
+        "detail": "Single crystal · Anisotropic displacements and coordinates from a rough start",
+        "id": "sc-neut-cwl_pr2nio4-5c2",
+        "origin": "5C2 @ LLB",
+        "samples": [
+            "Pr₂NiO₄ [Fmmm]"
+        ],
+        "searchAliases": [
+            "sc-neut-cwl_pr2nio4-5c2",
+            "Pr₂NiO₄ [Fmmm] · 5C2 @ LLB",
+            "Single crystal · Anisotropic displacements and coordinates from a rough start"
+        ],
+        "sources": [
+            "docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project/project.edi",
+            "docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project/analysis/analysis.edi",
+            "docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project/experiments/llb_5c2.edi",
+            "docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project/structures/pr2nio4.edi"
+        ],
+        "values": {
+            "beamMode": [
+                "constant wavelength"
+            ],
+            "dimensionality": [
+                "1d"
+            ],
+            "facilities": [
+                "LLB"
+            ],
+            "fittingMode": [
+                "single"
+            ],
+            "instruments": [
+                "5C2"
+            ],
+            "polarisation": [
+                "unpolarised"
+            ],
+            "probe": [
+                "neutron"
+            ],
+            "purpose": [
+                "refinement"
+            ],
+            "sampleForm": [
+                "single crystal"
+            ],
+            "scatteringType": [
+                "bragg"
+            ],
+            "structure": [
+                "crystal"
+            ]
+        }
+    },
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "inputs": {
+        "experiment": {
+            "file": "inputs/experiments/llb_5c2.edi",
+            "sha256": "64054c5c3e0a9e6f39c2939f5a859de01bc7579b464a8ad5045171c79a53f6ad"
+        },
+        "structure": {
+            "file": "inputs/structures/pr2nio4.edi",
+            "sha256": "a37a18c113ba4738af270329671dfbed3992098d997d59deff3cd92f6bc016d6"
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "scenes": [
+        {
+            "description": "Create the project",
+            "id": "project-created",
+            "image": "project-created.webp",
+            "metadata": "project-created.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Find the structure pr2nio4 in the EasyDiffraction collection",
+            "id": "structure-web-0",
+            "image": "structure-web-0.webp",
+            "metadata": "structure-web-0.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Load the structure pr2nio4",
+            "id": "structure-loaded-0",
+            "image": "structure-loaded-0.webp",
+            "metadata": "structure-loaded-0.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Find the experiment llb_5c2 in the EasyDiffraction collection",
+            "id": "experiment-web-0",
+            "image": "experiment-web-0.webp",
+            "metadata": "experiment-web-0.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Load the experiment llb_5c2",
+            "id": "experiment-loaded-0",
+            "image": "experiment-loaded-0.webp",
+            "metadata": "experiment-loaded-0.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Start with every parameter fixed",
+            "id": "nothing-free",
+            "image": "nothing-free.webp",
+            "metadata": "nothing-free.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Scale",
+            "id": "stage-1-fit",
+            "image": "stage-1-fit.webp",
+            "metadata": "stage-1-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Positions",
+            "id": "stage-2-fit",
+            "image": "stage-2-fit.webp",
+            "metadata": "stage-2-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: The interstitial displacement",
+            "id": "stage-3-fit",
+            "image": "stage-3-fit.webp",
+            "metadata": "stage-3-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Anisotropic displacements",
+            "id": "stage-4-fit",
+            "image": "stage-4-fit.webp",
+            "metadata": "stage-4-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the correlations",
+            "id": "correlations",
+            "image": "correlations.webp",
+            "metadata": "correlations.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Review the report",
+            "id": "report",
+            "image": "report.webp",
+            "metadata": "report.json",
+            "page": "report",
+            "sidebar": "Main",
+            "status": "captured"
+        }
+    ],
+    "schema": 1,
+    "script_sha256": "36c16d995e53b6cd8b111a566637dfb9cc721a1508eb2ecaa1d8cd8de3c55832",
+    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "status": "complete",
+    "workflow": "tutorial"
+}

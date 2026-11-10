@@ -1,0 +1,35 @@
+{
+ "schema": "edi-data-index/1",
+ "entries": [
+  {
+   "id": "1000041",
+   "kind": "structure",
+   "name": "La0.5Ba0.5CoO3 (stand-in for a COD entry)",
+   "formula": "Ba0.5 Co La0.5 O3",
+   "elements": [
+    "Ba",
+    "Co",
+    "La",
+    "O"
+   ],
+   "space_group": "P m -3 m",
+   "cell": [
+    3.88,
+    3.88,
+    3.88,
+    90.0,
+    90.0,
+    90.0
+   ],
+   "source": "COD 1000041",
+   "files": [
+    {
+     "path": "structures/1000041.cif",
+     "format": "cif",
+     "sha256": "00d1adc78bc31fff2e5bb124127aab91eefc889e2065c51b378a51cad02778c6",
+     "bytes": 517
+    }
+   ]
+  }
+ ]
+}

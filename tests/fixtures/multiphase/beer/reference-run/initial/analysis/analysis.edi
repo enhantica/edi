@@ -1,0 +1,14 @@
+_edi.schema_version 1
+
+_fitting_mode.type joint
+
+_minimizer.type "lmfit (leastsq)"
+_minimizer.max_iterations 1000
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+s2_ferrite_scale expt_s2.linked_structure.ferrite.scale
+s2_austenite_scale expt_s2.linked_structure.austenite.scale
+n2_ferrite_scale expt_n2.linked_structure.ferrite.scale
+n2_austenite_scale expt_n2.linked_structure.austenite.scale

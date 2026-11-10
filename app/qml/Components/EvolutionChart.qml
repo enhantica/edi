@@ -1,0 +1,455 @@
+// SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtGraphs
+
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
+
+import edi.app
+
+// The Evolution tab's chart (edi ADR-0017 §19): one fitted parameter across a scan's datasets, each dataset a point
+// with its uncertainty as an error bar, drawn as the pattern chart draws measured points (MeasuredLayer). x is the
+// first extract rule's value or the file's place in the scan (the box at the top left); the parameter is chosen in
+// the selector beside that box; the page's selector row above lists the datasets, as on the Pattern tab. A click on
+// a point shows that dataset, here and on the Pattern tab; a line marks the shown one. The pointer zooms as on the
+// pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
+// resets. Before any dataset is fitted the selector already lists every free parameter, and the chart has no axes,
+// only its empty state. The Report page gives it one of the report model's series instead of a project (edi ADR-0036):
+// it then draws that parameter, titled with its name and units, as the HTML report does, and no dataset is shown.
+Item {
+    id: chart
+
+    objectName: "evolution"
+
+    property ProjectViewModel project: null
+    // One series of the report model's `evolution`: a parameter's name, units, x title and points ({x, y, su, text}).
+    property var reportSeries: null
+    readonly property bool fromReport: reportSeries !== null
+    readonly property var reportPoints: fromReport ? reportSeries.points : []
+    // The report model's pattern styles: a report's points take its measured row (`meas.0`), as the HTML report draws
+    // them, never the app's colour scheme or project.
+    property var reportStyles: []
+    readonly property var reportMeasured: ApplicationInfo.evolutionMeasuredStyle()
+    // The theme's colours, or the light ones a PDF's copy is drawn in.
+    property FigureColors colors: FigureColors {}
+    readonly property EvolutionViewModel evolution: project && !fromReport ? project.evolution : null
+    // The tab is the one the window shows; the points are drawn once it is.
+    property bool shown: true
+
+    readonly property real em: EaStyle.Sizes.fontPixelSize
+    // The main area's margin (AppSizes.mainAreaMargin), as the pattern chart's.
+    readonly property real sideMargin: fromReport ? em : AppSizes.mainAreaMargin
+    // About one tick per six ems across the chart and two up its plot (the chart less its toolbar row, its x labels and
+    // its x title), at most the tab's eight and six, so a report's small chart keeps its labels apart.
+    readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
+    readonly property int yTicks: Math.max(2, Math.min(6, Math.floor((height - em * 7 - xTitleHeight) / (em * 2.5))))
+    readonly property real toolbarRightInset: sideMargin
+    readonly property real titleGutter: Math.round(em * 1.6)
+    readonly property real xTitleHeight: Math.round(em * 1.7)
+    // The zoomed ranges, [xMin, xMax, yMin, yMax]; empty: the whole data.
+    property list<real> zoom: []
+    // Some dataset has its results: the axes, the titles and the points are drawn.
+    readonly property bool fitted: fromReport ? reportPoints.length > 0 : evolution !== null && evolution.fitted
+    // A report's ranges, with the margins the view model gives the tab's: [xMin, xMax, yMin, yMax].
+    readonly property var reportRange: ApplicationInfo.evolutionReportRange()
+
+    // The tick labels in the app's label font and size, as the pattern chart's axes (the owner, 2026-10-22).
+    Component {
+        id: xTickLabel
+
+        Item {
+            id: xTick
+
+            property string text: ""
+
+            implicitWidth: xTickText.implicitWidth
+            implicitHeight: xTickText.implicitHeight
+
+            EaElements.Label {
+                id: xTickText
+
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                color: chart.colors.chartLabels
+                text: xTick.text
+            }
+        }
+    }
+    Component {
+        id: yTickLabel
+
+        Item {
+            id: yTick
+
+            property string text: ""
+
+            implicitWidth: yTickText.implicitWidth
+            implicitHeight: yTickText.implicitHeight
+
+            EaElements.Label {
+                id: yTickText
+
+                anchors.fill: parent
+                horizontalAlignment: Text.AlignRight
+                verticalAlignment: Text.AlignVCenter
+                color: chart.colors.chartLabels
+                text: yTick.text
+            }
+        }
+    }
+
+    // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
+    function niceStep(span, count) {
+        return ApplicationInfo.chartNiceStep(span, count);
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        color: chart.colors.chartBackground
+    }
+
+    // x: the extracted value or the file index; the closed box names its axis, as the pattern chart's do.
+    ToolbarComboBox {
+        id: xBox
+
+        objectName: "evolution.toolbar.x"
+        x: chart.sideMargin
+        y: chart.em
+        visible: !chart.fromReport
+        enabled: chart.evolution !== null && chart.evolution.xModes.length > 1 && chart.project.scanColumns.length > 0
+        toolTip: qsTr("X axis")
+        // Each value capitalised after the lower-case prefix (the owner, 2026-10-27).
+        readonly property var entries: ApplicationInfo.evolutionXEntries(false)
+        model: entries
+        closedTexts: ApplicationInfo.evolutionXEntries(true)
+        shownIndex: chart.evolution ? chart.evolution.xMode : 0
+        onActivated: index => chart.evolution.xMode = index
+    }
+
+    // The parameter drawn, one of those results.csv records, with the previous and next buttons.
+    BlockSelector {
+        objectName: "evolution.parameters"
+        visible: !chart.fromReport
+        x: xBox.x + xBox.width + AppSizes.toolbarSpacing * 4
+        y: xBox.y + (xBox.height - height) / 2
+        width: Math.max(0, viewButtons.x - x - AppSizes.toolbarSpacing * 4)
+        backgroundColor: chart.colors.chartBackground
+        blocks: chart.evolution ? chart.evolution.parameters : null
+        blocksTextRole: "label"
+        blockKind: "parameter"
+        blockIndex: chart.evolution ? chart.evolution.currentParameter : -1
+        onBlockActivated: index => chart.evolution.currentParameter = index
+    }
+
+    // The project's two view settings, as on the pattern chart's toolbar (the owner, 2026-11-03): the error bars, and
+    // whether the y range fits the values with their error bars or the values only, longer bars then clipped.
+    Row {
+        id: viewButtons
+
+        visible: !chart.fromReport
+        x: chart.width - chart.toolbarRightInset - width
+        y: xBox.y + (xBox.height - height) / 2
+        spacing: AppSizes.toolbarSpacing
+
+        ChartToolButton {
+            objectName: "evolution.toolbar.errorBars"
+            fontIcon: "arrows-alt-v"
+            toolTip: qsTr("Show error bars")
+            enabled: chart.project !== null
+            checked: chart.project !== null && chart.project.evolutionErrorBars
+            onClicked: chart.project.evolutionErrorBars = !chart.project.evolutionErrorBars
+        }
+        ChartToolButton {
+            objectName: "evolution.toolbar.range"
+            fontIcon: "expand"
+            toolTip: qsTr("Fit the range to the error bars too")
+            enabled: chart.project !== null
+            checked: chart.project !== null && chart.project.evolutionRangeWithSu
+            onClicked: chart.project.evolutionRangeWithSu = !chart.project.evolutionRangeWithSu
+        }
+        SaveImageButton {
+            objectName: "evolution.toolbar.save"
+            target: chart
+            fileName: "evolution"
+        }
+    }
+
+    // A report's chart is titled with its parameter's name and units, where the tab has its selectors.
+    EaElements.Label {
+        objectName: chart.fromReport ? "report.evolution.title" : ""
+        x: chart.sideMargin
+        y: xBox.y + (xBox.height - height) / 2
+        width: chart.width - 2 * chart.sideMargin
+        visible: chart.fromReport
+        elide: Text.ElideRight
+        color: chart.colors.chartLabels
+        text: chart.fromReport ? chart.reportSeries.name + (chart.reportSeries.units ? ` (${chart.reportSeries.units})` : "") : ""
+    }
+
+    GraphsView {
+        id: view
+
+        objectName: "evolution.view"
+        visible: chart.fitted
+        y: xBox.y + xBox.height + chart.sideMargin
+        width: parent.width
+        height: parent.height - y - chart.xTitleHeight - chart.em
+        marginLeft: chart.sideMargin + chart.titleGutter
+        marginRight: chart.sideMargin
+        marginTop: 0
+        marginBottom: 0
+        theme: ChartTheme {
+            labelTextColor: chart.colors.chartLabels
+        }
+        axisX: ValueAxis {
+            id: axisX
+            min: chart.fromReport ? chart.reportRange[0] : chart.evolution ? chart.evolution.xMin : 0
+            max: chart.fromReport ? chart.reportRange[1] : chart.evolution ? chart.evolution.xMax : 1
+            tickInterval: chart.niceStep(max - min, chart.xTicks)
+            tickAnchor: 0
+            lineVisible: false
+            labelDelegate: xTickLabel
+            gridVisible: false
+            subGridVisible: false
+        }
+        axisY: ValueAxis {
+            id: axisY
+            min: chart.fromReport ? chart.reportRange[2] : chart.evolution ? chart.evolution.yMin : 0
+            max: chart.fromReport ? chart.reportRange[3] : chart.evolution ? chart.evolution.yMax : 1
+            tickInterval: chart.niceStep(max - min, chart.yTicks)
+            tickAnchor: 0
+            lineVisible: false
+            labelDelegate: yTickLabel
+            gridVisible: false
+            subGridVisible: false
+        }
+        // Qt Graphs draws nothing without a series.
+        LineSeries {
+            visible: false
+        }
+    }
+
+    // The plot area: the grid at the ticks, the shown dataset's line, the points, and the border over them.
+    Item {
+        id: plot
+
+        visible: chart.fitted
+        x: view.x + view.plotArea.x
+        y: view.y + view.plotArea.y
+        width: view.plotArea.width
+        height: view.plotArea.height
+        clip: true
+
+        function ticks(axis: ValueAxis): list<real> {
+            return ApplicationInfo.chartGridShares(axis);
+        }
+
+        Repeater {
+            model: plot.ticks(axisX)
+            delegate: Rectangle {
+                required property real modelData
+                x: Math.round(modelData * plot.width)
+                width: 1
+                height: plot.height
+                color: chart.colors.chartGridLine
+            }
+        }
+        Repeater {
+            model: plot.ticks(axisY)
+            delegate: Rectangle {
+                required property real modelData
+                y: Math.round((1 - modelData) * plot.height)
+                width: plot.width
+                height: 1
+                color: chart.colors.chartGridLine
+            }
+        }
+        MeasuredLayer {
+            id: layer
+
+            objectName: "evolution.points"
+            anchors.fill: parent
+            color: !chart.fromReport ? AppColors.experiment(0, chart.colors.isDarkPalette) : chart.reportMeasured ? (chart.colors.isDarkPalette ? chart.reportMeasured.dark : chart.reportMeasured.light) : chart.colors.themeForeground
+            markerSize: 6
+            xMin: axisX.min
+            xMax: axisX.max
+            yMin: axisY.min
+            yMax: axisY.max
+        }
+        // The shown dataset, from its own x: it moves only when the shown dataset, the x mode or the axis does. The
+        // Stacked and Map charts mark it with the same look. Over the points, so the line shows across a marker too.
+        SelectedPatternLine {
+            readonly property real at: chart.evolution && chart.project && chart.evolution.xMode >= 0 ? chart.evolution.datasetX(chart.project.currentExperimentIndex) : NaN
+
+            objectName: "evolution.current"
+            vertical: true
+            dark: chart.colors.isDarkPalette
+            position: (at - axisX.min) / (axisX.max - axisX.min) * plot.width
+        }
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            border.color: chart.colors.chartAxis
+            border.width: 1
+        }
+        // A left click shows the dataset of the nearest point within a few pixels. A drag zooms to its box (refused
+        // when flat in either direction or not finite); the wheel zooms about the pointer (one notch away multiplies
+        // the x span by 0.8, as on the pattern chart); a right click resets. Neither a drag nor a right click selects:
+        // the press arms the point pick only for a left button, and a move past the threshold disarms it.
+        MouseArea {
+            id: pointer
+
+            property real pressX: 0
+            property real pressY: 0
+            // Whether a click may pick a point: a press arms it only for the left button, and a move past the
+            // threshold disarms it, so a drag or a right click selects nothing (the Binding below hands it to the model).
+            property bool picking: true
+            readonly property bool dragging: pressed && (pressedButtons & Qt.LeftButton) && (Math.abs(mouseX - pressX) > chart.em * 0.3 || Math.abs(mouseY - pressY) > chart.em * 0.3)
+
+            function xAt(px: real): real {
+                return ApplicationInfo.chartCoordinate(px, false);
+            }
+            function yAt(py: real): real {
+                return ApplicationInfo.chartCoordinate(py, true);
+            }
+            function moved(mouse): bool {
+                return ApplicationInfo.evolutionMoved(mouse);
+            }
+
+            objectName: "evolution.pointer"
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            cursorShape: Qt.PointingHandCursor
+            onPressed: mouse => ApplicationInfo.evolutionPointer(mouse, 0)
+            onPositionChanged: mouse => ApplicationInfo.evolutionPointer(mouse, 1)
+            // A zoom is taken only with increasing ends and finite spans on both axes.
+            onReleased: mouse => ApplicationInfo.evolutionPointer(mouse, 2)
+            onClicked: mouse => ApplicationInfo.evolutionPointer(mouse, 3)
+            onWheel: wheel => ApplicationInfo.evolutionPointer(wheel, 4)
+
+            Binding {
+                target: chart.evolution
+                property: "picking"
+                value: pointer.picking
+                when: chart.evolution !== null
+            }
+
+            // The box being dragged, as the pattern chart draws it.
+            Rectangle {
+                objectName: "evolution.zoom.box"
+                visible: pointer.dragging
+                x: Math.min(pointer.pressX, pointer.mouseX)
+                y: Math.min(pointer.pressY, pointer.mouseY)
+                width: Math.abs(pointer.mouseX - pointer.pressX)
+                height: Math.abs(pointer.mouseY - pointer.pressY)
+                color: "transparent"
+                border.color: EaStyle.Colors.appBorder
+                border.width: EaStyle.Sizes.borderThickness
+                opacity: 0.9
+
+                Rectangle {
+                    anchors.fill: parent
+                    opacity: 0.5
+                    color: EaStyle.Colors.appBorder
+                }
+            }
+        }
+    }
+
+    // A zoom holds the axes at its box until it is reset; the axes then follow the data's ranges again.
+    Binding {
+        target: axisX
+        property: "min"
+        value: chart.zoom.length === 4 ? chart.zoom[0] : 0
+        when: chart.zoom.length === 4
+    }
+    Binding {
+        target: axisX
+        property: "max"
+        value: chart.zoom.length === 4 ? chart.zoom[1] : 1
+        when: chart.zoom.length === 4
+    }
+    Binding {
+        target: axisY
+        property: "min"
+        value: chart.zoom.length === 4 ? chart.zoom[2] : 0
+        when: chart.zoom.length === 4
+    }
+    Binding {
+        target: axisY
+        property: "max"
+        value: chart.zoom.length === 4 ? chart.zoom[3] : 1
+        when: chart.zoom.length === 4
+    }
+
+    // Another parameter or x axis is drawn at its whole range.
+    Connections {
+        target: chart.evolution
+        function onCurrentParameterChanged() {
+            ApplicationInfo.evolutionResetZoom();
+        }
+        function onXModeChanged() {
+            ApplicationInfo.evolutionResetZoom();
+        }
+    }
+    // A report's points go to the layer whenever its series changes, each with its s.u. bar (none without a finite
+    // s.u.).
+    function drawReportPoints() {
+        ApplicationInfo.evolutionDrawReportPoints();
+    }
+    onReportPointsChanged: ApplicationInfo.evolutionReportChanged()
+    Component.onCompleted: ApplicationInfo.evolutionReportChanged()
+
+    // The layer is the model's to fill while the tab is shown.
+    Binding {
+        target: chart.evolution
+        property: "layer"
+        value: chart.shown ? layer : null
+        when: chart.evolution !== null
+    }
+
+    EaElements.Label {
+        objectName: "evolution.title.y"
+        visible: chart.fitted
+        rotation: -90
+        color: chart.colors.chartLabels
+        // Centred in the margin, clear of the tick labels, which Qt Graphs lets reach into the plot's left margin.
+        x: (chart.sideMargin - width) / 2
+        y: plot.y + (plot.height - height) / 2
+        text: chart.evolution ? chart.evolution.yTitle : ""
+    }
+    EaElements.Label {
+        objectName: "evolution.title.x"
+        visible: chart.fitted
+        x: plot.x + (plot.width - width) / 2
+        y: chart.height - chart.em - chart.xTitleHeight + (chart.xTitleHeight - height) / 2
+        color: chart.colors.chartLabels
+        text: chart.fromReport ? chart.reportSeries.x_title : chart.evolution ? chart.evolution.xTitle : ""
+    }
+    // Results the template has changed since stay drawn, marked out of date until the next run.
+    EaElements.Label {
+        objectName: "evolution.outOfDate"
+        anchors.right: plot.right
+        anchors.bottom: plot.top
+        anchors.bottomMargin: chart.em * 0.5
+        visible: chart.evolution !== null && chart.evolution.outOfDate
+        color: EaStyle.Colors.orange
+        text: qsTr("Out of date: the template changed after this run")
+    }
+    EaElements.Label {
+        anchors.centerIn: plot
+        visible: chart.fitted && chart.evolution !== null && chart.evolution.count === 0
+        color: EaStyle.Colors.themeForegroundMinor
+        text: qsTr("No fitted values yet: the scan's results appear here as the datasets are fitted")
+    }
+    EmptyStateLabel {
+        objectName: "evolution.empty"
+        anchors.centerIn: parent
+        visible: (chart.fromReport || chart.evolution !== null) && !chart.fitted
+        width: Math.min(implicitWidth, parent.width - 2 * chart.sideMargin)
+        text: qsTr("No fitted results yet")
+    }
+}

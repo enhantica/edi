@@ -1,0 +1,265 @@
+"""Static app wiring checks retained while native app tests are disabled."""
+
+import re
+from pathlib import Path
+
+import pytest
+import yaml
+
+from tests.fixtures.example_catalogue.current_selection import current_cases
+
+ROOT = Path(__file__).resolve().parents[3]
+APP = ROOT / 'app'
+
+
+def source(path):
+    text = (APP / path).read_text()
+    return re.sub(r'//[^\n]*|/\*.*?\*/', '', text, flags=re.DOTALL)
+
+
+def test_excluded_regions_are_in_the_basic_category_tier():
+    text = source('src/category_list_model.cpp')
+    assert re.search(r'QStringLiteral\("excluded_region"\)\s*,\s*\{\s*T::Basic\b', text), (
+        'excluded regions must remain on the Experiment Basic tab'
+    )
+    page = source('qml/Pages/Experiment/ExperimentPage.qml')
+    assert '"excluded_region": excludedRegionsContent' in page, (
+        'the Basic category must retain its live excluded-regions editor'
+    )
+
+
+def test_cwl_width_row_combines_uvw_xy_and_keeps_tof_lorentzian_separate():
+    # Previously U V W and X Y occupied separate rows; TCH now shares one width row.
+    # TOF Lorentzian gamma, size and strain still use their separate family row.
+    text = source('src/experiment_view_model.cpp')
+    match = re.search(r'int peak_family\([^)]*\)\s*\{(.*?)\n\}', text, re.DOTALL)
+    assert match, 'the profile row classifier must remain inspectable by the static layout gate'
+    body = match.group(1)
+    width = re.search(r'if\s*\(([^\n{};]+)\)\s*\{\s*return\s+1\s*;', body)
+    assert width and 'starts("broad_gauss_")' in width.group(1), (
+        'U, V and W must share the profile width row'
+    )
+    for name in ('broad_lorentz_x', 'broad_lorentz_y'):
+        assert re.search(r'name\s*==\s*"' + name + '"', width.group(1)), (
+            'both TCH X and Y must join U V W in the profile width row'
+        )
+    assert 'starts("broad_lorentz_")' not in width.group(1), (
+        'the shared CWL width row must not absorb all TOF Lorentzian fields'
+    )
+    assert re.search(r'if\s*\([^{};]*"broad_lorentz_"[^{};]*\)\s*\{\s*return\s+2\s*;', body), (
+        'TOF Lorentzian gamma, size and strain must retain their separate row'
+    )
+    grid = source('qml/Components/ParameterGrid.qml')
+    columns = re.search(r'property int maxColumns:\s*(\d+)', grid)
+    assert columns and int(columns.group(1)) >= 5, (
+        'one profile width row must have room for all five U V W X Y fields'
+    )
+    peak = source('qml/Pages/Experiment/PeakGroup.qml')
+    assert 'peakGaussian' in peak and 'peakLorentzian' in peak, (
+        'the peak group must consume the shared width row and the TOF Lorentzian row'
+    )
+
+
+@pytest.mark.parametrize(
+    ('category', 'component', 'collection'),
+    [('alias', 'AliasesGroup', 'aliases'), ('constraint', 'ConstraintsGroup', 'constraints')],
+)
+def test_analysis_groups_read_core_rows_without_preview_data(category, component, collection):
+    page = source('qml/Pages/Analysis/AnalysisPage.qml')
+    assert f'"{category}"' in page and component + ' {' in page, (
+        'Analysis must attach each declared relation group to its category'
+    )
+    group = source(f'qml/Pages/Analysis/{component}.qml')
+    assert f'analysis.{collection}' in group, (
+        'a relation table must consume the live analysis model'
+    )
+    assert not re.search(r'\bmodel\s*:\s*\[', group), (
+        'preview rows must not replace a shipped table model'
+    )
+    adapter = source('src/analysis_view_model.cpp')
+    assert f'project_.{collection}' in adapter, (
+        'the analysis row model must enumerate edi core declarations'
+    )
+    assert not re.search(r'rows\.append\(\s*\{\s*(?:nullptr|0)\s*,', adapter), (
+        'sample rows must never be injected into shipped analysis models'
+    )
+
+
+def test_load_warnings_reach_the_app_message_model():
+    session = source('src/session.cpp')
+    assert re.search(r'edi::load_project\([^;]*warnings\.append', session, re.DOTALL), (
+        'project loading must collect the core warning sink into app messages'
+    )
+    assert re.search(r'warnings_->setMessages\(warnings\)', session), (
+        'the replacement project must publish collected warnings to the Messages model'
+    )
+
+
+def test_preview_projects_cannot_be_bundled_as_application_resources():
+    for path in (ROOT / 'app').rglob('*'):
+        if path.is_file() and path.suffix in {'.qml', '.qrc', '.cmake'}:
+            assert 'constraint_samples' not in path.read_text(), (
+                'temporary look-check projects must not enter shipped application resources'
+            )
+    cmake = (ROOT / 'app/CMakeLists.txt').read_text()
+    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
+    selected_ids = [row['id'] for row in registry if row.get('user-facing') is True]
+    selected = current_cases()
+    assert selected_ids == [row['id'] for row in selected], (
+        'The collection catalogue retains the independent owner selection in order'
+    )
+    assert 'file(STRINGS ${_cli}/projects.yml' in cmake and 'user-facing:' in cmake, (
+        'the app example selection must read the registry user-facing declarations'
+    )
+    assert 'edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})' not in cmake, (
+        'The downloaded example catalogue must not embed the selected project payloads'
+    )
+    assert 'qt_add_resources(edi_app_module "edi_example_metadata"' in cmake, (
+        'The selected catalogue retains application metadata for the downloaded examples'
+    )
+    assert not any(re.search(r'(?i)(?:look|preview|demo)', case) for case in selected_ids), (
+        'look-check and preview projects must not enter the shipped example catalogue'
+    )
+    assert 'constraint_samples' not in cmake, (
+        'the application packaging list must exclude the temporary relation samples'
+    )
+
+
+@pytest.mark.parametrize('component', ['AliasesGroup', 'ConstraintsGroup'])
+def test_relation_tables_expose_live_append_duplicate_and_remove_actions(component):
+    group = source(f'qml/Pages/Analysis/{component}.qml')
+    for action in ('append', 'duplicate', 'remove'):
+        assert re.search(r'onClicked\s*:[^\n]*\.' + action + r'\(', group), (
+            'each relation table action must call its live model operation'
+        )
+    assert 'Append new' in group and 'Duplicate selected' in group, (
+        'relation editing must expose both requested footer actions'
+    )
+    if component == 'AliasesGroup':
+        assert 'ComboBox' in group, 'alias rows must provide a suitable-parameter combobox'
+    else:
+        assert re.search(r'onClicked[^\n]*(?:enable|toggle|Enabled)', group), (
+            'constraint rows must expose a live enable action before removal'
+        )
+        assert re.search(r'(?:enable|toggle|Enabled)[^}]*}.*\.remove\(', group, re.DOTALL), (
+            'the enable action must appear before the remove action in each constraint row'
+        )
+
+
+def test_linked_structures_are_explicitly_moved_to_the_end_of_presentation_order():
+    """The historical linked-group witness now follows dictionary order without an exception."""
+    text = source('src/category_list_model.cpp')
+    body = text.split('presentation_order(', 1)[1].split(
+        'CategoryListModel::CategoryListModel', 1
+    )[0]
+    assert 'std::stable_sort' in body, (
+        'Category presentation preserves declaration order when dictionary numbers tie'
+    )
+    assert re.search(
+        r'return\s+edi::category_order\(a->id\)\s*<\s*edi::category_order\(b->id\)', body
+    ), 'Every sidebar group follows its declared dictionary order number'
+    assert '"linked_structure"' not in body, (
+        'Linked structures have no separate ordering rule outside the dictionary'
+    )
+
+
+def test_alias_picker_uses_core_candidates_and_the_closed_edit_door():
+    text = source('src/analysis_view_model.cpp')
+    assert 'named_parameters(' in text, (
+        'the alias picker must enumerate core-owned suitable parameter identities'
+    )
+    assert re.search(r'editor_\.apply_relation_(?:edit|control)\(\s*edi::Edit::', text), (
+        'relation edits must enter the shared relation door for publication and undo'
+    )
+    # The widget-aware route adds input identity; both typed routes retain the
+    # same recorded-edit and preview publisher (the relation Undo contract).
+    relations = text.split('AnalysisViewModel::AnalysisViewModel', 1)[0]
+    edits = re.findall(r'edi::Edit::\w+\(', relations)
+    routed = re.findall(
+        r'editor_\.apply_relation_(?:edit|control)\(\s*edi::Edit::\w+\(', relations
+    )
+    assert edits and len(routed) == len(edits), (
+        'every relation edit must enter the typed relation route without a direct-write escape'
+    )
+    project = source('src/project_view_model.cpp')
+
+    def body(name):
+        matches = re.findall(
+            r'ProjectViewModel::' + name + r'\([^)]*\)\s*{(.*?)\n}', project, re.DOTALL
+        )
+        assert len(matches) == 1, (
+            f'The closed relation route requires one inspectable {name} implementation'
+        )
+        return matches[0]
+
+    for name in ('apply_relation_edit', 'apply_relation_control'):
+        assert 'applyRecordedEdit(change, true)' in body(name), (
+            'Each typed relation route must record Undo through the common structural edit door'
+        )
+    assert 'return apply_relation_edit(change)' in body('apply_relation_control'), (
+        'A relation control without native widget input retains the ordinary typed relation route'
+    )
+    assert 'editor_.append_constraint(project_, std::move(row), action)' in relations, (
+        'Complete constraint rows retain the typed editor entry '
+        'rather than direct collection writes'
+    )
+    append = body('append_constraint')
+    appends = re.findall(r'edi::Edit::constraint_append\(', append)
+    recorded_appends = re.findall(
+        r'applyRecordedEdit\(edi::Edit::constraint_append\([^;]*\),\s*true\)', append
+    )
+    assert appends and len(recorded_appends) == len(appends), (
+        'Both native-widget and manual complete-constraint commits record structural Undo'
+    )
+    assert 'applyEdit(change, structural)' in body('applyRecordedEdit'), (
+        'Recorded relation changes retain the same common edit execution path'
+    )
+    assert 'applyEdit(change, structural)' in body('apply'), (
+        'Ordinary edits and recorded relations converge on the same edit execution path'
+    )
+    assert 'preview_->apply(change, applied, applied_result)' in body('applyEdit'), (
+        'The common edit door submits the same typed change and application receipts to preview'
+    )
+
+
+def test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits():
+    analysis = source('src/analysis_view_model.cpp')
+    assert re.search(r'BlockText\([^;]*saved\("analysis/analysis\.edi"\)', analysis), (
+        'the Analysis Text tab must read the canonical saved analysis block'
+    )
+    project = source('src/project_view_model.cpp')
+    saved = re.search(
+        r'ProjectViewModel::savedFiles\(\)\s+const\s*\{(.*?)\n\}', project, re.DOTALL
+    )
+    assert saved, 'the shared Text snapshot provider must remain inspectable'
+    assert re.search(r'edi::project_edi_files\(\s*\*project_\s*\)', saved.group(1)) and (
+        'scanTemplateOrModel' not in saved.group(1)
+    ), (
+        'ADR-0015 makes Text use the shown model, including selected scan values; '
+        'the save routes still write the scan template or ordinary project'
+    )
+    session = source('src/session.cpp')
+    staged = re.search(r'bool Session::stageCopy\([^)]*\)\s*{(.*?)\n}', session, re.DOTALL)
+    assert staged, 'The staged project Save boundary remains inspectable'
+    planning = re.search(r'Session::beginSave\(.*?\n\}', session, re.DOTALL)
+    assert planning, 'The operation captures its canonical model before planning and writing'
+    assert (
+        'operation.snapshot = std::make_shared<const edi::Project>(project_->savedModel())'
+        in planning.group(0)
+    ), 'Each save operation freezes the canonical scan template or ordinary model at its start'
+    assert 'std::make_shared<edi::Project>(*operation.snapshot)' in staged.group(1), (
+        'A staged save writes its own frozen canonical snapshot without rereading live state'
+    )
+    assert 'edi::save_project_as(*copy, staged.folder.toStdString())' in staged.group(1), (
+        'The canonical staged snapshot reaches the actual core writer'
+    )
+    assert re.search(
+        r'savedModel\(\) const { return scan_template_ \? \*scan_template_ : \*project_; }',
+        source('src/project_view_model.hpp'),
+    ), 'The operation snapshot selects the scan template or ordinary model'
+    assert re.search(r'for \(const auto& \[path, body\] : savedFiles\(\)\)', project), (
+        'each text block must come from the shared saved-file snapshot'
+    )
+    assert 'analysis_->text()->invalidate()' in project, (
+        'editing a relation must invalidate shown analysis text instead of displaying stale loops'
+    )

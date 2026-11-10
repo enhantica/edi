@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "baseline": "e20b4012c36f586b57e3f41fc79b07c076d675df",
+  "thresholds": {
+    "unit/py": 0.1,
+    "unit/cpp": 0.1,
+    "integration": 1.0,
+    "system": 5.0
+  },
+  "unit_cpp_diagnosis": {
+    "reason": "No diagnosis owed beyond closing the holes: the tier has 3 cases, all measured 0.006-0.009 s solo (floor 0.005 s), zero breaches \u2014 the  pass declared them UNMEASURED because no producer measured C++ then.",
+    "remeasurement": "One solo timed Release run per case, quiet box (start load_1m 1.76, max sample 1.76), sha e20b4012, 2026-08-26."
+  },
+  "breaches": [
+    {
+      "nodeid": "tests/unit/py/test_c11_t4_cw_selection.py::test_c11_t4_ragged_programmatic_cw_pattern_is_a_structured_io_refusal",
+      "disposition": "re-tier",
+      "reason": "a refusal probe paying full project/pattern construction (0.26-0.27 s stable across both measurements) \u2014 construct the minimal ragged pattern instead ( list 0.27 s; re-measure 0.26 s); proposal corrected by the tests lane: this case crosses a process, project-loader, codegen/git, or full-residual boundary, so caching it as a unit would hide mutable integration state; its assertions move intact",
+      "successors": [
+        "tests/integration/py/test_c11_t4_cw_selection_integration.py::test_c11_t4_ragged_programmatic_cw_pattern_is_a_structured_io_refusal"
+      ]
+    },
+    {
+      "nodeid": "tests/unit/py/test_c11_t4_cw_selection.py::test_c11_t4_cw_cached_construction_is_family_aware_or_refused_before_indexing",
+      "disposition": "re-tier",
+      "reason": "same construction cost as its sibling (0.27-0.32 s stable); share or shrink the constructed family vehicle ( list 0.27 s; re-measure 0.32 s); proposal corrected by the tests lane: this case crosses a process, project-loader, codegen/git, or full-residual boundary, so caching it as a unit would hide mutable integration state; its assertions move intact",
+      "successors": [
+        "tests/integration/py/test_c11_t4_cw_selection_integration.py::test_c11_t4_cw_cached_construction_is_family_aware_or_refused_before_indexing"
+      ]
+    },
+    {
+      "nodeid": "tests/unit/py/test_e02_t2_io_parity.py::test_e02_t2_save_as_replaces_the_complete_destination_without_stale_files",
+      "disposition": "re-tier",
+      "reason": "asserts real on-disk save-as semantics (stale-file replacement) \u2014 file I/O is integration work by the tier rationale; assertions move intact ( list 0.10 s; re-measure 0.10 s)",
+      "successors": [
+        "tests/integration/py/test_e02_t2_io_parity_integration.py::test_e02_t2_save_as_replaces_the_complete_destination_without_stale_files"
+      ]
+    },
+    {
+      "nodeid": "tests/unit/py/test_c11_t40_epoch_and_substrate.py::test_c11_t40_schema_two_refuses_a_retired_peak_tag",
+      "disposition": "re-tier",
+      "reason": "cleared by the quiet-box re-measure (0.090 s < 0.1 s bound; the listed 0.100 s was at the bound exactly) \u2014 margin restored by sharing the loader setup with its sibling cases, which still breach at 0.11-0.12 s ( list 0.10 s; re-measure 0.09 s); proposal corrected by the tests lane: this case crosses a process, project-loader, codegen/git, or full-residual boundary, so caching it as a unit would hide mutable integration state; its assertions move intact",
+      "successors": [
+        "tests/integration/py/test_c11_t40_epoch_and_substrate_integration.py::test_c11_t40_schema_two_refuses_a_retired_peak_tag"
+      ]
+    },
+    {
+      "nodeid": "tests/integration/py/test_c09_t13_tof_fit_parity.py::test_c09_t13_bare_silicon_fit_reaches_the_reference_quality_band",
+      "disposition": "re-tier",
+      "reason": "EXECUTED as re-tier (refining the recorded optimise): the claim is a full CLI fit to convergence reaching the reference quality band on the structurally-required bare-silicon case \u2014 bounding iterations would risk the asserted convergence, and an end-to-end CLI fit to convergence is system work by the tier rationale (3.59 s vs the 5.0 s system bound)",
+      "successors": [
+        "tests/system/py/test_c09_t13_tof_fit_parity.py::test_c09_t13_bare_silicon_fit_reaches_the_reference_quality_band"
+      ]
+    },
+    {
+      "nodeid": "tests/integration/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_edi_runner_fails_closed_except_for_named_pin_transition",
+      "disposition": "split",
+      "reason": "EXECUTED as split (refining the recorded optimise): the three fail-closed probes each need their own collection subprocess (a shared invocation cannot observe three different corpus roots), so each probe is its own test at ~0.9 s with assertions unchanged; their union is the original claim \u2014 the successor file was subsequently re-homed whole to tests/system/py (collection-subprocess machinery is system work), paths updated",
+      "successors": [
+        "tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_edi_runner_fails_closed_on_a_missing_manifest",
+        "tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_edi_runner_fails_closed_on_broken_totality",
+        "tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_edi_runner_collects_the_pinned_edi_side"
+      ]
+    },
+    {
+      "nodeid": "tests/integration/py/test_c09_t16_verification_notebooks.py::test_configured_notebook_gate_rejects_a_broken_assertion",
+      "disposition": "re-tier",
+      "reason": "executes a real notebook through the configured gate to prove rejection (2.31 s) \u2014 an end-to-end subprocess pipeline is system work; assertions move intact ( list 2.31 s; re-measure 2.64 s)",
+      "successors": [
+        "tests/system/py/test_c09_t16_notebook_gate_rejection.py::test_configured_notebook_gate_rejects_a_broken_assertion"
+      ]
+    },
+    {
+      "nodeid": "tests/integration/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]",
+      "disposition": "re-tier",
+      "reason": "the declared corpus consumer runs a full corpus fit through edi to convergence (1.81 s) \u2014 a full-pipeline convergence run is system work; the consumer claim and its assertions move intact ( list 1.81 s; re-measure 2.13 s)",
+      "successors": [
+        "tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]"
+      ]
+    },
+    {
+      "nodeid": "tests/integration/py/test_c06_t2_suite_scheduling.py::test_c06_t2_module_fixture_cost_cannot_move_to_a_nonheavy_sibling",
+      "disposition": "retired",
+      "reason": "EXECUTED as a ruling-39 DELETION WITH A NOTE, coupled to the step-5 marker retirement exactly as recorded: the claim was that a module fixture's cost tiers every test of its module heavy, so the cost cannot escape the per-PR exclusion via a cheap sibling. With the heavy marker retired there is no exclusion left to escape \u2014 `-m heavy` collects nothing \u2014 and the assertion had become vacuous (a gate that cannot fail reports coverage it does not have). LOST CLAIM, named: marker-consequence of module fixture costs. SURVIVING coverage: module costs stay recorded in the manifest (`# module-cost:` rows), printed in the per-tier audit totals, and inside the ratchet accounting; the test file held only this test and is deleted with it.",
+      "successors": []
+    },
+    {
+      "nodeid": "tests/system/py/test_c09_t7_cached_fit.py::test_c09_t7_post_refine_engine_is_coherent_through_repeated_refinement",
+      "disposition": "split",
+      "reason": "EXECUTED as split + cheaper vehicle (refining the recorded optimise): the esd probe subprocess is its own claim and moves to its own test, and the cached-surface vehicle is si-sepd-s5 (6 iterations to convergence vs s2's 14; every claim is a cached-vs-stateless equality, indifferent to the start point) \u2014 2.82 s + 3.11 s against the 5.0 s bound, assertions unchanged",
+      "successors": [
+        "tests/system/py/test_c09_t7_cached_fit.py::test_c09_t7_post_refine_engine_is_coherent_through_repeated_refinement",
+        "tests/system/py/test_c09_t7_cached_fit.py::test_c09_t7_internal_esd_probe_agrees_on_the_reference_pattern"
+      ]
+    },
+    {
+      "nodeid": "tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_cli_defaults_to_compact_human_and_off_is_silent",
+      "disposition": "split",
+      "reason": "EXECUTED as split (refining the recorded optimise): the five verbosity-surface spawns split into three tests (default+explicit / full / off-pair), each keeping its spawns and assertions; 1.31-2.32 s per node against the 5.0 s bound",
+      "successors": [
+        "tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_cli_defaults_to_compact_human",
+        "tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_cli_full_verbosity_reports_parameters",
+        "tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_cli_verbosity_off_is_silent_for_both_reports"
+      ]
+    }
+  ],
+  "retired_coverage": [
+    {
+      "nodeid": "tests/integration/py/test_c06_t2_suite_scheduling.py::test_c06_t2_module_fixture_cost_cannot_move_to_a_nonheavy_sibling",
+      "ruling": 39,
+      "lost_claim": "a module-scoped fixture cost tiers every test of its module heavy, so the cost cannot escape the per-PR exclusion by moving to a cheap sibling",
+      "surviving_coverage": "module fixture costs stay recorded in the manifest (# module-cost: rows), printed in the per-tier audit totals, and inside the ratchet accounting",
+      "reason": "the heavy marker (and with it any marker-based exclusion to escape) is retired by the  owner directive; -m heavy collects nothing, so the assertion had become vacuous - a gate that cannot fail reports coverage it does not have. Lost claim: a module-scoped fixture cost tiers every test of its module heavy, so the cost cannot escape the per-PR exclusion via a cheap sibling. Surviving coverage: module fixture costs stay recorded in the manifest (# module-cost: rows), printed in the per-tier audit totals, and inside the ratchet accounting.",
+      "claims": [
+        "assert module_rows, f'no manifest rows for {CONFORMANCE_MODULE}'",
+        "assert scope == 'module'",
+        "assert module_cost is not None",
+        "assert selected == {\n        'heavy': expected_heavy,\n        'not heavy': set(module_rows) - expected_heavy,\n    }",
+        "assert collected.returncode in {0, 5}, collected.stdout + collected.stderr"
+      ]
+    }
+  ]
+}

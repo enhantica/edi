@@ -1,0 +1,41 @@
+data_structure
+_cell.length_a 2.886
+_cell.length_b 2.886
+_cell.length_c 2.886
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+_space_group.name_h_m "I m -3 m"
+loop_
+_atom_site.id
+_atom_site.wyckoff_letter
+_atom_site.type_symbol
+_atom_site.adp_type
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.occupancy
+_atom_site.adp_iso
+Fe a Fe Biso 0.0 0.0 0.0 1.0 1.71513
+
+data_experiment
+_experiment_type.sample_form powder
+_experiment_type.radiation_probe neutron
+_experiment_type.scattering_type bragg
+_experiment_type.beam_mode "time-of-flight"
+_peak.type tof-pseudo-voigt
+_peak.broad_gauss_sigma_0 893.6397
+_peak.broad_gauss_sigma_1 1283.6387
+_peak.broad_gauss_sigma_2 311.7041
+_peak.broad_lorentz_gamma_0 5.033
+_peak.broad_lorentz_gamma_1 0.0
+_peak.broad_lorentz_gamma_2 0.0
+_peak.cutoff_fwhm 12.0
+_instrument.calib_d_to_tof_offset -10.29183
+_instrument.calib_d_to_tof_linear 54902.1875
+_instrument.calib_d_to_tof_quadratic 0.0
+_instrument.setup_twotheta_bank 90.0
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+structure 401.4629

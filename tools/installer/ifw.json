@@ -1,0 +1,17 @@
+{
+  "version": "4.11.0",
+  "platforms": {
+    "linux": {
+      "url": "https://download.qt.io/online/qtsdkrepository/linux_x64/ifw/tools_ifw_411/qt.tools.ifw.411/4.11.0-0-202603231357ifw-linux-x64.7z",
+      "sha256": "79ef906970c7e4be9ec15447fd5acb0a8ae2ab41aef5f9184086ce3972eddbc7"
+    },
+    "macos": {
+      "url": "https://download.qt.io/online/qtsdkrepository/mac_x64/ifw/tools_ifw_411/qt.tools.ifw.411/4.11.0-0-202603311245ifw-mac-universal.7z",
+      "sha256": "140397cb4776a00a8efb76e5b8a362f8e6adc9a213da7a074e81b9b912f0c8f3"
+    },
+    "windows": {
+      "url": "https://download.qt.io/online/qtsdkrepository/windows_x86/ifw/tools_ifw_411/qt.tools.ifw.411/4.11.0-0-202603231357ifw-win-x64.7z",
+      "sha256": "c47201c4f6a82a8b607daa245237f40831d78425e904edd1514b71fd17efefc1"
+    }
+  }
+}

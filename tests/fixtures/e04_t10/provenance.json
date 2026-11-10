@@ -1,0 +1,18 @@
+{
+  "source": "https://github.com/easyscience/diffraction-lib",
+  "commit": "c0654956a1281f1ea3f3467c3367167f93edee18",
+  "file": "src/easydiffraction/display/structure/assets/elements.py",
+  "source_sha256": "45cb1a5b03c60104169e7bdb9676d9dc3eca4d43cdccd758416b4c2f4649070b",
+  "fixture_sha256": "b13e76724501bcae9c8455606ae2bcf128c219ac38ea24d4d72e148cf5c845ae",
+  "licences": [
+    "BSD-3-Clause",
+    "MIT"
+  ],
+  "published_sources": [
+    "EasyDiffractionBeta easyDiffractionApp/Logic/Tables.py PERIODIC_TABLE",
+    "pymatgen src/pymatgen/vis/ElementColorSchemes.yaml VESTA",
+    "pymatgen dev_scripts/periodic_table_resources/Shannon_Radii.csv"
+  ],
+  "selection_rule": "diffraction-lib assets/LICENSES.md representative-radius selection",
+  "command": "python tests/fixtures/e04_t10/generate.py --source <diffraction-lib-checkout>"
+}

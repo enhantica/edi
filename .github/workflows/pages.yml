@@ -1,0 +1,195 @@
+# The site on GitHub Pages: the public site (website/) at the root, the contributor documentation (mkdocs.yml) at
+# /dev/ and the web app at /webapp/. The site is built from main (or
+# by dispatch) with the notebooks executed for rendering, which needs crysta's SDK; the web app is built
+# as CI's `app · WebAssembly` job builds it and placed into the site (ADR-0023). A dispatch may name a
+# crysta commit to build the web app from instead of the pinned SDK, for a preview of unreleased crysta work;
+# the notebooks are then published unexecuted, as the native build would use the pin.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      component:
+        description: Site component to build and publish
+        type: choice
+        options: [docs, wasm, all]
+        default: docs
+
+permissions:
+  contents: read
+
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
+
+jobs:
+  # The crysta SDK, built once per crysta commit (edi ADR-0083).
+  crysta-sdk:
+    if: github.event_name != 'release'
+    uses: ./.github/workflows/crysta-sdk.yml
+    secrets: inherit
+
+  refresh-release-notes:
+    if: github.repository == 'enhantica/edi' && github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PAGES_REF: ${{ github.event.release.prerelease && vars.EDI_PREVIEW_PAGES_REF || github.event.repository.default_branch }}
+    steps:
+      - run: |
+          args=(-f component=docs)
+          gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref "$PAGES_REF" "${args[@]}"
+
+  docs:
+    needs: crysta-sdk
+    name: build documentation
+    if: github.event.pull_request.head.repo.fork == false && github.repository == 'enhantica/edi' && github.event_name != 'release' && (github.event_name != 'workflow_dispatch' || inputs.component != 'wasm')
+    environment: crysta-sdk
+    runs-on: &linux ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-pixi
+      - name: Check independent publication
+        run: pixi run pages-check
+      - name: Prepare notebooks
+        run: pixi run notebook-prepare
+      - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - name: Build the native code
+        run: pixi run core-build
+      - name: Execute notebooks for rendering
+        run: pixi run notebook-exec-ci
+      # The repository keeps tutorial notebooks without outputs, so the site runs them before it renders them.
+      - name: Run the tutorial notebooks
+        run: pixi run notebooks-run
+      - name: Strict contributor docs build  # mkdocs.yml writes site/dev
+        run: pixi run docs-build
+      - name: Build the public site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/edi-releases.json"
+          pixi run site-build --require-outputs --base-url https://enhantica.github.io/edi/ --github-releases "$RUNNER_TEMP/edi-releases.json"
+      - name: Place the public site at the root
+        run: |
+          for path in dev webapp; do
+            [ ! -e "website/_build/$path" ] || { echo "the public site must not own /$path/"; exit 1; }
+          done
+          cp -R website/_build/. site/
+      - name: Upload documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-docs
+          path: site
+          include-hidden-files: true
+          if-no-files-found: error
+
+  wasm:
+    needs: crysta-sdk
+    name: build WebAssembly
+    if: github.event.pull_request.head.repo.fork == false && github.repository == 'enhantica/edi' && github.event_name != 'release' && (github.event_name != 'workflow_dispatch' || inputs.component != 'docs')
+    environment: crysta-sdk
+    runs-on: *linux
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup-pixi
+      - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - name: Fetch the pinned crysta source
+        run: pixi run crysta-sdk
+      - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
+        run: pixi run -e app wasm-toolchain
+      - name: Build both kits and pack the web app
+        run: pixi run -e app --skip-deps wasm-build
+      - name: Upload WebAssembly
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-webapp
+          path: build/wasm/site
+          include-hidden-files: true
+          if-no-files-found: error
+
+  publish-docs:
+    name: publish documentation
+    needs: docs
+    if: github.event.repository.private == false
+    concurrency:
+      group: pages-publication
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: *linux
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download new documentation
+        uses: actions/download-artifact@v4
+        with:
+          name: pages-docs
+          path: documentation
+      - name: Preserve the deployed counterpart and assemble the site
+        run: python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component docs --incoming documentation --site site
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Upload the documentation site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: pages-site-docs-${{ github.run_attempt }}
+          path: site
+          retention-days: 90
+      - name: Deploy documentation to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: pages-site-docs-${{ github.run_attempt }}
+
+  publish-wasm:
+    name: publish WebAssembly
+    needs: wasm
+    if: github.event.repository.private == false
+    concurrency:
+      group: pages-publication
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: *linux
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download new WebAssembly
+        uses: actions/download-artifact@v4
+        with:
+          name: pages-webapp
+          path: webapp
+      - name: Preserve the deployed counterpart and assemble the site
+        run: python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component wasm --incoming webapp --site site
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Upload the WebAssembly site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: pages-site-wasm-${{ github.run_attempt }}
+          path: site
+          retention-days: 90
+      - name: Deploy WebAssembly to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: pages-site-wasm-${{ github.run_attempt }}

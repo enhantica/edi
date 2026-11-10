@@ -1,0 +1,46 @@
+# Add this job beside app-wasm in the application workflow. It builds its own
+# native outputs because the existing app job does not upload a desktop package.
+licence-surfaces:
+  needs: [changes, app-wasm]
+  if: ${{ !cancelled() && needs.app-wasm.result == 'success' }}
+  runs-on: ubuntu-24.04
+  environment: crysta-sdk
+  env:
+    CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+  steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+    - uses: ./.github/actions/setup-pixi
+    - uses: actions/create-github-app-token@v2
+      id: crysta-token
+      with:
+        app-id: ${{ vars.ENHANTICA_APP_ID }}
+        private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+        owner: enhantica
+        repositories: crysta
+        permission-contents: read
+        permission-actions: read
+    - uses: actions/download-artifact@v4
+      with:
+        name: edi-webapp
+        path: build/wasm/site
+    - name: Build the CLI and the native extension
+      run: pixi run core-build
+      env:
+        GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+    - name: Build the desktop install target
+      run: pixi run -e app app-build
+      env:
+        GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
+    - name: Install the desktop app, unpack the wheel and collect the CLI
+      run: pixi run --skip-deps python tests/fixtures/distribution_licences/stage.py
+      # stage.py writes all four EDI_*_BUNDLE paths to GITHUB_ENV.
+    - name: Check only the distribution licence gates
+      run: pixi run --skip-deps python -m pytest tests/system/py/test_distribution_licences.py
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: licence-surfaces
+        path: build/distribution-licences
+        if-no-files-found: error

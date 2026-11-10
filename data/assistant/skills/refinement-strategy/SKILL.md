@@ -1,0 +1,271 @@
+---
+name: refinement-strategy
+description: Choose and revise a fitting strategy from actual model, data, native eligibility and scientific references.
+---
+
+# Fit from current evidence
+
+Say fit, fitting and fitted to the user, never refine or refinement: these are Edi's words. The
+references below keep their own titles.
+
+Version: 1.6.9. Follow the user's goal, supplied constraints and actually offered
+operations. This is a decision loop, not a fixed recipe, family, stage count or
+target statistic. Explicit user groups/subsets/order/flags override delegated
+planning; native eligibility and ownership still apply.
+
+## Core workflow
+
+For a delegated full powder structure fit, track which eligible groups have actually
+been fitted and assessed: background intensities/terms, phase scale, required
+alignment, requested profile coefficients, and independent structural coordinates
+and displacement parameters. Symmetry/dependency and explicit user/calibration
+constraints still apply. A temporary diagnostic freeze or a default fixed flag is
+not an instruction to leave a group out. Unassessed eligible atomic sites must not
+be left at their starting values and called a completed structural fit. A failed
+subset trial does not assess the remaining sites: diagnose the coupled model and
+finish that category, or explicitly report the structural fit incomplete.
+
+1. **Establish essentials, then wait if needed.** Inspect the current project and
+   small attachment/header portions. Use the native reader for supported format,
+   columns and sigma; ask about those only after a real loading failure or genuine
+   ambiguity. Establish sample form, radiation probe, beam mode and wavelength/TOF calibration,
+   checking the other experiment-type axes against current capabilities. Defaults
+   and file extensions do not confirm an experiment type; explicit NPD already
+   establishes neutron powder diffraction. If required type choices or calibration
+   are missing/conflicting, collect the missing choices together with selectable
+   question-card options matching the app, without reasking established facts. Show
+   Assistant before asking and wait for the actual answer. If required facts are
+   missing and no question-card flow is offered, issue a FINAL question and END
+   the turn. Do no creation, import, setup, fitting or Save while awaiting those
+   facts. When they are established, proceed without a redundant question.
+
+2. **Find the dominant current mismatch efficiently.** Start broad numerical
+   assessment with offered `inspect_data view=summary` and suitable explicit
+   positive partitions. Reuse unchanged measured/sigma/geometry facts. Read exact
+   peak-containing measured/calculated/residual windows and separate Bragg rows
+   for unresolved positions/shape; off-peak windows assess baseline ONLY. For SC,
+   inspect relevant F-squared/intensity dependence. Request complete raw arrays
+   only for an explicit request or a detailed diagnostic that needs them, not
+   merely because a fit ran. All exact raw data remain available without a quota.
+   Check units, weighting, exclusions, native row mapping and current/adopted
+   calculation availability. Summaries are neither peak assignments, fit metrics,
+   total-width validation nor correlation evidence.
+
+3. **Introduce the implicated group; retain accepted work.** Resolve observed
+   position mismatch with eligible cell/offset/scale and supplied wavelength
+   anchored before widths or ADPs absorb it. In a delegated full fit, assess the
+   eligible phase scale rather than leave its initial fixed default unexamined;
+   profile and ADPs must not compensate for a wrong intensity normalization.
+   Preserve explicit user-fixed or independently calibrated scale. Assess baseline bias before ADPs;
+   Estimate alone is not validation. For delegated full powder fitting, fit the
+   eligible estimated background as its own assessed block, retaining accepted
+   work, before accepting profile/ADP interpretation. An estimate is only a
+   starting point, never a completed fitted background. If this required block
+   cannot be completed, report an incomplete fit; do not silently omit it.
+   Keep accepted useful eligible free groups in the fit by default while adding
+   ONE new unvalidated scientific block. Before EACH fit reconcile the COMPLETE
+   actual free population with accepted groups plus that one new block. A group
+   is not accepted merely because its flags were free by default, setup happened
+   earlier, or set_free succeeded; acceptance needs actual scientific assessment.
+   Different new categories do not become one block by putting them in one batch
+   or setting them all up before the first fit. Introduce background separately
+   from profile, and coordinates separately from ADPs; keep other UNVALIDATED
+   categories fixed until the current block is assessed. Already accepted groups
+   remain cumulative. This does not split an evidence-justified within-profile
+   coefficient group or forbid simultaneous X/Y; explicit user groups still win.
+   Hold an accepted group only for explicit user/calibration/native-dependence
+   requirements or a stated diagnostic based on observed correlation, confounding
+   or instability; keep that comparison restorable. Do not routinely freeze and
+   re-release successful groups, or require a final fixed/free sweep or extra fit.
+   Collect intended eligible members across sites BEFORE constructing flags;
+   finish one category/subset rather than alternate categories atom by atom.
+   After a failed new block, repair that implicated block while retaining earlier
+   accepted stages; do not add unrelated groups or restart everything all-free.
+   Use one exact uniform eligible group request when justified. Read the COMPLETE
+   actual free population: set_free changes listed flags only, not omitted flags.
+   The default full-powder background block does not prescribe the first fit or
+   override user groups/subsets/order/flags, fixed calibration, native eligibility
+   or automatic-background ownership.
+
+4. **Assess before spending the next Undo.** Reconcile actual prerequisite replies
+   and settle calculation before fitting. Read returned status/adopted FIRST.
+   Only an adopted outcome establishes this candidate as live work; adopted
+   cancellation can retain a partial result. Refused/error/superseded or unadopted
+   attempts do not adopt that candidate: reconcile the actual current state.
+   Inspect actual changes, CURRENT peak/baseline residuals, total widths and SUs.
+   If the adopted trial is unacceptable, use genuine latest-fit Undo while still
+   available, then promptly diagnose a restorable simpler supported candidate of
+   the implicated factor. Do not wander into unrelated groups to repair it.
+   Stall/no_step/rejection needs fresh evidence, eligibility and anchor diagnosis;
+   a parameter list, lower objective, convergence, positive ADPs or absent errors
+   is not adequacy. Weakly identified quantities need a physically justified
+   comparison OR an explicit unresolved limitation. Undo is not selective reversal
+   or a checkpoint bank, does not restore flags, and a refused/unadopted attempt
+   cannot justify undoing earlier accepted science. Fixing retains current values.
+
+5. **Preserve useful work and state an honest endpoint.** Continue justified work
+   or name the specific incomplete evidence/capability/quantities. Undo clears the
+   fit result record: after undoing a rejected trial that followed an accepted fit,
+   fix again what the trial freed, run_fit the restored model and keep that adopted
+   fit, so the work ends with fit results, R-factors and a report. Never finish with
+   `fit_result_current` false after such an Undo. Restricted
+   convergence or negative-ADP Undo alone is not a completed structure fit;
+   diagnose large reduced chi-square rather than force it to one. Before declaring
+   a delegated full powder fit complete, verify an adopted estimated-background
+   trial and its assessment. If background fitting was excluded, blocked or
+   rejected without a successful supported alternative, report the limited or
+   incomplete scope; do not call the estimated background adequate or the full
+   fit complete. Unperformed work is incomplete even if the solver converged. Save/Report may
+   preserve scientifically limited work. After ordinary Save inspect authoritative
+   saved/adopted values/SUs and current residuals; label old trial statistics
+   pre-Save unless an offered metric actually belongs to the saved model. Use
+   native `file_value ± file_su` verbatim with units, never reconstructed digits.
+   Keep scientific caveats public; app/tool/skill improvements go ONLY through
+   offered `diagnostics.developer_feedback` to the hidden diagnostic work report.
+
+## Scientific references and exceptions
+
+### Starts and native conventions
+
+Preserve provenance, comparable objectives/observations, composition, symmetry,
+genuine calibration and user flags. Defaults, including zero and initial free
+flags, are starts rather than user constraints. For a new CW task needing alignment,
+try the eligible joint alignment group before another offset start. Only observed
+stall/rejection justifies a data-supported alternative; never import specimen,
+tutorial or online fitted seeds or broaden displacement to absorb position error.
+
+For matching offered CW families, Crysta f6e737d3aa45c0b1c01cb7b741e606cdff08d8a6
+(src/core/cwl_profile.hpp, profile_chains.hpp and
+include/crysta/peaks/cwl_pseudo_voigt.hpp) defines:
+
+- Gaussian H_G² = U tan²(theta) + V tan(theta) + W.
+- TCH Lorentz H_L = X tan(theta) + Y/cos(theta).
+- Ordinary pseudo-Voigt eta = eta0 + eta1*(2theta in DEGREES); these are not TCH X/Y.
+
+Theta is native Bragg angle, not offset-shifted observed angle. Apply only to the
+matching actual engine/family/settings; another version/TOF model needs its own
+facts. Do not swap conventions from an external program. Type/profile changes
+may reset settings: inspect current values/eligibility. Definitions are not seeds
+or proof of scientific adequacy.
+
+### Native eligibility, imports and backgrounds
+
+Import a supplied CIF unless manual entry is requested. Initial Estimate uses
+current saved type/mode/settings unless manual anchors are explicit. Inspect
+anchors/terms/eligibility without imposing anchors or bypassing automatic ownership.
+For delegated full powder fitting, an estimated background is an initial model,
+not a measured fixed calibration. Inspect its actual eligible intensity/term
+parameters, free that eligible background group and run an assessed trial while
+retaining accepted free groups. Keep anchor positions, type, measured data and
+unrelated flags unchanged. Assess residuals, uncertainty and confounding; reject
+an unacceptable trial with genuine Undo. Near-unit quiet-point RMS or a small
+mean does not establish the baseline beneath peaks and does not replace this trial.
+
+An estimated background is NEVER adequate as the finished background of a full
+powder fit. Fitting it is required, not conditional on residual RMS, mean, solver
+convergence or a target chi-square. A rejected background trial requires diagnosis
+and a supported alternative; Undo alone does not complete the background work.
+
+Preserve an explicit user-fixed background, a restricted task scope, genuine
+independent calibration and native ownership. Do not change mode or invent
+anchors to bypass eligibility. If these prevent fitting an estimated background,
+state the concrete restriction and report the full fit as incomplete or limited;
+never turn the restriction into a claim that the estimate is adequate. This rule
+concerns fitting eligible background intensities/terms, not freeing anchor positions
+or every background field. An independently measured fixed calibration is not an
+estimated background.
+
+After materially changing the background, reassess profile/ADP restrictions based
+on the earlier baseline. A previously correlated X/Y pair is not permanently
+unidentifiable: compare its eligible joint fit from the improved model when that
+was the reason for simplifying it. Preserve a genuine user/calibration restriction.
+Obey fittability; alternative starts/families need supported operations and
+restorable state. Negative-ADP Undo does not finish that assessment.
+
+### Widths, identifiability and implicated-group recovery
+
+Assess actual TOTAL components over measured reflections/range, including high
+angles. X/Y are not universally exclusive; signed coefficients alone are not
+invalidity and positive Gaussian width does not certify Lorentz width. Unknown
+geometry/checks stay unknown. After a rejected/unidentified profile trial, promptly
+assess a physically justified simpler eligible SAME-family coefficient candidate,
+or state why comparison is unavailable/unjustified. Do not zero/fix from sign,
+postpone diagnosis by unrelated groups, or change profile family plus unrelated
+baseline/structure simultaneously for diagnosis. Never replay partial/uncertain
+effects, bypass ownership/change action mode, or replace inputs to lower objective.
+
+Use actual completed-fit correlation pairs when offered, with original fit/call
+provenance and explicitly unknown current-model validity. Missing/empty pairs do
+not establish independence/covariance availability; large SUs are not correlations
+and positive values alone are not identifiability. Repeated parameter reads are
+not new information about an undetermined model.
+
+### Single-crystal exceptions
+
+Use actual F-squared residual/intensity dependence for appropriate extinction/ADP
+assessment. Use current native extinction family, mosaic options and parameters;
+fittable/fit_reason wins over a powder release group applied to inactive SC fields.
+Enter a supplied size/radius in its actual field/units, without invented diameter
+conversion. Choose from evidence, not screenshots. Zero sensitivity depends on
+model/other values and is not limited to mixed Becker–Coppens. Only observed
+stall/sensitivity can justify a small positive, physically explained supported
+trial start: inspect response/SU and keep it restorable. Zero alone is insufficient;
+never use another experiment's fitted value.
+
+### Mixed sites and shared displacement models
+
+Establish actual same-phase co-occupancy and the user's scope first. Species
+sharing one crystallographic site use one shared isotropic displacement model by
+default. Establish that relation BEFORE the displacement trial, rather than wait
+for independent same-site values to become anticorrelated. For example, tie Biso(La) = Biso(Ba) on a mixed La/Ba site through add_relations,
+using actual returned unique names and ordinary aliases. Inspect existing
+relations first: reuse a matching equality instead of adding a duplicate or
+reverse relation. Refit and inspect the
+relation, current residuals and uncertainties. Near-perfect anticorrelation of
+independently free same-site ADPs calls for this shared model, not merely a warning
+that the fit is undetermined. Preserve occupancies and composition. Keep distinct
+ADPs only for an explicit user constraint or a stated physical justification. Leaving all same-site
+ADPs at zero or omitting the shared-site degree of freedom is not a substitute for
+fitting that model. Distinct same-element sites in similar bonding environments may also justify
+restorable sharing from weak identifiability/actual correlations: co-location is
+unnecessary, element alone insufficient. If unresolved, consider justified broader
+or overall isotropic groups OR state unavailable comparison/lost information.
+One failed trial settles neither alternatives nor required sharing. Negative ADPs
+alone do not mandate sharing or replacing established anisotropy. Keep Biso/Uiso
+conversion/units correct. Symmetry is not a modelling constraint: preserve
+independent coordinates/occupancies, compare residuals/SUs/complexity, and never
+equate arbitrary anisotropic tensors across frames. Affine constraints are not
+geometric restraints. No universal X-ray atom order applies to neutrons; report
+conditional uncertainties/correlations honestly.
+
+### Saving and numerical claims
+
+After ordinary requested/delegated Save inspect authoritative saved values/SUs and
+CURRENT residuals against accepted pre-Save values: Save can round/adopt/recalculate.
+Old run_fit metrics remain pre-Save/pre-edit unless an offered metric actually
+belongs to the saved model. Parameter reads, calculation-current/no-error flags
+and unquantified residual checks do NOT verify chi-square/Rwp/objective equality.
+Do not invent APIs/degrees of freedom, silently refit, or require reopening.
+Disclose material changes/undetermined values while preserving genuine commit/path
+facts. Ordinary Save may preserve an explicitly incomplete project; it is not
+scientific validation. Quote native file_value and file_su VERBATIM as value ± SU
+with units, never reconstructed parenthetic digits. If unavailable, give actual
+numerical SU or state absence, never zero. Distinguish observation/assumption/unknown.
+
+### Research, public caveats and hidden developer feedback
+
+When guidance/supported routes leave needed information unresolved, use offered
+public search/read: Edi source/docs, current engine/API facts or primary literature.
+Query public concepts, not raw data, unpublished sample details, credentials or
+private paths. Retain actual URLs/citations and label inferred decisions; research
+cannot manufacture an Edi operation/result. Ask only genuinely missing facts or
+indispensable user action. Automatic work reports retain history/research but do
+not veto science. Send app/tool/skill improvement suggestions ONLY through offered
+diagnostics.developer_feedback to hidden diagnostic work report, never purpose,
+chat or scientific Report. Scientific caveats and user-needed errors stay public.
+
+Read starting references where relevant, without replacing actual data/model/scope:
+
+- McCusker et al., Rietveld refinement guidelines: https://journals.iucr.org/j/issues/1999/01/00/gl0561/
+- Toby, International Tables H, Rietveld refinement and model simplification (2019): https://onlinelibrary.wiley.com/iucr/itc/Ha/ch4o7v0001/
+- Young (ed.), The Rietveld Method: https://doi.org/10.1093/oso/9780198555773.001.0001

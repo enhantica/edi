@@ -1,0 +1,10 @@
+_edi.schema_version 2
+_fitting_mode.type independent
+
+
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+_sequential_fit.data_dir experiments
+_sequential_fit.file_pattern scan.dat
+_sequential_fit.reverse false

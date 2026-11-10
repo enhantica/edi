@@ -1,0 +1,60 @@
+{
+  "example": "pd-neut-cwl_y2o3-spodi",
+  "result": {
+    "rwp": 0.013446756536677684,
+    "reduced_chi_square": 1.1985647351162638,
+    "converged": true
+  },
+  "edi_build_commit": "6021e5c7c0501590ae2633643b2f7968bc686027",
+  "axis_ranges": {
+    "initial": {
+      "xaxis": [
+        0.95,
+        153.9
+      ],
+      "xaxis2": [
+        0.95,
+        153.9
+      ],
+      "yaxis": [
+        -304.9913654163281,
+        31743.775500824533
+      ],
+      "yaxis2": [
+        -4670.123082763201,
+        4670.123082763201
+      ]
+    },
+    "refined": {
+      "xaxis": [
+        0.95,
+        153.9
+      ],
+      "xaxis2": [
+        0.95,
+        153.9
+      ],
+      "yaxis": [
+        -304.9913654163281,
+        31743.775500824533
+      ],
+      "yaxis2": [
+        -4670.123082763201,
+        4670.123082763201
+      ]
+    }
+  },
+  "generator_sha256": "d52dbe5637c3fc0c9fe1becb3e9237e0c95a3fb58d03056c8a3656f96d067ef8",
+  "input_sha256": {
+    "analysis/analysis.edi": "17fe1208c16ef917e0754bd3d524cde0a1af7ea27f78e7e2660e3425459282e1",
+    "experiments/spodi.edi": "c6ff7236515100d6a5559271a52772142d435583d2b477f87b82411848a45eb3",
+    "project.edi": "ef813084d41d24156e35956bc943a1351031f9d9b6da9f19b4ce57ce91287277",
+    "structures/y2o3.edi": "0035a2409b1fa26521d4b59c9520c37d8c4bb8c2ec9e53c50ff227ad87d53ccf"
+  },
+  "assets_sha256": {
+    "dark/initial.svg": "caa162b331c9450c80ca7f92563d42370e4bf0a5992405dad3009bde22b053f6",
+    "dark/refined.svg": "5566c8c984804030cdf47990c48ecdc7ca83ec8f859d94aea178991bae59787a",
+    "initial.svg": "4271565bda5a6bcc4756da05de5ec0db3c379d183d004d382b15922302874551",
+    "refined.svg": "f4798ff83cbb5a66e2afa5d511b636207c330010e8fffc3686ae504cd7165625"
+  }
+}

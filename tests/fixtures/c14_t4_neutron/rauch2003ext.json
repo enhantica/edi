@@ -1,0 +1,1030 @@
+{
+  "source": "rauch2003ext",
+  "booklet_sha256": "4a632ba0a155275c6c39090f14cf29448dce10548f2676a728a4b9485a173e94",
+  "carrier_nsf_sha256": "47c5f841100c91fb1d063be9503d0a1bc35a80ae1e9d0791f387ad05e5589ed9",
+  "extended_elements": [
+    "He",
+    "Li",
+    "C",
+    "O",
+    "Sn",
+    "Pr",
+    "Nd",
+    "Pb",
+    "Bi"
+  ],
+  "rows": {
+    "H": {
+      "b_real_fm": -3.7409,
+      "b_imag_fm": -0.0001,
+      "booklet_b_real_fm": -3.7409,
+      "absorption_barn": 0.3326,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "He": {
+      "b_real_fm": 3.0985,
+      "b_imag_fm": -0.0,
+      "booklet_b_real_fm": 3.26,
+      "absorption_barn": 0.00747,
+      "publication": [
+        "Haun",
+        "2020",
+        "10.1103/PhysRevLett.124.012501"
+      ]
+    },
+    "Li": {
+      "b_real_fm": -1.93,
+      "b_imag_fm": -0.0196,
+      "booklet_b_real_fm": -1.9,
+      "absorption_barn": 70.5,
+      "publication": [
+        "Gehlhaar",
+        "2025",
+        "10.1088/1361-648X/add3a6"
+      ]
+    },
+    "Be": {
+      "b_real_fm": 7.79,
+      "b_imag_fm": -0.0,
+      "booklet_b_real_fm": 7.79,
+      "absorption_barn": 0.0076,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "B": {
+      "b_real_fm": 5.3,
+      "b_imag_fm": -0.2133,
+      "booklet_b_real_fm": 5.3,
+      "absorption_barn": 767.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "C": {
+      "b_real_fm": 6.6472,
+      "b_imag_fm": -0.0,
+      "booklet_b_real_fm": 6.6484,
+      "absorption_barn": 0.0035,
+      "publication": [
+        "Snow",
+        "2020",
+        "10.1103/PhysRevD.101.062004"
+      ]
+    },
+    "N": {
+      "b_real_fm": 9.36,
+      "b_imag_fm": -0.0005,
+      "booklet_b_real_fm": 9.36,
+      "absorption_barn": 1.9,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "O": {
+      "b_real_fm": 5.8037,
+      "b_imag_fm": -0.0,
+      "booklet_b_real_fm": 5.805,
+      "absorption_barn": 0.00019,
+      "publication": [
+        "Snow",
+        "2020",
+        "10.1103/PhysRevD.101.062004"
+      ]
+    },
+    "F": {
+      "b_real_fm": 5.654,
+      "b_imag_fm": -0.0,
+      "booklet_b_real_fm": 5.654,
+      "absorption_barn": 0.0096,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ne": {
+      "b_real_fm": 4.566,
+      "b_imag_fm": -0.0,
+      "booklet_b_real_fm": 4.566,
+      "absorption_barn": 0.039,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Na": {
+      "b_real_fm": 3.63,
+      "b_imag_fm": -0.0001,
+      "booklet_b_real_fm": 3.63,
+      "absorption_barn": 0.53,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Mg": {
+      "b_real_fm": 5.375,
+      "b_imag_fm": -0.0,
+      "booklet_b_real_fm": 5.375,
+      "absorption_barn": 0.063,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Al": {
+      "b_real_fm": 3.449,
+      "b_imag_fm": -0.0001,
+      "booklet_b_real_fm": 3.449,
+      "absorption_barn": 0.231,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Si": {
+      "b_real_fm": 4.1507,
+      "b_imag_fm": -0.0,
+      "booklet_b_real_fm": 4.15071,
+      "absorption_barn": 0.171,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "P": {
+      "b_real_fm": 5.13,
+      "b_imag_fm": -0.0,
+      "booklet_b_real_fm": 5.13,
+      "absorption_barn": 0.172,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "S": {
+      "b_real_fm": 2.847,
+      "b_imag_fm": -0.0001,
+      "booklet_b_real_fm": 2.847,
+      "absorption_barn": 0.53,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Cl": {
+      "b_real_fm": 9.5792,
+      "b_imag_fm": -0.0093,
+      "booklet_b_real_fm": 9.5792,
+      "absorption_barn": 33.5,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ar": {
+      "b_real_fm": 1.909,
+      "b_imag_fm": -0.0002,
+      "booklet_b_real_fm": 1.909,
+      "absorption_barn": 0.675,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "K": {
+      "b_real_fm": 3.67,
+      "b_imag_fm": -0.0006,
+      "booklet_b_real_fm": 3.67,
+      "absorption_barn": 2.1,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ca": {
+      "b_real_fm": 4.7,
+      "b_imag_fm": -0.0001,
+      "booklet_b_real_fm": 4.7,
+      "absorption_barn": 0.43,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Sc": {
+      "b_real_fm": 12.1,
+      "b_imag_fm": -0.0076,
+      "booklet_b_real_fm": 12.1,
+      "absorption_barn": 27.5,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ti": {
+      "b_real_fm": -3.37,
+      "b_imag_fm": -0.0017,
+      "booklet_b_real_fm": -3.37,
+      "absorption_barn": 6.09,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "V": {
+      "b_real_fm": -0.443,
+      "b_imag_fm": -0.0014,
+      "booklet_b_real_fm": -0.443,
+      "absorption_barn": 5.08,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Cr": {
+      "b_real_fm": 3.635,
+      "b_imag_fm": -0.0008,
+      "booklet_b_real_fm": 3.635,
+      "absorption_barn": 3.05,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Mn": {
+      "b_real_fm": -3.75,
+      "b_imag_fm": -0.0037,
+      "booklet_b_real_fm": -3.75,
+      "absorption_barn": 13.3,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Fe": {
+      "b_real_fm": 9.45,
+      "b_imag_fm": -0.0007,
+      "booklet_b_real_fm": 9.45,
+      "absorption_barn": 2.56,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Co": {
+      "b_real_fm": 2.49,
+      "b_imag_fm": -0.0103,
+      "booklet_b_real_fm": 2.49,
+      "absorption_barn": 37.18,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ni": {
+      "b_real_fm": 10.3,
+      "b_imag_fm": -0.0012,
+      "booklet_b_real_fm": 10.3,
+      "absorption_barn": 4.49,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Cu": {
+      "b_real_fm": 7.718,
+      "b_imag_fm": -0.0011,
+      "booklet_b_real_fm": 7.718,
+      "absorption_barn": 3.78,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Zn": {
+      "b_real_fm": 5.68,
+      "b_imag_fm": -0.0003,
+      "booklet_b_real_fm": 5.68,
+      "absorption_barn": 1.11,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ga": {
+      "b_real_fm": 7.288,
+      "b_imag_fm": -0.0008,
+      "booklet_b_real_fm": 7.288,
+      "absorption_barn": 2.75,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ge": {
+      "b_real_fm": 8.185,
+      "b_imag_fm": -0.0006,
+      "booklet_b_real_fm": 8.185,
+      "absorption_barn": 2.2,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "As": {
+      "b_real_fm": 6.58,
+      "b_imag_fm": -0.0013,
+      "booklet_b_real_fm": 6.58,
+      "absorption_barn": 4.5,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Se": {
+      "b_real_fm": 7.97,
+      "b_imag_fm": -0.0033,
+      "booklet_b_real_fm": 7.97,
+      "absorption_barn": 11.7,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Br": {
+      "b_real_fm": 6.79,
+      "b_imag_fm": -0.0019,
+      "booklet_b_real_fm": 6.79,
+      "absorption_barn": 6.9,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Kr": {
+      "b_real_fm": 7.81,
+      "b_imag_fm": -0.007,
+      "booklet_b_real_fm": 7.81,
+      "absorption_barn": 25.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Rb": {
+      "b_real_fm": 7.08,
+      "b_imag_fm": -0.0001,
+      "booklet_b_real_fm": 7.08,
+      "absorption_barn": 0.38,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Sr": {
+      "b_real_fm": 7.02,
+      "b_imag_fm": -0.0004,
+      "booklet_b_real_fm": 7.02,
+      "absorption_barn": 1.28,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Y": {
+      "b_real_fm": 7.75,
+      "b_imag_fm": -0.0004,
+      "booklet_b_real_fm": 7.75,
+      "absorption_barn": 1.28,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Zr": {
+      "b_real_fm": 7.16,
+      "b_imag_fm": -0.0001,
+      "booklet_b_real_fm": 7.16,
+      "absorption_barn": 0.185,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Nb": {
+      "b_real_fm": 7.054,
+      "b_imag_fm": -0.0003,
+      "booklet_b_real_fm": 7.054,
+      "absorption_barn": 1.15,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Mo": {
+      "b_real_fm": 6.715,
+      "b_imag_fm": -0.0007,
+      "booklet_b_real_fm": 6.715,
+      "absorption_barn": 2.48,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Tc": {
+      "b_real_fm": 6.8,
+      "b_imag_fm": -0.0056,
+      "booklet_b_real_fm": 6.8,
+      "absorption_barn": 20.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ru": {
+      "b_real_fm": 7.02,
+      "b_imag_fm": -0.0007,
+      "booklet_b_real_fm": 7.02,
+      "absorption_barn": 2.56,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Rh": {
+      "b_real_fm": 5.9,
+      "b_imag_fm": -0.0403,
+      "booklet_b_real_fm": 5.9,
+      "absorption_barn": 144.8,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Pd": {
+      "b_real_fm": 5.91,
+      "b_imag_fm": -0.0019,
+      "booklet_b_real_fm": 5.91,
+      "absorption_barn": 6.9,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ag": {
+      "b_real_fm": 5.922,
+      "b_imag_fm": -0.0176,
+      "booklet_b_real_fm": 5.922,
+      "absorption_barn": 63.3,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Cd": {
+      "b_real_fm": 4.83,
+      "b_imag_fm": -0.7008,
+      "booklet_b_real_fm": 4.83,
+      "absorption_barn": 2520.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "In": {
+      "b_real_fm": 4.065,
+      "b_imag_fm": -0.0539,
+      "booklet_b_real_fm": 4.065,
+      "absorption_barn": 193.8,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Sn": {
+      "b_real_fm": 6.2239,
+      "b_imag_fm": -0.0002,
+      "booklet_b_real_fm": 6.225,
+      "absorption_barn": 0.626,
+      "publication": [
+        "Snow",
+        "2020",
+        "10.1103/PhysRevD.101.062004"
+      ]
+    },
+    "Sb": {
+      "b_real_fm": 5.57,
+      "b_imag_fm": -0.0014,
+      "booklet_b_real_fm": 5.57,
+      "absorption_barn": 4.91,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Te": {
+      "b_real_fm": 5.68,
+      "b_imag_fm": -0.0013,
+      "booklet_b_real_fm": 5.68,
+      "absorption_barn": 4.7,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "I": {
+      "b_real_fm": 5.28,
+      "b_imag_fm": -0.0017,
+      "booklet_b_real_fm": 5.28,
+      "absorption_barn": 6.15,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Xe": {
+      "b_real_fm": 4.69,
+      "b_imag_fm": -0.0066,
+      "booklet_b_real_fm": 4.69,
+      "absorption_barn": 23.9,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Cs": {
+      "b_real_fm": 5.42,
+      "b_imag_fm": -0.0081,
+      "booklet_b_real_fm": 5.42,
+      "absorption_barn": 29.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ba": {
+      "b_real_fm": 5.07,
+      "b_imag_fm": -0.0003,
+      "booklet_b_real_fm": 5.07,
+      "absorption_barn": 1.1,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "La": {
+      "b_real_fm": 8.24,
+      "b_imag_fm": -0.0025,
+      "booklet_b_real_fm": 8.24,
+      "absorption_barn": 8.97,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ce": {
+      "b_real_fm": 4.84,
+      "b_imag_fm": -0.0002,
+      "booklet_b_real_fm": 4.84,
+      "absorption_barn": 0.63,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Pr": {
+      "b_real_fm": 4.44,
+      "b_imag_fm": -0.0032,
+      "booklet_b_real_fm": 4.58,
+      "absorption_barn": 11.5,
+      "publication": [
+        "Gehlhaar",
+        "2026",
+        "10.1088/1361-648X/ae1ec0"
+      ]
+    },
+    "Nd": {
+      "b_real_fm": 7.87,
+      "b_imag_fm": -0.014,
+      "booklet_b_real_fm": 7.69,
+      "absorption_barn": 50.5,
+      "publication": [
+        "Gehlhaar",
+        "2026",
+        "10.1088/1361-648X/ae1ec0"
+      ]
+    },
+    "Pm": {
+      "b_real_fm": 12.6,
+      "b_imag_fm": -0.0468,
+      "booklet_b_real_fm": 12.6,
+      "absorption_barn": 168.4,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Sm": {
+      "b_real_fm": 0.0,
+      "b_imag_fm": -1.6468,
+      "booklet_b_real_fm": 0.0,
+      "absorption_barn": 5922.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Eu": {
+      "b_real_fm": 5.3,
+      "b_imag_fm": -1.2597,
+      "booklet_b_real_fm": 5.3,
+      "absorption_barn": 4530.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Gd": {
+      "b_real_fm": 9.5,
+      "b_imag_fm": -13.8209,
+      "booklet_b_real_fm": 9.5,
+      "absorption_barn": 49700.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Tb": {
+      "b_real_fm": 7.34,
+      "b_imag_fm": -0.0065,
+      "booklet_b_real_fm": 7.34,
+      "absorption_barn": 23.4,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Dy": {
+      "b_real_fm": 16.9,
+      "b_imag_fm": -0.2764,
+      "booklet_b_real_fm": 16.9,
+      "absorption_barn": 994.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ho": {
+      "b_real_fm": 8.44,
+      "b_imag_fm": -0.018,
+      "booklet_b_real_fm": 8.44,
+      "absorption_barn": 64.7,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Er": {
+      "b_real_fm": 7.79,
+      "b_imag_fm": -0.0442,
+      "booklet_b_real_fm": 7.79,
+      "absorption_barn": 159.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Tm": {
+      "b_real_fm": 7.07,
+      "b_imag_fm": -0.0278,
+      "booklet_b_real_fm": 7.07,
+      "absorption_barn": 100.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Yb": {
+      "b_real_fm": 12.41,
+      "b_imag_fm": -0.0097,
+      "booklet_b_real_fm": 12.41,
+      "absorption_barn": 34.8,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Lu": {
+      "b_real_fm": 7.21,
+      "b_imag_fm": -0.0206,
+      "booklet_b_real_fm": 7.21,
+      "absorption_barn": 74.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Hf": {
+      "b_real_fm": 7.77,
+      "b_imag_fm": -0.0289,
+      "booklet_b_real_fm": 7.77,
+      "absorption_barn": 104.1,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ta": {
+      "b_real_fm": 6.91,
+      "b_imag_fm": -0.0057,
+      "booklet_b_real_fm": 6.91,
+      "absorption_barn": 20.6,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "W": {
+      "b_real_fm": 4.755,
+      "b_imag_fm": -0.0051,
+      "booklet_b_real_fm": 4.755,
+      "absorption_barn": 18.3,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Re": {
+      "b_real_fm": 9.2,
+      "b_imag_fm": -0.0249,
+      "booklet_b_real_fm": 9.2,
+      "absorption_barn": 89.7,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Os": {
+      "b_real_fm": 10.7,
+      "b_imag_fm": -0.0044,
+      "booklet_b_real_fm": 10.7,
+      "absorption_barn": 16.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Ir": {
+      "b_real_fm": 10.6,
+      "b_imag_fm": -0.1182,
+      "booklet_b_real_fm": 10.6,
+      "absorption_barn": 425.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Pt": {
+      "b_real_fm": 9.6,
+      "b_imag_fm": -0.0029,
+      "booklet_b_real_fm": 9.6,
+      "absorption_barn": 10.3,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Au": {
+      "b_real_fm": 7.9,
+      "b_imag_fm": -0.0274,
+      "booklet_b_real_fm": 7.9,
+      "absorption_barn": 98.65,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Hg": {
+      "b_real_fm": 12.595,
+      "b_imag_fm": -0.1035,
+      "booklet_b_real_fm": 12.595,
+      "absorption_barn": 372.3,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Tl": {
+      "b_real_fm": 8.776,
+      "b_imag_fm": -0.001,
+      "booklet_b_real_fm": 8.776,
+      "absorption_barn": 3.43,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Pb": {
+      "b_real_fm": 9.4024,
+      "b_imag_fm": -0.0,
+      "booklet_b_real_fm": 9.401,
+      "absorption_barn": 0.171,
+      "publication": [
+        "Snow",
+        "2020",
+        "10.1103/PhysRevD.101.062004"
+      ]
+    },
+    "Bi": {
+      "b_real_fm": 8.5242,
+      "b_imag_fm": -0.0,
+      "booklet_b_real_fm": 8.532,
+      "absorption_barn": 0.0338,
+      "publication": [
+        "Snow",
+        "2020",
+        "10.1103/PhysRevD.101.062004"
+      ]
+    },
+    "Ra": {
+      "b_real_fm": 10.0,
+      "b_imag_fm": -0.0036,
+      "booklet_b_real_fm": 10.0,
+      "absorption_barn": 12.8,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Th": {
+      "b_real_fm": 10.31,
+      "b_imag_fm": -0.002,
+      "booklet_b_real_fm": 10.31,
+      "absorption_barn": 7.37,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Pa": {
+      "b_real_fm": 9.1,
+      "b_imag_fm": -0.0558,
+      "booklet_b_real_fm": 9.1,
+      "absorption_barn": 200.6,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "U": {
+      "b_real_fm": 8.417,
+      "b_imag_fm": -0.0021,
+      "booklet_b_real_fm": 8.417,
+      "absorption_barn": 7.57,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Np": {
+      "b_real_fm": 10.55,
+      "b_imag_fm": -0.0489,
+      "booklet_b_real_fm": 10.55,
+      "absorption_barn": 175.9,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Pu": {
+      "b_real_fm": 7.7,
+      "b_imag_fm": -0.2829,
+      "booklet_b_real_fm": 7.7,
+      "absorption_barn": 1017.3,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Am": {
+      "b_real_fm": 8.3,
+      "b_imag_fm": -0.0209,
+      "booklet_b_real_fm": 8.3,
+      "absorption_barn": 75.3,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "Cm": {
+      "b_real_fm": 9.5,
+      "b_imag_fm": -0.0045,
+      "booklet_b_real_fm": 9.5,
+      "absorption_barn": 16.2,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    },
+    "157Gd": {
+      "b_real_fm": 4.0,
+      "b_imag_fm": -72.0245,
+      "booklet_b_real_fm": 4.0,
+      "absorption_barn": 259000.0,
+      "publication": [
+        "Rauch",
+        "Waschkowski",
+        "2003"
+      ]
+    }
+  }
+}

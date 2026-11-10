@@ -1,0 +1,828 @@
+_edi.schema_version 3
+
+_fitting_mode.type sequential
+
+_minimizer.type "crysta (lm)"
+
+_minimizer.max_iterations 1000
+
+_minimizer.descent fast_descent
+
+_minimizer.chi_square_tolerance 0.0001
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Co1 cosio.atom_site.Co1.adp_iso
+biso_Co2 cosio.atom_site.Co2.adp_iso
+
+loop_
+_constraint.id
+_constraint.expression
+biso_Co2 "biso_Co2 = biso_Co1"
+
+_sequential_fit.data_dir experiments/d20_scan
+_sequential_fit.file_pattern *.dat
+_sequential_fit.reverse false
+_sequential_fit.template_file all594791.dat
+
+loop_
+_sequential_fit_extract.id
+_sequential_fit_extract.target
+_sequential_fit_extract.pattern
+_sequential_fit_extract.required
+temperature diffrn.ambient_temperature ^TEMP\s+([0-9.]+) true
+
+loop_
+_fit_parameter.id
+_fit_parameter.start_value
+_fit_parameter.start_uncertainty
+_fit_parameter.start_tied
+structure.cell.length_a 10.31 . .
+structure.cell.length_b 6 . .
+structure.cell.length_c 4.79 . .
+structure.Co1.adp_iso 0.01 . .
+structure.Co2.fract_x 0.279 . .
+structure.Co2.fract_z 0.985 . .
+structure.Si.fract_x 0.094 . .
+structure.Si.fract_z 0.429 . .
+structure.Si.adp_iso 0.01 . .
+structure.O1.fract_x 0.091 . .
+structure.O1.fract_z 0.771 . .
+structure.O1.adp_iso 0.01 . .
+structure.O2.fract_x 0.448 . .
+structure.O2.fract_z 0.217 . .
+structure.O2.adp_iso 0.01 . .
+structure.O3.fract_x 0.164 . .
+structure.O3.fract_y 0.032 . .
+structure.O3.fract_z 0.28 . .
+structure.O3.adp_iso 0.01 . .
+d20.broad_gauss_u 0.24 . .
+d20.broad_gauss_v -0.53 . .
+d20.broad_gauss_w 0.38 . .
+d20.broad_lorentz_y 0.02 . .
+d20.calib_twotheta_offset 0.29 . .
+d20.cosio.scale 1.2 . .
+d20.background.1 609 . .
+d20.background.2 581 . .
+d20.background.3 563 . .
+d20.background.4 540 . .
+d20.background.5 520 . .
+d20.background.6 507 . .
+d20.background.7 463 . .
+d20.background.8 434 . .
+d20.background.9 451 . .
+d20.background.10 431 . .
+d20.background.11 414 . .
+d20.background.12 361 . .
+d20.background.13 292 . .
+d20.background.14 241 . .
+
+loop_
+_fit_parameter_correlation.id
+_fit_parameter_correlation.source_kind
+_fit_parameter_correlation.parameter_unique_name_i
+_fit_parameter_correlation.parameter_unique_name_j
+_fit_parameter_correlation.correlation
+_fit_parameter_correlation.file_path
+1 deterministic cosio.cell.length_a cosio.cell.length_b 0.2802332179324169 all594791.dat
+2 deterministic cosio.cell.length_a cosio.cell.length_c 0.3055794305021064 all594791.dat
+3 deterministic cosio.cell.length_a cosio.atom_site.Co2.fract_x -0.022287278200117156 all594791.dat
+4 deterministic cosio.cell.length_a cosio.atom_site.Co2.fract_z 0.07645670726016426 all594791.dat
+5 deterministic cosio.cell.length_a cosio.atom_site.Si.fract_x 0.016141005159228804 all594791.dat
+6 deterministic cosio.cell.length_a cosio.atom_site.Si.fract_z 0.0011565305423717248 all594791.dat
+7 deterministic cosio.cell.length_a cosio.atom_site.O1.fract_x 0.006770541880861577 all594791.dat
+8 deterministic cosio.cell.length_a cosio.atom_site.O1.fract_z 0.014558909944336142 all594791.dat
+9 deterministic cosio.cell.length_a cosio.atom_site.O2.fract_x -0.019321058781616683 all594791.dat
+10 deterministic cosio.cell.length_a cosio.atom_site.O2.fract_z -0.013124336762910053 all594791.dat
+11 deterministic cosio.cell.length_a cosio.atom_site.O3.fract_x -0.055186821068075737 all594791.dat
+12 deterministic cosio.cell.length_a cosio.atom_site.O3.fract_y 0.005775735215973464 all594791.dat
+13 deterministic cosio.cell.length_a cosio.atom_site.O3.fract_z 0.036556204590044404 all594791.dat
+14 deterministic cosio.cell.length_a cosio.atom_site.Co1.adp_iso -0.0499396173757853 all594791.dat
+15 deterministic cosio.cell.length_a cosio.atom_site.Si.adp_iso -0.0412750690649669 all594791.dat
+16 deterministic cosio.cell.length_a cosio.atom_site.O1.adp_iso 0.006749802384531612 all594791.dat
+17 deterministic cosio.cell.length_a cosio.atom_site.O2.adp_iso 0.004608226334425292 all594791.dat
+18 deterministic cosio.cell.length_a cosio.atom_site.O3.adp_iso 0.019021265214802994 all594791.dat
+19 deterministic cosio.cell.length_a d20.linked_structure.cosio.scale -0.0024385973364779833 all594791.dat
+20 deterministic cosio.cell.length_a d20.instrument.calib_twotheta_offset 0.6472100032639563 all594791.dat
+21 deterministic cosio.cell.length_a d20.peak.broad_gauss_u 0.0038101468532509425 all594791.dat
+22 deterministic cosio.cell.length_a d20.peak.broad_gauss_v -0.025652515684575557 all594791.dat
+23 deterministic cosio.cell.length_a d20.peak.broad_gauss_w 0.04610469386650978 all594791.dat
+24 deterministic cosio.cell.length_a d20.peak.broad_lorentz_y -0.01656433316793761 all594791.dat
+25 deterministic cosio.cell.length_a d20.background.1.intensity 0.00000017568884176182724 all594791.dat
+26 deterministic cosio.cell.length_a d20.background.2.intensity -0.0000004545986724825964 all594791.dat
+27 deterministic cosio.cell.length_a d20.background.3.intensity 0.0000016547218437858763 all594791.dat
+28 deterministic cosio.cell.length_a d20.background.4.intensity -0.0000062872325894818915 all594791.dat
+29 deterministic cosio.cell.length_a d20.background.5.intensity 0.00003353829751783987 all594791.dat
+30 deterministic cosio.cell.length_a d20.background.6.intensity -0.00014928924091077038 all594791.dat
+31 deterministic cosio.cell.length_a d20.background.7.intensity -0.0011670521584049313 all594791.dat
+32 deterministic cosio.cell.length_a d20.background.8.intensity -0.007566698681679484 all594791.dat
+33 deterministic cosio.cell.length_a d20.background.9.intensity 0.010596763836557709 all594791.dat
+34 deterministic cosio.cell.length_a d20.background.10.intensity -0.016157390754702402 all594791.dat
+35 deterministic cosio.cell.length_a d20.background.11.intensity 0.011336094595013195 all594791.dat
+36 deterministic cosio.cell.length_a d20.background.12.intensity -0.005242641277233256 all594791.dat
+37 deterministic cosio.cell.length_a d20.background.13.intensity -0.02390614585109462 all594791.dat
+38 deterministic cosio.cell.length_a d20.background.14.intensity -0.0037389968076035045 all594791.dat
+39 deterministic cosio.cell.length_b cosio.cell.length_c 0.2554888650156964 all594791.dat
+40 deterministic cosio.cell.length_b cosio.atom_site.Co2.fract_x -0.05115968648926797 all594791.dat
+41 deterministic cosio.cell.length_b cosio.atom_site.Co2.fract_z 0.09726267058942238 all594791.dat
+42 deterministic cosio.cell.length_b cosio.atom_site.Si.fract_x 0.06838262173582088 all594791.dat
+43 deterministic cosio.cell.length_b cosio.atom_site.Si.fract_z -0.03436978708950371 all594791.dat
+44 deterministic cosio.cell.length_b cosio.atom_site.O1.fract_x 0.018755521789361032 all594791.dat
+45 deterministic cosio.cell.length_b cosio.atom_site.O1.fract_z -0.05029984518699667 all594791.dat
+46 deterministic cosio.cell.length_b cosio.atom_site.O2.fract_x -0.019383019442188232 all594791.dat
+47 deterministic cosio.cell.length_b cosio.atom_site.O2.fract_z -0.012223007283598977 all594791.dat
+48 deterministic cosio.cell.length_b cosio.atom_site.O3.fract_x -0.09208612438534625 all594791.dat
+49 deterministic cosio.cell.length_b cosio.atom_site.O3.fract_y -0.055831141816583135 all594791.dat
+50 deterministic cosio.cell.length_b cosio.atom_site.O3.fract_z 0.04003217835241558 all594791.dat
+51 deterministic cosio.cell.length_b cosio.atom_site.Co1.adp_iso 0.01693705578970065 all594791.dat
+52 deterministic cosio.cell.length_b cosio.atom_site.Si.adp_iso -0.016492540974700994 all594791.dat
+53 deterministic cosio.cell.length_b cosio.atom_site.O1.adp_iso 0.07738425228512869 all594791.dat
+54 deterministic cosio.cell.length_b cosio.atom_site.O2.adp_iso 0.07142322440419574 all594791.dat
+55 deterministic cosio.cell.length_b cosio.atom_site.O3.adp_iso -0.05260727737046742 all594791.dat
+56 deterministic cosio.cell.length_b d20.linked_structure.cosio.scale 0.020619066051627933 all594791.dat
+57 deterministic cosio.cell.length_b d20.instrument.calib_twotheta_offset 0.6591019482077543 all594791.dat
+58 deterministic cosio.cell.length_b d20.peak.broad_gauss_u 0.0455948754295424 all594791.dat
+59 deterministic cosio.cell.length_b d20.peak.broad_gauss_v -0.022284557815904684 all594791.dat
+60 deterministic cosio.cell.length_b d20.peak.broad_gauss_w 0.0021058698638469113 all594791.dat
+61 deterministic cosio.cell.length_b d20.peak.broad_lorentz_y -0.008314676968859716 all594791.dat
+62 deterministic cosio.cell.length_b d20.background.1.intensity -0.0000018213703108620624 all594791.dat
+63 deterministic cosio.cell.length_b d20.background.2.intensity 0.000004712835018489425 all594791.dat
+64 deterministic cosio.cell.length_b d20.background.3.intensity -0.000017154539864898627 all594791.dat
+65 deterministic cosio.cell.length_b d20.background.4.intensity 0.00006517988656581324 all594791.dat
+66 deterministic cosio.cell.length_b d20.background.5.intensity -0.00034769231084446505 all594791.dat
+67 deterministic cosio.cell.length_b d20.background.6.intensity 0.0015476850346933754 all594791.dat
+68 deterministic cosio.cell.length_b d20.background.7.intensity -0.0035167919691742513 all594791.dat
+69 deterministic cosio.cell.length_b d20.background.8.intensity -0.007304216827048876 all594791.dat
+70 deterministic cosio.cell.length_b d20.background.9.intensity -0.005099208533727377 all594791.dat
+71 deterministic cosio.cell.length_b d20.background.10.intensity -0.006075483545018699 all594791.dat
+72 deterministic cosio.cell.length_b d20.background.11.intensity 0.01257179466178684 all594791.dat
+73 deterministic cosio.cell.length_b d20.background.12.intensity -0.011198644636037983 all594791.dat
+74 deterministic cosio.cell.length_b d20.background.13.intensity -0.01099437940750739 all594791.dat
+75 deterministic cosio.cell.length_b d20.background.14.intensity 0.02715198072748863 all594791.dat
+76 deterministic cosio.cell.length_c cosio.atom_site.Co2.fract_x -0.030493669001766133 all594791.dat
+77 deterministic cosio.cell.length_c cosio.atom_site.Co2.fract_z 0.09730712661424407 all594791.dat
+78 deterministic cosio.cell.length_c cosio.atom_site.Si.fract_x -0.00793525502327324 all594791.dat
+79 deterministic cosio.cell.length_c cosio.atom_site.Si.fract_z 0.039916364738077345 all594791.dat
+80 deterministic cosio.cell.length_c cosio.atom_site.O1.fract_x -0.02251477066218712 all594791.dat
+81 deterministic cosio.cell.length_c cosio.atom_site.O1.fract_z -0.008347931651440791 all594791.dat
+82 deterministic cosio.cell.length_c cosio.atom_site.O2.fract_x -0.025675432914106126 all594791.dat
+83 deterministic cosio.cell.length_c cosio.atom_site.O2.fract_z 0.01140410701288743 all594791.dat
+84 deterministic cosio.cell.length_c cosio.atom_site.O3.fract_x -0.041251437681179774 all594791.dat
+85 deterministic cosio.cell.length_c cosio.atom_site.O3.fract_y 0.004595504170626149 all594791.dat
+86 deterministic cosio.cell.length_c cosio.atom_site.O3.fract_z 0.02469029772424424 all594791.dat
+87 deterministic cosio.cell.length_c cosio.atom_site.Co1.adp_iso -0.012795087869015682 all594791.dat
+88 deterministic cosio.cell.length_c cosio.atom_site.Si.adp_iso -0.05340741280513671 all594791.dat
+89 deterministic cosio.cell.length_c cosio.atom_site.O1.adp_iso -0.03760834719703874 all594791.dat
+90 deterministic cosio.cell.length_c cosio.atom_site.O2.adp_iso 0.014539043548127873 all594791.dat
+91 deterministic cosio.cell.length_c cosio.atom_site.O3.adp_iso 0.0030232668849632756 all594791.dat
+92 deterministic cosio.cell.length_c d20.linked_structure.cosio.scale -0.011012966704999965 all594791.dat
+93 deterministic cosio.cell.length_c d20.instrument.calib_twotheta_offset 0.6419155244539888 all594791.dat
+94 deterministic cosio.cell.length_c d20.peak.broad_gauss_u 0.02673843240756623 all594791.dat
+95 deterministic cosio.cell.length_c d20.peak.broad_gauss_v -0.028029587781605955 all594791.dat
+96 deterministic cosio.cell.length_c d20.peak.broad_gauss_w 0.024109932471832376 all594791.dat
+97 deterministic cosio.cell.length_c d20.peak.broad_lorentz_y -0.0038777052290787516 all594791.dat
+98 deterministic cosio.cell.length_c d20.background.1.intensity 0.0000005239310422250334 all594791.dat
+99 deterministic cosio.cell.length_c d20.background.2.intensity -0.0000013556828880172777 all594791.dat
+100 deterministic cosio.cell.length_c d20.background.3.intensity 0.000004934634047578742 all594791.dat
+101 deterministic cosio.cell.length_c d20.background.4.intensity -0.000018749490806546826 all594791.dat
+102 deterministic cosio.cell.length_c d20.background.5.intensity 0.00010001634137624105 all594791.dat
+103 deterministic cosio.cell.length_c d20.background.6.intensity -0.00044520338800801984 all594791.dat
+104 deterministic cosio.cell.length_c d20.background.7.intensity -0.0008758304831528742 all594791.dat
+105 deterministic cosio.cell.length_c d20.background.8.intensity 0.0005336345542478763 all594791.dat
+106 deterministic cosio.cell.length_c d20.background.9.intensity 0.002550870724954968 all594791.dat
+107 deterministic cosio.cell.length_c d20.background.10.intensity -0.007972322576793924 all594791.dat
+108 deterministic cosio.cell.length_c d20.background.11.intensity 0.0020079024431399095 all594791.dat
+109 deterministic cosio.cell.length_c d20.background.12.intensity -0.003651788272010101 all594791.dat
+110 deterministic cosio.cell.length_c d20.background.13.intensity -0.014941092583719185 all594791.dat
+111 deterministic cosio.cell.length_c d20.background.14.intensity -0.01793126511899845 all594791.dat
+112 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.Co2.fract_z -0.03892673060916077 all594791.dat
+113 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.Si.fract_x -0.06772112193699557 all594791.dat
+114 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.Si.fract_z 0.0606288816067865 all594791.dat
+115 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.O1.fract_x -0.08848881960433329 all594791.dat
+116 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.O1.fract_z 0.01798501008408637 all594791.dat
+117 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.O2.fract_x -0.013892294836987928 all594791.dat
+118 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.O2.fract_z 0.030720925315968962 all594791.dat
+119 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.O3.fract_x 0.13594284976709545 all594791.dat
+120 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.O3.fract_y 0.010321720742407359 all594791.dat
+121 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.O3.fract_z -0.03213028078099868 all594791.dat
+122 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.Co1.adp_iso -0.1462852891580097 all594791.dat
+123 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.Si.adp_iso 0.0027479509020644772 all594791.dat
+124 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.O1.adp_iso -0.05081573155518416 all594791.dat
+125 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.O2.adp_iso 0.11609543445999604 all594791.dat
+126 deterministic cosio.atom_site.Co2.fract_x cosio.atom_site.O3.adp_iso 0.0989457233025518 all594791.dat
+127 deterministic cosio.atom_site.Co2.fract_x d20.linked_structure.cosio.scale 0.08899494635146353 all594791.dat
+128 deterministic cosio.atom_site.Co2.fract_x d20.instrument.calib_twotheta_offset -0.04352359459629178 all594791.dat
+129 deterministic cosio.atom_site.Co2.fract_x d20.peak.broad_gauss_u -0.00984179205774089 all594791.dat
+130 deterministic cosio.atom_site.Co2.fract_x d20.peak.broad_gauss_v -0.0053950024677192855 all594791.dat
+131 deterministic cosio.atom_site.Co2.fract_x d20.peak.broad_gauss_w 0.007727077602146445 all594791.dat
+132 deterministic cosio.atom_site.Co2.fract_x d20.peak.broad_lorentz_y 0.024101161450058296 all594791.dat
+133 deterministic cosio.atom_site.Co2.fract_x d20.background.1.intensity 0.000006912323695585732 all594791.dat
+134 deterministic cosio.atom_site.Co2.fract_x d20.background.2.intensity -0.000017885786861014906 all594791.dat
+135 deterministic cosio.atom_site.Co2.fract_x d20.background.3.intensity 0.0000651035825618054 all594791.dat
+136 deterministic cosio.atom_site.Co2.fract_x d20.background.4.intensity -0.00024736566295236644 all594791.dat
+137 deterministic cosio.atom_site.Co2.fract_x d20.background.5.intensity 0.0013195349594326022 all594791.dat
+138 deterministic cosio.atom_site.Co2.fract_x d20.background.6.intensity -0.005873654509399737 all594791.dat
+139 deterministic cosio.atom_site.Co2.fract_x d20.background.7.intensity -0.007111088154308113 all594791.dat
+140 deterministic cosio.atom_site.Co2.fract_x d20.background.8.intensity 0.010951032287581704 all594791.dat
+141 deterministic cosio.atom_site.Co2.fract_x d20.background.9.intensity -0.05272171492549663 all594791.dat
+142 deterministic cosio.atom_site.Co2.fract_x d20.background.10.intensity 0.018626165987536317 all594791.dat
+143 deterministic cosio.atom_site.Co2.fract_x d20.background.11.intensity -0.1366077410223039 all594791.dat
+144 deterministic cosio.atom_site.Co2.fract_x d20.background.12.intensity 0.10437188673501263 all594791.dat
+145 deterministic cosio.atom_site.Co2.fract_x d20.background.13.intensity 0.028053648519959947 all594791.dat
+146 deterministic cosio.atom_site.Co2.fract_x d20.background.14.intensity -0.1665462940876395 all594791.dat
+147 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.Si.fract_x 0.1663690564098203 all594791.dat
+148 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.Si.fract_z -0.043305289196719755 all594791.dat
+149 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.O1.fract_x 0.07169258546736075 all594791.dat
+150 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.O1.fract_z -0.13402521419061536 all594791.dat
+151 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.O2.fract_x -0.059984884376091 all594791.dat
+152 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.O2.fract_z 0.006136676411221312 all594791.dat
+153 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.O3.fract_x -0.032552005083476936 all594791.dat
+154 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.O3.fract_y -0.01678901853618985 all594791.dat
+155 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.O3.fract_z 0.25815617909279404 all594791.dat
+156 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.Co1.adp_iso 0.05056697767733146 all594791.dat
+157 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.Si.adp_iso -0.12187660137632289 all594791.dat
+158 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.O1.adp_iso 0.038027956888793235 all594791.dat
+159 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.O2.adp_iso 0.1301503475485448 all594791.dat
+160 deterministic cosio.atom_site.Co2.fract_z cosio.atom_site.O3.adp_iso -0.08138869550601728 all594791.dat
+161 deterministic cosio.atom_site.Co2.fract_z d20.linked_structure.cosio.scale 0.04181654947946787 all594791.dat
+162 deterministic cosio.atom_site.Co2.fract_z d20.instrument.calib_twotheta_offset 0.08653026556111779 all594791.dat
+163 deterministic cosio.atom_site.Co2.fract_z d20.peak.broad_gauss_u 0.04919670794235222 all594791.dat
+164 deterministic cosio.atom_site.Co2.fract_z d20.peak.broad_gauss_v -0.057222432640179205 all594791.dat
+165 deterministic cosio.atom_site.Co2.fract_z d20.peak.broad_gauss_w 0.03895655587645935 all594791.dat
+166 deterministic cosio.atom_site.Co2.fract_z d20.peak.broad_lorentz_y 0.02435292031962691 all594791.dat
+167 deterministic cosio.atom_site.Co2.fract_z d20.background.1.intensity -0.000019881954095587337 all594791.dat
+168 deterministic cosio.atom_site.Co2.fract_z d20.background.2.intensity 0.000051444985646585696 all594791.dat
+169 deterministic cosio.atom_site.Co2.fract_z d20.background.3.intensity -0.00018725778722986333 all594791.dat
+170 deterministic cosio.atom_site.Co2.fract_z d20.background.4.intensity 0.0007114991964889895 all594791.dat
+171 deterministic cosio.atom_site.Co2.fract_z d20.background.5.intensity -0.0037953855525979974 all594791.dat
+172 deterministic cosio.atom_site.Co2.fract_z d20.background.6.intensity 0.01689442428679729 all594791.dat
+173 deterministic cosio.atom_site.Co2.fract_z d20.background.7.intensity -0.03278006904075704 all594791.dat
+174 deterministic cosio.atom_site.Co2.fract_z d20.background.8.intensity -0.01969589195525377 all594791.dat
+175 deterministic cosio.atom_site.Co2.fract_z d20.background.9.intensity 0.005001833081458284 all594791.dat
+176 deterministic cosio.atom_site.Co2.fract_z d20.background.10.intensity -0.054123462993435824 all594791.dat
+177 deterministic cosio.atom_site.Co2.fract_z d20.background.11.intensity 0.009843954212590463 all594791.dat
+178 deterministic cosio.atom_site.Co2.fract_z d20.background.12.intensity -0.07238335604247223 all594791.dat
+179 deterministic cosio.atom_site.Co2.fract_z d20.background.13.intensity -0.00623699978461356 all594791.dat
+180 deterministic cosio.atom_site.Co2.fract_z d20.background.14.intensity -0.090773959577106 all594791.dat
+181 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.Si.fract_z 0.03140058424438575 all594791.dat
+182 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.O1.fract_x -0.04407587091851451 all594791.dat
+183 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.O1.fract_z -0.008051552464108188 all594791.dat
+184 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.O2.fract_x -0.17327424143161638 all594791.dat
+185 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.O2.fract_z -0.08487988885468108 all594791.dat
+186 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.O3.fract_x -0.01463828431884917 all594791.dat
+187 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.O3.fract_y -0.03775201417076929 all594791.dat
+188 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.O3.fract_z -0.1239243490662059 all594791.dat
+189 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.Co1.adp_iso 0.09848079471133205 all594791.dat
+190 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.Si.adp_iso -0.09590694443688019 all594791.dat
+191 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.O1.adp_iso 0.019288623032907976 all594791.dat
+192 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.O2.adp_iso 0.0028663613328666453 all594791.dat
+193 deterministic cosio.atom_site.Si.fract_x cosio.atom_site.O3.adp_iso -0.01815166628912816 all594791.dat
+194 deterministic cosio.atom_site.Si.fract_x d20.linked_structure.cosio.scale -0.06596820964152618 all594791.dat
+195 deterministic cosio.atom_site.Si.fract_x d20.instrument.calib_twotheta_offset 0.030938719029086358 all594791.dat
+196 deterministic cosio.atom_site.Si.fract_x d20.peak.broad_gauss_u -0.07347195474148278 all594791.dat
+197 deterministic cosio.atom_site.Si.fract_x d20.peak.broad_gauss_v 0.07823114001920595 all594791.dat
+198 deterministic cosio.atom_site.Si.fract_x d20.peak.broad_gauss_w -0.04817029678953511 all594791.dat
+199 deterministic cosio.atom_site.Si.fract_x d20.peak.broad_lorentz_y -0.03744998324828626 all594791.dat
+200 deterministic cosio.atom_site.Si.fract_x d20.background.1.intensity -0.000007717949666476923 all594791.dat
+201 deterministic cosio.atom_site.Si.fract_x d20.background.2.intensity 0.000019970361458740855 all594791.dat
+202 deterministic cosio.atom_site.Si.fract_x d20.background.3.intensity -0.00007269135465579365 all594791.dat
+203 deterministic cosio.atom_site.Si.fract_x d20.background.4.intensity 0.00027619593927199684 all594791.dat
+204 deterministic cosio.atom_site.Si.fract_x d20.background.5.intensity -0.0014733257363767187 all594791.dat
+205 deterministic cosio.atom_site.Si.fract_x d20.background.6.intensity 0.006558224390661395 all594791.dat
+206 deterministic cosio.atom_site.Si.fract_x d20.background.7.intensity 0.04141615522048347 all594791.dat
+207 deterministic cosio.atom_site.Si.fract_x d20.background.8.intensity -0.01712309282859504 all594791.dat
+208 deterministic cosio.atom_site.Si.fract_x d20.background.9.intensity 0.08172878689607523 all594791.dat
+209 deterministic cosio.atom_site.Si.fract_x d20.background.10.intensity -0.011230082984366882 all594791.dat
+210 deterministic cosio.atom_site.Si.fract_x d20.background.11.intensity 0.028581180661300887 all594791.dat
+211 deterministic cosio.atom_site.Si.fract_x d20.background.12.intensity -0.012546426577830354 all594791.dat
+212 deterministic cosio.atom_site.Si.fract_x d20.background.13.intensity 0.13656353780470123 all594791.dat
+213 deterministic cosio.atom_site.Si.fract_x d20.background.14.intensity 0.10109891281253518 all594791.dat
+214 deterministic cosio.atom_site.Si.fract_z cosio.atom_site.O1.fract_x -0.1130012925930234 all594791.dat
+215 deterministic cosio.atom_site.Si.fract_z cosio.atom_site.O1.fract_z -0.13576595388876458 all594791.dat
+216 deterministic cosio.atom_site.Si.fract_z cosio.atom_site.O2.fract_x 0.11244018108237222 all594791.dat
+217 deterministic cosio.atom_site.Si.fract_z cosio.atom_site.O2.fract_z -0.060544212416159086 all594791.dat
+218 deterministic cosio.atom_site.Si.fract_z cosio.atom_site.O3.fract_x 0.05671575269652113 all594791.dat
+219 deterministic cosio.atom_site.Si.fract_z cosio.atom_site.O3.fract_y 0.001405137052017972 all594791.dat
+220 deterministic cosio.atom_site.Si.fract_z cosio.atom_site.O3.fract_z -0.05222265083924027 all594791.dat
+221 deterministic cosio.atom_site.Si.fract_z cosio.atom_site.Co1.adp_iso 0.055615137268329465 all594791.dat
+222 deterministic cosio.atom_site.Si.fract_z cosio.atom_site.Si.adp_iso -0.04018578562666998 all594791.dat
+223 deterministic cosio.atom_site.Si.fract_z cosio.atom_site.O1.adp_iso -0.18652448544938233 all594791.dat
+224 deterministic cosio.atom_site.Si.fract_z cosio.atom_site.O2.adp_iso -0.05700886633173692 all594791.dat
+225 deterministic cosio.atom_site.Si.fract_z cosio.atom_site.O3.adp_iso -0.17572537477599123 all594791.dat
+226 deterministic cosio.atom_site.Si.fract_z d20.linked_structure.cosio.scale -0.14474706816560448 all594791.dat
+227 deterministic cosio.atom_site.Si.fract_z d20.instrument.calib_twotheta_offset 0.002760066307138283 all594791.dat
+228 deterministic cosio.atom_site.Si.fract_z d20.peak.broad_gauss_u -0.07832644338695018 all594791.dat
+229 deterministic cosio.atom_site.Si.fract_z d20.peak.broad_gauss_v 0.07718831890192066 all594791.dat
+230 deterministic cosio.atom_site.Si.fract_z d20.peak.broad_gauss_w -0.07910183635542206 all594791.dat
+231 deterministic cosio.atom_site.Si.fract_z d20.peak.broad_lorentz_y 0.0649096990768152 all594791.dat
+232 deterministic cosio.atom_site.Si.fract_z d20.background.1.intensity -0.000010659878635295406 all594791.dat
+233 deterministic cosio.atom_site.Si.fract_z d20.background.2.intensity 0.00002758266620930959 all594791.dat
+234 deterministic cosio.atom_site.Si.fract_z d20.background.3.intensity -0.00010039985384919813 all594791.dat
+235 deterministic cosio.atom_site.Si.fract_z d20.background.4.intensity 0.00038147634017519986 all594791.dat
+236 deterministic cosio.atom_site.Si.fract_z d20.background.5.intensity -0.002034928215382318 all594791.dat
+237 deterministic cosio.atom_site.Si.fract_z d20.background.6.intensity 0.009058089142042385 all594791.dat
+238 deterministic cosio.atom_site.Si.fract_z d20.background.7.intensity -0.02328181430416161 all594791.dat
+239 deterministic cosio.atom_site.Si.fract_z d20.background.8.intensity 0.08873028828515933 all594791.dat
+240 deterministic cosio.atom_site.Si.fract_z d20.background.9.intensity 0.022046132904499898 all594791.dat
+241 deterministic cosio.atom_site.Si.fract_z d20.background.10.intensity 0.021201502526209417 all594791.dat
+242 deterministic cosio.atom_site.Si.fract_z d20.background.11.intensity -0.09575041604385896 all594791.dat
+243 deterministic cosio.atom_site.Si.fract_z d20.background.12.intensity 0.012047568357458412 all594791.dat
+244 deterministic cosio.atom_site.Si.fract_z d20.background.13.intensity 0.03492404859951122 all594791.dat
+245 deterministic cosio.atom_site.Si.fract_z d20.background.14.intensity -0.08792342824586 all594791.dat
+246 deterministic cosio.atom_site.O1.fract_x cosio.atom_site.O1.fract_z 0.06929629442736444 all594791.dat
+247 deterministic cosio.atom_site.O1.fract_x cosio.atom_site.O2.fract_x 0.004315652051818644 all594791.dat
+248 deterministic cosio.atom_site.O1.fract_x cosio.atom_site.O2.fract_z -0.06592719196447425 all594791.dat
+249 deterministic cosio.atom_site.O1.fract_x cosio.atom_site.O3.fract_x 0.1535679498915499 all594791.dat
+250 deterministic cosio.atom_site.O1.fract_x cosio.atom_site.O3.fract_y -0.21794260667803741 all594791.dat
+251 deterministic cosio.atom_site.O1.fract_x cosio.atom_site.O3.fract_z -0.05204855652094726 all594791.dat
+252 deterministic cosio.atom_site.O1.fract_x cosio.atom_site.Co1.adp_iso 0.13182394805484543 all594791.dat
+253 deterministic cosio.atom_site.O1.fract_x cosio.atom_site.Si.adp_iso -0.02403050953971824 all594791.dat
+254 deterministic cosio.atom_site.O1.fract_x cosio.atom_site.O1.adp_iso 0.1212039732363115 all594791.dat
+255 deterministic cosio.atom_site.O1.fract_x cosio.atom_site.O2.adp_iso 0.19163127001931693 all594791.dat
+256 deterministic cosio.atom_site.O1.fract_x cosio.atom_site.O3.adp_iso -0.03334552670370914 all594791.dat
+257 deterministic cosio.atom_site.O1.fract_x d20.linked_structure.cosio.scale 0.07033798711381896 all594791.dat
+258 deterministic cosio.atom_site.O1.fract_x d20.instrument.calib_twotheta_offset 0.03789827600668226 all594791.dat
+259 deterministic cosio.atom_site.O1.fract_x d20.peak.broad_gauss_u -0.023818197045501675 all594791.dat
+260 deterministic cosio.atom_site.O1.fract_x d20.peak.broad_gauss_v 0.009514546296760908 all594791.dat
+261 deterministic cosio.atom_site.O1.fract_x d20.peak.broad_gauss_w 0.006006412960081681 all594791.dat
+262 deterministic cosio.atom_site.O1.fract_x d20.peak.broad_lorentz_y -0.009186136995917889 all594791.dat
+263 deterministic cosio.atom_site.O1.fract_x d20.background.1.intensity -0.000021107657313768167 all594791.dat
+264 deterministic cosio.atom_site.O1.fract_x d20.background.2.intensity 0.00005461651919785504 all594791.dat
+265 deterministic cosio.atom_site.O1.fract_x d20.background.3.intensity -0.00019880204849393306 all594791.dat
+266 deterministic cosio.atom_site.O1.fract_x d20.background.4.intensity 0.0007553624330162977 all594791.dat
+267 deterministic cosio.atom_site.O1.fract_x d20.background.5.intensity -0.004029367396884795 all594791.dat
+268 deterministic cosio.atom_site.O1.fract_x d20.background.6.intensity 0.01793594918539109 all594791.dat
+269 deterministic cosio.atom_site.O1.fract_x d20.background.7.intensity 0.019876251709627802 all594791.dat
+270 deterministic cosio.atom_site.O1.fract_x d20.background.8.intensity -0.002778675722435042 all594791.dat
+271 deterministic cosio.atom_site.O1.fract_x d20.background.9.intensity -0.04500626019614514 all594791.dat
+272 deterministic cosio.atom_site.O1.fract_x d20.background.10.intensity 0.04513803647046655 all594791.dat
+273 deterministic cosio.atom_site.O1.fract_x d20.background.11.intensity -0.008908370634157522 all594791.dat
+274 deterministic cosio.atom_site.O1.fract_x d20.background.12.intensity 0.06726867677047703 all594791.dat
+275 deterministic cosio.atom_site.O1.fract_x d20.background.13.intensity 0.06546262400527178 all594791.dat
+276 deterministic cosio.atom_site.O1.fract_x d20.background.14.intensity -0.05251497731377336 all594791.dat
+277 deterministic cosio.atom_site.O1.fract_z cosio.atom_site.O2.fract_x -0.017752828675366778 all594791.dat
+278 deterministic cosio.atom_site.O1.fract_z cosio.atom_site.O2.fract_z 0.1871808532114277 all594791.dat
+279 deterministic cosio.atom_site.O1.fract_z cosio.atom_site.O3.fract_x -0.02995690921025942 all594791.dat
+280 deterministic cosio.atom_site.O1.fract_z cosio.atom_site.O3.fract_y -0.05741071120175212 all594791.dat
+281 deterministic cosio.atom_site.O1.fract_z cosio.atom_site.O3.fract_z -0.13554517100313326 all594791.dat
+282 deterministic cosio.atom_site.O1.fract_z cosio.atom_site.Co1.adp_iso 0.006432831217647387 all594791.dat
+283 deterministic cosio.atom_site.O1.fract_z cosio.atom_site.Si.adp_iso 0.04530390285982254 all594791.dat
+284 deterministic cosio.atom_site.O1.fract_z cosio.atom_site.O1.adp_iso 0.033806684713579116 all594791.dat
+285 deterministic cosio.atom_site.O1.fract_z cosio.atom_site.O2.adp_iso 0.04752516534597077 all594791.dat
+286 deterministic cosio.atom_site.O1.fract_z cosio.atom_site.O3.adp_iso -0.002156534433100044 all594791.dat
+287 deterministic cosio.atom_site.O1.fract_z d20.linked_structure.cosio.scale 0.004457605201927391 all594791.dat
+288 deterministic cosio.atom_site.O1.fract_z d20.instrument.calib_twotheta_offset -0.009093485967036618 all594791.dat
+289 deterministic cosio.atom_site.O1.fract_z d20.peak.broad_gauss_u -0.031420305002050966 all594791.dat
+290 deterministic cosio.atom_site.O1.fract_z d20.peak.broad_gauss_v 0.02241396104266687 all594791.dat
+291 deterministic cosio.atom_site.O1.fract_z d20.peak.broad_gauss_w 0.01042781058003874 all594791.dat
+292 deterministic cosio.atom_site.O1.fract_z d20.peak.broad_lorentz_y -0.061902568815267206 all594791.dat
+293 deterministic cosio.atom_site.O1.fract_z d20.background.1.intensity 0.00003842182056479784 all594791.dat
+294 deterministic cosio.atom_site.O1.fract_z d20.background.2.intensity -0.00009941729057112304 all594791.dat
+295 deterministic cosio.atom_site.O1.fract_z d20.background.3.intensity 0.00036187514897063287 all594791.dat
+296 deterministic cosio.atom_site.O1.fract_z d20.background.4.intensity -0.0013749702030091194 all594791.dat
+297 deterministic cosio.atom_site.O1.fract_z d20.background.5.intensity 0.00733457194260023 all594791.dat
+298 deterministic cosio.atom_site.O1.fract_z d20.background.6.intensity -0.032648427582145347 all594791.dat
+299 deterministic cosio.atom_site.O1.fract_z d20.background.7.intensity 0.08949937910487692 all594791.dat
+300 deterministic cosio.atom_site.O1.fract_z d20.background.8.intensity -0.00877436810959893 all594791.dat
+301 deterministic cosio.atom_site.O1.fract_z d20.background.9.intensity 0.003912084990292169 all594791.dat
+302 deterministic cosio.atom_site.O1.fract_z d20.background.10.intensity 0.01103539548209877 all594791.dat
+303 deterministic cosio.atom_site.O1.fract_z d20.background.11.intensity -0.05073277377831792 all594791.dat
+304 deterministic cosio.atom_site.O1.fract_z d20.background.12.intensity 0.09372201149130396 all594791.dat
+305 deterministic cosio.atom_site.O1.fract_z d20.background.13.intensity 0.14809313699632504 all594791.dat
+306 deterministic cosio.atom_site.O1.fract_z d20.background.14.intensity 0.0027423111142424066 all594791.dat
+307 deterministic cosio.atom_site.O2.fract_x cosio.atom_site.O2.fract_z -0.084289652342136 all594791.dat
+308 deterministic cosio.atom_site.O2.fract_x cosio.atom_site.O3.fract_x 0.1636444605872068 all594791.dat
+309 deterministic cosio.atom_site.O2.fract_x cosio.atom_site.O3.fract_y -0.14794959041615202 all594791.dat
+310 deterministic cosio.atom_site.O2.fract_x cosio.atom_site.O3.fract_z -0.17946923123153344 all594791.dat
+311 deterministic cosio.atom_site.O2.fract_x cosio.atom_site.Co1.adp_iso 0.0418037546919347 all594791.dat
+312 deterministic cosio.atom_site.O2.fract_x cosio.atom_site.Si.adp_iso 0.07556424523923295 all594791.dat
+313 deterministic cosio.atom_site.O2.fract_x cosio.atom_site.O1.adp_iso 0.0778500122800075 all594791.dat
+314 deterministic cosio.atom_site.O2.fract_x cosio.atom_site.O2.adp_iso 0.13402951480390685 all594791.dat
+315 deterministic cosio.atom_site.O2.fract_x cosio.atom_site.O3.adp_iso -0.0011134389715335537 all594791.dat
+316 deterministic cosio.atom_site.O2.fract_x d20.linked_structure.cosio.scale 0.12144216462159146 all594791.dat
+317 deterministic cosio.atom_site.O2.fract_x d20.instrument.calib_twotheta_offset -0.011472767204802059 all594791.dat
+318 deterministic cosio.atom_site.O2.fract_x d20.peak.broad_gauss_u 0.012657529731061424 all594791.dat
+319 deterministic cosio.atom_site.O2.fract_x d20.peak.broad_gauss_v -0.027476178253451437 all594791.dat
+320 deterministic cosio.atom_site.O2.fract_x d20.peak.broad_gauss_w 0.01662247898986624 all594791.dat
+321 deterministic cosio.atom_site.O2.fract_x d20.peak.broad_lorentz_y 0.04712031113410877 all594791.dat
+322 deterministic cosio.atom_site.O2.fract_x d20.background.1.intensity -0.000004021463273773274 all594791.dat
+323 deterministic cosio.atom_site.O2.fract_x d20.background.2.intensity 0.000010405623078610623 all594791.dat
+324 deterministic cosio.atom_site.O2.fract_x d20.background.3.intensity -0.00003787607145726936 all594791.dat
+325 deterministic cosio.atom_site.O2.fract_x d20.background.4.intensity 0.0001439128102851295 all594791.dat
+326 deterministic cosio.atom_site.O2.fract_x d20.background.5.intensity -0.0007676812618864942 all594791.dat
+327 deterministic cosio.atom_site.O2.fract_x d20.background.6.intensity 0.0034171845720563387 all594791.dat
+328 deterministic cosio.atom_site.O2.fract_x d20.background.7.intensity -0.039546259329809846 all594791.dat
+329 deterministic cosio.atom_site.O2.fract_x d20.background.8.intensity -0.033280256333453266 all594791.dat
+330 deterministic cosio.atom_site.O2.fract_x d20.background.9.intensity -0.04113593620530681 all594791.dat
+331 deterministic cosio.atom_site.O2.fract_x d20.background.10.intensity -0.05944513612040815 all594791.dat
+332 deterministic cosio.atom_site.O2.fract_x d20.background.11.intensity 0.048558408632833866 all594791.dat
+333 deterministic cosio.atom_site.O2.fract_x d20.background.12.intensity -0.008364583145792715 all594791.dat
+334 deterministic cosio.atom_site.O2.fract_x d20.background.13.intensity -0.016828245172051805 all594791.dat
+335 deterministic cosio.atom_site.O2.fract_x d20.background.14.intensity -0.04777178059516846 all594791.dat
+336 deterministic cosio.atom_site.O2.fract_z cosio.atom_site.O3.fract_x -0.18031765038286773 all594791.dat
+337 deterministic cosio.atom_site.O2.fract_z cosio.atom_site.O3.fract_y 0.13916839820353985 all594791.dat
+338 deterministic cosio.atom_site.O2.fract_z cosio.atom_site.O3.fract_z 0.2921190179003383 all594791.dat
+339 deterministic cosio.atom_site.O2.fract_z cosio.atom_site.Co1.adp_iso 0.055191439973789405 all594791.dat
+340 deterministic cosio.atom_site.O2.fract_z cosio.atom_site.Si.adp_iso -0.023707858396182828 all594791.dat
+341 deterministic cosio.atom_site.O2.fract_z cosio.atom_site.O1.adp_iso 0.033112216851963736 all594791.dat
+342 deterministic cosio.atom_site.O2.fract_z cosio.atom_site.O2.adp_iso 0.03523458001230651 all594791.dat
+343 deterministic cosio.atom_site.O2.fract_z cosio.atom_site.O3.adp_iso 0.1077569758391903 all594791.dat
+344 deterministic cosio.atom_site.O2.fract_z d20.linked_structure.cosio.scale 0.051261954658976726 all594791.dat
+345 deterministic cosio.atom_site.O2.fract_z d20.instrument.calib_twotheta_offset -0.01759838812859754 all594791.dat
+346 deterministic cosio.atom_site.O2.fract_z d20.peak.broad_gauss_u 0.0024096146029005893 all594791.dat
+347 deterministic cosio.atom_site.O2.fract_z d20.peak.broad_gauss_v -0.011281929878382934 all594791.dat
+348 deterministic cosio.atom_site.O2.fract_z d20.peak.broad_gauss_w 0.01336089836702812 all594791.dat
+349 deterministic cosio.atom_site.O2.fract_z d20.peak.broad_lorentz_y -0.008211910065888629 all594791.dat
+350 deterministic cosio.atom_site.O2.fract_z d20.background.1.intensity 0.000032927416234082776 all594791.dat
+351 deterministic cosio.atom_site.O2.fract_z d20.background.2.intensity -0.00008520040069405869 all594791.dat
+352 deterministic cosio.atom_site.O2.fract_z d20.background.3.intensity 0.00031012621161620793 all594791.dat
+353 deterministic cosio.atom_site.O2.fract_z d20.background.4.intensity -0.0011783464583188742 all594791.dat
+354 deterministic cosio.atom_site.O2.fract_z d20.background.5.intensity 0.0062857121215698225 all594791.dat
+355 deterministic cosio.atom_site.O2.fract_z d20.background.6.intensity -0.027979631069041278 all594791.dat
+356 deterministic cosio.atom_site.O2.fract_z d20.background.7.intensity 0.05154820812434186 all594791.dat
+357 deterministic cosio.atom_site.O2.fract_z d20.background.8.intensity -0.059089310436666154 all594791.dat
+358 deterministic cosio.atom_site.O2.fract_z d20.background.9.intensity 0.03066081163617078 all594791.dat
+359 deterministic cosio.atom_site.O2.fract_z d20.background.10.intensity -0.007813893635235864 all594791.dat
+360 deterministic cosio.atom_site.O2.fract_z d20.background.11.intensity -0.006747211791819872 all594791.dat
+361 deterministic cosio.atom_site.O2.fract_z d20.background.12.intensity 0.0667620009016054 all594791.dat
+362 deterministic cosio.atom_site.O2.fract_z d20.background.13.intensity 0.11379919421280654 all594791.dat
+363 deterministic cosio.atom_site.O2.fract_z d20.background.14.intensity -0.09370747251152595 all594791.dat
+364 deterministic cosio.atom_site.O3.fract_x cosio.atom_site.O3.fract_y 0.032910957597951006 all594791.dat
+365 deterministic cosio.atom_site.O3.fract_x cosio.atom_site.O3.fract_z -0.0984257600865134 all594791.dat
+366 deterministic cosio.atom_site.O3.fract_x cosio.atom_site.Co1.adp_iso 0.007480158646600092 all594791.dat
+367 deterministic cosio.atom_site.O3.fract_x cosio.atom_site.Si.adp_iso -0.067731049853298 all594791.dat
+368 deterministic cosio.atom_site.O3.fract_x cosio.atom_site.O1.adp_iso -0.09997462622044061 all594791.dat
+369 deterministic cosio.atom_site.O3.fract_x cosio.atom_site.O2.adp_iso 0.1830228672608523 all594791.dat
+370 deterministic cosio.atom_site.O3.fract_x cosio.atom_site.O3.adp_iso -0.05005886498423791 all594791.dat
+371 deterministic cosio.atom_site.O3.fract_x d20.linked_structure.cosio.scale -0.009762170214219287 all594791.dat
+372 deterministic cosio.atom_site.O3.fract_x d20.instrument.calib_twotheta_offset -0.10045819363626174 all594791.dat
+373 deterministic cosio.atom_site.O3.fract_x d20.peak.broad_gauss_u -0.07528222222542717 all594791.dat
+374 deterministic cosio.atom_site.O3.fract_x d20.peak.broad_gauss_v 0.06277924991416907 all594791.dat
+375 deterministic cosio.atom_site.O3.fract_x d20.peak.broad_gauss_w -0.04641461335543268 all594791.dat
+376 deterministic cosio.atom_site.O3.fract_x d20.peak.broad_lorentz_y 0.022045637534503233 all594791.dat
+377 deterministic cosio.atom_site.O3.fract_x d20.background.1.intensity -0.000025030091712295963 all594791.dat
+378 deterministic cosio.atom_site.O3.fract_x d20.background.2.intensity 0.00006476590292168204 all594791.dat
+379 deterministic cosio.atom_site.O3.fract_x d20.background.3.intensity -0.00023574541846658128 all594791.dat
+380 deterministic cosio.atom_site.O3.fract_x d20.background.4.intensity 0.0008957313780966447 all594791.dat
+381 deterministic cosio.atom_site.O3.fract_x d20.background.5.intensity -0.004778144442340175 all594791.dat
+382 deterministic cosio.atom_site.O3.fract_x d20.background.6.intensity 0.021268985296428754 all594791.dat
+383 deterministic cosio.atom_site.O3.fract_x d20.background.7.intensity 0.027115746653512397 all594791.dat
+384 deterministic cosio.atom_site.O3.fract_x d20.background.8.intensity 0.045642754613554694 all594791.dat
+385 deterministic cosio.atom_site.O3.fract_x d20.background.9.intensity -0.04959265978032812 all594791.dat
+386 deterministic cosio.atom_site.O3.fract_x d20.background.10.intensity 0.06373683314906899 all594791.dat
+387 deterministic cosio.atom_site.O3.fract_x d20.background.11.intensity -0.08979087051706412 all594791.dat
+388 deterministic cosio.atom_site.O3.fract_x d20.background.12.intensity 0.05991018145500848 all594791.dat
+389 deterministic cosio.atom_site.O3.fract_x d20.background.13.intensity 0.004552401644523505 all594791.dat
+390 deterministic cosio.atom_site.O3.fract_x d20.background.14.intensity 0.10122825454498531 all594791.dat
+391 deterministic cosio.atom_site.O3.fract_y cosio.atom_site.O3.fract_z 0.03945279634745328 all594791.dat
+392 deterministic cosio.atom_site.O3.fract_y cosio.atom_site.Co1.adp_iso 0.08081644129127176 all594791.dat
+393 deterministic cosio.atom_site.O3.fract_y cosio.atom_site.Si.adp_iso 0.07613461847409325 all594791.dat
+394 deterministic cosio.atom_site.O3.fract_y cosio.atom_site.O1.adp_iso 0.013249105498690704 all594791.dat
+395 deterministic cosio.atom_site.O3.fract_y cosio.atom_site.O2.adp_iso 0.016474325616660773 all594791.dat
+396 deterministic cosio.atom_site.O3.fract_y cosio.atom_site.O3.adp_iso 0.10017191305133633 all594791.dat
+397 deterministic cosio.atom_site.O3.fract_y d20.linked_structure.cosio.scale 0.08966184395402363 all594791.dat
+398 deterministic cosio.atom_site.O3.fract_y d20.instrument.calib_twotheta_offset -0.05946629387404918 all594791.dat
+399 deterministic cosio.atom_site.O3.fract_y d20.peak.broad_gauss_u 0.12454306859642736 all594791.dat
+400 deterministic cosio.atom_site.O3.fract_y d20.peak.broad_gauss_v -0.12667476272887632 all594791.dat
+401 deterministic cosio.atom_site.O3.fract_y d20.peak.broad_gauss_w 0.1194186848694707 all594791.dat
+402 deterministic cosio.atom_site.O3.fract_y d20.peak.broad_lorentz_y -0.072085969214498 all594791.dat
+403 deterministic cosio.atom_site.O3.fract_y d20.background.1.intensity -0.00001315002779805622 all594791.dat
+404 deterministic cosio.atom_site.O3.fract_y d20.background.2.intensity 0.00003402598095197238 all594791.dat
+405 deterministic cosio.atom_site.O3.fract_y d20.background.3.intensity -0.00012385327396631328 all594791.dat
+406 deterministic cosio.atom_site.O3.fract_y d20.background.4.intensity 0.0004705892674094169 all594791.dat
+407 deterministic cosio.atom_site.O3.fract_y d20.background.5.intensity -0.002510287735452347 all594791.dat
+408 deterministic cosio.atom_site.O3.fract_y d20.background.6.intensity 0.011174060051850012 all594791.dat
+409 deterministic cosio.atom_site.O3.fract_y d20.background.7.intensity -0.04107661971417896 all594791.dat
+410 deterministic cosio.atom_site.O3.fract_y d20.background.8.intensity -0.08266269414834636 all594791.dat
+411 deterministic cosio.atom_site.O3.fract_y d20.background.9.intensity 0.038274520933060295 all594791.dat
+412 deterministic cosio.atom_site.O3.fract_y d20.background.10.intensity -0.09987513420630455 all594791.dat
+413 deterministic cosio.atom_site.O3.fract_y d20.background.11.intensity 0.08793291209075986 all594791.dat
+414 deterministic cosio.atom_site.O3.fract_y d20.background.12.intensity -0.04067648622317591 all594791.dat
+415 deterministic cosio.atom_site.O3.fract_y d20.background.13.intensity -0.045666573509812285 all594791.dat
+416 deterministic cosio.atom_site.O3.fract_y d20.background.14.intensity -0.007677873183852397 all594791.dat
+417 deterministic cosio.atom_site.O3.fract_z cosio.atom_site.Co1.adp_iso 0.05130070255612128 all594791.dat
+418 deterministic cosio.atom_site.O3.fract_z cosio.atom_site.Si.adp_iso -0.010330398158061197 all594791.dat
+419 deterministic cosio.atom_site.O3.fract_z cosio.atom_site.O1.adp_iso -0.12185153305332073 all594791.dat
+420 deterministic cosio.atom_site.O3.fract_z cosio.atom_site.O2.adp_iso -0.005982989692705769 all594791.dat
+421 deterministic cosio.atom_site.O3.fract_z cosio.atom_site.O3.adp_iso -0.09220299772816737 all594791.dat
+422 deterministic cosio.atom_site.O3.fract_z d20.linked_structure.cosio.scale 0.05079935325353061 all594791.dat
+423 deterministic cosio.atom_site.O3.fract_z d20.instrument.calib_twotheta_offset 0.02116307009153193 all594791.dat
+424 deterministic cosio.atom_site.O3.fract_z d20.peak.broad_gauss_u 0.03257143279460143 all594791.dat
+425 deterministic cosio.atom_site.O3.fract_z d20.peak.broad_gauss_v -0.021056648347463982 all594791.dat
+426 deterministic cosio.atom_site.O3.fract_z d20.peak.broad_gauss_w -0.010008860117796522 all594791.dat
+427 deterministic cosio.atom_site.O3.fract_z d20.peak.broad_lorentz_y 0.06894716346717641 all594791.dat
+428 deterministic cosio.atom_site.O3.fract_z d20.background.1.intensity -0.000019624691525332427 all594791.dat
+429 deterministic cosio.atom_site.O3.fract_z d20.background.2.intensity 0.00005077931319014718 all594791.dat
+430 deterministic cosio.atom_site.O3.fract_z d20.background.3.intensity -0.00018483476485588263 all594791.dat
+431 deterministic cosio.atom_site.O3.fract_z d20.background.4.intensity 0.000702292751739997 all594791.dat
+432 deterministic cosio.atom_site.O3.fract_z d20.background.5.intensity -0.0037462751564615285 all594791.dat
+433 deterministic cosio.atom_site.O3.fract_z d20.background.6.intensity 0.016675818862469893 all594791.dat
+434 deterministic cosio.atom_site.O3.fract_z d20.background.7.intensity -0.0580889225268137 all594791.dat
+435 deterministic cosio.atom_site.O3.fract_z d20.background.8.intensity 0.0027741751062928125 all594791.dat
+436 deterministic cosio.atom_site.O3.fract_z d20.background.9.intensity -0.0758631584466815 all594791.dat
+437 deterministic cosio.atom_site.O3.fract_z d20.background.10.intensity -0.01291988800582456 all594791.dat
+438 deterministic cosio.atom_site.O3.fract_z d20.background.11.intensity -0.10449293834949366 all594791.dat
+439 deterministic cosio.atom_site.O3.fract_z d20.background.12.intensity -0.13825909514848006 all594791.dat
+440 deterministic cosio.atom_site.O3.fract_z d20.background.13.intensity -0.10431469916153133 all594791.dat
+441 deterministic cosio.atom_site.O3.fract_z d20.background.14.intensity -0.07535593832582373 all594791.dat
+442 deterministic cosio.atom_site.Co1.adp_iso cosio.atom_site.Si.adp_iso 0.20082116783284226 all594791.dat
+443 deterministic cosio.atom_site.Co1.adp_iso cosio.atom_site.O1.adp_iso 0.19530399839272103 all594791.dat
+444 deterministic cosio.atom_site.Co1.adp_iso cosio.atom_site.O2.adp_iso 0.21217063430837177 all594791.dat
+445 deterministic cosio.atom_site.Co1.adp_iso cosio.atom_site.O3.adp_iso 0.16628750361368072 all594791.dat
+446 deterministic cosio.atom_site.Co1.adp_iso d20.linked_structure.cosio.scale 0.2635069601744301 all594791.dat
+447 deterministic cosio.atom_site.Co1.adp_iso d20.instrument.calib_twotheta_offset -0.0076463838126372315 all594791.dat
+448 deterministic cosio.atom_site.Co1.adp_iso d20.peak.broad_gauss_u 0.003515209230481783 all594791.dat
+449 deterministic cosio.atom_site.Co1.adp_iso d20.peak.broad_gauss_v -0.0457734250192989 all594791.dat
+450 deterministic cosio.atom_site.Co1.adp_iso d20.peak.broad_gauss_w 0.12430267066619788 all594791.dat
+451 deterministic cosio.atom_site.Co1.adp_iso d20.peak.broad_lorentz_y -0.19252245634716414 all594791.dat
+452 deterministic cosio.atom_site.Co1.adp_iso d20.background.1.intensity -0.000016840930379164472 all594791.dat
+453 deterministic cosio.atom_site.Co1.adp_iso d20.background.2.intensity 0.000043576271098511835 all594791.dat
+454 deterministic cosio.atom_site.Co1.adp_iso d20.background.3.intensity -0.0001586159661455448 all594791.dat
+455 deterministic cosio.atom_site.Co1.adp_iso d20.background.4.intensity 0.0006026725731004192 all594791.dat
+456 deterministic cosio.atom_site.Co1.adp_iso d20.background.5.intensity -0.0032148662826018814 all594791.dat
+457 deterministic cosio.atom_site.Co1.adp_iso d20.background.6.intensity 0.014310355101187965 all594791.dat
+458 deterministic cosio.atom_site.Co1.adp_iso d20.background.7.intensity -0.03195939717680421 all594791.dat
+459 deterministic cosio.atom_site.Co1.adp_iso d20.background.8.intensity -0.03307748454547778 all594791.dat
+460 deterministic cosio.atom_site.Co1.adp_iso d20.background.9.intensity -0.03945441442299274 all594791.dat
+461 deterministic cosio.atom_site.Co1.adp_iso d20.background.10.intensity 0.1194424803677829 all594791.dat
+462 deterministic cosio.atom_site.Co1.adp_iso d20.background.11.intensity 0.029840730484404696 all594791.dat
+463 deterministic cosio.atom_site.Co1.adp_iso d20.background.12.intensity 0.15173099183096067 all594791.dat
+464 deterministic cosio.atom_site.Co1.adp_iso d20.background.13.intensity 0.2920773028567872 all594791.dat
+465 deterministic cosio.atom_site.Co1.adp_iso d20.background.14.intensity 0.25344586786343043 all594791.dat
+466 deterministic cosio.atom_site.Si.adp_iso cosio.atom_site.O1.adp_iso 0.24206848961194358 all594791.dat
+467 deterministic cosio.atom_site.Si.adp_iso cosio.atom_site.O2.adp_iso 0.19236872780172923 all594791.dat
+468 deterministic cosio.atom_site.Si.adp_iso cosio.atom_site.O3.adp_iso 0.11926268697665512 all594791.dat
+469 deterministic cosio.atom_site.Si.adp_iso d20.linked_structure.cosio.scale 0.27282917300182336 all594791.dat
+470 deterministic cosio.atom_site.Si.adp_iso d20.instrument.calib_twotheta_offset -0.0339481194197288 all594791.dat
+471 deterministic cosio.atom_site.Si.adp_iso d20.peak.broad_gauss_u 0.025902314016392362 all594791.dat
+472 deterministic cosio.atom_site.Si.adp_iso d20.peak.broad_gauss_v -0.07085833528947046 all594791.dat
+473 deterministic cosio.atom_site.Si.adp_iso d20.peak.broad_gauss_w 0.14891176503222933 all594791.dat
+474 deterministic cosio.atom_site.Si.adp_iso d20.peak.broad_lorentz_y -0.196868112746427 all594791.dat
+475 deterministic cosio.atom_site.Si.adp_iso d20.background.1.intensity -0.00000037139454413333756 all594791.dat
+476 deterministic cosio.atom_site.Si.adp_iso d20.background.2.intensity 0.000000960991403823232 all594791.dat
+477 deterministic cosio.atom_site.Si.adp_iso d20.background.3.intensity -0.0000034979720893557205 all594791.dat
+478 deterministic cosio.atom_site.Si.adp_iso d20.background.4.intensity 0.000013290792161447598 all594791.dat
+479 deterministic cosio.atom_site.Si.adp_iso d20.background.5.intensity -0.00007089773368839423 all594791.dat
+480 deterministic cosio.atom_site.Si.adp_iso d20.background.6.intensity 0.000315587541055197 all594791.dat
+481 deterministic cosio.atom_site.Si.adp_iso d20.background.7.intensity -0.02245735559154946 all594791.dat
+482 deterministic cosio.atom_site.Si.adp_iso d20.background.8.intensity -0.016536250913984463 all594791.dat
+483 deterministic cosio.atom_site.Si.adp_iso d20.background.9.intensity -0.046299528415783574 all594791.dat
+484 deterministic cosio.atom_site.Si.adp_iso d20.background.10.intensity 0.06213738333419918 all594791.dat
+485 deterministic cosio.atom_site.Si.adp_iso d20.background.11.intensity 0.14501476143818026 all594791.dat
+486 deterministic cosio.atom_site.Si.adp_iso d20.background.12.intensity 0.19471609582902843 all594791.dat
+487 deterministic cosio.atom_site.Si.adp_iso d20.background.13.intensity 0.22818951473071622 all594791.dat
+488 deterministic cosio.atom_site.Si.adp_iso d20.background.14.intensity 0.2836454313031933 all594791.dat
+489 deterministic cosio.atom_site.O1.adp_iso cosio.atom_site.O2.adp_iso 0.2852834832875503 all594791.dat
+490 deterministic cosio.atom_site.O1.adp_iso cosio.atom_site.O3.adp_iso 0.12600404814737362 all594791.dat
+491 deterministic cosio.atom_site.O1.adp_iso d20.linked_structure.cosio.scale 0.42512436261886405 all594791.dat
+492 deterministic cosio.atom_site.O1.adp_iso d20.instrument.calib_twotheta_offset 0.03091107163141017 all594791.dat
+493 deterministic cosio.atom_site.O1.adp_iso d20.peak.broad_gauss_u 0.07600016649887299 all594791.dat
+494 deterministic cosio.atom_site.O1.adp_iso d20.peak.broad_gauss_v -0.12584441959732193 all594791.dat
+495 deterministic cosio.atom_site.O1.adp_iso d20.peak.broad_gauss_w 0.1982855291922291 all594791.dat
+496 deterministic cosio.atom_site.O1.adp_iso d20.peak.broad_lorentz_y -0.20883889789730917 all594791.dat
+497 deterministic cosio.atom_site.O1.adp_iso d20.background.1.intensity -0.000003952054315142631 all594791.dat
+498 deterministic cosio.atom_site.O1.adp_iso d20.background.2.intensity 0.000010226025900841898 all594791.dat
+499 deterministic cosio.atom_site.O1.adp_iso d20.background.3.intensity -0.00003722234457270459 all594791.dat
+500 deterministic cosio.atom_site.O1.adp_iso d20.background.4.intensity 0.0001414289287870885 all594791.dat
+501 deterministic cosio.atom_site.O1.adp_iso d20.background.5.intensity -0.0007544313692653832 all594791.dat
+502 deterministic cosio.atom_site.O1.adp_iso d20.background.6.intensity 0.0033582052392310555 all594791.dat
+503 deterministic cosio.atom_site.O1.adp_iso d20.background.7.intensity -0.022672709941273864 all594791.dat
+504 deterministic cosio.atom_site.O1.adp_iso d20.background.8.intensity -0.09902800305727015 all594791.dat
+505 deterministic cosio.atom_site.O1.adp_iso d20.background.9.intensity -0.01700764907767068 all594791.dat
+506 deterministic cosio.atom_site.O1.adp_iso d20.background.10.intensity -0.046977133904757905 all594791.dat
+507 deterministic cosio.atom_site.O1.adp_iso d20.background.11.intensity 0.18990307269273254 all594791.dat
+508 deterministic cosio.atom_site.O1.adp_iso d20.background.12.intensity 0.16474953672228435 all594791.dat
+509 deterministic cosio.atom_site.O1.adp_iso d20.background.13.intensity 0.14269614799895658 all594791.dat
+510 deterministic cosio.atom_site.O1.adp_iso d20.background.14.intensity 0.25821926211671203 all594791.dat
+511 deterministic cosio.atom_site.O2.adp_iso cosio.atom_site.O3.adp_iso 0.02077272850022216 all594791.dat
+512 deterministic cosio.atom_site.O2.adp_iso d20.linked_structure.cosio.scale 0.3898283259000277 all594791.dat
+513 deterministic cosio.atom_site.O2.adp_iso d20.instrument.calib_twotheta_offset 0.02879903728782909 all594791.dat
+514 deterministic cosio.atom_site.O2.adp_iso d20.peak.broad_gauss_u 0.03421755646732566 all594791.dat
+515 deterministic cosio.atom_site.O2.adp_iso d20.peak.broad_gauss_v -0.08702042248995048 all594791.dat
+516 deterministic cosio.atom_site.O2.adp_iso d20.peak.broad_gauss_w 0.15204857556421084 all594791.dat
+517 deterministic cosio.atom_site.O2.adp_iso d20.peak.broad_lorentz_y -0.15687469616502728 all594791.dat
+518 deterministic cosio.atom_site.O2.adp_iso d20.background.1.intensity -0.000016934747015830227 all594791.dat
+519 deterministic cosio.atom_site.O2.adp_iso d20.background.2.intensity 0.00004381902367213212 all594791.dat
+520 deterministic cosio.atom_site.O2.adp_iso d20.background.3.intensity -0.0001594995762636413 all594791.dat
+521 deterministic cosio.atom_site.O2.adp_iso d20.background.4.intensity 0.0006060299121912243 all594791.dat
+522 deterministic cosio.atom_site.O2.adp_iso d20.background.5.intensity -0.003232775503505741 all594791.dat
+523 deterministic cosio.atom_site.O2.adp_iso d20.background.6.intensity 0.014390074532165408 all594791.dat
+524 deterministic cosio.atom_site.O2.adp_iso d20.background.7.intensity -0.02647599178958645 all594791.dat
+525 deterministic cosio.atom_site.O2.adp_iso d20.background.8.intensity -0.049460633924311825 all594791.dat
+526 deterministic cosio.atom_site.O2.adp_iso d20.background.9.intensity -0.06925384413891938 all594791.dat
+527 deterministic cosio.atom_site.O2.adp_iso d20.background.10.intensity 0.025789767075130036 all594791.dat
+528 deterministic cosio.atom_site.O2.adp_iso d20.background.11.intensity 0.08177156273529074 all594791.dat
+529 deterministic cosio.atom_site.O2.adp_iso d20.background.12.intensity 0.20993100770085116 all594791.dat
+530 deterministic cosio.atom_site.O2.adp_iso d20.background.13.intensity 0.20384355683073105 all594791.dat
+531 deterministic cosio.atom_site.O2.adp_iso d20.background.14.intensity 0.2813988309337574 all594791.dat
+532 deterministic cosio.atom_site.O3.adp_iso d20.linked_structure.cosio.scale 0.5096922131426612 all594791.dat
+533 deterministic cosio.atom_site.O3.adp_iso d20.instrument.calib_twotheta_offset -0.00004288609384945824 all594791.dat
+534 deterministic cosio.atom_site.O3.adp_iso d20.peak.broad_gauss_u 0.058667065911029145 all594791.dat
+535 deterministic cosio.atom_site.O3.adp_iso d20.peak.broad_gauss_v -0.1261248627241804 all594791.dat
+536 deterministic cosio.atom_site.O3.adp_iso d20.peak.broad_gauss_w 0.1990559675203664 all594791.dat
+537 deterministic cosio.atom_site.O3.adp_iso d20.peak.broad_lorentz_y -0.17193755631138422 all594791.dat
+538 deterministic cosio.atom_site.O3.adp_iso d20.background.1.intensity -0.0000014339379914667766 all594791.dat
+539 deterministic cosio.atom_site.O3.adp_iso d20.background.2.intensity 0.0000037103455239613146 all594791.dat
+540 deterministic cosio.atom_site.O3.adp_iso d20.background.3.intensity -0.00001350551630881497 all594791.dat
+541 deterministic cosio.atom_site.O3.adp_iso d20.background.4.intensity 0.00005131516367899279 all594791.dat
+542 deterministic cosio.atom_site.O3.adp_iso d20.background.5.intensity -0.0002737330299431419 all594791.dat
+543 deterministic cosio.atom_site.O3.adp_iso d20.background.6.intensity 0.0012184696087056562 all594791.dat
+544 deterministic cosio.atom_site.O3.adp_iso d20.background.7.intensity -0.039549903821375014 all594791.dat
+545 deterministic cosio.atom_site.O3.adp_iso d20.background.8.intensity -0.08342136303759867 all594791.dat
+546 deterministic cosio.atom_site.O3.adp_iso d20.background.9.intensity -0.06487481251630821 all594791.dat
+547 deterministic cosio.atom_site.O3.adp_iso d20.background.10.intensity -0.012429461389128465 all594791.dat
+548 deterministic cosio.atom_site.O3.adp_iso d20.background.11.intensity 0.12216434354879523 all594791.dat
+549 deterministic cosio.atom_site.O3.adp_iso d20.background.12.intensity 0.17774198847835762 all594791.dat
+550 deterministic cosio.atom_site.O3.adp_iso d20.background.13.intensity 0.2048893108200477 all594791.dat
+551 deterministic cosio.atom_site.O3.adp_iso d20.background.14.intensity 0.23544478695771806 all594791.dat
+552 deterministic d20.linked_structure.cosio.scale d20.instrument.calib_twotheta_offset 0.008656835245218455 all594791.dat
+553 deterministic d20.linked_structure.cosio.scale d20.peak.broad_gauss_u -0.07998453472423259 all594791.dat
+554 deterministic d20.linked_structure.cosio.scale d20.peak.broad_gauss_v -0.03739789840663394 all594791.dat
+555 deterministic d20.linked_structure.cosio.scale d20.peak.broad_gauss_w 0.022402655540737657 all594791.dat
+556 deterministic d20.linked_structure.cosio.scale d20.peak.broad_lorentz_y 0.2935302316955881 all594791.dat
+557 deterministic d20.linked_structure.cosio.scale d20.background.1.intensity -0.00002736454412026964 all594791.dat
+558 deterministic d20.linked_structure.cosio.scale d20.background.2.intensity 0.00007080634894981656 all594791.dat
+559 deterministic d20.linked_structure.cosio.scale d20.background.3.intensity -0.0002577324118107247 all594791.dat
+560 deterministic d20.linked_structure.cosio.scale d20.background.4.intensity 0.0009792725131778002 all594791.dat
+561 deterministic d20.linked_structure.cosio.scale d20.background.5.intensity -0.0052237820744032645 all594791.dat
+562 deterministic d20.linked_structure.cosio.scale d20.background.6.intensity 0.02325265497370194 all594791.dat
+563 deterministic d20.linked_structure.cosio.scale d20.background.7.intensity -0.10836000790425401 all594791.dat
+564 deterministic d20.linked_structure.cosio.scale d20.background.8.intensity -0.12056830057387263 all594791.dat
+565 deterministic d20.linked_structure.cosio.scale d20.background.9.intensity -0.3243764580371234 all594791.dat
+566 deterministic d20.linked_structure.cosio.scale d20.background.10.intensity -0.1441863875278194 all594791.dat
+567 deterministic d20.linked_structure.cosio.scale d20.background.11.intensity -0.12556433537378134 all594791.dat
+568 deterministic d20.linked_structure.cosio.scale d20.background.12.intensity 0.00728361125094474 all594791.dat
+569 deterministic d20.linked_structure.cosio.scale d20.background.13.intensity 0.0497493068059114 all594791.dat
+570 deterministic d20.linked_structure.cosio.scale d20.background.14.intensity 0.0698771611371904 all594791.dat
+571 deterministic d20.instrument.calib_twotheta_offset d20.peak.broad_gauss_u 0.03578797345377698 all594791.dat
+572 deterministic d20.instrument.calib_twotheta_offset d20.peak.broad_gauss_v -0.036331607872707596 all594791.dat
+573 deterministic d20.instrument.calib_twotheta_offset d20.peak.broad_gauss_w 0.03937768962357423 all594791.dat
+574 deterministic d20.instrument.calib_twotheta_offset d20.peak.broad_lorentz_y -0.022496005851847682 all594791.dat
+575 deterministic d20.instrument.calib_twotheta_offset d20.background.1.intensity 0.0000007112834346133047 all594791.dat
+576 deterministic d20.instrument.calib_twotheta_offset d20.background.2.intensity -0.0000018404612495926653 all594791.dat
+577 deterministic d20.instrument.calib_twotheta_offset d20.background.3.intensity 0.000006699208809905985 all594791.dat
+578 deterministic d20.instrument.calib_twotheta_offset d20.background.4.intensity -0.00002545411732127657 all594791.dat
+579 deterministic d20.instrument.calib_twotheta_offset d20.background.5.intensity 0.00013578116407144243 all594791.dat
+580 deterministic d20.instrument.calib_twotheta_offset d20.background.6.intensity -0.000604403574864226 all594791.dat
+581 deterministic d20.instrument.calib_twotheta_offset d20.background.7.intensity 0.0002956163497294977 all594791.dat
+582 deterministic d20.instrument.calib_twotheta_offset d20.background.8.intensity -0.004890453018336268 all594791.dat
+583 deterministic d20.instrument.calib_twotheta_offset d20.background.9.intensity 0.00025984886094361395 all594791.dat
+584 deterministic d20.instrument.calib_twotheta_offset d20.background.10.intensity -0.005057027816278472 all594791.dat
+585 deterministic d20.instrument.calib_twotheta_offset d20.background.11.intensity 0.011291825583736086 all594791.dat
+586 deterministic d20.instrument.calib_twotheta_offset d20.background.12.intensity -0.0026992433187372046 all594791.dat
+587 deterministic d20.instrument.calib_twotheta_offset d20.background.13.intensity -0.009638403704734132 all594791.dat
+588 deterministic d20.instrument.calib_twotheta_offset d20.background.14.intensity 0.0031795767957008454 all594791.dat
+589 deterministic d20.peak.broad_gauss_u d20.peak.broad_gauss_v -0.9514378363261257 all594791.dat
+590 deterministic d20.peak.broad_gauss_u d20.peak.broad_gauss_w 0.8597852058133937 all594791.dat
+591 deterministic d20.peak.broad_gauss_u d20.peak.broad_lorentz_y -0.43832968368057357 all594791.dat
+592 deterministic d20.peak.broad_gauss_u d20.background.1.intensity -0.0000008493788351918192 all594791.dat
+593 deterministic d20.peak.broad_gauss_u d20.background.2.intensity 0.000002197786082320214 all594791.dat
+594 deterministic d20.peak.broad_gauss_u d20.background.3.intensity -0.000007999857586064903 all594791.dat
+595 deterministic d20.peak.broad_gauss_u d20.background.4.intensity 0.000030396024264775974 all594791.dat
+596 deterministic d20.peak.broad_gauss_u d20.background.5.intensity -0.0001621430240811614 all594791.dat
+597 deterministic d20.peak.broad_gauss_u d20.background.6.intensity 0.0007217482930183528 all594791.dat
+598 deterministic d20.peak.broad_gauss_u d20.background.7.intensity -0.011629769029042433 all594791.dat
+599 deterministic d20.peak.broad_gauss_u d20.background.8.intensity -0.02775652366136585 all594791.dat
+600 deterministic d20.peak.broad_gauss_u d20.background.9.intensity 0.05526129157943059 all594791.dat
+601 deterministic d20.peak.broad_gauss_u d20.background.10.intensity 0.02982736273518086 all594791.dat
+602 deterministic d20.peak.broad_gauss_u d20.background.11.intensity 0.18557713091164524 all594791.dat
+603 deterministic d20.peak.broad_gauss_u d20.background.12.intensity 0.048602126644516665 all594791.dat
+604 deterministic d20.peak.broad_gauss_u d20.background.13.intensity -0.014042473620524082 all594791.dat
+605 deterministic d20.peak.broad_gauss_u d20.background.14.intensity 0.04139911690491027 all594791.dat
+606 deterministic d20.peak.broad_gauss_v d20.peak.broad_gauss_w -0.936310622095218 all594791.dat
+607 deterministic d20.peak.broad_gauss_v d20.peak.broad_lorentz_y 0.3633523372036083 all594791.dat
+608 deterministic d20.peak.broad_gauss_v d20.background.1.intensity 0.000004579112304108539 all594791.dat
+609 deterministic d20.peak.broad_gauss_v d20.background.2.intensity -0.000011848551990133119 all594791.dat
+610 deterministic d20.peak.broad_gauss_v d20.background.3.intensity 0.000043128277708772005 all594791.dat
+611 deterministic d20.peak.broad_gauss_v d20.background.4.intensity -0.0001638689391226451 all594791.dat
+612 deterministic d20.peak.broad_gauss_v d20.background.5.intensity 0.00087413423252265 all594791.dat
+613 deterministic d20.peak.broad_gauss_v d20.background.6.intensity -0.0038910393695595295 all594791.dat
+614 deterministic d20.peak.broad_gauss_v d20.background.7.intensity 0.0243671509130687 all594791.dat
+615 deterministic d20.peak.broad_gauss_v d20.background.8.intensity 0.037854990761610995 all594791.dat
+616 deterministic d20.peak.broad_gauss_v d20.background.9.intensity 0.003647088531356501 all594791.dat
+617 deterministic d20.peak.broad_gauss_v d20.background.10.intensity -0.013777654420014704 all594791.dat
+618 deterministic d20.peak.broad_gauss_v d20.background.11.intensity -0.16732650196539944 all594791.dat
+619 deterministic d20.peak.broad_gauss_v d20.background.12.intensity -0.07787721501569803 all594791.dat
+620 deterministic d20.peak.broad_gauss_v d20.background.13.intensity -0.013495371001745806 all594791.dat
+621 deterministic d20.peak.broad_gauss_v d20.background.14.intensity -0.06104779339662868 all594791.dat
+622 deterministic d20.peak.broad_gauss_w d20.peak.broad_lorentz_y -0.5775483465571422 all594791.dat
+623 deterministic d20.peak.broad_gauss_w d20.background.1.intensity -0.0000021611377173562187 all594791.dat
+624 deterministic d20.peak.broad_gauss_w d20.background.2.intensity 0.000005591990521772691 all594791.dat
+625 deterministic d20.peak.broad_gauss_w d20.background.3.intensity -0.000020354632396038163 all594791.dat
+626 deterministic d20.peak.broad_gauss_w d20.background.4.intensity 0.0000773388642946056 all594791.dat
+627 deterministic d20.peak.broad_gauss_w d20.background.5.intensity -0.00041255255050760603 all594791.dat
+628 deterministic d20.peak.broad_gauss_w d20.background.6.intensity 0.0018363978394958735 all594791.dat
+629 deterministic d20.peak.broad_gauss_w d20.background.7.intensity -0.013522133921160967 all594791.dat
+630 deterministic d20.peak.broad_gauss_w d20.background.8.intensity -0.04048922279973455 all594791.dat
+631 deterministic d20.peak.broad_gauss_w d20.background.9.intensity 0.041666311778365814 all594791.dat
+632 deterministic d20.peak.broad_gauss_w d20.background.10.intensity 0.046782972902781494 all594791.dat
+633 deterministic d20.peak.broad_gauss_w d20.background.11.intensity 0.23129047902133198 all594791.dat
+634 deterministic d20.peak.broad_gauss_w d20.background.12.intensity 0.16042696045345572 all594791.dat
+635 deterministic d20.peak.broad_gauss_w d20.background.13.intensity 0.11350795964362655 all594791.dat
+636 deterministic d20.peak.broad_gauss_w d20.background.14.intensity 0.17787100017375868 all594791.dat
+637 deterministic d20.peak.broad_lorentz_y d20.background.1.intensity -0.000014004440007936198 all594791.dat
+638 deterministic d20.peak.broad_lorentz_y d20.background.2.intensity 0.00003623679099740147 all594791.dat
+639 deterministic d20.peak.broad_lorentz_y d20.background.3.intensity -0.00013190053827832226 all594791.dat
+640 deterministic d20.peak.broad_lorentz_y d20.background.4.intensity 0.0005011654168836502 all594791.dat
+641 deterministic d20.peak.broad_lorentz_y d20.background.5.intensity -0.002673391610402152 all594791.dat
+642 deterministic d20.peak.broad_lorentz_y d20.background.6.intensity 0.011900085386581868 all594791.dat
+643 deterministic d20.peak.broad_lorentz_y d20.background.7.intensity -0.04821373988299662 all594791.dat
+644 deterministic d20.peak.broad_lorentz_y d20.background.8.intensity 0.009627825261059297 all594791.dat
+645 deterministic d20.peak.broad_lorentz_y d20.background.9.intensity -0.2805226646464534 all594791.dat
+646 deterministic d20.peak.broad_lorentz_y d20.background.10.intensity -0.162701669662217 all594791.dat
+647 deterministic d20.peak.broad_lorentz_y d20.background.11.intensity -0.38422681548005694 all594791.dat
+648 deterministic d20.peak.broad_lorentz_y d20.background.12.intensity -0.27323911061373357 all594791.dat
+649 deterministic d20.peak.broad_lorentz_y d20.background.13.intensity -0.2724806257486707 all594791.dat
+650 deterministic d20.peak.broad_lorentz_y d20.background.14.intensity -0.37116389757362317 all594791.dat
+651 deterministic d20.background.1.intensity d20.background.2.intensity -0.38647020396235393 all594791.dat
+652 deterministic d20.background.1.intensity d20.background.3.intensity 0.10617424455152112 all594791.dat
+653 deterministic d20.background.1.intensity d20.background.4.intensity -0.02794374778439526 all594791.dat
+654 deterministic d20.background.1.intensity d20.background.5.intensity 0.005238454386243523 all594791.dat
+655 deterministic d20.background.1.intensity d20.background.6.intensity -0.001176835253926064 all594791.dat
+656 deterministic d20.background.1.intensity d20.background.7.intensity 0.000437299830516006 all594791.dat
+657 deterministic d20.background.1.intensity d20.background.8.intensity -0.000055404386905608544 all594791.dat
+658 deterministic d20.background.1.intensity d20.background.9.intensity 0.000030265261516520345 all594791.dat
+659 deterministic d20.background.1.intensity d20.background.10.intensity -0.0000005799973590292854 all594791.dat
+660 deterministic d20.background.1.intensity d20.background.11.intensity 0.000007792500147674747 all594791.dat
+661 deterministic d20.background.1.intensity d20.background.12.intensity 0.000008487553907570536 all594791.dat
+662 deterministic d20.background.1.intensity d20.background.13.intensity 0.0000080967393420427 all594791.dat
+663 deterministic d20.background.1.intensity d20.background.14.intensity -0.0000020402850828047504 all594791.dat
+664 deterministic d20.background.2.intensity d20.background.3.intensity -0.27472815100090636 all594791.dat
+665 deterministic d20.background.2.intensity d20.background.4.intensity 0.07230505094027176 all594791.dat
+666 deterministic d20.background.2.intensity d20.background.5.intensity -0.013554613868121712 all594791.dat
+667 deterministic d20.background.2.intensity d20.background.6.intensity 0.0030450866376258235 all594791.dat
+668 deterministic d20.background.2.intensity d20.background.7.intensity -0.0011315227565611469 all594791.dat
+669 deterministic d20.background.2.intensity d20.background.8.intensity 0.0001433600477787495 all594791.dat
+670 deterministic d20.background.2.intensity d20.background.9.intensity -0.00007831201786455202 all594791.dat
+671 deterministic d20.background.2.intensity d20.background.10.intensity 0.000001500755692330583 all594791.dat
+672 deterministic d20.background.2.intensity d20.background.11.intensity -0.00002016326243875393 all594791.dat
+673 deterministic d20.background.2.intensity d20.background.12.intensity -0.00002196172905666947 all594791.dat
+674 deterministic d20.background.2.intensity d20.background.13.intensity -0.000020950487926176155 all594791.dat
+675 deterministic d20.background.2.intensity d20.background.14.intensity 0.0000052792817201956335 all594791.dat
+676 deterministic d20.background.3.intensity d20.background.4.intensity -0.2631876299419826 all594791.dat
+677 deterministic d20.background.3.intensity d20.background.5.intensity 0.04933827792579168 all594791.dat
+678 deterministic d20.background.3.intensity d20.background.6.intensity -0.011083999315440204 all594791.dat
+679 deterministic d20.background.3.intensity d20.background.7.intensity 0.004118699712564192 all594791.dat
+680 deterministic d20.background.3.intensity d20.background.8.intensity -0.000521825110593241 all594791.dat
+681 deterministic d20.background.3.intensity d20.background.9.intensity 0.00028505276062460073 all594791.dat
+682 deterministic d20.background.3.intensity d20.background.10.intensity -0.000005462693528118868 all594791.dat
+683 deterministic d20.background.3.intensity d20.background.11.intensity 0.00007339350687462904 all594791.dat
+684 deterministic d20.background.3.intensity d20.background.12.intensity 0.00007993985682264843 all594791.dat
+685 deterministic d20.background.3.intensity d20.background.13.intensity 0.00007625897764695177 all594791.dat
+686 deterministic d20.background.3.intensity d20.background.14.intensity -0.000019216384273705772 all594791.dat
+687 deterministic d20.background.4.intensity d20.background.5.intensity -0.18746427382118236 all594791.dat
+688 deterministic d20.background.4.intensity d20.background.6.intensity 0.04211443872906666 all594791.dat
+689 deterministic d20.background.4.intensity d20.background.7.intensity -0.015649290635242976 all594791.dat
+690 deterministic d20.background.4.intensity d20.background.8.intensity 0.0019827113862030048 all594791.dat
+691 deterministic d20.background.4.intensity d20.background.9.intensity -0.0010830781092853903 all594791.dat
+692 deterministic d20.background.4.intensity d20.background.10.intensity 0.00002075589011745043 all594791.dat
+693 deterministic d20.background.4.intensity d20.background.11.intensity -0.00027886381624700517 all594791.dat
+694 deterministic d20.background.4.intensity d20.background.12.intensity -0.0003037371355191137 all594791.dat
+695 deterministic d20.background.4.intensity d20.background.13.intensity -0.0002897513749556998 all594791.dat
+696 deterministic d20.background.4.intensity d20.background.14.intensity 0.00007301401010967838 all594791.dat
+697 deterministic d20.background.5.intensity d20.background.6.intensity -0.224653145213356 all594791.dat
+698 deterministic d20.background.5.intensity d20.background.7.intensity 0.08347878940480537 all594791.dat
+699 deterministic d20.background.5.intensity d20.background.8.intensity -0.01057647596413146 all594791.dat
+700 deterministic d20.background.5.intensity d20.background.9.intensity 0.005777517428832805 all594791.dat
+701 deterministic d20.background.5.intensity d20.background.10.intensity -0.00011071917701580082 all594791.dat
+702 deterministic d20.background.5.intensity d20.background.11.intensity 0.0014875571252221228 all594791.dat
+703 deterministic d20.background.5.intensity d20.background.12.intensity 0.001620240109367256 all594791.dat
+704 deterministic d20.background.5.intensity d20.background.13.intensity 0.0015456351711701432 all594791.dat
+705 deterministic d20.background.5.intensity d20.background.14.intensity -0.00038948226572538145 all594791.dat
+706 deterministic d20.background.6.intensity d20.background.7.intensity -0.37158967583348995 all594791.dat
+707 deterministic d20.background.6.intensity d20.background.8.intensity 0.047079135945711933 all594791.dat
+708 deterministic d20.background.6.intensity d20.background.9.intensity -0.025717500742514162 all594791.dat
+709 deterministic d20.background.6.intensity d20.background.10.intensity 0.0004928449895977892 all594791.dat
+710 deterministic d20.background.6.intensity d20.background.11.intensity -0.006621572663983551 all594791.dat
+711 deterministic d20.background.6.intensity d20.background.12.intensity -0.007212185290479924 all594791.dat
+712 deterministic d20.background.6.intensity d20.background.13.intensity -0.006880095845985327 all594791.dat
+713 deterministic d20.background.6.intensity d20.background.14.intensity 0.0017337049314663589 all594791.dat
+714 deterministic d20.background.7.intensity d20.background.8.intensity -0.11687274573569215 all594791.dat
+715 deterministic d20.background.7.intensity d20.background.9.intensity 0.08225299300510919 all594791.dat
+716 deterministic d20.background.7.intensity d20.background.10.intensity 0.013854052193923085 all594791.dat
+717 deterministic d20.background.7.intensity d20.background.11.intensity 0.01885422197530815 all594791.dat
+718 deterministic d20.background.7.intensity d20.background.12.intensity 0.026633917102981308 all594791.dat
+719 deterministic d20.background.7.intensity d20.background.13.intensity 0.029093860262326146 all594791.dat
+720 deterministic d20.background.7.intensity d20.background.14.intensity 0.01080809290804036 all594791.dat
+721 deterministic d20.background.8.intensity d20.background.9.intensity -0.2761296478989726 all594791.dat
+722 deterministic d20.background.8.intensity d20.background.10.intensity 0.1216976538727765 all594791.dat
+723 deterministic d20.background.8.intensity d20.background.11.intensity -0.044759443859679775 all594791.dat
+724 deterministic d20.background.8.intensity d20.background.12.intensity 0.004900934143358244 all594791.dat
+725 deterministic d20.background.8.intensity d20.background.13.intensity -0.010633496777413926 all594791.dat
+726 deterministic d20.background.8.intensity d20.background.14.intensity -0.010674355498874655 all594791.dat
+727 deterministic d20.background.9.intensity d20.background.10.intensity -0.19407449359302625 all594791.dat
+728 deterministic d20.background.9.intensity d20.background.11.intensity 0.2054037288518114 all594791.dat
+729 deterministic d20.background.9.intensity d20.background.12.intensity 0.046847764327271335 all594791.dat
+730 deterministic d20.background.9.intensity d20.background.13.intensity 0.06539110379577323 all594791.dat
+731 deterministic d20.background.9.intensity d20.background.14.intensity 0.07098497633758796 all594791.dat
+732 deterministic d20.background.10.intensity d20.background.11.intensity -0.1693789507280151 all594791.dat
+733 deterministic d20.background.10.intensity d20.background.12.intensity 0.14802411374250615 all594791.dat
+734 deterministic d20.background.10.intensity d20.background.13.intensity 0.07616659342656172 all594791.dat
+735 deterministic d20.background.10.intensity d20.background.14.intensity 0.10336663665717788 all594791.dat
+736 deterministic d20.background.11.intensity d20.background.12.intensity -0.0647030396952999 all594791.dat
+737 deterministic d20.background.11.intensity d20.background.13.intensity 0.1742770286956356 all594791.dat
+738 deterministic d20.background.11.intensity d20.background.14.intensity 0.19273238814396648 all594791.dat
+739 deterministic d20.background.12.intensity d20.background.13.intensity -0.004989221919067826 all594791.dat
+740 deterministic d20.background.12.intensity d20.background.14.intensity 0.2804909206727518 all594791.dat
+741 deterministic d20.background.13.intensity d20.background.14.intensity 0.007717554537370938 all594791.dat

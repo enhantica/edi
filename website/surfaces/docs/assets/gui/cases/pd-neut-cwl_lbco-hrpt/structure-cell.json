@@ -1,0 +1,1226 @@
+{
+    "description": "Set the space group and the cell",
+    "fit_phase": "",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "highlights": [
+        "group.space_group",
+        "group.cell"
+    ],
+    "id": "structure-cell",
+    "image": "structure-cell.webp",
+    "image_sha256": "a93f1b498b6f6029bd7e940da0adc33b30b2deb1f7118d3982c7a3a3b7f9b2be",
+    "items": {
+        "ApplicationWindow": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
+        "ApplicationWindowContentControl": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
+        "Main": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                252,
+                682,
+                56
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                252,
+                682,
+                56
+            ]
+        },
+        "appBar": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                77
+            ]
+        },
+        "appBar.button.preferences": {
+            "bounds": [
+                1431,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "cog",
+            "label": "",
+            "visible_bounds": [
+                1431,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.redo": {
+            "bounds": [
+                84,
+                21,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "redo",
+            "label": "",
+            "visible_bounds": [
+                84,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.reset": {
+            "bounds": [
+                119,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "backspace",
+            "label": "",
+            "visible_bounds": [
+                119,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.save": {
+            "bounds": [
+                14,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "save",
+            "label": "",
+            "visible_bounds": [
+                14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.undo": {
+            "bounds": [
+                49,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "undo",
+            "label": "",
+            "visible_bounds": [
+                49,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.separator": {
+            "bounds": [
+                1354,
+                33,
+                1,
+                12
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1354,
+                33,
+                1,
+                12
+            ]
+        },
+        "appBar.tab.analysis": {
+            "bounds": [
+                812.359375,
+                0,
+                67.84375,
+                77
+            ],
+            "enabled": false,
+            "icon": "calculator",
+            "label": "Analysis",
+            "visible_bounds": [
+                812.359375,
+                0,
+                67.84375,
+                77
+            ]
+        },
+        "appBar.tab.experiment": {
+            "bounds": [
+                727.453125,
+                0,
+                84.90625,
+                77
+            ],
+            "enabled": true,
+            "icon": "microscope",
+            "label": "Experiment",
+            "visible_bounds": [
+                727.453125,
+                0,
+                84.90625,
+                77
+            ]
+        },
+        "appBar.tab.home": {
+            "bounds": [
+                542,
+                0,
+                53.46875,
+                77
+            ],
+            "enabled": true,
+            "icon": "home",
+            "label": "Home",
+            "visible_bounds": [
+                542,
+                0,
+                53.46875,
+                77
+            ]
+        },
+        "appBar.tab.project": {
+            "bounds": [
+                595.46875,
+                0,
+                59.734375,
+                77
+            ],
+            "enabled": true,
+            "icon": "archive",
+            "label": "Project",
+            "visible_bounds": [
+                595.46875,
+                0,
+                59.734375,
+                77
+            ]
+        },
+        "appBar.tab.report": {
+            "bounds": [
+                880.203125,
+                0,
+                58.25,
+                77
+            ],
+            "enabled": false,
+            "icon": "clipboard-list",
+            "label": "Report",
+            "visible_bounds": [
+                880.203125,
+                0,
+                58.25,
+                77
+            ]
+        },
+        "appBar.tab.structure": {
+            "bounds": [
+                655.203125,
+                0,
+                72.25,
+                77
+            ],
+            "enabled": true,
+            "icon": "layer-group",
+            "label": "Structure",
+            "visible_bounds": [
+                655.203125,
+                0,
+                72.25,
+                77
+            ]
+        },
+        "appBar.workflow": {
+            "bounds": [
+                542,
+                0,
+                396.453125,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                542,
+                0,
+                396.453125,
+                77
+            ]
+        },
+        "assistant.toggle": {
+            "bounds": [
+                1361,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "robot",
+            "label": "",
+            "visible_bounds": [
+                1361,
+                21,
+                35,
+                35
+            ]
+        },
+        "cell.angle_alpha": {
+            "bounds": [
+                1126.75,
+                252,
+                110.75,
+                56
+            ],
+            "enabled": false,
+            "label": "90",
+            "visible_bounds": [
+                1126.75,
+                252,
+                110.75,
+                56
+            ]
+        },
+        "cell.angle_beta": {
+            "bounds": [
+                1241,
+                252,
+                110.75,
+                56
+            ],
+            "enabled": false,
+            "label": "90",
+            "visible_bounds": [
+                1241,
+                252,
+                110.75,
+                56
+            ]
+        },
+        "cell.angle_gamma": {
+            "bounds": [
+                1355.25,
+                252,
+                110.75,
+                56
+            ],
+            "enabled": false,
+            "label": "90",
+            "visible_bounds": [
+                1355.25,
+                252,
+                110.75,
+                56
+            ]
+        },
+        "cell.length_a": {
+            "bounds": [
+                784,
+                252,
+                110.75,
+                56
+            ],
+            "enabled": true,
+            "label": "3.88",
+            "visible_bounds": [
+                784,
+                252,
+                110.75,
+                56
+            ]
+        },
+        "cell.length_b": {
+            "bounds": [
+                898.25,
+                252,
+                110.75,
+                56
+            ],
+            "enabled": false,
+            "label": "3.88",
+            "visible_bounds": [
+                898.25,
+                252,
+                110.75,
+                56
+            ]
+        },
+        "cell.length_c": {
+            "bounds": [
+                1012.5,
+                252,
+                110.75,
+                56
+            ],
+            "enabled": false,
+            "label": "3.88",
+            "visible_bounds": [
+                1012.5,
+                252,
+                110.75,
+                56
+            ]
+        },
+        "chart.legend.entry": {
+            "bounds": [
+                42,
+                710,
+                29.8125,
+                27
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                42,
+                710,
+                29.8125,
+                27
+            ]
+        },
+        "chart.legend.toggle": {
+            "bounds": [
+                42,
+                710,
+                29.8125,
+                27
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                42,
+                710,
+                29.8125,
+                27
+            ]
+        },
+        "group.atom_site": {
+            "bounds": [
+                770,
+                322,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "atom",
+            "label": "Atom sites (1)",
+            "visible_bounds": [
+                770,
+                322,
+                710,
+                42
+            ]
+        },
+        "group.atom_site_aniso": {
+            "bounds": [
+                770,
+                364,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "arrows-alt",
+            "label": "Atomic displacement (1)",
+            "visible_bounds": [
+                770,
+                364,
+                710,
+                42
+            ]
+        },
+        "group.cell": {
+            "bounds": [
+                770,
+                203,
+                710,
+                119
+            ],
+            "enabled": true,
+            "icon": "cube",
+            "label": "Cell",
+            "visible_bounds": [
+                770,
+                203,
+                710,
+                119
+            ]
+        },
+        "group.space_group": {
+            "bounds": [
+                770,
+                161,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "satellite",
+            "label": "Space group",
+            "visible_bounds": [
+                770,
+                161,
+                710,
+                42
+            ]
+        },
+        "group.structures": {
+            "bounds": [
+                770,
+                119,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "layer-group",
+            "label": "Structures (1)",
+            "visible_bounds": [
+                770,
+                119,
+                710,
+                42
+            ]
+        },
+        "label": {
+            "ambiguous": true
+        },
+        "mainArea.blocks": {
+            "bounds": [
+                28,
+                133,
+                714,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                28,
+                133,
+                714,
+                35
+            ]
+        },
+        "mainArea.blocks.box": {
+            "bounds": [
+                28,
+                133,
+                637,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                28,
+                133,
+                637,
+                35
+            ]
+        },
+        "mainArea.blocks.down": {
+            "bounds": [
+                707,
+                133,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "arrow-circle-down",
+            "label": "",
+            "visible_bounds": [
+                707,
+                133,
+                35,
+                35
+            ]
+        },
+        "mainArea.blocks.up": {
+            "bounds": [
+                668.5,
+                133,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "arrow-circle-up",
+            "label": "",
+            "visible_bounds": [
+                668.5,
+                133,
+                35,
+                35
+            ]
+        },
+        "mainArea.structure.tab.pattern": {
+            "bounds": [
+                69.1875,
+                77,
+                57.09375,
+                42
+            ],
+            "enabled": false,
+            "label": "Pattern",
+            "visible_bounds": [
+                69.1875,
+                77,
+                57.09375,
+                42
+            ]
+        },
+        "mainArea.structure.tab.view": {
+            "bounds": [
+                0,
+                77,
+                69.1875,
+                42
+            ],
+            "enabled": true,
+            "label": "Structure",
+            "visible_bounds": [
+                0,
+                77,
+                69.1875,
+                42
+            ]
+        },
+        "sideBar.tab.basic": {
+            "bounds": [
+                770,
+                77,
+                43.515625,
+                42
+            ],
+            "enabled": true,
+            "label": "Main",
+            "visible_bounds": [
+                770,
+                77,
+                43.515625,
+                42
+            ]
+        },
+        "sideBar.tab.extras": {
+            "bounds": [
+                813.515625,
+                77,
+                45.125,
+                42
+            ],
+            "enabled": true,
+            "label": "Extra",
+            "visible_bounds": [
+                813.515625,
+                77,
+                45.125,
+                42
+            ]
+        },
+        "sideBar.tab.settings": {
+            "bounds": [
+                897.328125,
+                77,
+                62.8125,
+                42
+            ],
+            "enabled": false,
+            "label": "Settings",
+            "visible_bounds": [
+                897.328125,
+                77,
+                62.8125,
+                42
+            ]
+        },
+        "sideBar.tab.text": {
+            "bounds": [
+                858.640625,
+                77,
+                38.6875,
+                42
+            ],
+            "enabled": true,
+            "label": "Text",
+            "visible_bounds": [
+                858.640625,
+                77,
+                38.6875,
+                42
+            ]
+        },
+        "statusBar": {
+            "bounds": [
+                0,
+                758,
+                1480,
+                42
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                758,
+                1480,
+                42
+            ]
+        },
+        "statusBar.calculator": {
+            "bounds": [
+                588.8875,
+                772,
+                122.84375,
+                14
+            ],
+            "enabled": true,
+            "icon": "calculator",
+            "label": "",
+            "visible_bounds": [
+                588.8875,
+                772,
+                122.84375,
+                14
+            ]
+        },
+        "statusBar.experiments": {
+            "bounds": [
+                460.83750000000003,
+                772,
+                111.25,
+                14
+            ],
+            "enabled": true,
+            "icon": "microscope",
+            "label": "",
+            "visible_bounds": [
+                460.83750000000003,
+                772,
+                111.25000000000006,
+                14
+            ]
+        },
+        "statusBar.minimizer": {
+            "bounds": [
+                728.53125,
+                772,
+                118.109375,
+                14
+            ],
+            "enabled": true,
+            "icon": "level-down-alt",
+            "label": "",
+            "visible_bounds": [
+                728.53125,
+                772,
+                118.109375,
+                14
+            ]
+        },
+        "statusBar.parameters": {
+            "bounds": [
+                863.440625,
+                772,
+                103.375,
+                14
+            ],
+            "enabled": true,
+            "icon": "th-list",
+            "label": "",
+            "visible_bounds": [
+                863.440625,
+                772,
+                103.375,
+                14
+            ]
+        },
+        "statusBar.project": {
+            "bounds": [
+                126.58125,
+                772,
+                203.265625,
+                14
+            ],
+            "enabled": true,
+            "icon": "archive",
+            "label": "",
+            "visible_bounds": [
+                126.58125,
+                772,
+                203.265625,
+                14
+            ]
+        },
+        "statusBar.structures": {
+            "bounds": [
+                346.646875,
+                772,
+                97.390625,
+                14
+            ],
+            "enabled": true,
+            "icon": "layer-group",
+            "label": "",
+            "visible_bounds": [
+                346.646875,
+                772,
+                97.390625,
+                14
+            ]
+        },
+        "statusBar.value": {
+            "ambiguous": true
+        },
+        "statusBar.warnings": {
+            "bounds": [
+                14,
+                772,
+                95.78125,
+                14
+            ],
+            "enabled": true,
+            "icon": "exclamation-triangle",
+            "label": "",
+            "visible_bounds": [
+                14,
+                772,
+                95.78125,
+                14
+            ]
+        },
+        "structure.toolbar.a": {
+            "bounds": [
+                459.5,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                459.5,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.atoms": {
+            "bounds": [
+                196.25,
+                182,
+                95.25,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                196.25,
+                182,
+                95.25,
+                35
+            ]
+        },
+        "structure.toolbar.axes": {
+            "bounds": [
+                372,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "location-arrow",
+            "label": "",
+            "visible_bounds": [
+                372,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.b": {
+            "bounds": [
+                498,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                498,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.c": {
+            "bounds": [
+                536.5,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                536.5,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.cell": {
+            "bounds": [
+                333.5,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "vector-square",
+            "label": "",
+            "visible_bounds": [
+                333.5,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.colors": {
+            "bounds": [
+                111,
+                182,
+                71.25,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                111,
+                182,
+                71.25,
+                35
+            ]
+        },
+        "structure.toolbar.labels": {
+            "bounds": [
+                295,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "tag",
+            "label": "",
+            "visible_bounds": [
+                295,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.projection": {
+            "bounds": [
+                421,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "cube",
+            "label": "",
+            "visible_bounds": [
+                421,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.reset": {
+            "bounds": [
+                575,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "home",
+            "label": "",
+            "visible_bounds": [
+                575,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.save": {
+            "bounds": [
+                613.5,
+                182,
+                45.5,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                613.5,
+                182,
+                45.5,
+                35
+            ]
+        },
+        "structure.toolbar.save.button": {
+            "bounds": [
+                624,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "camera",
+            "label": "",
+            "visible_bounds": [
+                624,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.view": {
+            "bounds": [
+                0,
+                168,
+                770,
+                590
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                168,
+                770,
+                590
+            ]
+        },
+        "structure.view.labels": {
+            "bounds": [
+                0,
+                168,
+                770,
+                590
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                168,
+                770,
+                590
+            ]
+        },
+        "structure.view.legend": {
+            "bounds": [
+                28,
+                703,
+                57.8125,
+                41
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                28,
+                703,
+                57.8125,
+                41
+            ]
+        },
+        "workflow.home.sidebarHost": {
+            "bounds": [
+                770,
+                77,
+                710,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                710,
+                681
+            ]
+        },
+        "workflow.structure.mainContent": {
+            "bounds": [
+                0,
+                77,
+                770,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                77,
+                770,
+                681
+            ]
+        },
+        "workflow.structure.manualSidebar": {
+            "bounds": [
+                770,
+                77,
+                710,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                710,
+                681
+            ]
+        },
+        "workflow.structure.sidebarHost": {
+            "bounds": [
+                770,
+                77,
+                710,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                710,
+                681
+            ]
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "pixel_size": [
+        1480,
+        800
+    ],
+    "qt_version": "6.11.2",
+    "schema": 1,
+    "script_sha256": "5a28f6259705a33056c8a0242fd187a5b22fc3a598a2ef03f8bf7b5682641f9f",
+    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "state": {
+        "experiments": 0,
+        "fit_outcome": "",
+        "fit_result_rows": 0,
+        "fit_results_open": false,
+        "fit_running": false,
+        "fit_status": "",
+        "has_project": true,
+        "page": "structure",
+        "scan_failed": 0,
+        "scan_fitted": 0,
+        "scan_total": 0,
+        "sidebar": "",
+        "sidebar_tabs": [
+            {
+                "checked": true,
+                "enabled": true,
+                "id": "sideBar.tab.basic",
+                "label": "Main"
+            },
+            {
+                "checked": false,
+                "enabled": true,
+                "id": "sideBar.tab.extras",
+                "label": "Extra"
+            },
+            {
+                "checked": false,
+                "enabled": true,
+                "id": "sideBar.tab.text",
+                "label": "Text"
+            },
+            {
+                "checked": false,
+                "enabled": false,
+                "id": "sideBar.tab.settings",
+                "label": "Settings"
+            }
+        ],
+        "structures": 1
+    }
+}

@@ -1,0 +1,503 @@
+name: Desktop installers
+
+on:
+  workflow_dispatch:
+    inputs:
+      prepare_preview_release:
+        description: Build and test all three installers for a new prerelease draft
+        default: false
+        type: boolean
+      publish_components:
+        description: Deploy qualified online installer components to the public testing repository
+        default: false
+        type: boolean
+      preview_run:
+        description: >-
+          Installer run ID whose qualified installers to reuse without rebuilding: deployed with publish_components,
+          attached to the prerelease draft with prepare_preview_release
+        type: string
+      release_plan_run:
+        description: Prepare calendar release run ID for stable qualification at the same commit
+        type: string
+      windows_only:
+        description: Build and test Windows only for diagnosis
+        default: false
+        type: boolean
+  push:
+    branches: ['**']
+    paths:
+      - .github/workflows/installers.yml
+      - .github/actions/setup-pixi/action.yml
+      - tools/installer/**
+      - cmake/assistant_runtime*
+      - app/src/installer_smoke.cpp
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: desktop-installers-${{ github.event_name == 'push' && github.ref || inputs.prepare_preview_release && format('calendar-{0}', github.ref) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+jobs:
+  # The crysta SDK, built once per crysta commit (edi ADR-0083).
+  crysta-sdk:
+    uses: ./.github/workflows/crysta-sdk.yml
+    secrets: inherit
+
+  preview-version:
+    if: github.event.pull_request.head.repo.fork == false && inputs.prepare_preview_release && inputs.preview_run == ''
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.select.outputs.version }}
+      date: ${{ steps.select.outputs.date }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Reserve this source's calendar version
+        id: select
+        env:
+          # Reserving creates an empty draft, which needs the release token used for drafts.
+          GH_TOKEN: ${{ secrets.GH_API_PERSONAL_ACCESS_TOKEN }}
+          PYTHONPATH: tools/release
+        run: |
+          python - <<'PYTHON'
+          import datetime
+          import os
+          from pathlib import Path
+          from prepare import reserve_identity
+          today = datetime.datetime.now(datetime.UTC).date()
+          version, date = reserve_identity(
+              os.environ['GITHUB_REPOSITORY'], os.environ['GITHUB_SHA'], today, prerelease=True
+          )
+          with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
+              output.write(f'version={version}\ndate={date.isoformat()}\n')
+          PYTHON
+
+  installers:
+    needs: [preview-version, crysta-sdk]
+    if: >-
+      github.event.pull_request.head.repo.fork == false && !cancelled() && inputs.preview_run == ''
+      && (needs.preview-version.result == 'success' || needs.preview-version.result == 'skipped')
+    name: installer · ${{ matrix.runner == 'windows-2022' && 'Windows' || matrix.runner == 'macos-15' && 'macOS' || 'Linux' }}
+    environment: crysta-sdk
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      # Every platform is written out; a Windows diagnostic (windows_only) drops Linux and macOS.
+      matrix:
+        runner: [ubuntu-24.04, macos-15, windows-2022]
+        exclude:
+          - runner: ${{ inputs.windows_only && 'ubuntu-24.04' || 'none' }}
+          - runner: ${{ inputs.windows_only && 'macos-15' || 'none' }}
+          # Windows gets its crysta SDK in a later change (edi ADR-0083); until then only a diagnostic run builds it.
+          - runner: ${{ !inputs.windows_only && 'windows-2022' || 'none' }}
+    env:
+      PLATFORM: ${{ matrix.runner == 'windows-2022' && 'Windows' || matrix.runner == 'macos-15' && 'macOS' || 'Linux' }}
+      CMAKE_BUILD_PARALLEL_LEVEL: '4'
+      EDI_INSTALLER_PREVIEW_DATE: ${{ needs.preview-version.outputs.date }}
+      EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
+      EDI_INSTALLER_VERSION: 0.0.${{ github.run_number }}.${{ github.run_attempt }}
+    steps:
+      - name: Apply the prerelease version
+        if: inputs.prepare_preview_release
+        shell: bash
+        env:
+          RELEASE_PLAN_RUN: ${{ inputs.release_plan_run }}
+          WINDOWS_ONLY: ${{ inputs.windows_only }}
+          PREVIEW_VERSION: ${{ needs.preview-version.outputs.version }}
+        run: |
+          if [[ -n "$RELEASE_PLAN_RUN" || "$WINDOWS_ONLY" == true ]]; then
+            echo "A calendar preview is separate from stable qualification and Windows diagnostics."
+            exit 1
+          fi
+          [[ -n "$PREVIEW_VERSION" ]]
+          printf 'EDI_INSTALLER_VERSION=%s\nEDI_INSTALLER_PREVIEW_VERSION=%s\n' "$PREVIEW_VERSION" "$PREVIEW_VERSION" >> "$GITHUB_ENV"
+      - name: Reject publication inputs for a Windows diagnostic
+        if: inputs.windows_only && (inputs.publish_components || inputs.release_plan_run != '')
+        shell: bash
+        run: |
+          echo "Windows diagnostics cannot publish or qualify a release."
+          exit 1
+      - name: Enable long source paths on Windows
+        if: runner.os == 'Windows'
+        run: |
+          git config --global core.longpaths true
+          git config --global core.protectNTFS false
+      - uses: actions/checkout@v5
+        if: runner.os != 'Windows'
+        with:
+          fetch-depth: 0
+      - name: Check out Windows-compatible source paths
+        if: runner.os == 'Windows'
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !**/[aA][uU][xX]
+            !**/[aA][uU][xX].*
+            !**/[cC][oO][nN]
+            !**/[cC][oO][nN].*
+            !**/[pP][rR][nN]
+            !**/[pP][rR][nN].*
+            !**/[nN][uU][lL]
+            !**/[nN][uU][lL].*
+            !**/[cC][oO][mM][1-9]
+            !**/[cC][oO][mM][1-9].*
+            !**/[lL][pP][tT][1-9]
+            !**/[lL][pP][tT][1-9].*
+      - name: Set up the locked packaging environment
+        uses: ./.github/actions/setup-pixi
+        with:
+          manifest-path: tools/installer/pixi.toml
+      - name: Set up the Windows compiler
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Acquire source-bound release inputs
+        if: inputs.release_plan_run != ''
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/release/download_plan.py" --repo "$GITHUB_REPOSITORY" --run "$PREPARE_RUN" --output "$EDI_RELEASE_PLAN"
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREPARE_RUN: ${{ inputs.release_plan_run }}
+      - name: Validate calendar release policy offline
+        run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/releases" --noconftest -o addopts= -q
+      - name: Check installer boundaries and native UTC conversion offline
+        run: pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/installer" --noconftest -o addopts= -q
+      - name: Acquire the pinned Qt Installer Framework
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" tools --output "${{ github.workspace }}/build/installer/ifw"
+      - name: Check installer transport before building the application
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/protocol_check.py" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/protocol"
+      - name: The pinned crysta commit
+        shell: bash
+        run: echo "CRYSTA_SOURCE_COMMIT=$(python3 tools/ci/crysta_sdk.py pins pixi.toml)" >>"$GITHUB_ENV"
+      - name: Require an immutable engine source
+        shell: bash
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
+          import os, re
+          if not re.fullmatch(r'[0-9a-f]{40}', os.environ['CRYSTA_SOURCE_COMMIT']):
+              raise RuntimeError('Installer qualification requires a complete engine commit')
+          PYTHON
+      - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - name: Unpack the pinned crysta source
+        shell: bash
+        run: |
+          mkdir -p .crysta
+          tar -xzf "$CRYSTA_SDK_ARCHIVES/crysta-src-$CRYSTA_SOURCE_COMMIT.tar.gz" -C .crysta
+          printf '%s\n' "$CRYSTA_SOURCE_COMMIT" >.crysta/CRYSTA_SOURCE_SHA
+      - name: Check engine compiler portability before the full build
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --check-compiler --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
+      - name: Build crysta, desktop bundle and release CLI
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
+      - name: Check assistant process-family shutdown on this platform
+        shell: bash
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml cmake --build build/installer/app --target edi_assistant_lifetime_host --parallel 4
+          export EDI_LIFETIME_BIN_DIR="$(cat build/installer/app/edi-assistant-lifetime-directory.txt)"
+          pixi run --manifest-path tools/installer/pixi.toml python -m pytest "${{ github.workspace }}/tests/fixtures/assistant_fixes/check_process_lifetime.py" --noconftest -o addopts= -q --junitxml=build/installer/assistant-lifetime.xml
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+      - name: Check retired project ownership before packaging
+        shell: bash
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml cmake --build build/installer/app --target edi_trial_lock_tests --parallel 4
+          pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
+          import subprocess
+          from pathlib import Path
+          binary = Path(Path('build/installer/app/edi-trial-lock-executable.txt').read_text().strip())
+          subprocess.run([str(binary.resolve()), '-o', 'build/installer/project-retirement.xml,junitxml'], check=True)
+          PYTHON
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+      - name: Create the offline qualification installer
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/package"
+      - name: Install, launch, calculate, render and uninstall
+        shell: bash
+        run: |
+          installer=$(cat build/installer/package/installer.json | sed -n 's/.*"zip": "\([^"]*\)".*/\1/p')
+          pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" test --installer "${{ github.workspace }}/build/installer/package/$installer" --output "${{ github.workspace }}/build/installer/test"
+      - name: Create the online distribution installer
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --kind online --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/online"
+      - name: Qualify the online ZIP with local component transport
+        shell: bash
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
+          import json, subprocess
+          from pathlib import Path
+          root = Path.cwd()
+          package = root / 'build/installer/online'
+          metadata = json.loads((package / 'installer.json').read_text())
+          subprocess.run([
+              'python', str(root / 'tools/installer/package.py'), 'test',
+              '--installer', str(package / metadata['zip']),
+              '--repository', (package / 'repository').as_uri() + '/',
+              '--output', str(root / 'build/installer/online-test'),
+          ], check=True)
+          subprocess.run([
+              'python', str(root / 'tools/installer/package.py'), 'test',
+              '--installer', str(package / metadata['zip']),
+              '--repository', (package / 'repository').as_uri() + '/',
+              '--output', str(root / 'build/installer/online-assistant-test'),
+              '--with-assistant',
+          ], check=True)
+          PYTHON
+      - name: Prepare the tested platform repository
+        shell: bash
+        run: |
+          pixi run --manifest-path tools/installer/pixi.toml python - <<'PYTHON'
+          import json, shutil
+          from pathlib import Path
+          package = Path('build/installer/online')
+          metadata = json.loads((package / 'installer.json').read_text())
+          import os
+          channel = 'stable' if os.environ.get('EDI_RELEASE_PLAN') else 'testing'
+          target = Path('build/installer/components') / channel / metadata['platform']
+          shutil.copytree(package / 'repository', target)
+          delivery = Path('build/installer/delivery')
+          delivery.mkdir()
+          # The tested repository goes onto the release too, as one archive with its relative paths.
+          import sys
+          sys.path.insert(0, 'tools/release')
+          from promote import components_name, pack_components
+          pack_components(target, delivery / components_name(metadata['version'], metadata['platform'], channel))
+          os.link(package / metadata['zip'], delivery / metadata['zip'])
+          shutil.copy2(package / 'installer.json', delivery / 'installer.json')
+          shutil.copy2('build/installer/stage/build-inputs.json', delivery / 'build-inputs.json')
+          shutil.copy2('build/installer/online-test/passed.json', delivery / 'qualification.json')
+          cli_receipt = Path('build/installer/cli-qualification.json')
+          if cli_receipt.is_file():
+              cli = json.loads(cli_receipt.read_text())
+              shutil.copy2(cli_receipt, delivery / cli_receipt.name)
+              os.link(cli_receipt.parent / cli['zip'], delivery / cli['zip'])
+          wheel_receipt = Path('build/installer/wheel-qualification.json')
+          if wheel_receipt.is_file():
+              wheel = json.loads(wheel_receipt.read_text())
+              shutil.copy2(wheel_receipt, delivery / wheel_receipt.name)
+              os.link(wheel_receipt.parent / wheel['wheel'], delivery / wheel['wheel'])
+          preview_history = Path('build/installer/preview-history.json')
+          if preview_history.is_file():
+              shutil.copy2(preview_history, delivery / 'preview-history.json')
+          PYTHON
+      - name: Upload qualified release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ env.PLATFORM }}-${{ github.run_attempt }}
+          path: build/installer/delivery
+          if-no-files-found: error
+          compression-level: 0
+      - name: Upload tested components
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-components-${{ env.PLATFORM }}-${{ github.run_attempt }}
+          path: build/installer/components
+          if-no-files-found: error
+          compression-level: 0
+      - name: Upload installation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-check-${{ env.PLATFORM }}-${{ github.run_attempt }}
+          path: |
+            build/installer/assistant-lifetime.xml
+            build/installer/project-retirement.xml
+            build/installer/test/*.log
+            build/installer/test/*.json
+            build/installer/test/smoke/**
+            build/installer/online-test/*.log
+            build/installer/online-test/*.json
+            build/installer/online-test/smoke/**
+            build/installer/online-assistant-test/*.log
+            build/installer/online-assistant-test/*.json
+            build/installer/online-assistant-test/smoke/**
+            build/installer/online/installer.json
+            build/installer/stage/bundle-audit.json
+            build/installer/protocol/*.log
+            build/installer/protocol/passed.json
+            build/installer/package/installer.json
+          if-no-files-found: ignore
+
+  qualify-release:
+    name: record qualified release inputs
+    needs: installers
+    if: inputs.release_plan_run != '' && !inputs.windows_only && !inputs.prepare_preview_release && inputs.preview_run == ''
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Recover the exact prepared inputs
+        run: python tools/release/download_plan.py --repo "$GITHUB_REPOSITORY" --run "$PREPARE_RUN" --output release-plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREPARE_RUN: ${{ inputs.release_plan_run }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qualified-release-plan-${{ github.run_attempt }}
+          path: release-plan
+          if-no-files-found: error
+          retention-days: 90
+
+  draft-preview-release:
+    name: Create or update the prerelease draft
+    needs: installers
+    if: >-
+      github.event.pull_request.head.repo.fork == false && !cancelled() && github.event_name == 'workflow_dispatch' && inputs.prepare_preview_release
+      && (needs.installers.result == 'success' || (inputs.preview_run != '' && needs.installers.result == 'skipped'))
+    environment: crysta-sdk
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - if: inputs.preview_run == ''
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installer-{Linux,macOS,Windows}-*
+          path: preview-delivery
+      - name: Recover qualified installers from the preview run
+        if: inputs.preview_run != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_RUN: ${{ inputs.preview_run }}
+        run: |
+          python3 tools/release/preview.py --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME" \
+            --run "$PREVIEW_RUN" --output preview-delivery --deliveries
+      - name: Attach qualified online installers to the draft
+        if: github.event.pull_request.head.repo.fork == false
+        env:
+          GH_TOKEN: ${{ secrets.GH_API_PERSONAL_ACCESS_TOKEN }}
+          PREVIEW_RUN: ${{ inputs.preview_run }}
+        run: |
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::error::Draft creation needs the release token with permission to modify workflows."
+            exit 1
+          fi
+          # A retry of this job can reuse the last complete set from this run.
+          selected=0
+          for linux in preview-delivery/installer-Linux-*; do
+            attempt=${linux##*-}
+            if [[ "$attempt" =~ ^[1-9][0-9]*$ && -d "preview-delivery/installer-macOS-$attempt" &&
+                  -d "preview-delivery/installer-Windows-$attempt" ]] && (( attempt > selected )); then
+              selected=$attempt
+            fi
+          done
+          if (( selected == 0 )); then
+            echo "No complete set of qualified installers is available."
+            exit 1
+          fi
+          # Reused installers were built from the preview run's source, not this run's.
+          commit=$GITHUB_SHA
+          if [[ -n "$PREVIEW_RUN" ]]; then
+            commit=$(cat preview-delivery/commit)
+          fi
+          python3 tools/release/preview_draft.py --repo "$GITHUB_REPOSITORY" \
+            --commit "$commit" preview-delivery/installer-{Linux,macOS,Windows}-"$selected"
+
+  publish-installers:
+    name: Deploy testing installer components
+    needs: installers
+    if: >-
+      ${{ !cancelled() && github.event_name == 'workflow_dispatch' && !inputs.windows_only
+      && inputs.publish_components && inputs.release_plan_run == '' && !github.event.repository.private
+      && (needs.installers.result == 'success' || (inputs.preview_run != '' && needs.installers.result == 'skipped')) }}
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: pages-publication
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download tested platform repositories
+        if: inputs.preview_run == ''
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installer-components-*-${{ github.run_attempt }}
+          merge-multiple: true
+          path: components
+      - name: Recover qualified preview repositories
+        if: inputs.preview_run != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_RUN: ${{ inputs.preview_run }}
+        run: |
+          python3 tools/release/preview.py --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME" \
+            --run "$PREVIEW_RUN" --output preview
+          mv preview/components components
+      - name: Require the selected platforms from this successful attempt
+        if: inputs.preview_run == ''
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          root = Path('components/testing')
+          expected = {'linux-x86_64', 'macos-arm64', 'windows-x86_64'}
+          if not root.is_dir() or {item.name for item in root.iterdir()} != expected:
+              raise RuntimeError('Publish requires all platforms from one complete successful attempt; rerun all jobs')
+          for platform in expected:
+              if not (root / platform / 'Updates.xml').is_file():
+                  raise RuntimeError('Platform repository metadata is missing')
+          PYTHON
+      - name: Download installed calendar preview identities
+        if: inputs.prepare_preview_release && inputs.preview_run == ''
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installer-{Linux,macOS,Windows}-${{ github.run_attempt }}
+          path: preview-delivery
+      - name: Prepare the testing update feed
+        if: inputs.prepare_preview_release && inputs.preview_run == ''
+        run: |
+          python3 - <<'PYTHON'
+          import json
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          root = Path('components/testing')
+          histories = sorted(Path('preview-delivery').glob('installer-*/preview-history.json'))
+          if len(histories) != 3 or any(path.read_bytes() != histories[0].read_bytes() for path in histories[1:]):
+              raise RuntimeError('Preview release histories differ')
+          payload = histories[0].read_bytes()
+          version = json.loads(payload)['releases'][0]['version']
+          for metadata in root.glob('*/Updates.xml'):
+              versions = {item.findtext('Version') for item in ET.parse(metadata).findall('PackageUpdate')}
+              if versions != {version}:
+                  raise RuntimeError('Testing repositories do not match the preview feed')
+          (root / 'feed.json').write_bytes(payload)
+          PYTHON
+      - name: Preserve documentation, web app and previous components
+        run: python3 tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component installers --incoming components --site site
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Upload the assembled site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: pages-site-installers-${{ github.run_attempt }}
+          path: site
+          retention-days: 90
+      - name: Deploy installers to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: pages-site-installers-${{ github.run_attempt }}

@@ -1,0 +1,27 @@
+{
+  "desktop": [
+    "fa5-desktop",
+    "Desktop app",
+    "desktop"
+  ],
+  "web": [
+    "fa5-globe",
+    "Web app",
+    "web"
+  ],
+  "python": [
+    "simple-python",
+    "Python API",
+    "py"
+  ],
+  "cli-python": [
+    "simple-python",
+    "CLI from Python package",
+    "cli-py"
+  ],
+  "cli-standalone": [
+    "fa5-terminal",
+    "Standalone CLI",
+    "cli"
+  ]
+}

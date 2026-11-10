@@ -1,0 +1,224 @@
+{
+  "source": "Font Awesome Free Solid 5.15.4, shared app/site font; glyph outlines are the reference, not a regression capture",
+  "font_sha256": "7bdee169eb7f04b3e08de629fb530ec7fed8f1d1b4a9827d702331d227e24240",
+  "glyphs": {
+    "61760": {
+      "path_sha256": "7376ac0cb245e278ea0e33a336ab1a8ce9176618a9b624f2c12800de1e76c384",
+      "viewBox": [
+        0,
+        0,
+        496,
+        512
+      ]
+    },
+    "63550": {
+      "path_sha256": "b1a10b7c81b55bd41bda5fc84549e70022e5c6ec1b93a8b26fb7f080419f1a36",
+      "viewBox": [
+        0,
+        0,
+        640,
+        512
+      ]
+    },
+    "61842": {
+      "path_sha256": "ab40107ef24999a999a81f304f939955f75cdf2a51cc427a6bb40ed559294c5f",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "61633": {
+      "path_sha256": "b6e7990605d782c50acc85066ec387dbc1b3158af62e3da8eed17826e4300778",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "61697": {
+      "path_sha256": "e1e588cf3074da0d6d2e246db854c5ce8331baccfb84b1444c9061179a31a6a0",
+      "viewBox": [
+        0,
+        0,
+        448,
+        512
+      ]
+    },
+    "61556": {
+      "path_sha256": "db151a8afb963aadae035c197babcaecd38c8d32681100a4d21b30ab7d6f6f68",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "62973": {
+      "path_sha256": "9ebe7b6c2f2dc3f63fdd33fb87ce5087d111a5320c62bdaa91963230b04849fe",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "61558": {
+      "path_sha256": "7092d147e40f1a134e7fac58291362b27c9ae17fc197bbbc672629dac5344a3b",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    }
+  },
+  "toolbar": {
+    "align-left": {
+      "path_sha256": "cfa6e0c14d36c11aa51ed4909b6771a4b96514eb42ac4ba3d27c5d0cdfe34038",
+      "viewBox": [
+        0,
+        0,
+        448,
+        512
+      ]
+    },
+    "arrows-alt": {
+      "path_sha256": "26fd2c567c9c3db47e2f82487fa0afecdcb37361afba0e45e5dfec050090c2db",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "camera": {
+      "path_sha256": "09e4115b4460938e112a9a5969f6072ddd8003f8d11aad0dad819cc61f27e316",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "chart-area": {
+      "path_sha256": "c12e631ccf7c44ebcdadaad315e28d0e536fbff606d0bdcb6333d69165161c62",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "comment-alt": {
+      "path_sha256": "6862a3fa2d8d8183328103c5510c6f167cd107060a87af255a7b9ff842d7a6b0",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "cube": {
+      "path_sha256": "74b956cf52415e3b561e25929b80dc83289885cf8c54b140c8e1a5928dd2a05a",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "eraser": {
+      "path_sha256": "c042a788946750279ee2e3c4ab60141e9f72ffb89dcedbc45a2c161b261296c6",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "expand": {
+      "path_sha256": "07960d8422d848f6138d69058dd25a378d613527ca48fa5272ceea140c0959cc",
+      "viewBox": [
+        0,
+        0,
+        448,
+        512
+      ]
+    },
+    "home": {
+      "path_sha256": "a67bcbf9328bf2e593a57295b63ee415799a2415df455b2ef8bca1c2c56bc7c6",
+      "viewBox": [
+        0,
+        0,
+        576,
+        512
+      ]
+    },
+    "layer-group": {
+      "path_sha256": "9ebe7b6c2f2dc3f63fdd33fb87ce5087d111a5320c62bdaa91963230b04849fe",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "link": {
+      "path_sha256": "b6e7990605d782c50acc85066ec387dbc1b3158af62e3da8eed17826e4300778",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "location-arrow": {
+      "path_sha256": "27bae0bd3e1170ddbc1a9c2c06dab04b3fa1a846a850a7097fda2504c2e90c94",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "long-arrow-alt-up": {
+      "path_sha256": "3287f1efe362694e692c74de0cdc82d13dd946299afb56c229015e7c7aaf40ee",
+      "viewBox": [
+        0,
+        0,
+        256,
+        512
+      ]
+    },
+    "magnet": {
+      "path_sha256": "7092d147e40f1a134e7fac58291362b27c9ae17fc197bbbc672629dac5344a3b",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "tag": {
+      "path_sha256": "09f00a617fb26ab26d0f6886493c886d519b0667d8e954e88482c6a481cc01d2",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    },
+    "vector-square": {
+      "path_sha256": "32226f58ef9da22164f6aab926eef21bdd98a3c7541723a8a061e0fb6f666c44",
+      "viewBox": [
+        0,
+        0,
+        512,
+        512
+      ]
+    }
+  }
+}

@@ -1,0 +1,1716 @@
+{
+  "base": "2efceffd2659cd714d2b04b69055b82cc0f9cccb",
+  "engine": "edi",
+  "command": "python tests/fixtures/c13_t12_ids/generate.py edi",
+  "artifact_sha256": "d88bce5ec9caadb325bc5169303316a4793d25f66e1d4741284dd1a92f690d51",
+  "candidates": [
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "cdb4ee2aea69cc6a83331bbe96dc2caa9a299d21329efb0336fc02a82e1839a8"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "bdcc6a2a85f645f62724fe8dafbf0581cb0c1d65f6a76cb2985a9172e31a473c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c42703a6cd2c4d1e49777947c19740a1e14e570e67948517cecb558162eff32f"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c6f446ae373041e8f85f7f85bd58f5d368726583c3ad0e9af1d19892111bc940"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "87ee5504a3e25ac558b343724c905f2f7949e8cec3d92b9c4300bb922afa164f"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "a172cedcae47474b615c54d510a5d84a8dea3032e958587430b413538be3f333"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "72b18e81b7b2d18581b1003f17f67799cebcf9968bee9a3f4b1a7d5d6e8c033e"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "921d91c9826e3614f9dfc2ff2c8ad92f8f926a85651cb95bb0b40b40fde84dad"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "af7d397a4a40d63edf51d4479b31ce321d8bd983c70c0c9dd4a614b2e2bd2e4c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "32c354c063f416be060c647cda6496830edd15b051c705a720d225d30b4d4ce2"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "25075fe2640659fc0a7ad98bc0feff67ce9e654a827cd805540db84dc0fe1433"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "f0eaabb492696db3ea67cd78ffa62882eb0c67333feec19ae1c4e271872630bf"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "3b0e6bd03dc0025f61dd26b5e868480944ebc4384176210599f7f7b9bd46b688"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "bb3408a7f4b5cfc4233e13d520aba8c0ef5e65a74278db62a291df8a16d3f736"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "3506aebeb2c7c8490b12a02387ac6c034e37f72c46a0587bf09f44c7a2eb488a"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "93f1f5ed36883c3d921a8587c0793b959e4ed5d0e3a492730f5d2b1de3a8f279"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "b4afee5eb7e73325356c505211a2f5f65f2256ae79e7c17da321dd3a4b6729c1"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "3bfed4e9c51df561afd8522715a6bb1c95282846cfb693fbfec84df7ae25273a"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "e4feefc90cdea6086c442df72e293989b2a49642a37c3046e6cfa180df2778f9"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "57ecc2cd18c449b4a21aebd40666eb7b94190683e6f353322c57c09ce52e1447"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "946a9add6376f2a927ab72adabb907788463a836234d4ac375e9c809b45587bd"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "7bbe37c101b910a62c1074941897993828899bba769a0c84e9dd47ad1fa28436"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "a5af3d082dc9cef4c38dd6a44ea2f750c9d6d3ff2e9660d4b1f9d35f73476f97"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "dcde6d42b59ff6713cbfc9fa385b0163bf76abf355ee162a3555b019e5da91ef"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "86074e2b1d499628ab5da0363c592cd95841c6c1bf5a4f160cf6622128da7e1b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "7bf1ab11301dc6416a22d587de201b56b8df6e0b2fbe955f5adbbc7025303870"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "0243de6283afeb6efdd2b1f3fe5a113fd253eddde31567233f170f8f63608d4c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "771acc729137e8a80410d674ce2247dbd03ae9c5492312fff3bd980d8bc1df16"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "480794bdf4b4cdefa7c6052a0fc492d2eb52677951af597aa24ca0c25e7315bd"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "18007017e77755925c7c4113d307f94caa4d40fb304fa181befb580e571610ce"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "53e1c3b2a143591121906e422d3836aade47abfacf854e6854f6e5ba95c0e542"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "561fb4eff0b4af0b7ff71d19a96d766b83ee6f4f89effa5b6d3fd2c369b2d70f"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "5b24f327c4ee6c371c0dc410b287217431dd3a4d341dd2135da4e05319308587"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "b2e8cd9dc3295c3b7f4e51266f68f86015636c1a6d937d254e0300d112fd01f7"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "14a71a5ab623eaca6f528f599ab4c8f71a57a1a3fa5aa3e78f2e34fc98f2438a"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "99bb88401742848e032fd6f51709415fb6be169a72d2e5d7fc44289255160d3c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "251d177e3e7db921c05d14a06c2495601e4bb0e8ccfff429ac77fa6cd65786ec"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "0d45f5fd462b8c70bffb10021ac1bcff3f58f29b1faf7568595095427d42812c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "6d7c7057f36de8631a6f615d5b2bab7cf4974cf3b5ae0cda2a3a0dab40ad5c24"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "0d959e6f1decc86b0dfe1dbff5da74ae76258f4350c90ca8f1772f4192d7e7bd"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "0da267cc8ede983fbcb54c8d65bbae64b248d3bf7153b4c86d14325f06fc8ca1"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "3a6eb0790f39ac87c94f3856b2dd2c5d110e6811602261a9a923d3bb23adc8b7"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "46b42b4229cd7a39c564e780bb665a8bde4fdf722007e8473f167fe53ed4b995"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "aa157c31fac19e8122bf2ad2d0e10372d395e8b5a2f21f4fa4f48baf04330ab8"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "dc6c434270429a706d2609e06e38a13a37366f25a7af29fc46e2017b1b747dde"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "f2ba0078c97160da478a597ec3fa6af034030e903c3045d396733158d61c3c3c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "9bcb07239d88ef7c87f733534fdf5fee50fb213e115cebb1cd8f4b519c2186f1"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "9caaea4d1c74acf50638f883f9abd03c3ce59a6f98d9476adfe3de4279808fb3"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "4fdb0af4b3bb1185c0ec858cb608e8c1dfe6f00a165f006d0c7988dbbd502ff2"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c437455106e9e7f860d25d4a1ed7ccf1d96299deaa757ff823bdeeb8a4d43ded"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "6155399fef085504a47e6bb2c47f1e82239753a5d97ef984881bcf22b1d8ea01"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "0859242df1896ee9bc2e04ca62c6cb4f5b9b83ca58ca65cf7c0caa8cfef44d19"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "6a245fe147db42c8fa66362986fc9f1c2d71450ddf29d9d2910a258f8d7e3311"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "121a129ab73b0b462f185b79bd12fdae370d302ffac2376c3331b30517e28afc"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "3dad252429e92d930fc3716f5170c18bae19b6f8ea11e80a87d6c8ac92354d9b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "1e755a7d07330b972ef811993803fe8854cab78d5ad50f41c869215b00758073"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "75517dc549e3d908f1c4fd53d82ff638cc2115036005195682c9cdf15ab78d79"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "55da819ea7569d9e466879dce44ce2ffe617389f3f1d68d326d53b9050c95efc"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "733a1ea0229aa31c883c55da7fb6eb50148c2eefc1e4d1d23c7221cf8ccebb9f"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "86096bce9d7b95a4b4d6c61eb93c24e7d2e5c12f0f4eace1727708d5c79fd9d0"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "2f6f448193377a5dc0b6530b2ed2653ec328e5bde7f609fe4f85eaa023b1aef6"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "3702bac77753d521c470b02a16df86763a038e41e46694fc96a1f9791ee5c0df"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "04effb75d5c6c9a2496cf0ddd95e1284384fdb3d562a767ab6cf2aa6f2027f4c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "5a32432b7eda171b68f6083ae1668e1418f189ae3f100c946aabf60308ab41ba"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "a0c529f7461bfa86b975ba529ccb1c3675dd585cc5ca08be3b0381314553c298"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "add3de1213cbd7116a592f42e6b949204bf3a7a6a2ceffd4a2abee06d5311076"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "2a2aa397e29ef67f3de0ff431afe506877ad89edcc534857e385ca9d65dffaf5"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "ac44ba8f96dabfb64addacdf09e1ae7b4a88e15f4eb4ec704f2b77feda2d9aa4"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c0db0eb0fdc60e8105ff127b2641370ca48f404a294ac48407f36f9dfa3a6dad"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "e0041e6a36f3a4ace95c69a705804a29ea5a5181c36212f20f31da0769d1b739"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "40e9c9b17e2318efdc65c05d49cd873496972f2f8a50ea34344979ff36fbbf54"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "7f31faa242dc9b0d1fc255b53b61319e2943ba5e169c9be9d8796ac24d6e79d7"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "0850333ef4735de6f76cf532a2a59e75e292691c58f4bea5ef77469c0fe233e0"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "5785b8923d8c5eacc590271059fbacc64845a113f51da6855618f34aa51a7a01"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "637b3f8e6b7e71f4bb0299da1214fcd4c4d15d0ccfc8cd72f52167154ec498f1"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "a6603574643b0ffeb7ced89c421e0e5bf4354576422c32e1ae74e69ee10a1e26"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "b75db8b6fd995652437dd558b47e9c6a6e24e91ed171d83f24c3df62d3afd465"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "13325dec6ec5e027a3ebe0949a40275405d86ec31ad7774f53005f7a14c79d6b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "7631c35163acd33f6360e1592648a89711606a3933389d26d2396dc8e5a787a9"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "59d7caf2644c25d8dd42be1b5fddb6bc6f8a8fce2967e61758d0b65e68de88f3"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "12783715f1571d041956c9ae833b76da65a9e5a58b0f2b6e3fa78fda5f020e1f"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "ea034210358d7c9a7812bc1346a9dc7ccc0df214450b8e1dcb2eebe32710c970"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "01660b4d441977910921ab4ce2bf7d4157c426d9b9bcb3131da48e06a0b1e419"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "d3d8b6a812718ba9371711505d3aac5eeb80a87344438656f6e0ed97d2a860b8"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "79baf6cd5f3c4b9c92baa8cc18534b4a8eb73b382078e5a9ba7f18f04330aef5"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c28dc22dcaaab2974bc5073a423cf54830ce8580e1a1c2241ebe0353c3917671"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "c7ec8d3ff95097809e51d732f4e5b0763c89ab3d2982b84263e0efdf840ecf90"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "f336bfc36c0ded66dac299562c5fe3f8d1bb5bbbe772e828be3a019167a36d09"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "686e3248e47154f64362f9017e9e58ceb8c4ed27fb9d97da05b9aa90e7d4ddd9"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "93d765c18dd465960603b4fdf8a846cd39c56105d3e0ead788a082adca5f3afb"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "6c2cbd03dcd8c0679d19d956ddb2018cebcf1475cc9a17a0e4f4a7131c311a2e"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "64c8f220819b455b26a48b9770cf5302dc30a5b56a3ec7f638056775913e130d"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "8de22380d43313eeebfb21e91cc1a201ed0e6778626ab8b1fff69e3e93f35327"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "1257446adbdb6888f649212214f7ea4b26a8ab12c3bcf385f61563d392f8aa10"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "bc8e254fd638482b98f87dd71ed324282da2fc1d8b65c833793e686986527af5"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "59b21ce3b1f5d9c4b65bef9b1b5b9ff4bf3ba8362a2daeed089c277ab5551aa1"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "7d52552dfcd09121b549276aa787f9774c28e657c690932ab548bfca18618076"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "ecda4f6de75f7a8318c28367d2b4d5c34f6db2b06f402c6baf75adde465ad0f1"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "42653c4ab9c2b03a54713b45af645e63ebb368cc409488f6b3a18c9cafa7d2f7"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "4da3a004e36f179107ac6391aeb49fee1586ea5c8010ccf6adf3749d91431f87"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "568afba5e032421113b7343ff718d7fc58e538039dcac42354af2cc95ed20e68"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "6332bddb3591ec8e09c99d87d11dfa223bb29aed89beaafb897a9a4a75243d4f"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "99aec17fe69667ab0cc74621007054d47a6260d9ff86b0da31b76382478d60bc"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "52ee3b5176e0b05a881bd81da36dad077bd09ff0f339fc29c9ee9891e1dd09e6"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "30c8d3fc0f8839c6c67bc8fcb7008e92afd0a6c8f50dde4af41a4b5130e751f9"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "56e80e84fbc810ae51ead5803af2a3cbaea3adf048bacbdd04228d3537009fab"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "bfbea6d7687910f0f3a5e4cbb3d164e6de81c3e59218ffd1a3b11f75e292629b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "25a82d066efbbb20b5aec32fd54da7cd0f8ca6b85c1ff96fbda23cc3aa045e7c"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "44fce310089d367f226af3569d7671c2f8c1678acd9ae2d8c31dfa1d23c7c059"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "184ab056d3d3112e9257907a7120d668e00dc9939cc2633f47038bebfbcd88b2"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "d8c5201cab29b9330eddaa00cafc832e7647b621ab96c1dde61b22bde20988ae"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "9f01faf07caf6291803416e1db0ea228d773f8488835dc9cacf6bdf8d39a45d2"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "2fdc2092143fc2b0628bc5d7f96e93899c8f50d570a1685cf5640fa28bd5e700"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "5c7471e24e849f16164ba6c007d859410be37d78544f8f4e5abb87eb1a999ebc"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "e912911cc1ddea0e9b66ee32196566b0f8d92c2df5e0be71530261373ecafe56"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "01b6b9fa3e8e779bfde8281bf9a746a3c0e3399c90ae7302199d68f3eec52768"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "7f5f6afe3d113179108bad2a8053c9e295cb56858a9d92aa331d67f9f9f07815"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "573b6b7b59daaad1559a035299a94945f8f780feb21d6dc7f3af5e6c15c6a523"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "6cce0ef6101331b2694781aeede193b10673c01216ef918f4932ec769994716b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "bf4c4ed1a95b45ee91a0b15093c7f8af126f93ba43d522bcefe2a970badb4e2f"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "7bdf88030b18a6a5d8272e8bb6a9cc1ef0f826d82cd044149f195825ed46e6b2"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "39951c81ae6646abb8d2b06db38926ed6b8e4cf40afed6725df75e330fbf4a5c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "2135cb42ade9d2d561441f814de41d11e3956ccc5e6d19793e9705b1a40f2643"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "3f9c8d62be5728fc1dfb7f09cf97378897388c1bd5936e1d6b8892e4d1de93ec"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "cd2d9df3f740121c19b315aa0eb19ba56273259681ba2ce7455b34b3abe5b245"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "839e3aea7a698e7d416b5c50301c0c8d61f83f87715c9fedc063bcc5f71f7e93"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "297a816f0228bd7b6a85cc9420fa7e8bcc0e7ef850ef26a35764b0e81a027967"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "44611eb5004d97e920c0fed2e780d724d03557bf0ae94dc9abb0c7b27cd226d0"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "a57b4e96c9cd8917e0d281d524c218c36fcf71c21b42ff3c24ab0826a5f39f19"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "33acd5da49f26fc0174845708e52c8f3fee5ec4c4744d5ed7d2a29ee09d1eb57"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "3e65c5247ae7e2d4a9a87b99349202f73e570f693ea8a23ee3a80f85a6f05721"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "7fd9cca708831d02d813d542409fa68fde73eb90ec9e7f59d67cef458a11aac1"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "180bcbe1c010e4d167b663869bfa8649f8b37f96d66bf0ebce10d06da764d02e"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "f7bec596328815f6972fbddf30c70d00694b362295c999ff09e2d6f7a8e7e5f9"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c590b3c924c35c2f241746522284e4709df490d73a38aaa7d6de4ed1eac2f546"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "e0f895872d65b2528feec97350a3a212b3d4ab88748e25d022a34641d338216b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "88b0c561babe669acfdb589579af5b28b4aa33500006607a89720db237e1c8cd"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "e11781a46823e6a4812dd09c332ee66b60d2946ecb259945a7f18a9ac0ac799c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c9023070b5eb28796372c996420e3549814e6831934985abb7dd3551eb266caf"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "79000730387d4d32b8fde25fbb43caa590955248fa792079f33d300933306925"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "344de70e5901b911fda532d392c8e9cabbaba938b511ab9d7bc13f74b629ab2b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "7f7b277fcc13b7fa5766c162d52bcbed5cc719a0e4e9eb63ef37b898b2f96a5b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "63e469c963333c56a36f968dc036273d2b039b58551c9a96d097c71b3cf1a922"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "d012bdc66387bb93fc0d5a7abe551c7f6b560eaa089ec5fac76570a10c397924"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "551924925e7da303613617dc464f804d9a6f5d8dcf5cb52395df1f0cebe6c1df"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "7d710fe7570088adc3a84f3d46bfd3e2a470ceefa081f1d8a905bb6dbe412a42"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "41f4bb0921f7b49eb9631b17fc65e86779fc4c505b7495b754109f58355019f4"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "7cc42b76638de2efb6395bd3112fd4fcfe8e235c4f1afb2323ab473721712143"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c8fbdb1085708767b6fc203a0c5493992a3693b9e5061569f0339763761c83ac"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "022ff762a7f9689fb98f960e8f46b1bc6d824b09329e41ec4df1bbba5143f041"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "594360c5c1aa33696c3f5c3bcbe26c34d4e7ac60e3b0276bee035848eb3995e5"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "d792c83536fdc85797955b3184de87a4bbb47e23bfe9a9530ab52e31b539fd04"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c91b826e4fd6871afde7981616e95d1cf78a079e330d5a2c3f0656849d0a69cd"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "b01ab42137deede4edf6d4b39c94750da365e60ba6a52583d178ca3cc37b222d"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "34cc521cac50a56ea7367f8b26afd2a9f96ee4faff14d8a3e634fb72cec5c995"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "5cb6be8598e9a6c68c5a9e75c65129dcf8f08f6744ff80904ea5b1b4d5774f29"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "12e583b6198d84c459d1a548dbdefb08fbfecd11d4a318e3537d39256e5c4159"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "58b77f733c43a51edc42a207789afe8ee751c2ed8fbd54b2c6d4fffbe371e265"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "a7b324c5299576f310e77d00d2fe264595935c5ea18fd079bb290ac4ddec3f56"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "8d7352887aed190144753951e4b5dd995fac845c80f9798feeb27f9fda9a9a5b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "d03127353355dfa83e54bf208ae580368744595c73ebf0e5b61e7d7d19c4999f"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "f009b68102fa2c3715659bef2f26d3cbaed9d56e26adde8f32125e4eb7039cfc"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "01f50e477e6c4bf6e9336a24eb0f60883e9631b0840636e271627168ef2ab445"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "2aa281d14af1a67cf13247fff70743cb26160486a6051a68a138019119c20cb4"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "b64acb9f4a5949fbeaf5edd962fd17b3422e4d3772c18d92bb5c4cbcf6fae0f8"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c1a76531db6bef15e3fbfa0c2450227546199acab1fc2db51b6cc76c49f0021f"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "3a2aff971fd3ae64c211114678fa689d8f5ade2ed002c84c2f0b169c8366e463"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "f74aa07acb68ca5f4551217435936d6c8db27318bca1817ca746cfc9fa24edd7"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "76b5a357391276b282a516f54f48ef3c207f46d8192dc58c208d5183d38415f8"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "8b6300761924a1a93629cd76438109c9d8c39774cc5d7e07927025837eb343c9"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "3ee611851907a5d8762bfee1072cd4437ddb8d784b72c5def60aa0cb6adfa8d8"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "a4d26868017c0ccffe2efe50944ef4211834660cca834c6e9f86dec6a88246fa"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "59830ebc3a4184110566bf1a290d08473dfdcbd492ce498b14cd1a5e2fa2e441"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "a263ef2e099541c76c547e41a88068b947d0fcbc68bf691be29410d26ee90a40"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "67b700374101c104d27b54dbb4d2d934bd26baa755b6cc56b2e300613a190ab8"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "68a7d13936a51bc7b6eed76dd73aff34accc9c38fbc077e2a5872d8dd1ba6c58"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "9d4db501051e53edcd97f24690806c8076625de07d2b316b04661d7e08aa28a4"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "668e5919dbf21143577d2a5e2868c8effb95be1080dbdb23b575a91936354023"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "2e544e0b56088ddb28394db62dbc8d539424db895de26edce12baad9f211610d"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "b2eaa23d1da4a649b0b215bf6aee7d50cbc5266be8a7e9092dea1f18f31561ed"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "6e211d73cf5c23fecf4e1281833524ef0c2dd3e04c3d0a889c6f487a17b0a7a8"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "9d040d6df110c928e10f0fcc585ac77dd713415c7e2dfbec998822397e7e4426"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "f55f5d8a559c54959dd48848ac690773d5dcb33294f995f7ba595017f9122605"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "9f72a99a4751f946c5438c10c5aa8342b393dce5495c08ddbcbcb58709b975ee"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "a3fc6540f37151e465b0b899c2eac7e2c0773a46d3653898106247c8a01ec7f5"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "8540d957fc33e4a52f35f8f97cfc6b73cfed8c97d8324a5e68f851e42ab0bbc4"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "00d3971077fd32949353b111505cbe028320c16df0754915a6f8f0df084bb747"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "8d32897f7ec8a90adc2bba1cc990fb106cfd53365e9b0a266bdab34e66caf275"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "ca355af0f9440dfe937be27ba276238f2717a497095b94747e7c387f69fadd6b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "ce5c3281bd9259d6f17193af35fb70e43ec656af2edcc02b5d84c9997671c2e5"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "ece65a328b760aad7b6fe7273e22f013bdd8bdfb9bcc84f40a978fa213386e86"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "95cb17b6dafb6665420e809dd322976da14364f2b5290e6205febe9c64bf1d1c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "5c8a7ba29331f82b128a9d4b566ca145f0b070e7341efd90fcdc51786687f8ea"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "2d719e2b8fca675d20d61750064f6e34502607c46e48957ad3d86bac9655f56a"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "4000921bb50d6bb0eb94a92e91afa75dde0785b6c258fe44c27391eb6e26bc3f"
+    },
+    {
+      "load_error": "project <candidate>: experiment 'wish_1_10' (<candidate>/experiments/wish_1_10.edi) declares neither an embedded _data loop nor a _data_range grid - a project must say what it computes over",
+      "path_sha256": "a33e1a835adcc7a44fc97732f13984d16426337531ed97f8fdadd07f738ad10c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "8d9f455ed19eba33f3f00f2393f3db6a6a2d7b70dbf609f146354949e0b55f06"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "4385d9eae8289adb1c3d80d007ae5e6a266e3b7a058a347c35fe8d28a10eccdc"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "2e63eae44d390c93b288e8b26da3b683f45f3f9c5be5a75a9e6ef98608c040e2"
+    },
+    {
+      "load_error": "project <candidate>: experiment 'wish_5_6' (<candidate>/experiments/wish_5_6.edi) declares neither an embedded _data loop nor a _data_range grid - a project must say what it computes over",
+      "path_sha256": "f06150cd2e66884e29cc636b5d10a59026b8b14cd27feea5b326e3ac088d7502"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "48dcc6c8e2c205eef233d33a47f8466ee37e23406979886a40e052afd709c10e"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "6f49275033fcd87750132a73cec326c6f4b1ff0fd1a0bf050829cb01b5287304"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "b1bb1fbf72dd63290c6dc9f7612e79593ec09c57cb88cb85a4ae95c5ea050e7b"
+    },
+    {
+      "load_error": "project <candidate>: experiment 'wish_5_6' (<candidate>/experiments/wish_5_6.edi) declares neither an embedded _data loop nor a _data_range grid - a project must say what it computes over",
+      "path_sha256": "de88b5328b23bf494d81bf57605b59cb85c0c3f9a60df3f676062038c8e0a550"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "cc758ea9d5c558cbc893ad07267490a463fc42c0e3076e7188dee695d2acca10"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "d86846afdf1f721b87e6c34737d97dfeb117e94bbb5f8cf3f494d08e51b40fec"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "135b5cd72fd33f1d465daaf936337ec50675a4950743723fc4197c7b63ef1265"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "d218490fe484bc572a277ac0fe193e0f46e2527b9117fec9eaec08e48817eecf"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "a7bfc94f88bbdf39626b6f085ffd84e99da3ffc82ab972c5111f50501cc69eaf"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "2913f66ddfd05943230dc31984eaebdc8ac95d6e65697467bebd30034247d3fa"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "fa85650f5cca79516903cf0e8d9dcc728d3125f6584b4a1c2a6cb53a938aa570"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c3aaa3191cfefa018317d7f8f577a7fb6f2f12f3ecc1dcb1c6d9ba5e7c880ff4"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "b0811438bab30f46bc27fa24f01ec1cdb33686c1177c1402eae2564c75d94b9d"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "f15ce9be6fa115e2f32f781d86255e54419ad6234d75f9c8c626739679a9a443"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "173e3e89d4455d00d102950c58d9334d363732f656442ede07cda4501d78e8ad"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "fef0b16e2795f53735b4dd423becaf65a34fa3debfc759e47fb60fab5c08ce3c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "48824450249eb50d0b7f6aa29df16b1a3fd09717f25201732cc82cecaa088dc5"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "8e6862b9a914dde30c9fac923c75396a6a529cc2fbe12f7f90146856a4f0d6a0"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "178470a4301561983d40ef91cba48363503ff9feb230b8a613a6d556a458f978"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "63f94daf1cd13a27177cbd96f33b250307cdc3a43ef494f858a508a372f4b1c6"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "5b6c748a4dc2acdefe1ef49c1d4b69df9ae4aa0a84f1cd013177466ee935155f"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "0cb935b97ff1129a04aea5405a84fdca2f197ce254be83e2e0e263d8dfebe65d"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "af2123e392f18a5e573031257d75a4e327c064087a290579c0424c545437d0ed"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "f091de6e38111025310cd3b8795d076c937bcb0439a461e835adee3e37913c52"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "cf0e9ea66a481ff02c5c3db2ad2b34c36e7e975cbbf7fd44342828dd20a01d75"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "0dd1392ff435f5f779c0991b0a0269964d06665d68740832c954b81b8052aca9"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "ee958dcf6afee118b847a245f61f162b5be58994443d9b26fd0a94637764b2fc"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "cf17049da69e675247d0df07acc9312234bd2b247f0e3da20d1291b98c6bb157"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "47e09ffcf0161c5ab47564828de2492e1e830f140ed3a660e220d24b63022d13"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "8bacebbcc37cceb2b52931ce2f7e70039ffac97496e9c2286e9e5caeeb395a2e"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "bd737f57ce6f8794b6a08d47e29986511c3efb38c00abd12713ae277f790cfdd"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "b87cd4b6f811658b3169db23d842e0e987bec61545f042edd5241c40ab0570fe"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "9954c19f6f63a817049bba22f402f1bd06f2d841753ca436b839d0578ad7b8b6"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "e238812baea5b0fd4e2701fddf30c4bf0e8fc8682b3e1730be1e1fe05065a2f9"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "ec4fdf849475b2112a7cf51bcc88844b1e3fd7045ce4eac5a06b60688f58718d"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "8796e8346faa5633fc985242b84fec5f6d01d2a49298ac4b8434ccefc1a66578"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "e39ed52d51843da3b38591e718bfa7b5d49e61f66e7c39a38fe3320226b1d5f3"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "994690471488103734539380c304edc2f4c7ec6b3d41b65d96ea8dd81fa5385e"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c25c2bd490858da2bce59a6ee2ac785b3c65d807b2037cac6567c49e71b47f5f"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "3263ad2464586f795586a6cb8980fc324afb6709ba4dace80ff16d64d37a75a0"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "ee28915888ede283b7898f8077faf61340da2f23c6383163bb1c0fa13d86401a"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "86e1922ecbfe59344a293545faee648c0a1317df4a86551d4e6886bf2a97b729"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "45135b057668b65718e8fc610e6936fe290c98e0587ed4aa47e4961ab5ccd8fb"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "d30e73053665b5000be321c3a3d96cffdf6df65b9f45f5558fcf119e6ec6926a"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "842b3afa027c87b73bb0f8e4655732f56274d11b5a3b0033dcb604b8330b9f25"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "bc00ff9ec8b129a9558ceb4bf92f0ce4150b645c5d6eca3d2847245b3119821f"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "9d934e5ea8e54d846d104c326bcb97eddbf135b78627d7f39b6025b9fa581a1b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "b1f0ac4da4de578fe04377efaf41567ecac71b7255794edc497c5339de6dd377"
+    },
+    {
+      "accepted": true,
+      "path_sha256": "85a233a6615ffe2d242b3b820ec78ab4d148f2d6bcdf06fe8e53ee781a261cd8"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "471030f049f344f97f752b05f5cc36cfed955e9de69050ea8611a0ba198a6e32"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "bab7eade227edabd4a9d305812095210aa50be8d74dab85f4f2c33d3baff39ce"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "50090047744533ae177c437506b5b35d11c0d5b4efe8415c7c3c16ad33e51281"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "1704358efd848ac480ad196986a5c2d99ff0d1bc7ecde3fb1ce60f55cf99e54c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "b40bc1374968e42b4c82b30e0d3a706540545ed0062596098188b6f5834725ba"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "f3d22d1c6d60c0f3dde7a100d62af865c9b3b0ab8cd63a90ad4679837176887a"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "e1b06e624f6d93966d76cad757074f2f816fac1ee3df95be4dad89a73356e5df"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "a9087cdfb0f5211b6f3757685d80df0396a04f20703ddf8dfdc3c001e969e4dc"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "9c0859696da7deecbf65148ca65cfc02e2217536e347a20a24b59bccb15d096a"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "730a74c7fa7c25d5f6f94b886ee2d628d6b689333daaffdbdd5455b28b8a1476"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "890922adaf75af39fc32fc3c18b53d952d342f35720f244c3ac703c6c9d71e8b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "c62c9787811d949fe41b6fab7f607ef4101240c8f8a6986e7560dbe62433003b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "6e3f7976e21b4287f64b55a2621797a056daccfc3f4e81f49f08d82a76fdbfde"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "1cdd2b40c82c6a6ed3665956ec1fffe9882985c2c37756a28a168111b016e543"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "195d685d63231aa085f8bd373ce67657dfe2228553dcbf71532b7b8d3100c2dd"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "13f14759f31891c792220ee164d77d4baaf65f8defd3ac7845b5b7e6840c1b81"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "3fcb9fec680b1280760184e77341dc9149b7bf3eaced93158be3ff993da38d80"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "08f26c10edc3899540dc01e0a12dd9c696092b0236a0ccb2150d9646bf080fd6"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "fd69fd75fe2a3ce69383c5bbe782b2ba1d81ab39430be0771fe55ea9199f346b"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "d385a1e08d2771aaf21ee2ce023a1bee8bbb9313dd86d6df21823de56cb1323a"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "84b15402b6be9f7a588ae3458ba2946ec52728cd7aaf0d4019ddcf2f0cc9ba21"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "f9d35d43770d39092a663e665e82ae1d84a9e0da3d0d10c407acada6a40cd281"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "349fbfed6a0ab863f67d0f154811a1cb031661529abe4bf1b4aefaa6c35096e8"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "26d3e5583b23446111f6aa9795a97c13eeb0e644db8db47d8e1da2a542aa4322"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "053c5809138282d3db241b50b15c6fb5a46d9ef4a846df68991d50e1f704dce1"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "220bb0ddc34cf9ebbf2d4e46a3f079689b805e00eaa76f343a9d8ca5abb30533"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "f601e49a9d887b17ba8ab1bb99f0e7d12f88141bf467b70a94cfe50ab603c47c"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "7b085611550362da2b70d67a5267cd7e636417372f1e6dc3b80698ae3e9280d2"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "e74010037ee6f5511863c5dd25ab065cb6f7345b195ea16fe2bc32667b91fcf3"
+    },
+    {
+      "load_error": "project has no structures/*.edi: <candidate>",
+      "path_sha256": "452ed654afece6cfbfd93fec7ee10725cfe752ad889bd455fbb43bd7f0ba39aa"
+    }
+  ],
+  "accepted": [
+    {
+      "path": "app/examples/pd-xray-cwl_lif/project",
+      "archive": "0",
+      "save_error": "experiment 'cu_ka' is calculation-only (a generated grid, no observation); writing its declared range is a later slice \u2014 refusing rather than persisting a grid as data"
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
+      "archive": "1",
+      "files": {
+        "analysis/analysis.edi": "27bb721e7c73a9d4dcd33568eee2df6febf65cea949c611f6b26bbbd9f8d7dcc",
+        "experiments/d20.edi": "7053aa291373fc6df17e3d2ced5008a098ef314f65e06a1204f6d0ecbb1ae518",
+        "experiments/d20_scan/01_001_497p3790.dat": "22db61d0c3782c2614c6fccb92e1b9861010bfdb391ff87fa7ab0f53abcfc37f",
+        "experiments/d20_scan/01_002_497p3410.dat": "ef3eaf0029ac15202d49952f66caf1d30a8d4ca3adf82e76f3a89ef4a843728d",
+        "experiments/d20_scan/01_003_497p2280.dat": "12df6cee20e6241e84a392053ef1ad6cb9cc153d96ddbd95b025ba79f4c22734",
+        "experiments/d20_scan/01_004_497p0360.dat": "943ff86fb9bf5d264f4a2d41e64b1d5711f26ab76de4cb90c0545900e92c674e",
+        "experiments/d20_scan/01_005_496p5900.dat": "5f3023b3820eb243fe8186c8f9ff953e1325c0d767097174f77e94419f1d8094",
+        "experiments/d20_scan/01_006_495p3740.dat": "f2025c68fdd8fc3de28b057382d9087ea6c0b92dbec0c1b9eca54dc0ef41f2d4",
+        "experiments/d20_scan/01_007_489p9560.dat": "2898a2b6434c15f02eff1c1994fa8c896c6d92b93d15a15994854e75be060aef",
+        "experiments/d20_scan/01_008_485p7350.dat": "de3f00765f6765b80157d75947c7517e997dfea579adcc76251fe644a9a7ba70",
+        "experiments/d20_scan/01_009_481p2260.dat": "021d76aad5f57879aefa516eefc96418536d0f42af793e6a0d47d6f407e05005",
+        "experiments/d20_scan/01_010_476p9800.dat": "1dc012ecb202cb10c04d5a70be15c2a9734c2b37d547f564ecee9d2c9abedefa",
+        "experiments/d20_scan/01_011_472p5840.dat": "acd16e373fdfe9e3cc5c597be55ec304109578badf82df8743d69f07a58ca9c0",
+        "experiments/d20_scan/01_012_468p2800.dat": "f78b5d3d9da83a3f003535847f2610e52e7dfd8374ee5950a0c3c34109f56462",
+        "experiments/d20_scan/01_013_463p8850.dat": "d5c22e9a92bfaf425cd6ab3633325319d7a62db6e65d3916e97447c6422fd30c",
+        "experiments/d20_scan/01_014_459p2510.dat": "dd07ea491ebb2a9fd37a9b0a6204e82367ea4a1954315778ceb2fe585d93bbd4",
+        "experiments/d20_scan/01_015_454p8870.dat": "48231f25702a2c8e550c09f6272b5305549297e7647b59b7a3d8d6b28810b1a4",
+        "experiments/d20_scan/01_016_450p3320.dat": "6e363f78be7d54a57830bca46b5bd0a18f768f6b15dd8a68ed6c1d292216fb03",
+        "experiments/d20_scan/01_017_446p0030.dat": "89c898df19634d5672e76798c37bc9e8551bb5678767e988bc41d735173483e0",
+        "experiments/d20_scan/01_018_441p4020.dat": "aca3572c999b8cf60592ea7b884f67ecc8a90664361f4e6aa15590b6ef8ea6e0",
+        "experiments/d20_scan/01_019_437p1320.dat": "f6418e949ff522365390f777c197ab7fbd9d76cded8c04d7d4a509a51e8b877b",
+        "experiments/d20_scan/01_020_433p0150.dat": "a3d5a690e7a7b31263035b240181507e751f6b7f0ba35b77c29cd82d6bb535fd",
+        "experiments/d20_scan/01_021_428p4870.dat": "b80cc00f57695d56589aa857d1c72fd921acc2ec2c45adecc4d2901e49e3bff4",
+        "experiments/d20_scan/01_022_424p1020.dat": "458d5d83a455d35efe65f3a9a518cf0b66d677b280be587868a6cb9e7af2db38",
+        "experiments/d20_scan/01_023_419p4530.dat": "33611d2a5959694b1dbe9d228db99613afe5431bc35a43e61764267a73be83d4",
+        "experiments/d20_scan/01_024_415p1880.dat": "7a9fdd55cf98f32e0ec00e042999c4555b5c818c9429d6daf41fc7a166bac478",
+        "experiments/d20_scan/01_025_410p7830.dat": "d0e151a4805a8c29be88b33249f11e1f5414e9de25dffde20869b202cdeb72ec",
+        "experiments/d20_scan/01_026_406p1830.dat": "7fa18447b1981382d68d30c896b87af509f6bba264bc1013af1650cb5b34383e",
+        "experiments/d20_scan/01_027_402p1390.dat": "a68b8fae71666b66d6139375978379ab63ce7facb1f4c63a343262c47e81270b",
+        "experiments/d20_scan/01_028_397p5640.dat": "450d09ba353d52cf88805f153913f308ec51428aa279649911a5297dd4106f25",
+        "experiments/d20_scan/01_029_393p2660.dat": "6ebb10a745535d973fbaa3aa16bcf57f163ad99d67cedb123f6739cc0d19989a",
+        "experiments/d20_scan/01_030_388p8760.dat": "2fe4da899cfec93b4685f5ddf48cb98f639901dc2239bced310739522ed301ba",
+        "experiments/d20_scan/01_031_384p6000.dat": "c051142ae04c23efe2323ca6ffbbdf39ee6571371d26dcc00c1cf592ff97ee55",
+        "experiments/d20_scan/01_032_380p2820.dat": "e03e997f68637b4df7b60513c7845a260b01726f3f67fa804b355a71b94de8f5",
+        "experiments/d20_scan/01_033_375p8110.dat": "a56ff8f5849e1e3fe67b6858352fcc88c24a53cfe579df98e97d48c2e2d9f055",
+        "experiments/d20_scan/01_034_371p4350.dat": "76e2fd2646d8c37d1d357e4479b20e29a47c41ee357614f7d947a8c1fcbb7ce3",
+        "experiments/d20_scan/01_035_362p8190.dat": "424bea57f499991eb8aa7d224373a6bd73d0107c0977c06f0db15ed1eaab8ccc",
+        "experiments/d20_scan/01_036_358p4140.dat": "1006fc6e31bbd16528ac73eccd0e115148bcdfb75b397df5a11a5849d96131bc",
+        "experiments/d20_scan/01_037_354p1160.dat": "0e6a05e598dadc199dd04823bed2db908f96e104cbb5359fc824893a657adc1f",
+        "experiments/d20_scan/01_038_349p8060.dat": "206f085b19fa066d2b473479221c460287a40f19f5e7c1f0320c2979c8ffe32a",
+        "experiments/d20_scan/01_039_345p2570.dat": "5f1b51a111b63db9d3154dd6fa9e2dfc1c18cdaccfcd38a0f6cc97dae5e79615",
+        "experiments/d20_scan/01_040_340p7230.dat": "7855c5f97795bcb99310acd974b65fc6aad8a5d157f41aec9bdf2802533414ac",
+        "experiments/d20_scan/01_041_336p6280.dat": "10d3cb20af02ac533a17e0966dd41f3fb80f80bfdc5e2763d4e92b08485640f0",
+        "experiments/d20_scan/01_042_332p2660.dat": "03fe53d66954d3935bbbca3c39dda6ec625c1f5627c6eb6d89e94d0364ade80e",
+        "experiments/d20_scan/01_043_327p9190.dat": "f8dbe59316ee34514cf8ddd5502b5b53609276ce3117e05d87ac7ac9afd97aec",
+        "experiments/d20_scan/01_044_323p3350.dat": "c038f2e38226ad3fd2281b55fbb39cf04a6ef2dc3d4f0276b5c8bf0ba393024f",
+        "experiments/d20_scan/01_045_319p0710.dat": "5c2058a222ef253a0f46235b9615cf957e6414b4e52f4138dfb64be5fd173af4",
+        "experiments/d20_scan/01_046_314p8200.dat": "08d4bf74090bd142686ba02fe36c6642f4117480d0f9026b3e3a307ca64b6ed8",
+        "experiments/d20_scan/01_047_310p9350.dat": "fec1490aaf6f59a7464c3b21cdedf6333cb3d764f8d9a13ac62478cb2d981afa",
+        "experiments/d20_scan/01_048_306p6800.dat": "29e6848c38f889e1bc839bac949c3b2404abe2f9a652a604fc4542fe55d52dc3",
+        "experiments/d20_scan/01_049_303p0940.dat": "70240b3346e701baaa43629897aeb121f54cd19aff707eabe45d2524844ca664",
+        "experiments/d20_scan/01_050_300p4240.dat": "92e8342610fa5d0f5a749a9b4dc29479c3ac75b052db2c9a2393155bf354b28c",
+        "experiments/d20_scan/01_051_299p3940.dat": "dd2bf75b4d8e3ae22bf9643d3be77773d3b5317b6ab8a273b802bb3640059874",
+        "experiments/d20_scan/01_052_299p2050.dat": "4565452f1baca8f389bcf7d8e47faef032fc945105c95923f74ddd4b6709c410",
+        "experiments/d20_scan/01_053_298p8330.dat": "841b483ddd09b3c2e767db9bb9890c5ac2d1d3a937b51da72f3bc18871e3e79b",
+        "experiments/d20_scan/01_054_298p0250.dat": "eb716b2eecde0c12d3329a5651ab8d3945e07d0929a802c164b15868861dd689",
+        "experiments/d20_scan/01_055_296p4040.dat": "acf75bbc5a6a1e60f2fec3d8e7d6101374ee8528af85817d84a816c2681eca6a",
+        "experiments/d20_scan/01_056_290p7210.dat": "940bcd89b8fe5ac1ac574ac558dcc921e82ea8b40238c76209b0bc786ad22eee",
+        "experiments/d20_scan/01_057_286p2140.dat": "90525f159ad2e7b5dba17ba5e5a817b03e81b9bb850373e34de26fc30e00bd8d",
+        "experiments/d20_scan/01_058_281p9010.dat": "243f7d2144ece905f6de4f72acbff36fad21f42706937370f63b21afdd3ba325",
+        "experiments/d20_scan/01_059_277p4860.dat": "7283650bc9654d294ddb40e2e97f293f9be346e04dc3b01ab80def0c379ddba1",
+        "experiments/d20_scan/01_060_273p0910.dat": "6e6045caf495e42b716d4a14b0544ae4465e7f61b9db4200b8740f2137c33043",
+        "experiments/d20_scan/01_061_268p6170.dat": "56ae5f39aff745c323b4143c019c828b649dd24cb38b6dd995710f747cdea63b",
+        "experiments/d20_scan/01_062_264p2270.dat": "cac5e46d43612d7f3e44829e0b83606258443922c94ab58cf5f5da9767e1eef3",
+        "experiments/d20_scan/01_063_259p8830.dat": "7d831ef5c563487fead89e89d0b2f663265a34c8d8d1ca8615f7147fa88926d9",
+        "experiments/d20_scan/01_064_255p4710.dat": "9b7bee4d7bce1b21a6c949784dcc77cbe1c4f68dac20b6e1f5403d7e416892ff",
+        "experiments/d20_scan/01_065_250p8860.dat": "5f1d25db589640730d6dfb7c267af35b6c0d108e30e927467c780335b65b711c",
+        "experiments/d20_scan/01_066_246p4910.dat": "1475795b475c580b6bebef7a47b544c125adb53e056c5e0234cc04943212fdda",
+        "experiments/d20_scan/01_067_242p0240.dat": "a809c348dc88901c28d6a2bba6675fdcd92759739b52287aef810827d9350872",
+        "experiments/d20_scan/01_068_237p6280.dat": "17bc9c32998fc52f5a707528e0bb34a5f5a3c758460c06a680106d7f8b15d509",
+        "experiments/d20_scan/01_069_233p1580.dat": "353eb5a64530acc7d801ff266b4c26a28edf1f0d106cb53f31b1dabb0784cac1",
+        "experiments/d20_scan/01_070_228p8500.dat": "fa65084b98954849ab8c758c025c9d54844eccf44191b4a17f0af0048cc2aafb",
+        "experiments/d20_scan/01_071_224p4280.dat": "1d3a611527ac7c9e20d2630f570ba3d2501d06c203f30b135d59d71dc6c24607",
+        "experiments/d20_scan/01_072_220p0320.dat": "b96c8d59b7f83d69264b2f0b9d788f510424ba4b05ab05877b3f378ea28971ea",
+        "experiments/d20_scan/01_073_215p5290.dat": "2bb93ecf6d608b203a456fc6105f09a4da91fabdb918040bdca1f376e4eb20e1",
+        "experiments/d20_scan/01_074_211p2050.dat": "de09bfbe03355eb1707e5a3f9782e5e8264b6306003ea3c43340853cd98378e1",
+        "experiments/d20_scan/01_075_206p8010.dat": "b25f8a037ebda34163d413ad3f86663a10c2de1e16479dbcd0213318421cdb6b",
+        "experiments/d20_scan/01_076_202p4320.dat": "850dc3873eb6e1351365d111421a6dd56965d3f13096f8a99761fdaf45939b6f",
+        "experiments/d20_scan/01_077_198p0270.dat": "821331225f83ffebfd52964851dc3d87b99f2767afc0229014d755b2ad93961a",
+        "experiments/d20_scan/01_078_193p7040.dat": "0f3bd513597e7753ac9be045536f431e00616e13b7d4d7a69d94bf9bb5660ed6",
+        "experiments/d20_scan/01_079_189p3940.dat": "9fd207d48eb77ecf979aaaa1cfcb1efe09edfa7259a5b26150a9669a70b5ec86",
+        "experiments/d20_scan/01_080_184p9760.dat": "be54656813c1d4be8e78e622770e4bbc63e2f78e8600097dbae0337a2ace7f15",
+        "experiments/d20_scan/01_081_180p6510.dat": "a35ba186cfd2383fc5610becdcd625108a38e3606c48aab96cff1f1a6d49d0cb",
+        "experiments/d20_scan/01_082_176p5080.dat": "99e844a0e5fcf2cabb3afcb4e54e7b6685d3678191371241417600b878b78e9d",
+        "experiments/d20_scan/01_083_172p2020.dat": "adab65cb6294027bb3ae955a72eb27eec38f463125f8747d5ca95c22f6f7d7b2",
+        "experiments/d20_scan/01_084_167p8070.dat": "cccb96e06d3430b50321be31f750bce1d93c9577e8baf8fe6b5571e838e9d483",
+        "experiments/d20_scan/01_085_163p5550.dat": "b49dda0e6f80077784a6e3075d6f3e5c277b2ea61c381fb54eeca92abcf088c3",
+        "experiments/d20_scan/01_086_159p2290.dat": "e0412cd8d7fc27c4a70276f921cf3bd2fc42216399bc37347529045cbabd3bf2",
+        "experiments/d20_scan/01_087_154p8790.dat": "786ec6d894d6c72e98bcd75a6f6d33f79e67380ecd6f1306518cd702ced85776",
+        "experiments/d20_scan/01_088_150p5940.dat": "9bef7dde185a0e05295b7b2cfc571759148a38b5a9e7d20c2ebb7155ce77b9f6",
+        "experiments/d20_scan/01_089_146p2570.dat": "187774183b67a14b26fd9ca37fd2c83e1499c685aeacca49d269875e4f27fe21",
+        "experiments/d20_scan/01_090_142p0530.dat": "2f52bfef144edebe852b12e23351f05f97e50a573181c1f2c14383444bd16987",
+        "experiments/d20_scan/01_091_137p9060.dat": "9cbb27d5e6862e44010e27b37e2e6bc092eff833555d83a6bb40c2ff4ddc7b2c",
+        "experiments/d20_scan/01_092_133p7450.dat": "ed8e8a37b1b57b1ec606e2c5ee57d40d946d34249e879ab44fd5505c79f1da45",
+        "experiments/d20_scan/01_093_129p5840.dat": "48b543ba633903102e0be89434ef4269cfec2faabddcc4209471a1228d63491e",
+        "experiments/d20_scan/01_094_125p4340.dat": "a5fc59c5920f766e8057cde53301488b64fb737f2fe69ea2db029d8a1d6c6124",
+        "experiments/d20_scan/01_095_121p3580.dat": "31e9e79b02c15a215dfb9d25f79e69a9989b8f69413608a04954c3392733de27",
+        "experiments/d20_scan/01_096_117p1490.dat": "1e9cd3e8c1ec347cb153e9cef1754912b90d64919206cba528ec107579b7f71b",
+        "experiments/d20_scan/01_097_113p0630.dat": "04e9db3d4b807c246171fa9efc761987edd89b8e4c0bbbc4db58149e2e21d61f",
+        "experiments/d20_scan/01_098_109p2600.dat": "fe318a1be180fe8bb36553072a06fcb914716f775e4178c57196c3f54bbe7440",
+        "experiments/d20_scan/01_099_105p6360.dat": "a1db92e7f37ab2530b18f9c979e7626e81d320fdc62e0a99ad6b55257912ea08",
+        "experiments/d20_scan/01_100_103p0030.dat": "2c963c020313193b28e64a42e7d217b52e3548dbd22e17a6bb1ce212b19ecc99",
+        "experiments/d20_scan/01_101_101p9130.dat": "b60e169864b4fcc0a34c5cd18bdcda39eb73565319b70d1dcea644602e266bcf",
+        "experiments/d20_scan/01_102_101p8800.dat": "fce7aae98c761517eab36c3435fad63f1b54b42cfeed5d9aa3dd6cc52507cade",
+        "experiments/d20_scan/01_103_101p8220.dat": "380ec121a9e49a470b3cb567c66739ccba346c9959ea8ac3e7f5d5866d7aec8c",
+        "experiments/d20_scan/01_104_101p6830.dat": "660fd2627db86042128122ba1979627462e9787bed8746fb3683891a726bf9b4",
+        "experiments/d20_scan/01_105_101p3630.dat": "122de03f7e29f0ba58bfa1e62a16d21f1d70ac179f7150af95825078a1b377d4",
+        "experiments/d20_scan/01_106_100p5400.dat": "2cdd6346481323006d05564bdd8c58cc7522e6440ef5333d785abf2def2f9efa",
+        "experiments/d20_scan/01_107_099p5650.dat": "28eaf543a7cc252ac4e9f82c0c449071c9892e3306483c929232a28efe10f4f0",
+        "experiments/d20_scan/01_108_098p5500.dat": "6a23ea8bcc2c3014e7d5fb60d525105a6c1ba1d4908f6042535ee90192b77219",
+        "experiments/d20_scan/01_109_097p5340.dat": "f1fb0335a3df055a0dd1d468f23c430aef3d41c33555c684d8e4ced5ed4ba78e",
+        "experiments/d20_scan/01_110_096p4920.dat": "bb9babfd6b49b4cb019f007ac4f9683a14c8dc9f89fc9eddd092677094bf41de",
+        "experiments/d20_scan/01_111_095p5170.dat": "23e84372a799fba239ccc6e3c7beac018b9c17c73c3ebf43ccf1d332cddb677b",
+        "experiments/d20_scan/01_112_094p4880.dat": "fbb59687dfec327ef1368e073bdf04a3b61fc071a78f89803751235ea32ab9fb",
+        "experiments/d20_scan/01_113_093p4840.dat": "91e30e877319e41a9a13e9ea2171d71f9de992c31e9ec6bd063f92e7c9c3e228",
+        "experiments/d20_scan/01_114_092p4800.dat": "341c1a1e0b27ed7b8182971ab13b4cf68657d5b9f40e78e9f68efea059fb3e67",
+        "experiments/d20_scan/01_115_091p4890.dat": "d4b270af7d468e0cb960a7b8a1e821a7e5565e65c7f9cdd2596ac325e63ae415",
+        "experiments/d20_scan/01_116_090p4890.dat": "fdff650c5d456acb17b8d145c38c0bc0929eccd291570e39d734711bfd2ccb35",
+        "experiments/d20_scan/01_117_089p4800.dat": "a9a99d3e263c724b28b8b945b30e7846101952a87cad1458138e43a8adca77fe",
+        "experiments/d20_scan/01_118_088p4620.dat": "a5971a3ea8bd0c09c26df43e41f00ba736066fc4d8d052b74b7196f0658780ef",
+        "experiments/d20_scan/01_119_087p4450.dat": "6fe2f51b48a833d73b7be41dab21f6cda08a054dcb817a9601671c323f8d988e",
+        "experiments/d20_scan/01_120_086p4230.dat": "c69586ac805e3af61a33d90b87e635e7f895b724c78f32f02211b28203fe4a13",
+        "experiments/d20_scan/01_121_085p3880.dat": "356f9e9f7f7d96f760a789bb577e15d5e42ede954fffaefb21fbc6cc8c8e1424",
+        "experiments/d20_scan/01_122_084p3500.dat": "5546c302c3af0bd2bb86386677de6e13c30a8808fca1271631cb228a7f4d650f",
+        "experiments/d20_scan/01_123_083p2780.dat": "ab54111a4bad28e9b194ea9c79b824204b9fe57cd2e3592c9037d2217118e957",
+        "experiments/d20_scan/01_124_082p1890.dat": "b5426601315463137a772b5a2f38cc75bfca98a567d576b24ca4cc53c2721933",
+        "experiments/d20_scan/01_125_081p1590.dat": "0d8bfe903fe180e35e3ab9644d9ae95290807d660c0bd555186fc782091c9311",
+        "experiments/d20_scan/01_126_080p1810.dat": "f436500faab79ac06a477f25279e666fc395aa1309f6206c4cfc370e5ab236dc",
+        "experiments/d20_scan/01_127_079p2110.dat": "565eb4a52e8001ab11d847cabe6c71db3de5288b55044202d1bead9792dc96aa",
+        "experiments/d20_scan/01_128_078p2390.dat": "32338a8411205faf0cdbb6c740df2867df4140f25564f687a87ed4f9e6b8457d",
+        "experiments/d20_scan/01_129_077p2590.dat": "9f6ed717261d3de98b96991b91ca1fb2b54eca19b47ec16838867caef8915dbb",
+        "experiments/d20_scan/01_130_076p2370.dat": "61a7e8264179201cf1419b47c7ae62cbea5ce243810c7415e974efee7f58948f",
+        "experiments/d20_scan/01_131_075p2470.dat": "641c94352867e68da1ac3169da18b4b95e5fcb04356bc23f6bcbcc2393546968",
+        "experiments/d20_scan/01_132_074p2460.dat": "f8523d6cc3107326f4336d080b447d1ba2c6a065e51189ea14fa01401871f7da",
+        "experiments/d20_scan/01_133_073p2490.dat": "0d2b0add7aa63374321bcadeb41c09b21b1619cba288b9595d6b0cd1abf3fdad",
+        "experiments/d20_scan/01_134_072p2520.dat": "d0591e7013ac0001709d1d1b21f9fa3d9be0ca6f0b0f2101ebecf861b4da3728",
+        "experiments/d20_scan/01_135_071p2550.dat": "803b7a6ff8dd28c8f728105f00ca2cee7e73cc53137ba96de8974282143e975d",
+        "experiments/d20_scan/01_136_070p2250.dat": "798255d0b928feaead4de0698608821eb06915c5a4dd67b99a4815986b9557a1",
+        "experiments/d20_scan/01_137_069p2340.dat": "be0e5eabb2dcdf28b310958cda178b9777e974370c651e4f9d792adc049ef4b0",
+        "experiments/d20_scan/01_138_068p2110.dat": "0c9777ed8db46f31ebef1aa1c4b8ffb59f01208158e492151a65aa83770793d4",
+        "experiments/d20_scan/01_139_067p1860.dat": "67e114cf9eb3ac20e1325b2271e20c9fa612ace8188d0056aecd232545054cf0",
+        "experiments/d20_scan/01_140_066p2090.dat": "29daac593288f93fb1c6f3c9633c3306571c1ab66bb37f3dcc64f606ab0a9e35",
+        "experiments/d20_scan/01_141_065p2420.dat": "fad943baa9b1621d072a1a2ffccc85e3091000062a45e2abf33637d5a002fc80",
+        "experiments/d20_scan/01_142_064p2810.dat": "fd6f185b182b286b474bca2959a1a74c05125b7b6da907e1c1fc4f6b64119738",
+        "experiments/d20_scan/01_143_063p2750.dat": "67f4d6e158ec69618c5be22eb762be95da14e754a0cfb5378dfa12518116d94e",
+        "experiments/d20_scan/01_144_062p3420.dat": "ed46ce55bfc090d19cff03c8583c977b76beea36d3ca9c73dc7fb443106c4dd0",
+        "experiments/d20_scan/01_145_061p3970.dat": "7a2da67d3d162992697ae55962ec0b05f4dc23df10a487fe3d3293e66d312779",
+        "experiments/d20_scan/01_146_060p4590.dat": "6ae57bb627d9d02c5ff29b2c704252a8d3a6db30740e3c3ef15176f1b8df12d0",
+        "experiments/d20_scan/01_147_059p5330.dat": "795069a1c843c39047fa93a06d5470de4a455a1766ac46f3256dc969b10c6be4",
+        "experiments/d20_scan/01_148_058p6120.dat": "1b01909c754668e190702a9e431c1e6261ade0bde50c7c2ff2732b3c4c262e7b",
+        "experiments/d20_scan/01_149_057p6970.dat": "c669aa6aa7081b786c150c8f6b0ba3e85d25e637e907ba4f0b12ceee4b532d92",
+        "experiments/d20_scan/01_150_056p7860.dat": "11d5df33f66162035b7475748d6f0eb50fef402628e35baef9527ccb86999dcc",
+        "experiments/d20_scan/01_151_055p8750.dat": "6d0fcc54e30995618e087169d843308e2edcf43198da06723237e67eb2bae203",
+        "experiments/d20_scan/01_152_054p9730.dat": "fc0630582ea6a255ff3933ab0db9a5a6102dba721ccbf5edfb4727403790f15a",
+        "experiments/d20_scan/01_153_054p0730.dat": "f5cb618b08438919701e21e20051c3aa95cd3d48aadfdfedf5a2699b7f4da0e0",
+        "experiments/d20_scan/01_154_053p1720.dat": "b1a9779c8a27da47bb1975645c7257101878758e16c1f5ea40b8a94f4f97f0a9",
+        "experiments/d20_scan/01_155_052p3450.dat": "c6ddfe0309c55ce450cdb1b9a0a009b1dd2a66b0616b3f39f911bc86fd64cc19",
+        "experiments/d20_scan/01_156_051p8630.dat": "afd9c3153047f2348f032054326c34b7d00231e7a55be6ccafe0b9237c56602e",
+        "experiments/d20_scan/01_157_051p8610.dat": "811d12ff3ce0b8a2f0810233572120f3b7e4a9aa1f37dc1004b1caa498b0a2c8",
+        "experiments/d20_scan/01_158_051p8530.dat": "71fb1da8bf9ae6c13fb7e12305c7dbcdfab4eb55cb79c4bbd9fd679404bd9b25",
+        "experiments/d20_scan/01_159_051p8480.dat": "fa790d2e6485682af832719cf2c4072f4299677bffa67e71159b9ac4a1d754e0",
+        "experiments/d20_scan/01_160_051p7720.dat": "f7de52240ea61be6602658e7ba18202c11c469cebb1c8cedca0b2184262d3b02",
+        "experiments/d20_scan/01_161_051p3070.dat": "180edbe3e0f475f2238d43739ab946bacec6475c3e9286a81d66679128754cad",
+        "experiments/d20_scan/01_162_050p4140.dat": "145b3d0e82b0324eca2fc3da02ee15b890114e41a7883c7f70e0058a430f00f3",
+        "experiments/d20_scan/02_001_050p4140.dat": "145b3d0e82b0324eca2fc3da02ee15b890114e41a7883c7f70e0058a430f00f3",
+        "experiments/d20_scan/02_002_051p3070.dat": "180edbe3e0f475f2238d43739ab946bacec6475c3e9286a81d66679128754cad",
+        "experiments/d20_scan/02_003_051p7720.dat": "f7de52240ea61be6602658e7ba18202c11c469cebb1c8cedca0b2184262d3b02",
+        "experiments/d20_scan/02_004_051p8480.dat": "fa790d2e6485682af832719cf2c4072f4299677bffa67e71159b9ac4a1d754e0",
+        "experiments/d20_scan/02_005_051p8530.dat": "71fb1da8bf9ae6c13fb7e12305c7dbcdfab4eb55cb79c4bbd9fd679404bd9b25",
+        "experiments/d20_scan/02_006_051p8610.dat": "811d12ff3ce0b8a2f0810233572120f3b7e4a9aa1f37dc1004b1caa498b0a2c8",
+        "experiments/d20_scan/02_007_051p8630.dat": "afd9c3153047f2348f032054326c34b7d00231e7a55be6ccafe0b9237c56602e",
+        "experiments/d20_scan/02_008_052p3450.dat": "c6ddfe0309c55ce450cdb1b9a0a009b1dd2a66b0616b3f39f911bc86fd64cc19",
+        "experiments/d20_scan/02_009_053p1720.dat": "b1a9779c8a27da47bb1975645c7257101878758e16c1f5ea40b8a94f4f97f0a9",
+        "experiments/d20_scan/02_010_054p0730.dat": "f5cb618b08438919701e21e20051c3aa95cd3d48aadfdfedf5a2699b7f4da0e0",
+        "experiments/d20_scan/02_011_054p9730.dat": "fc0630582ea6a255ff3933ab0db9a5a6102dba721ccbf5edfb4727403790f15a",
+        "experiments/d20_scan/02_012_055p8750.dat": "6d0fcc54e30995618e087169d843308e2edcf43198da06723237e67eb2bae203",
+        "experiments/d20_scan/02_013_056p7860.dat": "11d5df33f66162035b7475748d6f0eb50fef402628e35baef9527ccb86999dcc",
+        "experiments/d20_scan/02_014_057p6970.dat": "c669aa6aa7081b786c150c8f6b0ba3e85d25e637e907ba4f0b12ceee4b532d92",
+        "experiments/d20_scan/02_015_058p6120.dat": "1b01909c754668e190702a9e431c1e6261ade0bde50c7c2ff2732b3c4c262e7b",
+        "experiments/d20_scan/02_016_059p5330.dat": "795069a1c843c39047fa93a06d5470de4a455a1766ac46f3256dc969b10c6be4",
+        "experiments/d20_scan/02_017_060p4590.dat": "6ae57bb627d9d02c5ff29b2c704252a8d3a6db30740e3c3ef15176f1b8df12d0",
+        "experiments/d20_scan/02_018_061p3970.dat": "7a2da67d3d162992697ae55962ec0b05f4dc23df10a487fe3d3293e66d312779",
+        "experiments/d20_scan/02_019_062p3420.dat": "ed46ce55bfc090d19cff03c8583c977b76beea36d3ca9c73dc7fb443106c4dd0",
+        "experiments/d20_scan/02_020_063p2750.dat": "67f4d6e158ec69618c5be22eb762be95da14e754a0cfb5378dfa12518116d94e",
+        "experiments/d20_scan/02_021_064p2810.dat": "fd6f185b182b286b474bca2959a1a74c05125b7b6da907e1c1fc4f6b64119738",
+        "experiments/d20_scan/02_022_065p2420.dat": "fad943baa9b1621d072a1a2ffccc85e3091000062a45e2abf33637d5a002fc80",
+        "experiments/d20_scan/02_023_066p2090.dat": "29daac593288f93fb1c6f3c9633c3306571c1ab66bb37f3dcc64f606ab0a9e35",
+        "experiments/d20_scan/02_024_067p1860.dat": "67e114cf9eb3ac20e1325b2271e20c9fa612ace8188d0056aecd232545054cf0",
+        "experiments/d20_scan/02_025_068p2110.dat": "0c9777ed8db46f31ebef1aa1c4b8ffb59f01208158e492151a65aa83770793d4",
+        "experiments/d20_scan/02_026_069p2340.dat": "be0e5eabb2dcdf28b310958cda178b9777e974370c651e4f9d792adc049ef4b0",
+        "experiments/d20_scan/02_027_070p2250.dat": "798255d0b928feaead4de0698608821eb06915c5a4dd67b99a4815986b9557a1",
+        "experiments/d20_scan/02_028_071p2550.dat": "803b7a6ff8dd28c8f728105f00ca2cee7e73cc53137ba96de8974282143e975d",
+        "experiments/d20_scan/02_029_072p2520.dat": "d0591e7013ac0001709d1d1b21f9fa3d9be0ca6f0b0f2101ebecf861b4da3728",
+        "experiments/d20_scan/02_030_073p2490.dat": "0d2b0add7aa63374321bcadeb41c09b21b1619cba288b9595d6b0cd1abf3fdad",
+        "experiments/d20_scan/02_031_074p2460.dat": "f8523d6cc3107326f4336d080b447d1ba2c6a065e51189ea14fa01401871f7da",
+        "experiments/d20_scan/02_032_075p2470.dat": "641c94352867e68da1ac3169da18b4b95e5fcb04356bc23f6bcbcc2393546968",
+        "experiments/d20_scan/02_033_076p2370.dat": "61a7e8264179201cf1419b47c7ae62cbea5ce243810c7415e974efee7f58948f",
+        "experiments/d20_scan/02_034_077p2590.dat": "9f6ed717261d3de98b96991b91ca1fb2b54eca19b47ec16838867caef8915dbb",
+        "experiments/d20_scan/02_035_078p2390.dat": "32338a8411205faf0cdbb6c740df2867df4140f25564f687a87ed4f9e6b8457d",
+        "experiments/d20_scan/02_036_079p2110.dat": "565eb4a52e8001ab11d847cabe6c71db3de5288b55044202d1bead9792dc96aa",
+        "experiments/d20_scan/02_037_080p1810.dat": "f436500faab79ac06a477f25279e666fc395aa1309f6206c4cfc370e5ab236dc",
+        "experiments/d20_scan/02_038_081p1590.dat": "0d8bfe903fe180e35e3ab9644d9ae95290807d660c0bd555186fc782091c9311",
+        "experiments/d20_scan/02_039_082p1890.dat": "b5426601315463137a772b5a2f38cc75bfca98a567d576b24ca4cc53c2721933",
+        "experiments/d20_scan/02_040_083p2780.dat": "ab54111a4bad28e9b194ea9c79b824204b9fe57cd2e3592c9037d2217118e957",
+        "experiments/d20_scan/02_041_084p3500.dat": "5546c302c3af0bd2bb86386677de6e13c30a8808fca1271631cb228a7f4d650f",
+        "experiments/d20_scan/02_042_085p3880.dat": "356f9e9f7f7d96f760a789bb577e15d5e42ede954fffaefb21fbc6cc8c8e1424",
+        "experiments/d20_scan/02_043_086p4230.dat": "c69586ac805e3af61a33d90b87e635e7f895b724c78f32f02211b28203fe4a13",
+        "experiments/d20_scan/02_044_087p4450.dat": "6fe2f51b48a833d73b7be41dab21f6cda08a054dcb817a9601671c323f8d988e",
+        "experiments/d20_scan/02_045_088p4620.dat": "a5971a3ea8bd0c09c26df43e41f00ba736066fc4d8d052b74b7196f0658780ef",
+        "experiments/d20_scan/02_046_089p4800.dat": "a9a99d3e263c724b28b8b945b30e7846101952a87cad1458138e43a8adca77fe",
+        "experiments/d20_scan/02_047_090p4890.dat": "fdff650c5d456acb17b8d145c38c0bc0929eccd291570e39d734711bfd2ccb35",
+        "experiments/d20_scan/02_048_091p4890.dat": "d4b270af7d468e0cb960a7b8a1e821a7e5565e65c7f9cdd2596ac325e63ae415",
+        "experiments/d20_scan/02_049_092p4800.dat": "341c1a1e0b27ed7b8182971ab13b4cf68657d5b9f40e78e9f68efea059fb3e67",
+        "experiments/d20_scan/02_050_093p4840.dat": "91e30e877319e41a9a13e9ea2171d71f9de992c31e9ec6bd063f92e7c9c3e228",
+        "experiments/d20_scan/02_051_094p4880.dat": "fbb59687dfec327ef1368e073bdf04a3b61fc071a78f89803751235ea32ab9fb",
+        "experiments/d20_scan/02_052_095p5170.dat": "23e84372a799fba239ccc6e3c7beac018b9c17c73c3ebf43ccf1d332cddb677b",
+        "experiments/d20_scan/02_053_096p4920.dat": "bb9babfd6b49b4cb019f007ac4f9683a14c8dc9f89fc9eddd092677094bf41de",
+        "experiments/d20_scan/02_054_097p5340.dat": "f1fb0335a3df055a0dd1d468f23c430aef3d41c33555c684d8e4ced5ed4ba78e",
+        "experiments/d20_scan/02_055_098p5500.dat": "6a23ea8bcc2c3014e7d5fb60d525105a6c1ba1d4908f6042535ee90192b77219",
+        "experiments/d20_scan/02_056_099p5650.dat": "28eaf543a7cc252ac4e9f82c0c449071c9892e3306483c929232a28efe10f4f0",
+        "experiments/d20_scan/02_057_100p5400.dat": "2cdd6346481323006d05564bdd8c58cc7522e6440ef5333d785abf2def2f9efa",
+        "experiments/d20_scan/02_058_101p3630.dat": "122de03f7e29f0ba58bfa1e62a16d21f1d70ac179f7150af95825078a1b377d4",
+        "experiments/d20_scan/02_059_101p6830.dat": "660fd2627db86042128122ba1979627462e9787bed8746fb3683891a726bf9b4",
+        "experiments/d20_scan/02_060_101p8220.dat": "380ec121a9e49a470b3cb567c66739ccba346c9959ea8ac3e7f5d5866d7aec8c",
+        "experiments/d20_scan/02_061_101p8800.dat": "fce7aae98c761517eab36c3435fad63f1b54b42cfeed5d9aa3dd6cc52507cade",
+        "experiments/d20_scan/02_062_101p9130.dat": "b60e169864b4fcc0a34c5cd18bdcda39eb73565319b70d1dcea644602e266bcf",
+        "experiments/d20_scan/02_063_103p0030.dat": "2c963c020313193b28e64a42e7d217b52e3548dbd22e17a6bb1ce212b19ecc99",
+        "experiments/d20_scan/02_064_105p6360.dat": "a1db92e7f37ab2530b18f9c979e7626e81d320fdc62e0a99ad6b55257912ea08",
+        "experiments/d20_scan/02_065_109p2600.dat": "fe318a1be180fe8bb36553072a06fcb914716f775e4178c57196c3f54bbe7440",
+        "experiments/d20_scan/02_066_113p0630.dat": "04e9db3d4b807c246171fa9efc761987edd89b8e4c0bbbc4db58149e2e21d61f",
+        "experiments/d20_scan/02_067_117p1490.dat": "1e9cd3e8c1ec347cb153e9cef1754912b90d64919206cba528ec107579b7f71b",
+        "experiments/d20_scan/02_068_121p3580.dat": "31e9e79b02c15a215dfb9d25f79e69a9989b8f69413608a04954c3392733de27",
+        "experiments/d20_scan/02_069_125p4340.dat": "a5fc59c5920f766e8057cde53301488b64fb737f2fe69ea2db029d8a1d6c6124",
+        "experiments/d20_scan/02_070_129p5840.dat": "48b543ba633903102e0be89434ef4269cfec2faabddcc4209471a1228d63491e",
+        "experiments/d20_scan/02_071_133p7450.dat": "ed8e8a37b1b57b1ec606e2c5ee57d40d946d34249e879ab44fd5505c79f1da45",
+        "experiments/d20_scan/02_072_137p9060.dat": "9cbb27d5e6862e44010e27b37e2e6bc092eff833555d83a6bb40c2ff4ddc7b2c",
+        "experiments/d20_scan/02_073_142p0530.dat": "2f52bfef144edebe852b12e23351f05f97e50a573181c1f2c14383444bd16987",
+        "experiments/d20_scan/02_074_146p2570.dat": "187774183b67a14b26fd9ca37fd2c83e1499c685aeacca49d269875e4f27fe21",
+        "experiments/d20_scan/02_075_150p5940.dat": "9bef7dde185a0e05295b7b2cfc571759148a38b5a9e7d20c2ebb7155ce77b9f6",
+        "experiments/d20_scan/02_076_154p8790.dat": "786ec6d894d6c72e98bcd75a6f6d33f79e67380ecd6f1306518cd702ced85776",
+        "experiments/d20_scan/02_077_159p2290.dat": "e0412cd8d7fc27c4a70276f921cf3bd2fc42216399bc37347529045cbabd3bf2",
+        "experiments/d20_scan/02_078_163p5550.dat": "b49dda0e6f80077784a6e3075d6f3e5c277b2ea61c381fb54eeca92abcf088c3",
+        "experiments/d20_scan/02_079_167p8070.dat": "cccb96e06d3430b50321be31f750bce1d93c9577e8baf8fe6b5571e838e9d483",
+        "experiments/d20_scan/02_080_172p2020.dat": "adab65cb6294027bb3ae955a72eb27eec38f463125f8747d5ca95c22f6f7d7b2",
+        "experiments/d20_scan/02_081_176p5080.dat": "99e844a0e5fcf2cabb3afcb4e54e7b6685d3678191371241417600b878b78e9d",
+        "experiments/d20_scan/02_082_180p6510.dat": "a35ba186cfd2383fc5610becdcd625108a38e3606c48aab96cff1f1a6d49d0cb",
+        "experiments/d20_scan/02_083_184p9760.dat": "be54656813c1d4be8e78e622770e4bbc63e2f78e8600097dbae0337a2ace7f15",
+        "experiments/d20_scan/02_084_189p3940.dat": "9fd207d48eb77ecf979aaaa1cfcb1efe09edfa7259a5b26150a9669a70b5ec86",
+        "experiments/d20_scan/02_085_193p7040.dat": "0f3bd513597e7753ac9be045536f431e00616e13b7d4d7a69d94bf9bb5660ed6",
+        "experiments/d20_scan/02_086_198p0270.dat": "821331225f83ffebfd52964851dc3d87b99f2767afc0229014d755b2ad93961a",
+        "experiments/d20_scan/02_087_202p4320.dat": "850dc3873eb6e1351365d111421a6dd56965d3f13096f8a99761fdaf45939b6f",
+        "experiments/d20_scan/02_088_206p8010.dat": "b25f8a037ebda34163d413ad3f86663a10c2de1e16479dbcd0213318421cdb6b",
+        "experiments/d20_scan/02_089_211p2050.dat": "de09bfbe03355eb1707e5a3f9782e5e8264b6306003ea3c43340853cd98378e1",
+        "experiments/d20_scan/02_090_215p5290.dat": "2bb93ecf6d608b203a456fc6105f09a4da91fabdb918040bdca1f376e4eb20e1",
+        "experiments/d20_scan/02_091_220p0320.dat": "b96c8d59b7f83d69264b2f0b9d788f510424ba4b05ab05877b3f378ea28971ea",
+        "experiments/d20_scan/02_092_224p4280.dat": "1d3a611527ac7c9e20d2630f570ba3d2501d06c203f30b135d59d71dc6c24607",
+        "experiments/d20_scan/02_093_228p8500.dat": "fa65084b98954849ab8c758c025c9d54844eccf44191b4a17f0af0048cc2aafb",
+        "experiments/d20_scan/02_094_233p1580.dat": "353eb5a64530acc7d801ff266b4c26a28edf1f0d106cb53f31b1dabb0784cac1",
+        "experiments/d20_scan/02_095_237p6280.dat": "17bc9c32998fc52f5a707528e0bb34a5f5a3c758460c06a680106d7f8b15d509",
+        "experiments/d20_scan/02_096_242p0240.dat": "a809c348dc88901c28d6a2bba6675fdcd92759739b52287aef810827d9350872",
+        "experiments/d20_scan/02_097_246p4910.dat": "1475795b475c580b6bebef7a47b544c125adb53e056c5e0234cc04943212fdda",
+        "experiments/d20_scan/02_098_250p8860.dat": "5f1d25db589640730d6dfb7c267af35b6c0d108e30e927467c780335b65b711c",
+        "experiments/d20_scan/02_099_255p4710.dat": "9b7bee4d7bce1b21a6c949784dcc77cbe1c4f68dac20b6e1f5403d7e416892ff",
+        "experiments/d20_scan/02_100_259p8830.dat": "7d831ef5c563487fead89e89d0b2f663265a34c8d8d1ca8615f7147fa88926d9",
+        "experiments/d20_scan/02_101_264p2270.dat": "cac5e46d43612d7f3e44829e0b83606258443922c94ab58cf5f5da9767e1eef3",
+        "experiments/d20_scan/02_102_268p6170.dat": "56ae5f39aff745c323b4143c019c828b649dd24cb38b6dd995710f747cdea63b",
+        "experiments/d20_scan/02_103_273p0910.dat": "6e6045caf495e42b716d4a14b0544ae4465e7f61b9db4200b8740f2137c33043",
+        "experiments/d20_scan/02_104_277p4860.dat": "7283650bc9654d294ddb40e2e97f293f9be346e04dc3b01ab80def0c379ddba1",
+        "experiments/d20_scan/02_105_281p9010.dat": "243f7d2144ece905f6de4f72acbff36fad21f42706937370f63b21afdd3ba325",
+        "experiments/d20_scan/02_106_286p2140.dat": "90525f159ad2e7b5dba17ba5e5a817b03e81b9bb850373e34de26fc30e00bd8d",
+        "experiments/d20_scan/02_107_290p7210.dat": "940bcd89b8fe5ac1ac574ac558dcc921e82ea8b40238c76209b0bc786ad22eee",
+        "experiments/d20_scan/02_108_296p4040.dat": "acf75bbc5a6a1e60f2fec3d8e7d6101374ee8528af85817d84a816c2681eca6a",
+        "experiments/d20_scan/02_109_298p0250.dat": "eb716b2eecde0c12d3329a5651ab8d3945e07d0929a802c164b15868861dd689",
+        "experiments/d20_scan/02_110_298p8330.dat": "841b483ddd09b3c2e767db9bb9890c5ac2d1d3a937b51da72f3bc18871e3e79b",
+        "experiments/d20_scan/02_111_299p2050.dat": "4565452f1baca8f389bcf7d8e47faef032fc945105c95923f74ddd4b6709c410",
+        "experiments/d20_scan/02_112_299p3940.dat": "dd2bf75b4d8e3ae22bf9643d3be77773d3b5317b6ab8a273b802bb3640059874",
+        "experiments/d20_scan/02_113_300p4240.dat": "92e8342610fa5d0f5a749a9b4dc29479c3ac75b052db2c9a2393155bf354b28c",
+        "experiments/d20_scan/02_114_303p0940.dat": "70240b3346e701baaa43629897aeb121f54cd19aff707eabe45d2524844ca664",
+        "experiments/d20_scan/02_115_306p6800.dat": "29e6848c38f889e1bc839bac949c3b2404abe2f9a652a604fc4542fe55d52dc3",
+        "experiments/d20_scan/02_116_310p9350.dat": "fec1490aaf6f59a7464c3b21cdedf6333cb3d764f8d9a13ac62478cb2d981afa",
+        "experiments/d20_scan/02_117_314p8200.dat": "08d4bf74090bd142686ba02fe36c6642f4117480d0f9026b3e3a307ca64b6ed8",
+        "experiments/d20_scan/02_118_319p0710.dat": "5c2058a222ef253a0f46235b9615cf957e6414b4e52f4138dfb64be5fd173af4",
+        "experiments/d20_scan/02_119_323p3350.dat": "c038f2e38226ad3fd2281b55fbb39cf04a6ef2dc3d4f0276b5c8bf0ba393024f",
+        "experiments/d20_scan/02_120_327p9190.dat": "f8dbe59316ee34514cf8ddd5502b5b53609276ce3117e05d87ac7ac9afd97aec",
+        "experiments/d20_scan/02_121_332p2660.dat": "03fe53d66954d3935bbbca3c39dda6ec625c1f5627c6eb6d89e94d0364ade80e",
+        "experiments/d20_scan/02_122_336p6280.dat": "10d3cb20af02ac533a17e0966dd41f3fb80f80bfdc5e2763d4e92b08485640f0",
+        "experiments/d20_scan/02_123_340p7230.dat": "7855c5f97795bcb99310acd974b65fc6aad8a5d157f41aec9bdf2802533414ac",
+        "experiments/d20_scan/02_124_345p2570.dat": "5f1b51a111b63db9d3154dd6fa9e2dfc1c18cdaccfcd38a0f6cc97dae5e79615",
+        "experiments/d20_scan/02_125_349p8060.dat": "206f085b19fa066d2b473479221c460287a40f19f5e7c1f0320c2979c8ffe32a",
+        "experiments/d20_scan/02_126_354p1160.dat": "0e6a05e598dadc199dd04823bed2db908f96e104cbb5359fc824893a657adc1f",
+        "experiments/d20_scan/02_127_358p4140.dat": "1006fc6e31bbd16528ac73eccd0e115148bcdfb75b397df5a11a5849d96131bc",
+        "experiments/d20_scan/02_128_362p8190.dat": "424bea57f499991eb8aa7d224373a6bd73d0107c0977c06f0db15ed1eaab8ccc",
+        "experiments/d20_scan/02_129_371p4350.dat": "76e2fd2646d8c37d1d357e4479b20e29a47c41ee357614f7d947a8c1fcbb7ce3",
+        "experiments/d20_scan/02_130_375p8110.dat": "a56ff8f5849e1e3fe67b6858352fcc88c24a53cfe579df98e97d48c2e2d9f055",
+        "experiments/d20_scan/02_131_380p2820.dat": "e03e997f68637b4df7b60513c7845a260b01726f3f67fa804b355a71b94de8f5",
+        "experiments/d20_scan/02_132_384p6000.dat": "c051142ae04c23efe2323ca6ffbbdf39ee6571371d26dcc00c1cf592ff97ee55",
+        "experiments/d20_scan/02_133_388p8760.dat": "2fe4da899cfec93b4685f5ddf48cb98f639901dc2239bced310739522ed301ba",
+        "experiments/d20_scan/02_134_393p2660.dat": "6ebb10a745535d973fbaa3aa16bcf57f163ad99d67cedb123f6739cc0d19989a",
+        "experiments/d20_scan/02_135_397p5640.dat": "450d09ba353d52cf88805f153913f308ec51428aa279649911a5297dd4106f25",
+        "experiments/d20_scan/02_136_402p1390.dat": "a68b8fae71666b66d6139375978379ab63ce7facb1f4c63a343262c47e81270b",
+        "experiments/d20_scan/02_137_406p1830.dat": "7fa18447b1981382d68d30c896b87af509f6bba264bc1013af1650cb5b34383e",
+        "experiments/d20_scan/02_138_410p7830.dat": "d0e151a4805a8c29be88b33249f11e1f5414e9de25dffde20869b202cdeb72ec",
+        "experiments/d20_scan/02_139_415p1880.dat": "7a9fdd55cf98f32e0ec00e042999c4555b5c818c9429d6daf41fc7a166bac478",
+        "experiments/d20_scan/02_140_419p4530.dat": "33611d2a5959694b1dbe9d228db99613afe5431bc35a43e61764267a73be83d4",
+        "experiments/d20_scan/02_141_424p1020.dat": "458d5d83a455d35efe65f3a9a518cf0b66d677b280be587868a6cb9e7af2db38",
+        "experiments/d20_scan/02_142_428p4870.dat": "b80cc00f57695d56589aa857d1c72fd921acc2ec2c45adecc4d2901e49e3bff4",
+        "experiments/d20_scan/02_143_433p0150.dat": "a3d5a690e7a7b31263035b240181507e751f6b7f0ba35b77c29cd82d6bb535fd",
+        "experiments/d20_scan/02_144_437p1320.dat": "f6418e949ff522365390f777c197ab7fbd9d76cded8c04d7d4a509a51e8b877b",
+        "experiments/d20_scan/02_145_441p4020.dat": "aca3572c999b8cf60592ea7b884f67ecc8a90664361f4e6aa15590b6ef8ea6e0",
+        "experiments/d20_scan/02_146_446p0030.dat": "89c898df19634d5672e76798c37bc9e8551bb5678767e988bc41d735173483e0",
+        "experiments/d20_scan/02_147_450p3320.dat": "6e363f78be7d54a57830bca46b5bd0a18f768f6b15dd8a68ed6c1d292216fb03",
+        "experiments/d20_scan/02_148_454p8870.dat": "48231f25702a2c8e550c09f6272b5305549297e7647b59b7a3d8d6b28810b1a4",
+        "experiments/d20_scan/02_149_459p2510.dat": "dd07ea491ebb2a9fd37a9b0a6204e82367ea4a1954315778ceb2fe585d93bbd4",
+        "experiments/d20_scan/02_150_463p8850.dat": "d5c22e9a92bfaf425cd6ab3633325319d7a62db6e65d3916e97447c6422fd30c",
+        "experiments/d20_scan/02_151_468p2800.dat": "f78b5d3d9da83a3f003535847f2610e52e7dfd8374ee5950a0c3c34109f56462",
+        "experiments/d20_scan/02_152_472p5840.dat": "acd16e373fdfe9e3cc5c597be55ec304109578badf82df8743d69f07a58ca9c0",
+        "experiments/d20_scan/02_153_476p9800.dat": "1dc012ecb202cb10c04d5a70be15c2a9734c2b37d547f564ecee9d2c9abedefa",
+        "experiments/d20_scan/02_154_481p2260.dat": "021d76aad5f57879aefa516eefc96418536d0f42af793e6a0d47d6f407e05005",
+        "experiments/d20_scan/02_155_485p7350.dat": "de3f00765f6765b80157d75947c7517e997dfea579adcc76251fe644a9a7ba70",
+        "experiments/d20_scan/02_156_489p9560.dat": "2898a2b6434c15f02eff1c1994fa8c896c6d92b93d15a15994854e75be060aef",
+        "experiments/d20_scan/02_157_495p3740.dat": "f2025c68fdd8fc3de28b057382d9087ea6c0b92dbec0c1b9eca54dc0ef41f2d4",
+        "experiments/d20_scan/02_158_496p5900.dat": "5f3023b3820eb243fe8186c8f9ff953e1325c0d767097174f77e94419f1d8094",
+        "experiments/d20_scan/02_159_497p0360.dat": "943ff86fb9bf5d264f4a2d41e64b1d5711f26ab76de4cb90c0545900e92c674e",
+        "experiments/d20_scan/02_160_497p2280.dat": "12df6cee20e6241e84a392053ef1ad6cb9cc153d96ddbd95b025ba79f4c22734",
+        "experiments/d20_scan/02_161_497p3410.dat": "ef3eaf0029ac15202d49952f66caf1d30a8d4ca3adf82e76f3a89ef4a843728d",
+        "experiments/d20_scan/02_162_497p3790.dat": "22db61d0c3782c2614c6fccb92e1b9861010bfdb391ff87fa7ab0f53abcfc37f",
+        "project.edi": "cd72aaae8f0fe68b5505b4968ac4d912d788ffd0dc9da56aad23f1d1bd8f289e",
+        "structures/cosio.edi": "ffa28715457129c99865a0ef6d3a70273e5d89e35138591c41cb691a942d0e44"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
+      "archive": "2",
+      "files": {
+        "analysis/analysis.edi": "15d033c6a44e46e0bcb96e6fc1ee945e22dc72fc0a36f663b4240435814e2e54",
+        "experiments/d20.edi": "8af68f599823c315c3f84456b2721bdebacb21bdc0e14ee6b42f7db0b56a6922",
+        "experiments/d20_scan/all594687.dat": "13d209575f8ddfeaa32183cbfe6ee457cdbff505763cdca09be1d7c801e8415d",
+        "experiments/d20_scan/all594791.dat": "0ec0607b473b3f618d3f56d494eca9184e8f38751ffaabdb77172a45f3b3999f",
+        "experiments/d20_scan/all594842.dat": "95656a5ee8468c3a012010831a05889c093d08d7779b1ac77d4918cb0e823590",
+        "project.edi": "ea05eb3b03269011c20e59cba138e8d547f084647169df4ab9b0f3e9c314fdb7",
+        "structures/cosio.edi": "95d2b05d22a273299c267da8689b7417ad6aa05085b520ad94860977805ad0f9"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project",
+      "archive": "3",
+      "files": {
+        "README.md": "3fa59004ccd24aa905d4db42ef61af3f066e242bb135c85816962ba27d2556e6",
+        "analysis/analysis.edi": "b1bbc29974965044d51a6df0eec96e1d43aa950e6af9aab32af551dd97fd6faa",
+        "experiments/d20.edi": "84d829a01ff717b84fb93f90ccb32764b40a9521e5a5a1ff9ca3ba88a32d6272",
+        "project.edi": "9cd92ca9c86a22d66c4e7671d66c9c1b489a89b1e5431628fde2bd52d86ebcd7",
+        "structures/cosio.edi": "2a166185b0f9a0e7c504f843c43dc20dd8da47dc4bf21f98c309cd1a4d31e830"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project",
+      "archive": "4",
+      "files": {
+        "README.md": "229628e528490c3ce645ad2f75d51a72e6d8c09bca2c7fe0cd12c8ab43c7e3c2",
+        "analysis/analysis.edi": "b1bbc29974965044d51a6df0eec96e1d43aa950e6af9aab32af551dd97fd6faa",
+        "experiments/d20.edi": "0e68deec835d7f0ae8c68fc7f51a5b2b7406b3816625e085855915a687541623",
+        "project.edi": "6c405fead8a717bcb6429dee6d16ca76e22d400ade81aabe39c63f4030379532",
+        "structures/cosio.edi": "2a166185b0f9a0e7c504f843c43dc20dd8da47dc4bf21f98c309cd1a4d31e830"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project",
+      "archive": "5",
+      "files": {
+        "analysis/analysis.edi": "622953d9f61a1927cfdde76b6296bf57805006e83817b80cd36f851b35d8ef79",
+        "experiments/echidna.edi": "372e3a1cee4228b17a254007a48d906f313db9dd2a9292df69e707a7dd4246ef",
+        "project.edi": "413ed38f72aa9b6ee17573b87aa46b42b80b3ae0eec81e2f08a184c166453d2e",
+        "structures/lab6.edi": "ae52d392119f81a94e77ba4128ee2afc447fbcd3bdd9cdc6e2fea56eba54074d"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project",
+      "archive": "6",
+      "files": {
+        "README.md": "015a0c1126e50e9d8c6ca901829c0bed524049218942f593a2fd3514839f5c83",
+        "analysis/analysis.edi": "9b1aff7a505d8667abd69794009f4db9530df5631697cd5bc10827275e7b86d4",
+        "experiments/hrpt.edi": "04ae0d49d5677813da42190c8e9935ab34cf34f407ef6eda3170d19ae5f23740",
+        "project.edi": "ed45fc368feb625a09a1e82a2a2d72484ae9ccbb3cf3789f68e164134bf3d54b",
+        "structures/lbco.edi": "aa8845b0b19738bb12944680408b33d7fa5c807d8331ae469c117bb63ff6b0f6"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project",
+      "archive": "7",
+      "files": {
+        "README.md": "78fc18a02a851001bfeec12dbe0509d8030d39e4ac56c445d1e4ca56eaac033d",
+        "analysis/analysis.edi": "9b1aff7a505d8667abd69794009f4db9530df5631697cd5bc10827275e7b86d4",
+        "experiments/hrpt.edi": "75b80599e01aab29997f88c8ae4ca6a9f8059781aa5221a6f2274ec81cd6f768",
+        "project.edi": "336cc3b1d50f3b90f08da834577bb34c7f7a5c696806d623dfd7a5b973bebcf9",
+        "structures/lbco.edi": "aa8845b0b19738bb12944680408b33d7fa5c807d8331ae469c117bb63ff6b0f6"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project",
+      "archive": "8",
+      "files": {
+        "analysis/analysis.edi": "494db6eaa33dd5b4e18e6fc2d28282486b2d9bfc50a8e52098e6ad34422062fd",
+        "experiments/d1a.edi": "1397212f018457de21bd98ccc52918112db1eb46163c18860250735769522496",
+        "project.edi": "8292d9f5ecc053796530fb9fcb9953ac83f4ad7b237d4d5a9a07a18589a1bd47",
+        "structures/pbso4.edi": "d14b19ea6dc7f6f3a129fa5fb3538f7413fc3cb727950c2f70fb9e2e6e3f2520"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project",
+      "archive": "9",
+      "files": {
+        "analysis/analysis.edi": "c859cfebc586252e3b1572cd54f854592d55a143b97302621120483df4733340",
+        "experiments/dream.edi": "8fd1f452e2d02e32dddef6ef8cfedd101d954092f99a2e302b203d46868c0a9c",
+        "project.edi": "9580ce63c0584e9b97a1fef88f1cffd5dcd3ca27ea3ee874c4e5cb7f9b617221",
+        "structures/diamond.edi": "57650796c81a5963ee142a26847f89d9dac23cb6bc018406c77c6141a68f2613"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project",
+      "archive": "10",
+      "files": {
+        "analysis/analysis.edi": "5439feddf4b4d024774746def3ad77d211dbb06d34f260699e3fea6db5e52c2b",
+        "experiments/beer.edi": "beec4ec6cf421409fb6cb868f68287217647cad8005b6d01f133572ba2812dfc",
+        "project.edi": "72f70eb5fb038f3e28798b75845499c57dedfb8dfc96bcab7dd6e46b97d8e879",
+        "structures/fe.edi": "9ee23e6fff7c5eb544677380a5c3176ee7425e3e790cbe7b50dca77472a16c29"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "archive": "11",
+      "files": {
+        "README.md": "f94a4449a2030f8d026df7de1b1e17d3c4032cda66a5c441694cea55cf28d9ee",
+        "analysis/analysis.edi": "851f29e2e3958b19c31696ae78bd3e7c5e2c99cdc8ea265a5715f6d5de48ec49",
+        "experiments/wish_4_7.edi": "cde1a11721332c54c5687b0d69167fd11dc3208657a4870d26b9a261cef9959c",
+        "experiments/wish_5_6.edi": "36f3074af4941feef3cfe173c0036ae61d9db7ff6977dfcc931be8f229fe2aee",
+        "project.edi": "9d6d07950c1fda49a8dc939a2ff10e9fc7ad4cb051a5b5c0369cea879b33b9ba",
+        "structures/ncaf.edi": "900890555937fb620a626adcb58cd4c0e550eaa100f1155d499544c8c7189bd3"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "archive": "12",
+      "files": {
+        "analysis/analysis.edi": "a92ff6a4dab31015df35866d7dcd51e8b7176ebaa836c8ed1739998d03e24d03",
+        "experiments/wish_2_9.edi": "5e586fa83d71f1c9c7b1a059ad3c0d5916a7f35e3c6d58293cd17c4792b0d8d8",
+        "experiments/wish_4_7.edi": "2cffa2b80c23954f81590c05393d7d91eca13e0d98df801c0a94dbfca17794ed",
+        "experiments/wish_5_6.edi": "d56ecb1eddc6930da2222b572e601957a04816fa6eea0f06ba1642e650a5eeae",
+        "project.edi": "d4d5ccab5887510b7785e7e48704401b9fbbdf4b7415beda23864c09bc53dd6f",
+        "structures/ncaf.edi": "7f3ff556d43919d66b080f1c26518e752f10451224ae27b97fa94a7099592a84"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project",
+      "archive": "13",
+      "files": {
+        "README.md": "2b589c4c0a04b69c81e84abdd492c1ef07de1d3e7895c7fb694363b7707d25ef",
+        "analysis/analysis.edi": "9282de582d8a53da0e8489bbcd39af1e2f0cd991ff9f5e2f40af129e059f5af0",
+        "experiments/sepd.edi": "262ba0c59894678c0c8c66482352ab5117a6642915601c8d62c795ee054ae55a",
+        "project.edi": "819ac14c65039c4907bd6b7d6219c970fba92566cfe3410b5201ba263930b8ac",
+        "structures/si.edi": "7ad514f47ced64ec522f8265777254fc3e3c9553174f78cae42631b712cb56c6"
+      }
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project",
+      "archive": "14",
+      "files": {
+        "README.md": "bec15afcd746c8186220fb510467211d9ab6c19395f0006745791f97b244f62e",
+        "analysis/analysis.edi": "9282de582d8a53da0e8489bbcd39af1e2f0cd991ff9f5e2f40af129e059f5af0",
+        "experiments/sepd.edi": "1582a3f94974bfb75ef181779aeb5eb5659fa61d0342c4f20c2f0d4d1ccf7b4e",
+        "project.edi": "1b7f69cd8b54c76bf8f2d2a4d158a438928a2d367366b3a9dc85b079bf753df5",
+        "structures/si.edi": "7ad514f47ced64ec522f8265777254fc3e3c9553174f78cae42631b712cb56c6"
+      }
+    },
+    {
+      "path": "tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/jvd_absorption",
+      "archive": "15",
+      "files": {
+        "analysis/analysis.edi": "32a0200a45754fba92d9fca8bc76ac326e7c9c6a25e256bb856be25785bf9493",
+        "experiments/wish_1_10.edi": "5d862d7f7d8a31cf155106be1b0cc860c6a7b65ae2e26a3d68c746840d3fa534",
+        "experiments/wish_2_9.edi": "f199bbc7a035ee3c24e2442052d4663c0deb97089b77b41b1748eee46876c79b",
+        "experiments/wish_3_8.edi": "bcdb301936d588d6e1547255a9dc98501534aa31447672933e0ce29aaf7ee343",
+        "experiments/wish_4_7.edi": "20bae4ec30d40ec9a55e247f75de8bd5cebb2d1aa70b1746b8fbab194d3d7d2e",
+        "experiments/wish_5_6.edi": "398b43514419a53b50106645212961d87daf048f148eda9c81dc9313ef2f0e21",
+        "project.edi": "855500219ac4b61ccd6a60d1c3b2c5738e68662cfc860e2f517003716baef1e1",
+        "structures/ncaf.edi": "fee02793f31f706488801f8d3b45a4da784523896622a9f0f2f51c30e2fee4ec"
+      }
+    },
+    {
+      "path": "tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/key_absent",
+      "archive": "16",
+      "files": {
+        "analysis/analysis.edi": "278a2d75bfcbb4e5f78ed308e5be72fdf1d21ba100b4711e9c8746a17cbb5635",
+        "experiments/wish_5_6.edi": "c8307f78622a71b5a4211067f4c102cd84406dc3c5b3c42e78a6f71f5f652a1b",
+        "project.edi": "855500219ac4b61ccd6a60d1c3b2c5738e68662cfc860e2f517003716baef1e1",
+        "structures/ncaf.edi": "8d2cfac260741c78ff52859c25a7d205483de03a8dad3f824c84929a677f0a54"
+      }
+    },
+    {
+      "path": "tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/no_code_type_none",
+      "archive": "17",
+      "files": {
+        "analysis/analysis.edi": "278a2d75bfcbb4e5f78ed308e5be72fdf1d21ba100b4711e9c8746a17cbb5635",
+        "experiments/wish_5_6.edi": "5fcf360e30d0a589e0a54639d9feef5317588b1358f3ca6c0c9c15dee96cc774",
+        "project.edi": "855500219ac4b61ccd6a60d1c3b2c5738e68662cfc860e2f517003716baef1e1",
+        "structures/ncaf.edi": "b7009876ffe8a67993ddb1c6a5eb56512d92a3e5c7c231096044aade48a2e95b"
+      }
+    },
+    {
+      "path": "tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/type_none",
+      "archive": "18",
+      "files": {
+        "analysis/analysis.edi": "278a2d75bfcbb4e5f78ed308e5be72fdf1d21ba100b4711e9c8746a17cbb5635",
+        "experiments/wish_5_6.edi": "c8307f78622a71b5a4211067f4c102cd84406dc3c5b3c42e78a6f71f5f652a1b",
+        "project.edi": "cca6aae563fc8c74fcd15203392da6160b5546205edb4020162426b400f26622",
+        "structures/ncaf.edi": "8d2cfac260741c78ff52859c25a7d205483de03a8dad3f824c84929a677f0a54"
+      }
+    },
+    {
+      "path": "tests/fixtures/c09_t6_ncaf_5bank_absorption/key_absent_project",
+      "archive": "19",
+      "files": {
+        "analysis/analysis.edi": "278a2d75bfcbb4e5f78ed308e5be72fdf1d21ba100b4711e9c8746a17cbb5635",
+        "experiments/wish_5_6.edi": "c8307f78622a71b5a4211067f4c102cd84406dc3c5b3c42e78a6f71f5f652a1b",
+        "project.edi": "cca6aae563fc8c74fcd15203392da6160b5546205edb4020162426b400f26622",
+        "structures/ncaf.edi": "8d2cfac260741c78ff52859c25a7d205483de03a8dad3f824c84929a677f0a54"
+      }
+    },
+    {
+      "path": "tests/fixtures/c09_t6_ncaf_5bank_absorption/type_none_project",
+      "archive": "20",
+      "files": {
+        "analysis/analysis.edi": "278a2d75bfcbb4e5f78ed308e5be72fdf1d21ba100b4711e9c8746a17cbb5635",
+        "experiments/wish_5_6.edi": "c8307f78622a71b5a4211067f4c102cd84406dc3c5b3c42e78a6f71f5f652a1b",
+        "project.edi": "cca6aae563fc8c74fcd15203392da6160b5546205edb4020162426b400f26622",
+        "structures/ncaf.edi": "8d2cfac260741c78ff52859c25a7d205483de03a8dad3f824c84929a677f0a54"
+      }
+    },
+    {
+      "path": "tests/fixtures/e02_t2_ncaf_5bank/project",
+      "archive": "21",
+      "files": {
+        "analysis/analysis.edi": "32a0200a45754fba92d9fca8bc76ac326e7c9c6a25e256bb856be25785bf9493",
+        "experiments/wish_1_10.edi": "1c6e4a9e4ac2f9923a12d31d62421b1991eeb29a67565cf5bd26fb8ffd42f9e1",
+        "experiments/wish_2_9.edi": "0295f1e6564066338f1ef7c4f895b34bf20730a7b8381941946782b7e009cccf",
+        "experiments/wish_3_8.edi": "895796a216b5cbfd4c01cbdbc276e7e2f1275ec96bfaf90d847e5bfa38d4d883",
+        "experiments/wish_4_7.edi": "d38e5f958686673b9c81d110bd307b6babee9661fbdb307f869abff544f4f39c",
+        "experiments/wish_5_6.edi": "5a000b7f019b7f48b7c5597ace9ac0a553805afc9dd318058eb362fa9da511bd",
+        "project.edi": "cca6aae563fc8c74fcd15203392da6160b5546205edb4020162426b400f26622",
+        "structures/ncaf.edi": "eaccf0e07883f5d1f7640a1332ae9b94b4e74f402984f9781502fb2496250bb4"
+      }
+    },
+    {
+      "path": "tests/fixtures/e04_t1/editable-project",
+      "archive": "22",
+      "files": {
+        "analysis/analysis.edi": "9b1aff7a505d8667abd69794009f4db9530df5631697cd5bc10827275e7b86d4",
+        "experiments/hrpt.edi": "04ae0d49d5677813da42190c8e9935ab34cf34f407ef6eda3170d19ae5f23740",
+        "project.edi": "c0fabb0dc268deac419e555624a84c3e20ce3e1c442b01fd37bf40ae6dff6b98",
+        "structures/lbco.edi": "a24c849c2ef4a9590a500c14cfda743e588688cf4dbff0030e2e43c237fce1e6"
+      }
+    },
+    {
+      "path": "tests/fixtures/e04_t1/warning-project",
+      "archive": "23",
+      "files": {
+        "analysis/analysis.edi": "064d7ece788dda68ae2a280b378919fa9a8fc1232426ce57289c4124939b526c",
+        "experiments/experiment.edi": "cbd43ba313b3712033e900ed04276a3f0cd6d8e0f9aa6c53586ff210622a57d3",
+        "project.edi": "2beaa0b2f3e53769d1847b3a439c57de459611cc0552edacba414a9d1e169d20",
+        "structures/structure.edi": "2fef5314fe0a03e4e602e769981e6d803d1fde63fce1e1e33789c5dac6a6f6ae"
+      }
+    },
+    {
+      "path": "tests/fixtures/e04_t1/xray-project",
+      "archive": "24",
+      "files": {
+        "analysis/analysis.edi": "93a822b411e9a5d4e2933cb49668a3bb12ca3aac22c615cafcb5c45bac054a53",
+        "experiments/experiment.edi": "cbd43ba313b3712033e900ed04276a3f0cd6d8e0f9aa6c53586ff210622a57d3",
+        "project.edi": "2beaa0b2f3e53769d1847b3a439c57de459611cc0552edacba414a9d1e169d20",
+        "structures/structure.edi": "2fef5314fe0a03e4e602e769981e6d803d1fde63fce1e1e33789c5dac6a6f6ae"
+      }
+    }
+  ]
+}

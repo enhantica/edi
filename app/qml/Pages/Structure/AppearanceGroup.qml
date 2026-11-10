@@ -1,0 +1,162 @@
+// SPDX-License-Identifier: BSD-3-Clause
+import QtQuick
+
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
+
+import edi.app
+
+// Appearance (edi ADR-0017 §16; easydiffractionbeta's group of that name and place): the
+// `structure_style` options of diffraction-lib that its modebar does not carry — the atom view (the radius
+// model, or the ADP surfaces) and the atom scale, or the ADP probability in the ADP view — laid out and styled as the Instrument group (the owner, 2026-10-02): a muted
+// caption above each field and the fields side by side in equal columns over the group's width, with the
+// components that group and the selectors use. The elements whose radius was substituted are listed under them.
+// View state of the open project, shared by every structure's view; not saved.
+SideBarGroup {
+    id: group
+
+    property StructureViewOptions options: null
+    property StructureViewController controller: null
+    // The structure shown: its moments bring the Moment scale field.
+    property StructureViewModel structure: null
+
+    readonly property string openKey: "Extras:appearance"
+
+    objectName: "group.appearance"
+    // Open as left, or open when it is the first group shown, as every sidebar group (SideBarGroups).
+    collapsed: !SideBarGroups.isOpen(openKey, group)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
+    title: Session.categoryTitle("structure_view")
+    icon: "palette"
+    last: SideBarGroups.isLast(group)
+
+    Column {
+        spacing: AppSizes.groupContentSpacing
+
+        // Two fields in equal columns and rows spaced, as ParameterGrid lays out the instrument's.
+        Grid {
+            id: grid
+
+            readonly property real fieldWidth: (EaStyle.Sizes.sideBarContentWidth - grid.columnSpacing) / 2
+
+            columns: 2
+            columnSpacing: AppSizes.inputSpacing
+            rowSpacing: AppSizes.groupContentSpacing
+
+            SelectorField {
+                objectName: "structure.appearance.atomView"
+                width: grid.fieldWidth
+                label: qsTr("Atom view")
+                options: group.options ? group.options.atomViewOptions : null
+                token: group.options ? group.options.atomView : ""
+                onSelected: token => group.options.atomView = token
+            }
+            EaElements.ParamTextField {
+                id: scale
+
+                objectName: "structure.appearance.atomScale"
+                visible: group.options === null || group.options.atomView !== "adp"
+                width: grid.fieldWidth
+                parameter: group.options ? {
+                    "value": group.options.atomScale,
+                    "error": 0,
+                    "enabled": true,
+                    "fittable": false,
+                    "fit": false,
+                    "name": "atom_scale",
+                    "shortPrettyName": qsTr("Atom scale"),
+                    "units": ""
+                } : ({})
+
+                // Above 0 and at most 1 (diffraction-lib's range); anything else leaves the scale as it was.
+                function commit() {
+                    ApplicationInfo.appearanceCommit(false, () => {
+                        text = Qt.binding(() => scale.value);
+                    });
+                }
+
+                // Its title as every field's (edi ADR-0017 §5).
+                Component.onCompleted: FieldTitles.align(scale)
+                onAccepted: commit()
+                onEditingFinished: commit()
+            }
+            // The ADP view sizes its ellipsoids by a probability, not a scale: its field takes the scale's place
+            // (the owner, 2026-10-06; diffraction-lib's `adp_probability`, 0.99 by default).
+            EaElements.ParamTextField {
+                id: probability
+
+                objectName: "structure.appearance.adpProbability"
+                visible: group.options !== null && group.options.atomView === "adp"
+                width: grid.fieldWidth
+                parameter: group.options ? {
+                    "value": group.options.adpProbability,
+                    "error": 0,
+                    "enabled": true,
+                    "fittable": false,
+                    "fit": false,
+                    "name": "adp_probability",
+                    "shortPrettyName": qsTr("Probability"),
+                    "units": ""
+                } : ({})
+
+                // Above 0 and below 1 (diffraction-lib's range); anything else leaves the probability as it was.
+                function commit() {
+                    ApplicationInfo.appearanceCommit(true, () => {
+                        text = Qt.binding(() => probability.value);
+                    });
+                }
+
+                Component.onCompleted: FieldTitles.align(probability)
+                onAccepted: commit()
+                onEditingFinished: commit()
+            }
+            // Where each moment's arrow sits on its atom, left of the moment scale (the owner, 2026-11-03).
+            SelectorField {
+                objectName: "structure.appearance.momentView"
+                visible: momentScale.visible
+                width: grid.fieldWidth
+                uid: "structure_view.moment_view"
+                options: group.options ? group.options.momentViewOptions : null
+                token: group.options ? group.options.momentView : ""
+                onSelected: token => group.options.momentView = token
+            }
+            // The moment arrows' length per Bohr magneton, in the right column below the atom scale, beside the moment
+            // view (the owner, 2026-11-03).
+            EaElements.ParamTextField {
+                id: momentScale
+
+                objectName: "structure.appearance.momentScale"
+                visible: group.structure !== null && group.structure.magnetic
+                width: grid.fieldWidth
+                parameter: group.options ? {
+                    "value": group.options.momentScale,
+                    "error": 0,
+                    "enabled": true,
+                    "fittable": false,
+                    "fit": false,
+                    "name": "moment_scale",
+                    "shortPrettyName": qsTr("Moment scale"),
+                    "units": "Å/μB"
+                } : ({})
+
+                // Above 0; anything else leaves the scale as it was.
+                function commit() {
+                    if (group.options !== null && text !== momentScale.value) {
+                        group.options.momentScale = Number(text);
+                        text = Qt.binding(() => momentScale.value);
+                    }
+                }
+
+                Component.onCompleted: FieldTitles.align(momentScale)
+                onAccepted: commit()
+                onEditingFinished: commit()
+            }
+        }
+        EaElements.Label {
+            objectName: "structure.appearance.substituted"
+            visible: group.controller !== null && group.controller.substitutedElements !== ""
+            color: EaStyle.Colors.themeForegroundMinor
+            text: group.options && group.options.atomView === "ionic" ? qsTr("No ionic radius, the covalent radius or 1.0 Å used for: %1").arg(group.controller ? group.controller.substitutedElements : "") : qsTr("No radius, 1.0 Å used for: %1").arg(group.controller ? group.controller.substitutedElements : "")
+        }
+    }
+}

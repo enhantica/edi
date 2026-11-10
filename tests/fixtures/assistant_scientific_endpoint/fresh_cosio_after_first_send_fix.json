@@ -1,0 +1,196 @@
+{
+  "kind": "Actual fresh provider diagnostic; not a scientific oracle or CI acceptance",
+  "source_head_at_launch": "27fe8b69a78d20645dbd27db6028f7200c90e0d7",
+  "probe_source_marker": "4b1e2eb2465818475b05c52fe9fbb3826d79c1e3-dirty",
+  "probe_sha256_at_launch": "5b6c2ed7c8dae2d5737dbff320a6dd58b3d6f4b4f3a4dad7b80008d50fc18502",
+  "runtime_sha256": "5998898d46aa2b50697702155d6fd398553623c66120558b9ae32e7e062e4b0f",
+  "existing_managed_login_available": true,
+  "login_refresh_requested": false,
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "show_actions": true,
+  "input_sha256": {
+    "d20.xye": "72ff3c5902cc9e87b7a9a6f4d87081e6367f1477a7958914e3d89c87ddc164e9",
+    "cosio.cif": "993c4770e9ee68929f537aaa132fb8d81f279eb4eb7b8af12516d5ff7c841b33"
+  },
+  "scientific_session_send_count": 1,
+  "provider_completed": true,
+  "actual_provider_turn_identity_observed": true,
+  "final_ui": {
+    "connected": true,
+    "state": "idle",
+    "can_cancel": false,
+    "last_error": "",
+    "pending_question": {},
+    "pending_plan": {}
+  },
+  "native_fit_observed": true,
+  "fit_events": [
+    {
+      "index": 23,
+      "row_id": "c4bb6cbb-e797-43ea-9f84-821cd76735a2",
+      "status": "completed",
+      "adopted": true
+    },
+    {
+      "index": 34,
+      "row_id": "ae3479d0-a82a-49b6-801e-5f157f40041f",
+      "status": "completed",
+      "adopted": true
+    },
+    {
+      "index": 42,
+      "row_id": "a4b622c3-fb6b-4787-90d6-6f93c2e2862d",
+      "status": "completed",
+      "adopted": true
+    },
+    {
+      "index": 56,
+      "row_id": "b94e5645-82bd-4c19-85cc-d2f3b385066e",
+      "status": "completed",
+      "adopted": true
+    },
+    {
+      "index": 68,
+      "row_id": "cbe2c9f9-97fe-47f4-b702-4f70c88e165f",
+      "status": "completed",
+      "adopted": true
+    },
+    {
+      "index": 78,
+      "row_id": "3b4be927-b01a-4420-afd7-2c6c57056dcb",
+      "status": "completed",
+      "adopted": true
+    },
+    {
+      "index": 101,
+      "row_id": "e9d8d2e8-5445-4267-8e85-ee5904280739",
+      "status": "completed",
+      "adopted": true
+    }
+  ],
+  "undo_events": [
+    {
+      "index": 52,
+      "row_id": "767487fb-21c2-4e39-9eef-8dadce65aea4",
+      "status": "completed",
+      "applied": true
+    },
+    {
+      "index": 89,
+      "row_id": "1452a2c0-9f5c-4bb1-b022-f58b7e4f8e56",
+      "status": "completed",
+      "applied": true
+    }
+  ],
+  "applied_undo_count": 2,
+  "ends_with_adopted_fit": true,
+  "current_fit": {
+    "status": "Success",
+    "outcome": "success",
+    "running": false,
+    "goodnessOfFit": "5.94 \u2192 5.94",
+    "results": 4
+  },
+  "report_page_before_driver_view": true,
+  "live_gate": {
+    "passed": true,
+    "findings": [],
+    "last_adopted_fit_row": "e9d8d2e8-5445-4267-8e85-ee5904280739",
+    "last_applied_undo_row": "1452a2c0-9f5c-4bb1-b022-f58b7e4f8e56",
+    "documented_undo_cleared_result": false,
+    "current_result_rows": 4
+  },
+  "final_fit_required_after_rejected_trial_undo": {
+    "status": "passed",
+    "reason": "Final native fit chronology and current results after the latest applied Undo"
+  },
+  "original_failed_receipts_unchanged": true,
+  "owned_main_and_display_processes_exited": true,
+  "observation_seconds": 671.34207965713,
+  "gate_assertions_changed": false,
+  "build_started": false,
+  "primary_receipt_sha256": {
+    "RESULT.json": "bba8a5ada5051206a18d9292d3871992fbfa9166ec1681d93aa847cb52af6045",
+    "final-canonical-history.json": "f935ef47b4626031447272c62a13474044bd56507400c070d3716b68941832c1",
+    "final-ui.json": "22b77b6695b04331d16c46e88d11f64297fd0a66fda1fc18a12b878668ae6769",
+    "DRIVER.py": "073f346aa3d49b094ee641bc11bf2c9ab28dcdcb0f46a67aedf1bbe7418f0a63",
+    "final-scientific-receipt.json": "f1e7d7f2b6cad1ec565471abb95babb9da778407e0de026d9a21b43b688b1b36"
+  },
+  "rejected_trials": [
+    {
+      "assistant_message_index": 51,
+      "reason_reported_by_assistant": "negative total Lorentzian width at low-angle reflections",
+      "undo_row_index": 52,
+      "undo_row_id": "767487fb-21c2-4e39-9eef-8dadce65aea4",
+      "undo_applied": true,
+      "undo_fit_result_current": false
+    },
+    {
+      "assistant_message_index": 88,
+      "reason_reported_by_assistant": "negative Co1 isotropic displacement parameter",
+      "undo_row_index": 89,
+      "undo_row_id": "1452a2c0-9f5c-4bb1-b022-f58b7e4f8e56",
+      "undo_applied": true,
+      "undo_fit_result_current": false
+    }
+  ],
+  "offline_gate": {
+    "exit": 0,
+    "result": {
+      "case": "build/tests-seq14/cosio-sol-high-on",
+      "passed": true,
+      "findings": [],
+      "last_adopted_fit_row": "e9d8d2e8-5445-4267-8e85-ee5904280739",
+      "last_applied_undo_row": "1452a2c0-9f5c-4bb1-b022-f58b7e4f8e56",
+      "documented_undo_cleared_result": false,
+      "current_result_rows": 4
+    }
+  },
+  "additional_native_symptom": {
+    "status": "failed",
+    "tool": "add_relations",
+    "arguments": {
+      "aliases": [
+        {
+          "id": "B_Co1",
+          "path": "structure.atom_sites[Co1].adp_iso"
+        },
+        {
+          "id": "B_Co2",
+          "path": "structure.atom_sites[Co2].adp_iso"
+        }
+      ],
+      "constraints": [
+        {
+          "enabled": true,
+          "expression": "B_Co2 = B_Co1",
+          "id": "shared_cobalt_Biso"
+        }
+      ],
+      "purpose": "Test a common isotropic displacement for the two octahedral cobalt sites"
+    },
+    "nativeOutcome": {
+      "action_error": "control_commit_unconfirmed",
+      "action_field": "relation",
+      "atomic": false,
+      "calculation_pending": false,
+      "complete": false,
+      "message": "The genuine group click did not expand its controls",
+      "status": "partial",
+      "steps_completed": 6
+    }
+  },
+  "fit_quality_qualification": "The assistant reports the final fit as provisional, with systematic intensity residuals; the shared cobalt displacement comparison was blocked by the Constraints controls",
+  "prior_first_send_receipt_seals_match": true,
+  "driver_identical_apart_from_output_names": true,
+  "followup_prompt_sent": false,
+  "post_run_identity": {
+    "checked_utc": "2026-11-02T14:14:47.336408+00:00",
+    "head": "27fe8b69a78d20645dbd27db6028f7200c90e0d7",
+    "binary_sha256": "5b6c2ed7c8dae2d5737dbff320a6dd58b3d6f4b4f3a4dad7b80008d50fc18502",
+    "binary_unchanged_from_preflight": true,
+    "runtime_sha256": "5998898d46aa2b50697702155d6fd398553623c66120558b9ae32e7e062e4b0f",
+    "runtime_unchanged_from_launch": true
+  }
+}

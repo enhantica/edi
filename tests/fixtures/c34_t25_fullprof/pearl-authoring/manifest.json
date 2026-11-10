@@ -1,0 +1,19 @@
+{
+  "version": "FullProf.2k 8.40",
+  "command": [
+    "fp2k",
+    "Ceo2_PEARL",
+    "Ceo2_PEARL"
+  ],
+  "source": "Independent RALF run retained by -tests-seq6-whole.log; 2026-09-25",
+  "input_name": "Ceo2_PEARL.pcr (retained after the run as Ceo2_PEARL.inp)",
+  "input_note": "FullProf rewrites the sampling range; physical parameters remain fixed.",
+  "data_name": "Ceo2_PEARL.dat (original ../Ceo2_PEARL.ralf)",
+  "data_sha256": "7397e5c44f2193f86e49ac8680d5c3bd2499bafbb955e3698335d49693335ca7",
+  "sha256": {
+    "Ceo2_PEARL.inp": "9c7a44c461a8ca08a3cd096bdac502402d25175a21aa38b31a9136a0fe306da7",
+    "Ceo2_PEARL.prf": "9f2a26b00033c0b90c893ac87c6db6c5cb1a589924bc8c22df7d7cf15cbd2859",
+    "Ceo2_PEARL.sum": "ab0b2da33d7895b31640cf96e659068d83eb31ceb7bf3c627cc8bd9a15115911",
+    "Ceo2_PEARL.out": "c32a7f066d99082380a24928b8ec11e07f8b74373bfcab95062d130c668e27a6"
+  }
+}

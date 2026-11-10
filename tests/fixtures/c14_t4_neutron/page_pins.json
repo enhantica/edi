@@ -1,0 +1,173 @@
+{
+  "base": "56912acf876b64eb821feb6681490a83b57221b8",
+  "classification": "Existing page bounds are regression pins; FullProf files are independent references",
+  "pages": {
+    "pd-neut-cwl_LaB6_basic": {
+      "tolerances": [
+        {
+          "max_profile_difference_percent": 0.2,
+          "max_deviation_percent": 0.65,
+          "min_intensity_ratio": 0.999,
+          "max_intensity_ratio": 1.001,
+          "min_correlation": 0.99999
+        }
+      ],
+      "reference_directory": "pd-neut-cwl_lab6-echidna_basic",
+      "files": {
+        "ECH0030684_LaB6_1p622A_baseline.prf": "8d0484e615c778e6789aa60668c1649f50a151ff22e0958bd6eb0a2e43a2e481",
+        "ECH0030684_LaB6_1p622A_baseline.sum": "26d2d0f4e7ae195bba13b1d34fb8300ef1ce71a1cca1cbe3c5a2ba041cbd6af8",
+        "ECH0030684_LaB6_1p622A_baseline.bac": "a3fe5fcf1e9a5a43d5e854ce840dc84aa6862a1f747d1f7b5e72fff9b0366e3c"
+      }
+    },
+    "pd-neut-cwl_LaB6_absorption": {
+      "tolerances": [
+        {
+          "max_profile_difference_percent": 0.2,
+          "max_deviation_percent": 0.65,
+          "min_intensity_ratio": 0.999,
+          "max_intensity_ratio": 1.001,
+          "min_correlation": 0.99999
+        },
+        {
+          "max_profile_difference_percent": 0.22,
+          "max_deviation_percent": 0.65,
+          "min_intensity_ratio": 0.998,
+          "max_intensity_ratio": 1.001,
+          "min_correlation": 0.99999
+        },
+        {
+          "max_profile_difference_percent": 0.1,
+          "max_deviation_percent": 0.12,
+          "min_intensity_ratio": 0.9995,
+          "max_intensity_ratio": 1.0015,
+          "min_correlation": 0.9999995
+        }
+      ],
+      "reference_directory": "pd-neut-cwl_lab6-echidna_absorption",
+      "files": {
+        "ECH0030684_LaB6_1p622A_absorption.prf": "40d897f62aa26a762a42e2eb56d6ea829e90bbdefe2f431f89e130b1cbb2f560",
+        "ECH0030684_LaB6_1p622A_absorption.sum": "52831cc5e68a8c822fb12e5fd4419535fd49605893058371bcd1458b08e963b6",
+        "ECH0030684_LaB6_1p622A_absorption.bac": "66ca08f0fe55304143f5e6a4a43def3e85dbadbf2350c7fa2f52fabd940665fa"
+      }
+    },
+    "pd-neut-cwl_LaB6_fcj-asymmetry": {
+      "tolerances": [
+        {
+          "max_profile_difference_percent": 0.5,
+          "max_deviation_percent": 0.45,
+          "min_intensity_ratio": 0.9993,
+          "max_intensity_ratio": 1.0007,
+          "min_correlation": 0.99998
+        }
+      ],
+      "reference_directory": "pd-neut-cwl_lab6-echidna_fcj-asymmetry",
+      "files": {
+        "ECH0030684_LaB6_1p622A_fcj.prf": "791ed87f188bcdefcb668d81d144023d7c8f9cad8b05ed7b829ae420813b8d85",
+        "ECH0030684_LaB6_1p622A_fcj.sum": "42289ad161634b6fed3c3047da295c824058e663d6ba5bed68ad9e8c0da08cd3",
+        "ECH0030684_LaB6_1p622A_fcj.bac": "6e9c617371a72357082cd201a44d7e8c1d0a104ef1f139d3ea3173c3ef592149"
+      }
+    },
+    "pd-neut-cwl_LaB6_11B": {
+      "tolerances": [
+        {
+          "max_profile_difference_percent": 0.19,
+          "max_deviation_percent": 0.58,
+          "min_intensity_ratio": 0.999,
+          "max_intensity_ratio": 1.001,
+          "min_correlation": 0.99999
+        }
+      ],
+      "reference_directory": "pd-neut-cwl_lab6-echidna_11b",
+      "files": {
+        "ECH0030684_LaB6_1p622A_11B.prf": "99c6851fedae979a0f84eeddff33ecd143025d8c462dabcf6160d9492ba9eb6e",
+        "ECH0030684_LaB6_1p622A_11B.sum": "8ff10c7420dbf29c58fb2a00ce15db8415b5c7b5ebcef5d53e87396561d0ae61",
+        "ECH0030684_LaB6_1p622A_11B.bac": "d35819a839993fc1d967e8b946a72bc373d89f073d5a3b6964ee7a7efa821bf2"
+      }
+    },
+    "pd-neut-cwl_LBCO_basic": {
+      "tolerances": [
+        {
+          "max_profile_difference_percent": 0.11,
+          "max_deviation_percent": 0.45,
+          "min_intensity_ratio": 0.999,
+          "max_intensity_ratio": 1.001,
+          "min_correlation": 0.99999
+        }
+      ],
+      "reference_directory": "pd-neut-cwl_lbco-hrpt_basic",
+      "files": {
+        "lbco.prf": "640490df5dd98482f561c7b1a3a7714ae860bc6fd709db1b40b37b5275dff1bb",
+        "lbco.sum": "9a96665f826bd0b83e374992c8a56868094906a674ff4b348618ec8e774acde9",
+        "lbco.bac": "07f4b0b0371334c6b67bfebca0f75374e2e33685fdbf87ee877d673335833d03"
+      }
+    },
+    "pd-neut-cwl_PbSO4_basic": {
+      "tolerances": [
+        {
+          "max_profile_difference_percent": 0.75,
+          "max_deviation_percent": 4.5,
+          "min_intensity_ratio": 0.999,
+          "max_intensity_ratio": 1.001,
+          "min_correlation": 0.99995
+        }
+      ],
+      "reference_directory": "pd-neut-cwl_pbso4_basic",
+      "files": {
+        "pbso4.prf": "c85bf109a776be3257fd8b8d69cb554435a1d106de54444aadc5bfa9fe15e907",
+        "pbso4.sum": "00ae2424b0ce876f2ed173cc51ca88d48fb2e704b071fd8e6366d9055fc92768",
+        "pbso4.bac": "e7a9a2551558c8fd8159b85adaaf7ad5e15fce173fc9fcd950defaaade7154c8"
+      }
+    },
+    "pd-neut-cwl_PbSO4_beba-asymmetry": {
+      "tolerances": [
+        {
+          "max_profile_difference_percent": 1.0,
+          "max_deviation_percent": 7.0,
+          "min_intensity_ratio": 0.9995,
+          "max_intensity_ratio": 1.0008,
+          "min_correlation": 0.99993
+        }
+      ],
+      "reference_directory": "pd-neut-cwl_pbso4_beba-asymmetry",
+      "files": {
+        "pbso4.prf": "071e2b81921e0c47b12819db5a65ec3cc2efa92d914bb46746cb7c3faa35107b",
+        "pbso4.sum": "42128272cb26869839a4b7a406c8a34e38c0f70ddb83eb6f671246587e65158b",
+        "pbso4.bac": "a7ee9ccd9fd7b10713495817b715b87b38cf2cb97c561750b4e09a83eb34103a"
+      }
+    },
+    "pd-neut-cwl_Y2O3_isotropic-adp": {
+      "tolerances": [
+        {
+          "max_profile_difference_percent": 0.01,
+          "max_deviation_percent": 0.01,
+          "min_intensity_ratio": 0.9999,
+          "max_intensity_ratio": 1.0001,
+          "min_correlation": 0.999999
+        }
+      ],
+      "reference_directory": "pd-neut-cwl_y2o3_isotropic-adp",
+      "files": {
+        "y2o3_isotropic_adp.prf": "7b70793eb5b3556de446371b98876c62dfff5775dc5d8e41ef80ac5eca82b2f5",
+        "y2o3_isotropic_adp.sum": "721fea6c55fd689ffb0fddfdc489bc5f122305a8db701b2ea9904e2ead91f582",
+        "y2o3_isotropic_adp.bac": "a0e3fbdd25c98e65cd3123f9ec445015a4ec14a57707026bb23e6986a8e9e3eb"
+      }
+    },
+    "pd-neut-tof_Fe_pseudo-voigt": {
+      "tolerances": [
+        {
+          "max_profile_difference_percent": 0.05,
+          "max_deviation_percent": 0.05,
+          "min_intensity_ratio": 0.9998,
+          "max_intensity_ratio": 1.0004,
+          "min_correlation": 0.9999999
+        }
+      ],
+      "reference_directory": "pd-neut-tof_fe_pseudo-voigt",
+      "files": {
+        "fe_1.prf": "fd3761ea0c11dcb8e82571341bfa3b4045bf218e74df7e0a073d200c83a8012f",
+        "fe.sum": "5286353543b3d81b82d682d3cc95da8a12b850620b0d65f12237148b41b3c489",
+        "fe_1.bac": "16a34bda1efbf25220b4625eed1a779163c14084689141182a7eba6c8d4609ec"
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 12/10/2026  Time: 14:43:23.965                              
+
+ => PCR file code: ECH0030684_LaB6_1p622A_fcj
+ => DAT file code: ECH0030684_LaB6_1p62 -> Relative contribution: 1.0000                                                            
+ => Title: LaB6 Ge(331)
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => The    7th default profile function was selected
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
+ => Analysis of refinement at the end
+ => Wavelengths:  1.62390 1.62390
+ => Cos(Monochromator angle)=   0.0000
+ => Absorption correction (AC), muR-eff =   0.0000  0.0000
+ => Base of peaks: 2.0*HW*   12.00
+ ==> Angular range, step and number of points:
+     2Thmin:       4.164220  2Thmax:     163.756378  Step:       0.049998  No. of points:   3194
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    4.711 g/cm3
+
+ 
+              CPU Time:     0.094 seconds
+                            0.002 minutes
+
+ => Run finished at:     Date: 12/10/2026  Time: 14:43:24.066                              

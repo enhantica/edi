@@ -1,0 +1,115 @@
+{
+ "schema": "edi-data-index/1",
+ "entries": [
+  {
+   "id": "lbco",
+   "kind": "structure",
+   "name": "La0.5Ba0.5CoO3",
+   "description": "Cubic perovskite, La and Ba sharing one site",
+   "formula": "Ba0.5 Co La0.5 O3",
+   "elements": [
+    "Ba",
+    "Co",
+    "La",
+    "O"
+   ],
+   "space_group": "P m -3 m",
+   "cell": [
+    3.88,
+    3.88,
+    3.88,
+    90.0,
+    90.0,
+    90.0
+   ],
+   "source": "EasyDiffraction",
+   "files": [
+    {
+     "path": "structures/lbco.cif",
+     "format": "cif",
+     "sha256": "00d1adc78bc31fff2e5bb124127aab91eefc889e2065c51b378a51cad02778c6",
+     "bytes": 517
+    }
+   ]
+  },
+  {
+   "id": "lbco-hrpt",
+   "kind": "experiment",
+   "name": "La0.5Ba0.5CoO3 at HRPT",
+   "formula": "Ba0.5 Co La0.5 O3",
+   "elements": [
+    "Ba",
+    "Co",
+    "La",
+    "O"
+   ],
+   "radiation": "neutron",
+   "technique": "powder constant wavelength",
+   "instrument": "HRPT",
+   "facility": "PSI",
+   "source": "EasyDiffraction",
+   "structures": [
+    "lbco"
+   ],
+   "files": [
+    {
+     "path": "experiments/lbco_hrpt.edi",
+     "format": "edi",
+     "sha256": "f0c0e3839ffa3b6043992fb768eef3794ced6c869ceb7da52a57b8a387cac3f2",
+     "bytes": 46359
+    }
+   ]
+  },
+  {
+   "id": "lbco-hrpt-xye",
+   "kind": "data",
+   "name": "La0.5Ba0.5CoO3 pattern from HRPT",
+   "formula": "Ba0.5 Co La0.5 O3",
+   "elements": [
+    "Ba",
+    "Co",
+    "La",
+    "O"
+   ],
+   "radiation": "neutron",
+   "technique": "powder constant wavelength",
+   "instrument": "HRPT",
+   "facility": "PSI",
+   "source": "EasyDiffraction",
+   "files": [
+    {
+     "path": "data/lbco_hrpt.xye",
+     "format": "xye",
+     "sha256": "70dba3f642b394f0e7e7802a8637e0e287164562671993ee0701b813c902e360",
+     "bytes": 83671
+    }
+   ]
+  },
+  {
+   "id": "lbco-hrpt-project",
+   "kind": "project",
+   "name": "La₀.₅Ba₀.₅CoO₃ [Pm-3m]",
+   "description": "Cubic perovskite · La and Ba sharing one site · Profile, background, displacements",
+   "formula": "Ba0.5 Co La0.5 O3",
+   "elements": [
+    "Ba",
+    "Co",
+    "La",
+    "O"
+   ],
+   "radiation": "neutron",
+   "technique": "powder constant wavelength",
+   "instrument": "HRPT",
+   "facility": "PSI",
+   "source": "EasyDiffraction",
+   "files": [
+    {
+     "path": "projects/lbco-hrpt.zip",
+     "format": "zip",
+     "sha256": "9c59e42b0efd7f0f81345600519771fea4d659a0b305a51d5014976ef17323f9",
+     "bytes": 15873
+    }
+   ]
+  }
+ ]
+}

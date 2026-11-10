@@ -1,0 +1,9 @@
+loop_
+_fit_parameter_correlation.id
+_fit_parameter_correlation.source_kind
+_fit_parameter_correlation.parameter_unique_name_i
+_fit_parameter_correlation.parameter_unique_name_j
+_fit_parameter_correlation.correlation
+1 deterministic bank.background.base.coef bank.background.ramp.coef -0.80268761959358648
+2 deterministic bank.background.base.coef bank.background.curve.coef 0.65431991913353948
+3 deterministic bank.background.ramp.coef bank.background.curve.coef -0.96215765242478601

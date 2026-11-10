@@ -1,0 +1,26 @@
+data_copper
+_edi.schema_version 3
+_experiment_type.sample_form "single crystal"
+_experiment_type.radiation_probe neutron
+_experiment_type.scattering_type bragg
+_experiment_type.beam_mode "constant wavelength"
+_scattering_source.neutron_scattering_length sears1992
+_instrument.setup_wavelength .8
+_extinction.type none
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+phase_m 1.6
+loop_
+_refln.index_h
+_refln.index_k
+_refln.index_l
+_refln.intensity_meas
+_refln.intensity_meas_su
+1 1 1 0.5346087123161019 0.009
+2 2 3 0.523123133836855 0.013499999999999998
+3 1 2 0.49455810099934705 0.018
+4 2 1 0.4827097727844141 0.009
+5 1 3 0.41568972694882356 0.013499999999999998
+6 2 2 0.406767165766549 0.018
+7 1 1 0.36923314740824803 0.009

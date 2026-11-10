@@ -1,0 +1,143 @@
+{
+  "claim": "REGRESSION INPUT: separately executed settled Auto/save/reload authoring flow",
+  "engine_source_commit": "3188231bb61f9594e06bbed8e39cb37393477672",
+  "engine_stamp": "3188231bb61f9594e06bbed8e39cb37393477672",
+  "engine_binary_sha256": "2ee267849b336d020ef78b9bfa7b02dcef23b4ee909541cb544c6ca41ef69623",
+  "command": "python -m tests.fixtures.background_estimate.generate_app_lifecycle --engine-source-commit 3188231bb61f9594e06bbed8e39cb37393477672",
+  "sampling": "every fourth original measured row, plus the last row; no interpolation",
+  "scope": "bounded app worker/type/Undo lifecycle; full measured inputs and Manual-fit pins remain separate, and no physics accuracy claim uses this subset",
+  "cases": {
+    "line-segment": {
+      "source_sha256": {
+        "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
+        "experiments/d20.edi": "a967d961d35cd7d566f38b16d0f01278f9bc0c5f1e9b44e2b53addaa8bc32681",
+        "project.edi": "4dae4ba4e331b7f0ab16d9e5407033205ae3a577b2082930b453553e7fd6086a",
+        "structures/cosio.edi": "c50a073381764ae5e8d8e5a77599290f4dee8a79986eee47fbb454bda8b755c8"
+      },
+      "source_points": 1418,
+      "measured_points": 356,
+      "initial_rows": [
+        [
+          "1",
+          8.0953,
+          579.0903802027862,
+          true
+        ],
+        [
+          "2",
+          15.2953,
+          508.2031889650246,
+          true
+        ],
+        [
+          "3",
+          32.8953,
+          422.81842857142857,
+          true
+        ],
+        [
+          "4",
+          57.6953,
+          444.4878571428572,
+          true
+        ],
+        [
+          "5",
+          80.6953,
+          421.57757151692357,
+          true
+        ],
+        [
+          "6",
+          132.3953,
+          319.16772866954193,
+          true
+        ],
+        [
+          "7",
+          132.7953,
+          318.1199211048958,
+          true
+        ],
+        [
+          "8",
+          133.9953,
+          314.5887048517621,
+          true
+        ],
+        [
+          "9",
+          150.0953,
+          315.3607644609109,
+          true
+        ]
+      ],
+      "sha256": {
+        "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
+        "experiments/d20.edi": "4831f0fd049046239f2346429534d8eca426a074e0434e1801ad4bac036a3687",
+        "project.edi": "4dae4ba4e331b7f0ab16d9e5407033205ae3a577b2082930b453553e7fd6086a",
+        "structures/cosio.edi": "c50a073381764ae5e8d8e5a77599290f4dee8a79986eee47fbb454bda8b755c8"
+      }
+    },
+    "polynomial": {
+      "source_sha256": {
+        "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
+        "experiments/d20.edi": "eb71831245aa68f32f1eac5d0a72d9001fdc3daae0378ce48e43b2e842930ac1",
+        "project.edi": "4dae4ba4e331b7f0ab16d9e5407033205ae3a577b2082930b453553e7fd6086a",
+        "structures/cosio.edi": "c50a073381764ae5e8d8e5a77599290f4dee8a79986eee47fbb454bda8b755c8"
+      },
+      "source_points": 1418,
+      "measured_points": 356,
+      "initial_rows": [
+        [
+          "0",
+          0,
+          405.0061649233137,
+          true
+        ],
+        [
+          "1",
+          1,
+          -126.14595825295855,
+          true
+        ]
+      ],
+      "sha256": {
+        "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
+        "experiments/d20.edi": "33b86953cad0b7bb75ddc86c1a66a554473b7ba500d79b8f91cbcdadbc0234ed",
+        "project.edi": "4dae4ba4e331b7f0ab16d9e5407033205ae3a577b2082930b453553e7fd6086a",
+        "structures/cosio.edi": "c50a073381764ae5e8d8e5a77599290f4dee8a79986eee47fbb454bda8b755c8"
+      }
+    },
+    "chebyshev": {
+      "source_sha256": {
+        "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
+        "experiments/d20.edi": "8dcf7ef33abc200e18ad8043cde0a073643139ce72f0832d6498c7ce6f15d6fd",
+        "project.edi": "4dae4ba4e331b7f0ab16d9e5407033205ae3a577b2082930b453553e7fd6086a",
+        "structures/cosio.edi": "c50a073381764ae5e8d8e5a77599290f4dee8a79986eee47fbb454bda8b755c8"
+      },
+      "source_points": 1418,
+      "measured_points": 356,
+      "initial_rows": [
+        [
+          "0",
+          0,
+          406.66924170043114,
+          true
+        ],
+        [
+          "1",
+          1,
+          -111.7180142777764,
+          true
+        ]
+      ],
+      "sha256": {
+        "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
+        "experiments/d20.edi": "b9e812d3805f0b12819e8cb25ffa290b8916e0546fe2bb7a989e955c543c7eb9",
+        "project.edi": "4dae4ba4e331b7f0ab16d9e5407033205ae3a577b2082930b453553e7fd6086a",
+        "structures/cosio.edi": "c50a073381764ae5e8d8e5a77599290f4dee8a79986eee47fbb454bda8b755c8"
+      }
+    }
+  }
+}

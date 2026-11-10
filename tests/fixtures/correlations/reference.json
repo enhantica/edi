@@ -1,0 +1,110 @@
+{
+  "reference_revision": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+  "reference_sources": {
+    "src/easydiffraction/analysis/analysis.py": "b9c80be741bfc4cd149e0d95b8fb5a4eea6f75756a4db28a9a78a75baaf5e2e2",
+    "src/easydiffraction/display/plotters/plotly.py": "6c76e1e620daa1b7d5e285500cbf0b9783cedb48460218be0d6738ec00e79f3e",
+    "src/easydiffraction/display/plotting.py": "7a837a5cad937fb77b7b154ba8d46ce37f694f9026e61392801559e8af8ec132"
+  },
+  "method": "Unit-weight polynomial least squares: inverse(X.T @ X), normalized by diffraction-lib; no product engine imported.",
+  "cases": {
+    "1": {
+      "names": [
+        "bank.background.base.coef"
+      ],
+      "matrix": [
+        [
+          1.0
+        ]
+      ],
+      "rows": []
+    },
+    "2": {
+      "names": [
+        "bank.background.base.coef",
+        "bank.background.ramp.coef"
+      ],
+      "matrix": [
+        [
+          1.0000000000000002,
+          -0.8401680504168058
+        ],
+        [
+          -0.8401680504168058,
+          0.9999999999999999
+        ]
+      ],
+      "rows": [
+        {
+          "source_kind": "deterministic",
+          "parameter_unique_name_i": "bank.background.base.coef",
+          "parameter_unique_name_j": "bank.background.ramp.coef",
+          "correlation": -0.8401680504168058
+        }
+      ]
+    },
+    "3": {
+      "names": [
+        "bank.background.base.coef",
+        "bank.background.ramp.coef",
+        "bank.background.curve.coef"
+      ],
+      "matrix": [
+        [
+          1.0000000000000002,
+          -0.8026876195935865,
+          0.6543199191335395
+        ],
+        [
+          -0.802687619593586,
+          1.0,
+          -0.962157652424786
+        ],
+        [
+          0.6543199191335392,
+          -0.962157652424786,
+          1.0000000000000002
+        ]
+      ],
+      "rows": [
+        {
+          "source_kind": "deterministic",
+          "parameter_unique_name_i": "bank.background.base.coef",
+          "parameter_unique_name_j": "bank.background.ramp.coef",
+          "correlation": -0.8026876195935865
+        },
+        {
+          "source_kind": "deterministic",
+          "parameter_unique_name_i": "bank.background.base.coef",
+          "parameter_unique_name_j": "bank.background.curve.coef",
+          "correlation": 0.6543199191335395
+        },
+        {
+          "source_kind": "deterministic",
+          "parameter_unique_name_i": "bank.background.ramp.coef",
+          "parameter_unique_name_j": "bank.background.curve.coef",
+          "correlation": -0.962157652424786
+        }
+      ]
+    }
+  },
+  "heatmap": {
+    "colorscale": [
+      [
+        0.0,
+        "#d73027"
+      ],
+      [
+        0.5,
+        "#ffffff"
+      ],
+      [
+        1.0,
+        "#4575b4"
+      ]
+    ],
+    "zmin": -1,
+    "zmax": 1,
+    "zmid": 0,
+    "shape_count": 6
+  }
+}

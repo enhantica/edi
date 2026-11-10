@@ -1,0 +1,1955 @@
+{
+    "actions": [
+        {
+            "action": "platform:light",
+            "scene": "home"
+        },
+        {
+            "action": "theme:light",
+            "scene": "home"
+        },
+        {
+            "action": "home.start",
+            "scene": "project-details"
+        },
+        {
+            "action": "project.create",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.name=pd-neut-tof_ncaf-wish",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.title=Na₂Ca₃Al₂F₁₄ [I2₁3] - WISH @ ISIS",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-nIdXLX/pd-neut-tof_ncaf-wish",
+            "scene": "project-details"
+        },
+        {
+            "action": "createProject.accept",
+            "scene": "project-created"
+        },
+        {
+            "action": "pin-time:01 Jan 2026 12:00:00",
+            "scene": "project-created"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "expand:group.structures",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "structures.load",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "structures.load.web",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.source",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "choose:EasyDiffraction Database",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=pd-neut-tof_ncaf-wish-ncaf",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "structure-loaded-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-loaded-0"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "expand:group.experiments",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "experiments.load",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "experiments.load.experimentWeb",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=pd-neut-tof_ncaf-wish-wish_1_10",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "experiment-loaded-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-loaded-0"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "expand:group.experiments",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "experiments.load",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "experiments.load.experimentWeb",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=pd-neut-tof_ncaf-wish-wish_2_9",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "experiment-loaded-1"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-loaded-1"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "expand:group.experiments",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "experiments.load",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "experiments.load.experimentWeb",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=pd-neut-tof_ncaf-wish-wish_3_8",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "experiment-loaded-2"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-loaded-2"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "experiment-web-3"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "experiment-web-3"
+        },
+        {
+            "action": "expand:group.experiments",
+            "scene": "experiment-web-3"
+        },
+        {
+            "action": "experiments.load",
+            "scene": "experiment-web-3"
+        },
+        {
+            "action": "experiments.load.experimentWeb",
+            "scene": "experiment-web-3"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=pd-neut-tof_ncaf-wish-wish_4_7",
+            "scene": "experiment-web-3"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "experiment-web-3"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-web-3"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "experiment-loaded-3"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-loaded-3"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "experiment-web-4"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "experiment-web-4"
+        },
+        {
+            "action": "expand:group.experiments",
+            "scene": "experiment-web-4"
+        },
+        {
+            "action": "experiments.load",
+            "scene": "experiment-web-4"
+        },
+        {
+            "action": "experiments.load.experimentWeb",
+            "scene": "experiment-web-4"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=pd-neut-tof_ncaf-wish-wish_5_6",
+            "scene": "experiment-web-4"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "experiment-web-4"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-web-4"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "experiment-loaded-4"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-loaded-4"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_1_10].instrument.calib_d_to_tof_linear",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_1_10].instrument.calib_d_to_tof_offset",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_1_10].linked_structures[ncaf].scale",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_2_9].instrument.calib_d_to_tof_linear",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_2_9].instrument.calib_d_to_tof_offset",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_2_9].linked_structures[ncaf].scale",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_3_8].instrument.calib_d_to_tof_linear",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_3_8].instrument.calib_d_to_tof_offset",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_3_8].linked_structures[ncaf].scale",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_4_7].instrument.calib_d_to_tof_linear",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_4_7].instrument.calib_d_to_tof_offset",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_4_7].linked_structures[ncaf].scale",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_5_6].instrument.calib_d_to_tof_linear",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_5_6].instrument.calib_d_to_tof_offset",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_5_6].linked_structures[ncaf].scale",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_1_10].background[",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_2_9].background[",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_3_8].background[",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_4_7].background[",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_5_6].background[",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_2_9].peak.broad_gauss_sigma_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_2_9].peak.broad_gauss_sigma_2",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_2_9].peak.broad_lorentz_gamma_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_2_9].peak.decay_beta_0",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_2_9].peak.decay_beta_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_2_9].peak.rise_alpha_0",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_2_9].peak.rise_alpha_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_3_8].peak.broad_gauss_sigma_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_3_8].peak.broad_gauss_sigma_2",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_3_8].peak.decay_beta_0",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_3_8].peak.decay_beta_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_3_8].peak.rise_alpha_0",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_3_8].peak.rise_alpha_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_4_7].peak.broad_gauss_sigma_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_4_7].peak.broad_gauss_sigma_2",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_4_7].peak.decay_beta_0",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_4_7].peak.decay_beta_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_4_7].peak.rise_alpha_0",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_4_7].peak.rise_alpha_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_5_6].peak.broad_gauss_sigma_2",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_5_6].peak.decay_beta_0",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_5_6].peak.decay_beta_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_5_6].peak.rise_alpha_0",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_5_6].peak.rise_alpha_1",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_2_9].absorption.abscor1",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_3_8].absorption.abscor1",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_4_7].absorption.abscor1",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=experiments[wish_5_6].absorption.abscor1",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Al1].fract_x",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Ca1].fract_x",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[F1].fract_x",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[F1].fract_y",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[F1].fract_z",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[F2].fract_x",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[F2].fract_y",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[F2].fract_z",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[F3].fract_x",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Na1].fract_x",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Al1].adp_iso",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Ca1].adp_iso",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[F1].adp_iso",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[F2].adp_iso",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[F3].adp_iso",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=structure.atom_sites[Na1].adp_iso",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "mainArea.analysis.tab.correlations",
+            "scene": "correlations"
+        },
+        {
+            "action": "mainArea.analysis.tab.fitting",
+            "scene": "report"
+        },
+        {
+            "action": "appBar.tab.report",
+            "scene": "report"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "report"
+        }
+    ],
+    "binary_sha256": "b5cc90a1c3fb05fa5f5729aa7e3a496252546936ddc5ac49724bc250094c5fe4",
+    "dependencies": [
+        {
+            "file": "inputs/analysis/analysis.edi",
+            "sha256": "7a697d796bf8343b6ffa768a341fd0b9eea057ed84cbae9759f418e3f71e9895"
+        },
+        {
+            "file": "inputs/experiments/wish_2_9.edi",
+            "sha256": "2e921f4c31ed9dd39f7a26475cf0798db7fcfe34fcfca2e34479de26d5644012"
+        },
+        {
+            "file": "inputs/experiments/wish_3_8.edi",
+            "sha256": "f42e3b7a75128300f69a93d4e1c0628f160ef1c42f998f8b86c2f3227d5ce3c0"
+        },
+        {
+            "file": "inputs/experiments/wish_4_7.edi",
+            "sha256": "21dbc4f9632d817bdba4bb0cc27529535a964ad1805d358454d05ccedebc861c"
+        },
+        {
+            "file": "inputs/experiments/wish_5_6.edi",
+            "sha256": "710d2a36a973081d25cec22d09c159684ed0df8b38a08951fd948f3d8c888556"
+        }
+    ],
+    "error": "",
+    "example": "pd-neut-tof_ncaf-wish",
+    "fixture": {
+        "detail": "All five detector bank pairs fitted jointly · Jorgensen–Von Dreele profile · Per-bank calibration",
+        "id": "pd-neut-tof_ncaf-wish",
+        "origin": "WISH @ ISIS",
+        "samples": [
+            "Na₂Ca₃Al₂F₁₄ [I2₁3]"
+        ],
+        "searchAliases": [
+            "pd-neut-tof_ncaf-wish",
+            "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS",
+            "All five detector bank pairs fitted jointly · Jorgensen–Von Dreele profile · Per-bank calibration"
+        ],
+        "sources": [
+            "docs/user/cli/pd-neut-tof_ncaf-wish/project/project.edi",
+            "docs/user/cli/pd-neut-tof_ncaf-wish/project/analysis/analysis.edi",
+            "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_1_10.edi",
+            "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_2_9.edi",
+            "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_3_8.edi",
+            "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_4_7.edi",
+            "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_5_6.edi",
+            "docs/user/cli/pd-neut-tof_ncaf-wish/project/structures/ncaf.edi"
+        ],
+        "values": {
+            "beamMode": [
+                "time-of-flight"
+            ],
+            "dimensionality": [
+                "1d"
+            ],
+            "facilities": [
+                "ISIS"
+            ],
+            "fittingMode": [
+                "joint"
+            ],
+            "instruments": [
+                "WISH"
+            ],
+            "polarisation": [
+                "unpolarised"
+            ],
+            "probe": [
+                "neutron"
+            ],
+            "purpose": [
+                "refinement"
+            ],
+            "sampleForm": [
+                "powder"
+            ],
+            "scatteringType": [
+                "bragg"
+            ],
+            "structure": [
+                "crystal"
+            ]
+        }
+    },
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "inputs": {
+        "experiment": {
+            "file": "inputs/experiments/wish_1_10.edi",
+            "sha256": "2b9be49af490454d817f78e200852c640a025a14607efe41ff0b18683c9e918b"
+        },
+        "structure": {
+            "file": "inputs/structures/ncaf.edi",
+            "sha256": "7eefbd591ab966a95b10bf062be50d0302820a06b62f5207371857c408a0be99"
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "scenes": [
+        {
+            "description": "Create the project",
+            "id": "project-created",
+            "image": "project-created.webp",
+            "metadata": "project-created.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Find the structure ncaf in the EasyDiffraction collection",
+            "id": "structure-web-0",
+            "image": "structure-web-0.webp",
+            "metadata": "structure-web-0.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Load the structure ncaf",
+            "id": "structure-loaded-0",
+            "image": "structure-loaded-0.webp",
+            "metadata": "structure-loaded-0.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Find the experiment wish_1_10 in the EasyDiffraction collection",
+            "id": "experiment-web-0",
+            "image": "experiment-web-0.webp",
+            "metadata": "experiment-web-0.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Load the experiment wish_5_6",
+            "id": "experiment-loaded-4",
+            "image": "experiment-loaded-4.webp",
+            "metadata": "experiment-loaded-4.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Start with every parameter fixed",
+            "id": "nothing-free",
+            "image": "nothing-free.webp",
+            "metadata": "nothing-free.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Scales and time-of-flight calibration",
+            "id": "stage-1-fit",
+            "image": "stage-1-fit.webp",
+            "metadata": "stage-1-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Background",
+            "id": "stage-2-fit",
+            "image": "stage-2-fit.webp",
+            "metadata": "stage-2-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Peak shapes",
+            "id": "stage-3-fit",
+            "image": "stage-3-fit.webp",
+            "metadata": "stage-3-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Absorption",
+            "id": "stage-4-fit",
+            "image": "stage-4-fit.webp",
+            "metadata": "stage-4-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Atom positions",
+            "id": "stage-5-fit",
+            "image": "stage-5-fit.webp",
+            "metadata": "stage-5-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Displacements",
+            "id": "stage-6-fit",
+            "image": "stage-6-fit.webp",
+            "metadata": "stage-6-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the correlations",
+            "id": "correlations",
+            "image": "correlations.webp",
+            "metadata": "correlations.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Review the report",
+            "id": "report",
+            "image": "report.webp",
+            "metadata": "report.json",
+            "page": "report",
+            "sidebar": "Main",
+            "status": "captured"
+        }
+    ],
+    "schema": 1,
+    "script_sha256": "aa63f610f431f17ffb3a6c9babffe2a944dbec0459c786f5304a64e83fb003a1",
+    "source_revision": "a4b6be4f6926cc6b17811f3263d7a34afff75a6d",
+    "status": "complete",
+    "workflow": "tutorial"
+}

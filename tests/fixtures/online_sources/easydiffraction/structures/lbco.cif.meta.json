@@ -1,0 +1,8 @@
+{
+ "id": "lbco",
+ "name": "La0.5Ba0.5CoO3",
+ "description": "Cubic perovskite, La and Ba sharing one site",
+ "formula": "Ba0.5 Co La0.5 O3",
+ "space_group": "P m -3 m",
+ "source": "EasyDiffraction"
+}

@@ -1,0 +1,11 @@
+{
+  "cosio-d20-s1": "_edi.schema_version 2\n\n_fitting_mode.type single\n\n_minimizer.type \"lmfit (leastsq)\"\n_minimizer.max_iterations 1000\n",
+  "cosio-d20-s4": "_edi.schema_version 2\n\n_fitting_mode.type single\n\n_minimizer.type \"lmfit (leastsq)\"\n_minimizer.max_iterations 1000\n",
+  "cosio-d20-scan-3f": "_edi.schema_version 2\n\n_fitting_mode.type sequential\n\n_minimizer.type \"crysta (lm)\"\n_minimizer.max_iterations 1000\n\n_sequential_fit.data_dir experiments/d20_scan\n_sequential_fit.file_pattern *.dat\n_sequential_fit.reverse false\n\nloop_\n_sequential_fit_extract.id\n_sequential_fit_extract.target\n_sequential_fit_extract.pattern\n_sequential_fit_extract.required\ntemperature diffrn.ambient_temperature ^TEMP\\s+([0-9.]+) true\n",
+  "lbco-hrpt-s2": "_edi.schema_version 2\n\n_fitting_mode.type single\n\n_minimizer.type \"lmfit (leastsq)\"\n_minimizer.max_iterations 1000\n",
+  "lbco-hrpt-s4": "_edi.schema_version 2\n\n_fitting_mode.type single\n\n_minimizer.type \"lmfit (leastsq)\"\n_minimizer.max_iterations 1000\n",
+  "ncaf-wish-2bank-s3": "_edi.schema_version 2\n\n_fitting_mode.type joint\n\n_minimizer.type \"lmfit (leastsq)\"\n_minimizer.max_iterations 1000\n\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nwish_4_7 1.0\nwish_5_6 1.0\n",
+  "ncaf-wish-3bank-s5": "_edi.schema_version 2\n\n_fitting_mode.type joint\n\nloop_\n_joint_fit.experiment_id\n_joint_fit.weight\nwish_5_6 1.0\nwish_4_7 1.0\nwish_2_9 1.0\n",
+  "si-sepd-s2": "_edi.schema_version 2\n\n_fitting_mode.type single\n\n_minimizer.type \"lmfit (leastsq)\"\n_minimizer.max_iterations 1000\n",
+  "si-sepd-s5": "_edi.schema_version 2\n\n_fitting_mode.type single\n\n_minimizer.type \"lmfit (leastsq)\"\n_minimizer.max_iterations 1000\n"
+}

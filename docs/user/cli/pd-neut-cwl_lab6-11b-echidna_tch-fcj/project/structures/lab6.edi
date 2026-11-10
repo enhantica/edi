@@ -1,0 +1,32 @@
+data_lab6
+
+_edi.schema_version 3
+
+_cell.length_a 4.156885
+_cell.length_b 4.156885
+_cell.length_c 4.156885
+_cell.angle_alpha 90.0
+_cell.angle_beta 90.0
+_cell.angle_gamma 90.0
+
+_space_group.name_h_m "P m -3 m"
+
+loop_
+_scattering_length.type_symbol
+_scattering_length.length_fm
+B 6.65
+La 8.24
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.multiplicity
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+La La 0.0 0.0 0.0 a 1 1.0 0.59716() Biso
+B B 0.19978() 0.5 0.5 f 6 1.0 0.4425() Biso

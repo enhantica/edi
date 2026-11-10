@@ -1,0 +1,24 @@
+{
+  "source": "https://github.com/easyscience/diffraction-lib/blob/cb2cda7b/docs/docs/tutorials/refine-lbco-hrpt-from-data.py",
+  "sha256": "2c4423d80d5be021b11693db8205f047507aca0e7c5a2b9744a407980eb291b9",
+  "outline": [
+    "\ud83d\udee0\ufe0f Import Library",
+    "\ud83d\udce6 Define Project",
+    "\ud83e\udde9 Define Structure",
+    "\ud83d\udd2c Define Experiment",
+    "\ud83d\ude80 Perform Analysis",
+    "\ud83d\udcbe Save Project"
+  ],
+  "workflow": [
+    "create empty project",
+    "create named structure and atom sites",
+    "add measured experiment",
+    "set wavelength, profile, background and exclusions",
+    "link named structure",
+    "free parameters",
+    "fit",
+    "display pattern, results and free parameters"
+  ],
+  "adaptation": "Use edi fit and free vocabulary; omit calculator and minimizer switching. Repeated fits retain displays. Source values define a workflow, not fitted-value correctness.",
+  "site_symmetry_reference": "crysta corpus lbco-hrpt-s2/project/structures/lbco.edi: P m -3 m sites La/Ba a (1), Co b (1), O c (3); Wyckoff letters are assigned through the public atom-site field and determine the multiplicities"
+}

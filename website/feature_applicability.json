@@ -1,0 +1,73 @@
+{
+ "types": [
+  ["powder", "constant wavelength", "neutron"],
+  ["powder", "constant wavelength", "xray"],
+  ["powder", "time-of-flight", "neutron"],
+  ["powder", "time-of-flight", "xray"],
+  ["single crystal", "constant wavelength", "neutron"],
+  ["single crystal", "time-of-flight", "neutron"]
+ ],
+ "accepts": {
+  "absorption.type=cylinder-hewat": [
+   ["powder", "constant wavelength", "neutron"],
+   ["powder", "constant wavelength", "xray"],
+   ["powder", "time-of-flight", "neutron"],
+   ["powder", "time-of-flight", "xray"],
+   ["single crystal", "constant wavelength", "neutron"],
+   ["single crystal", "time-of-flight", "neutron"]
+  ],
+  "absorption.type=cylinder-lobanov": [
+   ["powder", "constant wavelength", "neutron"],
+   ["powder", "constant wavelength", "xray"],
+   ["single crystal", "constant wavelength", "neutron"]
+  ],
+  "extinction.type=becker-coppens-mixed": [
+   ["single crystal", "constant wavelength", "neutron"],
+   ["single crystal", "time-of-flight", "neutron"]
+  ],
+  "extinction.type=larson-anisotropic": [
+   ["single crystal", "constant wavelength", "neutron"],
+   ["single crystal", "time-of-flight", "neutron"]
+  ],
+  "peak.type=cwl-gaussian": [
+   ["powder", "constant wavelength", "neutron"],
+   ["powder", "constant wavelength", "xray"],
+   ["single crystal", "constant wavelength", "neutron"]
+  ],
+  "peak.type=cwl-pseudo-voigt": [
+   ["powder", "constant wavelength", "neutron"],
+   ["powder", "constant wavelength", "xray"],
+   ["single crystal", "constant wavelength", "neutron"]
+  ],
+  "peak.type=cwl-pseudo-voigt-berar-baldinozzi": [
+   ["powder", "constant wavelength", "neutron"],
+   ["powder", "constant wavelength", "xray"],
+   ["single crystal", "constant wavelength", "neutron"]
+  ],
+  "peak.type=cwl-tch-pseudo-voigt": [
+   ["powder", "constant wavelength", "neutron"],
+   ["powder", "constant wavelength", "xray"],
+   ["single crystal", "constant wavelength", "neutron"]
+  ],
+  "peak.type=cwl-tch-pseudo-voigt-fcj": [
+   ["powder", "constant wavelength", "neutron"],
+   ["powder", "constant wavelength", "xray"],
+   ["single crystal", "constant wavelength", "neutron"]
+  ],
+  "peak.type=tof-jorgensen": [
+   ["powder", "time-of-flight", "neutron"],
+   ["powder", "time-of-flight", "xray"],
+   ["single crystal", "time-of-flight", "neutron"]
+  ],
+  "peak.type=tof-jorgensen-von-dreele": [
+   ["powder", "time-of-flight", "neutron"],
+   ["powder", "time-of-flight", "xray"],
+   ["single crystal", "time-of-flight", "neutron"]
+  ],
+  "peak.type=tof-pseudo-voigt": [
+   ["powder", "time-of-flight", "neutron"],
+   ["powder", "time-of-flight", "xray"],
+   ["single crystal", "time-of-flight", "neutron"]
+  ]
+ }
+}

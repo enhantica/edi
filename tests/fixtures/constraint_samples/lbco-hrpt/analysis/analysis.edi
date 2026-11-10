@@ -1,0 +1,20 @@
+_edi.schema_version 2
+
+_fitting_mode.type single
+
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_La lbco.atom_site.La.adp_iso
+biso_Ba lbco.atom_site.Ba.adp_iso
+occ_La lbco.atom_site.La.occupancy
+occ_Ba lbco.atom_site.Ba.occupancy
+
+loop_
+_constraint.id
+_constraint.expression
+biso_Ba "biso_Ba = biso_La"
+occ_Ba "occ_Ba = 1 - occ_La"

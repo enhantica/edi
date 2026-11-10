@@ -1,0 +1,22 @@
+/* Subtle audience switcher — small, bottom-right, out of the way.*/
+.audience-switcher {
+  position: fixed;
+  right: 0.8rem;
+  bottom: 0.6rem;
+  z-index: 100;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.65rem;
+  border-radius: 1rem;
+  background: var(--md-default-fg-color--lightest, #eee);
+  color: var(--md-default-fg-color--light, #555);
+  opacity: 0.75;
+}
+.audience-switcher:hover {
+  opacity: 1;
+}
+
+/* Every docs table fills the content width (owner record 2026-11-09): Zensical wraps each table in an inline-block
+   .md-typeset__table, so the wrapper and the table both take the full width. Text wraps; a number has no space to
+   wrap at. */
+.md-typeset .md-typeset__scrollwrap,.md-typeset .md-typeset__table{display:block;width:100%}
+.md-typeset table:not([class]){display:table;width:100%}

@@ -1,0 +1,267 @@
+# The CLI project registry: every project under docs/user/cli/<id>/ and whether it is in the EXECUTING
+# set — the set CI and `pixi run verify` run through `python -m edi` and compare against the project's
+# expected.json (tools/checks/cli_projects.py). A C33 feature task `add`s a project here or `extend`s
+# one. Project ids are <technique>_<sample>[-<instrument>][_<variant>], lowercase, each part kebab-case,
+# with a variant only when it tells the user something (simulation, scan); the project's _metadata.name
+# is the id. Older test fixtures keep their three-part ids.
+# `offline: true`: executing, but too slow for CI — it runs only when asked for explicitly
+# (`python tools/checks/cli_projects.py --offline`), never in CI or `pixi run verify`.
+# `user-facing` set to `true`: one of the example catalogue's cases, listed in the app's examples in registry
+# order; every other project is a test fixture.
+# `verification: true`: a project whose model is exactly another program's, fitted only for its scale or against
+# that program's own calculation (ADR-0031); it stays a CLI project and is never one of the app's examples.
+# A case's record (ADR-0080): `title: "<sample> on <instrument>"` (the page title) and `short-name:` (its navigation
+# title is `<short-name> <code>`, unique in its section); `diffraction-lib: <tutorial>` when diffraction-lib has the same case, else
+# `follows-diffraction-lib: <tutorial>` for the tutorial whose outline it takes; `structure-by-hand: true` when its
+# tutorials build the structure step by step instead of loading the collection's CIF; `data-from-file: true` when
+# they also load the data from a file on the user's disk; `interfaces: [app, python, cli]` (the default) or a subset
+# when its tutorials cover only some interfaces, the others shown as a dash and never asked for.
+schema: 1
+projects:
+  - id: pd-neut-cwl_cosio-d20_start-1
+    executing: true
+  - id: pd-neut-cwl_cosio-d20_start-4
+    executing: true
+  - id: pd-neut-cwl_cosio-d20_scan-3f
+    executing: true
+  - id: pd-neut-cwl_cosio-d20_scan-162f
+    executing: true
+    offline: true
+  - id: pd-neut-cwl_cosio-d20_scan-324f
+    executing: true
+    offline: true
+  - id: pd-neut-cwl_lbco-hrpt_start-2
+    executing: true
+  - id: pd-neut-cwl_lbco-hrpt_start-4
+    executing: true
+  - id: pd-neut-tof_ncaf-wish-2bank_start-3
+    executing: true
+  - id: pd-neut-tof_ncaf-wish-3bank_start-5
+    executing: true
+  - id: pd-neut-tof_ncaf-wish-5bank_start-5
+    # The five-bank project with the original FullProf free set and excluded regions.
+    executing: true
+  - id: pd-neut-tof_ncaf-wish-5bank_start-fullprof
+    # The same project started at every value of FullProf's own .pcr.
+    executing: true
+  - id: pd-neut-tof_si-sepd_start-2
+    executing: true
+  - id: pd-neut-tof_si-sepd_start-5
+    executing: true
+  - id: pd-neut-tof_diamond-dream_basic
+    executing: true
+    verification: true
+  - id: pd-neut-cwl_lab6-echidna_fcj-asymmetry
+    # A scale-only fit of a verification parameter set; executing once every feature its full .pcr fit needs exists (the C33 milestone
+    # page's list).
+    executing: false
+    verification: true
+  - id: pd-neut-cwl_pbso4_beba-asymmetry
+    # The pseudo-Voigt with Berar-Baldinozzi re-fitted (profile, mixing, asymmetry, scale) since FullProf's TCH pair left edi.
+    executing: false
+  - id: pd-neut-cwl_yap-spodi_3k
+    executing: true
+  - id: pd-xray-cwl_latp_scan-4f
+    # Three phases in a synchrotron X-ray sequential scan, against the owner's FullProf fit.
+    executing: true
+  - id: pd-neut-tof_fe_pseudo-voigt
+    # A scale-only fit of a verification parameter set; executing once every feature its full .pcr fit needs exists (the C33 milestone
+    # page's list).
+    executing: false
+    verification: true
+  - id: pd-neut-tof_cecoal-polaris_chebyshev
+    # CeCoAl3 with FullProf's Chebyshev background (Nba -5), against a FullProf fit.
+    executing: true
+  - id: pd-neut-tof_ceo2-pearl_polynomial
+    # CeO2 with FullProf's plain polynomial background (Nba 0), against a FullProf fit.
+    executing: true
+  - id: pd-neut-cwl_lab6-11b-echidna_tch-fcj
+    # The owner's LaB6 TCH x FCJ fit, polynomial background, against FullProf.
+    executing: true
+  - id: pd-xray-cwl_lif_single
+    # Fits the two X-ray polarization parameters against FullProf's calculated profile; executing since edi
+    # declared the two parameters.
+    executing: true
+    verification: true
+  - id: pd-neut-tof_ferrite-austenite-beer_joint
+    # Ferrite and austenite against two BEER banks, fitted jointly, each bank's phase scales free.
+    executing: true
+  - id: pd-neut-cwl_y2o3_beta-adp
+    # Y2O3 with anisotropic beta ADPs tied by site symmetry; the scale alone against FullProf's fit.
+    executing: true
+    verification: true
+  - id: pd-xray-cwl_pbso4-lab_round-robin
+    executing: true
+  - id: pd-neut-cwl_lab6-11b-echidna_basic
+    executing: true
+  - id: pd-neut-tof_diamond-dream_mcstas
+    executing: true
+  # The example catalogue: its user-facing cases in the order the app lists them, simplest first:
+  # calculations, constant-wavelength neutron, time-of-flight neutron, X-ray, joint, scans.
+  - id: pd-neut-cwl_lbco_simulation
+    title: "La₀.₅Ba₀.₅CoO₃ on HRPT"
+    short-name: "LBCO"
+    diffraction-lib: simulate-lbco-cwl
+    executing: true
+    user-facing: true
+  - id: pd-neut-cwl_lbco-hrpt
+    title: "La₀.₅Ba₀.₅CoO₃ on HRPT"
+    short-name: "LBCO"
+    structure-by-hand: true
+    diffraction-lib: refine-lbco-hrpt-from-data
+    executing: true
+    user-facing: true
+  - id: pd-neut-cwl_hs-hrpt
+    title: "ZnCu₃(OD)₆Cl₂ on HRPT"
+    short-name: "HS"
+    diffraction-lib: refine-hs-hrpt
+    executing: true
+    user-facing: true
+  - id: pd-neut-cwl_cosio-d20
+    title: "Co₂SiO₄ on D20"
+    short-name: "Co₂SiO₄"
+    diffraction-lib: refine-cosio-d20
+    executing: true
+    user-facing: true
+  - id: pd-neut-cwl_cosio-d20_2k
+    title: "Co₂SiO₄ on D20 at 2.3 K"
+    short-name: "Co₂SiO₄ 2.3 K"
+    follows-diffraction-lib: refine-cosio-d20
+    executing: true
+    user-facing: true
+  - id: pd-neut-cwl_lmo-echidna
+    title: "LiNiO₂ on ECHIDNA"
+    short-name: "LiNiO₂"
+    diffraction-lib: refine-lmo-echidna
+    executing: true
+    user-facing: true
+  - id: pd-neut-cwl_y2o3-spodi
+    title: "Y₂O₃ on SPODI"
+    short-name: "Y₂O₃"
+    follows-diffraction-lib: refine-hs-hrpt
+    executing: true
+    user-facing: true
+  - id: pd-neut-cwl_yalo3-al2o3-spodi
+    title: "YAlO₃ and Al₂O₃ on SPODI"
+    short-name: "YAlO₃+Al₂O₃"
+    diffraction-lib: refine-yap-3k
+    executing: true
+    user-facing: true
+  - id: pd-neut-tof_si-sepd
+    title: "Si on SEPD"
+    short-name: "Si"
+    data-from-file: true
+    diffraction-lib: refine-si-sepd
+    executing: true
+    user-facing: true
+  - id: pd-neut-tof_cecoal-polaris
+    title: "CeCoAl₃ on POLARIS"
+    short-name: "CeCoAl₃"
+    follows-diffraction-lib: refine-ncaf-wish
+    executing: true
+    user-facing: true
+  - id: pd-neut-tof_ceo2-pearl
+    title: "CeO₂ on PEARL"
+    short-name: "CeO₂"
+    follows-diffraction-lib: refine-si-sepd
+    executing: true
+    user-facing: true
+  - id: pd-neut-tof_lbco-si-mcstas
+    title: "La₀.₅Ba₀.₅CoO₃ and Si on a McStas instrument"
+    short-name: "LBCO+Si"
+    diffraction-lib: refine-lbco-si-mcstas
+    executing: true
+    user-facing: true
+  - id: pd-neut-tof_ncaf-wish
+    title: "Na₂Ca₃Al₂F₁₄ on WISH"
+    short-name: "NCAF"
+    diffraction-lib: refine-ncaf-wish
+    executing: true
+    user-facing: true
+  - id: pd-neut-tof_ferrite-austenite-beer
+    title: "Ferrite and austenite on BEER"
+    short-name: "α-Fe+γ-Fe"
+    follows-diffraction-lib: refine-lbco-si-mcstas
+    executing: true
+    user-facing: true
+  - id: pd-xray-cwl_pbso4-lab
+    title: "PbSO₄ on a laboratory diffractometer"
+    short-name: "PbSO₄"
+    diffraction-lib: refine-pbso4-xray
+    executing: true
+    user-facing: true
+  - id: pd-xray-cwl_lam7o3-p021
+    title: "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ on P02.1"
+    short-name: "LaM₇O₃"
+    diffraction-lib: refine-lam7o3-p021
+    executing: true
+    user-facing: true
+  - id: pd-neut-xray-cwl_pbso4-d1a-lab
+    title: "PbSO₄ on D1A and a laboratory diffractometer"
+    short-name: "PbSO₄"
+    diffraction-lib: refine-pbso4-joint
+    executing: true
+    user-facing: true
+  - id: pd-neut-cwl_cosio-d20_scan
+    executing: true
+  - id: pd-neut-cwl_cosio-d20_scan-213f
+    title: "Co₂SiO₄ on D20, cooling scan"
+    short-name: "Co₂SiO₄"
+    diffraction-lib: refine-cosio-d20-tscan
+    executing: true
+    offline: true
+    user-facing: true
+  - id: pd-xray-cwl_latp-bm01_scan
+    title: "LATP and AlPO₄ on BM01"
+    short-name: "LATP+AlPO₄"
+    follows-diffraction-lib: refine-cosio-d20-tscan
+    executing: true
+    offline: true
+    user-facing: true
+  - id: sc-neut-cwl_pr2nio4-5c2_basic
+    executing: true
+    verification: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi_basic
+    executing: true
+    verification: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction
+    executing: true
+    verification: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp
+    executing: true
+    verification: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi_simulation
+    title: "Tb₂Ti₂O₇ on HEiDi"
+    short-name: "Tb₂Ti₂O₇"
+    # The single-crystal simulation (owner, 2026-11-08): HEiDi's Tb2Ti2O7 structure and instrument without its
+    # reflections.
+    follows-diffraction-lib: refine-tbti-heidi
+    executing: true
+    user-facing: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi
+    title: "Tb₂Ti₂O₇ on HEiDi"
+    short-name: "Tb₂Ti₂O₇"
+    diffraction-lib: refine-tbti-heidi
+    executing: true
+    user-facing: true
+  - id: sc-neut-cwl_pr2nio4-5c2
+    title: "Pr₂NiO₄ on 5C2"
+    short-name: "Pr₂NiO₄"
+    follows-diffraction-lib: refine-tbti-heidi
+    executing: true
+    user-facing: true
+  - id: sc-neut-cwl_cosio-heidi
+    title: "Co₂SiO₄ on HEiDi"
+    short-name: "Co₂SiO₄"
+    follows-diffraction-lib: refine-tbti-heidi
+    executing: true
+    user-facing: true
+  - id: sc-neut-tof_taurine-unknown_basic
+    executing: true
+    verification: true
+  - id: sc-neut-tof_taurine-senju
+    title: "Taurine on SENJU"
+    short-name: "C₂H₇NO₃S"
+    diffraction-lib: refine-taurine-senju
+    executing: true
+    user-facing: true

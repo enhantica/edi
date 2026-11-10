@@ -1,0 +1,41 @@
+{
+  "kind": "independent-contract-reference",
+  "limit_item": "asym_beba_limit",
+  "limit_is_fit_coefficient": false,
+  "limit_units": "degrees",
+  "fullprof_manual": {
+    "url": "https://www.psi.ch/sites/default/files/import/lns-diffraction/LinuxEN/fullprof-manual.pdf",
+    "pdf_pages": [
+      75,
+      76
+    ],
+    "line": 8,
+    "classification": "fixed powder-data setup; separate from the four asymmetry fit coefficients"
+  },
+  "owner_pcr": {
+    "path": "edi/knowledge/fitting/fullprof/pd-neut-cwl_yap-spodi_3k/yap_3k.pcr",
+    "sha256": "fc133b5a9ab27421cb85eccdb5160f3d5cc3232062bfb3597f4d9d154e5073b0",
+    "header_line_1based": 10,
+    "AsyLim": 160.0,
+    "asymmetry_codewords": [
+      361.0,
+      371.0,
+      391.0,
+      401.0
+    ]
+  },
+  "upstream_peak_metadata": {
+    "repository": "https://github.com/easyscience/diffraction-lib",
+    "commit": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+    "path": "src/easydiffraction/datablocks/experiment/categories/peak/cwl_mixins.py",
+    "sha256": "de47b3f21828b512bcf7537d49ebfe36ec0fe5a8eab31745d3bb77030c377ff7",
+    "tagged_parameter_fields": [
+      "asym_beba_a0",
+      "asym_beba_b0",
+      "asym_beba_a1",
+      "asym_beba_b1"
+    ],
+    "limit_entry_present": false,
+    "scope": "Pinned per-category metadata defines four coefficients; it does not expose a limit entry or an explicit false flag for the limit"
+  }
+}

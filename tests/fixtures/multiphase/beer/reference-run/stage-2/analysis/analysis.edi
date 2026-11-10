@@ -1,0 +1,206 @@
+_edi.schema_version 1
+
+_fitting_mode.type joint
+
+_minimizer.type "lmfit (leastsq)"
+_minimizer.max_iterations 1000
+
+_fit_result.result_kind deterministic
+_fit_result.success true
+_fit_result.message "Fit succeeded."
+_fit_result.iterations 18
+_fit_result.fitting_time 1.77847157
+_fit_result.reduced_chi_square 12.75066721
+_fit_result.objective_name chi_square
+_fit_result.objective_value 71454.73903917
+_fit_result.n_data_points 5620
+_fit_result.n_parameters 96
+_fit_result.n_free_parameters 16
+_fit_result.degrees_of_freedom 5604
+_fit_result.covariance_available true
+_fit_result.correlation_available true
+_fit_result.r_factor_all 0.04965452
+_fit_result.wr_factor_all 0.0688045
+_fit_result.r_factor_gt 0.04957133
+_fit_result.wr_factor_gt 0.06875607
+_fit_result.prof_r_factor 0.04965452
+_fit_result.prof_wr_factor 0.0688045
+_fit_result.prof_wr_expected 0.01926861
+_fit_result.profile_function tof-pseudo-voigt
+_fit_result.background_function line-segment
+_fit_result.threshold_expression I>3\s(I)
+_fit_result.number_reflns_total 32
+_fit_result.number_reflns_gt 0
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+s2_ferrite_scale expt_s2.linked_structure.ferrite.scale
+s2_austenite_scale expt_s2.linked_structure.austenite.scale
+n2_ferrite_scale expt_n2.linked_structure.ferrite.scale
+n2_austenite_scale expt_n2.linked_structure.austenite.scale
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+expt_s2 1.
+expt_n2 1.
+
+loop_
+_fit_parameter.parameter_unique_name
+_fit_parameter.fit_min
+_fit_parameter.fit_max
+_fit_parameter.start_value
+_fit_parameter.start_uncertainty
+ferrite.atom_site.Fe.adp_iso -inf inf 1.71892137 0.01269214
+austenite.atom_site.Fe.adp_iso -inf inf 1.71261441 0.01188705
+expt_s2.linked_structure.ferrite.scale -inf inf 283.94075627 0.94484372
+expt_s2.linked_structure.austenite.scale -inf inf 68.01514602 0.19058823
+expt_s2.peak.broad_lorentz_gamma_0 -inf inf 5.22877717 0.18722811
+expt_s2.peak.broad_gauss_sigma_0 -inf inf 885.58953631 56.75302258
+expt_s2.peak.broad_gauss_sigma_1 -inf inf 1283.08276112 56.70261682
+expt_s2.peak.broad_gauss_sigma_2 -inf inf 311.35045992 11.27088471
+expt_s2.instrument.d_to_tof_offset -inf inf -10.45219893 0.11822093
+expt_n2.linked_structure.ferrite.scale -inf inf 285.49004008 0.94796661
+expt_n2.linked_structure.austenite.scale -inf inf 67.81074856 0.19024395
+expt_n2.peak.broad_lorentz_gamma_0 -inf inf 5.2494971 0.18798155
+expt_n2.peak.broad_gauss_sigma_0 -inf inf 920.2293162 57.27647944
+expt_n2.peak.broad_gauss_sigma_1 -inf inf 1227.7853931 57.23326837
+expt_n2.peak.broad_gauss_sigma_2 -inf inf 328.82585912 11.37828342
+expt_n2.instrument.d_to_tof_offset -inf inf -2.26014661 0.11822662
+
+loop_
+_fit_parameter_correlation.id
+_fit_parameter_correlation.source_kind
+_fit_parameter_correlation.parameter_unique_name_i
+_fit_parameter_correlation.parameter_unique_name_j
+_fit_parameter_correlation.correlation
+1 deterministic austenite.atom_site.Fe.adp_iso ferrite.atom_site.Fe.adp_iso -0.04186702
+2 deterministic expt_s2.linked_structure.ferrite.scale ferrite.atom_site.Fe.adp_iso 0.76345309
+3 deterministic expt_s2.linked_structure.austenite.scale ferrite.atom_site.Fe.adp_iso -0.02719083
+4 deterministic expt_s2.peak.broad_lorentz_gamma_0 ferrite.atom_site.Fe.adp_iso -0.01162675
+5 deterministic expt_s2.peak.broad_gauss_sigma_0 ferrite.atom_site.Fe.adp_iso 0.01431731
+6 deterministic expt_s2.peak.broad_gauss_sigma_1 ferrite.atom_site.Fe.adp_iso -0.01275012
+7 deterministic expt_s2.peak.broad_gauss_sigma_2 ferrite.atom_site.Fe.adp_iso 0.01329408
+8 deterministic expt_s2.instrument.d_to_tof_offset ferrite.atom_site.Fe.adp_iso -0.00494757
+9 deterministic expt_n2.linked_structure.ferrite.scale ferrite.atom_site.Fe.adp_iso 0.76070872
+10 deterministic expt_n2.linked_structure.austenite.scale ferrite.atom_site.Fe.adp_iso -0.02800177
+11 deterministic expt_n2.peak.broad_lorentz_gamma_0 ferrite.atom_site.Fe.adp_iso -0.01157747
+12 deterministic expt_n2.peak.broad_gauss_sigma_0 ferrite.atom_site.Fe.adp_iso 0.01894813
+13 deterministic expt_n2.peak.broad_gauss_sigma_1 ferrite.atom_site.Fe.adp_iso -0.01671899
+14 deterministic expt_n2.peak.broad_gauss_sigma_2 ferrite.atom_site.Fe.adp_iso 0.01663803
+15 deterministic expt_n2.instrument.d_to_tof_offset ferrite.atom_site.Fe.adp_iso 0.0055801
+16 deterministic austenite.atom_site.Fe.adp_iso expt_s2.linked_structure.ferrite.scale -0.02605385
+17 deterministic austenite.atom_site.Fe.adp_iso expt_s2.linked_structure.austenite.scale 0.76390767
+18 deterministic austenite.atom_site.Fe.adp_iso expt_s2.peak.broad_lorentz_gamma_0 -0.01337298
+19 deterministic austenite.atom_site.Fe.adp_iso expt_s2.peak.broad_gauss_sigma_0 0.05093008
+20 deterministic austenite.atom_site.Fe.adp_iso expt_s2.peak.broad_gauss_sigma_1 -0.04637697
+21 deterministic austenite.atom_site.Fe.adp_iso expt_s2.peak.broad_gauss_sigma_2 0.04401525
+22 deterministic austenite.atom_site.Fe.adp_iso expt_s2.instrument.d_to_tof_offset -0.01142167
+23 deterministic austenite.atom_site.Fe.adp_iso expt_n2.linked_structure.ferrite.scale -0.02707855
+24 deterministic austenite.atom_site.Fe.adp_iso expt_n2.linked_structure.austenite.scale 0.76364544
+25 deterministic austenite.atom_site.Fe.adp_iso expt_n2.peak.broad_lorentz_gamma_0 -0.0137326
+26 deterministic austenite.atom_site.Fe.adp_iso expt_n2.peak.broad_gauss_sigma_0 0.04945438
+27 deterministic austenite.atom_site.Fe.adp_iso expt_n2.peak.broad_gauss_sigma_1 -0.0452868
+28 deterministic austenite.atom_site.Fe.adp_iso expt_n2.peak.broad_gauss_sigma_2 0.0429157
+29 deterministic austenite.atom_site.Fe.adp_iso expt_n2.instrument.d_to_tof_offset 0.00476887
+30 deterministic expt_s2.linked_structure.austenite.scale expt_s2.linked_structure.ferrite.scale -0.0144629
+31 deterministic expt_s2.linked_structure.ferrite.scale expt_s2.peak.broad_lorentz_gamma_0 0.03031795
+32 deterministic expt_s2.linked_structure.ferrite.scale expt_s2.peak.broad_gauss_sigma_0 0.00870834
+33 deterministic expt_s2.linked_structure.ferrite.scale expt_s2.peak.broad_gauss_sigma_1 -0.01219665
+34 deterministic expt_s2.linked_structure.ferrite.scale expt_s2.peak.broad_gauss_sigma_2 0.01224274
+35 deterministic expt_s2.instrument.d_to_tof_offset expt_s2.linked_structure.ferrite.scale -0.03662206
+36 deterministic expt_n2.linked_structure.ferrite.scale expt_s2.linked_structure.ferrite.scale 0.58079366
+37 deterministic expt_n2.linked_structure.austenite.scale expt_s2.linked_structure.ferrite.scale -0.01686417
+38 deterministic expt_n2.peak.broad_lorentz_gamma_0 expt_s2.linked_structure.ferrite.scale -0.00892302
+39 deterministic expt_n2.peak.broad_gauss_sigma_0 expt_s2.linked_structure.ferrite.scale 0.01476348
+40 deterministic expt_n2.peak.broad_gauss_sigma_1 expt_s2.linked_structure.ferrite.scale -0.01303641
+41 deterministic expt_n2.peak.broad_gauss_sigma_2 expt_s2.linked_structure.ferrite.scale 0.01296054
+42 deterministic expt_n2.instrument.d_to_tof_offset expt_s2.linked_structure.ferrite.scale 0.00428976
+43 deterministic expt_s2.linked_structure.austenite.scale expt_s2.peak.broad_lorentz_gamma_0 0.03934243
+44 deterministic expt_s2.linked_structure.austenite.scale expt_s2.peak.broad_gauss_sigma_0 0.03890074
+45 deterministic expt_s2.linked_structure.austenite.scale expt_s2.peak.broad_gauss_sigma_1 -0.04171821
+46 deterministic expt_s2.linked_structure.austenite.scale expt_s2.peak.broad_gauss_sigma_2 0.03773658
+47 deterministic expt_s2.instrument.d_to_tof_offset expt_s2.linked_structure.austenite.scale -0.047146
+48 deterministic expt_n2.linked_structure.ferrite.scale expt_s2.linked_structure.austenite.scale -0.01703946
+49 deterministic expt_n2.linked_structure.austenite.scale expt_s2.linked_structure.austenite.scale 0.58337366
+50 deterministic expt_n2.peak.broad_lorentz_gamma_0 expt_s2.linked_structure.austenite.scale -0.01054877
+51 deterministic expt_n2.peak.broad_gauss_sigma_0 expt_s2.linked_structure.austenite.scale 0.03787947
+52 deterministic expt_n2.peak.broad_gauss_sigma_1 expt_s2.linked_structure.austenite.scale -0.03468429
+53 deterministic expt_n2.peak.broad_gauss_sigma_2 expt_s2.linked_structure.austenite.scale 0.03287212
+54 deterministic expt_n2.instrument.d_to_tof_offset expt_s2.linked_structure.austenite.scale 0.00367072
+55 deterministic expt_s2.peak.broad_gauss_sigma_0 expt_s2.peak.broad_lorentz_gamma_0 -0.06970901
+56 deterministic expt_s2.peak.broad_gauss_sigma_1 expt_s2.peak.broad_lorentz_gamma_0 -0.04132666
+57 deterministic expt_s2.peak.broad_gauss_sigma_2 expt_s2.peak.broad_lorentz_gamma_0 -0.00400147
+58 deterministic expt_s2.instrument.d_to_tof_offset expt_s2.peak.broad_lorentz_gamma_0 0.01115405
+59 deterministic expt_n2.linked_structure.ferrite.scale expt_s2.peak.broad_lorentz_gamma_0 -0.00891079
+60 deterministic expt_n2.linked_structure.austenite.scale expt_s2.peak.broad_lorentz_gamma_0 -0.01026068
+61 deterministic expt_n2.peak.broad_lorentz_gamma_0 expt_s2.peak.broad_lorentz_gamma_0 0.000332
+62 deterministic expt_n2.peak.broad_gauss_sigma_0 expt_s2.peak.broad_lorentz_gamma_0 -0.00091795
+63 deterministic expt_n2.peak.broad_gauss_sigma_1 expt_s2.peak.broad_lorentz_gamma_0 0.00083287
+64 deterministic expt_n2.peak.broad_gauss_sigma_2 expt_s2.peak.broad_lorentz_gamma_0 -0.00079896
+65 deterministic expt_n2.instrument.d_to_tof_offset expt_s2.peak.broad_lorentz_gamma_0 -0.00013433
+66 deterministic expt_s2.peak.broad_gauss_sigma_0 expt_s2.peak.broad_gauss_sigma_1 -0.95051575
+67 deterministic expt_s2.peak.broad_gauss_sigma_0 expt_s2.peak.broad_gauss_sigma_2 0.89817447
+68 deterministic expt_s2.instrument.d_to_tof_offset expt_s2.peak.broad_gauss_sigma_0 0.01644865
+69 deterministic expt_n2.linked_structure.ferrite.scale expt_s2.peak.broad_gauss_sigma_0 0.01113753
+70 deterministic expt_n2.linked_structure.austenite.scale expt_s2.peak.broad_gauss_sigma_0 0.03895794
+71 deterministic expt_n2.peak.broad_lorentz_gamma_0 expt_s2.peak.broad_gauss_sigma_0 -0.00089966
+72 deterministic expt_n2.peak.broad_gauss_sigma_0 expt_s2.peak.broad_gauss_sigma_0 0.00286507
+73 deterministic expt_n2.peak.broad_gauss_sigma_1 expt_s2.peak.broad_gauss_sigma_0 -0.00261321
+74 deterministic expt_n2.peak.broad_gauss_sigma_2 expt_s2.peak.broad_gauss_sigma_0 0.00248948
+75 deterministic expt_n2.instrument.d_to_tof_offset expt_s2.peak.broad_gauss_sigma_0 0.00033812
+76 deterministic expt_s2.peak.broad_gauss_sigma_1 expt_s2.peak.broad_gauss_sigma_2 -0.97942525
+77 deterministic expt_s2.instrument.d_to_tof_offset expt_s2.peak.broad_gauss_sigma_1 -0.02331081
+78 deterministic expt_n2.linked_structure.ferrite.scale expt_s2.peak.broad_gauss_sigma_1 -0.00992329
+79 deterministic expt_n2.linked_structure.austenite.scale expt_s2.peak.broad_gauss_sigma_1 -0.03547399
+80 deterministic expt_n2.peak.broad_lorentz_gamma_0 expt_s2.peak.broad_gauss_sigma_1 0.00081573
+81 deterministic expt_n2.peak.broad_gauss_sigma_0 expt_s2.peak.broad_gauss_sigma_1 -0.00260289
+82 deterministic expt_n2.peak.broad_gauss_sigma_1 expt_s2.peak.broad_gauss_sigma_1 0.00237423
+83 deterministic expt_n2.peak.broad_gauss_sigma_2 expt_s2.peak.broad_gauss_sigma_1 -0.00226162
+84 deterministic expt_n2.instrument.d_to_tof_offset expt_s2.peak.broad_gauss_sigma_1 -0.00030623
+85 deterministic expt_s2.instrument.d_to_tof_offset expt_s2.peak.broad_gauss_sigma_2 0.00930873
+86 deterministic expt_n2.linked_structure.ferrite.scale expt_s2.peak.broad_gauss_sigma_2 0.0103259
+87 deterministic expt_n2.linked_structure.austenite.scale expt_s2.peak.broad_gauss_sigma_2 0.03367224
+88 deterministic expt_n2.peak.broad_lorentz_gamma_0 expt_s2.peak.broad_gauss_sigma_2 -0.00078872
+89 deterministic expt_n2.peak.broad_gauss_sigma_0 expt_s2.peak.broad_gauss_sigma_2 0.00249546
+90 deterministic expt_n2.peak.broad_gauss_sigma_1 expt_s2.peak.broad_gauss_sigma_2 -0.00227558
+91 deterministic expt_n2.peak.broad_gauss_sigma_2 expt_s2.peak.broad_gauss_sigma_2 0.00216848
+92 deterministic expt_n2.instrument.d_to_tof_offset expt_s2.peak.broad_gauss_sigma_2 0.00029754
+93 deterministic expt_n2.linked_structure.ferrite.scale expt_s2.instrument.d_to_tof_offset -0.00381923
+94 deterministic expt_n2.linked_structure.austenite.scale expt_s2.instrument.d_to_tof_offset -0.00874369
+95 deterministic expt_n2.peak.broad_lorentz_gamma_0 expt_s2.instrument.d_to_tof_offset 0.0002229
+96 deterministic expt_n2.peak.broad_gauss_sigma_0 expt_s2.instrument.d_to_tof_offset -0.00067909
+97 deterministic expt_n2.peak.broad_gauss_sigma_1 expt_s2.instrument.d_to_tof_offset 0.00061843
+98 deterministic expt_n2.peak.broad_gauss_sigma_2 expt_s2.instrument.d_to_tof_offset -0.00059037
+99 deterministic expt_n2.instrument.d_to_tof_offset expt_s2.instrument.d_to_tof_offset -0.00008588
+100 deterministic expt_n2.linked_structure.austenite.scale expt_n2.linked_structure.ferrite.scale -0.01636852
+101 deterministic expt_n2.linked_structure.ferrite.scale expt_n2.peak.broad_lorentz_gamma_0 0.03036607
+102 deterministic expt_n2.linked_structure.ferrite.scale expt_n2.peak.broad_gauss_sigma_0 0.0114464
+103 deterministic expt_n2.linked_structure.ferrite.scale expt_n2.peak.broad_gauss_sigma_1 -0.0144999
+104 deterministic expt_n2.linked_structure.ferrite.scale expt_n2.peak.broad_gauss_sigma_2 0.01375054
+105 deterministic expt_n2.instrument.d_to_tof_offset expt_n2.linked_structure.ferrite.scale -0.02217285
+106 deterministic expt_n2.linked_structure.austenite.scale expt_n2.peak.broad_lorentz_gamma_0 0.0389518
+107 deterministic expt_n2.linked_structure.austenite.scale expt_n2.peak.broad_gauss_sigma_0 0.03799679
+108 deterministic expt_n2.linked_structure.austenite.scale expt_n2.peak.broad_gauss_sigma_1 -0.0409208
+109 deterministic expt_n2.linked_structure.austenite.scale expt_n2.peak.broad_gauss_sigma_2 0.03651422
+110 deterministic expt_n2.instrument.d_to_tof_offset expt_n2.linked_structure.austenite.scale -0.02130379
+111 deterministic expt_n2.peak.broad_gauss_sigma_0 expt_n2.peak.broad_lorentz_gamma_0 -0.06780675
+112 deterministic expt_n2.peak.broad_gauss_sigma_1 expt_n2.peak.broad_lorentz_gamma_0 -0.04201162
+113 deterministic expt_n2.peak.broad_gauss_sigma_2 expt_n2.peak.broad_lorentz_gamma_0 -0.00369138
+114 deterministic expt_n2.instrument.d_to_tof_offset expt_n2.peak.broad_lorentz_gamma_0 0.01203466
+115 deterministic expt_n2.peak.broad_gauss_sigma_0 expt_n2.peak.broad_gauss_sigma_1 -0.95095118
+116 deterministic expt_n2.peak.broad_gauss_sigma_0 expt_n2.peak.broad_gauss_sigma_2 0.89878505
+117 deterministic expt_n2.instrument.d_to_tof_offset expt_n2.peak.broad_gauss_sigma_0 0.013116
+118 deterministic expt_n2.peak.broad_gauss_sigma_1 expt_n2.peak.broad_gauss_sigma_2 -0.97949453
+119 deterministic expt_n2.instrument.d_to_tof_offset expt_n2.peak.broad_gauss_sigma_1 -0.0209229
+120 deterministic expt_n2.instrument.d_to_tof_offset expt_n2.peak.broad_gauss_sigma_2 0.01454588
+
+loop_
+_software.id
+_software.name
+_software.version
+_software.url
+framework EasyDiffraction 0.19.1 https://github.com/easyscience/diffraction-lib
+calculator cryspy 0.12.1 https://www.cryspy.fr
+minimizer lmfit 1.3.4 https://lmfit.github.io/lmfit-py

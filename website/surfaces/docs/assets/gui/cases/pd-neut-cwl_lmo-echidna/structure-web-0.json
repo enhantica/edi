@@ -1,0 +1,1225 @@
+{
+    "description": "Find the structure lmo in the EasyDiffraction collection",
+    "fit_phase": "",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "highlights": [
+        "onlineLoad.field.id",
+        "onlineLoad.results"
+    ],
+    "id": "structure-web-0",
+    "image": "structure-web-0.webp",
+    "image_sha256": "5bfb378917282a44fd3908d6e061cc600eb22ad713be0043b503c725543db7a4",
+    "items": {
+        "ApplicationWindow": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
+        "ApplicationWindowContentControl": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
+        "Main": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
+        "OnlineLoadDialog": {
+            "bounds": [
+                150,
+                215,
+                1180.5,
+                370
+            ],
+            "enabled": true,
+            "label": "Load structure from web",
+            "visible_bounds": [
+                150,
+                215,
+                1180.5,
+                370
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                131
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                131
+            ]
+        },
+        "appBar": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                77
+            ]
+        },
+        "appBar.button.preferences": {
+            "bounds": [
+                1431,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "cog",
+            "label": "",
+            "visible_bounds": [
+                1431,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.redo": {
+            "bounds": [
+                84,
+                21,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "redo",
+            "label": "",
+            "visible_bounds": [
+                84,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.reset": {
+            "bounds": [
+                119,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "backspace",
+            "label": "",
+            "visible_bounds": [
+                119,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.save": {
+            "bounds": [
+                14,
+                21,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "save",
+            "label": "",
+            "visible_bounds": [
+                14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.undo": {
+            "bounds": [
+                49,
+                21,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "undo",
+            "label": "",
+            "visible_bounds": [
+                49,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.separator": {
+            "bounds": [
+                1354,
+                33,
+                1,
+                12
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1354,
+                33,
+                1,
+                12
+            ]
+        },
+        "appBar.tab.analysis": {
+            "bounds": [
+                812.359375,
+                0,
+                67.84375,
+                77
+            ],
+            "enabled": false,
+            "icon": "calculator",
+            "label": "Analysis",
+            "visible_bounds": [
+                812.359375,
+                0,
+                67.84375,
+                77
+            ]
+        },
+        "appBar.tab.experiment": {
+            "bounds": [
+                727.453125,
+                0,
+                84.90625,
+                77
+            ],
+            "enabled": false,
+            "icon": "microscope",
+            "label": "Experiment",
+            "visible_bounds": [
+                727.453125,
+                0,
+                84.90625,
+                77
+            ]
+        },
+        "appBar.tab.home": {
+            "bounds": [
+                542,
+                0,
+                53.46875,
+                77
+            ],
+            "enabled": true,
+            "icon": "home",
+            "label": "Home",
+            "visible_bounds": [
+                542,
+                0,
+                53.46875,
+                77
+            ]
+        },
+        "appBar.tab.project": {
+            "bounds": [
+                595.46875,
+                0,
+                59.734375,
+                77
+            ],
+            "enabled": true,
+            "icon": "archive",
+            "label": "Project",
+            "visible_bounds": [
+                595.46875,
+                0,
+                59.734375,
+                77
+            ]
+        },
+        "appBar.tab.report": {
+            "bounds": [
+                880.203125,
+                0,
+                58.25,
+                77
+            ],
+            "enabled": false,
+            "icon": "clipboard-list",
+            "label": "Report",
+            "visible_bounds": [
+                880.203125,
+                0,
+                58.25,
+                77
+            ]
+        },
+        "appBar.tab.structure": {
+            "bounds": [
+                655.203125,
+                0,
+                72.25,
+                77
+            ],
+            "enabled": true,
+            "icon": "layer-group",
+            "label": "Structure",
+            "visible_bounds": [
+                655.203125,
+                0,
+                72.25,
+                77
+            ]
+        },
+        "appBar.workflow": {
+            "bounds": [
+                542,
+                0,
+                396.453125,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                542,
+                0,
+                396.453125,
+                77
+            ]
+        },
+        "assistant.toggle": {
+            "bounds": [
+                1361,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "robot",
+            "label": "",
+            "visible_bounds": [
+                1361,
+                21,
+                35,
+                35
+            ]
+        },
+        "group.structures": {
+            "bounds": [
+                770,
+                119,
+                710,
+                194
+            ],
+            "enabled": true,
+            "icon": "layer-group",
+            "label": "Structures (0)",
+            "visible_bounds": [
+                770,
+                119,
+                710,
+                194
+            ]
+        },
+        "label": {
+            "ambiguous": true
+        },
+        "mainArea.structure.tab.pattern": {
+            "bounds": [
+                69.1875,
+                77,
+                57.09375,
+                42
+            ],
+            "enabled": false,
+            "label": "Pattern",
+            "visible_bounds": [
+                69.1875,
+                77,
+                57.09375,
+                42
+            ]
+        },
+        "mainArea.structure.tab.view": {
+            "bounds": [
+                0,
+                77,
+                69.1875,
+                42
+            ],
+            "enabled": true,
+            "label": "Structure",
+            "visible_bounds": [
+                0,
+                77,
+                69.1875,
+                42
+            ]
+        },
+        "onlineLoad.clear": {
+            "bounds": [
+                367.75,
+                374,
+                175.75,
+                39
+            ],
+            "enabled": true,
+            "icon": "eraser",
+            "label": "Clear",
+            "visible_bounds": [
+                367.75,
+                374,
+                175.75,
+                39
+            ]
+        },
+        "onlineLoad.close": {
+            "bounds": [
+                1253.3125,
+                552,
+                49.1875,
+                19
+            ],
+            "enabled": true,
+            "icon": "times",
+            "label": "Close",
+            "visible_bounds": [
+                1253.3125,
+                552,
+                49.1875,
+                19
+            ]
+        },
+        "onlineLoad.count": {
+            "bounds": [
+                178,
+                427,
+                42.125,
+                19
+            ],
+            "enabled": true,
+            "label": "1 entry",
+            "visible_bounds": [
+                178,
+                427,
+                42.125,
+                19
+            ]
+        },
+        "onlineLoad.field.elements": {
+            "bounds": [
+                557.5,
+                325,
+                365.5,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                557.5,
+                325,
+                365.5,
+                35
+            ]
+        },
+        "onlineLoad.field.formula": {
+            "bounds": [
+                178,
+                325,
+                365.5,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                178,
+                325,
+                365.5,
+                35
+            ]
+        },
+        "onlineLoad.field.id": {
+            "bounds": [
+                557.5,
+                276,
+                365.5,
+                35
+            ],
+            "enabled": true,
+            "label": "pd-neut-cwl_lmo-echidna-lmo",
+            "visible_bounds": [
+                557.5,
+                276,
+                365.5,
+                35
+            ]
+        },
+        "onlineLoad.field.name": {
+            "bounds": [
+                937,
+                276,
+                365.5,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                937,
+                276,
+                365.5,
+                35
+            ]
+        },
+        "onlineLoad.field.space_group": {
+            "bounds": [
+                937,
+                325,
+                365.5,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                937,
+                325,
+                365.5,
+                35
+            ]
+        },
+        "onlineLoad.id.0": {
+            "bounds": [
+                209,
+                499,
+                197,
+                39
+            ],
+            "enabled": true,
+            "label": "pd-neut-cwl_lmo-echidna-lmo",
+            "visible_bounds": [
+                209,
+                499,
+                197,
+                39
+            ]
+        },
+        "onlineLoad.reference.0": {
+            "bounds": [
+                892.001,
+                499,
+                405,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                892.001,
+                499,
+                405,
+                39
+            ]
+        },
+        "onlineLoad.results": {
+            "bounds": [
+                178,
+                460,
+                1124.5,
+                78
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                178,
+                460,
+                1124.5,
+                78
+            ]
+        },
+        "onlineLoad.row.0": {
+            "bounds": [
+                178,
+                499,
+                1124.5,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                178,
+                499,
+                1124.5,
+                39
+            ]
+        },
+        "onlineLoad.search": {
+            "bounds": [
+                178,
+                374,
+                175.75,
+                39
+            ],
+            "enabled": true,
+            "icon": "search",
+            "label": "Search",
+            "visible_bounds": [
+                178,
+                374,
+                175.75,
+                39
+            ]
+        },
+        "onlineLoad.source": {
+            "bounds": [
+                178,
+                276,
+                365.5,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                178,
+                276,
+                365.5,
+                35
+            ]
+        },
+        "sideBar.tab.basic": {
+            "bounds": [
+                770,
+                77,
+                43.515625,
+                42
+            ],
+            "enabled": true,
+            "label": "Main",
+            "visible_bounds": [
+                770,
+                77,
+                43.515625,
+                42
+            ]
+        },
+        "sideBar.tab.extras": {
+            "bounds": [
+                813.515625,
+                77,
+                45.125,
+                42
+            ],
+            "enabled": false,
+            "label": "Extra",
+            "visible_bounds": [
+                813.515625,
+                77,
+                45.125,
+                42
+            ]
+        },
+        "sideBar.tab.settings": {
+            "bounds": [
+                897.328125,
+                77,
+                62.8125,
+                42
+            ],
+            "enabled": false,
+            "label": "Settings",
+            "visible_bounds": [
+                897.328125,
+                77,
+                62.8125,
+                42
+            ]
+        },
+        "sideBar.tab.text": {
+            "bounds": [
+                858.640625,
+                77,
+                38.6875,
+                42
+            ],
+            "enabled": false,
+            "label": "Text",
+            "visible_bounds": [
+                858.640625,
+                77,
+                38.6875,
+                42
+            ]
+        },
+        "statusBar": {
+            "bounds": [
+                0,
+                758,
+                1480,
+                42
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                758,
+                1480,
+                42
+            ]
+        },
+        "statusBar.calculator": {
+            "bounds": [
+                608.809375,
+                772,
+                122.84375,
+                14
+            ],
+            "enabled": true,
+            "icon": "calculator",
+            "label": "",
+            "visible_bounds": [
+                608.809375,
+                772,
+                122.84375,
+                14
+            ]
+        },
+        "statusBar.experiments": {
+            "bounds": [
+                480.75937500000003,
+                772,
+                111.25,
+                14
+            ],
+            "enabled": true,
+            "icon": "microscope",
+            "label": "",
+            "visible_bounds": [
+                480.75937500000003,
+                772,
+                111.25000000000006,
+                14
+            ]
+        },
+        "statusBar.minimizer": {
+            "bounds": [
+                748.453125,
+                772,
+                118.109375,
+                14
+            ],
+            "enabled": true,
+            "icon": "level-down-alt",
+            "label": "",
+            "visible_bounds": [
+                748.453125,
+                772,
+                118.109375,
+                14
+            ]
+        },
+        "statusBar.parameters": {
+            "bounds": [
+                883.3625,
+                772,
+                103.375,
+                14
+            ],
+            "enabled": true,
+            "icon": "th-list",
+            "label": "",
+            "visible_bounds": [
+                883.3625,
+                772,
+                103.375,
+                14
+            ]
+        },
+        "statusBar.project": {
+            "bounds": [
+                126.58125,
+                772,
+                223.1875,
+                14
+            ],
+            "enabled": true,
+            "icon": "archive",
+            "label": "",
+            "visible_bounds": [
+                126.58125,
+                772,
+                223.1875,
+                14
+            ]
+        },
+        "statusBar.structures": {
+            "bounds": [
+                366.56875,
+                772,
+                97.390625,
+                14
+            ],
+            "enabled": true,
+            "icon": "layer-group",
+            "label": "",
+            "visible_bounds": [
+                366.56875,
+                772,
+                97.390625,
+                14
+            ]
+        },
+        "statusBar.value": {
+            "ambiguous": true
+        },
+        "statusBar.warnings": {
+            "bounds": [
+                14,
+                772,
+                95.78125,
+                14
+            ],
+            "enabled": true,
+            "icon": "exclamation-triangle",
+            "label": "",
+            "visible_bounds": [
+                14,
+                772,
+                95.78125,
+                14
+            ]
+        },
+        "structure.toolbar.a": {
+            "bounds": [
+                391.25,
+                133,
+                35,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                391.25,
+                133,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.axes": {
+            "bounds": [
+                303.75,
+                133,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "location-arrow",
+            "label": "",
+            "visible_bounds": [
+                303.75,
+                133,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.b": {
+            "bounds": [
+                429.75,
+                133,
+                35,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                429.75,
+                133,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.c": {
+            "bounds": [
+                468.25,
+                133,
+                35,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                468.25,
+                133,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.cell": {
+            "bounds": [
+                265.25,
+                133,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "vector-square",
+            "label": "",
+            "visible_bounds": [
+                265.25,
+                133,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.colors": {
+            "bounds": [
+                180,
+                133,
+                71.25,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                180,
+                133,
+                71.25,
+                35
+            ]
+        },
+        "structure.toolbar.projection": {
+            "bounds": [
+                352.75,
+                133,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "cube",
+            "label": "",
+            "visible_bounds": [
+                352.75,
+                133,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.reset": {
+            "bounds": [
+                506.75,
+                133,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "home",
+            "label": "",
+            "visible_bounds": [
+                506.75,
+                133,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.save": {
+            "bounds": [
+                545.25,
+                133,
+                45.5,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                545.25,
+                133,
+                45.5,
+                35
+            ]
+        },
+        "structure.toolbar.save.button": {
+            "bounds": [
+                555.75,
+                133,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "camera",
+            "label": "",
+            "visible_bounds": [
+                555.75,
+                133,
+                35,
+                35
+            ]
+        },
+        "structure.view": {
+            "bounds": [
+                0,
+                119,
+                770,
+                639
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                119,
+                770,
+                639
+            ]
+        },
+        "structure.view.labels": {
+            "bounds": [
+                0,
+                119,
+                770,
+                639
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                119,
+                770,
+                639
+            ]
+        },
+        "structures.create": {
+            "bounds": [
+                1016,
+                260,
+                218,
+                39
+            ],
+            "enabled": true,
+            "icon": "plus-circle",
+            "label": "Create structure",
+            "visible_bounds": [
+                1016,
+                260,
+                218,
+                39
+            ]
+        },
+        "structures.duplicate": {
+            "bounds": [
+                1248,
+                260,
+                218,
+                39
+            ],
+            "enabled": false,
+            "icon": "clone",
+            "label": "Duplicate structure",
+            "visible_bounds": [
+                1248,
+                260,
+                218,
+                39
+            ]
+        },
+        "structures.list": {
+            "bounds": [
+                784,
+                168,
+                682,
+                78
+            ],
+            "enabled": false,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                78
+            ]
+        },
+        "structures.load": {
+            "bounds": [
+                784,
+                260,
+                218,
+                39
+            ],
+            "enabled": true,
+            "icon": "upload",
+            "label": "Load",
+            "visible_bounds": [
+                784,
+                260,
+                218,
+                39
+            ]
+        },
+        "workflow.home.sidebarHost": {
+            "bounds": [
+                770,
+                77,
+                710,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                710,
+                681
+            ]
+        },
+        "workflow.structure.mainContent": {
+            "bounds": [
+                0,
+                77,
+                770,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                77,
+                770,
+                681
+            ]
+        },
+        "workflow.structure.manualSidebar": {
+            "bounds": [
+                770,
+                77,
+                710,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                710,
+                681
+            ]
+        },
+        "workflow.structure.sidebarHost": {
+            "bounds": [
+                770,
+                77,
+                710,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                710,
+                681
+            ]
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "pixel_size": [
+        1480,
+        800
+    ],
+    "qt_version": "6.11.2",
+    "schema": 1,
+    "script_sha256": "0aeada46401b2c74d51e972944c9fc5ded1d32d5f90c411a417abbf63aef9187",
+    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "state": {
+        "experiments": 0,
+        "fit_outcome": "",
+        "fit_result_rows": 0,
+        "fit_results_open": false,
+        "fit_running": false,
+        "fit_status": "",
+        "has_project": true,
+        "page": "structure",
+        "scan_failed": 0,
+        "scan_fitted": 0,
+        "scan_total": 0,
+        "sidebar": "",
+        "sidebar_tabs": [
+            {
+                "checked": true,
+                "enabled": true,
+                "id": "sideBar.tab.basic",
+                "label": "Main"
+            },
+            {
+                "checked": false,
+                "enabled": false,
+                "id": "sideBar.tab.extras",
+                "label": "Extra"
+            },
+            {
+                "checked": false,
+                "enabled": false,
+                "id": "sideBar.tab.text",
+                "label": "Text"
+            },
+            {
+                "checked": false,
+                "enabled": false,
+                "id": "sideBar.tab.settings",
+                "label": "Settings"
+            }
+        ],
+        "structures": 0
+    }
+}

@@ -1,0 +1,7 @@
+{
+  "field": "neutron_scattering_length",
+  "sources": {
+    "sears1992": 6.5,
+    "rauch2003ext": 9.5
+  }
+}

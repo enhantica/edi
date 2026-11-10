@@ -1,0 +1,1234 @@
+{
+    "actions": [
+        {
+            "action": "platform:light",
+            "scene": "home"
+        },
+        {
+            "action": "theme:light",
+            "scene": "home"
+        },
+        {
+            "action": "home.start",
+            "scene": "example-open"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "example-open"
+        },
+        {
+            "action": "reveal:group.examples",
+            "scene": "example-open"
+        },
+        {
+            "action": "expand:group.examples",
+            "scene": "example-open"
+        },
+        {
+            "action": "reveal:examples.search",
+            "scene": "example-open"
+        },
+        {
+            "action": "fill:examples.search=pd-xray-cwl_latp-bm01_scan",
+            "scene": "example-open"
+        },
+        {
+            "action": "reveal:examples.open.pd-xray-cwl_latp-bm01_scan",
+            "scene": "example-open"
+        },
+        {
+            "action": "examples.open.pd-xray-cwl_latp-bm01_scan",
+            "scene": "example-open"
+        },
+        {
+            "action": "pin-time:01 Jan 2026 12:00:00",
+            "scene": "example-open"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "fitting-mode-single"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "fitting-mode-single"
+        },
+        {
+            "action": "reveal:group.fitting_mode",
+            "scene": "fitting-mode-single"
+        },
+        {
+            "action": "expand:group.fitting_mode",
+            "scene": "fitting-mode-single"
+        },
+        {
+            "action": "fittingMode.type",
+            "scene": "fitting-mode-single"
+        },
+        {
+            "action": "choose-token:fittingMode.type=single",
+            "scene": "fitting-mode-single"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:bm01",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:Instrument",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=calib",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:bm01",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:Linked structures",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:alpo4_c2221",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:Cell",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:alpo4_p63mc",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:Cell",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:latp",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:Cell",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "choose:Background",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "choose:bm01",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "choose:Peak broadening",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "choose:bm01",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "choose:Peak mixing",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=eta_0",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "choose:bm01",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "choose:Peak asymmetry",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=a1",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=b1",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "choose:latp",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "choose:Atomic coordinates",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=[Li3]",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "choose:latp",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "choose:Atomic displacement",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=[L",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "scan-mode"
+        },
+        {
+            "action": "reveal:group.fitting_mode",
+            "scene": "scan-mode"
+        },
+        {
+            "action": "expand:group.fitting_mode",
+            "scene": "scan-mode"
+        },
+        {
+            "action": "fittingMode.type",
+            "scene": "scan-mode"
+        },
+        {
+            "action": "choose-token:fittingMode.type=sequential",
+            "scene": "scan-mode"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "scan-fit"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "scan-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "scan-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "scan-fit"
+        },
+        {
+            "action": "mainArea.analysis.tab.correlations",
+            "scene": "correlations"
+        },
+        {
+            "action": "mainArea.analysis.tab.fitting",
+            "scene": "report"
+        },
+        {
+            "action": "appBar.tab.report",
+            "scene": "report"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "report"
+        }
+    ],
+    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "dependencies": [
+        {
+            "file": "inputs/analysis/analysis.edi",
+            "sha256": "d3af43b8b139a9b5b227f52ac94cf3574a738eafc93a976b98144f2b3d302097"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_240.dat",
+            "sha256": "3b9d988630366da767e4b12f28e2124050d7a997ae7071e170ee97a5577f4728"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_241.dat",
+            "sha256": "25b576445e35b49c9ae8e9247518c05f3705cd97ec14dcc7823d86ceebc6163b"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_242.dat",
+            "sha256": "1670502096c41689fc935fc41ba910008206422aad385b6f56a3bee32b712cc6"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_243.dat",
+            "sha256": "865aaf40320ff185c267842492faad4273f9d82f350c114035f362170f88978d"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_244.dat",
+            "sha256": "157e14c1deee032ec2724a719f606c9de3e0485418e86be0cf2b65b05e6a6483"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_245.dat",
+            "sha256": "4b01694748ef95a354dd7f5aa2b5cfb6598ab9eef0596e0624764ab92cf3d85b"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_246.dat",
+            "sha256": "b0b80be9e1988f6fb52f5caf7339d3a57709996e1060b42afa947a5757082aa7"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_247.dat",
+            "sha256": "cf3d7e12a7b7d69fcfa1164b87c9ca785e3eb20d5662dbda9cd51623039475ed"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_248.dat",
+            "sha256": "c96bb957fe558976d57a1ea8084e2c91d0ea9f5e34ec2e40ec7f1e2f48d36e2c"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_249.dat",
+            "sha256": "0fcc676638e227d203c7e76d547bcc7edf88be23d878617bf728bbda6a3cfb47"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_250.dat",
+            "sha256": "1ab67e88cceb3f20f4cfe516ddcd9b17eca3a02b6a4c4848c71071855c39dc46"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_251.dat",
+            "sha256": "a5d740471dffe7252f37a17e1fa31a77bb283ad98fab76136c135798b6585676"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_252.dat",
+            "sha256": "c1617690307d098fb4fc0008f9f2fea2232c41619d50830a7773eae0bc8fa8fe"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_253.dat",
+            "sha256": "5c7a04c8d24ceaa9938d5430ff87f09e4fb104b7708184252c6bbeea52f272d5"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_254.dat",
+            "sha256": "fd65a3d05bc066fbebdde4bf87e8e5ad6ef6e35dbd2b503a755fa47d705c22e6"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_255.dat",
+            "sha256": "e9e2a5e259cd26b5e6a29d779f20df858c907b89a133b1bc59e9eb2a5b6e7aad"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_256.dat",
+            "sha256": "f7018bba3c2fe1c09f54674fd7a984d0469054c8cecb38218a65b19cb26ec69d"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_257.dat",
+            "sha256": "83152d67060f754dddbb3ea384371346203d743de58198a33a4345888d622431"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_258.dat",
+            "sha256": "dba168b82a57ce0feea2f631f0791985a7f6f2400235ad0fd6c05783a239b1b1"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_259.dat",
+            "sha256": "c77ee7d4fa994e59b30f7de2bf2d64799bd0ceb5c84b3e2e8eaeaeec1b592f16"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_260.dat",
+            "sha256": "70d3863ee1ca9b7418fd81322dbbfee2ca2523b3fabdcfed28d68653ea58149e"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_261.dat",
+            "sha256": "7b85c597f10c4463b00745957fcd118e8e8882c91489104668d8fab8277503a6"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_262.dat",
+            "sha256": "3d3fce2b7cfe6c3d3a8859a92f970570f8c7df17d05889de4535819dd4c1c496"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_263.dat",
+            "sha256": "cac138f145a6f12768dd00d710e90cbfb53a0d5fe26ecd829d0c904cfbff7278"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_264.dat",
+            "sha256": "64afde298e0bd34f8e098886572b44f2450b148b63360f4692e2c0456e0b783d"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_265.dat",
+            "sha256": "82eab61ac54177f86a6ab7db2b9331d710054a870586cf95c92d3bf7d69ebff5"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_266.dat",
+            "sha256": "904833ab1a2bc7b17f90892b537cbc9f1ed01684297cbe5aaaa68b24476c1f29"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_267.dat",
+            "sha256": "b04822521fb9152b7770b7b31d06d69f353afceddfa1da59faa54849c42d0375"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_268.dat",
+            "sha256": "81d95619043a6b3b9a89b81918acb586044b2f2cb4c8eec20b4490292160798d"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_269.dat",
+            "sha256": "e3933645aa72a91a523b9aa2f716869c4b085f9f143b8688226052d5279288af"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_270.dat",
+            "sha256": "fa7ec964987eec63d6236bd0cf0aef98cc02d859a936efabe15c94f9fc402e8d"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_271.dat",
+            "sha256": "dbdde893605cab68a6ad14a8e5f8f35f28a9373ac98c78e8d999d9a3b6f5d364"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_272.dat",
+            "sha256": "696a7f4148c15704666c29f2d01cd739db680c5a21ae25aff0a1620f12662291"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_273.dat",
+            "sha256": "c2a26b75e4b8f06bcf4f9b4a16046333b0ff673784859a68af657bd8de2522f9"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_274.dat",
+            "sha256": "7fc54b849420978c1b531166a90d5e5bcfa8c1e67dada09c6236709020049a36"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_275.dat",
+            "sha256": "fc10c8360bd02a24a1c3f914978df480dc2962185023eee5de659a4df22dd58d"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_276.dat",
+            "sha256": "f11d15a339772a97bbd66bf002bae69fe9684af1387a975d43b7128adfab1eb2"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_277.dat",
+            "sha256": "a9d9a947f58ea9e48c256ef002e6e28998fca92ddd35426c7a965ab85cedcd8c"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_278.dat",
+            "sha256": "1da075fb35617097af73bdcd534d05bd6462e45212713a9f2b0ff47ef2bc5043"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_279.dat",
+            "sha256": "b6e7ad7012dc948ba849718254f37a1696c9f809ca2cb7a1077979fc59f16fd6"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_280.dat",
+            "sha256": "1e30f9276fe15c106adb2a7c81ff1cf77dc9555c1aad4e134398e8726d92ac56"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_281.dat",
+            "sha256": "d0ea90c5b8b87bb88eb1f0eb9e4c0e3e1816a36ad29e980005015de0be43427b"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_282.dat",
+            "sha256": "0fb8d0a138bea39124e5e380748e9daf79d9fcdea689f6b542783d25416930e2"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_283.dat",
+            "sha256": "9a75c89b8dbea5a5ed6569d3ab957e35d9d4aead528b0e48fe314a91bb4f61f3"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_284.dat",
+            "sha256": "77b3bfa9fe5dbb66d21de403a7d97e55c7a4679ad471dc6d92f6a8db01e33a7d"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_285.dat",
+            "sha256": "32f16bc1047e43b1a1130fc282ccee952077f3e5eeb88c9dc36d0cfa77a196df"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_286.dat",
+            "sha256": "d5dc54d2c4e182b6c7bb43867561d8e23f3a7bed81832bc8cf7971f946e7c16c"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_287.dat",
+            "sha256": "680ff2690c20fdac323c3f4e744e5eb379e0364718015edc208ab679d8064108"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_288.dat",
+            "sha256": "1fe408408d40d238d013afd8138646143fdb8bd76be7ad9891cfd8e3c7b83ecd"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_289.dat",
+            "sha256": "e22c5b18834adcc67e409c5230297d279bf5c725809d4ea5c16586ca35fd07b3"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_290.dat",
+            "sha256": "586fa1d78a5f866eef08c1eb146c308db02ae3027e0f666ab86dfabecb2d626b"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_291.dat",
+            "sha256": "dd0905f4b7610c9f102cb7039c30ac2fe1dc8d69ff2fccd8a106cbf2a0214f71"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_292.dat",
+            "sha256": "af32a1a4b6a4ccc94e5bdcb5b14109e3e2a4b6c4baf6a3564b2941e2942f23ad"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_293.dat",
+            "sha256": "56eea771a448e2051179620deff4494d9692bdcab981601fc1513ac6538b2cf5"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_294.dat",
+            "sha256": "604e81e0447837df88ce53d309f6bcb0c3c6122e530cf0445bb45ceb89a3a19b"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_295.dat",
+            "sha256": "b5a6e719296bc3b34775149419f22e2936d1eacf9e4810edb33134023a303a13"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_296.dat",
+            "sha256": "66a5f34554e79943f4b056cfa67f4af48c0c962f3509f2f2693c3a46b9acba9e"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_297.dat",
+            "sha256": "001eebfbfdd16ce3e8a23f21dd307714a2d5be492b79d89f5cc378ed85c7e51c"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_298.dat",
+            "sha256": "8493bb29aac751d2080eabc681515fa292af1745a3937631d1ff45c8a8eb86ad"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_299.dat",
+            "sha256": "de32f4da3d9b70a5e80df1008731bfafdd670b055e559b6eb2b61c886c47b927"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_300.dat",
+            "sha256": "cd60091d7234955ecc0e11d895176a2e0fd2b91670d98feb64b88df37146eb26"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_301.dat",
+            "sha256": "0c868e3ba7b3f4877c5d48d19e015801952bb74ccb2a4b2f8b5d890770200796"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_302.dat",
+            "sha256": "7b7c69a722e93829317f692d5636fa404e95d5b44d6ecf814e9faec371ef40c3"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_303.dat",
+            "sha256": "e7dce12320374b1852afa8d865195cd36dbc9c7bf6b7696b650a69cc419d63e0"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_304.dat",
+            "sha256": "bb777343b334e2317c0d74f085ba70552da2eb813a11a19b06383b360ded02f2"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_305.dat",
+            "sha256": "e221c7d1484f718bda49ff0059eec0af08a724592d27c50a1a985d25e916b82d"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_306.dat",
+            "sha256": "1c15258a3b4fe43a02e422b37d39ad6034ed36bc95d9878f85c64a2c7d5215c1"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_307.dat",
+            "sha256": "e8d12faab8d68abaa9ec2c10f162070c0887b46c7aba47cd24ace3d32445f8e5"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_308.dat",
+            "sha256": "84471889a6d91b78532f99995219198945f58d4b8805acd7f36f89d8209747e4"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_309.dat",
+            "sha256": "ef861319c4b48a66f6c7f0037d6e9ba1018b20f6499383cecb478dd1d4b01c63"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_310.dat",
+            "sha256": "1e96b9c9336dbef7bc5df88104d618163de2b4d2931d0c2d81657adf997fc454"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_311.dat",
+            "sha256": "5a332ab8d4901c54e4126ae0e153c4452ae1b5babe4bdaeae7cd6b8e43750e0e"
+        },
+        {
+            "file": "inputs/experiments/bm01_scan/latp_312.dat",
+            "sha256": "cd3dc944fa035058af4caba8773f4247c955d5e5c29bfaef1504d70aacc05794"
+        },
+        {
+            "file": "inputs/structures/alpo4_p63mc.edi",
+            "sha256": "350e4eb631946104099c05296a072d96fd63ed5a28e13ada6e081bfd77610d5e"
+        },
+        {
+            "file": "inputs/structures/latp.edi",
+            "sha256": "2fa22f4a9a8554731d4abc98d471cb0a81a9b9a39eec390b7219a72d4d1ad3a9"
+        }
+    ],
+    "error": "",
+    "example": "pd-xray-cwl_latp-bm01_scan",
+    "fixture": {
+        "detail": "3 phases · 73 synchrotron patterns · Linked displacement parameters",
+        "id": "pd-xray-cwl_latp-bm01_scan",
+        "origin": "BM01 @ ESRF",
+        "samples": [
+            "LATP [R-3c]",
+            "AlPO₄ [C222₁]",
+            "AlPO₄ [P6₃mc]"
+        ],
+        "searchAliases": [
+            "pd-xray-cwl_latp-bm01_scan",
+            "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF",
+            "3 phases · 73 synchrotron patterns · Linked displacement parameters"
+        ],
+        "sources": [
+            "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/project.edi",
+            "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/analysis/analysis.edi",
+            "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/experiments/bm01.edi",
+            "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/structures/alpo4_c2221.edi",
+            "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/structures/alpo4_p63mc.edi",
+            "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/structures/latp.edi"
+        ],
+        "values": {
+            "beamMode": [
+                "constant wavelength"
+            ],
+            "dimensionality": [
+                "1d"
+            ],
+            "facilities": [
+                "ESRF"
+            ],
+            "fittingMode": [
+                "sequential"
+            ],
+            "instruments": [
+                "BM01"
+            ],
+            "polarisation": [
+                "__not_applicable__"
+            ],
+            "probe": [
+                "xray"
+            ],
+            "purpose": [
+                "refinement"
+            ],
+            "sampleForm": [
+                "powder"
+            ],
+            "scatteringType": [
+                "bragg"
+            ],
+            "structure": [
+                "crystal"
+            ]
+        }
+    },
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "inputs": {
+        "experiment": {
+            "file": "inputs/experiments/bm01.edi",
+            "sha256": "af58e09874522d486a4aab817a6e65e285674fd84b45164110e19d5213709af6"
+        },
+        "structure": {
+            "file": "inputs/structures/alpo4_c2221.edi",
+            "sha256": "b42662d5570b1a08f3b1df6451af8ff1f5c6e69ea3b40bd78f39dd2b181c5306"
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "scenes": [
+        {
+            "description": "Open the example from Examples",
+            "id": "example-open",
+            "image": "example-open.webp",
+            "metadata": "example-open.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Fit the template pattern alone first",
+            "id": "fitting-mode-single",
+            "image": "fitting-mode-single.webp",
+            "metadata": "fitting-mode-single.json",
+            "page": "analysis",
+            "sidebar": "Extra",
+            "status": "captured"
+        },
+        {
+            "description": "Start with every parameter fixed",
+            "id": "nothing-free",
+            "image": "nothing-free.webp",
+            "metadata": "nothing-free.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Scales, 2θ zero and cells",
+            "id": "stage-1-fit",
+            "image": "stage-1-fit.webp",
+            "metadata": "stage-1-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Background",
+            "id": "stage-2-fit",
+            "image": "stage-2-fit.webp",
+            "metadata": "stage-2-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Peak widths",
+            "id": "stage-3-fit",
+            "image": "stage-3-fit.webp",
+            "metadata": "stage-3-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Peak asymmetry",
+            "id": "stage-4-fit",
+            "image": "stage-4-fit.webp",
+            "metadata": "stage-4-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: LATP positions",
+            "id": "stage-5-fit",
+            "image": "stage-5-fit.webp",
+            "metadata": "stage-5-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: LATP displacements",
+            "id": "stage-6-fit",
+            "image": "stage-6-fit.webp",
+            "metadata": "stage-6-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Back to the sequential mode",
+            "id": "scan-mode",
+            "image": "scan-mode.webp",
+            "metadata": "scan-mode.json",
+            "page": "analysis",
+            "sidebar": "Extra",
+            "status": "captured"
+        },
+        {
+            "description": "Fit the scan",
+            "id": "scan-fit",
+            "image": "scan-fit.webp",
+            "metadata": "scan-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the correlations",
+            "id": "correlations",
+            "image": "correlations.webp",
+            "metadata": "correlations.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Review the report",
+            "id": "report",
+            "image": "report.webp",
+            "metadata": "report.json",
+            "page": "report",
+            "sidebar": "Main",
+            "status": "captured"
+        }
+    ],
+    "schema": 1,
+    "script_sha256": "896b904ecd2f2fd932bd8e63c23b29096cb44c624dd99ca4dba91503607c63e1",
+    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "status": "complete",
+    "workflow": "tutorial"
+}

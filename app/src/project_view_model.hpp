@@ -1,0 +1,1261 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#ifndef EDI_APP_PROJECT_VIEW_MODEL_HPP
+#define EDI_APP_PROJECT_VIEW_MODEL_HPP
+
+#include <QHash>
+#include <QVariantList>
+#include <QVariantMap>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QList>
+#include <QStringList>
+#include <QObject>
+#include <QPointer>
+#include <QTemporaryDir>
+#include <QTimer>
+#include <QSet>
+#include <QString>
+#include <QUrl>
+#include <QtQml/qqmllist.h>
+#include <QtQml/qqmlregistration.h>
+#include "collection_origin.hpp"
+#include "edi/io.hpp"
+#include <atomic>
+#include <functional>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include "edi/calculation.hpp"
+#include "analysis_view_model.hpp"
+#include "block_text.hpp"
+#include "category_list_model.hpp"
+#include "edi/edit.hpp"
+#include "edi/live_preview.hpp"
+#include "edi/background_estimate.hpp"
+#include "edi/model.hpp"
+#include "edi/assistant_files.hpp"
+#include "edi/scan.hpp"
+#include "edi/worker.hpp"
+#include "correlation_view_model.hpp"
+#include "evolution_view_model.hpp"
+#include "scan_view_model.hpp"
+#include "scan_session.hpp"
+#include "experiment_view_model.hpp"
+#include "fit_view_model.hpp"
+#include "parameter_table_model.hpp"
+#include "project_editor.hpp"
+#include "report_view_model.hpp"
+#include "row_table_model.hpp"
+#include "structure_view_model.hpp"
+#include "structure_view_options.hpp"
+
+namespace edi_app {
+
+// What a save would write and whether it asks first (ProjectViewModel::saveDataPlan). value() and the map
+// conversion read it by field name, as a record of the decision.
+struct SaveDataPlan {
+    Q_GADGET
+    QML_VALUE_TYPE(saveDataPlan)
+    Q_PROPERTY(bool linked MEMBER linked CONSTANT)
+    Q_PROPERTY(int linkedFiles MEMBER linkedFiles CONSTANT)
+    Q_PROPERTY(qint64 linkedBytes MEMBER linkedBytes CONSTANT)
+    Q_PROPERTY(int files MEMBER files CONSTANT)
+    Q_PROPERTY(qint64 bytes MEMBER bytes CONSTANT)
+    Q_PROPERTY(QString mode MEMBER mode CONSTANT)
+    Q_PROPERTY(bool large MEMBER large CONSTANT)
+    Q_PROPERTY(bool ask MEMBER ask CONSTANT)
+
+   public:
+    bool linked = false;
+    int linkedFiles = 0;
+    qint64 linkedBytes = 0;
+    int files = 0;
+    qint64 bytes = 0;
+    QString mode;
+    bool large = false;
+    bool ask = false;
+    QVariant value(const QString& key) const;
+    operator QVariantMap() const;
+};
+class OptionListModel;
+
+struct ImmutableAssistantResult;
+
+// A value and its standard uncertainty as the project's rule writes them, for QML: the value's text, the s.u.'s text
+// in the value's last digits, and the bracket; all empty when there is no s.u. to write.
+struct UncertaintyText {
+    Q_GADGET
+    QML_VALUE_TYPE(uncertaintyText)
+    Q_PROPERTY(QString value MEMBER value CONSTANT)
+    Q_PROPERTY(QString su MEMBER su CONSTANT)
+    Q_PROPERTY(QString bracket MEMBER bracket CONSTANT)
+
+   public:
+    QString value;
+    QString su;
+    QString bracket;
+    bool operator==(const UncertaintyText&) const = default;
+};
+
+class ParameterRegistry;
+
+// The project's structures: roles `name`, `label` (`name · file`, the file the structure is saved as),
+// `structure` (StructureViewModel), `colorIndex`.
+class StructureListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a project")
+
+   public:
+    explicit StructureListModel(QObject* parent);
+    void setStructures(const QList<StructureViewModel*>& structures);
+};
+
+// The project's experiments: roles `name`, `label` (`name · file`), `experiment` (ExperimentViewModel),
+// `fitOutcome`, the outcome key of the project's last fit (recorded_outcome) on each experiment it fitted, else
+// empty: the first experiment after a single fit, every bank of a joint fit; `file`, the file its data is in; and
+// `extracted`, its scan values with their units. In a scan project the rows are the scan's datasets instead
+// (setDatasets): each the template experiment over one data file, with that file's results.csv outcome.
+class ExperimentListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a project")
+    // A scan's extract columns, one per rule with its unit, in the order of each row's `extracted` values.
+    Q_PROPERTY(QStringList columns READ columns NOTIFY columnsChanged)
+
+   public:
+    explicit ExperimentListModel(QObject* parent);
+    void setExperiments(const QList<ExperimentViewModel*>& experiments, const edi::Project& project);
+    struct Dataset {
+        QString file;
+        QString outcome;
+        QStringList extracted;
+        bool is_template = false;
+        QString reliability;  // its fit's χ², as the selector's line shows it; empty before it is fitted
+    };
+    // A scan's `count` datasets. The rows hold only their keys: a row's values are built from `row` when it is read,
+    // so a scan of many files keeps no text per file (the session holds its facts).
+    void setDatasets(ExperimentViewModel* experiment, int count, std::function<Dataset(int)> row);
+    // A dataset's facts changed; its row is read again.
+    void datasetChanged(int index) { announceRows(index, index); }
+    // Every dataset's facts may have changed.
+    void datasetsChanged() { announceRows(0, count() - 1); }
+    // Whether the rows are `count` datasets of `experiment` already, so a change needs only announcing.
+    bool showsDatasets(ExperimentViewModel* experiment, int count) const {
+        return dataset_row_ && dataset_experiment_ == experiment && this->count() == count;
+    }
+    QStringList columns() const { return columns_; }
+    void setColumns(const QStringList& columns);
+    // Called with each row a view reads (a scan's datasets): the owner loads what the row still lacks, so only shown
+    // rows are read.
+    void setShownHook(std::function<void(int)> shown) { shown_ = std::move(shown); }
+    QVariant data(const QModelIndex& index, int role) const override;
+
+   signals:
+    void columnsChanged();
+
+   protected:
+    QList<QVariant> rowValues(int row) const override;
+
+   private:
+    QStringList columns_;
+    std::function<void(int)> shown_;
+    std::function<Dataset(int)> dataset_row_;  // set while the rows are a scan's datasets
+    QPointer<ExperimentViewModel> dataset_experiment_;
+};
+
+// The open project. It owns the core Project and is the editor every write goes through: the core
+// call, then the differences published (I3), the block lists re-derived after a structural
+// change, and one queued recalculation per event-loop turn (D8).
+class ProjectViewModel : public QObject, public ProjectEditor {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Opened through Session")
+    Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
+    Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
+    Q_PROPERTY(QString description READ description WRITE setDescription NOTIFY descriptionChanged)
+    // The project's authors, one text separated by "; " (project.edi `_metadata.authors`).
+    Q_PROPERTY(QString authors READ authors WRITE setAuthors NOTIFY authorsChanged)
+    // How values with a standard uncertainty are written and shown: "iucr_19" or "iucr_99".
+    Q_PROPERTY(QString suRule READ suRule WRITE setSuRule NOTIFY suRuleChanged)
+    // edi ADR-0069: whether a save copies a linked scan's files into the project ("all"), keeps them linked
+    // ("linked") or asks ("ask"). Kept by the app for the project's folder; until chosen, all up to 20 files and
+    // 50 MB, linked above.
+    Q_PROPERTY(QString includeDataOnSave READ includeDataOnSave WRITE setIncludeDataOnSave NOTIFY includeDataOnSaveChanged)
+    // The Analysis pattern chart's x axis, the project's `_pattern_chart.x_axis`: d-spacing, or the experiment's own.
+    // The report's charts follow it. An undoable edit.
+    Q_PROPERTY(bool patternDSpacing READ patternDSpacing WRITE setPatternDSpacing NOTIFY patternDSpacingChanged)
+    // The Evolution chart's view settings, the project's `_evolution_chart` (edi ADR-0017 §19): the error bars drawn
+    // (absent: yes), and the y range fitted to the values with their error bars (absent: the values only).
+    Q_PROPERTY(bool evolutionErrorBars READ evolutionErrorBars WRITE setEvolutionErrorBars NOTIFY evolutionErrorBarsChanged)
+    Q_PROPERTY(bool evolutionRangeWithSu READ evolutionRangeWithSu WRITE setEvolutionRangeWithSu NOTIFY evolutionRangeWithSuChanged)
+    Q_PROPERTY(QString path READ path NOTIFY pathChanged)
+    // True after any edit since the project was opened or last saved (edi ADR-0017 §13).
+    Q_PROPERTY(bool modified READ modified NOTIFY modifiedChanged)
+    Q_PROPERTY(bool saving READ saving NOTIFY savingChanged)
+    Q_PROPERTY(QString lastModified READ lastModified NOTIFY lastModifiedChanged)
+    Q_PROPERTY(edi_app::StructureListModel* structures READ structures CONSTANT)
+    Q_PROPERTY(edi_app::ExperimentListModel* experiments READ experiments CONSTANT)
+    Q_PROPERTY(edi_app::ParameterTableModel* parameters READ parameters CONSTANT)
+    Q_PROPERTY(edi_app::AnalysisViewModel* analysis READ analysis CONSTANT)
+    // Start fitting, its progress and its result.
+    Q_PROPERTY(edi_app::FitViewModel* fit READ fit CONSTANT)
+    Q_PROPERTY(edi_app::BlockText* metadataText READ metadataText CONSTANT)
+    // `project.edi`'s categories with no designed group, each with a group made from the dictionary on the Project
+    // page's Extras (CategoryListModel).
+    Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
+    // The categories of the report's own file, reports/report.edi, for the Report page's groups.
+    Q_PROPERTY(edi_app::CategoryListModel* reportCategories READ reportCategories CONSTANT)
+    // The report's own file as a save writes it, reports/report.edi (the Report page's Text; ADR-0036 §7).
+    Q_PROPERTY(edi_app::BlockText* reportText READ reportText CONSTANT)
+    Q_PROPERTY(edi_app::BlockText* projectText READ projectText CONSTANT)
+    Q_PROPERTY(edi_app::ReportViewModel* report READ report CONSTANT)
+    Q_PROPERTY(int currentStructureIndex READ currentStructureIndex WRITE setCurrentStructureIndex NOTIFY currentStructureIndexChanged)
+    Q_PROPERTY(int currentExperimentIndex READ currentExperimentIndex WRITE setCurrentExperimentIndex NOTIFY currentExperimentIndexChanged)
+    Q_PROPERTY(edi_app::StructureViewModel* currentStructure READ currentStructure NOTIFY currentStructureChanged)
+    Q_PROPERTY(edi_app::ExperimentViewModel* currentExperiment READ currentExperiment NOTIFY currentExperimentChanged)
+    Q_PROPERTY(bool canLoadStructure READ canLoadStructure NOTIFY canLoadStructureChanged)
+    // Create experiment adds an experiment without data, beside experiments with data too: a fit skips it, a
+    // calculation covers it. A scan project keeps its one template experiment.
+    Q_PROPERTY(bool canCreateExperiment READ canCreateExperiment NOTIFY canCreateExperimentChanged)
+    // The type a new experiment takes when measured data is loaded for one (no experiment selected): chosen on
+    // the Experiment page's selectors before the import, as the data fixes the type afterwards (ADR-0068).
+    Q_PROPERTY(edi_app::OptionListModel* newExperimentSampleFormOptions READ newExperimentSampleFormOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* newExperimentBeamModeOptions READ newExperimentBeamModeOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* newExperimentRadiationProbeOptions READ newExperimentRadiationProbeOptions CONSTANT)
+    Q_PROPERTY(QString newExperimentSampleFormToken READ newExperimentSampleFormToken NOTIFY newExperimentSampleFormTokenChanged)
+    Q_PROPERTY(QString newExperimentBeamModeToken READ newExperimentBeamModeToken NOTIFY newExperimentBeamModeTokenChanged)
+    Q_PROPERTY(QString newExperimentRadiationProbeToken READ newExperimentRadiationProbeToken NOTIFY newExperimentRadiationProbeTokenChanged)
+    // A scan project (sequential or independent mode over a declared scan): its experiment list is the scan's
+    // datasets, and the current experiment index the shown dataset. `scanColumns`: one heading per extract
+    // rule, with its unit ("temperature (K)").
+    Q_PROPERTY(bool scan READ scan NOTIFY scanChanged)
+    Q_PROPERTY(QString missingDataFolder READ missingDataFolder NOTIFY missingDataFolderChanged)
+    Q_PROPERTY(QString missingDataFile READ missingDataFile NOTIFY missingDataFileChanged)
+    Q_PROPERTY(QString pendingCollectionData READ pendingCollectionData NOTIFY pendingCollectionDataChanged)
+    Q_PROPERTY(QStringList scanColumns READ scanColumns CONSTANT)
+    // The template dataset's place among the datasets (`_sequential_fit.template_file`), or -1.
+    Q_PROPERTY(int templateIndex READ templateIndex NOTIFY templateIndexChanged)
+    // The Evolution tab: a fitted parameter across the scan's datasets (scan projects).
+    Q_PROPERTY(edi_app::EvolutionViewModel* evolution READ evolution CONSTANT)
+    // A scan's stacked patterns and 2D map (edi ADR-0041).
+    Q_PROPERTY(edi_app::ScanViewModel* scanViews READ scanViews CONSTANT)
+    // A project of several single crystals and nothing else: its experiments, in order, for the Stacked chart; empty
+    // otherwise.
+    Q_PROPERTY(QQmlListProperty<edi_app::ExperimentViewModel> singleCrystalExperiments READ
+                   singleCrystalExperimentList NOTIFY experimentModelsChanged)
+    // The Correlations tab: the last fit's parameter correlations for the shown experiment.
+    Q_PROPERTY(edi_app::CorrelationViewModel* correlations READ correlations CONSTANT)
+    Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
+    // The app bar's Undo (edi ADR-0024): the newest recorded change — an edit of the aliases or
+    // constraints, or a fit — is undone, so they undo in the order they were made.
+    Q_PROPERTY(bool canUndo READ canUndo NOTIFY canUndoChanged)
+    // A calculation is in flight or owed (edi ADR-0020): the pattern, the texts and the report show the last
+    // published one until `recalculated`.
+    Q_PROPERTY(bool calculating READ calculating NOTIFY calculatingChanged)
+    // A parameter's slider is held (the owner, 2026-10-25): the pattern charts hold their y range, widening it only
+    // when the calculated curve leaves it, and fit it once again when the slider is let go. A typed value or a
+    // spin-box step fits it at once.
+    Q_PROPERTY(bool adjusting READ adjusting WRITE setAdjusting NOTIFY adjustingChanged)
+    // ADR-0017 §16: the structure view's options, one object for the open project, shared by the toolbar, the
+    // Appearance group and every structure's view; a new project starts at the defaults.
+    Q_PROPERTY(edi_app::StructureViewOptions* structureViewOptions READ structureViewOptions CONSTANT)
+    // ADR-0038: the palette the project's experiments and structures take their colours from (a token of
+    // edi::colour_scheme_from_name, the app's Preferences), and each block's position in it (edi::colour_positions):
+    // kept while the block exists, a new block taking the next free one, a loaded project's experiments first. The
+    // count is one past the last position in use, at least 1.
+    Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
+    Q_PROPERTY(QList<int> experimentColourPositions READ experimentColourPositions NOTIFY
+                   experimentColourPositionsChanged)
+    Q_PROPERTY(QList<int> structureColourPositions READ structureColourPositions NOTIFY
+                   structureColourPositionsChanged)
+    Q_PROPERTY(int colourPositionCount READ colourPositionCount NOTIFY colourPositionCountChanged)
+    // ADR-0031, ADR-0041: the scan views' settings a project keeps (the owner, 2026-10-26), in the app's settings keyed
+    // by its folder as its selection is, so it reopens with them: the Stacked spacing (a name of
+    // edi::stacked_spacing_names, Wide when none is kept) and the Map's direction (a name of
+    // edi::scan_map_direction_names, Auto when none is kept; the choice, never the direction it resolves to). A project
+    // not saved yet keeps them from its first save.
+    Q_PROPERTY(QString stackedSpacing READ stackedSpacing WRITE setStackedSpacing NOTIFY stackedSpacingChanged)
+    Q_PROPERTY(QString mapDirection READ mapDirection WRITE setMapDirection NOTIFY mapDirectionChanged)
+
+   public:
+    // `colourScheme` is the palette the blocks first take their positions in: the one selected when the project opens,
+    // so an opened project's positions are those of that palette (ADR-0038).
+    ProjectViewModel(edi::Project project, QObject* parent, const QString& colourScheme = QStringLiteral("earth"));
+    ~ProjectViewModel() override;
+
+    QString name() const;
+    void setName(const QString& name);
+    QString title() const;
+    void setTitle(const QString& title);
+    QString description() const;
+    void setDescription(const QString& description);
+    QString authors() const;
+    void setAuthors(const QString& authors);
+    QString suRule() const;
+    void setSuRule(const QString& rule);
+    // The report's settings (ADR-0036 §7), each an undoable edit: in `reports/report.edi` the groups the report
+    // leaves out (their keys separated by spaces) and whether a saved report embeds its libraries; in
+    // `analysis/analysis.edi` the correlation threshold the Analysis page's level sets and the x axis.
+    void setReportExcluded(const QString& keys);
+    void setReportHtmlOffline(bool embedded);
+    // Whether Save report writes `format` ("html", "pdf" or "cif"): `reports/report.edi`'s `_report.<format>`.
+    void setReportFormat(const QString& format, bool on);
+    // Save report's record (ADR-0036 §7): the rows of the reports it wrote, each replacing the row of the same name,
+    // then `reports/report.edi` written alone. Not an edit: no model value changes and nothing is marked modified.
+    // Throws when the file cannot be written, the open project's rows then as they were.
+    void recordReportFiles(std::vector<edi::ReportFile> rows);
+    void setReportCorrelationThreshold(double threshold);
+    bool patternDSpacing() const;
+    void setPatternDSpacing(bool on);
+    bool evolutionErrorBars() const;
+    void setEvolutionErrorBars(bool on);
+    bool evolutionRangeWithSu() const;
+    void setEvolutionRangeWithSu(bool on);
+    // A value and its standard uncertainty as the project's rule writes them; empty texts for a non-finite value or a
+    // zero or non-finite s.u.
+    Q_INVOKABLE edi_app::UncertaintyText suText(double value, double su) const;
+    QString path() const { return QString::fromStdString(project_->path); }
+    // Unsaved edits, a held drag's included: the guards against losing them read this while only the announcement waits.
+    bool modified() const { return modified_ || modified_held_; }
+    // A save is running: the project takes no change until it is done (edi ADR-0069).
+    bool saving() const { return operation_holds_ != 0; }
+    // Work in `folder` from now on: the folder an archive was unpacked into, whose archive is the project's location
+    // (edi ADR-0052). Not a save and not an edit.
+    void workIn(const QString& folder);
+    // Why the project cannot be saved now (a fit is running), or empty.
+    QString saveRefusal() const;
+    // What a scan project reads of a staged save's folder, read before the save is published: the folder's listing
+    // (its datasets, index and run) and the shown dataset's values over the staged copy.
+    struct StagedScan {
+        std::shared_ptr<ScanSession> listing;
+        QString refusal;  // why the listing refused, if it did: the scan shows it, the save goes ahead
+        std::optional<std::vector<edi::Edit::ScanValue>> shown;
+        bool includedData = false;  // the staged save included linked data
+        QString included;           // the linked scan folder whose files it copied in, if it did
+    };
+    // A processed scan's results written into a staged save's `directory`, and what the project will read there read
+    // into `scan`, before the save is published. Why not, or empty.
+    QString stageScan(const QString& directory, const edi::Project& staged, StagedScan& scan);
+    // The project takes a published staged save: `staged` is the staged copy, which already wrote `directory`. It works
+    // there and holds the staged values and results, and a scan the listing `scan` read. Reads and writes no file.
+    void takeStaged(const QString& directory, const edi::Project& staged, StagedScan scan);
+    // After a save adopted the template: a dataset read in flight took its values before, so it is dropped and the
+    // selected dataset read again over the adopted template; `shown` when the shown one was not built again already.
+    void viewAfterSave(bool shown);
+    // The model a save writes: a scan's template while a dataset is shown, else the project.
+    const edi::Project& savedModel() const { return scan_template_ ? *scan_template_ : *project_; }
+    // The project holds changes its place does not (the web app's kept unsaved state, reopened).
+    void markUnsaved() { setModified(true); }
+    // How many edits the project has had: a save that finishes later knows whether the project changed meanwhile.
+    quint64 revision() const { return revision_; }
+    QString lastModified() const;
+    StructureListModel* structures() const { return structure_list_; }
+    ExperimentListModel* experiments() const { return experiment_list_; }
+    ParameterTableModel* parameters() const { return parameters_; }
+    AnalysisViewModel* analysis() const { return analysis_; }
+    FitViewModel* fit() const { return fit_; }
+    BlockText* metadataText() const { return metadata_text_; }
+    CategoryListModel* categories() const { return categories_; }
+    CategoryListModel* reportCategories() const { return report_categories_; }
+    BlockText* reportText() const { return report_text_; }
+    BlockText* projectText() const { return project_text_; }
+    ReportViewModel* report() const { return report_; }
+    int currentStructureIndex() const { return current_structure_; }
+    void setCurrentStructureIndex(int index);
+    int currentExperimentIndex() const { return scan_ ? current_dataset_ : current_experiment_; }
+    void setCurrentExperimentIndex(int index);
+    StructureViewModel* currentStructure() const { return structure_models_.value(current_structure_); }
+    ExperimentViewModel* currentExperiment() const { return experiment_models_.value(current_experiment_); }
+    // A project holds any number of structures (phases); loading one is always possible.
+    bool canLoadStructure() const { return true; }
+    bool canCreateExperiment() const;
+    bool scan() const { return scan_; }
+    QStringList scanColumns() const { return scan_columns_; }
+    EvolutionViewModel* evolution() const { return evolution_; }
+    ScanViewModel* scanViews() const { return scan_views_; }
+    QList<ExperimentViewModel*> singleCrystalExperiments() const;
+    QQmlListProperty<ExperimentViewModel> singleCrystalExperimentList();
+    CorrelationViewModel* correlations() const { return correlations_; }
+    int templateIndex() const;
+    QString lastError() const { return last_error_; }
+    bool calculating() const { return calculating_; }
+    bool adjusting() const { return adjusting_; }
+    void setAdjusting(bool adjusting);
+    StructureViewOptions* structureViewOptions() const { return structure_view_options_; }
+    QString colourScheme() const { return colour_scheme_; }
+    void setColourScheme(const QString& scheme);
+    QList<int> experimentColourPositions() const { return experiment_colour_positions_; }
+    QList<int> structureColourPositions() const { return structure_colour_positions_; }
+    int colourPositionCount() const;
+    // The experiments' positions, then the structures'.
+    std::vector<std::size_t> colourPositions() const;
+    // A parameter's number in the Analysis table, from 1, by its unique name, as a correlation names it
+    // (`tb2ti2o7.atom_site.O1.fract_x`); 0 when the table does not list it. The correlation chart labels its ticks by
+    // these when the names are hidden (the owner, 2026-10-27).
+    Q_INVOKABLE int parameterNumber(const QString& uniqueName) const;
+    // The parameter of that unique name, as the Analysis table shows it; null when no current parameter has it.
+    // A calculated table naming parameters (the correlations) names them by it (owner record 1d005d242).
+    Q_INVOKABLE edi_app::ParameterItem* parameterNamed(const QString& uniqueName) const;
+    QString stackedSpacing() const { return stacked_spacing_; }
+    void setStackedSpacing(const QString& spacing);
+    QString mapDirection() const { return map_direction_; }
+    void setMapDirection(const QString& direction);
+    const QList<StructureViewModel*>& structureModels() const { return structure_models_; }
+    const QList<ExperimentViewModel*>& experimentModels() const { return experiment_models_; }
+    const edi::Project& project() const { return *project_; }
+    const edi::Project* currentProject() const override { return project_.get(); }
+    /// Native assistant access to the same model and worker used by manual controls.
+    edi::Project* assistantProject() { return project_.get(); }
+    // Optional native file spelling on exact current canonical inspection rows.
+    QJsonArray assistantParameterText(const QJsonArray& rows) const;
+    edi::work::Worker& assistantWorker() { return *worker_; }
+    // The demo's seam: the project's created and last-modified times, which a loaded example takes
+    // from the clock, set to a fixed value so its saved Text is reproducible.
+    void pinTimestamps(const QString& timestamp);
+    // The files a save of the project writes (path relative to the project, text), from one save
+    // per change; a writer refusal is thrown as its message.
+    struct SavedFiles {
+        std::vector<std::pair<std::string, std::string>> files;
+        std::string refusal;
+    };
+    const std::vector<std::pair<std::string, std::string>>& savedFiles() const;
+    std::string savedFile(const std::string& relative) const;
+    // The same file as a save writes it without calculating: what finds the generated groups.
+    std::string discoveredFile(const std::string& relative) const;
+    SavedFile savedFileFunction() const;
+
+    // A Stacked view or Map says whether it is on screen: with every pattern waited for, a followed scan shows each
+    // file on it as the current dataset (edi ADR-0029, 8).
+    Q_INVOKABLE void setScanViewShown(QObject* view, bool shown);
+    // D12: add blocks from `.edi` files; on a refusal nothing changes and `refused` names the reason.
+    Q_INVOKABLE bool loadStructure(const QUrl& file);
+    Q_INVOKABLE bool loadExperiments(const QList<QUrl>& files);
+    /// A full experiment from the web with the structures it links (ADR-0068): each structure file whose name the
+    /// project does not hold yet is added, then the experiment, as one undoable change; `label` names the entry in a
+    /// refusal, which never names a temporary file.
+    Q_INVOKABLE bool loadExperimentWithStructures(const QUrl& file, const QList<QUrl>& structures, const QString& label);
+    // A structure's removal takes every experiment's link to it (and texture row for it) with it, in one undoable
+    // step, with a message naming the experiments.
+    Q_INVOKABLE void removeStructure(int index);
+    // Create structure: a new structure named structure1, structure2, … holding easydiffractionbeta's default phase
+    // (P b n m, a = 10, b = 6, c = 5 Å, one O site at the origin), selected and linked to no experiment. One
+    // undoable step.
+    Q_INVOKABLE bool createStructure();
+    // Duplicate structure: a copy of the current structure (edi::structure_copy) named `<name>_copy`, selected and
+    // linked to no experiment. One undoable step.
+    Q_INVOKABLE bool duplicateStructure();
+    // The parameter table's "free" header: free or fix every one of `parameters` (the rows the filters show) that can
+    // be fitted, as one edit with one Undo step (the owner, 2026-10-11).
+    Q_INVOKABLE bool setParametersFree(const QList<ParameterItem*>& parameters, bool free);
+    struct EditOutcome {
+        bool applied = false;
+        bool published = false;
+        QString message;
+    };
+    // Native batches and the existing manual relation/free editor share the same
+    // preowned Undo and actual applied/publication boundary. No QML entry point.
+    EditOutcome applyRecordedEdit(const edi::Edit& change, bool structural);
+    // The whole project put back to `accepted` (an assistant trial's rollback, edi ADR-0055): one structural edit
+    // and one Undo step, as a Text tab apply is, so a later Undo cannot split it. Empty, or why it was refused.
+    QString restoreProject(const edi::Project& accepted);
+    EditOutcome changeBackgroundPoint(edi::ExperimentBase&, const edi::BackgroundPointInput&, bool native_bounded = false);
+    BackgroundOutcome edit_background_point(edi::ExperimentBase&, const edi::BackgroundPointInput&) override;
+    QString rename_background_point(edi::ExperimentBase&, edi::LineSegment&, const std::string&) override;
+    // Same-owner empty completion, sharing the normal structural editor/Undo.
+    EditOutcome populateEmptyProject(const std::shared_ptr<edi::EmptyProjectPopulation>& prepared);
+    // Name points by position: the current experiment's line-segment points take ids from their positions
+    // (edi::position_point_ids), every reference following, as one edit with one Undo step (the owner, 2026-10-11).
+    Q_INVOKABLE bool namePointsByPosition();
+    // Id from order: the current experiment's polynomial or Chebyshev terms take their orders as ids
+    // (edi::order_term_ids), every reference following, as one edit with one Undo step.
+    Q_INVOKABLE bool nameTermsByOrder();
+    // Estimate: the current experiment's line-segment points replaced by crysta's estimate with the experiment's
+    // `_background_estimate` settings (edi::estimate_background, ADR-0040), numbered and fixed, as one edit with
+    // one Undo step. The summary and any warning go to the messages.
+    Q_INVOKABLE bool estimateBackground();
+    /// The same ordinary estimator with actual application/publication and preowned Undo.
+    EditOutcome estimateBackgroundOutcome(EditOutcome* receipt = nullptr);
+    Q_INVOKABLE void removeExperiment(int index);
+    // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
+    // neutron, Bragg, linked to every structure. One undoable step, as a load of experiments is.
+    Q_INVOKABLE bool createExperiment();
+    // Duplicate experiment: a copy of the current experiment with its data (edi::experiment_copy) named
+    // `<name>_copy`, selected. Refused in a scan project, as Create experiment is. One undoable step.
+    Q_INVOKABLE bool duplicateExperiment();
+    // Load data…: the plain-data file's rows (crysta's reader) become the measured data of experiment `index`, one
+    // made with Create experiment; its type then locks and its range shows the data's. An experiment still named
+    // experiment1, experiment2, … takes the file's name. A second load replaces the data. One undoable step, and
+    // one message saying what the reader skipped or changed.
+    Q_INVOKABLE bool loadData(int index, const QUrl& file);
+    // Load data for the experiment a chooser was opened for, wherever its row is now: refused when that experiment
+    // is no longer in the project (removed, or replaced by an Undo or a type change since).
+    Q_INVOKABLE bool loadDataInto(edi_app::ExperimentViewModel* experiment, const QUrl& file);
+    /// Several measured data files at once (owner, 2026-11-04), as one undoable change. `asScan` false: one new
+    /// experiment per file, each a copy of `experiment`'s setup named after its file. `asScan` true: `experiment` becomes
+    /// a scan's template and the files its datasets, copied into `scans/<name>` in the saved project's folder (a scan's
+    /// data folder lies inside the project); the project must be saved and hold that one experiment.
+    Q_INVOKABLE bool loadDatasets(edi_app::ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan,
+                                  bool copy = true, const QList<edi_app::CollectionOrigin>& origins = {});
+    /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
+    Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
+    QString includeDataOnSave() const;
+    struct LinkedInventory {
+        bool linked = false;
+        int files = 0;
+        qint64 bytes = 0;
+        // Of those, a scan's: the files an inclusion copies as they are. Linked experiments are written into their
+        // own documents instead, from the data the project holds.
+        int scanFiles = 0;
+        qint64 scanBytes = 0;
+    };
+    LinkedInventory linkedInventory() const;
+    /// Why a save cannot include the linked data now (an experiment's data not downloaded or not found), else empty.
+    QString linkedDataUnavailable() const;
+    /// The inputs a save reads from disk as found now, to tell whether they changed: the linked files and, for a save
+    /// writing the whole project, every file it carries over; each by its physical place, size and its modification and
+    /// change times (the change time follows any rewrite, and no one can set it back).
+    QString linkedInputsKey(bool wholeTree = false) const;
+    /// Why the bytes a save copied are not the ones its receipt (`linkedInputsKey`) planned, else empty: each carried
+    /// file under `stagedFolder` (the regenerated ones excepted) against the hash recorded for it.
+    // `copiedTree`: the stage is a plain copy of the project's folder (no writer ran), so nothing in it is exempt.
+    QString carriedBytesDiffer(const QString& receipt, const QString& stagedFolder,
+                               const QStringList& written = {}, bool copiedTree = false) const;
+    void setIncludeDataOnSave(const QString& mode);
+    /// What a save of the project writes (edi ADR-0069): `linked` (a scan or an experiment reads files outside the
+    /// project), their `linkedFiles` and `linkedBytes`, the save's `files` and `bytes` (its generated texts, every file
+    /// carried over as it is when `wholeTree`, a save writing the whole project, and the linked ones unless the mode
+    /// keeps them linked), the `mode`, `large` (over 100 MB) and `ask`: whether the user chooses first.
+    // `countCarried`: the save writes every carried file even into the project's own folder (it is staged whole).
+    // `followLinks`: the writer stores what each link to a file reaches (a .zip, a browser place, a download), so it
+    // counts those bytes too.
+    Q_INVOKABLE edi_app::SaveDataPlan saveDataPlan(bool wholeTree = false, bool countCarried = false, bool followLinks = false) const;
+    /// For a writer that stores what links reach (a .zip, a browser place, a download): each link in the checked stage
+    /// replaced by the bytes it reaches, those bytes checked against the receipt as they are written; a link to a
+    /// folder or to nothing refused. Empty when the stage then holds only checked bytes of its own, else why not.
+    QString freezeLinks(const QString& receipt, const QString& stagedFolder) const;
+    /// `source` copied to `stage` as it is, its links reading as the save's receipt describes them (a relative link
+    /// leaving the folder anchored to the absolute place it reaches). Empty, else why it could not be copied.
+    QString copyFolderAs(const QString& source, const QString& stage) const;
+    /// For a save that includes the data: `written` was just saved into `directory`; the linked scan's files are copied
+    /// into its scans/<name>, linked experiment files are written into their experiments, and it is written again in
+    /// place. The open project is not touched. Empty, or the refusal (then nothing copied stays and `written` still
+    /// links its data). `linked` is the scan folder copied, `changed` whether anything was included.
+    QString includeDataInto(edi::Project& written, const QString& directory, QString* linked = nullptr,
+                            bool* changed = nullptr, const QString* receipt = nullptr) const;
+    /// After a save that included the data: the open project reads what `written` declares.
+    void pointAtIncluded(const edi::Project& written);
+    /// And one Undo links it again as `linkedState` did (`linkedScan` the scan folder, if it was copied).
+    void adoptIncludedData(const edi::Project& linkedState, const QString& linkedScan);
+    /// Makes a scan's dataset its template (the owner, 2026-11-04): the template mark moves to its row, one undoable
+    /// change. A shown dataset becomes the template as shown; otherwise the template experiment takes that file's data.
+    /// A dataset still being read, or not shown, gives the template its file's data.
+    Q_INVOKABLE bool useAsTemplate(int dataset);
+    /// The scan's data folder when it cannot be found (ADR-0069), else empty: the Experiment page marks the experiment
+    /// "data not found" and offers Locate folder…; the project still opens.
+    QString missingDataFolder() const;
+    /// Points the scan at `folder` instead, relative to the project when it can be (one undoable change).
+    Q_INVOKABLE bool locateDataFolder(const QUrl& folder, const QString& missing = {});
+    /// The selected experiment's linked data file when it was not found, else empty: the Experiment
+    /// page marks it "data not found" and offers Locate file….
+    QString missingDataFile() const;
+    /// Reads the selected experiment's data from `file` instead and links it there (one undoable change).
+    Q_INVOKABLE bool locateDataFile(edi_app::ExperimentViewModel* experiment, const QUrl& file);
+    /// The selected experiment's collection entry when its data is not here yet, else empty: the Experiment page says
+    /// it is downloaded when a fit starts and offers Download.
+    QString pendingCollectionData() const;
+    /// Whether an experiment's data comes from a data collection and is not here yet (edi ADR-0069).
+    bool needsCollectionData() const;
+    /// Fetches that data, from the app's cache or else the collection, checks each file's digest and fills the
+    /// experiments; `done` gets empty or why not. Each call is an operation of its own: a later one, or the project's
+    /// retirement, keeps an earlier one from filling or answering.
+    void fetchCollectionData(std::function<void(const QString&)> done);
+    /// The Experiment page's Download for data not here yet.
+    Q_INVOKABLE void downloadCollectionData();
+    using CollectionFetcher =
+        std::function<void(const QString& id, std::function<void(const QByteArray&, const QString&)> done)>;
+    void setCollectionFetcher(CollectionFetcher fetcher) { collection_fetcher_ = std::move(fetcher); }
+    /// Measured data into a new experiment, made only once the file has been read: the type is the pending one
+    /// above unless a token is given; an impossible type or an unreadable file leaves the project untouched. One
+    /// Undo entry.
+    Q_INVOKABLE bool loadDataIntoNewExperiment(const QUrl& file, const QString& sampleForm = QString(),
+                                               const QString& beamMode = QString(), const QString& radiationProbe = QString());
+    /// One axis of the pending new-experiment type (sampleForm, beamMode, radiationProbe); a single crystal is
+    /// neutron and constant wavelength, as setExperimentType keeps it.
+    Q_INVOKABLE bool setNewExperimentType(const QString& axis, const QString& token);
+    OptionListModel* newExperimentSampleFormOptions() { ensureNewExperimentOptions(); return new_experiment_sample_form_options_; }
+    OptionListModel* newExperimentBeamModeOptions() { ensureNewExperimentOptions(); return new_experiment_beam_mode_options_; }
+    OptionListModel* newExperimentRadiationProbeOptions() { ensureNewExperimentOptions(); return new_experiment_radiation_probe_options_; }
+    QString newExperimentSampleFormToken() const;
+    QString newExperimentBeamModeToken() const;
+    QString newExperimentRadiationProbeToken() const;
+    // One type axis ("sampleForm", "beamMode", "radiationProbe", "scatteringType") of an experiment without
+    // data set to `token`: the experiment is made anew with that type, keeping its name, its link and,
+    // within one beam mode, its range.
+    Q_INVOKABLE bool setExperimentType(int index, const QString& axis, const QString& token);
+    // The place of the structure of this name in the project, or -1: its colour (edi ADR-0017 §8).
+    Q_INVOKABLE int structureIndex(const QString& name) const;
+
+    QString apply(const edi::Edit& change, bool structural) override;
+    QString assign_parameter_value(edi::Parameter& parameter, double value) override;
+    QString assign_parameter_free(edi::Parameter& parameter, bool free) override;
+    QString apply_relation_edit(const edi::Edit& change) override;
+    QString apply_relation_control(const edi::Edit& change, const ProjectEditor::RelationAction& action) override;
+    RelationOutcome append_constraint(edi::Project&, edi::ParameterConstraint&&, const ProjectEditor::RelationAction&) override;
+    QString rename_structure(edi::Structure& structure, const std::string& name) override;
+    QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) override;
+    bool canUndo() const { return can_undo_; }
+    Q_INVOKABLE void undo();
+    bool fitUndoAvailable() const;
+    // A Text tab's apply (edi ADR-0017 §7): the project file `file` replaced by `text`, read as opening the project
+    // reads it, on a copy (edi::project_with_file_text); the read project replaces this one in one Undo step. The
+    // refusal, with nothing changed, or empty.
+    Q_INVOKABLE QString applyText(const QString& file, const QString& text);
+
+    // , the fit's three owner-thread steps (FitViewModel): the project took a fit's result — every view
+    // publishes it, the pattern included, in one step; a frame of a running fit is drawn; the patterns go back
+    // to what the project holds (a fit that wrote nothing).
+    void publishFit();
+    // A fit's or a shown dataset's patterns; a dataset's may bring the first experiment's d-spacing capture.
+    void showFitFrame(const edi::FitFrame& frame, std::optional<edi::PatternSource> d_frame = std::nullopt);
+    void restorePatterns();
+    // A scan run's owner-thread steps (FitViewModel): before a fresh run, the previous results set aside, which
+    // Undo restores; each file it fits; the file it shows while followed; its end, after which the shown dataset is
+    // viewed again from the rows on disk. The shown dataset stays in the model while the scan runs from the template.
+    QString prepareScan(bool fresh);
+    // Reset fits (FitViewModel::reset): every dataset's fit result cleared, one Undo step; the refusal, if any.
+    QString resetScan();
+    // Why an edit or a single or joint fit waits: a chosen dataset is still being read, so the model still shows the
+    // one before; empty otherwise.
+    QString pendingRefusal() const;
+    // The template a scan runs from: the stored one while a dataset is shown, else none (the model is the template).
+    const edi::Project* scanTemplate() const { return scan_template_ ? &*scan_template_ : nullptr; }
+    // The place of the file's dataset in the scan, or -1 when its row could not be indexed.
+    int scanFileFitted(const edi::ScanFileRecord& record);
+    // A followed file handed over with its receipt token: FitViewModel accepts the receipt only for the token it
+    // handed over last.
+    void followScanFile(const std::string& file, std::uint64_t token);
+    // A followed file with its pattern as the fit left it: shown like followScanFile, its pattern not calculated
+    // again (edi ADR-0029).
+    void followScanFrame(const std::string& file, const edi::FitFrame& frame, std::uint64_t token);
+    // Every pattern with no pattern chart shown (the Stacked or the Map view): the file is presented by becoming the
+    // current dataset, counted once a frame is synchronised with it.
+    void followScanSelection(const std::string& file, std::uint64_t token);
+    // A Stacked view or Map is on screen (setScanViewShown).
+    bool scanViewShown() const { return !scan_views_shown_.empty(); }
+    // No dataset read is in flight or waits to be applied.
+    bool viewSettled() const { return !view_reading_ && view_applied_ == view_request_; }
+    // Drops a followed file's pending receipt without counting it (Follow off, a new scan).
+    void releaseFollow() { followRendered(false); }
+    // A followed scan's newest finished file becomes the current dataset at once (the evolution's line, the list,
+    // the selectors), with no read; its pattern follows when the view is ready (edi ADR-0029).
+    void markScanFile(const std::string& file);
+    // No dataset read is in flight: the last one asked for has been shown (or refused).
+    // A followed scan asks for its next pattern once the last view asked for is applied and a pattern chart of the
+    // current experiment is shown: a file put on a chart no one sees would be drawn first when it is shown again,
+    // older than the files finished meanwhile (edi ADR-0029).
+    bool followReady() const { return !view_reading_ && view_applied_ == view_request_ && patternShown(); }
+    bool patternShown() const;
+    // The run's driver returned: the rows and notes on disk are indexed again, the files skipped after the last
+    // row included (a skipped file sends no event). Comes before scanEnded.
+    void settleScan();
+    // Whether the scan's results hold any processed file (a row, or a skipped file).
+    bool scanProcessed() const;
+    // The run ended: its status, seconds and outcome key (the worst file's, Stopped or Failed).
+    void scanEnded(edi::FitStatus status, double seconds);
+    // Every pattern, display catches up: the patterns of a scan that ended are all drawn, and the shown dataset is
+    // shown as its row gives it (scanEnded waits for this).
+    void scanCaughtUp();
+    // Why the scan modes cannot run here (no single template experiment, no datasets), or empty.
+    QString scanRefusal() const;
+    QString apply_setting(const edi::Edit& change) override;
+    QString apply_unread(const edi::Edit& change) override;
+    QString value_refusal(const edi::Parameter& parameter) const override;
+    QString free_refusal() const override;
+    QString apply_background_edit(const edi::ExperimentBase& experiment, const edi::Edit& change,
+                                  bool structural) override;
+    // A report setting's edit (ADR-0036 §7): the settings as they were kept for Undo.
+    // `during_fit`: a setting only a chart reads (the Evolution chart's error bars and range), which may change while
+    // a fit runs; every other setting waits for the fit to end.
+    QString apply_report_setting(const edi::Edit& change, bool during_fit = false);
+    // Writes report settings through the preview's settings door and publishes what they change.
+    QString write_report_settings(const edi::Edit& change, bool restoring = false, bool during_fit = false);
+    // The scan's results (null outside a scan project).
+    const ScanSession* scanSession() const { return scan_session_; }
+
+   signals:
+    void nameChanged();
+    void projectEdited();
+    void titleChanged();
+    void descriptionChanged();
+    void authorsChanged();
+    void suRuleChanged();
+    void includeDataOnSaveChanged();
+    void patternDSpacingChanged();
+    void evolutionErrorBarsChanged();
+    void evolutionRangeWithSuChanged();
+    void lastModifiedChanged();
+    void currentStructureIndexChanged();
+    void currentStructureChanged();
+    void currentExperimentIndexChanged();
+    void currentExperimentChanged();
+    void canLoadStructureChanged();
+    void canCreateExperimentChanged();
+    void newExperimentSampleFormTokenChanged();
+    void newExperimentBeamModeTokenChanged();
+    void newExperimentRadiationProbeTokenChanged();
+    void experimentModelsChanged();
+    void lastErrorChanged();
+    void canUndoChanged();
+    // Each edit, as it is made: what keeps unsaved work follows it (the web app, edi ADR-0052 §9).
+    void edited();
+    void refused(const QString& message);
+    // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
+    void message(const QString& text);
+    // An information entry for the Messages: why an estimate with the calculated peaks set to auto subtracted or
+    // ignored them (the owner, 2026-10-20).
+    void information(const QString& text);
+    void pathChanged();
+    void modifiedChanged();
+    void savingChanged();
+    // A calculation was published; each experiment's pattern holds its outcome (Session's message list).
+    void recalculated();
+    void calculatingChanged();
+    void adjustingChanged();
+    // A calculation began, and ended, on the worker (edi::LivePreview's `calculating` and `calculated` hooks):
+    // every one it runs, a superseded one included, in order, each before its publication or rejection. What
+    // counts the calculations an input costs (the owner's one-calculation rule).
+    void calculationStarted();
+    void templateIndexChanged();
+    void scanChanged();
+    void missingDataFolderChanged();
+    void missingDataFileChanged();
+    void pendingCollectionDataChanged();
+    void colourSchemeChanged();
+    void experimentColourPositionsChanged();
+    void structureColourPositionsChanged();
+    void colourPositionCountChanged();
+    // Any of the three changed: what the report and the experiments follow.
+    void colourPositionsChanged();
+    void stackedSpacingChanged();
+    void mapDirectionChanged();
+    void calculationFinished();
+
+   private:
+    // The information entry for an estimate with the calculated peaks set to auto (none for another setting).
+    void postAutoModelReason(const std::string& experiment, const std::string& reason);
+    void publish(bool structural);
+    // Each of these signals only what changed since it was last published (the owner's per-property
+    // rule).
+    void publishMetadata();
+    void publishCurrent();
+    // ADR-0031 §1: the structure id, the experiment id and a scan's dataset file last selected in this project, in
+    // the app's settings keyed by the project's folder; stored only once restored.
+    QStringList storedSelection() const;
+    void storeSelection() const;
+    QString selectionKey() const;
+    bool selection_restored_ = false;
+    void syncBlocks();
+    void completeSymmetry();
+    void syncParameterTable(bool refresh_report = true);
+    void invalidateTexts();
+    // A calculation the worker finished was published into the project (edi::LivePreview's hook).
+    void published(const edi::PreviewResult& result);
+    void publishCalculating();
+    void setLastError(const QString& error);
+    friend class Session;
+    friend class FitViewModel;
+    friend class ReportViewModel;
+    friend class AssistantViewModel;
+    friend class TrialLockTests;
+    // One-shot ordinary Save entry origin and stack-local emitted origin.
+    // Manual edits/Save carry zero, including nested and early-error callbacks.
+    std::uint64_t assistant_save_origin_=0, project_edit_origin_=0;
+    void notifyProjectEdited(std::uint64_t origin=0);
+    struct WidgetParameterInput {
+        enum class Field { Value, Free, FreeGroup } field;
+        const edi::Parameter* parameter = nullptr;
+        std::vector<const edi::Parameter*> members; // Original exact free-header set; no QObject ownership.
+        double value = 0;
+        bool free = false, consumed = false;
+        EditOutcome outcome;
+    };
+    struct FitUndoInput {
+        std::uint64_t attempt = 0;
+        bool consumed = false, started = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<FitUndoInput> fit_undo_input_;
+    bool fit_undo_invoking_ = false;
+    std::shared_ptr<FitUndoInput> prepareFitUndo();
+    void finishFitUndo(const std::shared_ptr<FitUndoInput>&) noexcept;
+    struct WidgetEditProof {
+        edi::WorkStamps before;
+        std::optional<edi::WorkStamps> after;
+    };
+    void captureWidgetEditProof(WidgetEditProof&,const edi::Edit::AppliedResult&) noexcept;
+    struct WidgetRelationInput {
+        WidgetEditProof proof;
+        edi::Edit::AppliedResult applied_result;
+        ProjectEditor::RelationAction expected;
+        bool consumed = false;
+        EditOutcome outcome;
+    };
+    struct WidgetCreationInput {
+        WidgetEditProof proof;
+        CreationAction expected;
+        // Opted in only by individual assistant actions; manual/compound readers unchanged.
+        bool bounded_result = false, result_identity_refused = false;
+        edi::Edit::AppliedResult applied_result;
+        bool consumed = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<WidgetCreationInput> widget_creation_input_;
+    std::shared_ptr<WidgetCreationInput> prepareWidgetCreation(const CreationAction&);
+    void finishWidgetCreation(const std::shared_ptr<WidgetCreationInput>&) noexcept;
+    QString apply_creation_control(const edi::Edit&, bool structural, const CreationAction&) override;
+    struct WidgetFileInput {
+        std::function<bool()> source_current;
+        QUrl reader_path; // Internal immutable-byte stage for the original path-only SDK measurement reader.
+        enum class Kind { Structure, Measurement };
+        Kind kind = Kind::Structure;
+        const edi::ExperimentBase* experiment = nullptr;
+        bool bounded_result = false, result_identity_refused = false, source_changed = false;
+        edi::Edit::AppliedResult applied_result;
+        std::size_t points = 0, skipped = 0, nonpositive = 0, duplicates = 0, reordered = 0, derived = 0;
+        QUrl path;
+        std::shared_ptr<const edi::assistant::SelectedFile> source;
+        bool consumed = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<WidgetFileInput> widget_file_input_;
+    std::shared_ptr<WidgetFileInput> prepareWidgetStructureFile(const QUrl&, std::shared_ptr<const edi::assistant::SelectedFile>);
+    std::shared_ptr<WidgetFileInput> prepareWidgetMeasurementFile(const QUrl&, std::shared_ptr<const edi::assistant::SelectedFile>, ExperimentViewModel*);
+    void finishWidgetFile(const std::shared_ptr<WidgetFileInput>&) noexcept;
+    struct WidgetBackgroundInput {
+        const edi::ExperimentBase* experiment = nullptr;
+        edi::BackgroundPointInput expected;
+        const edi::LineSegment* row = nullptr;
+        const edi::LineSegment* result_row = nullptr;
+        std::vector<const edi::LineSegment*> members;
+        bool names = false, rename = false, consumed = false;
+        EditOutcome outcome;
+    };
+    std::shared_ptr<WidgetBackgroundInput> widget_background_input_;
+    std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackground(edi::ExperimentBase&, const edi::BackgroundPointInput&);
+    std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackgroundRename(edi::ExperimentBase&, edi::LineSegment&, const std::string&);
+    std::shared_ptr<WidgetBackgroundInput> prepareWidgetBackgroundNames(edi::ExperimentBase&);
+    void finishWidgetBackground(const std::shared_ptr<WidgetBackgroundInput>&) noexcept;
+    edi::Edit::AppliedResult* relation_result_ = nullptr; // Scoped manual complete-row pin only.
+    std::shared_ptr<WidgetRelationInput> widget_relation_input_;
+    std::shared_ptr<WidgetRelationInput> prepareWidgetRelations(const ProjectEditor::RelationAction& action);
+    void finishWidgetRelations(const std::shared_ptr<WidgetRelationInput>& input) noexcept;
+    std::shared_ptr<WidgetParameterInput> widget_input_;
+    bool widget_input_executing_ = false;
+    std::shared_ptr<WidgetParameterInput> prepareWidgetValue(const edi::Parameter& parameter, double value);
+    std::shared_ptr<WidgetParameterInput> prepareWidgetFree(const edi::Parameter& parameter, bool free);
+    std::shared_ptr<WidgetParameterInput> prepareWidgetFreeGroup(std::vector<const edi::Parameter*>, bool free);
+    void finishWidgetInput(const std::shared_ptr<WidgetParameterInput>& input) noexcept;
+    void retire() noexcept;
+    bool retired_ = false;
+    unsigned publication_depth_ = 0;
+    // Private stack lifetime, not a callback/API or model authority grant. Session
+    // may eagerly drain only an idle old owner; active stacks unwind normally.
+    struct PublicationScope {
+        ProjectViewModel& owner;
+        explicit PublicationScope(ProjectViewModel& value) noexcept : owner(value) { ++owner.publication_depth_; }
+        ~PublicationScope() {
+            if (--owner.publication_depth_ == 0 && owner.retired_) owner.deleteLater();
+        }
+        PublicationScope(const PublicationScope&) = delete;
+        PublicationScope& operator=(const PublicationScope&) = delete;
+    };
+    // edi ADR-0069: a save operation holds its project from its plan until its publication and notifications are
+    // done. Meanwhile edits, Undo, the assistant's changes, a fit start, another save and a replacement refuse; the
+    // project is kept alive as long as any copy of the operation can continue.
+    unsigned operation_holds_ = 0;
+    struct OperationHold {
+        QPointer<ProjectViewModel> owner;
+        explicit OperationHold(ProjectViewModel& value) : owner(&value) {
+            ++value.publication_depth_;
+            if (value.operation_holds_++ == 0) emit value.savingChanged();
+        }
+        ~OperationHold() {
+            if (owner.isNull()) return;
+            ProjectViewModel& value = *owner;
+            if (--value.operation_holds_ == 0) emit value.savingChanged();
+            if (--value.publication_depth_ == 0 && value.retired_) value.deleteLater();
+        }
+        OperationHold(const OperationHold&) = delete;
+        OperationHold& operator=(const OperationHold&) = delete;
+    };
+    QString operationRefusal() const;
+    // Keep the exact old sealed files alive until normal QObject deferred deletion.
+    std::shared_ptr<ImmutableAssistantResult> retired_result_;
+    // `trial`: the assistant's own trial asks (its fit start). While an assistant trial is open nothing else may edit
+    // the project (edi ADR-0055).
+    // `ownSave`: the save operation holding the project asks for its own write, which its hold admits.
+    QString criticalEditRefusal(bool restoring = false, bool trial = false, bool ownSave = false) const;
+    QString saveRefusal(bool admitted) const;
+    void recordReportFiles(std::vector<edi::ReportFile> rows, bool admitted);
+    // The trial lock's own plain message while an assistant trial is open, else empty (edi ADR-0055).
+    QString trialLockRefusal() const;
+    // The assistant edit in progress (its own-edit identity), which the trial lock admits.
+    std::uint64_t assistant_edit_ = 0;
+    struct AssistantEditScope {
+        QPointer<ProjectViewModel> project;
+        std::uint64_t id;
+        AssistantEditScope(ProjectViewModel* value, std::uint64_t serial) : project(value), id(serial) {
+            if (project) project->assistant_edit_ = id;
+        }
+        ~AssistantEditScope() {
+            if (project && project->assistant_edit_ == id) project->assistant_edit_ = 0;
+        }
+        AssistantEditScope(const AssistantEditScope&) = delete;
+        AssistantEditScope& operator=(const AssistantEditScope&) = delete;
+    };
+    bool edit_notification_ = false;
+    QString applyUndo(const edi::Edit& change, bool structural);
+    void holdPublicationFailure(const QString& warning) noexcept;
+    void setModified(bool modified);
+
+    std::unique_ptr<edi::Project> project_;
+    ParameterRegistry* registry_;
+    QList<StructureViewModel*> structure_models_;
+    QList<ExperimentViewModel*> experiment_models_;
+    StructureListModel* structure_list_;
+    ExperimentListModel* experiment_list_;
+    ParameterTableModel* parameters_;
+    AnalysisViewModel* analysis_;
+    FitViewModel* fit_ = nullptr;
+    // The undo history, oldest first: a fit (none: the fit's own start state is what undo_fit restores), an
+    // edit of the relations (its RelationsUndo), or experiments added by Create or Load experiment.
+    struct AddedExperiments {
+        std::vector<const edi::ExperimentBase*> experiments;
+    };
+    // A full experiment loaded from the web with the structures it brought: undone together.
+    struct AddedExperimentsWithStructures {
+        edi::StructuresUndo structures;
+        std::vector<const edi::ExperimentBase*> experiments;
+    };
+    // A fresh scan run: the result files it replaced, as they were (absent: there was none, also recorded).
+    // The fit records Reset fits clears: the model's and, while a dataset is shown, the template's.
+    struct FitRecords {
+        edi::FitResultRecord model;
+        std::optional<edi::FitResultRecord> stash;
+    };
+    struct ScanRun {
+        ScanSession::Files files;
+        std::optional<FitRecords> fit_records;  // Reset fits only
+        int shown_dataset = -1;                 // Reset fits only: the dataset the model showed, and its values
+        std::vector<edi::Edit::ScanValue> shown_values;
+    };
+    // Load data: the experiment as it was before (a simulation, or its earlier data, with its file name).
+    struct LoadedData {
+        const edi::ExperimentBase* experiment = nullptr;
+        std::shared_ptr<const edi::BraggPdExperiment> before;
+    };
+    // The table header's free or fixed: each parameter's flag as it was, by unique name.
+    struct FreeFlags {
+        std::vector<std::pair<std::string, bool>> before;
+    };
+    // Id from position or Id from order: the experiment's background point or term ids as they were, in order.
+    struct BackgroundPointUndo { std::shared_ptr<edi::BackgroundPointChange> prepared; };
+    struct PointIds {
+        const edi::ExperimentBase* experiment = nullptr;
+        std::vector<std::string> before;
+        bool terms = false;
+    };
+    // Estimate: the experiment's line-segment points, mode and their record as they were.
+    struct BackgroundPoints {
+        const edi::ExperimentBase* experiment = nullptr;
+        edi::BackgroundState before;
+    };
+    // A structure's or an experiment's rename: the block by its new name, and the name it had. The scan's results
+    // before and after it, so its Undo puts back the same shared results rather than renamed copies.
+    struct BlockName {
+        bool structure = true;
+        std::string name;
+        std::string before;
+        decltype(edi::FitResultRecord::scan_results) results_before;
+        decltype(edi::FitResultRecord::scan_results) results_after;
+    };
+    // A Text tab's apply: the project as it was.
+    struct AppliedText {
+        std::shared_ptr<const edi::Project> before;
+    };
+    struct EmptyPopulationUndo { std::shared_ptr<edi::EmptyProjectPopulation> prepared; };
+    using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, AddedExperimentsWithStructures, ScanRun, LoadedData,
+                                    edi::StructuresUndo, edi::ExperimentControlsUndo, EmptyPopulationUndo, FreeFlags, PointIds, BackgroundPointUndo, BackgroundPoints, BlockName,
+                                    edi::ReportSettingsState, AppliedText>;
+    // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
+    void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
+    // Each experiment view's Load data… state: every experiment but a scan's.
+    void syncLoadState();
+    // Applies an experiment's replacement by Load data or its undo; the refusal, if any.
+    QString replaceData(int index, edi::BraggPdExperiment replacement, bool restoring = false);
+    bool restoreScanRun(const ScanRun& run, bool restoring = false);
+    // The results read again from disk (after a run, an undo or a load), with every view of them.
+    void reloadScanResults();
+    // The indexed results in the lists, Evolution, the fit summary and the outdated state.
+    void showScanResults();
+    // After the template changed (a single fit's designation, its Undo): texts, tags and outdated state.
+    void publishTemplate();
+    // The run as a whole, from the indexed rows: `run_outcome` is the run's own end when it failed or was stopped.
+    ScanSummary scanSummary(const QString& run_outcome, double seconds) const;
+    // The template designation a single fit on a dataset changes, as it was before the fit, for its Undo.
+    struct TemplateState {
+        std::string template_file;
+        std::optional<edi::Project> stash;
+        std::optional<std::string> run_file;  // the scan's provenance file as it was (which fit came last)
+        bool run_file_known = false;          // false: it could not be read, so its Undo leaves it alone
+        // The fitted dataset's file, and the scan's results and file-named correlation rows as they were (ADR-0034:
+        // the results are shared, so this holds pointers).
+        std::string pairs_file;
+        std::map<std::string, std::shared_ptr<const edi::ScanFileResult>> results;
+        std::vector<edi::FitParameterCorrelation> rows;
+    };
+    std::optional<TemplateState> fit_template_before_, fit_template_undo_;
+    std::vector<UndoRecord> undo_history_;
+    void noteAddedExperiments(std::size_t before);
+    /// The first free name of the form experiment1, experiment2, …
+    std::string freeExperimentName() const;
+    void ensureNewExperimentOptions();
+    OptionListModel* new_experiment_sample_form_options_ = nullptr;
+    OptionListModel* new_experiment_beam_mode_options_ = nullptr;
+    OptionListModel* new_experiment_radiation_probe_options_ = nullptr;
+    edi::ExperimentTypeTokens new_experiment_type_;
+    bool can_undo_ = false;
+    void syncUndo();
+    BlockText* metadata_text_;
+    CategoryListModel* categories_ = nullptr;
+    CategoryListModel* report_categories_ = nullptr;
+    void syncCategories();
+    // Every block's category list against its saved text as it is now.
+    void refreshCategories();
+    // The Structure view's options are the shown structure's: set from it when it is shown, saved to it on a change.
+    void showStructureView();
+    void keepStructureView();
+    bool showing_view_ = false;
+    BlockText* report_text_ = nullptr;
+    BlockText* project_text_;
+    ReportViewModel* report_;
+    StructureViewOptions* structure_view_options_;
+    int current_structure_ = -1;
+    int current_experiment_ = -1;
+    // A scan project (edi ADR-0017 §19, ADR-0026): its results (the session), the dataset shown, and the template.
+    // While a dataset is shown the model holds that dataset's projection (its data, the template's parameters with
+    // its results row over them) and `scan_template_` holds the template, which is what a save writes and what a
+    // scan runs from. An admitted edit of the experiment or the structures goes to the template, seeded from the
+    // shown values; an edit of a project-wide setting goes to both; a refused edit to neither.
+    bool scan_ = false;
+    QString scan_refusal_;
+    EvolutionViewModel* evolution_ = nullptr;
+    ScanViewModel* scan_views_ = nullptr;
+    CorrelationViewModel* correlations_ = nullptr;
+    // ADR-0034: each file's results as the run reports them go into the fit record (the model's, and the template's
+    // while a dataset is shown), where the Correlations tab, Undo and a save find them; nothing keeps a second copy.
+    void adoptScanFileResult(const std::string& file, const std::shared_ptr<const edi::ScanFileResult>& result);
+    // The Correlations tab follows the last fit and the shown experiment.
+    void syncCorrelations();
+    // Each experiment's pattern colour: its place and count (a scan's template: the shown dataset's) and the positions
+    // its chart's style table takes.
+    void syncPatternColours();
+    // Every block's position in the palette, after the blocks or the palette changed.
+    void syncColourPositions();
+    QString colour_scheme_ = QStringLiteral("earth");
+    QHash<const QObject*, std::size_t> colour_positions_;  // by the block's view-model
+    QList<int> experiment_colour_positions_, structure_colour_positions_;
+    // The scan views' kept settings: read when the project opens, written when changed and at every save.
+    void restoreViewSettings();
+    void storeViewSettings() const;
+    QString stacked_spacing_ = QStringLiteral("wide");
+    QString map_direction_ = QStringLiteral("auto");
+    QStringList scan_columns_;
+    std::string scan_declaration_;  // what the session was listed from (scanDeclaration)
+    ScanSession* scan_session_ = nullptr;
+    int current_dataset_ = -1;
+    std::optional<edi::Project> scan_template_;
+    bool applying_view_ = false;
+    bool applying_setting_ = false;
+    // The newest dataset view asked for: a projection read off the GUI thread applies only while it is the newest.
+    std::uint64_t view_request_ = 0, view_applied_ = 0;
+    int view_wanted_ = -1;       // the dataset of the newest request
+    int projected_dataset_ = -1;  // the dataset the model holds now (a failed read leaves the one before)
+    bool view_reading_ = false;  // a read is in flight
+    // A followed file's pattern from the scan's fit (its dataset and the frame), until its dataset is shown.
+    std::optional<std::pair<int, edi::FitFrame>> follow_frame_;
+    // A followed file handed over while a scan runs, its dataset and name, until the chart is drawn with it: once
+    // its dataset is applied, the main window's first frame synchronised after that, which draws it; or never, when
+    // the read or the application fails, or the read or the drawing takes longer than kRenderWaitMs (edi ADR-0029).
+    // The receipt is bound to what was drawn: the followed dataset still in the model, and a shown chart that has
+    // presented the pattern generation its application set (or a later one). Any other view request releases it.
+    int follow_index_ = -1;
+    std::string follow_file_;
+    std::uint64_t follow_token_ = 0;
+    std::uint64_t follow_before_ = 0;  // the pattern generation when it was handed over
+    std::uint64_t follow_generation_ = 0;
+    bool follow_issuing_ = false;  // the followed file's own view request is being made
+    bool follow_selection_ = false;  // the followed file is presented as the current dataset (followScanSelection)
+    std::set<const QObject*> scan_views_shown_;
+    int render_swaps_ = -1;  // 1 while a followed file waits for its frame, -1 while nothing waits for one
+    // Set while a followed file waits for its frame; cleared at the start of the next frame (QQuickWindow::afterAnimating).
+    std::atomic<bool> render_armed_{false};
+    // Set at the start of the frame that takes a followed file's points; the render thread clears it once that frame is
+    // synchronised, and the receipt follows on this thread.
+    std::atomic<bool> render_synced_{false};
+    // The hand-over that frame takes: the receipt carries it and counts only while it is still the current one.
+    std::atomic<std::uint64_t> render_token_{0};
+    QTimer render_wait_;
+    QMetaObject::Connection render_connection_;
+    QMetaObject::Connection render_sync_connection_;
+    void handFollowed(int index, const std::string& file, std::uint64_t token);
+    void awaitRender();
+    bool presentedFollowed() const;
+    void followRendered(bool drawn);
+    // Reads the newest requested dataset off the GUI thread; its delivery applies it, or reads a newer one.
+    void startViewRead();
+    // Shows a dataset at once: the one a project opens on (`reread`: its file is read), or the shown one again from
+    // its changed row.
+    void viewDatasetNow(int index, bool reread);
+    // The identity of the template a run is fitting from (ScanSession::templateIdentity), for its provenance.
+    std::string run_identity_;
+    // A Continue's earlier provenance (its rows stay), for the run's own at its end.
+    std::optional<ScanSession::Run> previous_run_;
+    void loadScan();
+    // The scan declaration (_sequential_fit and its extraction rules) as one string, and the result columns it names.
+    static std::string scanDeclaration(const edi::Project& project);
+    static QStringList scanColumns(const edi::Project& project);
+    void makeScanSession();
+    // A changed declaration lists, reads and admits the scan again (publish).
+    void followScanDeclaration();
+    // Re-derives whether the scan modes can run (a single template experiment and a listed scan).
+    void syncScanAdmission();
+    // Shows a dataset: its projection is read off the GUI thread and applied when ready. `refresh`: again, even
+    // when it is the shown one (its results row changed).
+    void viewDataset(int index, bool refresh = false);
+    // A dataset's projection, read off the GUI thread: its data, the values it is shown with and, while a scan
+    // runs, its calculated pattern; or the refusal.
+    struct DatasetView {
+        std::optional<edi::PdDataBase> data;
+        std::vector<edi::Edit::ScanValue> values;
+        std::optional<edi::FitFrame> frame;
+        std::optional<edi::PatternSource> d_frame;  // the frame on d, when a chart is on d
+        QString error;
+    };
+    // Applies a projection read for request `request`, unless a newer one was asked for since.
+    void applyDatasetView(std::uint64_t request, int index, DatasetView view);
+    // The values a dataset is shown with: the template's, with its results row's over them.
+    std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row) const;
+    // The same over `from`, read with `index`'s columns.
+    std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row, const edi::Project& from,
+                                                    const edi::ScanResultIndex& index) const;
+    void syncDatasets();
+    // One dataset's row in the lists (its outcome, extracted values, template tag).
+    void syncDataset(int index);
+    ExperimentListModel::Dataset datasetRow(int index) const;
+    // The template, or the model when no dataset view holds one apart.
+    const edi::Project& scanTemplateOrModel() const { return scan_template_ ? *scan_template_ : *project_; }
+    // The results' outdated state, from their provenance against the template.
+    void syncOutOfDate();
+    void markTemplateChanged();
+    mutable std::optional<SavedFiles> saved_files_;
+    mutable std::optional<SavedFiles> discovered_files_;  // a save of a copy: nothing calculated (discoveredFile)
+    // ADR-0020: the calculation runs on the worker; every edit goes through the preview, which publishes a
+    // result only if no newer request exists. Deliveries arrive here by a queued call, so every model write
+    // and every signal of a publication happens on this object's (the GUI) thread. The preview goes first
+    // when the project closes, then the worker, which waits for a calculation in flight.
+    std::unique_ptr<edi::work::Worker> worker_;
+    std::unique_ptr<edi::LivePreview> preview_;
+    bool pending_structural_ = false;
+    bool editing_ = false;
+    bool edit_publication_failed_ = false;
+    struct RecordedEdit {
+        std::size_t index = 0;
+        std::vector<const edi::Parameter*> targets;
+    };
+    RecordedEdit* recording_ = nullptr; // stack owner, detached before any UI observer
+    void finishRecordedEdit() noexcept;
+    // The Undo step a slider drag is making, trimmed to what the drag changed when it is let go (edi ADR-0070).
+    struct DragUndo {
+        std::size_t index = 0;
+        std::vector<const edi::Parameter*> targets;
+    };
+    std::optional<DragUndo> drag_undo_;
+    void closeDragUndo() noexcept;
+    EditOutcome estimateBackgroundFor(const edi::ExperimentBase* expected,EditOutcome* receipt);
+    EditOutcome* estimate_receipt_ = nullptr;
+    EditOutcome applyEdit(const edi::Edit& change, bool structural, bool restoring = false);
+    QString editReadinessRefusal(bool restoring, bool trial = false) const;
+    bool calculating_ = false;
+    bool adjusting_ = false;
+    std::optional<QString> include_data_on_save_;  // chosen before the project has a folder to key it by
+    bool adjusted_ = false;  // a drag step left the full publish for the release
+    edi::PreviewResult adjust_result_;  // the newest drag step's calculation, published in full on release
+    bool template_change_held_ = false;
+    bool modified_held_ = false;  // a drag step changed the project: modified and `edited` are announced on release  // a drag step changed a scan's template: its identity is hashed on release
+    bool template_promotion_held_ = false;  // a drag step changed a shown dataset: the template takes it on release
+    void promoteShownToTemplate();
+    // What a held slider deferred, done once (release, or a save during the hold).
+    void settleHeld();
+    // On release the edit's and the calculation's publications run as one: the fields, texts and report once.
+    bool releasing_ = false;
+    bool release_owed_ = false;
+    CollectionFetcher collection_fetcher_;
+    quint64 collection_fetch_ = 0;  // the collection data fetch under way: only it fills or answers
+    bool collection_fetching_ = false;
+    // What a request waits for: each experiment without data that names a collection entry, by the experiment itself,
+    // its entry and its digest (edi ADR-0069). Equal entries of two experiments are two targets.
+    struct CollectionTarget {
+        const edi::ExperimentBase* experiment = nullptr;
+        QString id;
+        QString digest;
+        bool operator==(const CollectionTarget&) const = default;
+    };
+    struct CollectionWaiter {
+        std::vector<CollectionTarget> targets;
+        std::function<void(const QString&)> done;
+    };
+    std::vector<CollectionTarget> collectionTargets() const;
+    bool collectionTargetsFilled(const std::vector<CollectionTarget>& targets) const;
+    // Why `targets` can no longer be filled (one left the project or names another entry or digest), else empty.
+    QString collectionTargetsChanged(const std::vector<CollectionTarget>& targets) const;
+    // A request with its own targets, kept as they were when it was made, through every retry.
+    void fetchCollectionFor(CollectionWaiter waiter);
+    std::vector<CollectionWaiter> collection_waiters_;  // told once when the fetch ends
+    std::vector<CollectionWaiter> collection_later_;    // need more than the fetch under way
+    std::vector<CollectionTarget> collection_fetch_targets_;  // what the fetch under way fills
+    // The cached copy of an experiment's collection file (its digest names it), and filling the experiment from a file
+    // whose digest was checked; whether it filled.
+    QString collectionCacheFile(const edi::ExperimentBase& experiment) const;
+    bool fillCollectionData(std::size_t index, const QString& file);
+    void publishFilledData();  // a release left its calculation running: its publication carries the release
+    bool released_registry_ = false;
+    bool released_texts_due_ = false;
+    void publishRegistry();
+    void refreshTextsAndReport();
+    bool modified_ = false;
+    quint64 revision_ = 0;
+    QString last_error_;
+    QString published_name_, published_title_, published_description_, published_last_modified_;
+    QString published_authors_, published_su_rule_;
+    bool published_pattern_d_spacing_ = false;
+    bool published_evolution_error_bars_ = true;
+    bool published_evolution_range_with_su_ = false;
+    StructureViewModel* published_structure_ = nullptr;
+    ExperimentViewModel* published_experiment_ = nullptr;
+    int published_structure_index_ = -1;
+    int published_experiment_index_ = -1;
+    bool published_can_load_structure_ = false;
+    bool published_can_create_experiment_ = false;
+};
+
+}  // namespace edi_app
+
+#endif  // EDI_APP_PROJECT_VIEW_MODEL_HPP

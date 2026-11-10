@@ -1,0 +1,1437 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#include "fit_view_model.hpp"
+
+#include <utility>
+#include <QFile>
+#include <QDir>
+#include <QFileInfo>
+#include <QSaveFile>
+#include <QPointer>
+#include <QScopeGuard>
+#include <exception>
+#include <algorithm>
+#include <cmath>
+#include <optional>
+
+#include "analysis_view_model.hpp"
+#include "edi/display.hpp"
+#include "edi/duration_text.hpp"
+#include "edi/edit.hpp"
+#include "edi/io.hpp"
+#include "edi/selectors.hpp"
+#include "project_view_model.hpp"
+#include "run_log.hpp"
+#include "scan_session.hpp"
+
+namespace edi_app {
+namespace {
+
+// The goodness-of-fit and the fit-results table show χ² in its dictionary format.
+QString chi(double value) { return QString::fromStdString(edi::display_text("fit_result.reduced_chi_square", value)); }
+// A recorded χ² that was not a number is none, and shows as nothing.
+QString chi(const std::optional<double>& value) { return value.has_value() ? chi(*value) : QString(); }
+// The goodness-of-fit's dictionary label (`reduced χ²`).
+QString chi_label() { return QString::fromStdString(edi::label("fit_result.reduced_chi_square")); }
+
+// The status a recorded result names (its exit reason, crysta's status label).
+edi::FitStatus status_of(const edi::FitResultRecord& result) {
+    if (result.exit_reason == "done") return edi::FitStatus::DONE;
+    if (result.exit_reason == "max_iter") return edi::FitStatus::MAX_ITER;
+    if (result.exit_reason == "no_step") return edi::FitStatus::NO_STEP;
+    if (result.exit_reason == "cancelled") return edi::FitStatus::CANCELLED;
+    return result.success ? edi::FitStatus::DONE : edi::FitStatus::ERROR;
+}
+
+// How the fit ended: the outcome key (FitOutcomes.qml draws its icon and colour) and its word, the same in the
+// status bar and the results window.
+QString outcome_key(edi::FitStatus status) {
+    switch (status) {
+        case edi::FitStatus::DONE: return QStringLiteral("success");
+        case edi::FitStatus::MAX_ITER: return QStringLiteral("maxIterations");
+        case edi::FitStatus::NO_STEP: return QStringLiteral("noStep");
+        case edi::FitStatus::CANCELLED: return QStringLiteral("stopped");
+        case edi::FitStatus::SUPERSEDED: return QStringLiteral("superseded");
+        case edi::FitStatus::UNAVAILABLE:
+        case edi::FitStatus::ERROR: break;
+    }
+    return QStringLiteral("failed");
+}
+
+QString status_text(edi::FitStatus status) {
+    switch (status) {
+        case edi::FitStatus::DONE: return FitViewModel::tr("Success");
+        case edi::FitStatus::MAX_ITER: return FitViewModel::tr("Max iterations");
+        case edi::FitStatus::NO_STEP: return FitViewModel::tr("No step");
+        case edi::FitStatus::CANCELLED: return FitViewModel::tr("Stopped");
+        case edi::FitStatus::SUPERSEDED: return FitViewModel::tr("Superseded");
+        case edi::FitStatus::UNAVAILABLE:
+        case edi::FitStatus::ERROR: break;
+    }
+    return FitViewModel::tr("Failed");
+}
+
+// A fit's time as the status bar shows it: two significant digits, never fewer than the whole seconds (0.41s, 3.2s,
+// 127s; edi::duration_text).
+QString duration(double seconds) { return QString::fromStdString(edi::duration_text(seconds)) + QStringLiteral("s"); }
+// The same time as the fit results table writes it, with a space before the unit: 1.3 s (the owner, 2026-10-21).
+QString seconds(double value) { return QString::fromStdString(edi::duration_text(value)) + QStringLiteral(" s"); }
+
+}  // namespace
+
+QString recorded_outcome(const edi::FitResultRecord& result) {
+    return result.held() ? outcome_key(status_of(result)) : QString();
+}
+
+// ---- FitResultListModel --------------------------------------------------------------------------
+
+FitResultListModel::FitResultListModel(QObject* parent)
+    : RowTableModel({"icon", "metric", "value", "outcome"}, parent), agreement_(new FitAgreementModel(this)) {}
+
+void FitResultListModel::setRecord(const edi::Project& project) {
+    // diffraction-lib's rows (analysis/fit_helpers/reporting.py, _build_fit_results_rows) down to the global reduced
+    // χ², from the result the project records; the agreement factors are the second table (edi ADR-0045). The
+    // status bar names the minimizer, so the table does not.
+    const edi::FitResultRecord& result = project.fit_result;
+    if (!result.held()) {
+        clear();
+        return;
+    }
+    QList<Row> rows;
+    int key = 0;
+    const auto row = [&rows, &key](const QString& icon, const QString& metric, const QString& value,
+                                   const QString& outcome = QString()) {
+        rows.append(
+            {reinterpret_cast<const void*>(static_cast<std::uintptr_t>(++key)), {icon, metric, value, outcome}});
+    };
+    const edi::FitStatus status = status_of(result);
+    row(QString(), tr("Overall status"), status_text(status), outcome_key(status));
+    row(QStringLiteral("stopwatch"), tr("Fitting time"), seconds(result.fitting_time));
+    row(QStringLiteral("redo"), tr("Iterations"), QString::number(result.iterations));
+    row(QStringLiteral("ruler"), tr("Goodness-of-fit (%1)").arg(chi_label()), chi(result.reduced_chi_square));
+    setTableRows(rows);
+    agreement_->setRecord(project);
+}
+
+// ---- FitAgreementModel ---------------------------------------------------------------------------
+
+FitAgreementModel::FitAgreementModel(QObject* parent) : RowTableModel({"label", "place", "values"}, parent) {}
+
+void FitAgreementModel::setRecord(const edi::Project& project) {
+    const edi::FitResultRecord& result = project.fit_result;
+    if (!result.held()) {
+        clear();
+        return;
+    }
+    // crysta's R factors are fractions; each shows in its dictionary format, in per cent as FullProf prints them.
+    const auto percent = [](const char* uid, const std::optional<double>& value, std::string_view variant = {}) {
+        return value.has_value() ? QString::fromStdString(edi::display_text(uid, *value, variant)) : QString();
+    };
+    // The profile factors in the order FullProf prints them, then each linked structure's two (the owner,
+    // 2026-10-21).
+    QList<AgreementColumn> columns;
+    const auto column = [&columns](const QString& factor, const QString& structure = QString(), int place = -1) {
+        columns.append(AgreementColumn{factor, structure, place});
+    };
+    // A single crystal's fit is over F²: crysta records its R(F²) and wR(F²) as the profile pair, which the dictionary
+    // names by the sample form.
+    const bool single_crystal =
+        !project.experiments.empty() &&
+        std::all_of(project.experiments.begin(), project.experiments.end(),
+                    [](const auto& experiment) { return experiment->reflections.has_value(); });
+    if (single_crystal) {
+        const std::string form = edi::token(edi::SampleFormEnum::SINGLE_CRYSTAL);
+        column(QString::fromStdString(edi::label("fit_result.prof_r_factor", form)));
+        column(QString::fromStdString(edi::label("fit_result.prof_wr_factor", form)));
+        // A crystal with its own share shows its own factors; a record with no shares, its pooled ones. One with shares
+        // has none for a crystal it does not hold.
+        const bool shares = std::any_of(project.experiments.begin(), project.experiments.end(),
+                                        [](const auto& item) { return item->fit_share_held(); });
+        QList<Row> rows;
+        for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+            const edi::ExperimentBase& experiment = *project.experiments[i];
+            const bool own = experiment.fit_share_held();
+            const auto shown = [own, shares](const std::optional<double>& bank, const std::optional<double>& pooled) {
+                return own ? bank : shares ? std::nullopt : pooled;
+            };
+            rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)),
+                         {QString::fromStdString(experiment.name.value()), static_cast<int>(i),
+                          QStringList{percent("fit_result.prof_r_factor",
+                                              shown(experiment.fit_prof_r_factor, result.prof_r_factor), form),
+                                      percent("fit_result.prof_wr_factor",
+                                              shown(experiment.fit_prof_wr_factor, result.prof_wr_factor), form)}}});
+        }
+        if (columns != columns_) {
+            columns_ = columns;
+            emit columnsChanged();
+        }
+        setTableRows(rows);
+        return;
+    }
+    column(QStringLiteral("R<sub>p</sub>"));
+    column(QStringLiteral("R<sub>wp</sub>"));
+    column(QStringLiteral("R<sub>exp</sub>"));
+    column(QStringLiteral("cR<sub>p</sub>"));
+    column(QStringLiteral("cR<sub>wp</sub>"));
+    // A link with no structure id names the project's first structure.
+    const auto structure_of = [&project](const edi::LinkedStructure& link) {
+        const std::string& linked = link.structure_id.value();
+        return linked.empty() && !project.structures.empty() ? project.structures.front()->name.value() : linked;
+    };
+    std::vector<std::string> structures;
+    for (const auto& experiment : project.experiments) {
+        for (const auto& link : experiment->linked_structures) {
+            const std::string name = structure_of(*link);
+            if (std::find(structures.begin(), structures.end(), name) == structures.end()) {
+                structures.push_back(name);
+            }
+        }
+    }
+    // In the project's structure order.
+    std::vector<std::pair<std::string, int>> ordered;
+    for (std::size_t i = 0; i < project.structures.size(); ++i) {
+        const std::string& name = project.structures[i]->name.value();
+        if (std::find(structures.begin(), structures.end(), name) != structures.end()) {
+            ordered.emplace_back(name, static_cast<int>(i));
+        }
+    }
+    for (const auto& [name, place] : ordered) {
+        column(QStringLiteral("R<sub>Bragg</sub>"), QString::fromStdString(name), place);
+        column(QStringLiteral("R<sub>F</sub>"), QString::fromStdString(name), place);
+    }
+
+    QList<Row> rows;
+    int key = 0;
+    const auto row = [&rows, &key](const QString& label, int place, const QStringList& values) {
+        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(++key)), {label, place, values}});
+    };
+    // The datasets of the fit: those holding their own factors, or, in a record with no per-dataset factors, the
+    // first experiment, as the experiment selector reads it (ExperimentListModel).
+    const bool shares =
+        std::any_of(project.experiments.begin(), project.experiments.end(),
+                    [](const auto& experiment) { return experiment->fit_share_held(); });
+    const auto in_fit = [&](std::size_t i) {
+        return shares ? project.experiments[i]->fit_share_held() : i == 0;
+    };
+    std::size_t datasets = 0;
+    for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+        datasets += in_fit(i) ? 1 : 0;
+    }
+    const QStringList blank_structures(static_cast<qsizetype>(2 * ordered.size()));
+    const QStringList global{percent("fit_result.prof_r_factor", result.prof_r_factor),
+                             percent("fit_result.prof_wr_factor", result.prof_wr_factor),
+                             percent("fit_result.prof_wr_expected", result.prof_wr_expected),
+                             percent("fit_result.prof_cr_factor", result.prof_cr_factor),
+                             percent("fit_result.prof_cwr_factor", result.prof_cwr_factor)};
+    // The global row only when it does not repeat a single dataset's own (the owner, 2026-10-21); a phase factor is
+    // not defined over several datasets.
+    if (datasets != 1) {
+        row(tr("All datasets"), -1, global + blank_structures);
+    }
+    for (std::size_t i = 0; i < project.experiments.size(); ++i) {
+        if (!in_fit(i)) {
+            continue;
+        }
+        const edi::ExperimentBase& experiment = *project.experiments[i];
+        // Without its own factors the one dataset's are the global ones.
+        QStringList values = shares ? QStringList{percent("fit_result_bank.prof_r_factor", experiment.fit_prof_r_factor),
+                                                  percent("fit_result_bank.prof_wr_factor", experiment.fit_prof_wr_factor),
+                                                  percent("fit_result_bank.prof_wr_expected", experiment.fit_prof_wr_expected),
+                                                  percent("fit_result_bank.prof_cr_factor", experiment.fit_prof_cr_factor),
+                                                  percent("fit_result_bank.prof_cwr_factor", experiment.fit_prof_cwr_factor)}
+                                    : global;
+        for (const auto& [name, place] : ordered) {
+            QString bragg, f;
+            for (const auto& link : experiment.linked_structures) {
+                if (structure_of(*link) == name) {
+                    bragg = percent("fit_result_phase.bragg_r_factor", link->fit_bragg_r_factor);
+                    f = percent("fit_result_phase.f_r_factor", link->fit_f_r_factor);
+                }
+            }
+            values << bragg << f;
+        }
+        row(QString::fromStdString(experiment.name), static_cast<int>(i), values);
+    }
+    if (columns != columns_) {
+        columns_ = columns;
+        emit columnsChanged();
+    }
+    setTableRows(rows);
+}
+
+void FitAgreementModel::clear() {
+    setTableRows({});
+    if (!columns_.isEmpty()) {
+        columns_.clear();
+        emit columnsChanged();
+    }
+}
+
+namespace {
+
+QString chi_range(const ScanSummary& summary) {
+    return summary.chi_min == summary.chi_max ? chi(summary.chi_min)
+                                              : QStringLiteral("%1–%2").arg(chi(summary.chi_min), chi(summary.chi_max));
+}
+
+QString outcome_word(const QString& key) {
+    if (key == QLatin1String("success")) return FitViewModel::tr("Success");
+    if (key == QLatin1String("maxIterations")) return FitViewModel::tr("Max iterations");
+    if (key == QLatin1String("noStep")) return FitViewModel::tr("No step");
+    if (key == QLatin1String("notConverged")) return FitViewModel::tr("Not converged");
+    if (key == QLatin1String("stopped")) return FitViewModel::tr("Stopped");
+    if (key == QLatin1String("skipped")) return FitViewModel::tr("Skipped");
+    if (key == QLatin1String("refused")) return FitViewModel::tr("Refused");
+    return FitViewModel::tr("Failed");
+}
+
+}  // namespace
+
+void FitResultListModel::setScan(const ScanSummary& summary) {
+    agreement_->clear();  // a scan's agreement factors are in the Evolution tab
+    if (summary.processed() == 0 && summary.outcome.isEmpty()) {
+        clear();
+        return;
+    }
+    QList<Row> rows;
+    int key = 0;
+    const auto row = [&rows, &key](const QString& icon, const QString& metric, const QString& value,
+                                   const QString& outcome = QString()) {
+        rows.append(
+            {reinterpret_cast<const void*>(static_cast<std::uintptr_t>(++key)), {icon, metric, value, outcome}});
+    };
+    row(QString(), tr("Overall status"), outcome_word(summary.outcome), summary.outcome);
+    // The run's time when this app ran it; the driver's results record none.
+    if (summary.seconds >= 0.0) {
+        row(QStringLiteral("stopwatch"), tr("Fitting time"), seconds(summary.seconds));
+    }
+    row(QStringLiteral("copy"), tr("Files fitted"), QStringLiteral("%1/%2").arg(summary.fitted).arg(summary.files));
+    row(QStringLiteral("check-circle"), tr("Converged"), QString::number(summary.ok));
+    row(QStringLiteral("times-circle"), tr("Failed"), QString::number(summary.failed));
+    if (summary.skipped > 0) {
+        row(QStringLiteral("minus-circle"), tr("Skipped (no intensity above zero)"), QString::number(summary.skipped));
+    }
+    if (summary.negative_points > 0) {
+        row(QStringLiteral("minus-circle"), tr("Points skipped (negative intensity)"),
+            QString::number(summary.negative_points));
+    }
+    if (summary.fitted > 0) {
+        row(QStringLiteral("ruler"), tr("Goodness-of-fit range (%1)").arg(chi_label()), chi_range(summary));
+    }
+    setTableRows(rows);
+}
+
+void FitResultListModel::clear() {
+    setTableRows({});
+    agreement_->clear();
+}
+
+// ---- FitViewModel ---------------------------------------------------------------------------------
+
+namespace {
+// The shortest time between two files a followed scan shows (edi ADR-0029): fast fits show the latest file about
+// twice a second, slow ones every file. "About once a second" doubles it.
+constexpr int kFollowIntervalMs = 500;
+constexpr int kOncePerSecondMs = 1000;
+// The pattern-update modes (FitViewModel::patternUpdates).
+constexpr int kEveryPattern = 0;
+constexpr int kOncePerSecond = 1;
+constexpr int kAdaptive = 2;
+constexpr int kAtEnd = 3;
+constexpr int kCatchUp = FitViewModel::kCatchUpMode;
+}  // namespace
+
+FitViewModel::FitViewModel(edi::Project& project, edi::work::Worker& worker, ProjectViewModel& owner, QObject* parent)
+    : QObject(parent), project_(project), owner_(owner), results_(new FitResultListModel(this)) {
+    // One frame per display frame at most: a frame waits for the tick, and the next is calculated only
+    // once it is shown (edi::FitJob::frame_shown).
+    frame_timer_.setSingleShot(true);
+    frame_timer_.setInterval(16);
+    connect(&frame_timer_, &QTimer::timeout, this, &FitViewModel::showFrame);
+    follow_timer_.setSingleShot(true);
+    connect(&follow_timer_, &QTimer::timeout, this, &FitViewModel::followLatest);
+    clock_timer_.setInterval(1000);
+    connect(&clock_timer_, &QTimer::timeout, this,
+            [this] { setElapsed(duration(static_cast<double>(clock_.elapsed()) / 1000.0)); });
+    edi::FitJob::Hooks hooks;
+    hooks.started = [this](const edi::FitPreamble& preamble) { started(preamble); };
+    hooks.iterated = [this](const edi::IterationRecord& record) { iterated(record); };
+    hooks.frame = [this](const edi::FitFrame& shown) { frame(shown); };
+    hooks.finished = [this](const edi::FitReport& report) { ended(report); };
+    hooks.scan_started = [this](const edi::ScanPreamble& preamble) { scanStarted(preamble); };
+    hooks.file_completed = [this](const edi::ScanFileRecord& record) { fileCompleted(record); };
+    hooks.file_frame = [this](const std::string& file, const edi::FitFrame& shown) { scanFrame(file, shown); };
+    job_ = std::make_unique<edi::FitJob>(project_, worker, std::move(hooks));
+    job_->wait_for_patterns(waitsForView(pattern_updates_));
+    job_->send_every_pattern(pattern_updates_ == kCatchUp);
+    showRecord();
+    sync();
+}
+
+void FitViewModel::showRecord() {
+    const edi::FitResultRecord& result = project_.fit_result;
+    if (!result.held()) {
+        return;
+    }
+    // A reopened project knows its last fit's χ², not the one before it.
+    setProgress(QString::number(result.iterations), chi(result.reduced_chi_square), status_text(status_of(result)),
+                recorded_outcome(result));
+    setElapsed(duration(result.fitting_time));
+    results_->setRecord(project_);
+}
+
+void FitViewModel::showScan(const ScanSummary& summary, bool scan_last) {
+    scan_ = summary;
+    scan_last_ = scan_last;
+    setScanRefused(false);
+    sync();
+    emit scanSummaryChanged();
+    emit scanFilesChanged();
+    emit scanOkChanged();
+    emit scanFailedChanged();
+    emit scanProgressChanged();
+    emit scanProcessedChanged();
+    emit scanFittedChanged();
+    emit scanTotalChanged();
+    // After a single fit on a dataset the status bar and the results window show that fit's own record (also when
+    // an Undo or a reopen brings it back).
+    if (!scan_last_) {
+        showRecord();
+        return;
+    }
+    if (scan_.fitted == 0) {
+        // A run that failed or was stopped before its first file still says so, here and in the results window;
+        // so does one that skipped every file it reached (no χ² to show).
+        setProgress(QString(), QString(), scan_.outcome.isEmpty() ? QString() : outcome_word(scan_.outcome),
+                    scan_.outcome);
+        setElapsed(scan_.seconds >= 0.0 ? duration(scan_.seconds) : QString());
+        results_->setScan(scan_);
+        return;
+    }
+    setProgress(QString(), chi_range(scan_), outcome_word(scan_.outcome), scan_.outcome);
+    setElapsed(scan_.seconds >= 0.0 ? duration(scan_.seconds) : QString());
+    results_->setScan(scan_);
+}
+
+void FitViewModel::showScanRefused(const QString& error, const QString& run_outcome, double seconds) {
+    scan_.outcome = run_outcome.isEmpty() ? QStringLiteral("refused") : run_outcome;
+    scan_.seconds = seconds;
+    scan_last_ = true;
+    setScanRefused(true);
+    sync();
+    emit scanSummaryChanged();
+    setProgress(QString(), QString(), outcome_word(scan_.outcome), scan_.outcome);
+    setElapsed(seconds >= 0.0 ? duration(seconds) : QString());
+    results_->setScan(scan_);
+    if (!scan_index_refused_) {
+        scan_index_refused_ = true;
+        emit refused(error);
+    }
+}
+
+FitViewModel::~FitViewModel() { close(); }
+
+void FitViewModel::close() {
+    invalidateFitUndo();
+    accepted_fit_.reset();
+    starting_ = undo_target_ = {};
+    candidate_ = stop_rollback_ = manual_since_accepted_ = false;
+    trial_files_.clear();
+    pending_accept_.reset();
+    latest_attempt_ = submitted_attempt_ = finished_attempt_ = native_attempt_ = 0;
+    catch_up_.clear();
+    caught_up_pending_ = false;
+    frame_timer_.stop();
+    follow_timer_.stop();
+    clock_timer_.stop();
+    pending_frame_.reset();
+    job_.reset();
+}
+
+std::uint64_t FitViewModel::beginAttempt() noexcept {
+    undo_attempt_ = 0;
+    latest_attempt_ = !owner_.retired_ && attempt_serial_ != UINT64_MAX ? ++attempt_serial_ : 0;
+    return latest_attempt_;
+}
+std::uint64_t FitViewModel::prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt) {
+    if (!attempt || attempt != latest_attempt_) throw std::runtime_error("The original fit attempt is no longer current");
+    if (nativeRunning() || native_completion_ || native_completion_serial_ == UINT64_MAX)
+        throw std::runtime_error("A native fit is already owned or its completion identity is exhausted");
+    native_attempt_ = attempt;
+    native_completion_ = std::move(completion); // Callback ownership precedes either real start entrance.
+    return ++native_completion_serial_;
+}
+void FitViewModel::discardNativePreparation(std::uint64_t token) noexcept {
+    if (native_completion_serial_ == token && !nativeRunning()) native_completion_ = {};
+}
+void FitViewModel::startNative(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt) {
+    if (!attempt) attempt = beginAttempt();
+    const auto token = prepareNativeCompletion(std::move(completion), attempt);
+    const QPointer<FitViewModel> self(this);
+    try { startImpl(attempt); }
+    catch (...) { if (self) self->discardNativePreparation(token); throw; }
+    if (self) self->discardNativePreparation(token); // A submitted worker keeps its actual completion.
+}
+
+void FitViewModel::start() {
+    const QPointer<FitViewModel> self(this);
+    // Data from a data collection that is not here yet is downloaded first (edi ADR-0069); the fit starts when it has
+    // arrived, unless something else started or the project changed meanwhile (the fetch's own operation).
+    if (!native_completion_ && owner_.needsCollectionData()) {
+        if (waiting_for_data_) return;  // one wait at a time
+        const auto waiting = ++collection_wait_;
+        const quint64 revision = owner_.revision();
+        qCInfo(lcApp, "fit waits for collection data to download");
+        setWaitingForData(true);
+        // A listener of the waiting state may close or replace the project: this fit then asks for nothing.
+        if (!self || owner_.retired_) return;
+        owner_.fetchCollectionData([self, waiting, revision](const QString& error) {
+            if (!self || self->collection_wait_ != waiting) return;  // stopped, or another fit asked meanwhile
+            self->setWaitingForData(false);
+            if (!self || self->owner_.retired_) return;
+            if (!error.isEmpty()) {
+                emit self->refused(error);
+                return;
+            }
+            // The fit was asked for the project as it was then: edited since, it is not started on another setup.
+            if (self->owner_.revision() != revision) {
+                emit self->refused(tr("The project changed while its data was downloaded: start the fit again"));
+                return;
+            }
+            if (!self->owner_.needsCollectionData()) self->start();
+        });
+        return;
+    }
+    const auto attempt = native_completion_ ? native_attempt_ : beginAttempt();
+    try { startImpl(attempt); }
+    catch (...) {
+        if (!self) return;
+        // Cancellation can throw from Worker tracing after setting its actual
+        // flag. Neither that nor a diagnostic observer may escape this QML door.
+        try { if (nativeRunning()) cancel(); } catch (...) {}
+        if (self) try { emit refused(tr("Fitting could not be started or presented; any admitted worker is being stopped")); } catch (...) {}
+        // An admitted worker still owns its original real FitReport callback.
+    }
+}
+void FitViewModel::startImpl(std::uint64_t attempt) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    const QPointer<FitViewModel> writing(this);
+    if (native_completion_) ++fit_writing_;
+    const auto written = qScopeGuard([writing, counted = static_cast<bool>(native_completion_)] {
+        if (writing && counted) --writing->fit_writing_;
+    });
+    if (const QString critical = owner_.criticalEditRefusal(false, static_cast<bool>(native_completion_)); !critical.isEmpty()) {
+        emit refused(critical);
+        return;
+    }
+    if (!attempt || attempt != latest_attempt_ || !job_ || job_->running() || !available_) {
+        return;
+    }
+    // A chosen dataset still being read: the model still shows the one before, which is not the one to fit. A scan
+    // runs from the template, whatever is shown.
+    if (const QString pending = owner_.editReadinessRefusal(false, static_cast<bool>(native_completion_));
+        !pending.isEmpty() && !edi::fits_a_scan(project_)) {
+        emit refused(pending);
+        if (owner_.retired_) return;
+        return;
+    }
+    // A scan runs from the template. With no dataset fitted, or with outdated results (Refit), it starts afresh (the
+    // previous result files, if any, go to Undo); otherwise it continues from the first dataset without a row (edi
+    // ADR-0017 §17, §19).
+    const bool scan = edi::fits_a_scan(project_);
+    // Patterns of an earlier scan still waiting to be drawn are not, and its view is not shown again after them.
+    if (catchingUp()) {
+        dropHandedFile();
+        frame_shown_ = true;
+    }
+    catch_up_.clear();
+    caught_up_pending_ = false;
+    syncBehind();
+    if (scan) {
+        const QString error = owner_.prepareScan(scan_.processed() == 0 || out_of_date_);
+        if (!error.isEmpty()) {
+            emit refused(error);
+            if (owner_.retired_) return;
+            return;
+        }
+        setFollowing(true);
+        if (owner_.retired_) return;
+        if (owner_.retired_) return;
+        job_->follow(true);
+        if (owner_.retired_) return;
+    }
+    submitted_single_joint_ = !scan;
+    submitted_attempt_ = attempt; // The real submitted job owns this identity even if a later attempt refuses.
+    if (!scan) starting_ = {attempt, std::make_shared<const edi::Project>(project_), accepted_fit_, !manual_since_accepted_,
+                            accepted_history_depth_};
+    const bool admitted = job_->start(scan ? owner_.scanTemplate() : nullptr);
+    if (!admitted && submitted_attempt_ == attempt) submitted_attempt_ = 0;
+    if (owner_.retired_) return;
+    if (admitted) {
+        qCInfo(lcApp, "fit started");
+        if (scan_last_ != scan) {
+            scan_last_ = scan;
+            emit scanSummaryChanged();
+            if (owner_.retired_) return;
+        }
+        if (scan) {
+            scan_resumed_ = 0;
+            scan_index_refused_ = false;
+            // The job sends the first file's pattern unasked.
+            frame_requested_ = true;
+            frame_shown_ = true;
+            dropHandedFile();
+            setScanRefused(false);
+            if (owner_.retired_) return;
+            setScanning(true);
+            if (owner_.retired_) return;
+            setScanCounts(scan_, QString());
+            if (owner_.retired_) return;
+        }
+        results_->clear();
+        if (owner_.retired_) return;
+        clock_.start();
+        clock_timer_.start();
+        setElapsed(duration(0.0));
+        if (owner_.retired_) return;
+        setRunning(true);
+        if (owner_.retired_) return;
+        setProgress(QString(), QString(), tr("Running"));
+        if (owner_.retired_) return;
+    }
+}
+
+void FitViewModel::cancel() {
+    if (waiting_for_data_) {
+        ++collection_wait_;  // the download may go on, but this fit no longer starts after it
+        setWaitingForData(false);
+        return;
+    }
+    if (job_ && job_->running()) {
+        job_->cancel();
+    }
+}
+
+void FitViewModel::setWaitingForData(bool waiting) {
+    if (waiting == waiting_for_data_) return;
+    waiting_for_data_ = waiting;
+    emit waitingForDataChanged();
+}
+
+bool FitViewModel::undo() {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    const auto input = owner_.fit_undo_input_;
+    if (owner_.fit_undo_invoking_ && !input) return false;
+    if (input && (!owner_.fit_undo_invoking_ || !input->consumed || input->started ||
+                  input->attempt != undo_attempt_ || !owner_.fitUndoAvailable())) return false;
+    if (running_ || !can_undo_) {
+        return false;
+    }
+    // Through the project's one write door, as an edit: the restore, then the calculation of the pre-fit
+    // state on the worker (edi::Edit::undo_fit). The fit items describe a fit the model no longer holds.
+    // The assistant's Undo of a rejected fit goes back to the accepted state before it: values, flags, saved starts,
+    // relations and fit record (edi ADR-0055), owned by the attempt being undone. The app's own Undo clears the
+    // record, as diffraction-lib's does. Either way the accepted state is then the one before the undone fit.
+    edi::Project& project = project_;
+    const UndoTarget target = undo_target_.attempt == undo_attempt_ ? undo_target_ : UndoTarget{};
+    // With no manual edit since the accepted fit, the whole accepted project comes back in this one step, whatever
+    // the trial's setup changed (exclusions, background points and terms included); otherwise the project as the
+    // undone fit started, so a manual change is never overwritten.
+    const bool whole = input && target.accepted && target.owned;
+    std::optional<edi::Project> back;
+    if (whole) {
+        // A restore is scientific state: where the project is saved, and what its last Save recorded, stay.
+        back.emplace(*target.accepted);
+        back->path = project.path;
+        back->metadata = project.metadata;
+        back->scan_data_root = project.scan_data_root;
+    }
+    auto edit = whole ? edi::Edit::replace_project(project, std::move(*back))
+                : input ? edi::Edit::undo_fit_to(project, target.before, nullptr) : edi::Edit::undo_fit(project);
+    const QPointer<FitViewModel> self(this);
+    restoring_ = true;
+    const auto restoration = qScopeGuard([self] { if (self) self->restoring_ = false; });
+    const bool undone = owner_.applyUndo(std::move(edit), whole).isEmpty();
+    if (!self) return undone;
+    restoring_ = false;
+    if (undone && whole) {
+        // The undone fit's entry is gone; the trial's setup entries above the accepted fit go with it.
+        accepted_history_depth_ = target.depth;
+        dropTrialHistory();
+    }
+    if (undone) accepted_history_depth_ = owner_.undo_history_.size();
+    if (undone) {
+        if (owner_.retired_) return true;
+        // What the Undo left is the accepted baseline now, with its own history depth and no disarm to carry over.
+        accepted_fit_ = target.attempt ? std::make_shared<const edi::Project>(project_) : nullptr;
+        undo_target_ = {};
+        candidate_ = manual_since_accepted_ = false;
+        trial_files_.clear();
+        setProgress(QString(), QString(), QString());
+        setElapsed(QString());
+        results_->setRecord(project_);
+        return true;
+    }
+    return false;
+}
+
+bool FitViewModel::restoreAccepted(quint64 owner) {
+    if (!candidate_ || candidate_owner_ != owner || !accepted_fit_ || running_ || owner_.retired_) return false;
+    // The candidate and its Undo history stay until the restore has applied: a refused restore spends nothing.
+    const auto accepted = accepted_fit_;
+    const QPointer<FitViewModel> self(this);
+    restoring_ = true;
+    const auto restoration = qScopeGuard([self] { if (self) self->restoring_ = false; });
+    // The reports the trial saved: rows the accepted project does not list. Their files go with the rollback.
+    std::vector<std::string> trial_reports;
+    for (const auto& row : project_.report_files) {
+        const std::string name = row->name.value();
+        if (std::none_of(accepted->report_files.begin(), accepted->report_files.end(),
+                         [&name](const auto& kept) { return kept->name.value() == name; }))
+            trial_reports.push_back(name);
+    }
+    const bool reports_changed = trial_reports.size() + accepted->report_files.size() != project_.report_files.size() ||
+                                 !trial_reports.empty();
+    const QString refusal = owner_.restoreProject(*accepted);
+    if (!self) return false;
+    restoring_ = false;
+    if (!refusal.isEmpty() || owner_.retired_) return false;
+    // The rejected trial leaves no Undo step behind: Undo continues from the accepted fit, never into the trial.
+    restoreTrialFiles(trial_reports, reports_changed);
+    candidate_ = stop_rollback_ = false;
+    dropTrialHistory();
+    manual_since_accepted_ = false;
+    results_->setRecord(project_);
+    return true;
+}
+
+void FitViewModel::saved() {
+    if (!accepted_fit_) return;
+    accepted_fit_ = std::make_shared<const edi::Project>(project_);
+    accepted_history_depth_ = owner_.undo_history_.size();
+    candidate_ = stop_rollback_ = manual_since_accepted_ = false;
+    trial_files_.clear();
+}
+
+void FitViewModel::noteTrialFile(const QString& path) {
+    // Only what the assistant itself writes after an accepted fit belongs to a trial a rollback can undo; a file the
+    // user saves is never touched. Its first write may come before any edit opens the candidate.
+    if (owner_.assistant_edit_ == 0 || !accepted_fit_ || manual_since_accepted_ || restoring_) return;
+    if (trial_files_.count(path) != 0) return;
+    QFile file(path);
+    if (!file.exists()) {
+        trial_files_.emplace(path, std::nullopt);
+    } else if (file.open(QIODevice::ReadOnly)) {
+        trial_files_.emplace(path, file.readAll());
+    }
+    // A file that exists but cannot be read is left out: a rollback must never remove what it could not put back.
+}
+
+void FitViewModel::restoreTrialFiles(const std::vector<std::string>& trial_reports, bool reports_changed) {
+    auto files = std::exchange(trial_files_, {});
+    const QDir reports(QDir(QString::fromStdString(project_.path)).filePath(QStringLiteral("reports")));
+    // A report the trial added is removed unless its earlier bytes were noted, which are put back instead.
+    for (const auto& name : trial_reports) files.try_emplace(reports.filePath(QString::fromStdString(name)), std::nullopt);
+    for (const auto& [path, before] : files) {
+        if (path == reports.filePath(QStringLiteral("report.edi"))) continue;
+        if (!before) {
+            if (QFile::exists(path) && !QFile::remove(path)) qWarning("The trial's file %s could not be removed", qPrintable(path));
+            continue;
+        }
+        QSaveFile file(path);
+        if (!file.open(QIODevice::WriteOnly) || file.write(*before) != before->size() || !file.commit())
+            qWarning("The file %s could not be put back as the accepted state left it", qPrintable(path));
+    }
+    // reports/report.edi lists the accepted rows again, as the accepted state's last Save report wrote them.
+    if ((reports_changed || files.count(reports.filePath(QStringLiteral("report.edi"))) != 0) && !project_.path.empty()) {
+        try {
+            edi::save_report_settings(project_, project_.path);
+        } catch (const std::exception& error) {
+            qWarning("reports/report.edi could not be rewritten: %s", error.what());
+        }
+    }
+}
+
+void FitViewModel::dropTrialHistory() noexcept {
+    auto& history = owner_.undo_history_;
+    if (accepted_history_depth_ < history.size()) {
+        history.erase(history.begin() + static_cast<std::ptrdiff_t>(accepted_history_depth_), history.end());
+        try { owner_.syncUndo(); } catch (...) {}
+    }
+}
+
+void FitViewModel::restoreAcceptedOnStop(quint64 owner) {
+    if (running_ || presenting_) {
+        if (candidate_ && candidate_owner_ == owner) { stop_rollback_ = true; stop_owner_ = owner; }
+    }
+    else (void)restoreAccepted(owner);
+}
+
+void FitViewModel::sync() {
+    syncScanState();
+    // A scan mode runs only in a project whose scan resolves to datasets of one template experiment; a declared
+    // scan is never fitted jointly, whatever mode the project was saved with.
+    const QString mode = QString::fromStdString(edi::effective_fitting_mode(project_));
+    const bool declared = project_.sequential_fit.declared();
+    const bool scan = edi::is_scan_fitting_mode(mode.toStdString()) && declared;  // ADR-0081
+    if (scan != scan_mode_) {
+        scan_mode_ = scan;
+        emit scanModeChanged();
+    }
+    const bool measured = has_measured_data(project_);
+    if (measured != measured_) {
+        measured_ = measured;
+        emit measuredChanged();
+    }
+    QString reason;
+    if (!measured) {
+        reason = tr("A fit needs measured data: no experiment in this project has any");
+    } else if (scan) {
+        reason = owner_.scanRefusal();
+        // Outdated results can always be fitted again (Refit; the owner, 2026-10-26).
+        if (reason.isEmpty() && !running_ && !out_of_date_ && scan_.files > 0 && scan_.processed() >= scan_.files) {
+            reason = tr("Every dataset is fitted or skipped: Reset fits to fit them again");
+        }
+    } else if (mode == QLatin1String("joint") && declared) {
+        reason = tr("This project declares a scan (_sequential_fit): its datasets are fitted in the sequential or "
+                    "independent mode, not jointly");
+    } else if (mode != QLatin1String("single") && mode != QLatin1String("joint") &&
+               mode != QLatin1String("independent")) {  // independent without a scan: each experiment alone
+        reason = tr("Start fitting runs the single, joint, sequential and independent fitting modes; this project's "
+                    "is %1")
+                     .arg(mode);
+    }
+    const bool available = reason.isEmpty();
+    if (available != available_) {
+        available_ = available;
+        emit availableChanged();
+    }
+    if (reason != unavailable_reason_) {
+        unavailable_reason_ = reason;
+        emit unavailableReasonChanged();
+    }
+    const AnalysisViewModel* analysis = owner_.analysis();
+    const bool can_undo = !running_ && analysis != nullptr && analysis->fitStart()->count() > 0;
+    if (can_undo != can_undo_) {
+        can_undo_ = can_undo;
+        emit canUndoChanged();
+    }
+}
+
+void FitViewModel::started(const edi::FitPreamble& preamble) {
+    for (const std::string& message : preamble.zero_starts) {
+        qCInfo(lcCrysta, "%s", message.c_str());  // a free parameter the fit starts away from 0, in the run log
+    }
+    chi_before_ = preamble.pre_fit.reduced_chi_square;
+    setProgress(QStringLiteral("0"), chi(chi_before_), tr("Running"));
+}
+
+void FitViewModel::iterated(const edi::IterationRecord& record) {
+    setProgress(QString::number(record.iteration),
+                QStringLiteral("%1 → %2").arg(chi(chi_before_), chi(record.reduced_chi_square)), tr("Running"));
+}
+
+void FitViewModel::frame(const edi::FitFrame& shown) {
+    pending_frame_ = shown;
+    if (!frame_timer_.isActive()) {
+        frame_timer_.start();
+    }
+}
+
+void FitViewModel::showFrame() {
+    if (!pending_frame_.has_value() || !running_) {
+        return;
+    }
+    owner_.showFitFrame(*pending_frame_);
+    pending_frame_.reset();
+    if (job_) {
+        job_->frame_shown();
+    }
+}
+
+void FitViewModel::scanStarted(const edi::ScanPreamble& preamble) {
+    ScanSummary counts;
+    counts.files = preamble.total_files;
+    counts.fitted = static_cast<int>(preamble.completed_rows.size());
+    for (const edi::ScanFileRecord& row : preamble.completed_rows) {
+        ++(row.converged ? counts.ok : counts.failed);
+    }
+    // Files an earlier run skipped are done too: the notes it kept say which.
+    if (const ScanSession* session = owner_.scanSession(); session != nullptr && session->index().error.empty()) {
+        counts.skipped = static_cast<int>(session->index().skipped);
+    }
+    scan_resumed_ = counts.processed();
+    latest_file_.clear();
+    followed_file_.clear();
+    follow_clock_.invalidate();
+    scan_pattern_updates_ = 0;
+    scan_received_ = 0;
+    catch_up_.clear();
+    caught_up_pending_ = false;
+    emit scanPatternUpdatesChanged();
+    emit scanShownFileChanged();
+    emit scanReceivedChanged();
+    syncBehind();
+    setScanCounts(counts, preamble.completed_rows.empty()
+                              ? QString()
+                              : QString::fromStdString(preamble.completed_rows.back().file_name));
+    if (!preamble.completed_rows.empty()) {
+        setProgress(QString(), chi(preamble.completed_rows.back().reduced_chi_square), tr("Running"));
+    }
+}
+
+void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
+    // The index holds this file's row and the notes of the files skipped before it (a skipped file sends no event
+    // of its own), retained rows of an earlier run included: fitted and skipped are its counts.
+    const int dataset = owner_.scanFileFitted(record);
+    const ScanSession* session = owner_.scanSession();
+    if (session != nullptr && (dataset < 0 || !session->index().error.empty())) {
+        // The index refused what the run wrote: nothing more is published until a full read succeeds (the settle
+        // when the run returns), and the refusal is shown once.
+        if (!scan_index_refused_) {
+            scan_index_refused_ = true;
+            emit refused(session->index().error.empty() ? tr("The row just written could not be indexed")
+                                                         : QString::fromStdString(session->index().error));
+        }
+        return;
+    }
+    ScanSummary counts = scan_;
+    ++(record.converged ? counts.ok : counts.failed);
+    if (session != nullptr) {
+        counts.fitted = static_cast<int>(session->index().fitted);
+        counts.skipped = static_cast<int>(session->index().skipped);
+    } else {
+        ++counts.fitted;
+    }
+    setScanCounts(counts, QString::fromStdString(record.file_name));
+    setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
+    latest_file_ = record.file_name;
+    if (following() && pattern_updates_ != kCatchUp) {
+        // The cheap indicators follow every finished file; only the pattern waits for the view (edi ADR-0029). A
+        // display catching up shows them with the file it draws.
+        owner_.markScanFile(latest_file_);
+    }
+    followLatest();
+}
+
+void FitViewModel::scanFrame(const std::string& file, const edi::FitFrame& frame) {
+    frame_requested_ = false;
+    // Only at the end: the first file's pattern, which the job sends unasked, is not drawn either.
+    if (!following() || pattern_updates_ == kAtEnd) {
+        return;
+    }
+    if (pattern_updates_ == kCatchUp) {
+        // Every file's pattern waits its turn; the fit has gone on already.
+        catch_up_.emplace_back(file, frame);
+        ++scan_received_;
+        emit scanReceivedChanged();
+        drainFollowed();
+        syncBehind();
+        return;
+    }
+    frame_shown_ = false;
+    follow_clock_.start();
+    const std::uint64_t token = handOver(file);
+    if (owner_.patternShown() || !owner_.scanViewShown()) {
+        owner_.followScanFrame(file, frame, token);
+    } else {
+        // On a Stacked view or Map the file is shown as the current dataset (edi ADR-0029, 8), in every update mode,
+        // so the view moves with the scan as each file finishes (the owner, 2026-11-04).
+        owner_.followScanSelection(file, token);
+    }
+}
+
+bool FitViewModel::waitsForView(int mode) const {
+    // Fit waits: while a pattern chart, a Stacked view or a Map is on screen, which shows every file; with none, as
+    // on the Correlations or Evolution tab or another page, there is nothing to wait for.
+    return mode == kEveryPattern && (owner_.patternShown() || owner_.scanViewShown());
+}
+
+bool FitViewModel::viewReady() const {
+    // A pattern chart once the last view asked for is applied; with no pattern chart, a Stacked view or Map with no
+    // dataset read pending, in every update mode.
+    if (owner_.patternShown()) {
+        return owner_.followReady();
+    }
+    return owner_.scanViewShown() && owner_.viewSettled();
+}
+
+std::uint64_t FitViewModel::handOver(const std::string& file) {
+    handed_file_ = file;
+    handed_token_ = ++last_token_;
+    return handed_token_;
+}
+
+void FitViewModel::dropHandedFile() {
+    // A receipt still on its way for the file handed over last no longer counts.
+    if (handed_token_ != 0) {
+        handed_token_ = 0;
+        presented_token_ = 0;
+        handed_file_.clear();
+        owner_.releaseFollow();
+    }
+}
+
+void FitViewModel::patternDrawn(const std::string& file) {
+    followed_file_ = file;
+    ++scan_pattern_updates_;
+    emit scanPatternUpdatesChanged();
+    emit scanShownFileChanged();
+}
+
+void FitViewModel::drainFollowed() {
+    if (pattern_updates_ != kCatchUp || !frame_shown_ || catch_up_.empty()) {
+        return;
+    }
+    // A pattern chart draws the file's pattern; without one (the Stacked or the Map view) the file is shown as the
+    // current dataset.
+    const bool chart = owner_.patternShown();
+    if (chart ? !owner_.followReady() : !owner_.scanViewShown() || !owner_.viewSettled()) {
+        return;  // shown once a view that shows it is on screen
+    }
+    auto [file, frame] = std::move(catch_up_.front());
+    catch_up_.pop_front();
+    frame_shown_ = false;
+    const std::uint64_t token = handOver(file);
+    if (chart) {
+        owner_.followScanFrame(file, frame, token);
+    } else {
+        owner_.followScanSelection(file, token);
+    }
+}
+
+void FitViewModel::syncBehind() {
+    const bool behind = pattern_updates_ == kCatchUp && !catch_up_.empty();
+    if (behind != behind_) {
+        behind_ = behind;
+        emit scanBehindChanged();
+    }
+    // The scan ended while its patterns were drawn: the view it held back is shown now that they are.
+    if (!scanning_ && !catchingUp() && caught_up_pending_) {
+        caught_up_pending_ = false;
+        owner_.scanCaughtUp();
+    }
+}
+
+void FitViewModel::followLatest() {
+    if (!following() || frame_requested_ || !frame_shown_ || !job_ || !viewReady() ||
+        pattern_updates_ == kAtEnd || pattern_updates_ == kCatchUp) {
+        return;
+    }
+    const int interval = pattern_updates_ == kEveryPattern    ? 0
+                         : pattern_updates_ == kOncePerSecond ? kOncePerSecondMs
+                                                              : kFollowIntervalMs;
+    if (follow_clock_.isValid() && follow_clock_.elapsed() < interval) {
+        if (!follow_timer_.isActive()) {
+            follow_timer_.start(static_cast<int>(interval - follow_clock_.elapsed()));
+        }
+        return;
+    }
+    // The job sends the pattern of the next file it fits; a file finished before that is not drawn.
+    frame_requested_ = true;
+    job_->frame_shown();
+}
+
+void FitViewModel::patternShownChanged() {
+    // Every pattern: the worker waits for a drawing only while a chart can draw one.
+    if (job_) {
+        job_->wait_for_patterns(waitsForView(pattern_updates_));
+        job_->send_every_pattern(pattern_updates_ == kCatchUp);
+    }
+    followShown();
+}
+
+void FitViewModel::followShown() {
+    if (pattern_updates_ == kCatchUp) {
+        drainFollowed();
+        syncBehind();
+        return;
+    }
+    if (following() && !follow_timer_.isActive()) {
+        followLatest();
+    }
+}
+
+void FitViewModel::followPresented(std::uint64_t token, const std::string& file) {
+    if (token == 0 || token != handed_token_ || presented_token_ == token) {
+        return;
+    }
+    presented_token_ = token;
+    // The interval runs from the drawing, so no two drawn patterns are closer than it.
+    follow_clock_.start();
+    patternDrawn(file);
+}
+
+void FitViewModel::followRendered(std::uint64_t token, const std::string& file, bool drawn) {
+    if (token == 0 || token != handed_token_) {
+        return;  // a receipt for a file handed over before the one awaited, or one already dropped
+    }
+    const bool presented = presented_token_ == token;
+    handed_token_ = 0;
+    handed_file_.clear();
+    presented_token_ = 0;
+    if (drawn && !presented) {
+        follow_clock_.start();
+        patternDrawn(file);
+    }
+    frame_shown_ = true;
+    followShown();
+}
+
+void FitViewModel::setScanCounts(const ScanSummary& counts, const QString& file) {
+    scan_.files = counts.files;
+    scan_.fitted = counts.fitted;
+    scan_.skipped = counts.skipped;
+    scan_.ok = counts.ok;
+    scan_.failed = counts.failed;
+    sync();
+    emit scanSummaryChanged();
+    emit scanFilesChanged();
+    emit scanOkChanged();
+    emit scanFailedChanged();
+    emit scanProgressChanged();
+    emit scanProcessedChanged();
+    emit scanFittedChanged();
+    emit scanTotalChanged();
+    const int percent = scan_.files > 0 ? static_cast<int>(100.0 * scan_.processed() / scan_.files) : 0;
+    QStringList parts{QStringLiteral("%1/%2").arg(scan_.processed()).arg(scan_.files),
+                      QStringLiteral("%1%").arg(percent)};
+    if (!file.isEmpty()) {
+        parts.append(QFileInfo(file).completeBaseName());
+    }
+    const QString text = parts.join(QStringLiteral(" · "));
+    if (text != scan_text_) {
+        scan_text_ = text;
+        emit scanTextChanged();
+    }
+    // The time left at this run's pace: the files it fitted so far over the time they took.
+    const int done = scan_.processed() - scan_resumed_;
+    QString eta;
+    if (scanning_ && done > 0 && scan_.files > scan_.processed()) {
+        const double seconds = static_cast<double>(clock_.elapsed()) / 1000.0;
+        eta = duration(seconds / done * (scan_.files - scan_.processed()));
+    }
+    if (eta != eta_) {
+        eta_ = eta;
+        emit etaChanged();
+    }
+}
+
+void FitViewModel::setScanRefused(bool refused) {
+    if (refused != scan_refused_) {
+        scan_refused_ = refused;
+        emit scanRefusedChanged();
+    }
+}
+
+void FitViewModel::setScanning(bool scanning) {
+    if (scanning != scanning_) {
+        scanning_ = scanning;
+        emit scanningChanged();
+        emit followingChanged();
+    }
+}
+
+void FitViewModel::setContinuable(bool continuable) {
+    if (continuable != continuable_) {
+        continuable_ = continuable;
+        emit continuableChanged();
+    }
+}
+
+void FitViewModel::reset() {
+    if (running_ || !can_reset_) {
+        return;
+    }
+    if (const QString error = owner_.resetScan(); !error.isEmpty()) {
+        emit refused(error);
+    }
+}
+
+void FitViewModel::syncScanState() {
+    // In a scan project the fit button follows the datasets' fits (owner, 2026-10-06): Start fitting while none is
+    // fitted, Continue fitting while some are not, unavailable once all are; Reset fits clears them.
+    const bool scan = edi::fits_a_scan(project_) && owner_.scan();
+    setContinuable(scan && scan_.processed() > 0 && scan_.processed() < scan_.files);
+    const ScanSession* session = owner_.scanSession();
+    const bool unreadable = session != nullptr && (!session->index().error.empty() || session->run().invalid);
+    const bool can_reset = scan && !running_ && (scan_.processed() > 0 || unreadable);
+    if (can_reset != can_reset_) {
+        can_reset_ = can_reset;
+        emit canResetChanged();
+    }
+}
+
+void FitViewModel::setOutOfDate(bool out_of_date) {
+    if (out_of_date != out_of_date_) {
+        out_of_date_ = out_of_date;
+        emit outOfDateChanged();
+        sync();  // outdated results make a fully fitted scan fittable again
+    }
+}
+
+void FitViewModel::settleScanCounts() {
+    owner_.settleScan();
+    const ScanSession* session = owner_.scanSession();
+    if (session == nullptr || !session->index().error.empty()) {
+        return;
+    }
+    // Every count from the full read, converged and failed included: events the live index refused are counted
+    // here, once the files read whole.
+    ScanSummary counts = scan_;
+    counts.fitted = static_cast<int>(session->index().fitted);
+    counts.skipped = static_cast<int>(session->index().skipped);
+    counts.ok = 0;
+    counts.failed = 0;
+    for (const edi::ScanResultIndex::Row& row : session->index().rows) {
+        if (row.offset >= 0) {
+            ++(row.converged ? counts.ok : counts.failed);
+        }
+    }
+    setScanCounts(counts, QString());
+}
+
+void FitViewModel::scanEnded(const edi::FitReport& report, bool automatic_results) {
+    setScanning(false);
+    if (owner_.retired_) return;
+    const double seconds = static_cast<double>(clock_.elapsed()) / 1000.0;
+    // The owner reads the rows on disk again and shows the run's summary, its own end and time included.
+    owner_.scanEnded(report.status, seconds);
+    if (report.status == edi::FitStatus::ERROR) {
+        emit refused(QString::fromStdString(report.refusal));
+        if (owner_.retired_) return;
+        return;
+    }
+    emit scanFinished();
+    if (owner_.retired_) return;
+    if (automatic_results) emit automaticResultsRequested();
+}
+
+void FitViewModel::ended(const edi::FitReport& report) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    // From the first announcement of the ending to the last rollback, the fit is still publishing.
+    const QPointer<FitViewModel> finishing(this);
+    ++finishing_;
+    const auto finished_publishing = qScopeGuard([finishing] { if (finishing) --finishing->finishing_; });
+    const auto attempt = submitted_attempt_;
+    submitted_attempt_ = 0;
+    const bool previous_presentation = presenting_;
+    const bool scan_completion = scanning_;
+    presenting_ = true;
+    // Latch actual adoption before the first Qt notification. A later failed attempt
+    // cannot borrow an older fit start; an edit during presentation retires both facts.
+    const bool adopted = attempt && report.adopted() && submitted_single_joint_;
+    if (adopted) history_attempt_ = attempt;
+    if (attempt == latest_attempt_) undo_attempt_ = adopted ? attempt : 0;
+    // Take the callback before any presentation/receiver can throw or replace the
+    // model. FitJob owns this report through the entire completion invocation.
+    auto completion = std::exchange(native_completion_, {});
+    // This completed fit owns its origin even if presentation starts another fit.
+    const bool automatic_results = !completion;
+    std::exception_ptr failure;
+    const bool visible = !owner_.retired_;
+    pending_accept_.reset();
+    ++fit_writing_;
+    try { if (visible) presentEnded(report, automatic_results, attempt); } catch (...) { failure = std::current_exception(); }
+    --fit_writing_;
+    presenting_ = previous_presentation;
+    if (scan_completion && !presenting_ && visible && !owner_.retired_ && !failure && !catchingUp()) {
+        try { owner_.viewDataset(std::max(0, owner_.current_dataset_), true); }
+        catch (...) { failure = std::current_exception(); }
+    }
+    // The adopted fit becomes the accepted state only once its presentation has completed; until then the trial it
+    // ends is still open and a failed presentation settles like any other unaccepted ending.
+    if (auto accepted = std::exchange(pending_accept_, nullptr); accepted && !failure && !stop_rollback_ && visible && !owner_.retired_) {
+        accepted_fit_ = std::make_shared<const edi::Project>(project_);
+        accepted_history_depth_ = owner_.undo_history_.size();
+        candidate_ = stop_rollback_ = manual_since_accepted_ = false;
+        trial_files_.clear();
+    }
+    const bool stopped = std::exchange(stop_rollback_, false);
+    const auto stopped_owner = stop_owner_;
+    // Even a presentation failure has a real completed optimizer/publication
+    // report. Contain the internal callback independently of ordinary Qt signals.
+    if (completion) try { completion(report, visible && !owner_.retired_ && !failure); } catch (...) {}
+    // A Stop or disconnect armed during this fit: if its call (retired by then, or not) did not settle the trial, the
+    // accepted state comes back now. The attempt's own facts were already reported or are in its report.
+    if (stopped && candidate_ && latest_attempt_ == attempt && visible && !owner_.retired_)
+        try { (void)restoreAccepted(stopped_owner); } catch (...) {}
+    if (failure) std::rethrow_exception(failure); // Existing FitJob retains its report; no fake UI success.
+}
+
+void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_results, std::uint64_t attempt) {
+    // The last delivery: a frame still waiting is older than what follows, and is dropped.
+    frame_timer_.stop();
+    follow_timer_.stop();
+    clock_timer_.stop();
+    pending_frame_.reset();
+    frame_requested_ = false;
+    // Catching up, the pattern being drawn still is.
+    frame_shown_ = pattern_updates_ != kCatchUp || handed_token_ == 0;
+    if (scanning_) {
+        // A followed scan always ends on its last file, whatever the interval skipped; catching up, it ends on it
+        // once the patterns before it are drawn.
+        caught_up_pending_ = catchingUp();
+        if (following() && !caught_up_pending_ && !latest_file_.empty() && latest_file_ != followed_file_ &&
+            latest_file_ != handed_file_) {
+            owner_.followScanFile(latest_file_, handOver(latest_file_));
+            if (owner_.retired_) return;
+        }
+        // Files skipped after the last row have sent no event: the counts are settled first, so the running bar
+        // closes on every file the run processed, whatever it ended as.
+        settleScanCounts();
+        if (owner_.retired_) return;
+        setRunning(false);
+        if (owner_.retired_) return;
+        scanEnded(report, automatic_results);
+        if (owner_.retired_) return;
+        return;
+    }
+    setRunning(false);
+    if (owner_.retired_) return;
+    if (report.adopted()) {
+        // The table, the χ², the chart and the texts all come from this one result, in this one step.
+        owner_.publishFit();
+        if (owner_.retired_) return;
+        if (submitted_single_joint_) {
+            undo_target_ = starting_.attempt == attempt ? starting_ : UndoTarget{};
+            // A fit stopped part way is not accepted: a candidate it ends goes back to the accepted state.
+            if (report.status != edi::FitStatus::CANCELLED) pending_accept_ = std::make_shared<const edi::Project>(project_);
+        }
+        const edi::FitResultBase& result = *report.result;
+        setProgress(QString::number(result.iterations),
+                    QStringLiteral("%1 → %2").arg(chi(result.pre_fit.reduced_chi_square), chi(result.reduced_chi_square)),
+                    status_text(report.status), outcome_key(report.status));
+        if (owner_.retired_) return;
+        setElapsed(duration(project_.fit_result.fitting_time));
+        if (owner_.retired_) return;
+        results_->setRecord(project_);
+        if (owner_.retired_) return;
+        sync();
+        if (owner_.retired_) return;
+        finished_attempt_ = attempt;
+        const auto finish_identity = qScopeGuard([this, attempt] { if (finished_attempt_ == attempt) finished_attempt_ = 0; });
+        emit finished();
+        if (owner_.retired_) return;
+        if (automatic_results) emit automaticResultsRequested();
+        if (owner_.retired_) return;
+        return;
+    }
+    // Nothing was written: the chart goes back to what the project holds.
+    owner_.restorePatterns();
+    if (owner_.retired_) return;
+    setProgress(QString(), QString(), status_text(report.status), outcome_key(report.status));
+    if (owner_.retired_) return;
+    setElapsed(duration(static_cast<double>(clock_.elapsed()) / 1000.0));
+    if (owner_.retired_) return;
+    sync();
+    if (owner_.retired_) return;
+    if (report.status == edi::FitStatus::ERROR) {
+        emit refused(QString::fromStdString(report.refusal));
+        if (owner_.retired_) return;
+    }
+}
+
+void FitViewModel::setRunning(bool running) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (owner_.retired_) return;
+    if (running != running_) {
+        running_ = running;
+        if (!running) {
+            qCInfo(lcApp, "fit finished");
+        }
+        // canUndo is settled before the change is announced, so a listener reading both sees one state:
+        // when a fit ends, the start state it can undo is already back.
+        sync();
+        if (owner_.retired_) return;
+        emit runningChanged();
+        if (owner_.retired_) return;
+    }
+}
+
+void FitViewModel::setFollowing(bool following) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (owner_.retired_) return;
+    if (job_) {
+        job_->follow(following);
+    }
+    if (following != following_) {
+        following_ = following;
+        emit followingChanged();
+        if (owner_.retired_) return;
+        // Follow turned on again: the newest finished file is shown now, calculated beside the scan, and the next
+        // ones as they come.
+        if (this->following() && !latest_file_.empty() && latest_file_ != followed_file_ &&
+            pattern_updates_ != kAtEnd && !catchingUp()) {
+            frame_shown_ = false;
+            follow_clock_.start();
+            owner_.followScanFile(latest_file_, handOver(latest_file_));
+            if (owner_.retired_) return;
+        }
+        // Follow turned off: a file still waiting to be drawn is not counted, nor drawn.
+        if (!this->following()) {
+            catch_up_.clear();
+            dropHandedFile();
+            frame_shown_ = true;
+            syncBehind();
+        }
+    }
+    followLatest();
+}
+
+void FitViewModel::setPatternUpdates(int mode) {
+    mode = mode >= kEveryPattern && mode <= kCatchUp ? mode : kAdaptive;
+    if (job_) {
+        job_->wait_for_patterns(waitsForView(mode));
+        job_->send_every_pattern(mode == kCatchUp);
+    }
+    if (mode != pattern_updates_) {
+        // Another mode draws the newest file from here on: the patterns still waiting are not drawn.
+        catch_up_.clear();
+        pattern_updates_ = mode;
+        emit patternUpdatesChanged();
+        syncBehind();
+        if (mode == kCatchUp) {
+            drainFollowed();
+        } else {
+            followLatest();
+        }
+    }
+}
+
+void FitViewModel::setElapsed(const QString& elapsed) {
+    if (elapsed != elapsed_) {
+        elapsed_ = elapsed;
+        emit elapsedChanged();
+    }
+}
+
+void FitViewModel::setProgress(const QString& iterations, const QString& goodness, const QString& status,
+                               const QString& outcome) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (owner_.retired_) return;
+    if (iterations != iterations_) {
+        iterations_ = iterations;
+        emit iterationsChanged();
+        if (owner_.retired_) return;
+    }
+    if (goodness != goodness_of_fit_) {
+        goodness_of_fit_ = goodness;
+        emit goodnessOfFitChanged();
+        if (owner_.retired_) return;
+    }
+    if (status != status_) {
+        status_ = status;
+        emit statusChanged();
+        if (owner_.retired_) return;
+    }
+    if (outcome != outcome_) {
+        outcome_ = outcome;
+        if (!outcome.isEmpty()) {
+            qCInfo(lcCrysta, "fit %s: %s", qPrintable(outcome), qPrintable(status));  // crysta's answer, in the run log
+        }
+        emit outcomeChanged();
+        if (owner_.retired_) return;
+    }
+}
+
+}  // namespace edi_app

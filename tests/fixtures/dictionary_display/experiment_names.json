@@ -1,0 +1,17 @@
+{
+  "instrument.setup_wavelength": [
+    "_diffrn_radiation_wavelength",
+    "_diffrn_radiation_wavelength.value",
+    "_diffrn_radiation_wavelength.wavelength",
+    "_diffrn_radiation_wavelength_value",
+    "_diffrn_radiation_wavelength_wavelength",
+    "_instr.wavelength",
+    "_instr_wavelength"
+  ],
+  "peak.broad_gauss_u": [
+    "_easydiffraction_peak.broad_gauss_u",
+    "_easydiffraction_peak_broad_gauss_u",
+    "_edi_peak.broad_gauss_u",
+    "_edi_peak_broad_gauss_u"
+  ]
+}

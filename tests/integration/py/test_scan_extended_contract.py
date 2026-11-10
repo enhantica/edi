@@ -1,0 +1,838 @@
+"""Scan integration seams from the saved-file contract and owner records."""
+
+from __future__ import annotations
+
+import fnmatch
+import hashlib
+import json
+import re
+import shlex
+import subprocess
+import tempfile
+from pathlib import Path
+
+import pytest
+import yaml
+
+from tests.integration.py.test_scan_app_contract import (
+    APP,
+    ROOT,
+    block,
+    evaluate,
+    item,
+    javascript,
+    property_value,
+    require,
+    source,
+    spans,
+)
+
+
+def test_scan_worker_routes_both_modes_to_existing_driver(tmp_path):
+    text = re.sub(
+        r'//[^\n]*|/\*.*?\*/', '', (ROOT / 'core/src/fit_job.cpp').read_text(), flags=re.DOTALL
+    )
+    actual = [row.split(':') for row in worker_dispatch(text, tmp_path)]
+    assert [row[:1] + row[3:] for row in actual] == [
+        ['sequential', '33', '55', '44', '66'],
+        ['independent', '33', '55', '44', '66'],
+    ], (
+        'Scan worker wiring: each scan mode reaches its own driver with cancellation, '
+        'scan-start, per-file completion and fitted-project subscribers'
+    )
+    assert all(row[1] in {'0', '11'} and row[2] in {'0', '22'} for row in actual), (
+        'Scan worker wiring: optional iteration and fit-preamble callbacks may be absent; '
+        'when forwarded they keep their subscriber identities'
+    )
+
+
+def test_scan_availability_and_joint_mode_follow_scan_declaration(tmp_path):
+    model = source('src/analysis_view_model.cpp')
+    # Observe the option producer consumed by the actual mode selector.
+    require(
+        source('qml/Pages/Analysis/FittingModeGroup.qml'),
+        r'options:\s*row\.analysis\s*\?\s*row\.analysis\.fittingModeOptions',
+        'Scan mode wiring: the actual picker uses the guarded options model',
+    )
+    assert joint_options(model, tmp_path) == ['1', '0', '1'], (
+        'Scan mode wiring: joint availability follows declaration in both '
+        'directions in the consumed options producer'
+    )
+
+
+def test_scan_stop_continue_and_follow_have_model_state(tmp_path):
+    selection = selection_follow(source('src/project_view_model.cpp'), tmp_path, program_only=True)
+    states = fit_state(
+        source('src/fit_view_model.hpp'),
+        source('src/fit_view_model.cpp'),
+        tmp_path,
+        program_only=True,
+    )
+    program = (
+        selection.replace('int main()', 'void selection_observation()')
+        + '\n'
+        + states.replace('int main()', 'void state_observation()')
+        + '\nint main(){selection_observation();state_observation();}'
+    )
+    observed = cpp_probe(program, tmp_path)
+    assert observed[0] == '0:2', (
+        'Follow wiring: a changed valid manual dataset selection disables Follow '
+        'and keeps the chosen dataset selected'
+    )
+    assert observed[3:] == ['0:0', '1:0', '0:1'], (
+        'Scan state wiring: the consumed getters distinguish idle, '
+        'running scan and stopped continuation'
+    )
+
+
+def assert_structure_selector(text):
+    expressions = {
+        name: property_value(text, name)
+        for name in ('blocks', 'blockIndex', 'blockKind', 'onBlockActivated')
+    }
+    result = javascript(
+        'const project={structures:{tag:"structures"},experiments:{tag:"experiments"},'
+        'currentStructureIndex:2,currentExperimentIndex:5};const seen=[];'
+        'for(const patternShown of [false,true]){const page={project,patternShown};'
+        'seen.push([('
+        + expressions['blocks']
+        + ').tag,('
+        + expressions['blockIndex']
+        + '),('
+        + expressions['blockKind']
+        + ')]);'
+        '(' + expressions['onBlockActivated'] + ')(7);'
+        'seen.push([project.currentStructureIndex,project.currentExperimentIndex]);}'
+        'console.log(JSON.stringify(seen));'
+    )
+    assert result == [
+        ['structures', 2, 'structure'],
+        [7, 5],
+        ['experiments', 5, 'experiment'],
+        [7, 7],
+    ], (
+        'Structure selects structures in its view and experiments in Pattern, '
+        'retaining independent indices and activating only the current collection'
+    )
+    assert javascript(
+        'const project=null,patternShown=true;console.log(JSON.stringify(['
+        + expressions['blocks']
+        + ','
+        + expressions['blockIndex']
+        + ']));'
+    ) == [None, -1], 'Structure keeps the null-project selector empty on either tab'
+
+
+def test_empty_selectors_are_hidden_on_experiment_and_structure_pages():
+    workflow = source('qml/Components/WorkflowPage.qml')
+    selector = block(workflow, 'MainAreaBlockSelector {')
+    assert (
+        property_value(selector, 'visible')
+        == 'page.blockSelectorShown && page.blocks !== null && page.bloc'
+        'ks.count > 0'
+    ), 'Selector wiring: the actual main-area selector hides for an empty bound model'
+    for page, model in [('Experiment', 'experiments')]:
+        text = source(f'qml/Pages/{page}/{page}Page.qml')
+        require(
+            text,
+            r'blocks:\s*project \? project\.' + model + r' : null',
+            'Selector wiring: each page supplies its own project-item model',
+        )
+
+    assert_structure_selector(source('qml/Pages/Structure/StructurePage.qml'))
+
+
+def test_selector_moves_to_main_tab_bar_once():
+    workflow = source('qml/Components/WorkflowPage.qml')
+    main = block(workflow, 'mainView:')
+    assert main.count('MainAreaBlockSelector {') == 1, (
+        'Selector wiring: the main view owns one placement component'
+    )
+    sidebar = block(workflow, 'sideBar:')
+    assert 'BlockSelector' not in sidebar, (
+        'Selector wiring: no selector instance remains in the sidebar'
+    )
+    placement = source('qml/Components/MainAreaBlockSelector.qml')
+    assert placement.count('BlockSelector {') == 1, (
+        'Selector wiring: placement composes exactly one original selector'
+    )
+    child = block(placement, 'BlockSelector {')
+    assert property_value(child, 'width') == 'placement.width', (
+        'Selector wiring: the actual selector follows main-area width'
+    )
+    for page in ('Experiment', 'Structure', 'Analysis'):
+        text = source(f'qml/Pages/{page}/{page}Page.qml')
+        assert not re.search(r'\b(?:BlockSelector|MainAreaBlockSelector)\s*\{', text), (
+            'Selector wiring: pages use the workflow selector rather than duplicate it'
+        )
+
+    selector = block(source('qml/Components/WorkflowPage.qml'), 'MainAreaBlockSelector {')
+    for name in ('blocks', 'blockIndex', 'blocksTextRole'):
+        assert property_value(selector, name) == 'page.' + name, (
+            'Selector wiring: the placed child receives the page model and selection'
+        )
+        require(
+            placement,
+            r'property alias ' + name + r': selector\.' + name + r'\s*(?:\n|$)',
+            'Selector wiring: placement forwards its exposed model and index '
+            'to the original child',
+        )
+    assert property_value(selector, 'onBlockActivated') == 'index => page.blockActivated(index)', (
+        'Selector wiring: the placed child returns the actual activated index'
+    )
+    assert (
+        property_value(child, 'onBlockActivated') == 'index => placement.blockActivated(index)'
+    ), 'Selector wiring: activation crosses placement without changing its index'
+    original = source('qml/Components/BlockSelector.qml')
+    picker = block(original, 'SearchableComboBox {')
+    assert (
+        property_value(picker, 'model') == 'blocks'
+        and property_value(picker, 'currentIndex') == 'blockIndex'
+    ), 'Selector wiring: the actual picker consumes the forwarded blocks and current index'
+    handler = property_value(picker, 'onActivated')
+    result = javascript(
+        'const Qt={binding:f=>f()};let picked=[];const '
+        'row={blockActivated:i=>picked.push(i)};const '
+        'selector={blockIndex:3,currentIndex:0};('
+        + handler
+        + ')(17);console.log(JSON.stringify([picked,selector.currentInd'
+        'ex]));'
+    )
+    assert result == [[17], 3], (
+        'Selector wiring: activation retains the source index and rebinds the shared selection'
+    )
+    for page, kind in [('Experiment', 'Experiment'), ('Analysis', 'Experiment')]:
+        text = source(f'qml/Pages/{page}/{page}Page.qml')
+        assert (
+            property_value(text, 'blockIndex') == 'project ? project.current' + kind + 'Index : -1'
+        ), 'Selector wiring: each page follows its shared project index'
+        assert (
+            property_value(text, 'onBlockActivated')
+            == 'index => page.project.current' + kind + 'Index = index'
+        ), 'Selector wiring: each page forwards the activated index to the same project selection'
+
+    assert_structure_selector(source('qml/Pages/Structure/StructurePage.qml'))
+
+
+def test_scan_explorer_header_has_declared_columns_in_order():
+    qml = source('qml/Pages/Experiment/ExperimentsGroup.qml')
+    header = block(qml, 'header:')
+    labels = re.findall(r'text:\s*qsTr\("([^\"]+)"\)', header)
+    assert labels[:3] == ['Fit', 'Datablock', 'Data file'], (
+        'Dataset list labels: the unlabelled number column precedes fit, datablock and file'
+    )
+    number_column = block(header, 'EaComponents.ListViewLabel {')
+    assert 'text:' not in number_column, (
+        'Dataset list labels: the first number column stays present with an empty header'
+    )
+    repeater = block(header, 'Repeater {')
+    table = block(qml, 'DataTable {')
+    common = source('qml/Components/DataTable.qml')
+    table_id = property_value(table, 'id')
+    context = (
+        'const project={experiments:{columns:["temperature (K)","field '
+        '(T)"],extractColumns:["temperature (K)","field (T)"]}};const group={project};const '
+        + table_id
+        + '={sourceModel:('
+        + property_value(table, 'sourceModel')
+        + ')};const sourceModel='
+        + table_id
+        + '.sourceModel;'
+        + table_id
+        + '.model=('
+        + property_value(common, 'model')
+        + ');'
+    )
+    model = property_value(repeater, 'model')
+    refresh = (
+        'group.scanColumns=(' + property_value(qml, 'scanColumns') + ');'
+        if model == 'group.scanColumns'
+        else ''
+    )
+    label = block(repeater, 'EaComponents.ListViewLabel {')
+    program = (
+        context + 'group.scan=true;'
+        'const AppSizes={fieldSpacing:4,iconColumnWidth:16,'
+        'iconOnlyColumnWidth:12,dataColumnWidth:32};'
+        'const count=29,modelRevision=0;const boldMetrics={advanceWidth:s=>s==="29"?12.25:99};'
+        'const numberColumnWidth=(' + property_value(common, 'numberColumnWidth') + ');'
+        'const textColumnWidth=()=>30;const qsTr=s=>s;'
+        'const column={modelData:"field (T)"};const modelData=column.modelData;'
+        + refresh
+        + 'const observed={connected:('
+        + table_id
+        + '.model===project.experiments),'
+        'width:(' + property_value(table, 'columns') + ')[0],'
+        'columns:(' + model + '),label:(' + property_value(label, 'text') + ')};'
+        'project.experiments.columns=["pressure (bar)"];'
+        'project.experiments.extractColumns=["pressure (bar)"];'
+        + refresh
+        + 'observed.changed=('
+        + model
+        + ');'
+        'console.log(JSON.stringify(observed));'
+    )
+    observed = javascript(program)
+    assert observed['connected'], (
+        'Dataset list wiring: displayed extract headers belong to the dataset table actually shown'
+    )
+    assert observed['width'] == 21, (
+        'The empty number header retains the measured row-number width and both field spacings'
+    )
+    assert observed['columns'] == ['temperature (K)', 'field (T)'], (
+        'Dataset list wiring: the displayed header uses every extract rule '
+        'label and unit in model order'
+    )
+    assert observed['label'] == 'field (T)', (
+        'Dataset list wiring: each repeated extract header displays its own label and unit'
+    )
+    assert observed['changed'] == ['pressure (bar)'], (
+        'Dataset list wiring: changing the selected table model changes its '
+        'displayed extract headers'
+    )
+
+
+def evolution_component():
+    page = source('qml/Pages/Analysis/AnalysisPage.qml')
+    items = re.search(r'mainItems:\s*\[([\s\S]*?)\n\s*\]', page)
+    assert items, 'Evolution wiring: the analysis main view declares its tab content'
+    components = re.findall(r'(?m)^\s*(\w+)\s*\{', items.group(1))
+    assert components.count('EvolutionChart') == 1, (
+        'Evolution wiring: the main view mounts exactly one evolution chart beside correlations'
+    )
+    paths = list((APP / 'qml').rglob('EvolutionChart.qml'))
+    assert len(paths) == 1, 'Evolution wiring: the mounted evolution chart resolves uniquely'
+    return source(paths[0].relative_to(APP))
+
+
+def assert_scene_evolution(qml):
+    layer = item(qml, 'evolution.points')
+    layer_id = property_value(layer, 'id')
+    binding = next(
+        qml[a:b]
+        for a, b in spans(qml)
+        if qml[a:b].startswith('{') and re.search(r'property:\s*"layer"', qml[a:b])
+    )
+    model_context = (
+        'const evolution={xMin:2,xMax:12,yMin:10,yMax:30};'
+        'const project={evolution};const chart={project,evolution,shown:true};'
+        'const other={evolution:{xMin:6,xMax:9,yMin:11,yMax:13}};'
+    )
+    handler = property_value(item(qml, 'evolution.pointer'), 'onClicked')
+    click_context = (
+        'let picked=[],hit=17;const width=200,height=100;'
+        'const axisX={min:2,max:12},axisY={min:10,max:30};'
+        'const chart={em:10,evolution:{datasetAt:(...args)=>{picked.push(args);return hit;}},'
+        'project:{currentExperimentIndex:3}};'
+    )
+    axis_context = model_context
+    for name in ('axisX', 'axisY'):
+        axis = block(qml, name + ': ValueAxis {')
+        axis_context += (
+            'const ' + name + '={get min(){return (' + property_value(axis, 'min') + ');},'
+            'get max(){return (' + property_value(axis, 'max') + ');}};'
+        )
+    expressions = ['axisX.min', 'axisX.max', 'axisY.min', 'axisY.max'] + [
+        property_value(layer, prop) for prop in ('xMin', 'xMax', 'yMin', 'yMax')
+    ]
+    # One runtime invocation observes all effective consumers; each scope retains
+    # its distinct state so a correct but unused binding cannot satisfy another.
+    bindings, values, axes = evaluate(
+        '[(()=>{'
+        + model_context
+        + 'const layer={tag:17};return [('
+        + property_value(binding, 'target')
+        + ') === evolution,('
+        + property_value(binding, 'value')
+        + ')];})(),(()=>{'
+        + click_context
+        + 'return [17,-1].map(dataset=>{picked=[];hit=dataset;'
+        'chart.project.currentExperimentIndex=3;('
+        + handler
+        + ')({x:40,y:25});return [picked,chart.project.currentExperimentIndex];});'
+        '})(),(()=>{'
+        + axis_context
+        + 'return [[2,12,10,30],[-3,17,-0.5,93]].map(([xMin,xMax,yMin,yMax])=>{'
+        'Object.assign(evolution,{xMin,xMax,yMin,yMax});return ['
+        + ','.join(expressions)
+        + '];});})()]'
+    )
+    assert bindings[0], 'Evolution wiring: the results model fills the visible chart layer'
+    assert bindings[1] == {'tag': 17}, (
+        'Evolution wiring: the active tab supplies its actual visible point '
+        'layer to the results model'
+    )
+    assert layer_id == 'layer', (
+        'Evolution wiring: the bound target resolves to the actual plotted point item'
+    )
+    assert values == [[[[4, 25, 0.3, 1.2]], 17], [[[4, 25, 0.3, 1.2]], 3]], (
+        'Evolution wiring: a plotted point click passes data coordinates and pixel tolerance '
+        'to hit testing, then selects that dataset; empty space keeps the selection'
+    )
+    assert axes == [[2, 12, 10, 30] * 2, [-3, 17, -0.5, 93] * 2], (
+        'Evolution wiring: the displayed axes and rendered points '
+        'follow changing result-model bounds'
+    )
+    draw = block(source('src/evolution_view_model.cpp'), 'void EvolutionViewModel::draw(')
+    with tempfile.TemporaryDirectory() as scratch:
+        actual = cpp_probe(
+            r"""#include <cstdio>
+#include <optional>
+#include <vector>
+struct Project { std::optional<bool> evolution_error_bars; };
+struct QPointF{double x,y;QPointF(double a,double b):x(a),y(b){}};
+template<class T>struct QList:std::vector<T>{void append(T x){this->push_back(x);}};
+struct Layer{void setData(QList<QPointF> p,QList<double> low,QList<double> high){for(unsigned i=0;
+i<p.size();
+++i)std::printf("%.17g:%.17g:%.17g:%.17g\n",p[i].x,p[i].y,low[i],high[i]);
+}};
+
+struct EvolutionViewModel{struct Point{double x,y,error;
+int dataset;
+};
+std::vector<Point> points_{{3,17,.4,8},{7,23,.7,17}};
+Layer layer;
+Layer* layer_=&layer;
+Project project;
+Project* project_=&project;
+void draw();
+};
+
+BODY
+int main(){EvolutionViewModel model;model.draw();}
+""".replace('BODY', draw),
+            Path(scratch),
+        )
+    assert [list(map(float, row.split(':'))) for row in actual] == [
+        [3, 17, 16.6, 17.4],
+        [7, 23, 22.3, 23.7],
+    ], (
+        'Evolution wiring: the actual renderer receives every point value and '
+        'both uncertainty endpoints'
+    )
+
+
+def assert_evolution_bindings(qml):
+    if 'MeasuredLayer {' in qml:
+        assert_scene_evolution(qml)
+        return
+    candidates = []
+    for begin, end in spans(qml):
+        child = qml[begin:end]
+        try:
+            error = next(
+                property_value(child, name)
+                for name in ('errors', 'uncertainty', 'errorBars')
+                if re.search(r'(?m)^\s*' + name + ':', child)
+            )
+            coordinates = next(
+                property_value(child, name)
+                for name in ('xValues', 'xAxis', 'axisMode')
+                if re.search(r'(?m)^\s*' + name + ':', child)
+            )
+            handler = next(
+                property_value(child, name)
+                for name in ('onPointActivated', 'onClicked')
+                if re.search(r'(?m)^\s*' + name + ':', child)
+            )
+            model = property_value(child, 'model')
+        except (StopIteration, pytest.fail.Exception):
+            continue
+        candidates.append((child, error, coordinates, handler, model))
+    assert len(candidates) == 1, (
+        'Evolution wiring: one actual plotting consumer binds rows, '
+        'errors, coordinates and its point event'
+    )
+    error, coordinates, handler, model = candidates[0][1:]
+    require(
+        model,
+        r'^\w+\.\w+\.(?:points|series|rows)$',
+        'Evolution wiring: the rendered series consumes the resolved result rows',
+    )
+    container = model.rsplit('.', 1)[0]
+    assert coordinates.startswith(container + '.'), (
+        'Evolution wiring: coordinates come from the same results object as the point series'
+    )
+    require(
+        error,
+        r'^(?:model|points|series)\.(?:uncertainty|errors)$',
+        'Evolution wiring: errors read the rendered point uncertainty role',
+    )
+    require(
+        handler,
+        r'^(?:index|point)\s*=>\s*'
+        + re.escape(container)
+        + r'\.selectDataset\((?:index|point\.index)\)$',
+        'Evolution wiring: the rendered point event selects its own result index',
+    )
+    root, field = container.split('.')
+    context = (
+        'let calls=[];const '
+        + root
+        + '={'
+        + field
+        + ':{xValues:[2,4,6],xAxis:[2,4,6],axisMode:"temperature",selec'
+        'tDataset:i=>calls.push(i)}};const '
+        'model={uncertainty:0.37,errors:0.37};const points=model;const '
+        'series=model;'
+    )
+    argument = '{index:17}' if handler.startswith('point') else '17'
+    program = (
+        context
+        + ';('
+        + handler
+        + ')('
+        + argument
+        + ');console.log(JSON.stringify(['
+        + error
+        + ','
+        + coordinates
+        + ',calls]));'
+    )
+    rendered_error, rendered_axis, selection = javascript(program)
+    assert rendered_error == 0.37, (
+        'Evolution wiring: effective point uncertainty reaches the error binding'
+    )
+    assert rendered_axis in ([2, 4, 6], 'temperature'), (
+        'Evolution wiring: effective coordinates read the switchable result axis'
+    )
+    assert selection == [17], (
+        'Evolution wiring: the effective series event forwards the clicked point index'
+    )
+
+
+def test_parameter_evolution_connects_rendered_errors_axis_and_point_selection():
+    assert_evolution_bindings(evolution_component())
+
+
+def assert_stale_marker(consumer, results=None):
+    # Comments may contain apostrophes; they cannot open string literals.
+    consumer = re.sub(r'//[^\n]*|/\*.*?\*/', '', consumer, flags=re.DOTALL)
+    if results is None:
+        model = re.search(r'(?m)^\s*model:\s*(\w+\.\w+)\.(?:points|series|rows)\s*$', consumer)
+        results = (
+            model.group(1)
+            if model
+            else ('chart.evolution' if 'MeasuredLayer {' in consumer else 'bar.fit')
+        )
+    root, field = results.split('.')
+    markers = []
+    for begin, end in spans(consumer):
+        child = consumer[begin:end]
+        try:
+            text = property_value(child, 'text')
+            if not re.search(r'out of date', text, re.IGNORECASE):
+                continue
+            markers.append((text, property_value(child, 'visible')))
+        except pytest.fail.Exception:
+            continue
+    assert markers, 'Stale-result wiring: each results consumer has its own guarded marker'
+    for text, visible in markers:
+        context = (
+            'const qsTr=x=>x;const ' + root + '={' + field + ':{}};'
+            'const other={' + field + ':{}};const fitArea={running:false};'
+        )
+        observations = evaluate(
+            '[[false,false],[true,false],[false,true]].map(([stale,running])=>{'
+            + root
+            + '.'
+            + field
+            + '={outOfDate:stale,stale};'
+            'other.' + field + '={outOfDate:!stale,stale:!stale};fitArea.running=running;'
+            'return [(' + text + '),(' + visible + ')];})',
+            context,
+        )
+        assert all(re.search(r'out of date', shown, re.IGNORECASE) for shown, _ in observations), (
+            'Stale-result wiring: the actual marker tells the user '
+            'the retained results are out of date'
+        )
+        assert [shown for _, shown in observations] == [False, True, False], (
+            'Stale-result wiring: the marker shows retained stale results '
+            'and hides current results, '
+            'using its own rendered result state'
+        )
+        return
+    pytest.fail('Stale-result wiring: retained results need their own effective stale marker')
+
+
+def test_old_scan_results_are_retained_with_out_of_date_state():
+    assert_stale_marker(evolution_component())
+
+
+def example_inventory(count):
+    project_id = f'pd-neut-cwl_cosio-d20_scan-{count}f'
+    base = ROOT / 'docs/user/cli' / project_id
+    assert base.is_dir(), 'Examples: both selected scan projects must exist in the CLI plane'
+    declaration = dict(
+        shlex.split(line)
+        for line in (base / 'project/analysis/analysis.edi').read_text().splitlines()
+        if line.startswith('_sequential_fit.') and len(shlex.split(line)) == 2
+    )
+    directory = declaration['_sequential_fit.data_dir']
+    pattern = declaration['_sequential_fit.file_pattern']
+    return {
+        file.name: hashlib.sha256(file.read_bytes()).hexdigest()
+        for file in (base / 'project' / directory).iterdir()
+        if file.is_file() and fnmatch.fnmatchcase(file.name, pattern)
+    }
+
+
+def assert_source_inventory(actual, count):
+    corpus = json.loads((ROOT / 'tests/fixtures/c11_t62/scan-inputs.json').read_text())['files']
+    expected = {
+        Path(name).name: digest
+        for name, digest in corpus.items()
+        if name.startswith('experiments/d20_scan/')
+        and (count == 324 or Path(name).name.startswith('01_'))
+    }
+    assert len(expected) == count, (
+        'Examples: the independent frozen source corpus must contain the selected run'
+    )
+    assert actual == expected, (
+        'Examples: every declared scan filename must match its frozen source checksum'
+    )
+
+
+@pytest.mark.parametrize('count', [162, 324])
+def test_scan_examples_have_exact_source_file_inventory_and_checksums(count):
+    assert_source_inventory(example_inventory(count), count)
+    project_id = f'pd-neut-cwl_cosio-d20_scan-{count}f'
+    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
+    assert any(row['id'] == project_id for row in registry), (
+        'Examples: the registry must expose each selected scan'
+    )
+
+
+@pytest.mark.parametrize('count', [162, 324])
+def test_example_gate_rejects_swapped_names_with_matching_local_provenance(count):
+    corpus = json.loads((ROOT / 'tests/fixtures/c11_t62/scan-inputs.json').read_text())['files']
+    inventory = {
+        Path(name).name: digest
+        for name, digest in corpus.items()
+        if name.startswith('experiments/d20_scan/')
+        and (count == 324 or Path(name).name.startswith('01_'))
+    }
+    names = sorted(inventory)
+    inventory[names[0]], inventory[names[1]] = inventory[names[1]], inventory[names[0]]
+    with pytest.raises(AssertionError, match='frozen source checksum'):
+        assert_source_inventory(inventory, count)
+
+
+def test_user_page_and_scale_adr_document_approved_limits():
+    nav = (ROOT / 'mkdocs.yml').read_text()
+    pages = [
+        path
+        for path in (ROOT / 'docs/user').rglob('*.md')
+        if re.search(r'(?im)^#.*(?:sequential.*app|app.*sequential)', path.read_text())
+    ]
+    assert pages, 'Docs: a user page must explain sequential fitting in the app'
+    assert any(path.name in nav for path in pages), (
+        'Docs: the app scan guide must enter navigation'
+    )
+    adrs = [
+        path.read_text()
+        for path in (ROOT / 'docs/dev/adrs').glob('*.md')
+        if re.search(r'1[ ,]?000[ ,]?000', path.read_text())
+    ]
+    assert adrs and any('scan' in text.lower() and 'results.csv' in text for text in adrs), (
+        'Scale: the ADR must explain the million-file target and disk-backed result store'
+    )
+
+
+def cpp_probe(program, tmp_path):
+    file = tmp_path / 'probe.cpp'
+    file.write_text(program)
+    executable = tmp_path / 'probe'
+    built = subprocess.run(
+        ['c++', '-std=c++20', str(file), '-o', str(executable)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert built.returncode == 0, (
+        'Scan wiring: the observed production operation must compile: ' + built.stderr
+    )
+    run = subprocess.run(
+        [str(executable)], capture_output=True, text=True, check=False, timeout=10
+    )
+    assert run.returncode == 0, (
+        'Scan wiring: the observed production operation must execute: ' + run.stderr
+    )
+    return run.stdout.splitlines()
+
+
+def worker_dispatch(text, tmp_path):
+    dispatch = block(text, 'FitResultBase fit_by_mode(')
+    if 'FileCompleteCallback' not in dispatch:
+        return ['REFUSED', 'REFUSED']
+    program = """#include <iostream>
+#include <string>
+#include <stdexcept>
+using IterationCallback=int; using PreambleCallback=int; using CancelCallback=int;
+
+ using FileCompleteCallback=int; using ScanStartCallback=int; using FileFittedCallback=int;
+using FitResultBase=std::string;
+std::string receipt(std::string mode,std::initializer_list<int> args){
+
+for(int arg:args)mode+=":"+std::to_string(arg);return mode;}
+struct Project {std::string mode;
+std::string fit(int a,int b,int c){return receipt("single",{a,b,c});
+
+}
+std::string fit_joint(int a,int b,int c){return receipt("joint",{a,
+b,c});
+}
+std::string fit_sequential(int a,int b,int scan,int d,int c,int fitted){
+return receipt("sequential",{a,b,c,scan,d,fitted});
+}
+std::string fit_independent(int a,int b,int scan,int d,int c,int fitted){
+return receipt("independent",{a,b,c,scan,d,fitted});
+}};
+std::string effective_fitting_mode(Project& p){return p.mode;}
+BODY
+int main(){for(auto mode:{"sequential","independent"}){Project p{mode}
+
+;try{std::cout<<fit_by_mode(p,11,22,33,55,44,66)<<"\\n";}catch(std::exception&
+e){std::cout<<"REFUSED\\n";}}}""".replace('BODY', dispatch)
+    if 'ScanStartCallback' not in dispatch:
+        program = program.replace('{a,b,c,scan,d,fitted}', '{a,b,c,d,fitted}')
+        program = program.replace(
+            'fit_by_mode(p,11,22,33,55,44,66)', 'fit_by_mode(p,11,22,33,44,66)'
+        )
+    return cpp_probe(program, tmp_path)
+
+
+def joint_options(text, tmp_path, *, selector_text=None):
+    producer = block(text, 'void AnalysisViewModel::sync(')
+    require(
+        producer,
+        r'const std::vector<std::string> modes = edi::applicable_fitting_modes\(project_\)',
+        'Scan mode wiring: the consumed options producer reads the project applicability rule',
+    )
+    require(
+        producer,
+        r'fitting_mode_options_->setItemOptions\("fitting_mode\.type", modes,',
+        'Scan mode wiring: the selector receives those exact applicable modes',
+    )
+    rule = block(
+        selector_text
+        if selector_text is not None
+        else (ROOT / 'core/src/selectors.cpp').read_text(),
+        'std::vector<std::string> applicable_fitting_modes(',
+    )
+    program = """#include <algorithm>
+#include <cstdio>
+#include <string>
+#include <vector>
+struct Scan{bool value=false;bool declared()const{return value;}};
+struct Project{Scan sequential_fit;std::vector<int> experiments{1,2};};
+BODY
+int main(){Project project;for(bool declared:{false,true,false}){
+project.sequential_fit.value=declared;const auto modes=applicable_fitting_modes(project);
+std::printf("%d\\n",std::find(modes.begin(),modes.end(),"joint")!=modes.end());}}
+""".replace('BODY', rule)
+    return cpp_probe(program, tmp_path)
+
+
+def selection_follow(text, tmp_path, *, program_only=False):
+    selection = block(text, 'void ProjectViewModel::setCurrentExperimentIndex(')
+    program = """#include <iostream>
+#include <vector>
+#define emit
+struct Fit{bool following=true;
+bool scanning(){return true;
+}void setFollowing(bool value){following=value;
+
+
+}};
+struct ProjectViewModel {int current_experiment_=1;std::vector<int>
+experiment_models_{0,1,2};Fit model;Fit* fit_=&model;
+bool scan_=true;
+int current_dataset_=1;
+struct Datasets{std::vector<int> files{0,1,2};
+} scan_datasets_;
+
+void viewDataset(int index){if(index>=0&&index<3)current_dataset_=index;}
+void syncDatasets(){}void currentExperimentIndexChanged(){}
+void publishCurrent(){}void setCurrentExperimentIndex(int index);};
+
+
+BODY
+int main(){for(int index:{2,1,17}){ProjectViewModel model;model.setCurrentExperimentIndex(index);
+
+std::cout<<model.model.following<<":"
+<<(model.scan_ ? model.current_dataset_ : model.current_experiment_)<<"\\n";
+
+
+}}""".replace('BODY', selection)
+    return program if program_only else cpp_probe(program, tmp_path)
+
+
+def fit_state(header, model, tmp_path, *, program_only=False):
+    declarations = []
+    for name in ('continuable', 'scanning'):
+        inline = re.search(r'bool ' + name + r'\(\) const\s*\{', header)
+        declarations.append(
+            block(header, 'bool ' + name + '() const')
+            if inline
+            else block(model, 'bool FitViewModel::' + name + '(').replace('FitViewModel::', '')
+        )
+    program = """#include <iostream>
+struct Scan{bool value=false;bool declared()const{return value;}};struct
+Project{Scan sequential_fit;};
+struct FitViewModel {bool scanning_=false,continuable_=false,running_=false,
+
+following_=false;Project project_;
+BODY
+};
+int main(){for(int state:{0,1,2}){FitViewModel model;model.project_.sequential_fit.value=state>0;
+
+model.running_=state==1;model.scanning_=state==1;model.continuable_=state==2;
+
+std::cout<<model.scanning()<<":"<<model.continuable()<<"\\n";}}""".replace(
+        'BODY', '\n'.join(declarations)
+    )
+    return program if program_only else cpp_probe(program, tmp_path)
+
+
+def test_rendered_evolution_and_stale_observers_reject_unrelated_models_handlers_and_flags():
+    good = """Item {
+ Plot {
+  model: view.results.points
+  errors: model.uncertainty
+  xValues: view.results.xValues
+  onPointActivated: index => view.results.selectDataset(index)
+ }
+}"""
+    assert_evolution_bindings(good)
+    for old, new in [
+        ('errors: model.uncertainty', 'errors: unrelated.uncertainty'),
+        ('xValues: view.results.xValues', 'xValues: other.results.xValues'),
+        (
+            'onPointActivated: index => view.results.selectDataset(index)',
+            'onPointActivated: index => view.results.selectDataset(0)',
+        ),
+        ('model: view.results.points', 'model: other.results.points'),
+    ]:
+        changed = good.replace(old, new)
+        assert changed != good, 'Evolution wiring: the control changes its named connection'
+        with pytest.raises((AssertionError, pytest.fail.Exception)):
+            assert_evolution_bindings(changed)
+    marker = """Item {
+ Text {
+  text: qsTr("out of date")
+  visible: bar.fit.outOfDate
+ }
+}"""
+    assert_stale_marker(marker)
+    for changed in [
+        marker.replace('visible: bar.fit.outOfDate', 'visible: other.fit.outOfDate'),
+        marker.replace('visible: bar.fit.outOfDate', 'visible: true'),
+        marker.replace('visible: bar.fit.outOfDate', 'visible: !bar.fit.outOfDate'),
+        marker.replace('visible: bar.fit.outOfDate', 'visible: true')
+        + '\nText { visible: bar.fit.outOfDate; text: "unrelated" }',
+    ]:
+        assert changed != marker, 'Stale wiring: the control changes its named marker binding'
+        with pytest.raises((AssertionError, pytest.fail.Exception)):
+            assert_stale_marker(changed)

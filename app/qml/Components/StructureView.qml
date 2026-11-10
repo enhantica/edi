@@ -1,0 +1,247 @@
+// SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick3D
+
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
+
+import edi.app
+
+// The structure view (edi ADR-0017 §16, ADR-0022): the core's structure scene on Qt Quick 3D,
+// diffraction-lib's view in easydiffractionbeta's toolbar style. The atoms and the bonds are instanced from
+// C++ (one table per mesh, filled by the controller), with no QML object per atom, bond, edge or label. The
+// colour scheme and the toolbar share one line centred at the view's top, and the element legend sits at its
+// bottom left (owner, 2026-10-11). The 3D item exists only where Qt Quick draws through a 3D API; elsewhere the
+// view shows a line of text, with the same state.
+Rectangle {
+    id: view
+
+    property StructureViewModel structure: null
+    property StructureViewOptions options: null
+    // The legend's width when it was last shown: the band the drawing keeps clear for it.
+    property real legendWidth: 0
+    function keepLegendWidth() {
+        if (legend.visible && legend.width > 0)
+            legendWidth = legend.width;
+    }
+    // The report's input (edi ADR-0036): set, the view draws the report model's scene of `reportStructure` with no
+    // toolbar. A drag still turns it, and the wheel scrolls what holds it.
+    property ReportViewModel report: null
+    // The theme colours the view draws with; a PDF's figure takes the light ones.
+    property FigureColors colors: FigureColors {}
+    property string reportStructure: ""
+
+    // The moment arrows' colours follow the app's preference (edi ADR-0078).
+    Binding {
+        target: view.options
+        property: "momentColours"
+        value: Preferences.momentColours
+        when: view.options !== null
+    }
+    // The view is on the page and the tab the window shows: its page binds it, as the pattern chart's (a loaded
+    // page that is not shown stays visible, clipped out of the window). A view not shown prepares nothing and
+    // presents once, with the latest source, when it is shown again; a view no page hides is shown.
+    property bool shown: true
+
+    // The controller's state, by name, for the tests and the toolbar.
+    readonly property StructureViewController controller: controller
+    readonly property bool current: controller.current
+    readonly property int revision: controller.revision
+    readonly property int atomCount: controller.atomCount
+    readonly property int bondCount: controller.bondCount
+    readonly property int cellEdgeCount: controller.cellEdgeCount
+    readonly property string detail: controller.detail
+    readonly property string projection: controller.projection
+    // Where Qt Quick draws through a graphics API Qt Quick 3D supports (software OpenGL included). While the
+    // API is unknown, before the view is in a window, neither the 3D item nor the text exists.
+    readonly property bool apiKnown: GraphicsInfo.api !== GraphicsInfo.Unknown
+    readonly property bool has3D: [GraphicsInfo.OpenGL, GraphicsInfo.Direct3D11, GraphicsInfo.Direct3D12, GraphicsInfo.Vulkan, GraphicsInfo.Metal].indexOf(GraphicsInfo.api) >= 0
+    readonly property real margin: EaStyle.Sizes.fontPixelSize
+    // The main area's margin, left of the legend and right of the toolbar (owner, 2026-10-05).
+    readonly property real sideMargin: AppSizes.mainAreaMargin
+    // How far the toolbar's right edge is from the view's: the block selector row above ends there too.
+    readonly property real toolbarRightInset: sideMargin
+    readonly property View3D view3d: scene.item as View3D
+
+    objectName: "structure.view"
+    // EasyApp's chart background, as easydiffractionbeta's structure view (the owner, 2026-10-02), opaque behind
+    // the 3D item, which clears to it too.
+    color: view.colors.chartBackground
+    clip: true
+
+    StructureViewController {
+        id: controller
+
+        // First, so a view made where it is not shown prepares nothing until it is.
+        active: view.shown && view.visible
+        structure: view.structure
+        options: view.options
+        report: view.report
+        reportStructure: view.reportStructure
+        dark: view.colors.isDarkPalette
+        // Every style colour from EasyApp's EaStyle.Colors, as easydiffractionbeta's structure view uses them (the
+        // owner, 2026-10-02): the cell edges grey, the axes red, green and blue, the labels in the foreground
+        // colour over a halo of the background. Lighting and atom colours are diffraction-lib's.
+        edgeColor: view.colors.grey
+        axisColorA: view.colors.red
+        axisColorB: view.colors.green
+        axisColorC: view.colors.blue
+        labelColor: view.colors.themeForeground
+        haloColor: view.colors.chartBackground
+        viewportWidth: view.width
+        viewportHeight: view.height
+        // The band kept clear at the top for the toolbar: its height with its margins.
+        topBand: view.report ? 0 : toolbar.height + 2 * view.margin
+        // And at either side for the legend: its width with its margin, and a gap before the drawing. Kept while the
+        // atoms are hidden, which hides the legend, so a show or hide keeps the camera (the owner, 2026-11-03).
+        sideBand: view.legendWidth > 0 && controller.hasSites ? view.sideMargin + view.legendWidth + view.margin : 0
+        spheres: structureScene.spheres
+        cylinders: structureScene.cylinders
+        triadShafts: structureScene.triadShafts
+        triadHeads: structureScene.triadHeads
+        shared: structureScene.shared
+        labels: labelLayer
+    }
+
+    // The scene, on every platform; the View3D below draws it where there is a 3D API.
+    StructureScene {
+        id: structureScene
+
+        controller: controller
+    }
+
+    // The scene, its labels and the legend.
+    Item {
+        id: capture
+
+        anchors.fill: parent
+
+        Rectangle {
+            anchors.fill: parent
+            color: view.color
+        }
+        Loader {
+            id: scene
+
+            anchors.fill: parent
+            active: view.has3D
+            sourceComponent: View3D {
+                importScene: structureScene
+                camera: structureScene.camera
+                environment: SceneEnvironment {
+                    backgroundMode: SceneEnvironment.Color
+                    clearColor: view.color
+                    antialiasingMode: SceneEnvironment.MSAA
+                    antialiasingQuality: SceneEnvironment.High
+                    // Linear light out to sRGB, as three.js renders diffraction-lib's view.
+                    tonemapMode: SceneEnvironment.TonemapModeLinear
+                }
+            }
+        }
+        StructureLabelLayer {
+            id: labelLayer
+
+            objectName: "structure.view.labels"
+            anchors.fill: parent
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            font.weight: Font.DemiBold
+            // The app's font and size, as every chart's labels (the owner, 2026-10-26); only bold, for the axis letters.
+            letterFont.family: EaStyle.Fonts.fontFamily
+            letterFont.bold: true
+            letterFont.pixelSize: EaStyle.Sizes.fontPixelSize
+        }
+        ChartLegend {
+            id: legend
+            objectName: "structure.view.legend"
+            colors: view.colors
+            minimumHeight: AppSizes.toolbarControlSize
+            rowHeight: AppSizes.structureLegendRowHeight
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            anchors.margins: view.margin
+            anchors.leftMargin: view.sideMargin
+            entries: controller.legend
+            labelInColor: false
+            visible: controller.legend.count > 0
+            onWidthChanged: view.keepLegendWidth()
+            onVisibleChanged: view.keepLegendWidth()
+        }
+        EaElements.Label {
+            objectName: "structure.view.unavailable"
+            anchors.centerIn: parent
+            visible: view.apiKnown && !view.has3D
+            color: view.colors.themeForegroundMinor
+            text: qsTr("The structure view needs a 3D graphics API, which this display does not provide")
+        }
+    }
+
+    // Drag rotates, the wheel zooms about the pointer, a right drag pans; hovering names the atom under the
+    // pointer by the surface Qt's pick hits (edi ADR-0022 §7).
+    MouseArea {
+        id: pointer
+
+        property point last
+
+        anchors.fill: parent
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        hoverEnabled: true
+        preventStealing: view.report !== null
+        onPressed: mouse => ApplicationInfo.structurePointer(mouse, 0)
+        onPositionChanged: mouse => ApplicationInfo.structurePointer(mouse, 1)
+        onExited: hover.text = ""
+        onWheel: wheel => ApplicationInfo.structurePointer(wheel, 2)
+    }
+
+    // The colour scheme and the toolbar, a toolbar group's spacing apart, in one line centred under the block
+    // selector row (owner, 2026-10-11).
+    Row {
+        x: Math.round(view.sideMargin + (view.width - view.toolbarRightInset - view.sideMargin - width) / 2)
+        y: view.margin
+        visible: !view.report
+        spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
+
+        ToolbarComboBox {
+            objectName: "structure.toolbar.colors"
+            toolTip: qsTr("Colour scheme (adjusted for contrast in labels and tables)")
+            // The schemes' names as their authors spell them; the options keep diffraction-lib's tokens.
+            model: ["Jmol", "VESTA"]
+            shownIndex: view.options && view.options.colorScheme === "vesta" ? 1 : 0
+            onActivated: index => ApplicationInfo.structureColourChoice(index)
+        }
+        StructureToolbar {
+            id: toolbar
+
+            controller: controller
+            options: view.options
+            saveTarget: view
+        }
+    }
+
+    // The atom under the pointer: its label, its parts and its coordinates, beside the pointer.
+    Rectangle {
+        id: hover
+
+        property alias text: hoverLabel.text
+
+        function show(x, y) {
+            ApplicationInfo.structureHoverShow(x, y);
+        }
+
+        objectName: "structure.view.hover"
+        visible: text !== ""
+        width: hoverLabel.width
+        height: hoverLabel.height
+        color: view.colors.mainContentBackgroundHalfTransparent
+        border.color: view.colors.chartGridLine
+        border.width: EaStyle.Sizes.borderThickness
+
+        EaElements.Label {
+            id: hoverLabel
+
+            padding: view.margin * 0.5
+        }
+    }
+}

@@ -1,0 +1,19 @@
+{
+  "Added": [
+    {
+      "title": "Refine projects with a standalone edi command for macOS, Windows and Linux.",
+      "interfaces": ["cli-standalone"]
+    }
+  ],
+  "Fixed": [
+    {
+      "title": "Show a sharp, transparent wordmark in the installer header and align the folder field with Browse.",
+      "interfaces": ["desktop"]
+    },
+    {
+      "title": "Use the same macOS Dock icon before and after opening EasyDiffraction.",
+      "interfaces": ["desktop"]
+    }
+  ],
+  "Changed": []
+}

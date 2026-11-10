@@ -1,0 +1,178 @@
+// SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Controls
+
+import EasyApplication.Gui.Components as EaComponents
+
+import edi.app
+
+// The Structure page (easydiffractionbeta Pages/Model): the structure view in the main area; the Structures
+// list and the current structure's `.edi` categories in the sidebar (packet §2b (ii), §15.6), with the
+// view's Appearance group on Extras; the structure block's `.edi` in Text.
+WorkflowPage {
+    id: page
+
+    readonly property ProjectViewModel project: Session.project
+    readonly property StructureViewModel structure: project ? project.currentStructure : null
+
+    // Each category's content, by `.edi` category id.
+    readonly property var contents: ({
+            "space_group": spaceGroupContent,
+            "cell": cellContent,
+            "atom_site": atomSitesContent,
+            "atom_site_aniso": atomSiteAdpContent,
+            "atom_site_moment": atomSiteMomentContent,
+            "magnetic_form_factor": magneticFormFactorsContent,
+            "space_group_magn": magneticSpaceGroupContent,
+            "parent_propagation_vector": propagationVectorsContent,
+            "scattering_length": scatteringLengthsContent
+        })
+
+    pageName: "structure"
+    defaultInfo: structure ? "" : qsTr("No structures defined")
+    mainTabs: [
+        IconTabButton {
+            objectName: "mainArea.structure.tab.view"
+            // The view's name, text only (edi ADR-0017 §2).
+            text: qsTr("Structure")
+        },
+        // The app's one pattern chart, as the Experiment and Analysis pages show it, once an experiment exists.
+        IconTabButton {
+            objectName: "mainArea.structure.tab.pattern"
+            text: qsTr("Pattern")
+            enabled: page.project !== null && page.project.experiments.count > 0
+        }
+    ]
+    mainItems: [
+        StructureView {
+            id: structureView
+
+            structure: page.structure
+            options: page.project ? page.project.structureViewOptions : null
+            shown: page.current && SwipeView.isCurrentItem
+        },
+        ProjectPatternChart {
+            id: chartView
+            experiment: page.project ? page.project.currentExperiment : null
+            axisProject: page.project
+            settingsPage: "pattern"
+            shown: page.current && SwipeView.isCurrentItem
+        }
+    ]
+    // The Pattern tab selects among the experiments, as the Experiment and Analysis pages do; the Structure tab among the
+    // structures.
+    readonly property bool patternShown: mainTabIndex === 1
+    readonly property bool patternEnabled: project !== null && project.experiments.count > 0
+    onPatternEnabledChanged: ApplicationInfo.finishUiEvent(2, undefined)
+    extrasEnabled: structure !== null
+    textEnabled: structure !== null
+    basicItem: Component {
+        EaComponents.SideBarColumn {
+            StructuresGroup {
+                project: page.project
+            }
+            Repeater {
+                model: page.structure ? page.structure.categories : null
+                delegate: CategoryGroup {
+                    textSource: page.structure ? page.structure.text : null
+                    shownTier: "Basic"
+                    contents: page.contents
+                }
+            }
+        }
+    }
+    extrasItem: Component {
+        EaComponents.SideBarColumn {
+            Repeater {
+                model: page.structure ? page.structure.categories : null
+                delegate: CategoryGroup {
+                    textSource: page.structure ? page.structure.text : null
+                    shownTier: "Extras"
+                    contents: page.contents
+                }
+            }
+            AppearanceGroup {
+                options: page.project ? page.project.structureViewOptions : null
+                controller: structureView.controller
+                structure: page.structure
+            }
+        }
+    }
+    textItem: Component {
+        TextTab {
+            source: page.structure ? page.structure.text : null
+        }
+    }
+    // One block selector for Basic, Extras and Text (edi ADR-0017 §7).
+    blockSelectorShown: true
+    blockSelectorRightInset: patternShown ? chartView.toolbarRightInset : structureView.toolbarRightInset
+    blocks: project ? (patternShown ? project.experiments : project.structures) : null
+    blocksTextRole: "label"
+    blockKind: patternShown ? "experiment" : "structure"
+    blockOutcomeRole: patternShown ? "fitOutcome" : ""
+    blockCurrentOutcome: patternShown && project && project.currentExperiment ? project.currentExperiment.fitOutcome : ""
+    blockTemplateRole: patternShown && project !== null && project.scan ? "isTemplate" : ""
+    blockCurrentTemplate: patternShown && project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
+    blockIndex: project ? (patternShown ? project.currentExperimentIndex : project.currentStructureIndex) : -1
+    onBlockActivated: index => ApplicationInfo.finishUiEvent(15, index)
+    continueText: qsTr("Continue")
+    onContinueClicked: AppState.open(AppState.Page.Experiment)
+
+    Component {
+        id: spaceGroupContent
+        SpaceGroupGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: cellContent
+        CellGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: atomSitesContent
+        AtomSitesGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: atomSiteAdpContent
+        AtomSiteAdpGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: magneticSpaceGroupContent
+        MagneticSpaceGroupGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: propagationVectorsContent
+        PropagationVectorsGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: atomSiteMomentContent
+        AtomSiteMomentGroup {
+            structure: page.structure
+            options: page.project ? page.project.structureViewOptions : null
+        }
+    }
+    Component {
+        id: magneticFormFactorsContent
+        MagneticFormFactorsGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: scatteringLengthsContent
+        ScatteringLengthsGroup {
+            structure: page.structure
+        }
+    }
+}

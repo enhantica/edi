@@ -1,0 +1,238 @@
+{
+  "about": "The capture rule: each owner review note fixed on a visible page, and the image of the UI test's expected set (app-screenshots/edi) that shows it. The demo produces every image (app/src/demo_driver.cpp); the review lane and the conductor check each note against its image.",
+  "captures": [
+    {
+      "image": "t2-09-system-dark-report.png",
+      "notes": [
+        1,
+        2
+      ],
+      "theme": "system",
+      "platform": "dark"
+    },
+    {
+      "image": "t2-10-system-light-report.png",
+      "notes": [
+        1
+      ],
+      "theme": "system",
+      "platform": "light"
+    },
+    {
+      "image": "t2-06-dark-experiment.png",
+      "notes": [
+        2
+      ],
+      "theme": "dark"
+    },
+    {
+      "image": "t2-07-dark-analysis.png",
+      "notes": [
+        2,
+        7,
+        8
+      ],
+      "theme": "dark"
+    },
+    {
+      "image": "t2-08-dark-structure-text.png",
+      "notes": [
+        2,
+        12
+      ],
+      "theme": "dark"
+    },
+    {
+      "image": "21-structure-extras.png",
+      "notes": [
+        3
+      ],
+      "theme": "light",
+      "expanded": [
+        "scattering_length"
+      ]
+    },
+    {
+      "image": "t2-01-instrument-cw.png",
+      "notes": [
+        4
+      ],
+      "theme": "light",
+      "expanded": [
+        "instrument"
+      ],
+      "note": "the D20 example as bundled: wavelength and 2θ offset, sharing the row; t2-17 shows the four-field row"
+    },
+    {
+      "image": "t2-17-instrument-cw-four.png",
+      "notes": [
+        4
+      ],
+      "theme": "light",
+      "expanded": [
+        "instrument"
+      ],
+      "declared": "a copy of the D20 experiment loaded with _instrument.calib_sample_displacement 0.05 and _instrument.calib_sample_transparency -0.02 declared (the line shifts), as a user edits the file; the four fields share the row"
+    },
+    {
+      "image": "t2-03-experiment-extras-peak.png",
+      "notes": [
+        5,
+        14
+      ],
+      "theme": "light",
+      "expanded": [
+        "peak"
+      ]
+    },
+    {
+      "image": "t2-02-linked-structure.png",
+      "notes": [
+        6
+      ],
+      "theme": "light",
+      "expanded": [
+        "linked_structure"
+      ]
+    },
+    {
+      "image": "t2-12-measured-data.png",
+      "notes": [
+        6,
+        14
+      ],
+      "theme": "light",
+      "expanded": [
+        "data"
+      ]
+    },
+    {
+      "image": "t2-13-reflections.png",
+      "notes": [
+        6
+      ],
+      "theme": "light",
+      "expanded": [
+        "refln"
+      ]
+    },
+    {
+      "image": "t2-14-joint-fit.png",
+      "notes": [
+        6,
+        14
+      ],
+      "theme": "light",
+      "expanded": [
+        "joint_fit"
+      ]
+    },
+    {
+      "image": "t2-15-scan-extraction.png",
+      "notes": [
+        6
+      ],
+      "theme": "light",
+      "expanded": [
+        "sequential_fit_extract"
+      ]
+    },
+    {
+      "image": "t2-16-fit-start.png",
+      "notes": [
+        6
+      ],
+      "theme": "light",
+      "expanded": [
+        "fit_parameter"
+      ]
+    },
+    {
+      "image": "13-analysis-basic.png",
+      "notes": [
+        7,
+        8
+      ],
+      "theme": "light"
+    },
+    {
+      "image": "t2-04-analysis-slider.png",
+      "notes": [
+        7,
+        8,
+        9,
+        14
+      ],
+      "theme": "light"
+    },
+    {
+      "image": "14-analysis-extra-minimizer.png",
+      "notes": [
+        10,
+        11
+      ],
+      "theme": "light",
+      "expanded": [
+        "minimizer"
+      ]
+    },
+    {
+      "image": "22-analysis-fitting-mode.png",
+      "notes": [
+        11
+      ],
+      "theme": "light",
+      "expanded": [
+        "fitting_mode"
+      ]
+    },
+    {
+      "image": "09-model-text-mode.png",
+      "notes": [
+        12
+      ],
+      "theme": "light"
+    },
+    {
+      "image": "23-experiment-text.png",
+      "notes": [
+        12
+      ],
+      "theme": "light"
+    },
+    {
+      "image": "24-analysis-text.png",
+      "notes": [
+        12
+      ],
+      "theme": "light"
+    },
+    {
+      "image": "t2-05-report-text.png",
+      "notes": [
+        12,
+        13
+      ],
+      "theme": "light",
+      "timestamp": "28 Sep 2026 12:00:00"
+    },
+    {
+      "image": "t2-11-project-text.png",
+      "notes": [
+        12
+      ],
+      "theme": "light",
+      "timestamp": "28 Sep 2026 12:00:00"
+    },
+    {
+      "image": "20-experiment-tof.png",
+      "notes": [
+        14
+      ],
+      "theme": "light",
+      "expanded": [
+        "peak"
+      ]
+    }
+  ]
+}

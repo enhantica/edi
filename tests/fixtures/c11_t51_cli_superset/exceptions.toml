@@ -1,0 +1,62 @@
+schema = 1
+directionality = 'crysta-cli is a subset of edi-cli; edi-only capabilities are expected'
+
+[[exception]]
+capability = 'option:<root>:build_commit'
+issue = 'four-surface-boundary'
+remove_after = 'four-surface-boundary'
+reason = 'whether edi exposes crysta build provenance belongs to the four-surface boundary ADR'
+
+[[exception]]
+capability = 'option:<root>:perf_info'
+issue = 'four-surface-boundary'
+remove_after = 'four-surface-boundary'
+reason = 'whether edi exposes top-level engine performance diagnostics belongs to the four-surface boundary ADR'
+
+[[exception]]
+capability = 'option:fit:chi_square_tolerance'
+issue = 'four-surface-boundary'
+remove_after = 'four-surface-boundary'
+reason = 'whether a model-owned convergence tolerance has an edi CLI override belongs to the four-surface boundary ADR'
+
+[[exception]]
+capability = 'option:fit:cutoff_policy'
+issue = 'four-surface-boundary'
+remove_after = 'four-surface-boundary'
+reason = 'whether model-owned cutoff policy controls have an edi CLI route belongs to the four-surface boundary ADR'
+
+[[exception]]
+capability = 'option:fit:output_file'
+issue = 'four-surface-boundary'
+remove_after = 'four-surface-boundary'
+reason = 'whether edi exposes crysta output-file emission belongs to the four-surface boundary ADR'
+
+[[exception]]
+capability = 'option:fit:parameter_tolerance'
+issue = 'four-surface-boundary'
+remove_after = 'four-surface-boundary'
+reason = 'whether a model-owned parameter tolerance has an edi CLI override belongs to the four-surface boundary ADR'
+
+[[exception]]
+capability = 'option:fit:perf_info'
+issue = 'four-surface-boundary'
+remove_after = 'four-surface-boundary'
+reason = 'whether edi exposes fit-level engine performance diagnostics belongs to the four-surface boundary ADR'
+
+[[exception]]
+capability = 'option:fit:solver_rung'
+issue = 'four-surface-boundary'
+remove_after = 'four-surface-boundary'
+reason = 'whether model-owned solver-rung selection has an edi CLI route belongs to the four-surface boundary ADR'
+
+[[exception]]
+capability = 'option:fit:descent'
+issue = 'four-surface-boundary'
+remove_after = 'four-surface-boundary'
+reason = ' (owner 2026-09-24): the descent is model-owned (_minimizer.descent in analysis.edi) and edi fit carries no minimization condition; whether crysta keeps a CLI override belongs to the four-surface boundary ADR'
+
+[[exception]]
+capability = 'option:fit:list_descents'
+issue = 'four-surface-boundary'
+remove_after = 'four-surface-boundary'
+reason = ' (owner 2026-09-24): edi documents the valid descent ids beside the analysis.edi fields rather than in the CLI; the registry listing is compared through the registry API instead'

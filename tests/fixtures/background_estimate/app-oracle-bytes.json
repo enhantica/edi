@@ -1,0 +1,18 @@
+{
+  "before_commit": "74d6311c74cdba65431dbe8cfe4c9be4e46233b4",
+  "claim": "INPUT BYTES: manual estimate category; all numerical expectations unchanged",
+  "command": "python -m tests.fixtures.background_estimate.adapt_oracles",
+  "files": {
+    "tests/fixtures/e04_t1/display_oracle.js": {
+      "after_sha256": "40335420379632ec77077c0a01b111ade73b6974450ee5a3bb7dcdcb0b687fa2",
+      "before_sha256": "179495ee7fc3658748251b10134a2b0cee04daf17f581fe067a1b4274b808a67"
+    },
+    "tests/fixtures/e04_t1/oracle.js": {
+      "after_sha256": "6ca78fb0123c5939458d5f696727fcea2aa4b6324861fce27c3b80d096b91ef4",
+      "before_sha256": "c602a34cc112bfb5643cacf3aa116f51b998edb36e0885907444f6b9116a6655"
+    }
+  },
+  "input_after_sha256": "cfe9ea2b020d8ac9b8b61a7affb253787d6a8a27be10462c396091f6e96baf7e",
+  "input_before_sha256": "5063e9ea674694f4ba201a2b7f77b985ae7a8c74111091912f6f9999e15ee2df",
+  "repository": "https://github.com/enhantica/edi"
+}

@@ -1,0 +1,499 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#ifndef EDI_APP_FIT_VIEW_MODEL_HPP
+#define EDI_APP_FIT_VIEW_MODEL_HPP
+
+#include <QByteArray>
+#include <QElapsedTimer>
+#include <QList>
+#include <QObject>
+#include <QString>
+#include <QTimer>
+#include <QtQml/qqmlregistration.h>
+#include <cstdint>
+#include <deque>
+#include <memory>
+#include <functional>
+#include <map>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "edi/fit_job.hpp"
+#include "edi/model.hpp"
+#include "edi/scan.hpp"
+#include "edi/worker.hpp"
+#include "row_table_model.hpp"
+
+namespace edi_app {
+
+class ProjectViewModel;
+
+// How a recorded fit ended, as the outcome key the app draws (FitOutcomes.qml): "success", "maxIterations",
+// "noStep", "stopped", "superseded" or "failed"; empty when the project holds no result.
+QString recorded_outcome(const edi::FitResultRecord& result);
+
+// The last fit's results, as diffraction-lib's "Least-squares fit results" table: roles
+// `icon` (a font icon), `metric`, `value` and `outcome` (the outcome key on the Overall status row, else
+// empty), from the fit's final result.
+// What a scan's results say about the run as a whole: the files, those fitted, converged and not, the χ² range,
+// the run's outcome (its own Failed or Stopped, else the worst file's) and its time (negative: not known).
+struct ScanSummary {
+    int files = 0;
+    int fitted = 0;
+    int ok = 0;
+    int failed = 0;
+    int skipped = 0;             // files with no intensity above zero, not fitted
+    long long negative_points = 0;  // rows skipped for a negative intensity, over every file
+    // Every completed file: a fitted one has a results row, a skipped one none (crysta writes no row for it).
+    int processed() const { return fitted + skipped; }
+    double chi_min = 0.0;
+    double chi_max = 0.0;
+    double seconds = -1.0;
+    QString outcome;
+};
+
+// One column of the agreement factors: `factor` (its name in Qt rich text, with the subscript), `structure` (the
+// structure's name, empty for a profile factor) and `place` (the structure's colour place, -1 for none). QML reads a
+// list of them as an array (edi ADR-0030).
+struct AgreementColumn {
+    Q_GADGET
+    QML_VALUE_TYPE(agreementColumn)
+    Q_PROPERTY(QString factor MEMBER factor CONSTANT)
+    Q_PROPERTY(QString structure MEMBER structure CONSTANT)
+    Q_PROPERTY(int place MEMBER place CONSTANT)
+
+   public:
+    QString factor;
+    QString structure;
+    int place = -1;
+    bool operator==(const AgreementColumn&) const = default;
+};
+
+// The agreement factors of the fit the project records (edi ADR-0045): one row per dataset, after an "All datasets"
+// row when there are several, and one column per factor: Rp, Rwp, Rexp, cRp, cRwp, then R_Bragg and R_F for each
+// linked structure. Roles `label`, `place` (the experiment's colour place, -1 for the global row) and `values` (the
+// columns' texts, in per cent; empty where a factor is not defined for the row).
+class FitAgreementModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to the fit results")
+    Q_PROPERTY(QList<edi_app::AgreementColumn> columns READ columns NOTIFY columnsChanged)
+
+   public:
+    explicit FitAgreementModel(QObject* parent);
+    void setRecord(const edi::Project& project);
+    void clear();
+    QList<AgreementColumn> columns() const { return columns_; }
+
+   signals:
+    void columnsChanged();
+
+   private:
+    QList<AgreementColumn> columns_;
+};
+
+class FitResultListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to the fit")
+    // The second table of the fit results: the agreement factors (empty for a scan's summary).
+    Q_PROPERTY(edi_app::FitAgreementModel* agreement READ agreement CONSTANT)
+
+   public:
+    explicit FitResultListModel(QObject* parent);
+    FitAgreementModel* agreement() const { return agreement_; }
+    // The rows of the result the project records (`_fit_result`): after a fit and after a project that holds
+    // one is opened alike.
+    void setRecord(const edi::Project& project);
+    // A scan's summary instead (edi ADR-0017 §19): its outcome, the files fitted, the ok and fail counts and the χ²
+    // range, from `analysis/results.csv`.
+    void setScan(const ScanSummary& summary);
+    void clear();
+
+   private:
+    FitAgreementModel* agreement_;
+};
+
+// Start fitting (edi ADR-0020 §9): the fit of the open project runs on its worker (edi::FitJob); its
+// progress, its end and its result reach the GUI here, on the GUI thread, in order.
+class FitViewModel : public QObject {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a project")
+    // A fit is running: Start fitting is Stop fitting.
+    Q_PROPERTY(bool running READ running NOTIFY runningChanged)
+    // A scan project with some datasets fitted and some not: Start fitting reads Continue fitting, and fits from
+    // the first unfitted one. `canReset`: Reset fits can clear the scan's fit results (one Undo step).
+    Q_PROPERTY(bool continuable READ continuable NOTIFY continuableChanged)
+    Q_PROPERTY(bool canReset READ canReset NOTIFY canResetChanged)
+    // The fitting mode is a scan's, sequential or independent: the Evolution tab and Follow are shown only then.
+    Q_PROPERTY(bool scanMode READ scanMode NOTIFY scanModeChanged)
+    // A scan is running: Follow is enabled. `following`: the pattern tab shows the file being fitted.
+    Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
+    Q_PROPERTY(bool following READ following WRITE setFollowing NOTIFY followingChanged)
+    // How often a followed scan redraws the pattern (edi ADR-0029), saved per machine: 0 every pattern with the fit
+    // waiting for each to be drawn, 1 about once a second, 2 adaptive (the default: the newest finished file whenever
+    // the screen is free, every half second at most), 3 only at the end, 4 every pattern with the display catching up
+    // (the fit never waits; the patterns are drawn in order at the display's pace).
+    Q_PROPERTY(int patternUpdates READ patternUpdates WRITE setPatternUpdates NOTIFY patternUpdatesChanged)
+    // The patterns a scan has drawn since it started, and the file drawn last.
+    Q_PROPERTY(int scanPatternUpdates READ scanPatternUpdates NOTIFY scanPatternUpdatesChanged)
+    Q_PROPERTY(QString scanShownFile READ scanShownFile NOTIFY scanShownFileChanged)
+    // Every pattern, display catches up: the patterns the scan has sent to be drawn, and whether some still wait
+    // behind the one being drawn (the status bar's "Showing N of M").
+    Q_PROPERTY(int scanReceived READ scanReceived NOTIFY scanReceivedChanged)
+    Q_PROPERTY(bool scanBehind READ scanBehind NOTIFY scanBehindChanged)
+    // Some experiment holds measured data. Without any, nothing can be fitted: Start fitting and every "free" toggle
+    // are disabled, while values stay editable and the calculated pattern follows them (edi ADR-0046).
+    Q_PROPERTY(bool measured READ measured NOTIFY measuredChanged)
+    // The project's fitting mode is one Start fitting runs (single, joint); otherwise `unavailableReason`.
+    Q_PROPERTY(bool available READ available NOTIFY availableChanged)
+    Q_PROPERTY(QString unavailableReason READ unavailableReason NOTIFY unavailableReasonChanged)
+    // The model holds a fit's start state (`_fit_parameter`): the app bar's Undo restores it.
+    Q_PROPERTY(bool canUndo READ canUndo NOTIFY canUndoChanged)
+    // The status bar's fit area: empty before the first fit and after an undo. `elapsed` is the running
+    // fit's time, then the fit's own; `status` is the outcome's word, "Running" while a fit runs; `outcome`
+    // is its key (recorded_outcome), empty while a fit runs.
+    Q_PROPERTY(QString iterations READ iterations NOTIFY iterationsChanged)
+    Q_PROPERTY(QString elapsed READ elapsed NOTIFY elapsedChanged)
+    Q_PROPERTY(QString goodnessOfFit READ goodnessOfFit NOTIFY goodnessOfFitChanged)
+    Q_PROPERTY(QString status READ status NOTIFY statusChanged)
+    Q_PROPERTY(QString outcome READ outcome NOTIFY outcomeChanged)
+    Q_PROPERTY(edi_app::FitResultListModel* results READ results CONSTANT)
+    // A running scan (S3): the share of its files processed (fitted or skipped), the bar's text (count, percent, the
+    // file just fitted) and the time left at the pace so far.
+    Q_PROPERTY(double scanProgress READ scanProgress NOTIFY scanProgressChanged)
+    Q_PROPERTY(int scanProcessed READ scanProcessed NOTIFY scanProcessedChanged)
+    Q_PROPERTY(int scanFitted READ scanFitted NOTIFY scanFittedChanged)
+    Q_PROPERTY(int scanTotal READ scanTotal NOTIFY scanTotalChanged)
+    Q_PROPERTY(QString scanText READ scanText NOTIFY scanTextChanged)
+    Q_PROPERTY(QString eta READ eta NOTIFY etaChanged)
+    // The template changed after the scan results were written: they stay shown, marked outdated, until the next run
+    // replaces them; the fit button then refits every file from the template (Refit; edi ADR-0017 §19).
+    Q_PROPERTY(bool outOfDate READ outOfDate NOTIFY outOfDateChanged)
+    // A scan's summary (scan projects): `scanFiles` reads "fitted/files", then the ok and fail counts.
+    Q_PROPERTY(bool scanSummary READ scanSummary NOTIFY scanSummaryChanged)
+    // The scan's results did not read whole: what is shown is what was last accepted, until a full read succeeds.
+    Q_PROPERTY(bool scanRefused READ scanRefused NOTIFY scanRefusedChanged)
+    Q_PROPERTY(QString scanFiles READ scanFiles NOTIFY scanFilesChanged)
+    Q_PROPERTY(int scanOk READ scanOk NOTIFY scanOkChanged)
+    Q_PROPERTY(int scanFailed READ scanFailed NOTIFY scanFailedChanged)
+
+   public:
+    FitViewModel(edi::Project& project, edi::work::Worker& worker, ProjectViewModel& owner, QObject* parent);
+    ~FitViewModel() override;
+
+    bool running() const { return running_; }
+    // Internal native adapter: actual worker admission is independent of UI publication.
+    bool nativeRunning() const noexcept { return job_ && job_->running(); }
+    void startNative(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt = 0);
+    bool continuable() const { return continuable_; }
+    bool canReset() const { return can_reset_; }
+    bool scanMode() const { return scan_mode_; }
+    bool scanning() const { return scanning_; }
+    // The completed files (fitted or skipped) of all the scan's files.
+    double scanProgress() const {
+        return scan_.files > 0 ? static_cast<double>(scan_.processed()) / scan_.files : 0.0;
+    }
+    QString scanText() const { return scan_text_; }
+    QString eta() const { return eta_; }
+    bool outOfDate() const { return out_of_date_; }
+    // The files the scan has processed (fitted or skipped), and those it has fitted, of all its files.
+    int scanProcessed() const { return scan_.processed(); }
+    int scanFitted() const { return scan_.fitted; }
+    int scanTotal() const { return scan_.files; }
+    // Follow is on only while a scan runs: off before one, after one and in the single and joint modes.
+    bool following() const { return scanning_ && following_; }
+    void setFollowing(bool following);
+    int patternUpdates() const { return pattern_updates_; }
+    void setPatternUpdates(int mode);
+    int scanPatternUpdates() const { return scan_pattern_updates_; }
+    QString scanShownFile() const { return QString::fromStdString(followed_file_); }
+    int scanReceived() const { return scan_received_; }
+    bool scanBehind() const { return behind_; }
+    // Every pattern, display catches up: files are still waiting to be shown or being shown, the scan running or not.
+    // Until they are, the owner keeps the followed file's pattern and shows the scan's last dataset only after them.
+    bool catchingUp() const { return pattern_updates_ == kCatchUpMode && (!catch_up_.empty() || handed_token_ != 0); }
+    static constexpr int kCatchUpMode = 4;
+    // The owner has shown the dataset it was asked for: a newer finished file may be followed now (edi ADR-0029).
+    void followShown();
+    // A pattern chart of the current experiment, or a Stacked view or Map, was shown or hidden
+    // (ProjectViewModel::patternShown, scanViewShown).
+    void patternShownChanged();
+    // The followed file's points are in the frame being started: its name and count change now, in that frame; the
+    // next file waits for followRendered. `token` as below.
+    void followPresented(std::uint64_t token, const std::string& file);
+    // The followed file handed to the owner was drawn on screen (`drawn`), or will not be (its read or application
+    // failed, or the window drew nothing in time): it is counted now unless followPresented counted it, and the next
+    // pattern asked for. `token` is the one handed over with the file (handOver); a receipt with any other is ignored.
+    void followRendered(std::uint64_t token, const std::string& file, bool drawn);
+    bool measured() const { return measured_; }
+    bool available() const { return available_; }
+    QString unavailableReason() const { return unavailable_reason_; }
+    bool canUndo() const { return can_undo_; }
+    QString iterations() const { return iterations_; }
+    QString elapsed() const { return elapsed_; }
+    QString goodnessOfFit() const { return goodness_of_fit_; }
+    QString status() const { return status_; }
+    QString outcome() const { return outcome_; }
+    FitResultListModel* results() const { return results_; }
+    // The last run was the scan's (a single fit on a dataset since then shows its own summary). A scan whose
+    // processed files were all skipped has a summary too: processed, not fitted, says a scan ran.
+    bool scanSummary() const { return scan_.processed() > 0 && scan_last_; }
+    QString scanFiles() const { return QStringLiteral("%1/%2").arg(scan_.fitted).arg(scan_.files); }
+    int scanOk() const { return scan_.ok; }
+    int scanFailed() const { return scan_.failed; }
+    // A scan project's results: the status bar's summary and the results window show the run as a whole, unless
+    // `scan_last` is false (a single fit on a dataset came after the run, and its own record is shown).
+    void showScan(const ScanSummary& summary, bool scan_last);
+    // The scan's results were refused (`error`): the counts last accepted stay, the run's own outcome (Failed,
+    // Stopped, else Refused) and time are shown, and no summary is built from the refused read.
+    void showScanRefused(const QString& error, const QString& run_outcome, double seconds);
+    bool scanRefused() const { return scan_refused_; }
+    // The scan results came from another template than the one held now (the owner compares their provenance).
+    void setOutOfDate(bool out_of_date);
+
+    Q_INVOKABLE void start();
+    /// A fit asked for while its collection data downloads: Stop ends the wait, and an edit meanwhile makes it start
+    /// nothing (it asks to be started again).
+    Q_PROPERTY(bool waitingForData READ waitingForData NOTIFY waitingForDataChanged)
+    bool waitingForData() const { return waiting_for_data_; }
+    Q_INVOKABLE void cancel();
+    // Clears every dataset's fit result in a scan project (one Undo step), so the next Start fits them all.
+    Q_INVOKABLE void reset();
+    // Whether the fit's start state was restored (refused while a fit runs or when there is none).
+    Q_INVOKABLE bool undo();
+    // After every publication of the project: what the mode and the start state allow now.
+    void sync();
+    // The project closes: the fit stops and delivers nothing more. Before the worker goes.
+    void close();
+
+    // An assistant trial (edi ADR-0055): an edit the assistant applied after an accepted fit opens a candidate owned by
+    // that assistant session (`owner`); an accepted fit or an Undo closes it, and a manual edit drops it, so a
+    // rollback never overwrites a change the trial did not make. restoreAccepted puts the whole accepted project
+    // back over the owner's open candidate as one Undo step and answers whether it did; restoreAcceptedOnStop does it
+    // now, or when a running fit ends.
+    void markCandidate(quint64 owner) noexcept {
+        if (!accepted_fit_ || restoring_ || manual_since_accepted_) return;  // disarmed until the next accepted fit
+        if (candidate_ && candidate_owner_ != owner) { dropCandidate(); return; }  // another session's edit
+        candidate_ = true;
+        candidate_owner_ = owner;
+    }
+    void dropCandidate() noexcept {
+        if (!restoring_) {
+            candidate_ = stop_rollback_ = false;
+            manual_since_accepted_ = true;
+            trial_files_.clear();
+        }
+    }
+    // A file the open trial is about to write outside the project model (a saved report and its reports/report.edi),
+    // noted once with what it held, so that rolling the trial back puts the folder back as the accepted state left it.
+    void noteTrialFile(const QString& path);
+    bool restoreAccepted(quint64 owner);
+    // A Save ends the trial: what was saved is the new accepted baseline, and nothing before it is rolled back.
+    void saved();
+    void restoreAcceptedOnStop(quint64 owner);
+    // Whether an assistant trial is open: there is an accepted fit to go back to, and a candidate, an assistant fit,
+    // its pending acceptance or a stopped rollback is outstanding. The project refuses every other edit and every
+    // save meanwhile (ProjectViewModel::criticalEditRefusal, saveRefusal).
+    bool trialOpen() const noexcept {
+        return presenting_ || static_cast<bool>(native_completion_) ||
+               (accepted_fit_ && ((candidate_ && assistant_busy_) || stop_rollback_ || pending_accept_));
+    }
+    // Whether the assistant is working a turn: the lock holds a candidate only then. Between turns the user may act,
+    // and a manual edit ends the trial for good (dropCandidate), a Save makes the saved state the baseline (saved).
+    void setAssistantBusy(bool busy) noexcept {
+        assistant_busy_ = busy;
+        // A turn that ended without changing the project leaves no trial: what it wrote stays as written.
+        if (!busy && !candidate_) trial_files_.clear();
+    }
+    // Whether this fit view is putting a state back (a rollback or a fit Undo), which the trial lock admits.
+    bool restoring() const noexcept { return restoring_; }
+    // Whether this fit view is writing its own fit (its start state, its adopted result), which the lock admits too.
+    bool fitWriting() const noexcept { return fit_writing_ > 0; }
+    // A fit's terminal continuation is running: its results, the assistant's completion and any rollback are still
+    // being published although `running` is already false (edi ADR-0069: no save starts until it is done).
+    bool finishing() const noexcept { return finishing_ > 0; }
+
+   signals:
+    void runningChanged();
+    void continuableChanged();
+    void canResetChanged();
+    void scanModeChanged();
+    void scanningChanged();
+    void followingChanged();
+    void patternUpdatesChanged();
+    void scanPatternUpdatesChanged();
+    void scanShownFileChanged();
+    void scanReceivedChanged();
+    void scanBehindChanged();
+    void measuredChanged();
+    void availableChanged();
+    void unavailableReasonChanged();
+    void canUndoChanged();
+    void iterationsChanged();
+    void elapsedChanged();
+    void goodnessOfFitChanged();
+    void statusChanged();
+    void outcomeChanged();
+    void scanSummaryChanged();
+    void scanFilesChanged();
+    void scanOkChanged();
+    void scanFailedChanged();
+    void scanProgressChanged();
+    void scanProcessedChanged();
+    void scanRefusedChanged();
+    void scanFittedChanged();
+    void scanTotalChanged();
+    void scanTextChanged();
+    void etaChanged();
+    void outOfDateChanged();
+    // A scan ended with its rows on disk (finished or stopped).
+    void scanFinished();
+    // A fit ended with a result the project now holds (finished, cancelled or stopped early).
+    void finished();
+    // Only a manual fit requests automatic results presentation; explicit opening is separate.
+    void automaticResultsRequested();
+    // A fit was refused or failed; the project is unchanged.
+    void refused(const QString& message);
+    void waitingForDataChanged();
+
+   private:
+    void started(const edi::FitPreamble& preamble);
+    void iterated(const edi::IterationRecord& record);
+    void frame(const edi::FitFrame& frame);
+    void showFrame();
+    void ended(const edi::FitReport& report);
+    void presentEnded(const edi::FitReport& report, bool automatic_results, std::uint64_t attempt);
+    void startImpl(std::uint64_t attempt);
+    friend class ProjectViewModel;
+    // Fixed correlation only: never a history of attempts or a scientific snapshot.
+    std::uint64_t beginAttempt() noexcept;
+    void invalidateFitUndo() noexcept { undo_attempt_ = history_attempt_ = 0; }
+    std::uint64_t attempt_serial_ = 0, latest_attempt_ = 0, submitted_attempt_ = 0;
+    std::uint64_t undo_attempt_ = 0, history_attempt_ = 0, finished_attempt_ = 0, native_attempt_ = 0;
+    // What the assistant's Undo of a rejected fit restores (Edit::undo_fit_to, edi ADR-0055). accepted_fit_ is the
+    // project as the latest adopted single or joint fit left it. A starting fit records its attempt, the project as it
+    // starts and the accepted state before it; its adoption makes that record the one its Undo restores.
+    struct UndoTarget {
+        std::uint64_t attempt = 0;
+        std::shared_ptr<const edi::Project> before, accepted;
+        bool owned = false;  // no manual edit since the accepted fit: Undo may put the whole accepted project back
+        std::size_t depth = 0;  // the Undo depth when that accepted fit was taken
+    };
+    std::shared_ptr<const edi::Project> accepted_fit_;
+    UndoTarget starting_, undo_target_;
+    // Whether the assistant changed the project since the accepted fit (markCandidate), and which session did.
+    bool candidate_ = false, stop_rollback_ = false, manual_since_accepted_ = false, restoring_ = false;
+    int fit_writing_ = 0;
+    int finishing_ = 0;
+    bool assistant_busy_ = false;
+    quint64 candidate_owner_ = 0, stop_owner_ = 0;
+    // The project's Undo depth when the accepted fit was taken: a whole-project restore drops the trial's own Undo
+    // entries above it, so a later ordinary Undo cannot bring back a fragment of the trial.
+    std::size_t accepted_history_depth_ = 0;
+    // The files the open trial wrote (noteTrialFile): each path with its bytes before the trial, or none when the
+    // trial created it. Rolling back restores or removes them; any other end of the trial keeps them as they are.
+    std::map<QString, std::optional<QByteArray>> trial_files_;
+    void restoreTrialFiles(const std::vector<std::string>& trial_reports, bool reports_changed);
+    // The project as an adopted fit left it, accepted only once its presentation completes.
+    std::shared_ptr<const edi::Project> pending_accept_;
+    void dropTrialHistory() noexcept;
+    bool presenting_ = false, submitted_single_joint_ = false;
+    friend class AssistantViewModel;
+    friend class TrialLockTests;
+    std::uint64_t prepareNativeCompletion(std::function<void(const edi::FitReport&, bool)> completion, std::uint64_t attempt);
+    void discardNativePreparation(std::uint64_t token) noexcept;
+    std::uint64_t native_completion_serial_ = 0;
+    std::function<void(const edi::FitReport&, bool)> native_completion_;
+    void scanStarted(const edi::ScanPreamble& preamble);
+    void fileCompleted(const edi::ScanFileRecord& record);
+    // A followed file's pattern, as its fit left it.
+    void scanFrame(const std::string& file, const edi::FitFrame& frame);
+    // Follow asks for the next finished file's pattern once the one before is shown and kFollowIntervalMs has
+    // passed.
+    void followLatest();
+    // Every pattern, display catches up: the oldest waiting pattern goes to the view once the one before is drawn.
+    void drainFollowed();
+    // `behind` and, once a scan that has ended is caught up, the owner's final view.
+    void syncBehind();
+    // The counts from the files on disk once the driver returned, before the running presentation ends.
+    void settleScanCounts();
+    void scanEnded(const edi::FitReport& report, bool automatic_results);
+    void setScanning(bool scanning);
+    void setScanRefused(bool refused);
+    void setContinuable(bool continuable);
+    // Continue fitting and Reset fits from the scan's fitted count and the mode.
+    void syncScanState();
+    void setScanCounts(const ScanSummary& counts, const QString& file);
+    void setRunning(bool running);
+    void setProgress(const QString& iterations, const QString& goodness, const QString& status,
+                     const QString& outcome = QString());
+    void setElapsed(const QString& elapsed);
+    // The status bar's fit items and the results table from the result the project records (a project
+    // opened with one).
+    void showRecord();
+
+    edi::Project& project_;
+    std::uint64_t collection_wait_ = 0;  // the newest fit waiting for collection data
+    bool waiting_for_data_ = false;
+    void setWaitingForData(bool waiting);
+    ProjectViewModel& owner_;
+    std::unique_ptr<edi::FitJob> job_;
+    FitResultListModel* results_;
+    ScanSummary scan_;
+    // Frames wait here for the next frame tick, at most one at a time (the job calculates the next only
+    // once this one is shown).
+    std::optional<edi::FitFrame> pending_frame_;
+    QTimer frame_timer_;
+    // A followed scan: the newest finished file, the one last shown, when, the wait for the interval, and whether
+    // the job is to send the next file's pattern.
+    std::string latest_file_, followed_file_;
+    QElapsedTimer follow_clock_;
+    QTimer follow_timer_;
+    bool frame_requested_ = false;
+    int pattern_updates_ = 2;       // Adaptive
+    // The pattern last handed to the view has been drawn (or will not be): only then is the next one asked for,
+    // however often followLatest runs in between. `handed_file_` is that file until its receipt arrives.
+    bool frame_shown_ = true;
+    std::string handed_file_;
+    std::uint64_t handed_token_ = 0;  // the receipt token of handed_file_, 0 when none is awaited
+    std::uint64_t last_token_ = 0;
+    std::uint64_t handOver(const std::string& file);
+    void dropHandedFile();
+    int scan_pattern_updates_ = 0;  // patterns drawn since the scan started
+    // Every pattern, display catches up: the files fitted and their patterns, oldest first, not yet handed to the
+    // view, and the patterns received since the scan started.
+    std::deque<std::pair<std::string, edi::FitFrame>> catch_up_;
+    int scan_received_ = 0;
+    bool behind_ = false;
+    // The scan ended with patterns still to draw: the owner's final view waits for them (ProjectViewModel::scanEnded).
+    bool caught_up_pending_ = false;
+    // A followed file is drawn: the shown file and the count move on.
+    void patternDrawn(const std::string& file);
+    // The token whose file's name and count already moved with its frame (followPresented); 0 if none.
+    std::uint64_t presented_token_ = 0;
+    // Every pattern, fit waits: the job waits while a view that shows each file is on screen.
+    bool waitsForView(int mode) const;
+    // The view can take the next followed file.
+    bool viewReady() const;
+    // The running fit's clock, shown once a second.
+    QElapsedTimer clock_;
+    QTimer clock_timer_;
+    bool running_ = false, available_ = false, can_undo_ = false, following_ = true, measured_ = false;
+    bool can_reset_ = false;
+    bool scan_mode_ = false;
+    bool scanning_ = false, continuable_ = false, out_of_date_ = false, scan_last_ = true;
+    // The running scan: the files already fitted when it started (a continued scan), for its pace.
+    int scan_resumed_ = 0;
+    bool scan_index_refused_ = false;  // this run's index refused and the refusal was shown
+    bool scan_refused_ = false;        // the results shown are the last accepted, the read after them refused
+    QString scan_text_, eta_;
+    double chi_before_ = 0.0;
+    QString unavailable_reason_, iterations_, elapsed_, goodness_of_fit_, status_, outcome_;
+};
+
+}  // namespace edi_app
+
+#endif  // EDI_APP_FIT_VIEW_MODEL_HPP

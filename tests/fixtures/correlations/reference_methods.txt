@@ -1,0 +1,324 @@
+from __future__ import annotations
+from dataclasses import dataclass
+import numpy as np
+import plotly.graph_objects as go
+@dataclass(frozen=True)
+class _CorrelationHeatmapContext:
+    """Inputs needed to build a correlation matrix plot."""
+    corr_df: pd.DataFrame
+    row_labels: list[str]
+    col_labels: list[str]
+    threshold: float | None
+    precision: int
+
+    @property
+    def n_rows(self) -> int:
+        """Return the number of displayed rows."""
+        return self.corr_df.shape[0]
+
+    @property
+    def n_cols(self) -> int:
+        """Return the number of displayed columns."""
+        return self.corr_df.shape[1]
+class Plotter:
+
+    def _build_correlation_heatmap_plot(self, corr_df: pd.DataFrame, title: str, *, threshold: float | None, precision: int) -> object:
+        """Build a compact pair-plot-style correlation heatmap."""
+        go = __import__('plotly.graph_objects', fromlist=['Figure', 'Heatmap'])
+        context = _CorrelationHeatmapContext(corr_df=corr_df, row_labels=self._square_matrix_axis_title_labels(corr_df.index.tolist()), col_labels=self._square_matrix_axis_title_labels(corr_df.columns.tolist()), threshold=threshold, precision=precision)
+        plot_extent = self._square_matrix_plot_extent(context.n_cols)
+        x_edges = self._correlation_heatmap_edges(context.n_cols)
+        y_edges = self._correlation_heatmap_edges(context.n_rows)
+        x_centers = self._correlation_heatmap_centers(context.n_cols)
+        y_centers = self._correlation_heatmap_centers(context.n_rows)
+        heatmap = go.Heatmap(z=self._correlation_heatmap_values(context.corr_df), x=x_edges, y=y_edges, customdata=self._correlation_heatmap_customdata(context.corr_df), zmin=-1.0, zmax=1.0, zmid=0.0, colorscale=self._plot_correlation_colorscale(), showscale=False, hoverongaps=False, hovertemplate=f'%{{customdata[0]}}<br>%{{customdata[1]}}<br>correlation: %{{z:.{context.precision}f}}<extra></extra>')
+        label_trace = PlotlyPlotter._get_correlation_label_trace(context.corr_df, x_centers=x_centers, y_centers=y_centers, threshold=context.threshold, precision=context.precision)
+        traces = [heatmap]
+        if label_trace is not None:
+            traces.append(label_trace)
+        fig = go.Figure(data=traces)
+        shapes = self._correlation_heatmap_grid_shapes(context)
+        fig.update_layout(autosize=True, margin=self._square_matrix_layout_margin([*context.row_labels, *context.col_labels]), annotations=self._correlation_heatmap_annotations(title=title, context=context, plot_extent=plot_extent, x_centers=x_centers, y_centers=y_centers), shapes=shapes, meta=self._square_matrix_layout_meta(n_parameters=context.n_cols, annotation_labels=[*context.row_labels, *context.col_labels], cell_size_pixels=self._correlation_cell_size_pixels(), cap_width=True), showlegend=False)
+        fig.update_xaxes(range=[0.0, plot_extent], showline=False, mirror=False, zeroline=False, showgrid=False, ticks='', ticklen=0, tickwidth=0, showticklabels=False, title_text=None, layer='above traces', constrain='domain')
+        fig.update_yaxes(range=[plot_extent, 0.0], showline=False, mirror=False, zeroline=False, showgrid=False, ticks='', ticklen=0, tickwidth=0, showticklabels=False, title_text=None, layer='above traces', constrain='domain', scaleanchor='x', scaleratio=1)
+        PlotlyPlotter._apply_theme_sync_meta(fig, axis_frame_shape_indexes=range(len(shapes)), correlation_heatmap=True)
+        return fig
+
+    @staticmethod
+    def _correlation_cell_size_pixels() -> int:
+        """
+        Return the correlation cell width in pixels (~16 label chars).
+        """
+        return round(CORRELATION_CELL_LABEL_CHAR_COUNT * CORRELATION_LABEL_CHAR_WIDTH_FACTOR * POSTERIOR_PAIR_AXIS_TITLE_FONT_SIZE)
+
+    def _correlation_heatmap_annotations(self, *, title: str, context: _CorrelationHeatmapContext, plot_extent: float, x_centers: np.ndarray, y_centers: np.ndarray) -> list[dict[str, object]]:
+        """Return pair-plot-like title and axis annotations."""
+        annotations = [self._square_matrix_title_annotation(title, [*context.row_labels, *context.col_labels])]
+        for row_index, row_label in enumerate(context.row_labels):
+            annotations.append({'x': 0.0, 'xref': 'paper', 'xanchor': 'right', 'xshift': -POSTERIOR_PAIR_Y_TITLE_XSHIFT_PIXELS, 'y': 1.0 - float(y_centers[row_index]) / plot_extent, 'yref': 'paper', 'yanchor': 'middle', 'text': row_label, 'align': 'center', 'font': {'size': POSTERIOR_PAIR_AXIS_TITLE_FONT_SIZE}, 'textangle': -90, 'showarrow': False})
+        for col_index, col_label in enumerate(context.col_labels):
+            annotations.append({'x': float(x_centers[col_index]) / plot_extent, 'xref': 'paper', 'xanchor': 'center', 'y': 0.0, 'yref': 'paper', 'yanchor': 'top', 'yshift': -POSTERIOR_PAIR_X_TITLE_YSHIFT_PIXELS, 'text': col_label, 'align': 'center', 'font': {'size': POSTERIOR_PAIR_AXIS_TITLE_FONT_SIZE}, 'showarrow': False})
+        return annotations
+
+    @classmethod
+    def _correlation_heatmap_centers(cls, n_parameters: int) -> np.ndarray:
+        """Return visible-cell centers for a gapped heatmap."""
+        gap_width = cls._square_matrix_gap_data_width(n_parameters)
+        return np.arange(n_parameters, dtype=float) * (1.0 + gap_width) + 0.5
+
+    @staticmethod
+    def _correlation_heatmap_customdata(corr_df: pd.DataFrame) -> np.ndarray:
+        """Return hover labels for a correlation heatmap."""
+        n_rows, n_cols = corr_df.shape
+        expanded = np.empty((2 * n_rows - 1, 2 * n_cols - 1, 2), dtype=object)
+        expanded[..., 0] = ''
+        expanded[..., 1] = ''
+        for row_index, row_label in enumerate(corr_df.index):
+            for col_index, col_label in enumerate(corr_df.columns):
+                expanded[2 * row_index, 2 * col_index, 0] = str(col_label)
+                expanded[2 * row_index, 2 * col_index, 1] = str(row_label)
+        return expanded
+
+    @classmethod
+    def _correlation_heatmap_edges(cls, n_parameters: int) -> np.ndarray:
+        """Return expanded heatmap edges with pair-plot-like gaps."""
+        if n_parameters <= 0:
+            return np.asarray([0.0], dtype=float)
+        gap_width = cls._square_matrix_gap_data_width(n_parameters)
+        if np.isclose(gap_width, 0.0):
+            return np.arange(n_parameters + 1, dtype=float)
+        widths = [1.0 if index % 2 == 0 else gap_width for index in range(2 * n_parameters - 1)]
+        return np.concatenate(([0.0], np.cumsum(np.asarray(widths, dtype=float))))
+
+    def _correlation_heatmap_grid_shapes(self, context: _CorrelationHeatmapContext) -> list[dict[str, object]]:
+        """Return per-cell borders for the visible lower triangle."""
+        axis_frame_color = self._plot_axis_frame_color()
+        gap_width = self._square_matrix_gap_data_width(context.n_cols)
+        return [{'type': 'rect', 'xref': 'x', 'yref': 'y', 'x0': float(col_index * (1.0 + gap_width)), 'x1': float(col_index * (1.0 + gap_width) + 1.0), 'y0': float(row_index * (1.0 + gap_width)), 'y1': float(row_index * (1.0 + gap_width) + 1.0), 'layer': 'above', 'line': {'color': axis_frame_color, 'width': POSTERIOR_PAIR_AXIS_LINE_WIDTH}, 'fillcolor': 'rgba(0, 0, 0, 0)'} for row_index in range(context.n_rows) for col_index in range(context.n_cols) if col_index <= row_index]
+
+    @staticmethod
+    def _correlation_heatmap_values(corr_df: pd.DataFrame) -> np.ndarray:
+        """Return a gapped heatmap array for correlation cells."""
+        n_rows, n_cols = corr_df.shape
+        expanded = np.full((2 * n_rows - 1, 2 * n_cols - 1), np.nan, dtype=float)
+        expanded[0::2, 0::2] = corr_df.to_numpy(dtype=float)
+        return expanded
+
+    @staticmethod
+    def _posterior_pair_cell_size_pixels(n_parameters: int, *, available_width_pixels: float) -> int:
+        """Return an estimated square cell size for a pair plot."""
+        if n_parameters < 1:
+            return PAIR_PLOT_CELL_SIZE_PIXELS
+        plot_width = max(PAIR_PLOT_MIN_CELL_SIZE_PIXELS, available_width_pixels - PAIR_PLOT_MARGIN_PIXELS)
+        cell_size = plot_width / n_parameters
+        return round(min(PAIR_PLOT_CELL_SIZE_PIXELS, max(PAIR_PLOT_MIN_CELL_SIZE_PIXELS, cell_size)))
+
+    @staticmethod
+    def _square_matrix_axis_title_label(unique_name: str) -> str:
+        """Return one compact multiline axis title."""
+        normalized_name = unique_name.strip()
+        if not normalized_name or '.' not in normalized_name:
+            return normalized_name
+        name_parts = [part.strip() for part in normalized_name.split('.') if part.strip()]
+        if not name_parts:
+            return normalized_name
+        return '<br>'.join([*(f'{part}.' for part in name_parts[:-1]), name_parts[-1]])
+
+    @staticmethod
+    def _square_matrix_axis_title_labels(parameter_names: list[str]) -> list[str]:
+        """Return compact multiline labels for square-matrix axes."""
+        return [Plotter._square_matrix_axis_title_label(name) for name in parameter_names]
+
+    @staticmethod
+    def _square_matrix_axis_title_line_count(label: str) -> int:
+        """Return the number of display lines in one axis title."""
+        if not label:
+            return 1
+        return label.count('<br>') + 1
+
+    @staticmethod
+    def _square_matrix_extra_axis_title_margin(annotation_labels: list[str]) -> int:
+        """Return extra margin needed for multiline axis labels."""
+        if not annotation_labels:
+            return 0
+        max_line_count = max((Plotter._square_matrix_axis_title_line_count(label) for label in annotation_labels))
+        return max(0, max_line_count - 1) * SQUARE_MATRIX_AXIS_TITLE_LINE_HEIGHT_PIXELS
+
+    @staticmethod
+    def _square_matrix_gap_data_width(n_parameters: int) -> float:
+        """Return the gap width matching pair-plot spacing."""
+        if n_parameters <= 1:
+            return 0.0
+        denominator = 1.0 - PAIR_PLOT_SUBPLOT_SPACING * (n_parameters - 1)
+        if denominator <= 0:
+            return 0.0
+        return PAIR_PLOT_SUBPLOT_SPACING * n_parameters / denominator
+
+    @staticmethod
+    def _square_matrix_layout_margin(annotation_labels: list[str]) -> dict[str, int | bool]:
+        """Return outer margins sized for multiline matrix labels."""
+        extra_margin = Plotter._square_matrix_extra_axis_title_margin(annotation_labels)
+        return {'autoexpand': False, 'l': SQUARE_MATRIX_LEFT_MARGIN_PIXELS + extra_margin, 'r': SQUARE_MATRIX_RIGHT_MARGIN_PIXELS, 't': SQUARE_MATRIX_TOP_MARGIN_PIXELS, 'b': SQUARE_MATRIX_BOTTOM_MARGIN_PIXELS + extra_margin}
+
+    @classmethod
+    def _square_matrix_layout_meta(cls, *, n_parameters: int, annotation_labels: list[str], cell_size_pixels: int | None=None, cap_width: bool=False) -> dict[str, object]:
+        """Return wrapper metadata for square matrix plots."""
+        margins = cls._square_matrix_layout_margin(annotation_labels)
+        if cell_size_pixels is None:
+            plot_size = cls._square_matrix_target_plot_size_pixels(n_parameters)
+        else:
+            plot_size = cell_size_pixels * cls._square_matrix_plot_extent(n_parameters)
+        aspect_width = round(plot_size + int(margins['l']) + int(margins['r']))
+        aspect_height = round(plot_size + int(margins['t']) + int(margins['b']))
+        wrapper: dict[str, object] = {'aspect_ratio': f'{aspect_width} / {aspect_height}'}
+        if cap_width:
+            wrapper['max_width_pixels'] = aspect_width
+        return {SQUARE_MATRIX_FIXED_ASPECT_META_KEY: wrapper}
+
+    @classmethod
+    def _square_matrix_plot_extent(cls, n_parameters: int) -> float:
+        """Return the inner plot extent for one square matrix plot."""
+        gap_width = cls._square_matrix_gap_data_width(n_parameters)
+        return float(n_parameters + max(0, n_parameters - 1) * gap_width)
+
+    @classmethod
+    def _square_matrix_target_plot_size_pixels(cls, n_parameters: int) -> float:
+        """Return the target inner size for one square matrix plot."""
+        cell_size = cls._posterior_pair_cell_size_pixels(n_parameters, available_width_pixels=PAIR_PLOT_ESTIMATED_CONTAINER_WIDTH_PIXELS)
+        return cell_size * cls._square_matrix_plot_extent(n_parameters)
+
+    @staticmethod
+    def _square_matrix_title_annotation(title: str, annotation_labels: list[str]) -> dict[str, object]:
+        """Return a top-left title annotation for matrix plots."""
+        return {'x': 0.0, 'xref': 'paper', 'xanchor': 'left', 'xshift': -Plotter._square_matrix_title_left_shift(annotation_labels), 'y': 1.0, 'yref': 'paper', 'yanchor': 'bottom', 'yshift': SQUARE_MATRIX_TITLE_YSHIFT_PIXELS, 'text': title, 'font': {'size': POSTERIOR_PAIR_TITLE_FONT_SIZE}, 'showarrow': False}
+
+    @staticmethod
+    def _square_matrix_title_left_shift(annotation_labels: list[str]) -> int:
+        """Return the title shift relative to the shared left margin."""
+        extra_margin = Plotter._square_matrix_extra_axis_title_margin(annotation_labels)
+        return max(0, SQUARE_MATRIX_LEFT_MARGIN_PIXELS + extra_margin - SQUARE_MATRIX_TITLE_LEFT_PADDING_PIXELS)
+class AnalysisReference:
+
+    @staticmethod
+    def _correlation_matrix_from_covariance(covariance: np.ndarray) -> np.ndarray | None:
+        """
+        Return a correlation matrix derived from a covariance matrix.
+        """
+        diagonal = np.diag(covariance)
+        if np.any(diagonal <= 0):
+            return None
+        scales = np.sqrt(diagonal)
+        denominator = np.outer(scales, scales)
+        with np.errstate(invalid='ignore', divide='ignore'):
+            correlation = covariance / denominator
+        if not np.all(np.isfinite(correlation)):
+            return None
+        return correlation
+
+    def _store_correlation_projection(self, *, unique_names: list[str], correlation_matrix: np.ndarray, source_kind: FitCorrelationSourceEnum) -> None:
+        """Store upper-triangle correlations from one matrix."""
+        if len(unique_names) <= 1:
+            return
+        if correlation_matrix.shape != (len(unique_names), len(unique_names)):
+            return
+        for row_index, unique_name_i in enumerate(unique_names[:-1]):
+            for column_index in range(row_index + 1, len(unique_names)):
+                correlation = correlation_matrix[row_index, column_index]
+                if not np.isfinite(correlation):
+                    continue
+                self.fit_parameter_correlations.create(source_kind=source_kind.value, parameter_unique_name_i=unique_name_i, parameter_unique_name_j=unique_names[column_index], correlation=float(np.clip(correlation, -1.0, 1.0)))
+class PlotterReference:
+
+    @staticmethod
+    def _correlation_colorscale_for_background(background_color: str) -> list[tuple[float, str]]:
+        """Return the correlation colorscale for a theme background."""
+        return [(0.0, '#d73027'), (0.5, background_color), (1.0, '#4575b4')]
+
+    def plot_correlation_heatmap(self, corr_df: object, title: str, threshold: float | None, precision: int) -> None:
+        """
+        Render a Plotly heatmap for a correlation matrix.
+
+        Parameters
+        ----------
+        corr_df : object
+            Square correlation DataFrame.
+        title : str
+            Figure title.
+        threshold : float | None
+            Absolute-correlation cutoff used for value labels.
+        precision : int
+            Number of decimals to show in labels and hover text.
+        """
+        num_rows, num_cols = corr_df.shape
+        x_edges = np.arange(num_cols + 1, dtype=float)
+        y_edges = np.arange(num_rows + 1, dtype=float)
+        x_centers = np.arange(num_cols, dtype=float) + 0.5
+        y_centers = np.arange(num_rows, dtype=float) + 0.5
+        grid_color = self._correlation_grid_color()
+        heatmap = go.Heatmap(z=corr_df.to_numpy(), x=x_edges, y=y_edges, zmin=-1.0, zmax=1.0, zmid=0.0, colorscale=self._correlation_colorscale(), colorbar={'title': {'text': ''}, 'lenmode': 'fraction', 'len': 1.0, 'y': 0.5, 'yanchor': 'middle'}, hoverongaps=False, hovertemplate=f'%{{x}}<br>%{{y}}<br>correlation: %{{z:.{precision}f}}<extra></extra>')
+        label_trace = self._get_correlation_label_trace(corr_df, x_centers=x_centers, y_centers=y_centers, threshold=threshold, precision=precision)
+        shapes = [{'type': 'line', 'x0': float(x_pos), 'x1': float(x_pos), 'y0': 0.0, 'y1': float(num_rows), 'xref': 'x', 'yref': 'y', 'layer': 'above', 'line': {'color': grid_color, 'width': CORRELATION_GRID_LINE_WIDTH}} for x_pos in x_edges[1:-1]]
+        shapes.extend(({'type': 'line', 'x0': 0.0, 'x1': float(num_cols), 'y0': float(y_pos), 'y1': float(y_pos), 'xref': 'x', 'yref': 'y', 'layer': 'above', 'line': {'color': grid_color, 'width': CORRELATION_GRID_LINE_WIDTH}} for y_pos in y_edges[1:-1]))
+        shapes.append({'type': 'rect', 'x0': 0.0, 'x1': 1.0, 'y0': 0.0, 'y1': 1.0, 'xref': 'paper', 'yref': 'paper', 'layer': 'above', 'line': {'color': grid_color, 'width': CORRELATION_FRAME_LINE_WIDTH}, 'fillcolor': 'rgba(0, 0, 0, 0)'})
+        layout = self._get_layout(title, ['Parameter', 'Parameter'], shapes=shapes)
+        traces = [heatmap]
+        if label_trace is not None:
+            traces.append(label_trace)
+        fig = self._get_figure(traces, layout)
+        self._apply_theme_sync_meta(fig, axis_frame_shape_indexes=range(len(shapes)), correlation_heatmap=True)
+        fig.update_xaxes(side='bottom', tickangle=-10, automargin=True, tickmode='array', tickvals=x_centers.tolist(), ticktext=corr_df.columns.tolist(), ticklabelstandoff=X_AXIS_TICK_LABEL_STANDOFF, range=[0.0, float(num_cols)], showgrid=False, showline=False, mirror=False, ticks='', layer='above traces')
+        fig.update_yaxes(autorange='reversed', automargin=True, tickmode='array', tickvals=y_centers.tolist(), ticktext=corr_df.index.tolist(), ticklabelstandoff=Y_AXIS_TICK_LABEL_STANDOFF, range=[float(num_rows), 0.0], showgrid=False, showline=False, mirror=False, ticks='', layer='above traces')
+        self._show_figure(fig)
+
+    @classmethod
+    def _correlation_label_color(cls) -> str:
+        """
+        Return the text color used for in-cell correlation labels.
+
+        Returns
+        -------
+        str
+            Hex color string.
+        """
+        return '#f5f5f5'
+
+    @classmethod
+    def _get_correlation_label_trace(cls, corr_df: object, x_centers: np.ndarray, y_centers: np.ndarray, threshold: float | None, precision: int) -> object | None:
+        """
+        Build a text trace for visible correlation values.
+
+        Parameters
+        ----------
+        corr_df : object
+            Correlation DataFrame to annotate.
+        x_centers : np.ndarray
+            Cell center x coordinates.
+        y_centers : np.ndarray
+            Cell center y coordinates.
+        threshold : float | None
+            Minimum absolute correlation required for a label.
+        precision : int
+            Number of decimals for rendered labels.
+
+        Returns
+        -------
+        object | None
+            Plotly text trace, or ``None`` when no labels should be
+            shown.
+        """
+        values = corr_df.to_numpy()
+        label_x = []
+        label_y = []
+        label_text = []
+        for row_idx, row in enumerate(values):
+            for col_idx, value in enumerate(row):
+                if np.isnan(value):
+                    continue
+                if threshold is not None and threshold > 0 and (abs(float(value)) < threshold):
+                    continue
+                label_x.append(float(x_centers[col_idx]))
+                label_y.append(float(y_centers[row_idx]))
+                label_text.append(f'{float(value):.{precision}f}')
+        if not label_text:
+            return None
+        return go.Scatter(x=label_x, y=label_y, mode='text', text=label_text, textposition='middle center', textfont={'color': cls._correlation_label_color()}, hoverinfo='skip', showlegend=False)

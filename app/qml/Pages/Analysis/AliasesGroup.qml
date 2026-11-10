@@ -1,0 +1,117 @@
+// SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Controls
+
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
+
+import edi.app
+
+// `alias`: the short names constraints use, each with the parameter it stands for, chosen from the
+// project's refinable parameters; append, duplicate and remove as the atom sites do. A loop in `.edi`, so a
+// table.
+Column {
+    id: group
+
+    objectName: "relations.aliases"
+    property AnalysisViewModel analysis: null
+    readonly property AliasListModel aliases: analysis ? analysis.aliases : null
+
+    spacing: AppSizes.groupContentSpacing
+
+    DataTable {
+        id: table
+        objectName: "aliases.list"
+        defaultInfoText: qsTr("No aliases")
+        sourceModel: group.aliases
+
+        columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
+
+        header: EaComponents.ListViewHeader {
+            EaComponents.ListViewLabel {
+                elide: Text.ElideRight
+                horizontalAlignment: Text.AlignHCenter
+            }
+            HeaderLabel {
+                horizontalAlignment: Text.AlignLeft
+                uid: "alias.id"
+            }
+            HeaderLabel {
+                horizontalAlignment: Text.AlignLeft
+                uid: "alias.parameter_unique_name"
+            }
+            EaComponents.ListViewLabel {
+                elide: Text.ElideRight
+                horizontalAlignment: Text.AlignHCenter
+            }
+        }
+
+        delegate: TableRow {
+            id: row
+
+            // The roles by the model: `id` cannot be a property name.
+            required property var model
+
+            EaComponents.ListViewLabel {
+                elide: Text.ElideRight
+                horizontalAlignment: Text.AlignHCenter
+                marksCurrentRow: true
+                text: row.index + 1
+            }
+            TextCell {
+                editMember: row
+                editModel: group.aliases
+                editIndex: row.index
+                objectName: `alias.id.${row.index}`
+                horizontalAlignment: Text.AlignLeft
+                value: row.model.id
+                onCommitted: text => group.aliases.setText(row.index, "id", text)
+            }
+            // The base's table combo box (TableViewComboBox), searchable: a project has many parameters.
+            ComboCell {
+                SearchableComboBox {
+                    inTable: true
+                    horizontalAlignment: Text.AlignLeft
+                    objectName: `alias.parameter.${row.index}`
+                    anchors.verticalCenter: parent.verticalCenter
+                    model: group.aliases ? group.aliases.parameterNames : []
+                    currentIndex: group.aliases ? group.aliases.parameterNames.indexOf(row.model.parameter) : -1
+                    displayText: row.model.parameter
+                    ToolTip.text: row.model.parameter
+                    onActivated: index => group.aliases.setText(row.index, "parameter", group.aliases.parameterNames[index])
+                }
+            }
+            EaComponents.ListViewButton {
+                horizontalAlignment: Text.AlignHCenter
+                objectName: `alias.remove.${row.index}`
+                fontIcon: "minus-circle"
+                ToolTip.text: qsTr("Remove this alias")
+                onClicked: group.aliases.remove(row.index)
+            }
+        }
+    }
+
+    Row {
+        spacing: EaStyle.Sizes.fontPixelSize
+
+        EaElements.SideBarButton {
+            objectName: "aliases.append"
+            enabled: group.aliases !== null && group.aliases.parameterNames.length > 0
+            ToolTip.text: enabled ? qsTr("Append an alias for an offered parameter") : qsTr("No parameter is available for an alias")
+            fontIcon: "plus-circle"
+            text: qsTr("Append new alias")
+            onClicked: group.aliases.append()
+        }
+        EaElements.SideBarButton {
+            objectName: "aliases.duplicate"
+            enabled: table.currentIndex >= 0 || (group.aliases && group.aliases.count > 0)
+            fontIcon: "clone"
+            text: qsTr("Duplicate selected alias")
+            ToolTip.text: enabled ? "" : qsTr("Nothing to duplicate: add an alias first")
+            onClicked: group.aliases.duplicate(Math.max(table.currentIndex, 0))
+        }
+    }
+}

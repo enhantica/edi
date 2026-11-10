@@ -1,0 +1,229 @@
+{
+    "actions": [
+        {
+            "action": "platform:light",
+            "scene": "assistant-panel"
+        },
+        {
+            "action": "theme:light",
+            "scene": "assistant-panel"
+        },
+        {
+            "action": "home.start",
+            "scene": "assistant-panel"
+        },
+        {
+            "action": "assistant.toggle",
+            "scene": "assistant-panel"
+        },
+        {
+            "action": "assistant.connection",
+            "scene": "assistant-connect"
+        },
+        {
+            "action": "choose:Connect ChatGPT",
+            "scene": "assistant-ready"
+        },
+        {
+            "action": "wait-assistant",
+            "scene": "assistant-ready"
+        },
+        {
+            "action": "assistant-attach:/tmp/edi-assistant-tutorial/tutorial-lbco.cif|/tmp/edi-assistant-tutorial/tutorial-hrpt.xye",
+            "scene": "assistant-ask"
+        },
+        {
+            "action": "fill:assistant.composer=Fit the crystal structure to this measured pattern.",
+            "scene": "assistant-ask"
+        },
+        {
+            "action": "assistant.send",
+            "scene": "assistant-approve"
+        },
+        {
+            "action": "choose:Share project information",
+            "scene": "assistant-question"
+        },
+        {
+            "action": "wait-assistant",
+            "scene": "assistant-question"
+        },
+        {
+            "action": "fill:assistant.composer=Neutrons, constant wavelength, measured on HRPT at PSI. The wavelength is 1.494 Å.",
+            "scene": "assistant-fitted"
+        },
+        {
+            "action": "assistant.send",
+            "scene": "assistant-fitted"
+        },
+        {
+            "action": "wait-assistant",
+            "scene": "assistant-fitted"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "assistant-result"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "assistant-result"
+        }
+    ],
+    "binary_sha256": "b5cc90a1c3fb05fa5f5729aa7e3a496252546936ddc5ac49724bc250094c5fe4",
+    "dependencies": [
+        {
+            "file": "inputs/analysis/analysis.edi",
+            "sha256": "cee189838e88e20b90aac3e85df9bedc1bb096b54debf5c21d3c407cd9b186c7"
+        }
+    ],
+    "error": "",
+    "example": "pd-neut-cwl_lbco-hrpt",
+    "fixture": {
+        "detail": "Cubic perovskite · La and Ba sharing one site · Profile, background, displacements",
+        "id": "pd-neut-cwl_lbco-hrpt",
+        "origin": "HRPT @ PSI",
+        "samples": [
+            "La₀.₅Ba₀.₅CoO₃ [Pm-3m]"
+        ],
+        "searchAliases": [
+            "pd-neut-cwl_lbco-hrpt",
+            "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
+            "Cubic perovskite · La and Ba sharing one site · Profile, background, displacements"
+        ],
+        "sources": [
+            "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/project.edi",
+            "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/analysis/analysis.edi",
+            "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/experiments/hrpt.edi",
+            "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/structures/lbco.edi"
+        ],
+        "values": {
+            "beamMode": [
+                "constant wavelength"
+            ],
+            "dimensionality": [
+                "1d"
+            ],
+            "facilities": [
+                "PSI"
+            ],
+            "fittingMode": [
+                "single"
+            ],
+            "instruments": [
+                "HRPT"
+            ],
+            "polarisation": [
+                "unpolarised"
+            ],
+            "probe": [
+                "neutron"
+            ],
+            "purpose": [
+                "refinement"
+            ],
+            "sampleForm": [
+                "powder"
+            ],
+            "scatteringType": [
+                "bragg"
+            ],
+            "structure": [
+                "crystal"
+            ]
+        }
+    },
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "inputs": {
+        "experiment": {
+            "file": "inputs/experiments/hrpt.edi",
+            "sha256": "f0c0e3839ffa3b6043992fb768eef3794ced6c869ceb7da52a57b8a387cac3f2"
+        },
+        "structure": {
+            "file": "inputs/structures/lbco.edi",
+            "sha256": "d1c245e00052e5ba22a07a5f26d645d97bc4576e369599467bfc85af224bfb04"
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "scenes": [
+        {
+            "description": "Open the assistant from the toolbar",
+            "id": "assistant-panel",
+            "image": "assistant-panel.webp",
+            "metadata": "assistant-panel.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Connect ChatGPT",
+            "id": "assistant-connect",
+            "image": "assistant-connect.webp",
+            "metadata": "assistant-connect.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "The assistant is connected; Show actions is off",
+            "id": "assistant-ready",
+            "image": "assistant-ready.webp",
+            "metadata": "assistant-ready.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Attach the two files and ask for the fit",
+            "id": "assistant-ask",
+            "image": "assistant-ask.webp",
+            "metadata": "assistant-ask.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Approve sharing the project information and the files",
+            "id": "assistant-approve",
+            "image": "assistant-approve.webp",
+            "metadata": "assistant-approve.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "The assistant asks what the files do not say",
+            "id": "assistant-question",
+            "image": "assistant-question.webp",
+            "metadata": "assistant-question.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Answer, and the assistant fits the structure",
+            "id": "assistant-fitted",
+            "image": "assistant-fitted.webp",
+            "metadata": "assistant-fitted.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "The fitted pattern on Analysis",
+            "id": "assistant-result",
+            "image": "assistant-result.webp",
+            "metadata": "assistant-result.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        }
+    ],
+    "schema": 1,
+    "script_sha256": "99e6e32c79073649f8592e204e5966766bb231b3dcbf4e2626fbc800fb34b4f0",
+    "source_revision": "a4b6be4f6926cc6b17811f3263d7a34afff75a6d",
+    "status": "complete",
+    "workflow": "tutorial"
+}

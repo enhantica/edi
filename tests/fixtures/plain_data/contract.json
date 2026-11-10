@@ -1,0 +1,5 @@
+{
+  "create_structure": "ProjectViewModel.createStructure() -> bool",
+  "load_data": "ProjectViewModel.loadData(int experimentIndex, QUrl file) -> bool",
+  "entry_note": "Qt invokable names for the native observation host; this file exposes the harness seam without hidden assertions. Numeric expectations are in cases.json."
+}

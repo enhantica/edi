@@ -1,0 +1,13 @@
+{
+  "example": "pd-neut-cwl_y2o3-spodi",
+  "edi_build_commit": "d565ed6229bca82a257aff7342a9c10983c609e2",
+  "script_sha256": "fa09b9f526f8b2a93a61820bedbbb032ef734770f77b619cfe3a576e9cde907f",
+  "command": [
+    "python",
+    "-m",
+    "edi",
+    "fit",
+    "pd-neut-cwl_y2o3-spodi",
+    "--dry"
+  ]
+}

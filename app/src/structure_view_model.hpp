@@ -1,0 +1,437 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#ifndef EDI_APP_STRUCTURE_VIEW_MODEL_HPP
+#define EDI_APP_STRUCTURE_VIEW_MODEL_HPP
+
+#include <QObject>
+#include <QString>
+#include <QStringList>
+#include <QVariantMap>
+#include <QtQml/qqmlregistration.h>
+
+#include <cstdint>
+#include <map>
+#include <optional>
+#include <random>
+
+#include "block_text.hpp"
+#include "category_list_model.hpp"
+#include "edi/model.hpp"
+#include "edi/structure_scene.hpp"
+#include "parameter_item.hpp"
+#include "project_editor.hpp"
+#include "row_table_model.hpp"
+
+namespace edi_app {
+
+// A magnetic structure's group names as the Structure page shows them (edi ADR-0078).
+struct MagneticGroupView {
+    Q_GADGET
+    QML_VALUE_TYPE(magneticGroupView)
+    Q_PROPERTY(QString number_bns MEMBER number_bns CONSTANT)
+    Q_PROPERTY(QString name_bns MEMBER name_bns CONSTANT)
+    Q_PROPERTY(QString name_uni MEMBER name_uni CONSTANT)
+    Q_PROPERTY(QString number_og MEMBER number_og CONSTANT)
+    Q_PROPERTY(QString name_og MEMBER name_og CONSTANT)
+
+   public:
+    QString number_bns, name_bns, name_uni, number_og, name_og;
+};
+
+// The parent space group of a magnetic structure, and whether it differs from the structure's own group.
+struct ParentGroupView {
+    Q_GADGET
+    QML_VALUE_TYPE(parentGroupView)
+    Q_PROPERTY(QString name_h_m_alt MEMBER name_h_m_alt CONSTANT)
+    Q_PROPERTY(QString it_number MEMBER it_number CONSTANT)
+    Q_PROPERTY(QString transform_pp_abc MEMBER transform_pp_abc CONSTANT)
+    Q_PROPERTY(bool differs MEMBER differs CONSTANT)
+
+   public:
+    QString name_h_m_alt, it_number, transform_pp_abc;
+    bool differs = false;
+};
+
+class ParameterRegistry;
+class ProjectEditor;
+
+// A structure's space group: the setting is editable, the crystal system follows it through
+// crysta.
+class SpaceGroupViewModel : public QObject {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+    Q_PROPERTY(QString nameHM READ nameHM WRITE setNameHM NOTIFY nameHMChanged)
+    Q_PROPERTY(QString coordSystemCode READ coordSystemCode WRITE setCoordSystemCode NOTIFY coordSystemCodeChanged)
+    Q_PROPERTY(int itNumber READ itNumber WRITE setItNumber NOTIFY itNumberChanged)
+    Q_PROPERTY(bool hasItNumber READ hasItNumber NOTIFY hasItNumberChanged)
+    Q_PROPERTY(QString crystalSystem READ crystalSystem NOTIFY crystalSystemChanged)
+    // What the name and code pickers list (the owner, 2026-10-06): every name crysta's table resolves, by IT
+    // number, and the codes of the shown space group's settings.
+    Q_PROPERTY(QStringList names READ names CONSTANT)
+    Q_PROPERTY(QStringList codes READ codes NOTIFY codesChanged)
+
+   public:
+    SpaceGroupViewModel(edi::Structure& structure, ProjectEditor& editor, QObject* parent);
+    QString nameHM() const { return name_hm_; }
+    void setNameHM(const QString& name);
+    QString coordSystemCode() const { return code_; }
+    void setCoordSystemCode(const QString& code);
+    int itNumber() const { return it_number_; }
+    // A new name or number chooses that space group's default setting, and a new code that setting's name, so
+    // name, code and number always agree; a name or code crysta's table does not have is stored as typed, for the
+    // calculation to say why it refuses it. A number of 0 or less clears the stored number; one above 230 is ignored.
+    void setItNumber(int number);
+    bool hasItNumber() const { return it_number_ > 0; }
+    QString crystalSystem() const { return crystal_system_; }
+    QStringList names() const;
+    QStringList codes() const { return codes_; }
+    void sync();
+
+   signals:
+    void codesChanged();
+    void nameHMChanged();
+    void coordSystemCodeChanged();
+    void itNumberChanged();
+    void hasItNumberChanged();
+    void crystalSystemChanged();
+
+   private:
+    edi::Structure& structure_;
+    ProjectEditor& editor_;
+    QString name_hm_, code_, crystal_system_;
+    QStringList codes_;
+    int it_number_ = 0;
+};
+
+// The six cell parameters.
+class CellViewModel : public QObject {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+    Q_PROPERTY(edi_app::ParameterItem* lengthA READ lengthA NOTIFY lengthAChanged)
+    Q_PROPERTY(edi_app::ParameterItem* lengthB READ lengthB NOTIFY lengthBChanged)
+    Q_PROPERTY(edi_app::ParameterItem* lengthC READ lengthC NOTIFY lengthCChanged)
+    Q_PROPERTY(edi_app::ParameterItem* angleAlpha READ angleAlpha NOTIFY angleAlphaChanged)
+    Q_PROPERTY(edi_app::ParameterItem* angleBeta READ angleBeta NOTIFY angleBetaChanged)
+    Q_PROPERTY(edi_app::ParameterItem* angleGamma READ angleGamma NOTIFY angleGammaChanged)
+
+   public:
+    CellViewModel(edi::Structure& structure, ParameterRegistry& registry, QObject* parent);
+    ParameterItem* lengthA() const { return items_[0]; }
+    ParameterItem* lengthB() const { return items_[1]; }
+    ParameterItem* lengthC() const { return items_[2]; }
+    ParameterItem* angleAlpha() const { return items_[3]; }
+    ParameterItem* angleBeta() const { return items_[4]; }
+    ParameterItem* angleGamma() const { return items_[5]; }
+    void sync();
+
+   signals:
+    void lengthAChanged();
+    void lengthBChanged();
+    void lengthCChanged();
+    void angleAlphaChanged();
+    void angleBetaChanged();
+    void angleGammaChanged();
+
+   private:
+    edi::Structure& structure_;
+    ParameterRegistry& registry_;
+    ParameterItem* items_[6] = {};
+};
+
+// The atom sites: label, type, Wyckoff letter and ADP type editable as text; coordinates, occupancy
+// and Biso as ParameterItems; append, duplicate and remove as the library's AtomSites collection
+// does.
+class AtomSiteListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+    // The space group's Wyckoff positions (edi::wyckoff_positions): the letters; each position's name, its
+    // multiplicity and letter ("4a"), which the closed WP box shows; and its list entry, the name and its coordinates
+    // with fraction glyphs ("8c: x, ¼, −x+½"; the owner, 2026-10-08 and 2026-10-11). Display only.
+    Q_PROPERTY(QStringList wyckoffLetters READ wyckoffLetters NOTIFY wyckoffLettersChanged)
+    Q_PROPERTY(QStringList wyckoffNames READ wyckoffNames NOTIFY wyckoffNamesChanged)
+    Q_PROPERTY(QStringList wyckoffLabels READ wyckoffLabels NOTIFY wyckoffLabelsChanged)
+
+   public:
+    AtomSiteListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry, QObject* parent);
+    void sync();
+    QStringList wyckoffLetters() const { return wyckoff_letters_; }
+    QStringList wyckoffNames() const { return wyckoff_names_; }
+    QStringList wyckoffLabels() const { return wyckoff_labels_; }
+    Q_INVOKABLE bool setText(int row, const QString& role, const QString& value);
+    // A random atom (edi::new_atom_site), from this model's random source.
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void duplicate(int row);
+    // The demo driver's and the tests' seam: every model made after it draws from this seed; the app never sets it.
+    static void fixRandomSeed(std::uint64_t seed);
+    Q_INVOKABLE void remove(int row);
+
+   signals:
+    void wyckoffLettersChanged();
+    void wyckoffNamesChanged();
+    void wyckoffLabelsChanged();
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override { return setText(row, role, value.toString()); }
+
+   private:
+    edi::Structure& structure_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+    QStringList wyckoff_letters_;
+    QStringList wyckoff_names_;
+    QStringList wyckoff_labels_;
+    static std::optional<std::uint64_t>& fixedSeed();
+    std::optional<std::mt19937_64> random_;
+};
+
+// The Atomic displacement group (the owner, 2026-10-06): one row per atom site, in the sites' order — its label,
+// ADP type, isotropic value and the six anisotropic components. For an isotropic type `adpIso` is the site's value
+// in that type and the six are empty; for an anisotropic type the six are the tensor's components (ADR-0027)
+// and `adpIso` is the equivalent value crysta derives from them, read only.
+class AtomSiteAdpListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+    // The types the group offers, in diffraction-lib's AdpTypeEnum order as the owner listed them.
+    Q_PROPERTY(QStringList types READ types CONSTANT)
+
+   public:
+    AtomSiteAdpListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry, QObject* parent);
+    QStringList types() const;
+    void sync();
+    // A new type converts the site's values (edi::change_adp_type).
+    Q_INVOKABLE void setType(int row, const QString& type);
+
+   private:
+    edi::Structure& structure_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+};
+
+// The Magnetic moments group (edi ADR-0078; the owner, 2026-11-03): one row per atom site, in the sites' order, as the
+// Atomic displacement group — its id, the magnetic ion its moment takes ("none" when the site carries no moment), the three
+// components along the cell axes and the symmetry form crysta derives, read only. The ion belongs to the site's atom
+// type, so two sites of one type share it.
+class AtomSiteMomentListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+    // Counts the structure's syncs: what components() reads (the cell as well as the moments) may have changed.
+    Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
+    // Why the last component edit was not made, until one is.
+    Q_PROPERTY(QString refusal READ refusal NOTIFY refusalChanged)
+
+   public:
+    AtomSiteMomentListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry,
+                            QObject* parent);
+    void sync();
+    // The ions a row can choose: "none", then the form-factor table's ions for the site's element.
+    Q_INVOKABLE QStringList ions(int row) const;
+    // "none" removes the site's moment; an ion marks the site magnetic and sets its type's ion.
+    Q_INVOKABLE void setIon(int row, const QString& ion);
+    // The row's moment in `form` ("crystal_axes", "cartesian" or "spherical"; edi ADR-0078): its three components,
+    // their s.u. (NaN where the components have none) and the modulus |M| with its s.u.; empty for a site without
+    // a moment.
+    Q_INVOKABLE QList<double> components(int row, const QString& form) const;
+    // Sets component `k` of the row's moment in `form`, the other two kept: the core converts it to crystal axes and
+    // refuses a moment the site symmetry does not admit (edi::moment_edit); otherwise the free components are written
+    // in one edit. Returns why it was refused, or an empty text, which `refusal` also holds.
+    Q_INVOKABLE QString setComponent(int row, const QString& form, int k, double value);
+    int revision() const { return revision_; }
+    QString refusal() const { return refusal_; }
+
+   signals:
+    void revisionChanged();
+    void refusalChanged();
+
+   private:
+    edi::Structure& structure_;
+    QString refusal_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+    int revision_ = 0;
+};
+
+// The Magnetic form factors group (the owner, 2026-11-03): one row per magnetic atom type, keyed by the first site
+// of the type that carries a moment. The type and its ion, read only (the ion is chosen in the moments table); the
+// approximation; and the coefficients C2, C4, C6 it uses, editable and fittable. A type takes the defaults (its own
+// ion, <j0>) until an edit gives it a form-factor row.
+class MagneticFormFactorListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+    Q_PROPERTY(QStringList approximations READ approximations CONSTANT)
+
+   public:
+    MagneticFormFactorListModel(edi::Structure& structure, ProjectEditor& editor, ParameterRegistry& registry,
+                                QObject* parent);
+    void sync();
+    // The approximation tokens, in the dictionary's order.
+    QStringList approximations() const;
+    // Whether the row's ion's table carries the term of coefficient `n` (0: <j2>, 1: <j4>, 2: <j6>).
+    Q_INVOKABLE bool hasTerm(int row, int n) const;
+    // Sets the row's approximation; the type gets a form-factor row when it has none.
+    Q_INVOKABLE void setApproximation(int row, const QString& approximation);
+
+   private:
+    edi::Structure& structure_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+};
+
+// The Propagation vectors group (edi ADR-0078; the owner, 2026-11-03): the structure's commensurate k vectors, each
+// added, edited and removed through crysta's rule, so a vector the cell and the signed group cannot carry, or a
+// second spelling of one already there, is refused with its reason and the rows stay as they were. The last row
+// cannot be removed.
+class PropagationVectorListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+    // Why the last change was refused; empty after one that was made.
+    Q_PROPERTY(QString refusal READ refusal NOTIFY refusalChanged)
+
+   public:
+    PropagationVectorListModel(edi::Structure& structure, ProjectEditor& editor, QObject* parent);
+    void sync();
+    Q_INVOKABLE bool setId(int row, const QString& id);
+    Q_INVOKABLE bool setVector(int row, const QString& vector);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void remove(int row);
+    QString refusal() const { return refusal_; }
+
+   signals:
+    void refusalChanged();
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override {
+        return role == QLatin1String("id")       ? setId(row, value.toString())
+               : role == QLatin1String("vector") ? setVector(row, value.toString())
+                                                 : false;
+    }
+
+   private:
+    bool replace(std::vector<std::pair<std::string, std::string>> rows);
+    edi::Structure& structure_;
+    ProjectEditor& editor_;
+    QString refusal_;
+};
+
+// The structure's custom neutron scattering lengths.
+class ScatteringLengthListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a structure")
+
+   public:
+    ScatteringLengthListModel(edi::Structure& structure, ProjectEditor& editor, QObject* parent);
+    void sync();
+    Q_INVOKABLE bool setTypeSymbol(int row, const QString& symbol);
+    Q_INVOKABLE bool setLengthFm(int row, double length);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void remove(int row);
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override {
+        return role == QLatin1String("typeSymbol") ? setTypeSymbol(row, value.toString())
+               : role == QLatin1String("lengthFm") ? setLengthFm(row, value.toDouble())
+                                                   : false;
+    }
+
+   private:
+    QString symbolAt(int row) const;
+    edi::Structure& structure_;
+    ProjectEditor& editor_;
+};
+
+// One structure of the project.
+class StructureViewModel : public QObject {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a project")
+    Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
+    Q_PROPERTY(edi_app::SpaceGroupViewModel* spaceGroup READ spaceGroup CONSTANT)
+    Q_PROPERTY(edi_app::CellViewModel* cell READ cell CONSTANT)
+    Q_PROPERTY(edi_app::AtomSiteListModel* atomSites READ atomSites CONSTANT)
+    Q_PROPERTY(edi_app::AtomSiteAdpListModel* atomSiteAdps READ atomSiteAdps CONSTANT)
+    Q_PROPERTY(edi_app::AtomSiteMomentListModel* atomSiteMoments READ atomSiteMoments CONSTANT)
+    Q_PROPERTY(edi_app::MagneticFormFactorListModel* magneticFormFactors READ magneticFormFactors CONSTANT)
+    Q_PROPERTY(edi_app::PropagationVectorListModel* propagationVectors READ propagationVectors CONSTANT)
+    Q_PROPERTY(edi_app::ScatteringLengthListModel* scatteringLengths READ scatteringLengths CONSTANT)
+    Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
+    Q_PROPERTY(edi_app::BlockText* text READ text CONSTANT)
+    // The magnetic space group as the file names it (`_space_group_magn`, by item name); and the parent group
+    // (`_parent_space_group`: name, number, transform), with `differs` when it is not the space group itself (edi
+    // ADR-0078).
+    Q_PROPERTY(edi_app::MagneticGroupView magneticGroup READ magneticGroup NOTIFY magneticGroupChanged)
+    // The 1651 magnetic space groups of crysta's table, as "BNS number  BNS symbol", for the group's selector; and
+    // why the last choice was refused, empty when it was taken.
+    Q_PROPERTY(QStringList magneticGroupNames READ magneticGroupNames CONSTANT)
+    Q_PROPERTY(QString magneticGroupRefusal READ magneticGroupRefusal NOTIFY magneticGroupRefusalChanged)
+    Q_PROPERTY(edi_app::ParentGroupView parentGroup READ parentGroup NOTIFY parentGroupChanged)
+    // Whether any site carries a moment.
+    Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
+
+   public:
+    StructureViewModel(SavedFile saved, edi::Structure& structure, ProjectEditor& editor,
+                       ParameterRegistry& registry, QObject* parent);
+    QString name() const { return name_; }
+    void setName(const QString& name);
+    SpaceGroupViewModel* spaceGroup() const { return space_group_; }
+    CellViewModel* cell() const { return cell_; }
+    AtomSiteListModel* atomSites() const { return atom_sites_; }
+    AtomSiteAdpListModel* atomSiteAdps() const { return atom_site_adps_; }
+    AtomSiteMomentListModel* atomSiteMoments() const { return atom_site_moments_; }
+    MagneticFormFactorListModel* magneticFormFactors() const { return magnetic_form_factors_; }
+    PropagationVectorListModel* propagationVectors() const { return propagation_vectors_; }
+    ScatteringLengthListModel* scatteringLengths() const { return scattering_lengths_; }
+    CategoryListModel* categories() const { return categories_; }
+    BlockText* text() const { return text_; }
+    MagneticGroupView magneticGroup() const;
+    ParentGroupView parentGroup() const;
+    static QStringList magneticGroupNames();
+    QString magneticGroupRefusal() const { return magnetic_group_refusal_; }
+    // Takes table group `index` of magneticGroupNames: its operators replace the structure's when crysta's rule
+    // admits them with the cell and the propagation vectors, else nothing changes and the refusal is kept.
+    Q_INVOKABLE bool setMagneticGroup(int index);
+    bool magnetic() const { return !structure_.atom_site_moment.empty(); }
+    const edi::Structure* structure() const { return &structure_; }
+    void sync();
+    // ADR-0022: the structure's immutable scene source, captured on this (the owner) thread when the
+    // view-model is created and in the publication hook, and nowhere else. Between an admitted edit that
+    // stales the geometry and its publication, the source is marked not current.
+    const edi::SceneSource& sceneSource() const { return scene_source_; }
+    void captureScene();
+    void markSceneStale();
+
+   signals:
+    void nameChanged();
+    void magneticChanged();
+    void magneticGroupChanged();
+    void magneticGroupRefusalChanged();
+    void parentGroupChanged();
+    void sceneSourceChanged();
+    void sceneWentStale();
+
+   private:
+    edi::Structure& structure_;
+    edi::SceneSource scene_source_;
+    ProjectEditor& editor_;
+    QString name_;
+    SpaceGroupViewModel* space_group_;
+    CellViewModel* cell_;
+    AtomSiteListModel* atom_sites_;
+    AtomSiteAdpListModel* atom_site_adps_;
+    AtomSiteMomentListModel* atom_site_moments_;
+    MagneticFormFactorListModel* magnetic_form_factors_;
+    PropagationVectorListModel* propagation_vectors_;
+    ScatteringLengthListModel* scattering_lengths_;
+    CategoryListModel* categories_;
+    BlockText* text_;
+    QString magnetic_group_refusal_;
+};
+
+}  // namespace edi_app
+
+#endif  // EDI_APP_STRUCTURE_VIEW_MODEL_HPP

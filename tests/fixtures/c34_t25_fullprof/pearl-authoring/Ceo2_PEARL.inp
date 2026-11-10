@@ -1,0 +1,61 @@
+COMM  Refinement of instrumental parameters of PEARL (NPROF=9)
+! Current global Chi2 (Bragg contrib.) =     0.5205E-03
+! Files => DAT-file: Ceo2_PEARL.dat,  PCR-file: Ceo2_PEARL
+!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut
+  -1   9   1   0   2   0   0   1   0   0   1   0   0   0   0   1   0   0   1
+!
+!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana
+   0   2   1   0   1   0   4   0   0   2  12   1   1   0   0   0   0
+!
+!  Bkpos        Wdt    Iabscor for Pattern#  1
+    7000.000    8.00     2
+!NCY  Eps  R_at  R_an  R_pr  R_gl    TOF-min      <Step>       TOF-max 
+ 10  0.05  1.00  1.00  1.00  1.00    1500.2500      2.0000  19380.7812
+!
+! Excluded regions (LowT  HighT) for Pattern#  1
+     1000.10     2000.00
+    18700.00    20000.00
+! 
+!
+       0    !Number of refined parameters
+!
+!    Zero       Code      Dtt1      Code       Dtt2     Code  Dtt_1overd    Code  2ThetaBank  -> Patt#  1
+     3.05177    0.00  4677.93018    0.00     1.76210    0.00     0.00000    0.00    90.000
+!   Background coefficients/codes  for Pattern#  1  (Polynomial of 6th degree)
+    2181.025     221.415     376.639   -1931.690    1965.935    -588.875
+        0.00        0.00        0.00        0.00        0.00        0.00
+!-------------------------------------------------------------------------------
+!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:   1.8201
+!-------------------------------------------------------------------------------
+LaMnO3
+!
+!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More
+   2   0   0 0.0 0.0 1.0   0   0   0   0   0        688.286   0   9   0
+!
+!
+F m 3 m                  <--Space group symbol
+!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes
+Ce     CE      0.00000  0.00000  0.00000  0.30159   0.02083   0   0   0    0  
+                  0.00     0.00     0.00     0.00      0.00
+O      O       0.25000  0.25000  0.25000  0.49641   0.04167   0   0   0    0  
+                  0.00     0.00     0.00     0.00      0.00
+!-------> Profile Parameters for Pattern #   1  ----> Phase #   1
+!  Scale          Extinc       Bov      Str1      Str2      Str3    Strain-Mode
+  2115.251        0.0000    0.0000    0.0000    0.0000    0.0000         0
+       0.00000      0.00      0.00      0.00      0.00      0.00
+!      Sigma-2       Sigma-1       Sigma-0       Sigma-Q   Iso-GStrain     Iso-GSize     Ani-LSize   Size-Model
+        3.5751       83.8088        0.0000        0.0000        0.0000        0.0000        0.0000       0
+          0.00          0.00          0.00          0.00          0.00          0.00          0.00
+!      Gamma-2       Gamma-1       Gamma-0   Iso-LorStrain   Iso-LorSize
+        0.0000        4.8407        0.0000        0.0000        0.0000
+          0.00          0.00          0.00          0.00          0.00
+!     a          b         c        alpha      beta       gamma      # Cell Info
+   5.410495   5.410495   5.410495  90.000000  90.000000  90.000000   
+    0.00000    0.00000    0.00000    0.00000    0.00000    0.00000
+!      Pref1      Pref2        alph0       beta0       alph1       beta1       alphQ       betaQ
+    0.000000    0.000000    0.000000    0.025455    0.251559    0.029005    0.000000    0.000000
+        0.00        0.00        0.00        0.00        0.00        0.00        0.00        0.00
+!Absorption correction parameters
+   0.00029    0.00   0.00000    0.00            ABS: ABSCOR1  ABSCOR2
+!  2Th1/TOF1    2Th2/TOF2  Pattern to plot
+    2000.000   18700.000       1

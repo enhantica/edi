@@ -1,0 +1,12 @@
+_build/
+**/site/
+**/.cache/
+**/__pycache__/
+.venv/
+**/.preview-*.yml
+
+_build-checks/
+
+/surfaces/docs/assets/tutorials/
+/surfaces/docs/python/tutorials/cases/
+/.tutorials/

@@ -1,0 +1,177 @@
+/* Home only. Documentation pages keep Zensical's native layout and typography. */
+.md-main:has(.ed-landing) {
+  display: flex;
+  overflow-x: clip;
+}
+.md-main__inner:has(.ed-landing) {
+  align-self: center;
+  width: 100%;
+  margin-block: 0;
+}
+.md-content__inner:has(.ed-landing) {
+  margin-block: 0;
+  padding-block: 0;
+  margin-inline: 0;
+}
+.ed-landing {
+  display: grid;
+  grid-template-columns: minmax(0, 21rem) minmax(0, 1fr);
+  --ed-hero-copy-gap: 1.4rem;
+  --ed-hero-gap: clamp(1.5rem, 3.2vw, 3.2rem);
+  box-sizing: border-box;
+  width: calc(100% + max(0px, (100vw - 61rem) / 2 - 1rem));
+  padding-inline: 1rem 0;
+  font-family: Nunito, var(--md-text-font), sans-serif;
+  align-items: center;
+  gap: var(--ed-hero-gap);
+  min-height: calc(100svh - 5.3rem);
+  padding-block: 3rem;
+}
+/* Size the message from its heading; the paragraph cannot widen that column. */
+.ed-landing__message {
+  display: grid;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+}
+.ed-landing__message .ed-landing__intro {
+  contain: inline-size;
+  max-width: 100%;
+}
+.ed-landing__copy h1 {
+  margin: 0;
+  color: var(--md-default-fg-color);
+  font-size: clamp(2.2rem, 3.4vw, 2.65rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.ed-landing__accent {
+  color: var(--md-primary-fg-color);
+}
+.ed-landing__copy h1 .headerlink {
+  display: none;
+}
+.ed-landing .ed-landing__intro {
+  max-width: 27em;
+  margin-block: var(--ed-hero-copy-gap) 0;
+  color: var(--md-default-fg-color--light);
+  font-size: .95rem;
+  line-height: 1.7;
+}
+.ed-landing__actions {
+  margin-top: 1.8rem;
+}
+.ed-landing__actions p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65rem;
+  margin: 0;
+}
+.ed-landing__interfaces {
+  margin: 0 0 var(--ed-hero-copy-gap);
+}
+.ed-landing__interfaces p {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .36rem;
+  margin: 0;
+}
+.md-typeset .ed-landing__interfaces a {
+  display: inline-flex;
+  align-items: center;
+  gap: .3em;
+  padding: .24rem .51rem;
+  border-radius: 999px;
+  background: var(--md-default-fg-color);
+  color: var(--md-default-bg-color);
+  font-size: .65rem;
+  line-height: 1.25;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.md-typeset .ed-landing__interfaces a:hover,
+.md-typeset .ed-landing__interfaces a:focus-visible {
+  background: var(--md-primary-fg-color);
+  color: var(--md-default-bg-color);
+  text-decoration: none;
+}
+.ed-landing__interfaces .twemoji {
+  width: .9rem;
+  height: .9rem;
+}
+.ed-landing__interfaces svg {
+  width: 100%;
+  height: 100%;
+}
+.ed-landing .ed-landing__preview {
+  width: calc(100% + 2.5rem);
+  max-width: none;
+  margin: 0;
+  transform: translateX(-1rem);
+  overflow: hidden;
+  /* The frame carries the site's one image border, so the picture inside has none. */
+  border: 1px solid var(--ed-image-border);
+  border-radius: var(--ed-screenshot-radius) / calc(var(--ed-screenshot-radius) * 1480 / 800);
+  box-shadow: 0 .8rem 2.4rem -.6rem rgb(18 50 68 / 12%);
+}
+.ed-landing .ed-landing__preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 0;
+  padding: 0;
+  background: none;
+}
+@media (max-width: 58rem) {
+  .ed-landing {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    padding-inline: .8rem;
+    gap: 2.4rem;
+    max-width: 42rem;
+    min-height: auto;
+    margin-inline: auto;
+    padding-block: 3rem;
+  }
+  .ed-landing__copy {
+    max-width: 32rem;
+  }
+  .ed-landing__copy h1 {
+    font-size: clamp(2.2rem, 5.5vw, 2.8rem);
+  }
+  .ed-landing .ed-landing__intro {
+    max-width: 32em;
+  }
+  .ed-landing .ed-landing__preview {
+    width: calc(100% + 1rem);
+    max-width: none;
+    margin-inline: -.5rem;
+    transform: none;
+  }
+}
+@media (max-width: 30rem) {
+  .ed-landing {
+    --ed-hero-copy-gap: 1.1rem;
+    gap: 2rem;
+    padding-block: 2.2rem;
+  }
+  .ed-landing__copy h1 {
+    font-size: clamp(1.8rem, 8.4vw, 2.2rem);
+  }
+  .ed-landing .ed-landing__intro {
+    font-size: .85rem;
+    line-height: 1.65;
+  }
+  .ed-landing__actions {
+    margin-top: 1.3rem;
+  }
+  .ed-landing__actions .md-button {
+    flex: 1 1 8rem;
+  }
+  .md-typeset .ed-landing__interfaces a {
+    font-size: .75rem;
+  }
+}

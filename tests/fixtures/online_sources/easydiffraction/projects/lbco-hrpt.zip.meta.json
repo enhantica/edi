@@ -1,0 +1,17 @@
+{
+ "id": "lbco-hrpt-project",
+ "name": "La₀.₅Ba₀.₅CoO₃ [Pm-3m]",
+ "description": "Cubic perovskite · La and Ba sharing one site · Profile, background, displacements",
+ "radiation": "neutron",
+ "technique": "powder constant wavelength",
+ "instrument": "HRPT",
+ "facility": "PSI",
+ "source": "EasyDiffraction",
+ "formula": "Ba0.5 Co La0.5 O3",
+ "elements": [
+  "Ba",
+  "Co",
+  "La",
+  "O"
+ ]
+}

@@ -1,0 +1,300 @@
+#  adds the first edi tests that must fit disposable copies: save-by-default cannot run
+# against the pinned corpus in place. Rows are exact test files and name a manifest case from
+# the crysta corpus authority; tools/testing/fit_policy.py validates both before admitting a fit.
+schema: 1
+sites:
+  # ADR-0080 gate 2: a declared example is itself a fitting case. Admit only this
+  # exact gate file and a whole canonical example tree; never arbitrary scratch models.
+  - file: tests/system/py/test_case_regression_pins.py
+    catalogue: true
+  - file: tests/system/py/test_cosio_heidi_case.py
+    catalogue: true
+    why: Unit 9 fits a disposable byte-identical canonical three-temperature example.
+    assertion_feed: External BP5024 Table 4 moment values and published standard uncertainties.
+  - file: tests/system/py/test_tutorial_auto_background_cli.py
+    case: cosio-d20-s4
+    why: The declared saved Auto fixture changes only estimator settings and one cell freedom for a three-iteration workflow check.
+    assertion_feed: Requested point count, saved Auto mode and actual fit progress; no fitted numerical accuracy oracle.
+    audit: 2026-11-09; both real CLI entries must settle the changed settings before fitting and saving.
+  - file: tests/system/py/test_tutorial_cli_stream_parity.py
+    catalogue: true
+  - file: tests/system/py/test_tutorial_command_line_stages.py
+    tutorial_stages: true
+    why: Owner 4cf15ae54 requires successive visible file edits and actual CLI fits of the declared tutorial catalogue.
+    assertion_feed: Labelled regression pins and Python stage order; admission freezes canonical input bytes and the actual measured arrays.
+    audit: 2026-11-09; exact registered file only, canonical .edi path set, unchanged measured coordinates, intensities and uncertainties after loading.
+  - file: tests/system/py/test_catalogue_descent.py
+    case: lam7o3-p021
+  - file: tests/system/py/test_c11_t43_sequential_surfaces.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c11_t43_rejection_classes.py
+    case: cosio-d20-scan-3f
+  # : the native event gate fits a one-iteration disposable copy, then compares each
+  # completion event against the scan writer's own results.csv row.
+  - file: tests/system/py/test_c34_t22_sequential_progress.py
+    case: cosio-d20-scan-3f
+  # : the corpus runner realizes every edi-side case on a DISPOSABLE COPY — a sequential
+  # case's fit writes results.csv beside the project by contract, and the runner's corpus root
+  # can be a live checkout (crysta's edi-verification harness). Today's one edi-side case:
+  - file: tests/system/py/test_c06_t6_fitting_corpus.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c11_t35_descent_end_to_end.py
+    case: cosio-d20-s1
+  - file: tests/system/py/test_e09_t58_fit_result_writeback.py
+    case: lbco-hrpt-s2
+  - file: tests/system/py/test_e09_t58_project_model_operations.py
+    case: ncaf-wish-3bank-s5
+  - file: tests/integration/py/test_e09_t58_project_only_fit_inputs.py
+    case: lbco-hrpt-s2
+  - file: tests/system/py/test_e09_t58_cli_persistence.py
+    case: lbco-hrpt-s2
+  - file: tests/system/py/test_e09_t58_absorption_cli_canonicalization.py
+    case: ncaf-wish-3bank-s5
+  - file: tests/system/py/test_e09_t58_absorption_family_contract.py
+    case: ncaf-wish-3bank-s5
+  #  disposable scan controls; single/joint controls also use declared corpus cases.
+  - file: tests/system/py/test_c34_t24_declared_fit_conditions.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c11_t62_scan_contract.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c11_t62_cli_cancel.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c11_t62_native_scan_io.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c11_t57_minimizer_type.py
+    case: cosio-d20-s1
+
+  #  pre-move freshness observations use disposable declared corpus inputs.
+  - file: tests/system/py/test_c34_t28_python_freshness.py
+    case: cosio-d20-s1
+  - file: tests/system/py/test_c34_t28_python_scan_freshness.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_c09_t13_tof_fit_parity.py
+    case: si-sepd-s2
+  # the committed CLI project is the lbco-hrpt-s4 corpus vehicle; fits use copies.
+  - file: tests/system/py/test_e04_t11_wasm_fit.py
+    case: lbco-hrpt-s4
+
+  # : save/Undo must write private copies of the declared single/joint inputs.
+  - file: tests/system/py/test_e05_t1_cli_fit_save.py
+    case: lbco-hrpt-s2
+  - file: tests/system/py/test_e05_t1_cli_joint_fit_save.py
+    case: ncaf-wish-3bank-s5
+
+  # : private LiF corpus copies preserve measured data and probe
+  # physical domains before each continuation, with a one-iteration fit.
+  - file: tests/integration/py/test_e05_t1_physical_domain.py
+    case: lif-xray-s1
+
+  # : the same private LiF physical-domain vehicle, extended to
+  # positive wavelength, numerical cell admission and all factory readers.
+  - file: tests/integration/py/test_e05_t1_metric_admission.py
+    case: lif-xray-s1
+
+  # The documented LiF model extends the same corpus family with doublet absorption.
+  - file: tests/system/py/test_lif_fast_descent_rounding.py
+    case: lif-xray-s1
+
+  - file: tests/system/py/test_multiphase.py
+    case: multiphase-scales
+
+
+  - file: tests/system/py/test_beer_multiphase.py
+    case: beer-ferrite-austenite
+
+  # Independent FullProf comparisons use private copies of the same declared models.
+  - file: tests/system/py/test_beer_fullprof_agreement.py
+    case: beer-ferrite-austenite
+  - file: tests/system/py/test_yap_agreement.py
+    case: yap-spodi-3k
+
+  # Active-participant variants of the two-phase scale vehicle; only admission is
+  # asserted, using the independent Bragg dilation truth table, never fitted values.
+  - file: tests/system/py/test_fit_participants.py
+    case: multiphase-scales
+
+  - file: tests/integration/py/test_constraint_fit.py
+    case: constraint-covariance
+  - file: tests/integration/py/test_parameter_correlations.py
+    case: constraint-covariance
+  - file: tests/system/py/test_scan_driver_resume.py
+    case: cosio-d20-scan-3f
+  - file: tests/system/py/test_scan_lazy_input.py
+    case: cosio-d20-scan-3f
+
+  - file: tests/integration/py/test_phase_scan.py
+    case: multiphase-scales
+    why: Authored two-phase scan controls recover known linear coefficients and compare each file with its single multiphase fit.
+
+
+  - file: tests/integration/py/test_phase_scan_class_boundaries.py
+    case: multiphase-scales
+    why: Authored two-phase scan controls recover known linear coefficients and compare each file with its single multiphase fit.
+
+
+
+  - file: tests/integration/app/test_phase_scan_state.py
+    case: multiphase-scales
+    why: The actual app consumes an authored linear phase scan and a partial fitted-plus-skipped prefix.
+
+  - file: tests/integration/py/test_scan_notes_resume.py
+    case: multiphase-scales
+    why: Authored two-phase inputs isolate retained-state admission and the fitted-plus-skipped population, never new diffraction accuracy.
+
+  - file: tests/integration/py/test_scan_notes_diagnostics.py
+    case: multiphase-scales
+    why: Authored two-phase inputs isolate retained-state admission and the fitted-plus-skipped population, never new diffraction accuracy.
+
+  - file: tests/integration/app/test_phase_scan_progress.py
+    case: multiphase-scales
+    why: Authored two-phase inputs isolate retained-state admission and the fitted-plus-skipped population, never new diffraction accuracy.
+
+  - file: tests/system/py/test_latest_fit_uncertainty.py
+    case: constraint-covariance
+
+  - file: tests/system/py/test_powder_r_factors.py
+    case: constraint-covariance
+
+  - file: tests/system/py/test_fcj_zero_start.py
+    case: lab6-echidna-fcj
+
+  - file: tests/system/py/test_fullprof_powder_factors.py
+    case: lbco-hrpt-s2
+
+  - file: tests/system/py/test_phase_r_factors.py
+    case: constraint-covariance
+
+  # Independently tabulated ADP lifecycle stimuli extend the LBCO special-site witness.
+  - file: tests/system/py/test_adp_site_symmetry.py
+    case: lbco-hrpt-s4
+
+  - file: tests/integration/py/test_shared_correlation_saved_bytes.py
+    case: cosio-d20-scan-3f
+    why: Frozen pre-change single and scan inputs isolate serialization compatibility.
+
+  # Exact saved-output site: frozen disposable copies of lbco-hrpt-s2 and
+  # cosio-d20-scan-3f. The gate verifies both physical inputs against the pinned corpus.
+  - file: tests/system/py/test_generated_correlation_saved_output.py
+    case: cosio-d20-scan-3f
+    why: Disposable pinned corpus copies must fit to prove complete generated saved rows.
+
+  - file: tests/fixtures/generated_correlations/produce.cpp
+    case: cosio-d20-scan-3f
+    why: Core producer fits only the disposable physical copies verified by its owning generated-output gate.
+
+  - file: tests/system/py/test_scan_output_aliases.py
+    case: multiphase-scales
+
+  - file: tests/system/py/test_doublet_fit_anchors.py
+    case: multiphase-scales
+    why: Active-graph variants assert Bragg dilation admission only, with immediate cancellation and no numerical fitted-value oracle.
+
+  - file: tests/system/py/test_positional_trial_domains.py
+    case: multiphase-scales
+    why: Authored coordinate-dependent domains and drive-only pattern inputs exercise real single and joint fit rejection; no fitted number supplies a correctness oracle.
+  - file: tests/integration/py/test_e05_t1_fit_result.py
+    case: lbco-hrpt-s2
+  - file: tests/system/py/test_background_estimate_settings_cli.py
+    case: lbco-hrpt-s2
+
+  - file: tests/system/py/test_background_estimate_lifecycle_cli.py
+    case: lbco-hrpt-s2
+    why: Disposable LBCO-derived projects exercise saved manual edits and automatic scan lifetime with bounded iterations; no fitted value or convergence endpoint is a numerical oracle.
+    assertion_feed: Exact point and mode retention, row identity, persisted-file inventory and failure/restart/resume invariants.
+    audit: 2026-10-20; direct inspection of the authored overrides and every real fit entry point.
+
+  - file: tests/system/py/test_background_estimate_lifecycle_scan.py
+    case: lbco-hrpt-s2
+    why: Disposable LBCO-derived projects exercise saved manual edits and automatic scan lifetime with bounded iterations; no fitted value or convergence endpoint is a numerical oracle.
+    assertion_feed: Exact point and mode retention, row identity, persisted-file inventory and failure/restart/resume invariants.
+    audit: 2026-10-20; direct inspection of the authored overrides and every real fit entry point.
+
+  - file: tests/system/py/test_background_estimate_relation_order.py
+    case: lbco-hrpt-s2
+    why: Disposable related-model projects compare stale targets with explicit relation application; one iteration only, with no fitted-value oracle.
+    assertion_feed: Automatic point equality after declared and symmetry relations, with a nonzero model, across every calculate and fit entry.
+    audit: 2026-10-20; the Python fit and CLI fit helpers reach actual public fitting entries.
+
+  - file: tests/integration/py/test_background_estimate_fitted_baseline.py
+    case: cosio-d20-s4
+    why: Disposable CoSiO-derived Auto and Manual controls isolate fitted-background lifecycle with three bounded iterations, not fit accuracy.
+    assertion_feed: Identical initial conditions, fitted row identity, Manual-to-Auto equivalence and subsequent save/calculate/refresh invariants.
+    audit: 2026-10-21; only background parameters free, no convergence or physics value asserted.
+
+  - file: tests/system/py/test_background_estimate_fitted_baseline_cli.py
+    case: cosio-d20-s4
+    why: Disposable CoSiO-derived Auto and Manual controls isolate fitted-background lifecycle with three bounded iterations, not fit accuracy.
+    assertion_feed: Identical initial conditions, fitted row identity, Manual-to-Auto equivalence and subsequent save/calculate/refresh invariants.
+    audit: 2026-10-21; only background parameters free, no convergence or physics value asserted.
+
+  - file: tests/integration/py/test_background_estimate_review3.py
+    case: cosio-d20-s4
+
+  - file: tests/system/py/test_background_estimate_review3_cli.py
+    case: cosio-d20-s4
+
+  - file: tests/integration/py/test_single_crystal_reader_fit.py
+    case: single-crystal-cwl-pr2nio4-basic
+
+  - file: tests/system/py/test_single_crystal_edges.py
+    case: single-crystal-joint-larson
+
+  - file: tests/system/py/test_single_crystal_taurine_converged.py
+    case: single-crystal-senju-taurine-converged
+
+  - file: tests/integration/py/test_fittability_loading.py
+    case: multiphase-scales
+    why: Authored active-link and dispersion variants exercise only fit-entry admission with one iteration; no convergence endpoint is a correctness oracle.
+    assertion_feed: Preservation of a chosen flag across context changes, the shared refusal reason, and entry under explicit no-dispersion capability.
+    audit: 2026-10-26; every fit entry is bounded by one iteration and uses the same model and link semantics as the corpus anchors.
+
+  - file: tests/integration/py/test_fittability_context.py
+    case: multiphase-scales
+    why: A retained wavelength flag must be refused at entry after dispersion is enabled; no fit result is asserted.
+    assertion_feed: Shared capability reason naming the current dispersion source.
+    audit: 2026-10-26; one negative fit-entry observation after an explicit source change.
+
+  - file: tests/integration/py/test_fittability_saved_bytes.py
+    case: single-crystal-page-cwl-tbti-isotropic-extinction
+    why: Disposable copies of the corresponding CLI extinction project freeze main saved bytes under both uncertainty rules.
+    assertion_feed: Labelled main regression pin plus the nonzero propagated uncertainty of the constrained crystal radius.
+    audit: 2026-10-26; the visible generator and hidden observation use the same constrained-radius corpus case.
+
+  - file: tests/integration/py/test_magnetic_boundaries.py
+    case: cosio-d20-s4
+    why: The pinned CoSiO D20 observations and frozen experiment recipe carry independently authored magnetic admission variants with one iteration.
+    assertion_feed: Refusal before trial mutation and exact post-fit propagation and calculated-profile retention; no fitted magnetic value is an accuracy oracle.
+    audit: 2026-11-03; both fit entries stage the declared measured experiment, with only the structure and bounded analysis recipe replaced to exercise magnetic boundaries.
+
+  - file: tests/integration/py/test_magnetic_review_boundaries.py
+    case: cosio-d20-s1
+
+  - file: tests/integration/py/test_magnetic_kept_fit_record.py
+    case: cosio-d20-s1
+
+  - file: tests/system/py/test_tutorial_build_workflow.py
+    case: lbco-hrpt-s2
+    why: The tutorial constructs the LBCO model from the published reference workflow and reads the pinned corpus measurement; it never loads a finished project.
+    assertion_feed: Finite fitted values and a decreasing measured weighted residual, without a fitted-value accuracy oracle.
+    audit: 2026-11-08; the exact system test builds one structure, experiment and link, reads only the declared LBCO measurement and reaches the ordinary analysis.fit entry.
+  - file: tests/integration/py/test_magnetic_token_readers.py
+    case: cosio-d20-s1
+    why: The frozen D20 observations carry independently stated P1 magnetic syntax variants; fit preparation is immediately canceled and no convergence value supplies an expectation.
+    assertion_feed: CIF token kinds, whole typed values and exact declared-field preservation.
+    audit: 2026-11-08; all numerical expectations are closed forms or input grammar, not fitted data.
+
+  - file: tests/integration/py/test_scan_undefined_magnetic_su.py
+    case: cosio-d20-s1
+    why: Authored P1 h00-only scan; a longitudinal free moment has zero intensity derivative. The literal retained nan row and covariance state test admission, not fit accuracy.
+
+  - file: tests/integration/py/test_independent_experiments.py
+    case: single-crystal-joint-larson
+    why: Authored Sears Ni single-crystal variants exercise per-experiment dispatch, isolated covariance and the unchanged joint family; the scan control is an analytic constant background.
+    assertion_feed: Weighted normal equations, local Fisher covariance, fresh isolated single-experiment fits and named per-dataset result identities; no engine-produced expected values.
+    audit: 2026-11-09; explicit non-scan independent mode extends the same one-atom Ni basis as the declared single-crystal joint family, with different noise and optima to reject pooled uncertainties.
+
+  - file: tests/system/py/test_independent_experiments_cli.py
+    case: single-crystal-joint-larson
+    why: Both real commands fit the explicitly authored Sears Ni independent-experiment variant of the single-crystal joint family.
+    assertion_feed: Weighted normal equations, Fisher covariance, named dataset agreement and independent saved-value rounding.
+    audit: 2026-11-09; no CLI-produced value supplies an expected physical answer.

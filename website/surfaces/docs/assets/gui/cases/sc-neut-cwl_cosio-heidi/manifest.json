@@ -1,0 +1,1396 @@
+{
+    "actions": [
+        {
+            "action": "platform:light",
+            "scene": "home"
+        },
+        {
+            "action": "theme:light",
+            "scene": "home"
+        },
+        {
+            "action": "home.start",
+            "scene": "project-details"
+        },
+        {
+            "action": "project.create",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.name=sc-neut-cwl_cosio-heidi",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.title=Co₂SiO₄ [Pnma] at 300 K, 55 K and 2.5 K - HEiDi @ MLZ (FRM II)",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-ycCAuJ/sc-neut-cwl_cosio-heidi",
+            "scene": "project-details"
+        },
+        {
+            "action": "createProject.accept",
+            "scene": "project-created"
+        },
+        {
+            "action": "pin-time:01 Jan 2026 12:00:00",
+            "scene": "project-created"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "expand:group.structures",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "structures.load",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "structures.load.web",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.source",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "choose:EasyDiffraction Database",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=sc-neut-cwl_cosio-heidi-cosio_300k",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "structure-loaded-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-loaded-0"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "structure-web-1"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "structure-web-1"
+        },
+        {
+            "action": "expand:group.structures",
+            "scene": "structure-web-1"
+        },
+        {
+            "action": "structures.load",
+            "scene": "structure-web-1"
+        },
+        {
+            "action": "structures.load.web",
+            "scene": "structure-web-1"
+        },
+        {
+            "action": "onlineLoad.source",
+            "scene": "structure-web-1"
+        },
+        {
+            "action": "choose:EasyDiffraction Database",
+            "scene": "structure-web-1"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=sc-neut-cwl_cosio-heidi-cosio_55k",
+            "scene": "structure-web-1"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "structure-web-1"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-web-1"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "structure-loaded-1"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-loaded-1"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "structure-web-2"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "structure-web-2"
+        },
+        {
+            "action": "expand:group.structures",
+            "scene": "structure-web-2"
+        },
+        {
+            "action": "structures.load",
+            "scene": "structure-web-2"
+        },
+        {
+            "action": "structures.load.web",
+            "scene": "structure-web-2"
+        },
+        {
+            "action": "onlineLoad.source",
+            "scene": "structure-web-2"
+        },
+        {
+            "action": "choose:EasyDiffraction Database",
+            "scene": "structure-web-2"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=sc-neut-cwl_cosio-heidi-cosio_2k5",
+            "scene": "structure-web-2"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "structure-web-2"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-web-2"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "structure-loaded-2"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-loaded-2"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "expand:group.experiments",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "experiments.load",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "experiments.load.experimentWeb",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=sc-neut-cwl_cosio-heidi-heidi_300k",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "experiment-loaded-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-loaded-0"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "expand:group.experiments",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "experiments.load",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "experiments.load.experimentWeb",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=sc-neut-cwl_cosio-heidi-heidi_55k",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-web-1"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "experiment-loaded-1"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-loaded-1"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "expand:group.experiments",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "experiments.load",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "experiments.load.experimentWeb",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=sc-neut-cwl_cosio-heidi-heidi_2k5",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-web-2"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "experiment-loaded-2"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-loaded-2"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "fitting-mode-independent"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "fitting-mode-independent"
+        },
+        {
+            "action": "reveal:group.fitting_mode",
+            "scene": "fitting-mode-independent"
+        },
+        {
+            "action": "expand:group.fitting_mode",
+            "scene": "fitting-mode-independent"
+        },
+        {
+            "action": "fittingMode.type",
+            "scene": "fitting-mode-independent"
+        },
+        {
+            "action": "choose-token:fittingMode.type=independent",
+            "scene": "fitting-mode-independent"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:heidi_300k",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:Linked structures",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "choose:cosio_300k",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "choose:Atomic coordinates",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "choose:cosio_300k",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "choose:Atomic displacement",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "choose:heidi_300k",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "choose:Extinction",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "choose:heidi_55k",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "choose:Linked structures",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "choose:cosio_55k",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "choose:Atomic coordinates",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "choose:heidi_55k",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "choose:Extinction",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-7-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-7-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-7-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-7-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-8-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-8-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-8-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-8-free"
+        },
+        {
+            "action": "choose:cosio_55k",
+            "scene": "stage-8-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-8-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-8-free"
+        },
+        {
+            "action": "choose:Atomic displacement",
+            "scene": "stage-8-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-8-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-8-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-8-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-8-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-8-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-8-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-9-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-9-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-9-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-9-free"
+        },
+        {
+            "action": "choose:heidi_2k5",
+            "scene": "stage-9-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-9-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-9-free"
+        },
+        {
+            "action": "choose:Linked structures",
+            "scene": "stage-9-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-9-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-9-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-9-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-9-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-9-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-9-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-10-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-10-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-10-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-10-free"
+        },
+        {
+            "action": "choose:cosio_2k5",
+            "scene": "stage-10-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-10-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-10-free"
+        },
+        {
+            "action": "choose:Atomic coordinates",
+            "scene": "stage-10-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-10-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-10-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-10-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-10-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-10-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-10-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-11-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-11-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-11-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-11-free"
+        },
+        {
+            "action": "choose:heidi_2k5",
+            "scene": "stage-11-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-11-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-11-free"
+        },
+        {
+            "action": "choose:Extinction",
+            "scene": "stage-11-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-11-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-11-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-11-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-11-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-11-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-11-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-12-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-12-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-12-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-12-free"
+        },
+        {
+            "action": "choose:cosio_2k5",
+            "scene": "stage-12-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-12-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-12-free"
+        },
+        {
+            "action": "choose:Atomic displacement",
+            "scene": "stage-12-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-12-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-12-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-12-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-12-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-12-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-12-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-13-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-13-free"
+        },
+        {
+            "action": "reveal:parameters.datablock",
+            "scene": "stage-13-free"
+        },
+        {
+            "action": "parameters.datablock",
+            "scene": "stage-13-free"
+        },
+        {
+            "action": "choose:cosio_2k5",
+            "scene": "stage-13-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-13-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-13-free"
+        },
+        {
+            "action": "choose:Magnetic moments",
+            "scene": "stage-13-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-13-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-13-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-13-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-13-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-13-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-13-fit"
+        },
+        {
+            "action": "mainArea.analysis.tab.correlations",
+            "scene": "correlations"
+        },
+        {
+            "action": "mainArea.analysis.tab.fitting",
+            "scene": "report"
+        },
+        {
+            "action": "appBar.tab.report",
+            "scene": "report"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "report"
+        }
+    ],
+    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "dependencies": [
+        {
+            "file": "inputs/analysis/analysis.edi",
+            "sha256": "4afc39681909eeeae10a9870c4a271623fcbd623e3ce5007c3e2e6b2cbb10b82"
+        },
+        {
+            "file": "inputs/experiments/heidi_300k.edi",
+            "sha256": "b6223d3a5a943ccaaafa1971b7b2ddce91f3e43962cbc8447b66fc27018ca965"
+        },
+        {
+            "file": "inputs/experiments/heidi_55k.edi",
+            "sha256": "bb9ae92f454146e7c6a7baa1dd248c42696acd620a624504a808a9a9854a3102"
+        },
+        {
+            "file": "inputs/structures/cosio_300k.edi",
+            "sha256": "2fd26bc4d305b15beccfeabaa8391d3ec33845624501443e783774fbed58fe5d"
+        },
+        {
+            "file": "inputs/structures/cosio_55k.edi",
+            "sha256": "2cbf27891099826ff14e4b1817fcbbc9ef328966696e671b41635c570328dcfb"
+        }
+    ],
+    "error": "",
+    "example": "sc-neut-cwl_cosio-heidi",
+    "fixture": {
+        "detail": "Single crystal · Three temperatures fitted independently, moments at 2.5 K",
+        "id": "sc-neut-cwl_cosio-heidi",
+        "origin": "HEiDi @ MLZ (FRM II)",
+        "samples": [
+            "Co₂SiO₄ [Pnma] at 300 K, 55 K and 2.5 K"
+        ],
+        "searchAliases": [
+            "sc-neut-cwl_cosio-heidi",
+            "Co₂SiO₄ [Pnma] at 300 K, 55 K and 2.5 K · HEiDi @ MLZ (FRM II)",
+            "Single crystal · Three temperatures fitted independently, moments at 2.5 K"
+        ],
+        "sources": [
+            "docs/user/cli/sc-neut-cwl_cosio-heidi/project/project.edi",
+            "docs/user/cli/sc-neut-cwl_cosio-heidi/project/analysis/analysis.edi",
+            "docs/user/cli/sc-neut-cwl_cosio-heidi/project/experiments/heidi_2k5.edi",
+            "docs/user/cli/sc-neut-cwl_cosio-heidi/project/experiments/heidi_300k.edi",
+            "docs/user/cli/sc-neut-cwl_cosio-heidi/project/experiments/heidi_55k.edi",
+            "docs/user/cli/sc-neut-cwl_cosio-heidi/project/structures/cosio_2k5.edi",
+            "docs/user/cli/sc-neut-cwl_cosio-heidi/project/structures/cosio_300k.edi",
+            "docs/user/cli/sc-neut-cwl_cosio-heidi/project/structures/cosio_55k.edi"
+        ],
+        "values": {
+            "beamMode": [
+                "constant wavelength"
+            ],
+            "dimensionality": [
+                "1d"
+            ],
+            "facilities": [
+                "MLZ (FRM II)"
+            ],
+            "fittingMode": [
+                "independent"
+            ],
+            "instruments": [
+                "HEiDi"
+            ],
+            "polarisation": [
+                "unpolarised"
+            ],
+            "probe": [
+                "neutron"
+            ],
+            "purpose": [
+                "refinement"
+            ],
+            "sampleForm": [
+                "single crystal"
+            ],
+            "scatteringType": [
+                "bragg"
+            ],
+            "structure": [
+                "crystal",
+                "magnetic"
+            ]
+        }
+    },
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "inputs": {
+        "experiment": {
+            "file": "inputs/experiments/heidi_2k5.edi",
+            "sha256": "398b01a6e461ce2dc8e622bf836a9d84eb13a4c4e67099e8c79c7f953f666d08"
+        },
+        "structure": {
+            "file": "inputs/structures/cosio_2k5.edi",
+            "sha256": "1a0d69436ecc043b523edc7d7f5c43de1754969e906f30f577c5237909c96569"
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "scenes": [
+        {
+            "description": "Create the project",
+            "id": "project-created",
+            "image": "project-created.webp",
+            "metadata": "project-created.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Find the structure cosio_300k in the EasyDiffraction collection",
+            "id": "structure-web-0",
+            "image": "structure-web-0.webp",
+            "metadata": "structure-web-0.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Load the structure cosio_2k5",
+            "id": "structure-loaded-2",
+            "image": "structure-loaded-2.webp",
+            "metadata": "structure-loaded-2.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Find the experiment heidi_300k in the EasyDiffraction collection",
+            "id": "experiment-web-0",
+            "image": "experiment-web-0.webp",
+            "metadata": "experiment-web-0.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Load the experiment heidi_2k5",
+            "id": "experiment-loaded-2",
+            "image": "experiment-loaded-2.webp",
+            "metadata": "experiment-loaded-2.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Fit each experiment on its own",
+            "id": "fitting-mode-independent",
+            "image": "fitting-mode-independent.webp",
+            "metadata": "fitting-mode-independent.json",
+            "page": "analysis",
+            "sidebar": "Extra",
+            "status": "captured"
+        },
+        {
+            "description": "Start with every parameter fixed",
+            "id": "nothing-free",
+            "image": "nothing-free.webp",
+            "metadata": "nothing-free.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 300 K: scale",
+            "id": "stage-1-fit",
+            "image": "stage-1-fit.webp",
+            "metadata": "stage-1-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 300 K: coordinates",
+            "id": "stage-2-fit",
+            "image": "stage-2-fit.webp",
+            "metadata": "stage-2-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 300 K: displacements",
+            "id": "stage-3-fit",
+            "image": "stage-3-fit.webp",
+            "metadata": "stage-3-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 300 K: extinction",
+            "id": "stage-4-fit",
+            "image": "stage-4-fit.webp",
+            "metadata": "stage-4-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 55 K: scale",
+            "id": "stage-5-fit",
+            "image": "stage-5-fit.webp",
+            "metadata": "stage-5-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 55 K: coordinates",
+            "id": "stage-6-fit",
+            "image": "stage-6-fit.webp",
+            "metadata": "stage-6-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 55 K: extinction",
+            "id": "stage-7-fit",
+            "image": "stage-7-fit.webp",
+            "metadata": "stage-7-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 55 K: displacements",
+            "id": "stage-8-fit",
+            "image": "stage-8-fit.webp",
+            "metadata": "stage-8-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 2.5 K: scale",
+            "id": "stage-9-fit",
+            "image": "stage-9-fit.webp",
+            "metadata": "stage-9-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 2.5 K: coordinates",
+            "id": "stage-10-fit",
+            "image": "stage-10-fit.webp",
+            "metadata": "stage-10-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 2.5 K: extinction",
+            "id": "stage-11-fit",
+            "image": "stage-11-fit.webp",
+            "metadata": "stage-11-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 2.5 K: displacements",
+            "id": "stage-12-fit",
+            "image": "stage-12-fit.webp",
+            "metadata": "stage-12-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: 2.5 K: the magnetic moments",
+            "id": "stage-13-fit",
+            "image": "stage-13-fit.webp",
+            "metadata": "stage-13-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the correlations",
+            "id": "correlations",
+            "image": "correlations.webp",
+            "metadata": "correlations.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Review the report",
+            "id": "report",
+            "image": "report.webp",
+            "metadata": "report.json",
+            "page": "report",
+            "sidebar": "Main",
+            "status": "captured"
+        }
+    ],
+    "schema": 1,
+    "script_sha256": "13fc93606362b489bd60c3cf353003c4356587dc2c9dd4d04b7a220fb326734f",
+    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "status": "complete",
+    "workflow": "tutorial"
+}

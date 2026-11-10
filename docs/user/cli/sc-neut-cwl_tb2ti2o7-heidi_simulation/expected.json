@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "source": {
+    "engine": "edi (regression pins of the calculated reflections)",
+    "artifact": "machine record (python -m edi calc --report machine)",
+    "provenance": "PROVENANCE.md"
+  },
+  "calc": {
+    "quantities": {
+      "n_points": {
+        "value": 211.0,
+        "kind": "regression-pin",
+        "tol_abs": 0.0,
+        "tol_rel": null
+      },
+      "checksum": {
+        "value": 85237.83541,
+        "kind": "regression-pin",
+        "tol_abs": null,
+        "tol_rel": 1e-06
+      }
+    }
+  }
+}

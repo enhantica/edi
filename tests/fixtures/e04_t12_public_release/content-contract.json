@@ -1,0 +1,14 @@
+{
+  "script": "tools/public-release/content_check.py",
+  "arguments": ["--base", "{base}", "--head", "{head}"],
+  "pr_arguments": ["--title", "{title}", "--body-file", "{body_file}"],
+  "working_directory": "The repository being checked",
+  "event_format": "CI supplies the actual PR title and writes its body to a file",
+  "commit_range": "base..head, including every commit; base=root denotes the initial one-commit push",
+  "subject_limit": 72,
+  "valid_body": "Two plain sentences about the change.",
+  "long_body_control": "A paragraph repeated across 140 lines must be refused.",
+  "metadata_policy": "No private citations, personal paths or development-process labels, even beside a test name.",
+  "file_policy": "Apply the publication scanner to files and decoded container members.",
+  "result": "0 accepts; nonzero refuses with a content diagnostic, never a traceback or usage error"
+}

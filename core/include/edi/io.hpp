@@ -1,0 +1,467 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#ifndef EDI_IO_HPP
+#define EDI_IO_HPP
+
+#include <array>
+#include <cstdint>
+#include <functional>
+#include <optional>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "edi/model.hpp"
+
+// edi project I/O (ADR-0009 — product logic in the core, not the binding). Reads/writes the
+// declarative `.edi` project format and reads CIF structures, shaped after diffraction-lib's io module
+// (the `_category.item` STAR layout + line-segment background + joint-fit analysis) without importing
+// its code. Every entry point fails closed: malformed input raises `edi::IoError` and no partial model
+// escapes. The crysta engine is never consulted here — parity with crysta's loader is proven by the
+// gate comparing values, not by sharing code.
+
+namespace edi {
+
+// Raised for every structured I/O failure (missing/truncated file, unknown block, non-finite numeric,
+// wrong-format handoff). Maps to a Python exception at the binding boundary.
+class IoError : public std::runtime_error {
+   public:
+    explicit IoError(const std::string& message) : std::runtime_error(message) {}
+};
+
+// Load a declarative `.edi` project directory (structures/, experiments/, analysis/) into a
+// Project: the single structure, every experiment bank (sorted by filename), and the analysis
+// fitting mode. THE ONE LOADER: a successful return PROVES the project is complete, with the
+// postconditions selected by what each experiment file declares —
+//   * an embedded `_data` loop  -> fit-ready: the loop is non-empty, declares all required
+//     columns, and every value is finite with a strictly positive sigma;
+//   * a `_data_range.<axis>_min/_max/_step` grid -> calculation-only: the generated axis carries
+//     no observation and the fit entry points refuse;
+//   * neither, or both, is a load-time IoError naming the offending file.
+// Any violation throws before the Project escapes — a partially-loaded project is
+// unrepresentable, and after a fit-ready load refinement cannot fail for a data reason.
+//
+// The loader's two warnings (an unsupported `_minimizer.type`, a directory without
+// `project.edi`) go to `std::cerr`, exactly as the CLI and `import edi` have always printed them,
+// unless the caller passes `on_warning`; then each message goes only to the sink. The app passes
+// one so it can show the warnings to its user.
+using WarningSink = std::function<void(const std::string&)>;
+// `path` is the project's folder, its `project.edi`, or a `.zip` of the folder (edi ADR-0052). An archive unpacks into a
+// new temporary folder first; the project then has no directory of its own (`path` empty), so its first save needs one,
+// and it reads its scan data from the unpacked folder.
+Project load_project(const std::string& path, const WarningSink& on_warning = {});
+// Ordinary GUI Open/Text restoration also accepts saved construction states with absent
+// structures, experiments or data. Present content and all held-structure references still
+// pass the same parser/integrity checks; no placeholder members are manufactured.
+// The original overload above remains the strict complete-model contract for non-GUI users.
+enum class ProjectLoadMode : std::uint8_t { Complete, Construction };
+Project load_project(const std::string& path, ProjectLoadMode mode, const WarningSink& on_warning = {});
+
+// Structures and experiments enter an open project from files. Every structure and experiment
+// text these loads and the project loader read goes through one check first: crysta decides once,
+// from the names the text spells as written, whether it is a CIF. A CIF is read by crysta, which
+// writes the `.edi` text a save would write for what it builds, and edi reads that text; any other
+// text is read as it is. No file suffix decides anything. A text crysta refuses, or one without
+// the project format's `_edi.schema_version`, is refused naming the file, and what crysta reports
+// goes to `on_warning`, else to stderr. An experiment file must also declare its type — all four
+// `_experiment_type` axes — and a type edi's experiment class implements (powder + bragg); a
+// project directory keeps the loader's presence-tracked axes. Nothing is changed by a load: adding
+// is the separate step below. The `_edi_file` and `_cif_file` names are the older spellings.
+Structure load_structure_file(const std::string& path, const WarningSink& on_warning = {});
+Structure load_structure_edi_file(const std::string& path);
+Structure load_structure_cif_file(const std::string& path);
+BraggPdExperiment load_experiment_file(const std::string& path, const WarningSink& on_warning = {});
+BraggPdExperiment load_experiment_edi_file(const std::string& path);
+// A batch, checked as a whole before anything is added: every file as above, each name unique
+// against the project and within the batch, and each linked structure one the project holds. The
+// first refusal names its file.
+std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
+                                                         const std::vector<std::string>& paths,
+                                                         const WarningSink& on_warning = {});
+// Add a loaded structure: refused when the project already holds one (edi persists one structure
+// per project — load_project reads one, save_project refuses more).
+void add_loaded_structure(Project& project, Structure structure);
+// Refuses an experiment that links a structure the project does not hold, before a project-aware
+// import adds it: `where` leads the message, and `source` names the file it came from. A detached
+// experiment, from a factory, is checked when it is saved or calculated instead.
+void require_held_links(const Project& project, const BraggPdExperiment& experiment,
+                        const std::string& where = {}, const std::string& source = {});
+// Add a loaded experiment: refused when its name is already in the project (upstream's collection
+// `add` replaces by key; edi refuses rather than silently replacing — divergence D-k), or when it
+// links a structure the project does not hold.
+void add_loaded_experiment(Project& project, BraggPdExperiment experiment);
+// Rename an experiment of the project, the adder's rule: refused when the new name is already in the
+// project, so a rename never makes two experiments share one name.
+void rename_experiment(Project& project, ExperimentBase& experiment, const std::string& name);
+// A copy of one of the project's experiments, for Duplicate experiment: everything it holds, its data included,
+// but no fit result, under the first name of `<name>_copy`, `<name>_copy2`, … that no experiment of the project has
+// (compared as a save compares names, without letter case). The caller adds it (Edit::create_experiment).
+BraggPdExperiment experiment_copy(const Project& project, const BraggPdExperiment& experiment);
+// The same for a structure, Duplicate structure: no experiment links to the copy (Edit::add_structure).
+Structure structure_copy(const Project& project, const Structure& structure);
+// A new project holding no structure and no experiment (`Project()` carries a default of each).
+Project empty_project(const std::string& name, const std::string& description);
+
+// The `.edi` text a save writes for one block of the project — the file crysta's writer produces,
+// byte for byte, taken from a save into a scratch directory that is removed afterwards. A writer
+// refusal (several structures, a calculation-only experiment) is thrown as the IoError
+// save_project throws.
+enum class BlockKind : std::uint8_t { PROJECT, STRUCTURE, EXPERIMENT, ANALYSIS };
+std::string block_edi_text(const Project& project, BlockKind kind, const std::string& name = {});
+
+// ADR-0016: THE composition of an entity document's path from a datablock name — crysta's
+// `datablock_key` (an empty name is `kind`'s default) and `entity_path`, reached through the
+// adapter, so edi has no naming policy of its own. `kind` is "structure" or "experiment"; the
+// result is `directory/<kind>s/<key>.edi`. Refuses (std::invalid_argument) a name outside the
+// persisted-name domain.
+std::string entity_path(const std::string& directory, const std::string& kind,
+                        const std::string& name);
+// Every file a save writes, in the loader's read order (project, structures, experiments,
+// analysis), each as its path relative to the project directory and its text.
+std::vector<std::pair<std::string, std::string>> project_edi_files(const Project& project);
+// A Text tab's edit read as opening a project reads it (edi ADR-0017 §7): the project saved to a scratch
+// folder, its file at `relative` replaced by `text`, and the folder loaded, every check of an open run on it.
+// The project is not touched; the copy keeps its path. Throws the loader's refusal.
+Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,
+                               const WarningSink& on_warning = {});
+
+// The crystal system of a space-group setting, named by crysta (its resolver and
+// per-setting freedom map); throws what crysta's resolver throws for an unknown setting.
+std::string crystal_system_name(const SpaceGroup& space_group);
+// The IT number of a space-group setting as crysta resolves it — the number crysta's writer writes
+// when `_space_group.it_number` is absent; throws what crysta's resolver throws.
+int space_group_it_number(const SpaceGroup& space_group);
+// One setting of crysta's space-group table, as the app's space-group pickers list it.
+struct SpaceGroupSettingName {
+    int it_number = 0;
+    std::string name_h_m;
+    std::string coord_system_code;  // "" for IT 1 and IT 2
+    int setting = 0;                // ordinal within its space group; 0 is the ITA default setting
+};
+// Every setting crysta resolves, by IT number and then in its table's order.
+std::vector<SpaceGroupSettingName> space_group_settings();
+// The setting a space-group edit chooses (the owner, 2026-10-06), so name, code and IT number never contradict
+// one another: a name or an IT number takes that group's default setting (its lowest ordinal, the ITA one), a
+// code the setting of `it_number` carrying it. Names compare without spaces. Empty when crysta's table has none.
+std::optional<SpaceGroupSettingName> space_group_setting_for_name(const std::string& name);
+std::optional<SpaceGroupSettingName> space_group_setting_for_number(int it_number);
+std::optional<SpaceGroupSettingName> space_group_setting_for_code(int it_number, const std::string& code);
+// Whether two Hermann-Mauguin names are one name, spaces aside.
+bool same_space_group_name(const std::string& a, const std::string& b);
+// A chosen setting written whole: the name, the code and the IT number, which is stored when `declare_number`
+// or when the group already stores one. Assignments only.
+void assign_space_group_setting(SpaceGroup& group, const SpaceGroupSettingName& setting, bool declare_number);
+// The rotations of a space-group setting's operations in fractional coordinates (row-major), by operation id
+// - 1, as crysta numbers them; throws what crysta's resolver throws for an unknown setting.
+std::vector<std::array<int, 9>> space_group_rotations(const SpaceGroup& space_group);
+
+// Write a Project back out as a `.edi` project directory (inverse of load_project: structures,
+// experiments, analysis). Each bank's embedded `_data` loop is written back IFF present, so
+// presence round-trips — a complete project stays complete, a model-only one stays model-only.
+void save_project(const Project& project, const std::string& directory);
+
+// Save the project to `directory` and make it the project's directory (Project.path and
+// metadata.path) — the binding's save_as rule: the last-modified time advances before the write and
+// is restored if the write fails, and the directory is remembered only after it succeeds. The app's
+// Save and Save as go through it.
+void save_project_as(Project& project, const std::string& directory);
+
+/// Make `directory` the project's place after a save there succeeded: its path, metadata path and scan data base move
+/// together, and a linked scan folder takes the declaration the save wrote for it, so the next calculation and save
+/// read the same folder (edi ADR-0069). Save as, the app's staged and adopted saves and Python share it.
+void adopt_save_location(Project& project, const std::string& directory);
+
+/// The file a linked experiment reads (`_data_source.path`) in a project at `project_root`.
+std::string linked_data_file(const std::string& project_root, const std::string& data_path);
+
+/// Whether the experiment holds its measured data now: a powder its pattern, a single crystal reflection rows (its
+/// list is there even when empty). A linked experiment that does not is waiting for its file.
+bool holds_measured_data(const BraggPdExperiment& experiment);
+/// Reads the linked file at `path` into `experiment` as its measured data, its declarations kept: a powder's pattern
+/// or a single crystal's reflections. Throws IoError when it cannot be read, or holds several datasets (a FullProf
+/// file's codes), which are copied into the project as separate experiments instead.
+void read_linked_file(BraggPdExperiment& experiment, const std::string& path);
+
+/// Whether a save writes `relative` (a '/'-separated path inside the project) again instead of carrying it: the
+/// writer's own boundary, as crysta's linked-data ADR states it; a staged save checks what it carried against it
+/// (edi ADR-0069).
+bool save_regenerates(const std::string& relative);
+/// What a save keeps of a `project.edi` text as it was: everything but the fields the writer writes itself.
+std::string carried_project_record(const std::string& text);
+/// One item of a project record as crysta reads it: its tag (empty for a loop, a comment or a blank line), its
+/// value as written (quotes kept) or its text field's lines. Every reader of a project record takes its items from
+/// project_record_items, crysta's one tokenizer, so text inside a value is never read as a tag.
+struct ProjectRecordItem {
+    std::string tag;
+    std::string value;
+    bool text_field = false;
+    bool text_closed = true;
+    std::vector<std::string> text;
+};
+std::vector<ProjectRecordItem> project_record_items(const std::string& text);
+
+// After a save, the open project takes what its saved files hold, exactly what a reopen of `directory` reads: each
+// parameter's value and s.u., which the IUCr rule rounds, and the coefficients of the correlation rows the save wrote,
+// rounded too; a scan's template then reads its pairs from those rows. Nothing is recalculated; whether anything
+// changed. A report saved next stays current after the project is reopened. A project still being built (no
+// structure yet, or an experiment without data) is read back as written; a save that cannot be read back throws IoError.
+bool adopt_saved_values(Project& project, const std::string& directory);
+// The same from `saved`, a project already holding what the files hold (a staged save's copy), with the fit's
+// agreement records: no file is read or written. Whether anything changed.
+bool adopt_values(Project& project, const Project& saved);
+
+// The save sequence after a successful write of `project` to `directory`, the same on every surface (edi ADR-0052):
+// adopt_saved_values, then, when the project holds results (calculated here, or read from its file), calculate
+// it from the adopted values and write it again, so the files, the open project and a reopen agree, the calculated
+// pattern and R factors included; a project without results whose values changed is written again too, so what the
+// save derives from those values follows them. Returns whether any value changed. A project still being built is
+// adopted the same way. After a rewrite, verifies parameter values/s.u.s and bank settings from the final
+// original files. Throws IoError when readback fails or disagrees with the adopted scientific inputs.
+bool adopt_saved_project(Project& project, const std::string& directory);
+
+// The delegated write — converts the model and calls crysta::save_project. Implemented in
+// the adapter (the one crysta-touching TU); edi-only signature (ADR-0003). With `source`, the
+// project's files are carried from that folder instead of its own, and no scan data with them.
+void save_project_via_crysta(const Project& project, const std::string& directory,
+                             const std::string* source = nullptr);
+// The fit's agreement records (each bank's, its phases' and every bank's together) recomputed by crysta from the
+// project's values, with due background estimates deferred, as a save that adopted rounded values keeps them. A project
+// holding no fit result, or one crysta cannot calculate, is left as it is.
+void refresh_agreement_records(Project& project);
+
+// The project's report as a CIF, written by crysta from the project a save would write: every item under its default
+// CIF name, values with their s.u. Throws std::invalid_argument when crysta cannot convert the project.
+std::string cif_report_text(const Project& project);
+
+// Save report's write (ADR-0036 §7): `reports/report.edi` of `directory` alone, from the project's report settings and
+// saved-report rows, when its text changes, through crysta's writer; whether it wrote.
+bool save_report_settings(const Project& project, const std::string& directory);
+
+// The report settings as `reports/report.edi` states them, each one the project leaves at its default written out with
+// that value, and the saved-report rows: what the Report page's Text tab shows, never empty. crysta writes the text.
+std::string report_settings_text(const Project& project);
+// What an apply of `text`, a new text of the project file `relative`, would not apply as given, each item by its current
+// name in lower case: the items `read` (the project read with it) does not write back, which an apply would lose, an
+// output item counting only when `current` (the file now) holds it; and the items given more than once.
+struct UnappliedItems {
+    std::vector<std::string> unknown;
+    std::vector<std::string> repeated;
+};
+UnappliedItems unapplied_items(const Project& read, const std::string& relative, const std::string& text,
+                               const std::string& current);
+
+// A report setting's value checked by crysta's rules, as a file states it (ADR-0036 §7): `tag` is `_report.<item>`,
+// `_correlation_chart.threshold` or `_pattern_chart.x_axis`, `value` its text. Throws std::invalid_argument naming the
+// item for a value it does not take, or for a tag that is not a report setting.
+void check_report_setting(const std::string& tag, const std::string& value);
+
+// The project's relations checked by crysta (a refusal is a DomainValidationError carrying crysta's
+// `crysta.domain.constraint_*` codes), every parameter marked with its dependence, and a dependent's
+// free flag cleared with crysta's `crysta.domain.dependent_free_ignored` warning to `warn`. The loader
+// runs it with `from_file`, where a constrained dependent's bracket is the uncertainty crysta saved
+// with it, so one holding a nonzero s.u. loses its free flag without the warning; so does every edit
+// of the relations, without `from_file`.
+void refresh_relations(Project& project, const WarningSink& warn = {}, bool from_file = false);
+
+// Every dependent (a cell sibling, a special-position follower, a constrained parameter) set from
+// its relation at the model's current independent values by crysta's one applier, values only.
+// Implemented in the adapter (the one crysta-touching TU, ADR-0003). Returns false and changes
+// nothing when the model cannot be converted or its relations do not hold; a calculation says why.
+bool apply_relations(Project& project);
+
+// The same, refusing instead: crysta's refusal (a relation that cannot hold, a value outside its
+// range) propagates, and the model is unchanged. A read that needs the completed values, such as a
+// geometry, calls it.
+void complete_relations(Project& project);
+
+// Undo's half: apply_relations, then each dependent's e.s.d. back to the one it held before the
+// fit (kept in memory by the fit's write-back, or seeded by the loader from a legacy file); one in
+// `restored`, which its own start row gave back, keeps that.
+void restore_dependents(Project& project, const std::set<const Parameter*>& restored = {});
+
+// Review-9 F1 — the lossless prior-state property on edi's own paths (implemented in the
+// adapter, ADR-0003). rebalance_positional_fit_state runs between write_back and the
+// completions: it moves the basic's snapshot onto the designated axis (the representative
+// when free, else the first free axis — one snapshot per basic), lands the fitted e.s.d. on
+// the declared free axes only, and puts a fixed representative's own uncertainty presence
+// back. restore_positional_dependents is undo's positional pass: a restored snapshot axis
+// derives its basic back onto the representative sign-correctly, free tied axes that did not
+// restore their own snapshot take the restored uncertainty, and fixed axes are never touched;
+// restore_dependents then completes the values.
+void rebalance_positional_fit_state(Structure& structure);
+void restore_positional_dependents(Structure& structure,
+                                   const std::set<const Parameter*>& restored);
+
+// Review-9 (the start_tied mirror): resolve each loaded _fit_parameter row's free tied companions
+// and seed their esd-only snapshots — from the row's start_tied token when the file carries the
+// column ('), else from each companion's own coordinate su (under the keep-prior rule that IS the
+// prior). A token contradicting the model's free tied set refuses. Implemented in the adapter
+// (ADR-0003);
+// `where` names the analysis file for error messages.
+void seed_positional_start_companions(
+    Project& project,
+    const std::vector<std::pair<Parameter*, std::optional<std::string>>>& rows,
+    const std::string& where);
+
+// Review-10 F2: the loader's own numeric rule — finite, full-token, classic-locale — exported
+// so every serialized number the adapter parses (the start_tied payload) crosses the SAME
+// boundary as every other number in the format; throws the loader's structured errors.
+double parse_edi_double(const std::string& text, const std::string& where);
+
+// Review-8 F4: the ruled absorption family contract at the MUTATION boundary — the one
+// spelling shared with the loader. "none" clears the coefficient body (a typed family's
+// parameters exist only when the type says so); "cylinder" keeps declared coefficients and
+// supplies a missing one as the owner's general default ("0" ⇒ A ≡ 1); any other token throws
+// std::invalid_argument. The factory and the public type setter route every supported
+// selection through this, so a mutated model always matches what both loaders accept.
+void apply_absorption_family(AbsorptionBase& absorption, const std::string& token);
+// A single crystal's extinction switched to `token`: the items of that type kept, a missing one
+// started at 0 (a missing distribution Gaussian), the rest removed; an unknown type throws
+// std::invalid_argument. The loader, the app's selector and the Python `type` setter share it.
+void apply_extinction_type(ExtinctionBase& extinction, const std::string& token);
+
+// Undo the last fit (diffraction-lib `undo_fit`, the single-level pre-fit snapshot). Restores each
+// parameter carrying persisted start state to its start_value/start_uncertainty, clears the snapshot,
+// and reports the structured outcome; with no persisted state it reports was_no_op and changes NOTHING
+// (a second undo is a reported no-op by construction). Lives beside the loader because the snapshot is
+// persistence state (the analysis.edi _fit_parameter loop); crysta's crysta/analysis.hpp mirrors it.
+// An undone model is the PRE-FIT model, so a restoring undo refreshes the stored calculated pattern
+// with it — refresh_calculated_pattern(), last, under the same was_no_op guard; an undo that restores
+// nothing still changes nothing.
+struct UndoFitOutcome {
+    std::vector<std::string> restored_parameters;  // fit-state slot ids, walk order
+    bool was_no_op = false;
+};
+UndoFitOutcome undo_fit(Project& project);
+// Undo_fit without its last step, the refresh of the stored calculated pattern — for a caller that
+// calculates elsewhere (the app's worker). Restores exactly what undo_fit restores.
+UndoFitOutcome restore_fit_start(Project& project);
+// The last fit's result record (`_fit_result` and each experiment's `_fit_result_bank` share).
+// `copy_fit_result` writes `from`'s onto `to`, a project `from` was copied from (experiments by position);
+// `clear_fit_result` leaves none. An undo clears it (restore_fit_start), as diffraction-lib's undo does.
+void copy_fit_result(Project& to, const Project& from);
+// One experiment's share of the last fit (its `_fit_result_bank` row and its phases' `_fit_result_phase` rows),
+// from its counterpart in another copy of the project.
+void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) noexcept;
+void clear_fit_share(ExperimentBase& experiment);
+void clear_fit_result(Project& project);
+// `tag` when its category belongs only to a powder pattern, which a single crystal refuses by name; else empty.
+// crysta's list, the one both loaders refuse from.
+std::string single_crystal_forbidden_tag(const std::string& tag);
+// ADR-0034 I6: a table's rows as a save writes them: numbered 1, 2, … in pair order, `deterministic`, the pair's two
+// names and the coefficient, `file` naming the scan file (empty for a single fit).
+std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& table, const std::string& file);
+// ADR-0034: a scan file's new results into a fit record: its bundle by file, with the rows read for the file dropped
+// (I7) and, for the template file, the saved rows made from its table (I6), the other files' read rows moving to their
+// bundles (hold_template_rows). The cost is the record's own rows, not the scan's pairs.
+void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
+                            std::shared_ptr<const ScanFileResult> result, const std::string& template_file);
+// ADR-0034: a scan record once its template's fit changed. The saved loop holds `template_rows`, the template's rows,
+// and each other file's rows in `rows`, as read, move into that file's bundle, unless a fit gave the file one. A read
+// row so keeps its id however the template's rows are numbered (I6, I7). Rows of the template file and rows naming no
+// file are dropped.
+void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrelation> template_rows,
+                        const std::vector<FitParameterCorrelation>& rows, const std::string& template_file);
+
+// Correlation pairs as a record holds them (FitResultRecord::correlations), each keeping its id; a pair with no id, or
+// with one an earlier pair took, gets the first free number of 1, 2, … (diffraction-lib numbers its
+// `_fit_parameter_correlation` rows so).
+std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
+    const std::vector<FitParameterCorrelation>& pairs);
+
+// Build one entity from text (diffraction-lib `StructureFactory.from_cif_str` /
+// `ExperimentFactory.from_cif_str`), a CIF or a `.edi` text, by the check above. `where` names the
+// text in a refusal (the path, for a file), and crysta's reports go to `on_warning`, else to
+// stderr. Fails closed (IoError) as the directory loader does.
+Structure structure_from_edi_text(const std::string& text, const std::string& where = "<from_cif_str>",
+                                  const WarningSink& on_warning = {});
+BraggPdExperiment experiment_from_edi_text(const std::string& text,
+                                           const std::string& where = "<from_cif_str>",
+                                           const WarningSink& on_warning = {});
+
+/// The type of a new experiment, by its `.edi` tokens (`_experiment_type.*`).
+struct ExperimentTypeTokens {
+    std::string sample_form = "powder";
+    std::string beam_mode = "constant wavelength";
+    std::string radiation_probe = "neutron";
+    std::string scattering_type = "bragg";
+};
+
+/// A new experiment without measured data: a simulation over its beam mode's default calculation grid
+/// (`_data_range`, so calculation_only), linked to `structure_id` at scale 1 when that is not empty, with
+/// default instrument and peak values and every parameter fixed. Built from `.edi` text by the one
+/// experiment builder, so a type token or a name the loader refuses is refused here with its message
+/// (IoError).
+BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
+                                        const std::string& structure_id);
+/// The same, linked to each of `structure_ids` at scale 1 (Create experiment links every structure).
+BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
+                                        const std::vector<std::string>& structure_ids);
+
+/// The rows of a plain two- or three-column data file `x y [σ]`, read by crysta's plain-data reader, and what
+/// it dropped or changed: lines that are not two or three numbers, rows with y <= 0, repeated
+/// x, rows moved by the sort, and rows whose σ was derived from y. Throws IoError when the file cannot be read or
+/// keeps no row.
+struct PlainDataRows {
+    std::vector<double> x;
+    std::vector<double> y;
+    std::vector<double> sigma;
+    std::size_t skipped = 0;
+    std::size_t nonpositive = 0;
+    std::size_t duplicates = 0;
+    std::size_t reordered = 0;
+    std::size_t derived = 0;
+};
+PlainDataRows read_plain_data(const std::string& path);
+
+/// A plain-data file read into an experiment (Load data): the experiment as it was, with the file's rows as
+/// its measured data, so its type, instrument, peak, background and excluded regions stay.
+struct PlainDataLoad {
+    BraggPdExperiment experiment;
+    std::string file_name;  // the file's own name, without its directory
+    std::size_t points = 0;
+    std::size_t skipped = 0;
+    std::size_t nonpositive = 0;
+    std::size_t duplicates = 0;
+    std::size_t reordered = 0;
+    std::size_t derived = 0;
+    // A FullProf reflection file holding several datasets (its code column): `experiment` takes the first and these
+    // the rest, one experiment each named `<name>_<code>`; empty otherwise.
+    std::vector<BraggPdExperiment> more;
+    std::size_t unweighted = 0;  // FullProf reflections with an su of 0, read past
+    std::vector<std::size_t> skipped_lines;  // a plain reflection file's lines that are not reflections
+};
+/// Whether a datablock name can name its saved file (crysta's rule: ASCII letters, digits, `_` and `-`, and not
+/// a Windows reserved device name).
+bool persistable_name(const std::string& name);
+/// `experiment` with the rows of the plain-data file at `path` as its measured data. With `take_file_name`,
+/// the experiment is renamed to the file's name without its extension, when that name can be saved (the caller
+/// still checks it against the project's other names). Throws IoError when the file cannot be read or keeps no
+/// row.
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
+                                         bool take_file_name);
+/// Same reader and assembly, with an internal approved-byte reader path and the original source path
+/// for file identity/naming. A reflection capture must preserve the source's case-insensitive
+/// .int/plain suffix class; mismatch refuses before reading. No second parser or input authority is introduced.
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& reader_path,
+                                         const std::string& source_path, bool take_file_name);
+
+// Registration-live loader vocabulary (seam 20 / I15): the Python registration seam adds a new
+// `_peak.type` token here so the loader and selector accept it without a rebuild — crysta's
+// registry-built known_peak_types() pattern, mirrored. Idempotent; a shipped row is never
+// overwritten. `peak_type_known` is the selector's fail-closed query.
+void register_peak_type(const std::string& token, BeamModeEnum mode);
+bool peak_type_known(const std::string& token);
+// The beam mode of a known, implemented `_peak.type` token (empty for an unknown or reserved one),
+// and every registered token in the registry's order — the selector's supported-set query.
+std::optional<BeamModeEnum> peak_type_beam_mode(const std::string& token);
+std::vector<std::string> registered_peak_types();
+/// Visit registered tokens and their implemented beam modes without copying.
+void visit_registered_peak_types(const std::function<void(const std::string&, std::optional<BeamModeEnum>)>& visitor);
+
+
+
+}  // namespace edi
+
+#endif  // EDI_IO_HPP

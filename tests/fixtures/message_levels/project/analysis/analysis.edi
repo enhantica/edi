@@ -1,0 +1,4 @@
+_edi.schema_version 3
+_minimizer.type crysta
+_minimizer.max_iterations 4
+_fitting_mode.type single

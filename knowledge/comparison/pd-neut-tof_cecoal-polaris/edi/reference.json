@@ -1,0 +1,32 @@
+{
+  "program": "edi",
+  "crysta_sdk": "build-baeb5984b282e727b2366cbddc0938f1ddb88cb9",
+  "banks": [
+    "polaris"
+  ],
+  "n_free": 32,
+  "status": "done",
+  "converged": true,
+  "iterations": 6,
+  "rwp": 0.02082051367463756,
+  "reduced_chi_square": 2.852889158052661,
+  "cells": {
+    "cecoal": {
+      "a": [
+        7.651317759933277,
+        0.0006487288393540956
+      ],
+      "b": [
+        4.051502446780316,
+        0.0003453912154109569
+      ],
+      "c": [
+        6.9055724150967945,
+        0.0005875715142938206
+      ]
+    }
+  },
+  "artifacts_sha256": {
+    "polaris.csv": "a00cd3b298c48810d7e23fc1d1536fd3d95e93f6203d55d7e5b5f4c9a292d663"
+  }
+}

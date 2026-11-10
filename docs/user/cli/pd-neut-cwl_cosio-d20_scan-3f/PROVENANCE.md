@@ -1,0 +1,66 @@
+# pd-neut-cwl_cosio-d20_scan-3f — provenance
+
+crysta fitting case `cosio-d20-scan-3f` under the CLI project id rule.
+
+Copied **byte-identical** from crysta `origin/main` at `973b34bd92f01ba77f89b049a3e7e74d252b9db3`, path
+`tests/fitting/cosio-d20-scan-3f/` — the `project/` tree and `expected.json`, nothing else.
+
+| object | git id at the source |
+| --- | --- |
+| `tests/fitting/cosio-d20-scan-3f` (tree) | `11d4e8d0978cac371b11fd740914550de88c1e43` |
+| `tests/fitting/cosio-d20-scan-3f/project` (tree) | `954556e9183643f1fd74d2c78ab02c13f74e195c` |
+| `tests/fitting/cosio-d20-scan-3f/expected.json` (blob) | `626ef8abd5c00bb12c05bbb18361aea4598a17d7` |
+
+**Extended.** `project/analysis/analysis.edi` declares two more minimization conditions,
+`_minimizer.descent fast_descent` and `_minimizer.chi_square_tolerance 1e-4`, so the project
+exercises a sequential fit under a non-default descent and tolerance. The three per-file reduced
+chi-squares were re-pinned, and three per-file iteration counts added, from `python -m edi fit` of
+this project on edi the declared-descent implementation linked against crysta
+`e31cba10244e7c26f058e9a829638c0231420126`. They are **regression pins** (the 52.3 K value is
+unchanged at its 1e-6 bound). `n_free` stays the independent reference it was. Under the engine
+defaults (`ladder`, 1e-6) the same project reproduces the pins it carried before the extension:
+4.783623, 4.381669 and 3.887557, at 5, 8 and 16 iterations.
+
+**Re-pinned 2026-11-04.** The fast descent now sets its damping from how well each step's predicted
+χ² drop matched the real one, instead of trying three smaller dampings after each accepted step. The
+three per-file reduced chi-squares were re-pinned from `python -m edi fit --report machine` of this
+project with `OMP_NUM_THREADS=1`, linked against crysta `ca4b68bd`: 4.82405862, 4.42856768 and
+3.88870096 (the last 0.00047 above the previous pin); the iteration counts are unchanged at 4, 6 and 12.
+
+The expected values keep the `kind` their source gave them: crysta-produced fit outputs are
+**regression pins** — they gate drift, not correctness — and only values marked `reference` come
+from outside every engine under test. The source case's own `PROVENANCE.md` in crysta says which
+is which and why.
+
+**Re-pinned.** The CW generation limit (FullProf's rule: a reflection contributes only if centred within the axis
+end plus `cutoff_fwhm` × the width there) moved this project's regression pins: 52.345 K 4.783623 → 4.784745,
+299.394 K 4.381672 → 4.382172, 497.379 K 3.887563 → 3.887746 at 10 iterations (was 11), measured by
+`tools/checks/cli_projects.py` on crysta `9c1caaec`.
+
+**Re-pinned again by (the frozen generation limit).** Each fit now fixes the CW generation limit from its starting
+state, so no reflection crosses it mid-fit. The 497.379 K file, the one whose widths moved the old limit across a
+reflection during its fit, went 3.887746 → 3.887590 at 10 iterations, measured by
+`tools/checks/cli_projects.py` on crysta `adb3b700`. The other two files did not move.
+The 299.394 K pin moved at the 8th significant digit with it (4.382171604 → 4.382171634) and was
+re-pinned to its record value.
+
+**Re-pinned with the constraint restored.** The project declares the tutorial's aliases and `biso_Co2 = biso_Co1`
+again, as its crysta source does: Co1 Biso is refined and Co2 Biso follows it, where before Co1 was fixed and Co2
+refined alone. The pins moved: 52.345 K 4.784745 → 4.824059, 299.394 K 4.382172 → 4.428567, 497.379 K 3.887590 →
+3.888231 (4, 6 and 12 iterations; the last was 10), measured by `tools/checks/cli_projects.py` against crysta
+`91a319e2`, `OMP_NUM_THREADS=1`. `n_free` did not move.
+
+## Catalogue metadata
+
+`project/project.edi` carries the app's example metadata (ADR-0031, the owner's enrichment of 2026-10-09): its
+title and description name the sample and scan, and `_metadata.purpose`, `.dimensionality`, `.instrument`,
+`.facility` and `.polarisation` were added. Every other file is unchanged.
+
+**Excluded rows rewritten ([ADR-0044](../../../dev/adrs/0044-pattern-charts-and-excluded-regions.md)).** Each excluded `_data` row now has the d-spacing computed from the
+file's own instrument, written like the file's other d values, and `.` for `intensity_calc` and `intensity_bkg`
+instead of `0.`. Included rows are unchanged, and the recorded hashes of these files moved with them.
+
+**Re-pinned 2026-11-07.** Under Shift/s.u. a fit now also needs the full undamped step to be below the tolerance, and a
+χ² plateau tries that step once before it ends the fit. Pins retaken with `python tools/checks/cli_projects.py` linked
+against crysta `4643af79`, `OMP_NUM_THREADS=1`: results[299.394].fit_result.reduced_chi_square 4.428567680931095 →
+4.428563830815897; results[299.394].fit_result.iterations 6 → 7.

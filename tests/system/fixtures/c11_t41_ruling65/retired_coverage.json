@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "disposition": "ruling-65 corpus-vocabulary retirement",
+  "reason": " replaced the crysta fitting corpus wholesale (18 cases deleted under rulings 30 and 38, 8 added, zero in common with origin/main). crysta owns the corpus and edi consumes it, so edi tests follow the vocabulary rather than re-arguing it (ruling 65, as amended). THIS FIELD DELIBERATELY MAKES NO COLLECTIVE CLAIM ABOUT WHY EACH ENTRY WAS RETIRED. It previously ended \"every reference a surviving case could carry was repointed; these are the ones no surviving case carries\", and the by-property audit below FALSIFIED that for eight entries. Annotating a false claim with a correction leaves the record self-contradictory, which is what review-22 F2 refused; the claim is removed. Per-entry status is in `audit`.",
+  "repointed": {
+    "cosio-d20-cwl": "cosio-d20-s1",
+    "seam-si-sepd-s1": "si-sepd-s2",
+    "ncaf-1bank-jvd-tof": "si-sepd-s2",
+    "ncaf-5bank-absorption-perturbed-tof": "ncaf-wish-3bank-s5",
+    "ncaf-joint-tof": "ncaf-wish-3bank-s5",
+    "seam-lbco-hrpt-s1": "lbco-hrpt-s2"
+  },
+  "retired_tests": [
+    {
+      "consumer": "tests/system/py/test_c09_t1_whole_fit_delegation.py",
+      "test": "test_c09_t1_fit_matches_cli_free_set_mapping_and_is_deterministic"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t6_joint_multibank_absorption.py",
+      "test": "test_c09_t6_declared_bank_with_missing_data_fails_without_writeback"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t6_joint_multibank_absorption.py",
+      "test": "test_c09_t6_freed_abscor2_surfaces_engine_error_without_writeback"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t6_joint_multibank_absorption.py",
+      "test": "test_c09_t6_fully_excluded_bank_fails_without_writeback"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t6_joint_multibank_absorption.py",
+      "test": "test_c09_t6_joint_bank_identity_defects_fail_without_writeback"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t6_joint_multibank_absorption.py",
+      "test": "test_c09_t6_joint_refit_count_mismatch_fails_without_writeback"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t6_joint_multibank_absorption.py",
+      "test": "test_c09_t6_unmappable_bank_label_grammar_fails_without_writeback"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t7_cached_fit.py",
+      "test": "test_c09_t7_absorption_uses_value_cache_stamps_not_jacobian_tiering"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t7_cached_fit.py",
+      "test": "test_c09_t7_cached_fit_is_exact_and_both_paths_match_cli_floor"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t7_cached_fit.py",
+      "test": "test_c09_t7_every_source_mutation_axis_is_stale"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t8_complete_project_loading.py",
+      "test": "test_c09_t8_complete_rejects_missing_structure_at_load_time"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t8_complete_project_loading.py",
+      "test": "test_c09_t8_complete_rejects_multiple_structures_at_load_time"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t8_complete_project_loading.py",
+      "test": "test_c09_t8_complete_rejects_one_data_less_bank_in_an_otherwise_complete_project"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t8_complete_project_loading.py",
+      "test": "test_c09_t8_embedded_numeric_grammar_accepts_the_pinned_corpus"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t8_complete_project_loading.py",
+      "test": "test_c09_t8_load_complete_exposes_exact_embedded_single_bank_data"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t8_complete_project_loading.py",
+      "test": "test_c09_t8_load_complete_maps_joint_columns_by_tag_and_measured_sigma"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t8_complete_project_loading.py",
+      "test": "test_c09_t8_malformed_embedded_data_fails_during_load"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t8_complete_project_loading.py",
+      "test": "test_c09_t8_single_one_call_fit_reuses_the_frec_golden"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t8_complete_project_loading.py",
+      "test": "test_c09_t8_unknown_unmodelled_tags_are_tolerated_without_changing_data"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t9_output_contract_and_cli.py",
+      "test": "test_c09_t9_callback_counts_history_identity_and_gil_release"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t9_output_contract_and_cli.py",
+      "test": "test_c09_t9_contract_pins_both_point_counts_on_edi_single_path"
+    },
+    {
+      "consumer": "tests/system/py/test_c09_t9_output_contract_and_cli.py",
+      "test": "test_c09_t9_machine_error_record_stays_on_stdout"
+    },
+    {
+      "consumer": "tests/unit/py/test_c11_t19_lbco_cw_project_shape_b.py",
+      "test": "test_c11_t19_project_declares_exact_shape_b_contract"
+    }
+  ],
+  "retired_files": [
+    "tests/unit/py/test_c11_t19_lbco_cw_project_shape_b.py"
+  ],
+  "audit": {
+    "note": "REVIEW-21 F2 CORRECTION. The claim above was FALSE AS A COLLECTIVE RATIONALE and is corrected here rather than restated. Audited BY PROPERTY, not by filename: for each entry the vehicle it used was resolved to the case that vehicle points at TODAY. EIGHT of the 23 entries had a SURVIVING vehicle, so \"no surviving case carries it\" was never true of them. Ruling 65 withdrew per-test paperwork; it did not authorise replacing the packet's no-coverage-loss boundary with a collective rationale that does not hold.",
+    "vehicle_survives_so_not_corpus_bound": [
+      "test_c09_t8_complete_rejects_missing_structure_at_load_time",
+      "test_c09_t8_complete_rejects_multiple_structures_at_load_time",
+      "test_c09_t8_malformed_embedded_data_fails_during_load",
+      "test_c09_t8_embedded_numeric_grammar_accepts_the_pinned_corpus_forms",
+      "test_c09_t8_unknown_unmodelled_tags_are_tolerated_without_loss",
+      "test_c09_t9_contract_pins_both_point_counts_on_edi_single_path",
+      "test_c09_t9_machine_error_record_stays_on_stdout",
+      "test_c11_t19_project_declares_exact_shape_b_contract"
+    ],
+    "restoration_attempted_and_what_it_showed": "Vehicle survival is NECESSARY BUT NOT SUFFICIENT, which the attempt measured rather than assumed. Restoring the five c09_t8 entries against the surviving vehicle produced 16 failures: they also assert the DELETED data's shape (embedded numeric grammar forms, pattern rows, bank structure) and one hardcodes structures/ncaf.edi. Restoring them is a rewrite of the assertions or a re-addition of corpus data, not a repoint. test_c09_t9_machine_error_record_stays_on_stdout uses NO corpus case at all and restores cleanly as source, but then FAILS I20: it deliberately fits an INVALID project to assert the machine error record, and I20 admits only a corpus case. Restoring that property therefore requires an I20 provision for deliberately-invalid projects, or asserting the record without reaching fit \u2014 a decision, not an edit, and NOT something to obtain by loosening I20.",
+    "unasserted_properties_named": [],
+    "properties_restored": {
+      "note": "REVIEW-22 F2 CLOSURE. These three properties rode tests ruling 65 retired, and none of them was corpus-bound. Naming a loss does not satisfy the packet binding boundary (an asserted property may not be lost), so they are ASSERTED again \u2014 on the surviving vehicle and through the CLI router, with no I20 exception and no loosening of I20. This list replaces `unasserted_properties_named`, which is now EMPTY: as of this record no property retired under ruling 65 is left unasserted.",
+      "iterations_history identity": "tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_iterations_history_matches_what_the_callback_observed \u2014 compares the outcome's exposed history against the INDEPENDENT callback stream, so the two cannot silently diverge.",
+      "another Python thread runs between callbacks (GIL release)": "tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_another_python_thread_runs_between_callbacks \u2014 a second thread makes measurable progress between the first and last callback, riding the surviving callback vehicle.",
+      "CLI machine error record on stdout, diagnostics on stderr": "tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_cli_router_splits_the_machine_record_from_the_diagnostics \u2014 drives edi.__main__.main() with run_fit stubbed to raise, so the REAL router is exercised and no public fit is reached. Mutation-proved both ways: leaking the prose to stdout fails it, and suppressing the record fails it."
+    }
+  }
+}

@@ -1,0 +1,22 @@
+data_Al2O3
+_edi.schema_version 3
+_cell.length_a 4.756614()
+_cell.length_b 4.756614
+_cell.length_c 12.973036()
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 120
+_space_group.name_h_m "R -3 c"
+_space_group.coord_system_code h
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.wyckoff_letter
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+Al1 Al c 0.0 0.0 0.33349() 1 -0.13591() Biso
+O1 O e 0.34993() 0.0 0.25 1 1.24078() Biso

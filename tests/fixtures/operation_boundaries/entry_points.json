@@ -1,0 +1,758 @@
+{
+  "contract": "Entry census and ownership domains; proof paths identify boundary families, not a claim every entry is exercised by every file. Same-name overloads and writable Qt property entry points are counted explicitly.",
+  "classes": {
+    "Session": {
+      "header": "app/src/session.hpp",
+      "entries": {
+        "existingParentFolder": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "locationExists": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "creationOutcomeCurrent": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "suggestedSaveTarget": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "assistantSaveAsCurrent": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "assistantSaveAsTarget": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "projectDirectoryExists": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "projectDirectoryUrl": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "label": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "units": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "tooltip": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "optionLabel": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "optionTooltip": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "documentationUrl": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "categoryTitle": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "written": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "display": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "valueText": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "suText": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "stageTutorialFiles": {
+          "domain": "tutorial-files",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "saveTutorialFiles": {
+          "domain": "tutorial-files",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "cancelTutorialFiles": {
+          "domain": "tutorial-files",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "openProject": {
+          "domain": "project-replacement",
+          "proof": "tests/system/py/test_held_edit_loss_guards.py",
+          "overloads": 1
+        },
+        "createProject": {
+          "domain": "project-replacement",
+          "proof": "tests/system/py/test_held_edit_loss_guards.py",
+          "overloads": 1
+        },
+        "createProjectWithOutcome": {
+          "domain": "project-replacement",
+          "proof": "tests/system/py/test_held_edit_loss_guards.py",
+          "overloads": 1
+        },
+        "closeProject": {
+          "domain": "project-replacement",
+          "proof": "tests/system/py/test_held_edit_loss_guards.py",
+          "overloads": 1
+        },
+        "createProjectAside": {
+          "domain": "project-replacement",
+          "proof": "tests/system/py/test_held_edit_loss_guards.py",
+          "overloads": 1
+        },
+        "setProjectAside": {
+          "domain": "project-replacement",
+          "proof": "tests/system/py/test_held_edit_loss_guards.py",
+          "overloads": 1
+        },
+        "restoreProjectSetAside": {
+          "domain": "project-replacement",
+          "proof": "tests/system/py/test_held_edit_loss_guards.py",
+          "overloads": 1
+        },
+        "dropProjectSetAside": {
+          "domain": "project-replacement",
+          "proof": "tests/system/py/test_held_edit_loss_guards.py",
+          "overloads": 1
+        },
+        "discardKeptChanges": {
+          "domain": "project-replacement",
+          "proof": "tests/system/py/test_held_edit_loss_guards.py",
+          "overloads": 1
+        },
+        "openExample": {
+          "domain": "collection-project",
+          "proof": "tests/system/py/test_file_fetch_owner_boundaries.py",
+          "overloads": 1
+        },
+        "openExampleAside": {
+          "domain": "collection-project",
+          "proof": "tests/system/py/test_file_fetch_owner_boundaries.py",
+          "overloads": 1
+        },
+        "save": {
+          "domain": "save-operation",
+          "proof": "tests/system/py/test_sealed_publication_contract.py",
+          "overloads": 1
+        },
+        "answerSaveData": {
+          "domain": "save-operation",
+          "proof": "tests/system/py/test_sealed_publication_contract.py",
+          "overloads": 1
+        },
+        "saveAs": {
+          "domain": "save-operation",
+          "proof": "tests/system/py/test_sealed_publication_contract.py",
+          "overloads": 1
+        },
+        "saveProjectAs": {
+          "domain": "save-operation",
+          "proof": "tests/system/py/test_sealed_publication_contract.py",
+          "overloads": 1
+        },
+        "saveWebProjectAs": {
+          "domain": "save-operation",
+          "proof": "tests/system/py/test_sealed_publication_contract.py",
+          "overloads": 1
+        },
+        "downloadWebProject": {
+          "domain": "save-operation",
+          "proof": "tests/system/py/test_sealed_publication_contract.py",
+          "overloads": 1
+        },
+        "completeAssistantSaveAs": {
+          "domain": "save-operation",
+          "proof": "tests/system/py/test_sealed_publication_contract.py",
+          "overloads": 1
+        },
+        "cancelAssistantSaveAs": {
+          "domain": "save-operation",
+          "proof": "tests/system/py/test_sealed_publication_contract.py",
+          "overloads": 1
+        },
+        "writeBackReports": {
+          "domain": "report-output",
+          "proof": "tests/system/py/test_report_publication_failures.py",
+          "overloads": 1
+        },
+        "openWebProject": {
+          "domain": "browser-open",
+          "proof": "tests/system/py/test_held_edit_loss_guards.py",
+          "overloads": 1
+        },
+        "openStoredProject": {
+          "domain": "browser-open",
+          "proof": "tests/system/py/test_held_edit_loss_guards.py",
+          "overloads": 1
+        },
+        "clearError": {
+          "domain": "error-state",
+          "proof": "tests/system/py/test_request_owner_boundaries.py",
+          "overloads": 1
+        },
+        "categoryIcon": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        }
+      },
+      "property_writers": {
+        "setColourScheme": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        }
+      }
+    },
+    "ProjectViewModel": {
+      "header": "app/src/project_view_model.hpp",
+      "entries": {
+        "suText": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "parameterNumber": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "filesBytes": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "saveDataPlan": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "structureIndex": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "loadStructure": {
+          "domain": "dataset-admission",
+          "proof": "tests/system/py/test_linked_experiment_payloads.py",
+          "overloads": 1
+        },
+        "loadExperiments": {
+          "domain": "dataset-admission",
+          "proof": "tests/system/py/test_linked_experiment_payloads.py",
+          "overloads": 1
+        },
+        "loadExperimentWithStructures": {
+          "domain": "dataset-admission",
+          "proof": "tests/system/py/test_linked_experiment_payloads.py",
+          "overloads": 1
+        },
+        "loadData": {
+          "domain": "dataset-admission",
+          "proof": "tests/system/py/test_linked_experiment_payloads.py",
+          "overloads": 1
+        },
+        "loadDataInto": {
+          "domain": "dataset-admission",
+          "proof": "tests/system/py/test_linked_experiment_payloads.py",
+          "overloads": 1
+        },
+        "loadDatasets": {
+          "domain": "dataset-admission",
+          "proof": "tests/system/py/test_linked_experiment_payloads.py",
+          "overloads": 1
+        },
+        "loadDataIntoNewExperiment": {
+          "domain": "dataset-admission",
+          "proof": "tests/system/py/test_linked_experiment_payloads.py",
+          "overloads": 1
+        },
+        "locateDataFolder": {
+          "domain": "dataset-admission",
+          "proof": "tests/system/py/test_linked_experiment_payloads.py",
+          "overloads": 1
+        },
+        "locateDataFile": {
+          "domain": "dataset-admission",
+          "proof": "tests/system/py/test_linked_experiment_payloads.py",
+          "overloads": 1
+        },
+        "downloadCollectionData": {
+          "domain": "collection-fill",
+          "proof": "tests/system/py/test_fetch_operation_ownership.py",
+          "overloads": 1
+        },
+        "setScanViewShown": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "removeStructure": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "createStructure": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "duplicateStructure": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "setParametersFree": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "namePointsByPosition": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "nameTermsByOrder": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "estimateBackground": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "removeExperiment": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "createExperiment": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "duplicateExperiment": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "useAsTemplate": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "setNewExperimentType": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "setExperimentType": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "undo": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "applyText": {
+          "domain": "model-publication",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "parameterNamed": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        }
+      },
+      "property_writers": {
+        "setAdjusting": {
+          "bindings": 1,
+          "domain": "held value",
+          "proof": "tests/system/py/test_held_edit_settlement_truth.py"
+        },
+        "setAuthors": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setColourScheme": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setCurrentExperimentIndex": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setCurrentStructureIndex": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setDescription": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setIncludeDataOnSave": {
+          "bindings": 1,
+          "domain": "save choice",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setMapDirection": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setName": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setPatternDSpacing": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setStackedSpacing": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setSuRule": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setTitle": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setEvolutionErrorBars": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/unit/app/tst_scan_view_content.qml"
+        },
+        "setEvolutionRangeWithSu": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/unit/app/tst_scan_view_content.qml"
+        }
+      }
+    },
+    "OnlineSearch": {
+      "header": "app/src/online_search.hpp",
+      "entries": {
+        "field": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "rememberedSelection": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "search": {
+          "domain": "query-generation",
+          "proof": "tests/system/py/test_query_operation_ownership.py",
+          "overloads": 1
+        },
+        "useAlternative": {
+          "domain": "query-generation",
+          "proof": "tests/system/py/test_query_operation_ownership.py",
+          "overloads": 1
+        },
+        "reset": {
+          "domain": "query-generation",
+          "proof": "tests/system/py/test_query_operation_ownership.py",
+          "overloads": 1
+        },
+        "cancelLoads": {
+          "domain": "query-generation",
+          "proof": "tests/system/py/test_query_operation_ownership.py",
+          "overloads": 1
+        },
+        "loadMore": {
+          "domain": "query-generation",
+          "proof": "tests/system/py/test_cod_query_ownership.py",
+          "overloads": 1
+        },
+        "prepare": {
+          "domain": "query-generation",
+          "proof": "tests/system/py/test_query_operation_ownership.py",
+          "overloads": 1
+        },
+        "recall": {
+          "domain": "query-generation",
+          "proof": "tests/system/py/test_query_operation_ownership.py",
+          "overloads": 1
+        },
+        "clear": {
+          "domain": "query-generation",
+          "proof": "tests/system/py/test_query_operation_ownership.py",
+          "overloads": 1
+        },
+        "setField": {
+          "domain": "query-generation",
+          "proof": "tests/system/py/test_query_operation_ownership.py",
+          "overloads": 1
+        },
+        "rememberSelection": {
+          "domain": "query-generation",
+          "proof": "tests/system/py/test_query_operation_ownership.py",
+          "overloads": 1
+        },
+        "load": {
+          "domain": "checked-input",
+          "proof": "tests/system/py/test_file_fetch_owner_boundaries.py",
+          "overloads": 1
+        },
+        "loadMany": {
+          "domain": "checked-input",
+          "proof": "tests/system/py/test_file_fetch_owner_boundaries.py",
+          "overloads": 1
+        },
+        "fieldKeys": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        }
+      },
+      "property_writers": {
+        "setKind": {
+          "bindings": 1,
+          "domain": "query selection",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setSourceId": {
+          "bindings": 1,
+          "domain": "query selection",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        }
+      }
+    },
+    "FitViewModel": {
+      "header": "app/src/fit_view_model.hpp",
+      "entries": {
+        "start": {
+          "domain": "fit-operation",
+          "proof": "tests/system/py/test_fetch_operation_ownership.py",
+          "overloads": 1
+        },
+        "cancel": {
+          "domain": "fit-operation",
+          "proof": "tests/system/py/test_fetch_operation_ownership.py",
+          "overloads": 1
+        },
+        "reset": {
+          "domain": "fit-operation",
+          "proof": "tests/system/py/test_fetch_operation_ownership.py",
+          "overloads": 1
+        },
+        "undo": {
+          "domain": "fit-operation",
+          "proof": "tests/system/py/test_fetch_operation_ownership.py",
+          "overloads": 1
+        }
+      },
+      "property_writers": {
+        "setFollowing": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setPatternUpdates": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        }
+      }
+    },
+    "OnlineSourcesModel": {
+      "header": "app/src/online_sources.hpp",
+      "entries": {
+        "urlOf": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "urlsOf": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "nameOf": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "kindsOf": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "isCod": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "add": {
+          "domain": "source configuration",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "remove": {
+          "domain": "source configuration",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "setEnabled": {
+          "domain": "source configuration",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "setName": {
+          "domain": "source configuration",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "setUrl": {
+          "domain": "source configuration",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "setKinds": {
+          "domain": "source configuration",
+          "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        }
+      },
+      "property_writers": {}
+    },
+    "ParameterItem": {
+      "header": "app/src/parameter_item.hpp",
+      "entries": {
+        "sliderHalfWidth": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        },
+        "displayText": {
+          "domain": "read-only query",
+          "proof": null,
+          "overloads": 1
+        }
+      },
+      "property_writers": {
+        "setFree": {
+          "bindings": 1,
+          "domain": "synchronous model or presentation",
+          "proof": "tests/system/py/test_operation_contracts.py"
+        },
+        "setValue": {
+          "bindings": 1,
+          "domain": "held value",
+          "proof": "tests/system/py/test_held_edit_settlement_truth.py"
+        }
+      }
+    }
+  },
+  "boundaries": [
+    {
+      "entry": "Session::beginSave",
+      "owner": "save operation through held settlement",
+      "proof": "test_request_owner_boundaries.py"
+    },
+    {
+      "entry": "ProjectViewModel::fetchCollectionData",
+      "owner": "each waiter and its admitted dependency set",
+      "proof": "test_fetch_operation_ownership.py"
+    },
+    {
+      "entry": "ProjectViewModel::publishFilledData",
+      "owner": "retained project through every synchronous subscriber",
+      "proof": "test_fetch_operation_ownership.py"
+    },
+    {
+      "entry": "edi_app::fetch_from / edi_app::fetch_url",
+      "owner": "tutorial, example, checked-file or query request",
+      "proof": "test_file_fetch_owner_boundaries.py"
+    },
+    {
+      "entry": "QFile / QDir / std::filesystem copy and rename; core archive and browser write",
+      "owner": "sealed exact save snapshot at user publication",
+      "proof": "test_sealed_publication_contract.py"
+    },
+    {
+      "entry": "ApplicationInfo::afterChanges / ApplicationInfo::projectWindowClosing",
+      "owner": "held dirty truth with deferred notifications",
+      "proof": "test_held_edit_native_guards.py"
+    },
+    {
+      "entry": "Session browser finishOpen and stored/recovery open",
+      "owner": "current owner, replacement generation and held revision",
+      "proof": "test_held_edit_loss_guards.py"
+    },
+    {
+      "entry": "OnlineSearch::search / fetch / loadChunk / loadMore",
+      "owner": "each COD count, detail, list and page continuation retains query generation",
+      "proof": "test_cod_query_ownership.py"
+    },
+    {
+      "entry": "ProjectViewModel::settleHeld / ProjectViewModel::edited",
+      "owner": "dirty truth remains visible inside the settlement notification, before any save",
+      "proof": "test_held_edit_settlement_truth.py"
+    },
+    {
+      "entry": "ProjectViewModel::saveTo from a separate public-header consumer",
+      "owner": "an unowned caller cannot borrow a pending operation through the legacy delegate",
+      "proof": "test_public_save_boundary.py"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "cases": {
+    "corpus:lif-xray-s1/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "76917b3672c7268e7fee9fb901c0ed8ffdd5ffcf29c6fc1083d470ad5b501e72",
+        "experiments/cu_ka.edi": "9fb985ff9604f1beb98a6cfedb721b154b9819d7f816bcc159b033db3d2b09d8",
+        "project.edi": "efa38eadd5af94f919ccb2c5ba29cd7f775bd5bf01954ac6e5d87fdfa5958866",
+        "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe"
+      },
+      "saved_sha256": {
+        "analysis/analysis.edi": "76917b3672c7268e7fee9fb901c0ed8ffdd5ffcf29c6fc1083d470ad5b501e72",
+        "experiments/cu_ka.edi": "9fb985ff9604f1beb98a6cfedb721b154b9819d7f816bcc159b033db3d2b09d8",
+        "project.edi": "cc99ff3508f4d995d8bc99edbb05ea0273095b92b92c0bb94ad53538048475a0",
+        "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe"
+      },
+      "source_commit": "4f5e75876ef190ff501ae1c5cd0e8af295a91f8f"
+    },
+    "repo:docs/user/cli/pd-xray-cwl_lif_single/project": {
+      "input_sha256": {
+        "analysis/analysis.edi": "76917b3672c7268e7fee9fb901c0ed8ffdd5ffcf29c6fc1083d470ad5b501e72",
+        "experiments/cu_ka.edi": "9fb985ff9604f1beb98a6cfedb721b154b9819d7f816bcc159b033db3d2b09d8",
+        "project.edi": "efa38eadd5af94f919ccb2c5ba29cd7f775bd5bf01954ac6e5d87fdfa5958866",
+        "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe"
+      },
+      "saved_sha256": {
+        "analysis/analysis.edi": "76917b3672c7268e7fee9fb901c0ed8ffdd5ffcf29c6fc1083d470ad5b501e72",
+        "experiments/cu_ka.edi": "9fb985ff9604f1beb98a6cfedb721b154b9819d7f816bcc159b033db3d2b09d8",
+        "project.edi": "cc99ff3508f4d995d8bc99edbb05ea0273095b92b92c0bb94ad53538048475a0",
+        "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe"
+      },
+      "source_commit": "fca2355019ff26f5f1bcf9e7696e7cdd00af6697"
+    }
+  },
+  "goldens": {},
+  "kind": " post-feature regression pins"
+}

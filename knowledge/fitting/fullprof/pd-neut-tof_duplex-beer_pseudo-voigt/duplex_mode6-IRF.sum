@@ -1,0 +1,696 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 05/10/2026  Time: 15:59:21.698                              
+
+ => PCR file code: duplex_mode6-IRF
+ => DAT file code: Duplex_in_HR_for_IRF -> Relative contribution: 0.5000                                                            
+ => DAT file code: Duplex_in_HR_for_IRF -> Relative contribution: 0.5000                                                            
+ => Title:Duplex high-resolution
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => Neutron Time-Of-Flight data                                                                                                     
+ => Abcisa variable is T.O.F. in microsecs
+ => The    7th default profile function was selected
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  2
+
+ => Global Refinement of neutron powder data                                                                                        
+ => Neutron Time-Of-Flight data                                                                                                     
+ => Abcisa variable is T.O.F. in microsecs
+ => The    7th default profile function was selected
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
+ => Analysis of refinement at the end
+ => Absorption correction type: 2
+ => Base of peaks: 2.0*HW*   12.00
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  2
+ => Analysis of refinement at the end
+ => Absorption correction type: 2
+ => Base of peaks: 2.0*HW*   12.00
+ ==> T.O.F. range, and number of points:
+    TOFmin:   40158.230469  TOFmax:  135592.468750
+    No. of points:   2997
+ ==> T.O.F. range, and number of points:
+    TOFmin:   40158.230469  TOFmax:  135592.468750
+    No. of points:   2997
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ =>-------> Pattern#  2
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    7.716 g/cm3
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 2
+ =>-------> Pattern#  2
+ => Crystal Structure Refinement for phase: 2
+ => The density (volumic mass) of phase 2 is:    7.649 g/cm3
+ => Scor: 3.3513
+ => Scor: 3.4676
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:   75
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 ferrite                                 I m -3 m            
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:    13  
+
+ =>  No. of reflections for pattern#:   2:    13  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Fe      0.00000(   0)  0.00000(   0)  0.00000(   0)  1.715( 16)  0.021(  0)    2
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              2.88600   0.00000
+                              2.88600   0.00000
+                              2.88600   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :    401.463745117     2.162075281
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       311.707245   22.111452
+      1283.621948  111.218941
+       893.654297  111.377541
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         5.033041    0.391590
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        2.886000    0.000000
+        2.886000    0.000000
+        2.886000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         1.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  2
+
+ => Cell parameters      :
+                              2.88600   0.00000
+                              2.88600   0.00000
+                              2.88600   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :    403.594787598     2.171180010
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       325.255157   22.317825
+      1249.421753  112.284866
+       914.509216  112.449272
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         5.028535    0.393048
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        2.886000    0.000000
+        2.886000    0.000000
+        2.886000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         1.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+------------------------------------------------------------------------------
+ => Phase No.  2 austenite                               F m -3 m            
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:    15  
+
+ =>  No. of reflections for pattern#:   2:    15  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Fe      0.00000(   0)  0.00000(   0)  0.00000(   0)  1.715( 16)  0.021(  0)    4
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              3.64680   0.00000
+                              3.64680   0.00000
+                              3.64680   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :     96.170562744     0.449066430
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       311.710754   22.111452
+      1283.602051  111.218941
+       893.678101  111.377541
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         5.033041    0.391590
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        3.646800    0.000000
+        3.646800    0.000000
+        3.646800    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         1.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  2
+
+ => Cell parameters      :
+                              3.64680   0.00000
+                              3.64680   0.00000
+                              3.64680   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :     95.868385315     0.448092431
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+       325.249146   22.317825
+      1249.243530  112.284866
+       914.368164  112.449272
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         5.029535    0.393048
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        3.646800    0.000000
+        3.646800    0.000000
+        3.646800    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         1.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter for TOF_pV (unused): 
+        0.000000    0.000000    0.000000
+        0.000000    0.000000    0.000000
+        0.000000    0.000000
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:   -10.2905    0.2313
+ => Background Parameters (linear interpolation)  ==>
+                                0.169253E-01   0.955974E-01
+                                0.148443       0.111394    
+                                0.184811       0.122921    
+                                0.197497       0.665329E-01
+                                0.189096       0.546731E-01
+                                0.214692       0.565183E-01
+                                0.188691       0.312239E-01
+                                0.219387       0.262402E-01
+                                0.199118       0.201187E-01
+                                0.198109       0.210589E-01
+                                0.227615       0.499803E-01
+                                0.243913       0.282899E-01
+                                0.290687       0.254461E-01
+                                0.306718       0.280561E-01
+                                0.324207       0.321529E-01
+                                0.297289       0.231862E-01
+                                0.257504       0.202368E-01
+                                0.232090       0.138654E-01
+                                0.215810       0.125889E-01
+                                0.169394       0.780091E-02
+                                0.239999       0.854447E-02
+                                0.433494       0.316411E-01
+                                0.437492       0.329306E-01
+                                0.342705       0.172840E-01
+                                0.533897       0.216355E-01
+                                0.953706       0.513200E-01
+                                 1.16681       0.761314E-01
+                                 1.11639       0.699109E-01
+                                0.916126       0.521494E-01
+                                0.688470       0.238858E-01
+                                0.692000E-01    0.00000    
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):  54902.19      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):      0.00      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle: 10
+ => N-P+C:  2783
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  5.17     Rwp:  7.20     Rexp:    1.92 Chi2:  14.1      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  5.53     Rwp:  7.56     Rexp:    2.01 Chi2:  14.1    
+ => Deviance:   115.         Dev*  :  0.2657E-01
+ => DW-Stat.:    0.3292     DW-exp:     1.9095
+ => N-sigma of the GoF:      489.453
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  1421
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  5.04     Rwp:  7.02     Rexp:    1.39 Chi2:  25.3      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  5.24     Rwp:  7.24     Rexp:    1.44 Chi2:  25.3    
+ => Deviance:   107.         Dev*  :  0.5066E-01
+ => DW-Stat.:    0.3597     DW-exp:     1.8889
+ => N-sigma of the GoF:      647.907
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  2
+
+
+ => Zero-point:    -2.0891    0.2314
+ => Background Parameters (linear interpolation)  ==>
+                                0.253883E-01   0.128748    
+                                0.174945       0.117903    
+                                0.209766       0.133322    
+                                0.202616       0.713765E-01
+                                0.213735       0.564390E-01
+                                0.254235       0.623936E-01
+                                0.180572       0.305415E-01
+                                0.224192       0.265393E-01
+                                0.204400       0.207278E-01
+                                0.199123       0.215725E-01
+                                0.245940       0.515134E-01
+                                0.239660       0.281243E-01
+                                0.280662       0.252212E-01
+                                0.302864       0.278517E-01
+                                0.335233       0.325284E-01
+                                0.276620       0.220802E-01
+                                0.254157       0.198379E-01
+                                0.236590       0.141152E-01
+                                0.223316       0.130083E-01
+                                0.176107       0.802091E-02
+                                0.234458       0.851950E-02
+                                0.426267       0.312085E-01
+                                0.445546       0.335916E-01
+                                0.346426       0.172770E-01
+                                0.529873       0.214578E-01
+                                0.941366       0.512697E-01
+                                 1.15625       0.752990E-01
+                                 1.05743       0.679160E-01
+                                0.961733       0.542521E-01
+                                0.685556       0.239246E-01
+                                0.692000E-01    0.00000    
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):  54902.19      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):      0.00      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  2
+
+  => Cycle:  1 => MaxCycle: 10
+ => N-P+C:  2783
+ =>  R-factors (not corrected for background) for Pattern:  2
+ => Rp:  4.80     Rwp:  7.06     Rexp:    1.92 Chi2:  13.5      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  2
+ => Rp:  5.14     Rwp:  7.42     Rexp:    2.02 Chi2:  13.5    
+ => Deviance:   110.         Dev*  :  0.2558E-01
+ => DW-Stat.:    0.3498     DW-exp:     1.9095
+ => N-sigma of the GoF:      465.973
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  2
+
+ => N-P+C:  1422
+ =>  R-factors (not corrected for background) for Pattern:  2
+ => Rp:  4.66     Rwp:  6.84     Rexp:    1.40 Chi2:  23.9      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  2
+ => Rp:  4.85     Rwp:  7.05     Rexp:    1.44 Chi2:  23.9    
+ => Deviance:   102.         Dev*  :  0.4885E-01
+ => DW-Stat.:    0.3872     DW-exp:     1.8889
+ => N-sigma of the GoF:      609.491
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   27.0    
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     ferrite
+ => Bragg R-factor:   4.15       Vol:   24.037( 0.000)  Fract(%):   50.85( 0.33)
+ => Rf-factor=  4.51             ATZ:         111.658   Brindley:  1.0000
+
+ => Phase:  2     austenite
+ => Bragg R-factor:   2.73       Vol:   48.499( 0.000)  Fract(%):   49.15( 0.29)
+ => Rf-factor=  4.43             ATZ:         223.317   Brindley:  1.0000
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  2
+     -----------------------------------------------------
+
+ => Phase:  1     ferrite
+ => Bragg R-factor:   4.27       Vol:   24.037( 0.000)  Fract(%):   51.06( 0.33)
+ => Rf-factor=  5.27             ATZ:         111.658   Brindley:  1.0000
+
+ => Phase:  2     austenite
+ => Bragg R-factor:   2.10       Vol:   48.499( 0.000)  Fract(%):   48.94( 0.29)
+ => Rf-factor=  3.86             ATZ:         223.317   Brindley:  1.0000
+
+
+       ----------------------------------------------------
+       -    ANALYSIS OF THE REFINEMENT FOR PATTERN #  1   -
+       ----------------------------------------------------
+
+
+ => GLOBAL INDICATORS:
+
+    The first and last reflections appears at:
+    2theta(degrees)/T.O.F(microsecs)/Energy(KeV) =>      40869.188    115595.508
+    s (angstroms-1) =>     1.3434    0.4750
+    D (angstroms  ) =>     0.7444    2.1055
+    sin(theta/lamb) =>     0.6717    0.2375
+    Q (angstroms-1) =>    16.8812    5.9684
+
+    The average FWHM is: 145.1286  Fwhm(av)/step =   4.5561
+
+ => Sum(Yiobs-Yical):      159.21     -95.79       9.47     264.19 <- Four regions
+            Total ->       337.09
+
+  Expected Rp (background uncorrected):     0.69 Observed->     5.17
+  Expected cRp(background   corrected):     0.73 Observed->     5.53
+  -> Ratio Rp/Exp=cRp/cExp:     7.53
+  Weighted Average Bragg R-factor:     3.45
+  Weighted Average      RF-factor:     4.47
+  Reduced Chi-square :    25.31
+
+ => Total number of "independent" reflections:     16
+    Effective number (account for resolution) of reflections: 
+                      at level p=1.00  :   8.0
+                      at level p=0.50  :   8.0
+                      at level p=0.25  :   8.0
+
+    A reflection contributes as x/(x+nearest), where "x"  
+    is the fraction of the total area of the current phase and 
+   "nearest" is the number of adjacent reflections verifying the formula:
+
+    Postn-p*FWHM <= Postn(adjacent) <= Postn+p*FWHM 
+
+   "nearest" is weighted by the corresponding "x(s)" 
+
+ =>             Number of global  refined parameters:     31
+                Number of profile refined parameters:      6
+    Number of intensity-affecting refined parameters:      1
+      (Preferred orientation belongs to this class)   
+
+ => (Effective Number of reflections)/(Number of intensity parameters)= refni
+      Ratio ( Optimistic view,p=0.25):    8.0
+      Ratio (Pessimistic view,p=1.00):    8.0
+      Ratio (   Eclectic view,p=0.50):    8.0
+
+ => PHASE DEPENDENT INDICATORS:
+
+ => Positions and FWHM of the sharpest reflection
+
+     Phase  2Theta/TOF  FWHM     Q       DQ      Delta   Dd/d(%)
+
+       1   42346.93 101.6999  16.2921  0.03913  0.07425  0.240
+       2   40869.19  99.8063  16.8812  0.04123  0.03428  0.244
+
+   Q ,DQ(FWHM in Q-space) and Delta are given in 1/angstroms
+ Delta is the expected step between consecutive reflections at Q
+
+ Phase    %Cont  Nintdp  Nprofp   Nref      Enref(Effective)
+                                         R:p=1  R:p=1/2  R:p=1/4
+     1   50.97       1       5       7    3.57    3.57    3.57
+                                          3.57    3.57    3.57
+     2   49.03       0       1       9    4.41    4.41    4.41
+                                          4.41    4.41    4.41
+  Where:
+  %Cont: percentage of the total integrated intensity (100x)
+ Nintdp: Number of intensity-affecting refined parameters
+ Nprofp: Number of profile refined parameters
+   Nref: Number "independent" contributing reflections
+  Enref: Effective Number of reflections for each p-value
+R:p=1/n: Ratio Enref(Effective)/Nintdp <- "Solvability Index" 
+
+
+ => ANALYSIS OF STANDARD DEVIATIONS
+
+    Phase:  1 Degrees of freedom for p=1, 1/2, 1/4:             2.57            2.57            2.57
+              Chi2 based on integrated intensities:          3317.20         3317.20         3317.20
+    Phase:  2 Degrees of freedom for p=1, 1/2, 1/4:             4.41            4.41            4.41
+              Chi2 based on integrated intensities:           997.56          997.56          997.56
+              Calculated with Scott'S FORMULA     :  4949.06 4949.06 4949.06
+
+ => Standard deviations concern the PRECISION of parameters and
+    represent ACCURACY only if there is no systematic errors
+    A better estimate of the accuracy of structural parameters
+    is obtained multiplying sigmas by the parameter SCOR
+ -> SCOR =   3.3513 { Berar'S FORMULA}
+ -> SCOR =   2.1345 {Pawley'S FORMULA}
+ -> Application of modified Scott'S FORMULA
+    SCOR(p=1,1/2,1/4) =            11.45           11.45           11.45
+    SCOR(p=1,1/2,1/4) =             6.28            6.28            6.28
+    SCOR(expected Si) =      13.9843     13.9843     13.9843
+   Warning! Do not take into account Scott'S SCOR
+            These indicators are under test....
+
+ => ANALYSIS OF CORRELATED PARAMETERS 
+
+  -> The parameter:    1 appears   2 times
+  -> The parameter:    4 appears   2 times
+  -> The parameter:    5 appears   2 times
+  -> The parameter:    8 appears   2 times
+  -> The parameter:   10 appears   2 times
+  -> The number of correlated parameters is :   5
+
+ => WARNING!:
+  Reduced Chi-square  TOO HIGH, the model is probably good but
+  the residuals are dominated by systematic errors in profile.
+
+
+       ----------------------------------------------------
+       -    ANALYSIS OF THE REFINEMENT FOR PATTERN #  2   -
+       ----------------------------------------------------
+
+
+ => GLOBAL INDICATORS:
+
+    The first and last reflections appears at:
+    2theta(degrees)/T.O.F(microsecs)/Energy(KeV) =>      40869.188    115595.508
+    s (angstroms-1) =>     1.3434    0.4750
+    D (angstroms  ) =>     0.7444    2.1055
+    sin(theta/lamb) =>     0.6717    0.2375
+    Q (angstroms-1) =>    16.8812    5.9684
+
+    The average FWHM is: 145.3912  Fwhm(av)/step =   4.5643
+
+ => Sum(Yiobs-Yical):      170.46     -74.85       0.35     234.07 <- Four regions
+            Total ->       330.03
+
+  Expected Rp (background uncorrected):     0.71 Observed->     4.80
+  Expected cRp(background   corrected):     0.76 Observed->     5.14
+  -> Ratio Rp/Exp=cRp/cExp:     6.78
+  Weighted Average Bragg R-factor:     3.21
+  Weighted Average      RF-factor:     4.58
+  Reduced Chi-square :    23.86
+
+ => Total number of "independent" reflections:     16
+    Effective number (account for resolution) of reflections: 
+                      at level p=1.00  :   8.0
+                      at level p=0.50  :   8.0
+                      at level p=0.25  :   8.0
+
+    A reflection contributes as x/(x+nearest), where "x"  
+    is the fraction of the total area of the current phase and 
+   "nearest" is the number of adjacent reflections verifying the formula:
+
+    Postn-p*FWHM <= Postn(adjacent) <= Postn+p*FWHM 
+
+   "nearest" is weighted by the corresponding "x(s)" 
+
+ =>             Number of global  refined parameters:     31
+                Number of profile refined parameters:      6
+    Number of intensity-affecting refined parameters:      1
+      (Preferred orientation belongs to this class)   
+
+ => (Effective Number of reflections)/(Number of intensity parameters)= refni
+      Ratio ( Optimistic view,p=0.25):    8.0
+      Ratio (Pessimistic view,p=1.00):    8.0
+      Ratio (   Eclectic view,p=0.50):    8.0
+
+ => PHASE DEPENDENT INDICATORS:
+
+ => Positions and FWHM of the sharpest reflection
+
+     Phase  2Theta/TOF  FWHM     Q       DQ      Delta   Dd/d(%)
+
+       1   42346.93 101.8513  16.2921  0.03919  0.07425  0.241
+       2   40869.19  99.9754  16.8812  0.04130  0.03428  0.245
+
+   Q ,DQ(FWHM in Q-space) and Delta are given in 1/angstroms
+ Delta is the expected step between consecutive reflections at Q
+
+ Phase    %Cont  Nintdp  Nprofp   Nref      Enref(Effective)
+                                         R:p=1  R:p=1/2  R:p=1/4
+     1   51.29       1       5       7    3.59    3.59    3.59
+                                          3.59    3.59    3.59
+     2   48.71       0       1       9    4.38    4.38    4.38
+                                          4.38    4.38    4.38
+  Where:
+  %Cont: percentage of the total integrated intensity (100x)
+ Nintdp: Number of intensity-affecting refined parameters
+ Nprofp: Number of profile refined parameters
+   Nref: Number "independent" contributing reflections
+  Enref: Effective Number of reflections for each p-value
+R:p=1/n: Ratio Enref(Effective)/Nintdp <- "Solvability Index" 
+
+
+ => ANALYSIS OF STANDARD DEVIATIONS
+
+    Phase:  1 Degrees of freedom for p=1, 1/2, 1/4:             2.59            2.59            2.59
+              Chi2 based on integrated intensities:          3921.77         3921.77         3921.77
+    Phase:  2 Degrees of freedom for p=1, 1/2, 1/4:             4.38            4.38            4.38
+              Chi2 based on integrated intensities:           916.55          916.55          916.55
+              Calculated with Scott'S FORMULA     :  4661.51 4661.51 4661.51
+
+ => Standard deviations concern the PRECISION of parameters and
+    represent ACCURACY only if there is no systematic errors
+    A better estimate of the accuracy of structural parameters
+    is obtained multiplying sigmas by the parameter SCOR
+ -> SCOR =   3.4676 { Berar'S FORMULA}
+ -> SCOR =   2.1364 {Pawley'S FORMULA}
+ -> Application of modified Scott'S FORMULA
+    SCOR(p=1,1/2,1/4) =            12.82           12.82           12.82
+    SCOR(p=1,1/2,1/4) =             6.20            6.20            6.20
+    SCOR(expected Si) =      13.9781     13.9781     13.9781
+   Warning! Do not take into account Scott'S SCOR
+            These indicators are under test....
+
+ => ANALYSIS OF CORRELATED PARAMETERS 
+
+  -> The parameter:    8 appears   2 times
+  -> The parameter:   11 appears   2 times
+  -> The parameter:   12 appears   2 times
+  -> The parameter:   14 appears   2 times
+  -> The parameter:   15 appears   2 times
+  -> The number of correlated parameters is :   5
+
+ => WARNING!:
+  Reduced Chi-square  TOO HIGH, the model is probably good but
+  the residuals are dominated by systematic errors in profile.
+
+ 
+              CPU Time:     0.984 seconds
+                            0.016 minutes
+
+ => Run finished at:     Date: 05/10/2026  Time: 15:59:22.674                              

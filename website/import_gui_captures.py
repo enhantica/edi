@@ -1,0 +1,1107 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
+"""Import a validated native walkthrough and generate its illustrated documentation."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import html
+import json
+import math
+import re
+import shutil
+from itertools import starmap
+from pathlib import Path
+
+from checks.gui_capture import validate_bundle
+from render_interfaces import screenshot_radius
+
+ROOT = Path(__file__).resolve().parent
+DOCS = ROOT / 'surfaces/docs'
+LABELS = {
+    'appBar': (
+        'Workflow navigation',
+        'Move between Home, Project, Structure, Experiment, Analysis and Report.',
+    ),
+    'statusBar': (
+        'Status bar',
+        'Read project counts, messages, calculation and fitting state here.',
+    ),
+    'home.start': ('Start', 'Begin a new analysis on the Project page.'),
+    'project.create': ('Create a new project', 'Open the project-details form.'),
+    'group.getStarted': ('Get started', 'Create a project or open an existing one.'),
+    'createProject.name': ('Name', 'Use a short project identifier.'),
+    'createProject.title': ('Title', 'Give the analysis a descriptive title.'),
+    'createProject.description': ('Description', 'Record the sample, measurement and purpose.'),
+    'createProject.location': ('Location', 'Choose where the project will be saved.'),
+    'structures.load': ('Load structure', 'Import the structure file for this example.'),
+    'structures.list': (
+        'Structures',
+        'Select the structure whose cell and atom sites you want to inspect.',
+    ),
+    'experiments.load': (
+        'Load experiment',
+        'Import the experiment file, including measured intensities and instrument settings.',
+    ),
+}
+
+LABELS.update({
+    'instrument.setup_wavelength': (
+        'Wavelength',
+        'Enter the wavelength used for this measurement, in ångströms.',
+    ),
+    'peak.type': ('Profile', 'Choose the peak-shape model for this measurement.'),
+    'peak.broad_gauss_u': ('U', 'Set the starting Gaussian width coefficient U.'),
+    'peak.broad_gauss_v': ('V', 'Set the starting Gaussian width coefficient V.'),
+    'peak.broad_gauss_w': ('W', 'Set the starting Gaussian width coefficient W.'),
+    'background_estimate.n_points': (
+        'Number of points',
+        'Choose the number of background anchors before estimating the baseline.',
+    ),
+    'group.parameters': (
+        'Parameters',
+        'Inspect values, uncertainties, bounds and the free parameter set.',
+    ),
+    'parameters.freeHeader': (
+        'Free parameters',
+        'Open the free header menu to fix or free the parameters matching the current filters.',
+    ),
+    'group.examples': (
+        'Built-in examples',
+        'Search or filter the example catalogue and select a case.',
+    ),
+    'project.openChoice': ('Project source', 'Choose a folder or a zip archive.'),
+    'project.saveChoice': ('Save options', 'Choose the output format and whether to save a copy.'),
+    'structures.create': ('Create structure', 'Add a starting structure to edit.'),
+    'structures.duplicate': ('Duplicate structure', 'Copy the selected structure.'),
+    'spaceGroup.itNumber': ('Space-group number', 'Select the symmetry of your model.'),
+    'spaceGroup.nameHM': ('Space-group symbol', 'Check the Hermann-Mauguin symbol and setting.'),
+    'cell.length_a': ('Cell length a', 'Inspect the cell length and its uncertainty.'),
+    'cell.length_b': ('Cell length b', 'Values controlled by symmetry are linked.'),
+    'cell.length_c': ('Cell length c', 'Use the cell convention of the selected space group.'),
+    'atomSites.list': (
+        'Atom sites',
+        'Inspect atom types, fractional coordinates and occupancies.',
+    ),
+    'experiments.list': ('Experiments', 'Select the measurement to inspect.'),
+    'experiments.loadData.0': (
+        'Measured-data file',
+        'Load the observed intensities for this experiment.',
+    ),
+    'experiments.create': (
+        'Create experiment',
+        'Add an experiment and choose its measurement type.',
+    ),
+    'background.type': ('Background model', 'Choose the background representation.'),
+    'background.rows': (
+        'Background values',
+        'Inspect or edit the values in the selected representation.',
+    ),
+    'excludedRegions.list': (
+        'Excluded intervals',
+        'Set the boundaries of regions omitted from fitting.',
+    ),
+    'linkedStructure.list': (
+        'Linked structures',
+        'Inspect phase links, scales and derived fractions.',
+    ),
+    'fittingMode.type': ('Fitting mode', 'The available choices depend on the project.'),
+    'report.writesHtml': ('HTML report', 'Select an HTML document.'),
+    'report.writesPdf': ('PDF report', 'Select a PDF document.'),
+    'report.writesCif': ('CIF report', 'Select a crystallographic report.'),
+    'report.save': ('Save report', 'Write the selected report formats.'),
+    'group.su_format': (
+        'Standard uncertainties',
+        'Choose how values and their standard uncertainties are written.',
+    ),
+    'group.appearance': (
+        'Appearance',
+        'Choose atom sizes, display scale and displacement ellipsoids.',
+    ),
+    'group.scattering_length': (
+        'Scattering lengths',
+        'Set custom neutron scattering lengths for atom types in this structure.',
+    ),
+    'group.scattering_source': (
+        'Scattering source',
+        'Choose the neutron scattering-length reference used by the experiment.',
+    ),
+    'group.instrument': (
+        'Instrument',
+        'Inspect the measurement conditions and calibration parameters.',
+    ),
+    'group.peak': ('Peak profile', 'Choose the peak shape and edit its profile parameters.'),
+    'group.data': ('Measured data', 'Inspect the measured range, intensities and uncertainties.'),
+    'group.absorption': (
+        'Absorption',
+        'Choose the sample absorption model and its physical parameters.',
+    ),
+    'group.preferred_orientation': (
+        'Preferred orientations',
+        'Set preferred directions and March parameters for linked structures.',
+    ),
+    'group.alias': ('Aliases', 'Give parameters short names for use in constraint expressions.'),
+    'group.constraint': (
+        'Constraints',
+        'Define relations between aliased parameters and enable the relations to apply.',
+    ),
+    'group.minimizer': ('Minimizer', 'Choose the descent strategy and convergence settings.'),
+    'group.shownParameters': (
+        'Parameters shown',
+        'Choose which additional parameter groups appear alongside free parameters.',
+    ),
+    'group.patternUpdates': (
+        'Pattern updates during a scan',
+        'Choose how often the display updates while a scan is fitted.',
+    ),
+    'peak.cutoff_fwhm': (
+        'Peak cutoff',
+        'Set the peak calculation window in multiples of the full width at half maximum.',
+    ),
+    'fitStart.list': (
+        'Fit start values',
+        'Inspect the free parameters before the last fit; use Undo to restore that state.',
+    ),
+})
+
+
+PAGE_INTRODUCTIONS = {
+    'project': 'Create or open a project and keep its details together.',
+    'structure': 'Inspect the crystal structure and edit its symmetry, cell and atom sites.',
+    'experiment': (
+        'Compare the measured pattern with the calculation and configure the measurement model.'
+    ),
+    'analysis': (
+        'Choose parameters to fit, run the fit and inspect the pattern and parameter correlations.'
+    ),
+    'report': 'Review the results and choose what to include in an exported report.',
+}
+MAIN_VIEW_DESCRIPTIONS = {
+    'project': {
+        'Project': ('Read the project details, location, structures and experiments in one view.')
+    },
+    'structure': {
+        'Structure': (
+            'Inspect the selected crystal structure and its unit cell in the interactive view.'
+        )
+    },
+    'experiment': {
+        'Pattern': (
+            'Compare measured and calculated intensities, reflection marks and the '
+            'residual pattern.'
+        )
+    },
+    'analysis': {
+        'Pattern': (
+            'Inspect the fitted pattern, residual and agreement factors for the selected '
+            'experiment.'
+        ),
+        'Correlations': (
+            'Inspect correlations between fitted parameters to identify strongly coupled values.'
+        ),
+    },
+    'report': {
+        'Report': (
+            'Read the report preview for the current model and results before exporting it.'
+        )
+    },
+}
+SIDEBAR_DESCRIPTIONS = {
+    (
+        'project',
+        'Main',
+    ): 'Create or open a project, browse built-in examples and return to recent work.',
+    (
+        'structure',
+        'Main',
+    ): ('Select a structure and edit its symmetry, cell, atom sites and displacement parameters.'),
+    (
+        'experiment',
+        'Main',
+    ): (
+        'Choose an experiment and edit its instrument, profile, background and linked structures.'
+    ),
+    (
+        'analysis',
+        'Main',
+    ): ('Choose free parameters, inspect their values and bounds, and adjust the selected value.'),
+    (
+        'report',
+        'Main',
+    ): 'Choose output formats, save locations and the sections included in the report.',
+    (
+        'project',
+        'Extra',
+    ): 'Choose how standard uncertainties are displayed in the project data.',
+    ('structure', 'Extra'): 'Adjust the structure appearance and scattering-length settings.',
+    (
+        'experiment',
+        'Extra',
+    ): 'Configure intensity corrections, scattering sources and background estimation.',
+    (
+        'analysis',
+        'Extra',
+    ): 'Configure fitting modes, minimizers, parameter aliases and constraints.',
+}
+SHARED_SIDEBAR_DESCRIPTIONS = {
+    'Text': "Inspect or edit this page's project data in its text representation.",
+    'Settings': (
+        'Choose which parameters are shown and how the displayed pattern updates during a scan.'
+    ),
+}
+
+
+def label(target: str, page: str, native_label: str = '') -> tuple[str, str]:
+    if target in LABELS:
+        return LABELS[target]
+    if target.endswith('.mainContent'):
+        return (
+            'Main workspace',
+            (
+                f'Inspect the {page} view here. Its content changes with the active page and '
+                'selection.'
+            ),
+        )
+    if target.endswith('.manualSidebar'):
+        return (
+            'Sidebar',
+            'Use the enabled Main, Extra, Text and Settings tabs to inspect and edit this page.',
+        )
+    if target.endswith('.page'):
+        return (
+            'Workflow page',
+            'The selected toolbar tab opens this workspace and its sidebar together.',
+        )
+    if target.startswith('group.'):
+        title = native_label or re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', target[6:]).replace('_', ' ')
+        return title[:1].upper() + title[1:], ''
+    return native_label or target, ''
+
+
+def _main_view_parts(meta: dict, target: str) -> list[list[float]]:
+    _, name, key = target.split('.')
+    tab = meta['items'][f'mainArea.{name}.tab.{key}']
+    x, y, width, height = meta['items'][f'workflow.{name}.mainContent']['visible_bounds']
+    tx, ty, tw, th = tab['visible_bounds']
+    bottom = ty + th
+    if not tab['enabled'] or not (
+        x <= tx < tx + tw <= x + width and y <= ty < bottom < y + height
+    ):
+        raise ValueError('A main-view tab must be enabled and inside its workspace')
+    return [[x, bottom, width, y + height - bottom], [tx, ty, tw, th]]
+
+
+def _page_parts(meta: dict, target: str) -> list[list[float]]:
+    name = target.split('.')[1]
+    main = meta['items'][f'workflow.{name}.mainContent']['visible_bounds']
+    tab = meta['items'][f'appBar.tab.{name}']['visible_bounds']
+    if name == 'home':
+        return [main, tab]
+    sidebar = meta['items'][f'workflow.{name}.manualSidebar']['visible_bounds']
+    x, y, width, height = main
+    sx, sy, sw, sh = sidebar
+    if abs(x + width - sx) > 0.1 or abs(y - sy) > 0.1 or abs(height - sh) > 0.1:
+        raise ValueError('Workflow regions must form one adjoining page')
+    return [[x, y, width + sw, height], tab]
+
+
+def _sidebar_parts(meta: dict, bounds: list[float]) -> list[list[float]]:
+    selected = [tab for tab in meta['state']['sidebar_tabs'] if tab['checked']]
+    if len(selected) != 1:
+        raise ValueError('A sidebar outline requires one selected native tab')
+    tab = meta['items'].get(selected[0]['id'], {})
+    if tab.get('ambiguous') or 'visible_bounds' not in tab:
+        raise ValueError('The selected native tab has no unique visible geometry')
+    tx, ty, tw, th = tab['visible_bounds']
+    x, y, width, height = bounds
+    bottom = ty + th
+    if not (x <= tx < tx + tw <= x + width and y <= ty < bottom < y + height):
+        raise ValueError('The selected tab must sit inside its sidebar')
+    return [[x, bottom, width, y + height - bottom], [tx, ty, tw, th]]
+
+
+def region_parts(meta: dict, target: str) -> list[list[float]]:
+    """Join a sidebar's active tab to its body using this capture's Qt bounds."""
+    if target.startswith('mainView.'):
+        return _main_view_parts(meta, target)
+    if target.endswith('.page'):
+        return _page_parts(meta, target)
+    bounds = meta['items'][target]['visible_bounds']
+    if not target.endswith('.manualSidebar'):
+        return [bounds]
+    return _sidebar_parts(meta, bounds)
+
+
+def region_path(parts: list[list[float]], inset: float = 1, radius: float = 4) -> str:  # noqa: PLR0914 - one name per corner
+    """Trace a rounded outline inside the area; the browser keeps it at display pixels."""
+    x, y, width, height = parts[0]
+    left, top, right, bottom = x + inset, y + inset, x + width - inset, y + height - inset
+    points = [(left, top)]
+    if len(parts) == 2:
+        tx, ty, tw, _ = parts[1]
+        points += [
+            (tx + inset, top),
+            (tx + inset, ty + inset),
+            (tx + tw - inset, ty + inset),
+            (tx + tw - inset, top),
+        ]
+    points += [(right, top), (right, bottom), (left, bottom)]
+    # A tab flush with its panel's edge repeats a corner; a repeated point has no direction.
+    points = [p for n, p in enumerate(points) if p != points[n - 1]]
+    commands = []
+    for number, (px, py) in enumerate(points):
+        before, after = points[number - 1], points[(number + 1) % len(points)]
+        steps = []
+        for ox, oy in (before, after):
+            length = math.hypot(ox - px, oy - py)
+            share = min(radius, length / 2) / length
+            steps.append((px + (ox - px) * share, py + (oy - py) * share))
+        commands.append(
+            f'{"L" if commands else "M"}{steps[0][0]:.3f} {steps[0][1]:.3f} '
+            f'Q{px:.3f} {py:.3f} {steps[1][0]:.3f} {steps[1][1]:.3f}'
+        )
+    return ' '.join(commands) + ' Z'
+
+
+def gui_icon(item: dict) -> str:
+    name = item.get('icon', '')
+    if not name:
+        return ''
+    glyphs = json.loads((DOCS / 'assets/gui-icons/glyphs.json').read_text())
+    code = ord(name) if len(name) == 1 and 0xE000 <= ord(name) <= 0xF8FF else glyphs.get(name)
+    if code is None:
+        raise ValueError(f'GUI icon is absent from the bundled Font Awesome 5 face: {name}')
+    return f'<span class="gui-fa" aria-hidden="true">&#{code};</span>'
+
+
+def pane(title: str, content: str) -> str:
+    title = title.replace('"', "'")
+    return (
+        '\n=== "'
+        + title
+        + '"\n\n'
+        + '\n'.join('    ' + line if line else '' for line in content.splitlines())
+        + '\n'
+    )
+
+
+def viewer(panes: list[tuple[str, str]]) -> str:
+    content = ''.join(starmap(pane, panes)) if len(panes) > 1 else panes[0][1]
+    return '<div class="gui-viewer" markdown="1">\n\n' + content + '\n</div>\n'
+
+
+def area_icon(area: str) -> str:
+    icons = {
+        'navigation': 'fa5-window-maximize',
+        'main': 'fa5-desktop',
+        'sidebar': 'fa5-columns',
+        'status': 'fa5-window-minimize',
+    }
+    return (
+        f'<span class="gui-area-icon" data-gui-area="{area}" '
+        f'aria-hidden="true">:{icons[area]}:</span> '
+    )
+
+
+def highlight_area(meta: dict, target: str, page: str) -> str:
+    """Use native item bounds to keep screenshot colours tied to the four app areas."""
+    if target.startswith('appBar'):
+        return 'navigation'
+    if target.startswith('statusBar'):
+        return 'status'
+    if target.startswith('mainView.') or target.endswith(('.mainContent', '.page')):
+        return 'main'
+    if target.endswith('.manualSidebar'):
+        return 'sidebar'
+    x, y, width, height = meta['items'][target]['visible_bounds']
+    centre_x, centre_y = x + width / 2, y + height / 2
+    for name, area in [
+        ('appBar', 'navigation'),
+        ('statusBar', 'status'),
+        (f'workflow.{page}.manualSidebar', 'sidebar'),
+        (f'workflow.{page}.mainContent', 'main'),
+    ]:
+        item = meta['items'].get(name)
+        if not item:
+            continue
+        left, top, width, height = item['visible_bounds']
+        if (
+            width > 0
+            and height > 0
+            and left <= centre_x <= left + width
+            and top <= centre_y <= top + height
+        ):
+            return area
+    raise ValueError('No native app area contains highlight: ' + target)
+
+
+def _figure_targets(scene: dict, meta: dict, view: str, selection: str) -> list[str]:
+    targets = (
+        [f'workflow.{scene["page"]}.manualSidebar']
+        if view == 'sidebar'
+        else (
+            [f'workflow.{scene["page"]}.mainContent']
+            + ([f'workflow.{scene["page"]}.manualSidebar'] if scene['page'] != 'home' else [])
+            if view == 'workflow'
+            else meta['highlights']
+        )
+    )
+    if view == 'main':
+        targets = [f'mainView.{scene["page"]}.{selection.rsplit(".", 1)[1]}']
+    return targets
+
+
+def _navigation_outline(
+    scene: dict, meta: dict, view: str, targets: list[str]
+) -> tuple[list[str], str]:
+    """Leave the page tab out of the highlights and outline it separately."""
+    targets = [target for target in targets if target != 'appBar']
+    empty = (
+        scene['page'] == 'home'
+        or (scene['page'] == 'structure' and not meta['state']['structures'])
+        or (scene['page'] == 'experiment' and not meta['state']['experiments'])
+    )
+    if empty and view == 'overview':
+        targets = [target for target in targets if not target.endswith('.mainContent')]
+    tab = f'appBar.tab.{scene["page"]}'
+    parts = region_parts(meta, tab)
+    data = html.escape(json.dumps(parts, separators=(',', ':')), quote=True)
+    navigation = (
+        f'<path data-gui-navigation data-gui-area="navigation" data-gui-parts="{data}" '
+        f'd="{region_path(parts)}" />'
+    )
+    return targets, navigation
+
+
+def _interactive_figure(
+    scene: dict, meta: dict, view: str, instance: str, targets: list[str]
+) -> str:
+    """Return one tab per highlighted region, each showing the same screenshot."""
+    panes = []
+    if view == 'layout':
+        panes.append((
+            'Overview',
+            figure(
+                scene,
+                view=view,
+                instance=instance,
+                interactive=False,
+                explanation=(
+                    'The page bar, main view, sidebar and status bar stay in the same '
+                    'places as you work.'
+                ),
+            ),
+        ))
+    for target in targets:
+        item = meta['items'].get(target, {})
+        title, text = label(target, scene['page'], item.get('label', ''))
+        panes.append((
+            (
+                area_icon(highlight_area(meta, target, scene['page']))
+                if view == 'layout'
+                else gui_icon(item)
+            )
+            + html.escape(title),
+            figure(
+                scene,
+                view=view,
+                instance=instance,
+                selection=target,
+                interactive=False,
+                description=title,
+                explanation=text or scene['description'].rstrip('.') + '.',
+            ),
+        ))
+    return viewer(panes)
+
+
+def _region_paths(
+    scene: dict, meta: dict, view: str, identity: str, targets: list[str]
+) -> list[str]:
+    paths = []
+    for number, target in enumerate(targets, 1):
+        plain = view in {'layout', 'flow'}
+        parts = [meta['items'][target]['visible_bounds']] if plain else region_parts(meta, target)
+        key = f'{identity}-{number}'
+        data = html.escape(json.dumps(parts, separators=(',', ':')), quote=True)
+        area = highlight_area(meta, target, scene['page'])
+        active = 'is-active' if number == 1 or view in {'layout', 'flow', 'workflow'} else ''
+        paths.append(
+            f'<path class="{active}" data-gui-region="{key}" data-gui-area="{area}" '
+            f'data-gui-parts="{data}" d="{region_path(parts)}" />'
+        )
+    return paths
+
+
+def _flow_arrows(scene: dict, meta: dict) -> str:
+    arrows = ''
+    half = meta['items']['appBar']['visible_bounds'][3] * 0.18
+    for axis, name in [
+        ('x', 'appBar.workflow'),
+        ('y', f'workflow.{scene["page"]}.manualSidebar'),
+    ]:
+        x, y, width, height = meta['items'][name]['visible_bounds']
+        if axis == 'x':
+            start, end, centre = (
+                x + width * 0.08,
+                x + width * 0.92,
+                y + height * 0.5,
+            )
+            points = [
+                (start, centre - half),
+                (end - half * 2, centre - half),
+                (end - half * 2, centre - half * 2),
+                (end, centre),
+                (end - half * 2, centre + half * 2),
+                (end - half * 2, centre + half),
+                (start, centre + half),
+            ]
+        else:
+            start, end, centre = (
+                y + height * 0.12,
+                y + height * 0.88,
+                x + width * 0.5,
+            )
+            points = [
+                (centre - half, start),
+                (centre + half, start),
+                (centre + half, end - half * 2),
+                (centre + half * 2, end - half * 2),
+                (centre, end),
+                (centre - half * 2, end - half * 2),
+                (centre - half, end - half * 2),
+            ]
+        data = 'M' + ' L'.join(f'{px:.2f} {py:.2f}' for px, py in points) + ' Z'
+        arrows += (
+            '<path class="gui-direction is-active" data-gui-direction '
+            f'data-gui-axis="{axis}" d="{data}" aria-hidden="true" />'
+        )
+    return arrows
+
+
+def figure(
+    scene: dict,
+    *,
+    view: str = 'overview',
+    instance: str = '',
+    description: str = '',
+    explanation: str = '',
+    selection: str = '',
+    interactive: bool = True,
+) -> str:
+    meta = scene['layout']
+    image = (
+        '../assets/gui/'
+        + scene.get('asset_folder', 'y2o3')
+        + '/'
+        + scene['image']
+        + '?v='
+        + meta['image_sha256'][:12]
+    )
+    # The browser swaps to this image in the dark theme; it sits in the same folder's dark/.
+    dark = f' data-gui-dark="{scene["dark_sha256"][:12]}"' if scene.get('dark_sha256') else ''
+    description = html.escape(description or scene['description'], quote=True)
+    identity = f'{scene["id"]}-{view}' + (f'-{instance}' if instance else '')
+    if selection:
+        identity += '-' + selection.replace('.', '-')
+    targets = _figure_targets(scene, meta, view, selection)
+    navigation = ''
+    if view in {'overview', 'workflow'}:
+        targets, navigation = _navigation_outline(scene, meta, view, targets)
+    if interactive and view in {'overview', 'layout'}:
+        return _interactive_figure(scene, meta, view, instance, targets)
+    if selection and view != 'main':
+        targets = [selection]
+    paths = _region_paths(scene, meta, view, identity, targets)
+    arrows = _flow_arrows(scene, meta) if view == 'flow' else ''
+    clip = f'gui-clip-{identity}'
+    return (
+        '<figure class="gui-figure" data-gui-figure>\n'
+        + (
+            f'<p class="gui-view-description">{html.escape(explanation)}</p>\n'
+            if explanation
+            else ''
+        )
+        + f'<a class="gui-image-link" href="{image}"{dark} data-gui-open '
+        'aria-haspopup="dialog" '
+        f'aria-label="Enlarge screenshot: {description}">'
+        f'<svg class="gui-capture" data-gui-view="{view}" viewBox="0 0 1480 800" '
+        f'width="1480" height="800" role="img" aria-label="{description}">'
+        f'<title>{description}</title><defs><clipPath id="{clip}"><rect width="1480" '
+        f'height="800" rx="{screenshot_radius(1480):g}" /></clipPath></defs>'
+        f'<image href="{image}"{dark} width="1480" height="800" clip-path="url(#{clip})" />'
+        '<rect class="gui-image-frame" width="1480" height="800" '
+        f'rx="{screenshot_radius(1480):g}" />'
+        + ''.join(paths)
+        + navigation
+        + arrows
+        + '</svg></a>\n'
+        + '\n</figure>\n'
+    )
+
+
+def page(title: str, body: str, icon: str = '') -> str:
+    meta = f'icon: {icon}\n' if icon else ''
+    return f'---\n{meta}template: gui.html\n---\n\n# {title}\n\n{body.rstrip()}\n'
+
+
+def native_options(text: str, by_id: dict[str, dict], root: str = '../') -> str:
+    """Keep authored choice lists bound to the captured native selector model."""
+    models = {
+        (entry['category'], entry['id']): entry['explanation_url']
+        for entry in json.loads((DOCS / 'physics/catalogue.json').read_text())['models']
+    }
+
+    def replace(match: re.Match[str]) -> str:
+        scene, target, category = match.group(1, 2, 3)
+        options = by_id[scene]['layout']['items'][target].get('options', [])
+        if not options or len({item['token'] for item in options}) != len(options):
+            raise ValueError(f'{scene}: {target} needs unique native options')
+        rows = []
+        for item in options:
+            name = html.escape(item['label']).replace('|', '&#124;')
+            if category:
+                route = models[category, item['token']]
+                name = f'[{name}]({root}physics/{route})'
+            rows.append(f'- {name}')
+        return match[0].split('\n', 1)[0] + '\n' + '\n'.join(rows) + '\n<!-- /gui-options -->'
+
+    return re.sub(
+        r'<!-- gui-options:([\w-]+):([\w.]+):([\w]*) -->\n.*?<!-- /gui-options -->',
+        replace,
+        text,
+        flags=re.DOTALL,
+    )
+
+
+def guide_figures(
+    by_id: dict[str, dict], filename: str, source: Path, slug: str, scenes: list | dict
+) -> list[str]:
+    """Return the figures for one guide section; named scenes become tabs of one viewer."""
+    figures = []
+    choices = (
+        list(scenes.items())
+        if isinstance(scenes, dict)
+        else [('', identity) for identity in scenes]
+    )
+    for index, (title, identity) in enumerate(choices):
+        if identity not in by_id:
+            raise ValueError(f'{filename}: required capture {identity} is missing')
+        figures.append(
+            figure(
+                by_id[identity],
+                instance=f'{source.stem}-{slug}-{index}',
+                interactive=not title,
+                explanation=by_id[identity]['description'] if title else '',
+            )
+        )
+    if isinstance(scenes, dict):
+        titles = []
+        for title, identity in scenes.items():
+            meta = by_id[identity]['layout']
+            item = meta['items'][meta['highlights'][0]]
+            titles.append(gui_icon(item) + html.escape(title))
+        figures = [viewer(list(zip(titles, figures, strict=True)))]
+    return figures
+
+
+def illustrate_guides(by_id: dict[str, dict]) -> None:
+    """Place source-matched scenes after their corresponding how-to instructions."""
+    if 'guide-project-open' not in by_id:
+        return
+    registry = json.loads((ROOT / 'gui-guide-scenes.json').read_text())
+    for filename, sections in registry.items():
+        source = DOCS / filename
+        # Links and images resolve from the page, however deep it sits under docs/.
+        root = '../' * (filename.count('/'))
+        text = native_options(source.read_text(), by_id, root)
+        text = re.sub(r'<!-- gui-guide:.*?<!-- /gui-guide -->\n?', '', text, flags=re.DOTALL)
+        text = re.sub(r'<figure class="gui-figure".*?</figure>\n?', '', text, flags=re.DOTALL)
+        headings = list(re.finditer(r'^## (.+)$', text, re.MULTILINE))
+        present = {match[1] for match in headings}
+        missing = set(sections) - present
+        if missing:
+            raise ValueError(f'{filename}: missing authored headings {sorted(missing)}')
+        for number in reversed(range(len(headings))):
+            match = headings[number]
+            if match[1] not in sections:
+                continue
+            scenes = sections[match[1]]
+            if isinstance(scenes, str):
+                scenes = [scenes]
+            slug = re.sub(r'[^a-z0-9]+', '-', match[1].lower()).strip('-')
+            figures = guide_figures(by_id, filename, source, slug, scenes)
+            end = headings[number + 1].start() if number + 1 < len(headings) else len(text)
+            content = (
+                f'\n<!-- gui-guide:{slug} -->\n'
+                + '\n'.join(figures).replace('"../assets/', f'"{root}assets/')
+                + '<!-- /gui-guide -->\n\n'
+            )
+            text = text[:end].rstrip() + '\n' + content + text[end:]
+        if not text.startswith('---\n'):
+            text = '---\ntemplate: gui.html\n---\n\n' + text
+        source.write_text(text.rstrip() + '\n')
+
+
+def copy_bundle(bundle: Path, manifest: dict, scenes: list[dict], folder: str) -> None:
+    destination = DOCS / 'assets/gui' / folder
+    destination.mkdir(parents=True, exist_ok=True)
+    artifacts = {'manifest.json', 'walkthrough.js'}
+    artifacts.update(item['file'] for item in manifest['inputs'].values())
+    artifacts.update(item['file'] for item in manifest.get('dependencies', []))
+    if 'data' in manifest['inputs']:
+        artifacts.update(
+            str(path.relative_to(bundle))
+            for path in (bundle / 'checkpoints').rglob('*')
+            if path.is_file()
+        )
+    for scene in scenes:
+        artifacts.update((scene['image'], scene['metadata']))
+    for artifact in sorted(artifacts):
+        target = destination / artifact
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if (bundle / artifact).resolve() != target.resolve():
+            shutil.copy2(bundle / artifact, target)
+
+
+def capture_inventory() -> None:
+    """Expose the executed action sequence without a second hand-maintained scene list."""
+    lines = [
+        '# GUI screenshot and action inventory',
+        '',
+        'Generated from the committed native capture manifests. Change `EXAMPLE_ID` in the',
+        'corresponding native plan, run it, validate the bundle and import it again.',
+        'The creation run starts empty and imports separate inputs. Reference runs open',
+        'their declared example to illustrate controls specific to that project type.',
+        '',
+    ]
+    for folder in BUNDLES:
+        directory = DOCS / 'assets/gui' / folder
+        if not (directory / 'manifest.json').is_file():
+            continue
+        manifest = json.loads((directory / 'manifest.json').read_text())
+        base = 'surfaces/docs/assets/gui/' + folder
+        lines += [
+            f'## {manifest["example"]}',
+            '',
+            f'[Executed plan]({base}/walkthrough.js) · [Native manifest]({base}/manifest.json)',
+            '',
+            '| Scene | Page / sidebar | Actions before capture | Highlights / result |',
+            '| --- | --- | --- | --- |',
+        ]
+        scenes = {scene['id']: scene for scene in manifest['scenes']}
+        identities = dict.fromkeys(
+            [action['scene'] for action in manifest['actions']] + list(scenes)
+        )
+        current_page = 'home'
+        for identity in identities:
+            scene = scenes.get(identity, {'id': identity, 'status': 'action only'})
+            actions = []
+            for item in manifest['actions']:
+                if item['scene'] != scene['id']:
+                    continue
+                action = item['action']
+                if action.startswith('appBar.tab.'):
+                    current_page = action.rsplit('.', 1)[1]
+                if action.startswith('fill:'):
+                    action = action.split('=', 1)[0]
+                elif action.startswith(('import-structure:', 'import-experiment:')):
+                    action = action.split(':', 1)[0] + ':<selected input>'
+                actions.append('`' + action.replace('|', '&#124;') + '`')
+            title = scene['id']
+            current_page = scene.get('page', current_page)
+            result = scene['status']
+            if result == 'captured':
+                metadata = json.loads((directory / scene['metadata']).read_text())
+                title = f'[{title}]({base}/{scene["image"]})'
+                result = ', '.join('`' + target + '`' for target in metadata['highlights'])
+            lines.append(
+                f'| {title} | {current_page} / {scene.get("sidebar") or "—"} | '
+                + ' → '.join(actions)
+                + f' | {result} |'
+            )
+        lines.append('')
+    (ROOT / 'GUI-SCENES.md').write_text('\n'.join(lines))
+
+
+def _import_references(reference: Path | None, joint: Path | None, by_id: dict) -> None:
+    """Copy the scan and joint-fit reference bundles and name their examples in the guides."""
+    for folder, provided in (('scan', reference), ('joint', joint)):
+        reference_path = provided or DOCS / 'assets/gui' / folder
+        if provided is None and not (reference_path / 'manifest.json').is_file():
+            continue
+        reference_manifest, reference_scenes = validate_bundle(
+            reference_path, workflow='reference'
+        )
+        copy_bundle(reference_path, reference_manifest, reference_scenes, folder)
+        for scene in reference_scenes:
+            if scene['id'] in by_id:
+                raise ValueError('Reference and creation scene ids must be distinct')
+            by_id[scene['id']] = {**scene, 'asset_folder': folder}
+        source = DOCS / (
+            'application/tutorials/cases/pd-neut-cwl_cosio-d20_scan-213f.md'
+            if folder == 'scan'
+            else 'application/analysis/joint-fit-weights.md'
+        )
+        text = source.read_text()
+        text = re.sub(
+            r'<!-- ' + folder + r'-example -->.*?<!-- /' + folder + r'-example -->',
+            '<!-- '
+            + folder
+            + '-example -->\nThis example is **'
+            + reference_manifest['example']
+            + '**: '
+            + ' + '.join(reference_manifest['fixture']['samples'])
+            + ', '
+            + reference_manifest['fixture']['origin']
+            + '.\n<!-- /'
+            + folder
+            + '-example -->',
+            text,
+            flags=re.DOTALL,
+        )
+        source.write_text(text)
+
+
+def _page_panes(name: str, modes: list[dict], by_id: dict, manifest: dict) -> list:
+    """Return the overview, main-view and sidebar tabs that illustrate one workflow page."""
+    base = modes[0]
+    panes = [
+        (
+            'Overview',
+            figure(
+                base,
+                view='workflow',
+                description=f'{name.title()} overview',
+                explanation=PAGE_INTRODUCTIONS[name],
+            ),
+        )
+    ]
+    tabs = sorted(
+        (
+            (key, item)
+            for key, item in base['layout']['items'].items()
+            if key.startswith(f'mainArea.{name}.tab.') and item['enabled']
+        ),
+        key=lambda pair: pair[1]['visible_bounds'][0],
+    )
+    for index, (key, item) in enumerate(tabs):
+        selected = base
+        if index:
+            captures = [
+                by_id[action['scene']]
+                for action in manifest['actions']
+                if action['action'] == key and action['scene'] in by_id
+            ]
+            if not captures:
+                raise ValueError(f'Enabled main-view tab has no capture: {key}')
+            selected = captures[-1]
+        title = html.escape(item['label'])
+        panes.append((
+            area_icon('main') + f"<span class='gui-sr-only'>Main view: </span>{title}",
+            figure(
+                selected,
+                view='main',
+                selection=key,
+                instance=key.rsplit('.', 1)[1],
+                description=f'{name.title()} — Main view: {item["label"]}',
+                explanation=MAIN_VIEW_DESCRIPTIONS[name].get(
+                    item['label'], PAGE_INTRODUCTIONS[name]
+                ),
+            ),
+        ))
+    panes.extend(
+        (
+            area_icon('sidebar') + f"<span class='gui-sr-only'>Sidebar: </span>{scene['sidebar']}",
+            figure(
+                scene,
+                view='sidebar',
+                description=f'{name.title()} — Sidebar: {scene["sidebar"]}',
+                explanation=SIDEBAR_DESCRIPTIONS.get(
+                    (name, scene['sidebar']),
+                    SHARED_SIDEBAR_DESCRIPTIONS.get(scene['sidebar'], PAGE_INTRODUCTIONS[name]),
+                ),
+            ),
+        )
+        for scene in modes
+    )
+    return panes
+
+
+def _write_workspace(manifest: dict, scenes: list[dict], by_id: dict) -> None:
+    workspace = """The interface follows the same analysis workflow as the [User \
+guide](../user-guide/analysis-workflow/index.md). The top bar selects a page, the central \
+workspace shows its main view, and the sidebar contains the related controls.
+
+## Main regions
+
+Choose a tab to inspect each region. These four areas stay in the same places on every workflow \
+page.
+
+"""
+    workspace += figure(by_id['11-experiment-basic'], view='layout')
+    workspace += (
+        '\n## Following the workflow\n\nMove through the pages from left to right. Within '
+        'each page, work down the sidebar from top to bottom.\n\n'
+    )
+    workspace += figure(
+        by_id['11-experiment-basic'],
+        view='flow',
+        interactive=False,
+        description=(
+            'Follow the pages from left to right and the sidebar controls from top to bottom'
+        ),
+    )
+    workspace += """
+## Workflow pages
+
+| Page | What you do here |
+| --- | --- |
+| Home | Start an analysis, learn the interface and find help. |
+| Project | Create or open a project and record its details. |
+| Structure | Load and inspect the crystal structure, cell and atom sites. |
+| Experiment | Load measured intensities and configure the instrument, profile and background. |
+| Analysis | Choose free parameters, run fitting and inspect the fitted pattern and results. |
+| Report | Review and export a report of the analysis. |
+
+## Sidebar tabs
+
+**Main** contains the primary controls for the active page. **Extra** and **Settings** add \
+controls where the page has them. Every page has a **Text** tab with the `.edi` text a save \
+writes for what the page shows. Its **Show** box picks **Editable**, text you can change and \
+apply with **✓**, or **Everything**, which adds the measured data and results and is read-only. A \
+disabled tab has no available view in the current state.
+
+The page views below introduce each enabled tab. Then follow a \
+[tutorial](tutorials/index.md) to build an analysis step by step.
+
+## Selection and messages
+
+Selecting a structure or experiment changes the model being inspected. The status bar reports the \
+project state, messages and fitting progress. Its **Fit** button runs the fit from any page. Read \
+messages after importing data or when an operation is refused.
+"""
+    gallery = (
+        '\n## Page and sidebar views\n\nChoose **Overview** for the whole page. '
+        + area_icon('main')
+        + 'marks a main-view tab; '
+        + area_icon('sidebar')
+        + (
+            'marks a sidebar tab. Only enabled tabs are shown. Analysis and Report show the '
+            'completed fit.\n'
+        )
+    )
+    gallery += (
+        '\n### :fa5-home: Home\n\nStart an analysis, learn the interface through '
+        'built-in tutorials, read about EasyDiffraction, open the documentation or get in '
+        'touch.\n\n'
+    )
+    gallery += figure(by_id['01-home'], view='workflow', description='Home overview')
+    for name in ['project', 'structure', 'experiment', 'analysis', 'report']:
+        icon = {
+            'project': 'archive',
+            'structure': 'layer-group',
+            'experiment': 'microscope',
+            'analysis': 'calculator',
+            'report': 'clipboard-list',
+        }[name]
+        gallery += f'\n### :fa5-{icon}: {name.title()}\n'
+        modes = [scene for scene in scenes if scene['page'] == name and scene['sidebar']]
+        gallery += viewer(_page_panes(name, modes, by_id, manifest))
+    (DOCS / 'application/workspace.md').write_text(
+        page('Application layout', workspace + gallery, icon='fa5/columns')
+    )
+
+
+def _write_application_introduction(by_id: dict) -> None:
+    introduction = DOCS / 'application/index.md'
+    text = introduction.read_text()
+    text = re.sub(
+        r'<figure class="gui-figure".*?</figure>',
+        figure(by_id['13-analysis-basic'], instance='application-introduction').rstrip(),
+        text,
+        count=1,
+        flags=re.DOTALL,
+    )
+    introduction.write_text(text)
+
+
+def render(
+    bundle: Path,
+    reference: Path | None = None,
+    joint: Path | None = None,
+    groups: dict[str, Path] | None = None,
+    dark: dict[str, Path] | None = None,
+) -> None:
+    manifest, scenes = validate_bundle(bundle)
+    copy_bundle(bundle, manifest, scenes, 'y2o3')
+    by_id = {scene['id']: scene for scene in scenes}
+    _import_references(reference, joint, by_id)
+    for folder, source in (groups or {}).items():
+        group_manifest, group_scenes = validate_bundle(source, workflow='reference', groups=True)
+        copy_bundle(source, group_manifest, group_scenes, folder)
+    for folder, source in (dark or {}).items():
+        copy_dark(source, folder)
+    by_id = {s['id']: s for folder in BUNDLES for s in load_scenes(folder)}
+    # The workspace guide takes the scenes with their dark images, like every other page.
+    _write_workspace(manifest, [by_id[scene['id']] for scene in scenes], by_id)
+    _write_application_introduction(by_id)
+    illustrate_guides(by_id)
+    capture_inventory()
+    print(json.dumps({'imported': len(scenes), 'source': manifest['source_revision']}))
+
+
+BUNDLES = ('y2o3', 'scan', 'joint', 'sc', 'magnetic')
+
+
+def load_scenes(folder: str) -> list[dict]:
+    """Return a committed bundle's scenes, each knowing its folder and dark image."""
+    root = DOCS / 'assets/gui' / folder
+    kind = {'y2o3': {}, 'scan': {'workflow': 'reference'}, 'joint': {'workflow': 'reference'}}
+    options = kind.get(folder, {'workflow': 'reference', 'groups': True})
+    _, scenes = validate_bundle(root, **options)
+    hashes = root / 'dark/hashes.json'
+    dark = json.loads(hashes.read_text()) if hashes.is_file() else {}
+    place = {'asset_folder': folder} if folder != 'y2o3' else {}
+    return [{**scene, **place, 'dark_sha256': dark.get(scene['image'], '')} for scene in scenes]
+
+
+def copy_dark(bundle: Path, folder: str) -> None:
+    """Keep only a dark bundle's images, with hashes for cache-busting and checks."""
+    manifest = json.loads((bundle / 'manifest.json').read_text())
+    target = DOCS / 'assets/gui' / folder / 'dark'
+    target.mkdir(parents=True, exist_ok=True)
+    hashes = {}
+    for scene in manifest['scenes']:
+        if scene['status'] != 'captured':
+            continue
+        data = (bundle / scene['image']).read_bytes()
+        (target / scene['image']).write_bytes(data)
+        hashes[scene['image']] = hashlib.sha256(data).hexdigest()
+    (target / 'hashes.json').write_text(json.dumps(hashes, indent=2, sort_keys=True) + '\n')
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('bundle', type=Path)
+    parser.add_argument('--reference-bundle', type=Path)
+    parser.add_argument('--joint-bundle', type=Path)
+    parser.add_argument('--group-bundle', action='append', default=[], metavar='FOLDER=PATH')
+    parser.add_argument('--dark-bundle', action='append', default=[], metavar='FOLDER=PATH')
+    args = parser.parse_args()
+
+    def named(values: list[str]) -> dict[str, Path]:
+        return {key: Path(path).resolve() for key, path in (v.split('=', 1) for v in values)}
+
+    render(
+        args.bundle.resolve(),
+        args.reference_bundle,
+        args.joint_bundle,
+        named(args.group_bundle),
+        named(args.dark_bundle),
+    )
+
+
+if __name__ == '__main__':
+    main()

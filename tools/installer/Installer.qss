@@ -1,0 +1,77 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+QWizard, QWizardPage, QWidget#SideWidget, QListWidget#PageListWidget,
+QWizard > QWidget > QWidget {
+    background-color: palette(window);
+}
+
+/* The empty subtitle keeps the Modern header visible without adding text height. */
+QWizard > QWidget > QWidget > QLabel[wordWrap="true"] {
+    font-size: 5px;
+}
+
+QWizard #IntroductionPage QLabel#MessageLabel {
+    min-height: 190px;
+}
+
+QListWidget#PageListWidget::item {
+    padding-left: @STEP_LIST_INSET@px;
+}
+
+QWizard QPushButton, QWizard QLineEdit, QWizard QComboBox {
+    color: palette(window-text);
+    background-color: palette(base);
+    border: 1px solid palette(mid);
+    border-radius: 5px;
+    min-height: 22px;
+    padding: 3px 9px;
+}
+
+QWizard QPushButton {
+    min-width: 70px;
+}
+
+QWizard QPushButton:hover {
+    background-color: palette(button);
+    border-color: palette(highlight);
+}
+
+QWizard QPushButton:focus, QWizard QLineEdit:focus, QWizard QComboBox:focus {
+    border-color: palette(highlight);
+}
+
+QWizard QPushButton:default {
+    background-color: #0079b7;
+    color: white;
+    border-color: #006a9e;
+}
+
+QWizard QPushButton:default:hover, QWizard QPushButton:default:focus {
+    background-color: #006a9e;
+    border-color: palette(highlight);
+}
+
+QWizard QPushButton:pressed {
+    background-color: palette(midlight);
+    color: palette(window-text);
+}
+
+QWizard QPushButton:disabled {
+    background-color: palette(window);
+    color: palette(mid);
+    border-color: palette(midlight);
+}
+
+QWizard QLineEdit#SearchLineEdit {
+    min-width: 95px;
+}
+
+QWizard #ComponentSelectionPage #SpaceItem {
+    min-width: 28em;
+}
+
+QWizard QLineEdit#TargetDirectoryLineEdit,
+QWizard QPushButton#BrowseDirectoryButton {
+    min-height: 28px;
+    max-height: 28px;
+    padding: 0 9px;
+}

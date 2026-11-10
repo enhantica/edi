@@ -1,0 +1,113 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#pragma once
+
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+// ADR-0016: the loader's reach into crysta's ONE identity decision — the identity-column table and
+// the representable-id domain — defined in adapter.cpp, edi's one crysta
+// contact (ADR-0003). core/src-private; never installed.
+
+namespace crysta {
+struct KeptDeclaration;
+}
+
+namespace edi::detail {
+
+// Whether a lone token is crysta's unknown or inapplicable marker (`?`, `.`) and not a literal; throws
+// std::invalid_argument for text that is no token on its own.
+bool is_kept_marker(const std::string& lexeme);
+
+// The `_iso_` declarations a magnetic text holds, kept as crysta reads them (edi ADR-0078); throws
+// std::invalid_argument for a loop that mixes them with other names.
+std::vector<crysta::KeptDeclaration> kept_iso_declarations_of(const std::string& text);
+
+// The category a loop column's identity names, or nullptr when `tag` is not an identity column.
+const char* identity_category(const std::string& tag);
+
+// Refuses (std::invalid_argument) an identity value no writer can re-emit (crysta's domain).
+void require_representable_id(const std::string& value, const std::string& category,
+                              const std::string& where);
+
+// Crysta's physical domains, so edi's readers admit exactly what the engine's calculation
+// admits — the refusal text, or empty when admissible.
+std::string cell_domain_message(double a, double b, double c, double alpha_deg, double beta_deg,
+                                double gamma_deg);
+std::string wavelength_domain_message(double wavelength);
+
+// The current `.edi` name `tag` reads as by crysta's dictionary: an older `.edi` spelling's, and with `every_name` (a
+// structure or experiment block) any name an item lists, `.edi` or CIF, in either notation; else `tag` itself.
+std::string current_edi_name(const std::string& tag, bool every_name);
+
+// Why `value` cannot be the `_structure_view` item `item` by crysta's dictionary (its tokens, a flag, a number in the
+// range the view draws), or empty when it can.
+std::string structure_view_refusal(const std::string& item, const std::string& value);
+
+// Replaces `file`, inside the folder `root`, with `text`, whole or not at all, by crysta's writer (its
+// output::replace_file); throws std::invalid_argument when it cannot write.
+void replace_file(const std::string& root, const std::string& file, const std::string& text);
+
+// The one-row category (`_peak`, `_cell`) whose item `tag` names by crysta's dictionary, by any of its names; empty for
+// an item of a loop category or a name no item lists. Such an item written as a loop column is refused.
+std::string one_row_category(const std::string& tag);
+
+// The site types whose own names include `tag`, an ADP name that spells its item for those types only
+// (`_atom_site_U_iso_or_equiv`: Uiso and Uani); empty for a name every type shares.
+std::vector<std::string> name_variants(const std::string& tag);
+
+// Whether `tags`, the names a structure or experiment text spells as edi's reader reads them, are
+// a CIF's by crysta's rule: they name items and none is `.edi`-only.
+bool is_cif_names(const std::vector<std::string>& tags);
+
+// A CIF text read by crysta as one structure, or one experiment, and written back as the `.edi`
+// text a save would write; what crysta reports goes to `notes`. Throws std::invalid_argument when
+// crysta refuses the text and std::runtime_error when it breaks the CIF grammar, the message led
+// by `where`.
+std::string cif_to_edi(const std::string& text, bool experiment, const std::string& where,
+                       std::vector<std::string>& notes);
+
+// A project's structure files by crysta's rule, sorted: each `.edi` and `.cif` in `folder`, the
+// suffix in any case; a `.cif` beside a `.edi` of the same name goes to `hidden` instead.
+std::vector<std::string> project_structure_files(const std::string& folder,
+                                                 std::vector<std::string>* hidden = nullptr);
+// A project's experiment files by the same rule.
+std::vector<std::string> project_experiment_files(const std::string& folder);
+
+}  // namespace edi::detail
+
+namespace edi {
+class Project;
+}  // namespace edi
+
+namespace edi::detail {
+
+// Whether `tag` is one of the project record's five retired `_metadata` tags (ADR-0054).
+bool is_retired_metadata_tag(const std::string& tag);
+
+// The retired tags a project record carries (tag and value as written), converted onto the
+// project's experiments by crysta's one conversion: an item an experiment declares stands, one it
+// leaves out takes the converted value. Returns one warning per retired tag; throws
+// std::invalid_argument naming a tag or value crysta refuses.
+std::vector<std::string> apply_legacy_metadata(
+    const std::vector<std::pair<std::string, std::string>>& record, Project& project);
+
+// ADR-0036 §7: the report's settings, checked by crysta's rules; each throws std::invalid_argument naming the item.
+// `_report.<item>` with its decoded value, stated into `project`; an item the category does not have is refused.
+void read_report_item(std::string_view item, const std::string& value, Project& project);
+// `_correlation_chart.threshold`, `_pattern_chart.x_axis` and a `_report_file.format`, checked.
+double read_correlation_threshold(const std::string& value);
+// A single crystal's `_reflns.threshold_sigma`/`_refine_ls.threshold_sigma` (`tag`) and `_reflns.threshold_basis`,
+// checked by crysta's rules (edi ADR-0050).
+double read_threshold_sigma(const std::string& value, const char* tag);
+std::string read_threshold_basis(const std::string& value);
+std::string read_pattern_x_axis(const std::string& value);
+// The Evolution chart's `_evolution_chart.error_bars` (`true`/`false`) and `_evolution_chart.range` (`values` or
+// `values_su`), checked.
+bool read_evolution_error_bars(const std::string& value);
+std::string read_evolution_range(const std::string& value);
+std::string read_report_file_format(const std::string& value);
+
+}  // namespace edi::detail

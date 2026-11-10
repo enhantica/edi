@@ -1,0 +1,170 @@
+// SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Controls
+
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
+
+import edi.app
+
+// The messages, opened from the status bar's messages item (edi ADR-0017 §14): the same dialog as About and
+// Preferences, of a fixed width, as tall as its rows need within the window. Its list is a sidebar table (the
+// base ListView, headerless and framed as Examples and Recent projects), over every message of the session's
+// one list — the loader's warnings and the calculation's refusals — each marked by its kind (a warning's
+// orange triangle; an error's red cross and red text), wrapped to as many lines as it needs, with its own
+// dismiss button. Empty, it shows a muted icon and "No messages" in one row. Dismiss all sits in the dialog's
+// button row beside OK. Opening the dialog marks the messages viewed, so the status bar's count stops being
+// red.
+AppDialog {
+    id: dialog
+
+    readonly property WarningListModel messages: Session.loadWarnings
+
+    objectName: "warnings"
+    title: qsTr("Messages")
+    standardButtons: Dialog.Ok
+    // The table's height fits its rows (the header is hidden, as Examples' and Recent projects'): at least one
+    // one-line row, at most what keeps the dialog inside the window between the app bar and the status bar
+    // less a margin at each, above which it scrolls. The width is fixed. The content is sized explicitly, as
+    // AppPreferencesDialog's is: a ListView has no implicit size (edi ADR-0017 §14).
+    readonly property real chromeHeight: implicitHeaderHeight + implicitFooterHeight + topPadding + bottomPadding + 2 * spacing
+    readonly property real maximumListHeight: Math.max(EaStyle.Sizes.tableRowHeight, (parent ? parent.height : 0) - EaStyle.Sizes.appBarHeight - EaStyle.Sizes.statusBarHeight - 2 * EaStyle.Sizes.fontPixelSize - chromeHeight)
+
+    contentWidth: listArea.width
+    contentHeight: listArea.height
+
+    onOpened: ApplicationInfo.finishUiEvent(7, undefined)
+
+    footer: EaElements.DialogButtonBox {
+        EaElements.Button {
+            objectName: "warnings.dismissAll"
+            fontIcon: "eye-slash"
+            enabled: dialog.messages !== null && dialog.messages.count > 0
+            text: qsTr("Dismiss all")
+            ToolTip.text: enabled ? "" : qsTr("No messages to dismiss")
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+            onClicked: ApplicationInfo.finishUiEvent(8, undefined)
+        }
+    }
+
+    // The table, its empty state, and the table's frame drawn again above both, so rows and the empty state
+    // never cover its edges.
+    Item {
+        id: listArea
+
+        width: AppSizes.messagesDialogContentWidth
+        height: Math.min(dialog.maximumListHeight, Math.max(table.tableRowHeight, table.contentHeight))
+
+        DataTable {
+            id: table
+
+            objectName: "warnings.list"
+            anchors.fill: parent
+            clip: true
+            defaultInfoText: ""
+            sourceModel: dialog.messages
+
+            // The row number first, as in every table: the current row is marked by it (the owner, 2026-10-22).
+            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
+
+            header: EaComponents.ListViewHeader {
+                visible: false
+                implicitHeight: 0
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignLeft
+                }
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignHCenter
+                }
+            }
+
+            delegate: TableRow {
+                id: row
+
+                required property string message
+                required property string severity
+                readonly property bool isError: severity === "error"
+                readonly property bool isInformation: severity === "information"
+
+                height: Math.max(table.tableRowHeight, messageCell.implicitHeight + EaStyle.Sizes.fontPixelSize)
+
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignHCenter
+                    marksCurrentRow: true
+                    text: row.index + 1
+                }
+                IconCell {
+                    horizontalAlignment: Text.AlignHCenter
+                    objectName: `warnings.kind.${row.index}`
+                    icon: row.isError ? "times-circle" : row.isInformation ? "info-circle" : "exclamation-triangle"
+                    iconColor: String(row.isError ? EaStyle.Colors.red : row.isInformation ? EaStyle.Colors.themeForegroundMinor : EaStyle.Colors.orange)
+                    toolTip: row.isError ? qsTr("Error") : row.isInformation ? qsTr("Information") : qsTr("Warning")
+                }
+                EaComponents.ListViewLabel {
+                    id: messageCell
+                    objectName: `warnings.message.${row.index}`
+                    // Wrapping determines the row height, so its initial width must not depend on that height.
+                    width: table.resolvedColumnWidths[2] ?? 0
+                    horizontalAlignment: Text.AlignLeft
+                    elide: Text.ElideRight
+                    wrapMode: Text.Wrap
+                    color: row.isError ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
+                    text: row.message
+                }
+                EaComponents.ListViewButton {
+                    horizontalAlignment: Text.AlignHCenter
+                    objectName: `warnings.dismiss.${row.index}`
+                    anchors.verticalCenter: parent.verticalCenter
+                    fontIcon: "minus-circle"
+                    ToolTip.text: qsTr("Dismiss this message")
+                    onClicked: ApplicationInfo.finishUiEvent(9, undefined)
+                }
+            }
+        }
+
+        // Empty: a muted icon and "No messages" on one line in the middle of the one-row area.
+        Rectangle {
+            anchors.fill: parent
+            visible: table.count === 0
+            color: EaStyle.Colors.themeBackground
+
+            Row {
+                anchors.centerIn: parent
+                spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+                EaElements.Label {
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.family: EaStyle.Fonts.iconsFamily
+                    color: EaStyle.Colors.themeForegroundDisabled
+                    text: "inbox"
+                }
+                EaElements.Label {
+                    objectName: "warnings.empty"
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: EaStyle.Colors.themeForegroundDisabled
+                    text: qsTr("No messages")
+                }
+            }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            border.color: EaStyle.Colors.appBarComboBoxBorder
+        }
+    }
+}

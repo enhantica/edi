@@ -1,0 +1,809 @@
+#include <doctest/doctest.h>
+
+#include <algorithm>
+#include <cmath>
+#include <filesystem>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <tuple>
+#include <vector>
+
+#include "assistant_parameter_edits.hpp"
+#include "edi/assistant.hpp"
+#include "edi/background_estimate.hpp"
+#include "edi/edit.hpp"
+#include "edi/io.hpp"
+#include "edi/parameter_walk.hpp"
+#include "edi/selectors.hpp"
+#include "json.hpp"
+
+namespace {
+using J = edi::json::Value;
+using A = edi::json::Array;
+using O = edi::json::Object;
+namespace fs = std::filesystem;
+
+fs::path repo() {
+    return fs::path(__FILE__).parent_path().parent_path().parent_path().parent_path();
+}
+
+edi::Project background_project(const std::string& kind, const std::string& mode) {
+    auto project = edi::load_project(
+        (repo() / "tests/fixtures/background_estimate/projects" / ("fitted-auto-" + kind))
+            .string());
+    edi::set_background_estimate_mode(project.experiment(), mode);
+    return project;
+}
+
+using NumericState = std::vector<std::tuple<std::string, double, bool, std::optional<double>,
+                                            std::optional<double>, std::optional<double>>>;
+NumericState numeric_state(edi::Project& project) {
+    NumericState result;
+    for (const auto& slot : edi::named_slots(project)) {
+        const auto& p = *slot.parameter;
+        result.emplace_back(slot.unique_name, p.value.get(), p.free.get(), p.uncertainty.get(),
+                            p.start_value.get(), p.start_uncertainty.get());
+    }
+    return result;
+}
+
+struct Target {
+    edi::Parameter* parameter;
+    std::string path, unique;
+};
+Target target(edi::Project& project, edi::Parameter& parameter) {
+    Target result{&parameter, {}, {}};
+    for (const auto& entry : edi::parameter_entries(project))
+        if (entry.parameter == &parameter) result.path = entry.path;
+    for (const auto& slot : edi::named_slots(project))
+        if (slot.parameter == &parameter) result.unique = slot.unique_name;
+    REQUIRE_FALSE_MESSAGE(result.path.empty(), "The gate requires false for result.path.empty()");
+    REQUIRE_FALSE_MESSAGE(result.unique.empty(),
+                          "The gate requires false for result.unique.empty()");
+    return result;
+}
+Target background_target(edi::Project& project) {
+    auto& experiment = project.experiment();
+    if (experiment.background_type == "line-segment") {
+        REQUIRE_FALSE_MESSAGE(experiment.background.empty(),
+                              "The gate requires false for experiment.background.empty()");
+        return target(project, experiment.background[0]->intensity);
+    }
+    REQUIRE_FALSE_MESSAGE(experiment.background_terms.empty(),
+                          "The gate requires false for experiment.background_terms.empty()");
+    return target(project, experiment.background_terms[0]->coef);
+}
+
+struct ControllerHost {
+    std::vector<J> requests;
+    unsigned applies = 0;
+    edi::work::Worker worker{[](edi::work::Delivery delivery) { delivery(); }};
+    edi::assistant::Controller controller;
+
+    explicit ControllerHost(edi::Project& project)
+        : controller(worker,
+                     edi::assistant::Hooks{[](const std::string&) {},
+                                           [&](const std::string& request) {
+                                               requests.push_back(edi::json::parse(request));
+                                           },
+                                           [&](const edi::Edit& edit, bool) {
+                                               try {
+                                                   edit();
+                                                   ++applies;
+                                                   return std::string{};
+                                               } catch (const std::exception& error) {
+                                                   return std::string(error.what());
+                                               }
+                                           },
+                                           [] { return std::uint64_t{100}; },
+                                           {}}) {
+        REQUIRE_MESSAGE(
+            controller.attach(&project, "independent-dev-owner").ok,
+            "The gate requires controller.attach(&project, \"independent-dev-owner\").ok");
+    }
+
+    edi::assistant::Reply tool(const std::string& name, J arguments,
+                               const std::string& plan = {}) {
+        REQUIRE_FALSE_MESSAGE(requests.empty(), "The gate requires false for requests.empty()");
+        const auto& request = requests.back();
+        const auto version = controller.revision();
+        O event{{"schema", "edi.assistant/1"},
+                {"type", "tool_call"},
+                {"connection_id", "independent-connection"},
+                {"turn_id", request.at("turn_id")},
+                {"request_id", request.at("request_id")},
+                {"call_id", "independent-call-" + std::to_string(++calls)},
+                {"name", name},
+                {"project_id", version.project_id},
+                {"revision", std::to_string(version.revision)},
+                {"arguments", std::move(arguments)}};
+        if (!plan.empty()) event.emplace_back("plan_id", plan);
+        return controller.provider_event(edi::json::write(event));
+    }
+
+    std::string approve(const std::vector<std::string>& paths) {
+        const J connection = O{{"schema", "edi.assistant/1"},
+                               {"type", "connection"},
+                               {"connection_id", "independent-connection"},
+                               {"status", "ready"},
+                               {"capabilities", A{O{{"id", "gpt-6.1-sol"},
+                                                    {"display_name", "Independent fixture"},
+                                                    {"efforts", A{"high"}},
+                                                    {"attachment_types", A{}}}}}};
+        REQUIRE_MESSAGE(
+            controller.provider_event(edi::json::write(connection)).ok,
+            "The gate requires controller.provider_event(edi::json::write(connection)).ok");
+        REQUIRE_MESSAGE(
+            controller
+                .user_command(
+                    edi::json::write(O{{"schema", "edi.assistant/1"},
+                                       {"type", "message"},
+                                       {"text", "Change only the explicitly named native values"},
+                                       {"connection_id", "independent-connection"},
+                                       {"model", "gpt-6.1-sol"},
+                                       {"effort", "high"}}))
+                .ok,
+            "The gate requires controller.user_command(edi::json::write(O{{\"schema\", "
+            "\"edi.assistant/1\"}, {\"type\", \"message\"}, {\"text\", \"Change only the "
+            "explicitly named native values\"}, {\"connection_id\", \"independent-connection\"}, "
+            "{\"model\", \"gpt-6.1-sol\"}, {\"effort\", \"high\"}})).ok");
+        A scope;
+        for (const auto& path : paths) scope.emplace_back(path);
+        auto proposed = tool(
+            "propose_plan",
+            O{{"summary", "Independent finite edit scope"},
+              {"groups", A{O{{"id", "values"}, {"paths", scope}}}},
+              {"budget", O{{"max_trials", 1}, {"max_iterations", 1}, {"max_elapsed_ms", 1000}}},
+              {"objective", O{{"absolute_tolerance", 0.0}, {"relative_tolerance", 0.0}}}});
+        REQUIRE_MESSAGE(proposed.ok, "The gate requires proposed.ok");
+        const auto id = edi::json::parse(proposed.value).at("plan_id").string("plan_id");
+        const auto version = controller.revision();
+        REQUIRE_MESSAGE(
+            controller
+                .user_command(edi::json::write(O{{"schema", "edi.assistant/1"},
+                                                 {"type", "approve_plan"},
+                                                 {"plan_id", id},
+                                                 {"project_id", version.project_id},
+                                                 {"revision", std::to_string(version.revision)}}))
+                .ok,
+            "The gate requires controller.user_command(edi::json::write(O{{\"schema\", "
+            "\"edi.assistant/1\"}, {\"type\", \"approve_plan\"}, {\"plan_id\", id}, "
+            "{\"project_id\", version.project_id}, {\"revision\", "
+            "std::to_string(version.revision)}})).ok");
+        return id;
+    }
+
+   private:
+    unsigned calls = 0;
+};
+}  // namespace
+
+TEST_CASE("E11 dev auto background rejects complete shared mixed value batches before writes") {
+    for (const std::string kind : {"line-segment", "polynomial", "chebyshev"}) {
+        CAPTURE(kind);
+        auto project = background_project(kind, "auto");
+        auto unrelated = target(project, project.structure().cell.length_a);
+        auto owned = background_target(project);
+        const auto before = numeric_state(project);
+        bool refused = false;
+        try {
+            auto edit = edi::assistant::detail::prepare_parameter_edit<double>(
+                project, {{unrelated.path, unrelated.parameter->value.get() + 0.03125},
+                          {owned.path, owned.parameter->value.get() + 1.0}});
+            edit();
+        } catch (const std::exception&) {
+            refused = true;
+        }
+        CHECK_MESSAGE(refused, "The gate requires refused");
+        CHECK_MESSAGE(numeric_state(project) == before,
+                      "The gate requires numeric_state(project) == before");
+        CHECK_MESSAGE(
+            edi::background_estimate_mode(project.experiment()) == "auto",
+            "The gate requires edi::background_estimate_mode(project.experiment()) == \"auto\"");
+    }
+}
+
+TEST_CASE("E11 dev background batch validates ownership again at actual Edit execution") {
+    for (const std::string kind : {"line-segment", "polynomial", "chebyshev"}) {
+        CAPTURE(kind);
+        auto project = background_project(kind, "manual");
+        auto unrelated = target(project, project.structure().cell.length_a);
+        auto owned = background_target(project);
+        auto prepared = edi::assistant::detail::prepare_parameter_edit<double>(
+            project, {{unrelated.path, unrelated.parameter->value.get() + 0.03125},
+                      {owned.path, owned.parameter->value.get() + 1.0}});
+        edi::set_background_estimate_mode(project.experiment(), "auto");
+        const auto before = numeric_state(project);
+        CHECK_THROWS_MESSAGE(prepared(), "The gate requires prepared()");
+        CHECK_MESSAGE(numeric_state(project) == before,
+                      "The gate requires numeric_state(project) == before");
+        CHECK_THROWS_MESSAGE(
+            edi::Edit::parameter_values(
+                project, {{unrelated.unique, unrelated.parameter->value.get() + 0.03125},
+                          {owned.unique, owned.parameter->value.get() + 1.0}})(),
+            "The gate requires edi::Edit::parameter_values(project, {{unrelated.unique, "
+            "unrelated.parameter->value.get() + 0.03125}, {owned.unique, "
+            "owned.parameter->value.get() + 1.0}})()");
+        CHECK_MESSAGE(numeric_state(project) == before,
+                      "The gate requires numeric_state(project) == before");
+    }
+}
+
+TEST_CASE("E11 dev manual background values and permitted automatic free flags remain editable") {
+    for (const std::string kind : {"line-segment", "polynomial", "chebyshev"}) {
+        CAPTURE(kind);
+        auto project = background_project(kind, "manual");
+        auto unrelated = target(project, project.structure().cell.length_a);
+        auto owned = background_target(project);
+        const double next_unrelated = unrelated.parameter->value.get() + 0.03125;
+        const double next_owned = owned.parameter->value.get() + 1.0;
+        CHECK_NOTHROW_MESSAGE(
+            edi::assistant::detail::prepare_parameter_edit<double>(
+                project, {{unrelated.path, next_unrelated}, {owned.path, next_owned}})(),
+            "The gate requires edi::assistant::detail::prepare_parameter_edit<double>(project, "
+            "{{unrelated.path, next_unrelated}, {owned.path, next_owned}})()");
+        CHECK_MESSAGE(unrelated.parameter->value.get() == next_unrelated,
+                      "The gate requires unrelated.parameter->value.get() == next_unrelated");
+        CHECK_MESSAGE(owned.parameter->value.get() == next_owned,
+                      "The gate requires owned.parameter->value.get() == next_owned");
+        auto automatic = background_project(kind, "auto");
+        auto flag = background_target(automatic);
+        const double before_value = flag.parameter->value.get();
+        const bool before_free = flag.parameter->free.get();
+        CHECK_NOTHROW_MESSAGE(
+            edi::assistant::detail::prepare_parameter_edit<bool>(automatic,
+                                                                 {{flag.path, !before_free}})(),
+            "The gate requires edi::assistant::detail::prepare_parameter_edit<bool>(automatic, "
+            "{{flag.path, !before_free}})()");
+        CHECK_MESSAGE(flag.parameter->free.get() != before_free,
+                      "The gate requires flag.parameter->free.get() != before_free");
+        CHECK_MESSAGE(flag.parameter->value.get() == before_value,
+                      "The gate requires flag.parameter->value.get() == before_value");
+        CHECK_MESSAGE(
+            edi::background_estimate_mode(automatic.experiment()) == "auto",
+            "The gate requires edi::background_estimate_mode(automatic.experiment()) == \"auto\"");
+    }
+}
+
+TEST_CASE(
+    "E11 dev restricted Controller preserves mixed batches rejected by native background "
+    "ownership") {
+    for (const std::string kind : {"line-segment", "polynomial", "chebyshev"}) {
+        CAPTURE(kind);
+        auto project = background_project(kind, "auto");
+        auto unrelated = target(project, project.structure().cell.length_a);
+        auto owned = background_target(project);
+        ControllerHost host(project);
+        const auto plan = host.approve({unrelated.path, owned.path});
+        const auto before = numeric_state(project);
+        const auto result = host.tool(
+            "set_parameters",
+            O{{"values",
+               A{O{{"path", unrelated.path},
+                   {"value", unrelated.parameter->value.get() + 0.03125}},
+                 O{{"path", owned.path}, {"value", owned.parameter->value.get() + 1.0}}}}},
+            plan);
+        CHECK_FALSE_MESSAGE(result.ok, "The gate requires false for result.ok");
+        CHECK_MESSAGE(host.applies == 0, "The gate requires host.applies == 0");
+        CHECK_MESSAGE(numeric_state(project) == before,
+                      "The gate requires numeric_state(project) == before");
+        CHECK_MESSAGE(host.controller.revision().revision == 0,
+                      "The gate requires host.controller.revision().revision == 0");
+    }
+}
+
+TEST_CASE("E11 dev context preserves actual published CW and TOF single crystal observations") {
+    for (const std::string name :
+         {"sc-neut-cwl_tb2ti2o7-heidi_basic", "sc-neut-tof_taurine-unknown_basic"}) {
+        SUBCASE(name.c_str()) {
+            CAPTURE(name);
+            auto project =
+                edi::load_project((repo() / "docs/user/cli" / name / "project").string());
+            REQUIRE_FALSE_MESSAGE(project.experiments.empty(),
+                                  "The gate requires false for project.experiments.empty()");
+            ControllerHost host(project);
+            const auto context = edi::json::parse(host.controller.context());
+            REQUIRE_MESSAGE(context.get("error").is_null(),
+                            "The gate requires context.get(\"error\").is_null()");
+            const auto& rows = context.at("datasets").array("datasets");
+            REQUIRE_MESSAGE(rows.size() == project.experiments.size(),
+                            "The gate requires rows.size() == project.experiments.size()");
+            for (std::size_t index = 0; index < rows.size(); ++index) {
+                const auto& experiment = *project.experiments[index];
+                REQUIRE_MESSAGE(experiment.reflections.has_value(),
+                                "The gate requires experiment.reflections.has_value()");
+                const auto& native = *experiment.reflections;
+                REQUIRE_MESSAGE(native.rectangular(), "The gate requires native.rectangular()");
+                REQUIRE_MESSAGE(native.size() > 0, "The gate requires native.size() > 0");
+                const auto& row = rows[index];
+                CHECK_MESSAGE(row.at("sample_form").string("sample_form") == "single crystal",
+                              "The gate requires row.at(\"sample_form\").string(\"sample_form\") "
+                              "== \"single crystal\"");
+                CHECK_MESSAGE(row.at("data_status").string("data_status") == "present",
+                              "The gate requires row.at(\"data_status\").string(\"data_status\") "
+                              "== \"present\"");
+                const auto& axis = row.at("axis");
+                CHECK_MESSAGE(
+                    axis.at("kind").string("kind") == "miller_indices",
+                    "The gate requires axis.at(\"kind\").string(\"kind\") == \"miller_indices\"");
+                CHECK_MESSAGE(
+                    axis.at("unit").string("unit") == "dimensionless",
+                    "The gate requires axis.at(\"unit\").string(\"unit\") == \"dimensionless\"");
+                CHECK_MESSAGE(axis.at("count").number("count") == native.index_h.size(),
+                              "The gate requires axis.at(\"count\").number(\"count\") == "
+                              "native.index_h.size()");
+                CHECK_MESSAGE(axis.at("min").is_null(),
+                              "The gate requires axis.at(\"min\").is_null()");
+                CHECK_MESSAGE(axis.at("max").is_null(),
+                              "The gate requires axis.at(\"max\").is_null()");
+                const auto& observations = row.at("observations");
+                CHECK_MESSAGE(
+                    observations.at("intensity_count").number("count") ==
+                        native.intensity_meas.size(),
+                    "The gate requires observations.at(\"intensity_count\").number(\"count\") == "
+                    "native.intensity_meas.size()");
+                CHECK_MESSAGE(
+                    observations.at("sigma_count").number("count") ==
+                        native.intensity_meas_su.size(),
+                    "The gate requires observations.at(\"sigma_count\").number(\"count\") == "
+                    "native.intensity_meas_su.size()");
+                CHECK_MESSAGE(
+                    observations.at("weighting").string("weighting") ==
+                        "measured_standard_uncertainty",
+                    "The gate requires observations.at(\"weighting\").string(\"weighting\") == "
+                    "\"measured_standard_uncertainty\"");
+                for (const std::string field : {"peak_profile_options", "absorption_type_options"})
+                    CHECK_MESSAGE(
+                        (row.get(field).is_null() || row.at(field).array("options").empty()),
+                        "The gate requires (row.get(field).is_null() || "
+                        "row.at(field).array(\"options\").empty())");
+                CHECK_MESSAGE((row.get("background").is_null() ||
+                               row.at("background").get("type").is_null()),
+                              "The gate requires (row.get(\"background\").is_null() || "
+                              "row.at(\"background\").get(\"type\").is_null())");
+            }
+        }
+    }
+}
+
+TEST_CASE("E11 dev context retains manual and automatic point and series background metadata") {
+    for (const std::string kind : {"line-segment", "polynomial", "chebyshev"}) {
+        for (const std::string mode : {"manual", "auto"}) {
+            const auto case_id = kind + "/" + mode;
+            SUBCASE(case_id.c_str()) {
+                CAPTURE(kind);
+                CAPTURE(mode);
+                auto project = background_project(kind, mode);
+                const auto& experiment = project.experiment();
+                const auto native = edi::background_estimate_options(experiment);
+                ControllerHost host(project);
+                const auto context = edi::json::parse(host.controller.context());
+                REQUIRE_MESSAGE(context.get("error").is_null(),
+                                "The gate requires context.get(\"error\").is_null()");
+                const auto& row = context.at("datasets").array("datasets")[0];
+                CHECK_MESSAGE(row.at("sample_form").string("sample_form") == "powder",
+                              "The gate requires row.at(\"sample_form\").string(\"sample_form\") "
+                              "== \"powder\"");
+                const auto& background = row.at("background");
+                CHECK_MESSAGE(
+                    background.at("type").string("type") == kind,
+                    "The gate requires background.at(\"type\").string(\"type\") == kind");
+                const auto& estimate = background.get("estimate");
+                const bool has_estimate = std::holds_alternative<O>(estimate.data);
+                CHECK_MESSAGE(has_estimate, "The gate requires has_estimate");
+                if (has_estimate) {
+                    CHECK_MESSAGE(
+                        estimate.at("mode").string("mode") == mode,
+                        "The gate requires estimate.at(\"mode\").string(\"mode\") == mode");
+                    CHECK_MESSAGE(estimate.at("method").string("method") == native.method,
+                                  "The gate requires estimate.at(\"method\").string(\"method\") "
+                                  "== native.method");
+                    CHECK_MESSAGE(
+                        estimate.at("in_peaks").string("in_peaks") == native.in_peaks,
+                        "The gate requires estimate.at(\"in_peaks\").string(\"in_peaks\") == "
+                        "native.in_peaks");
+                    CHECK_MESSAGE(
+                        estimate.at("use_model").string("use_model") == native.use_model,
+                        "The gate requires estimate.at(\"use_model\").string(\"use_model\") == "
+                        "native.use_model");
+                    const auto check_optional = [&](const char* field, const auto& value) {
+                        if (value)
+                            CHECK_MESSAGE(
+                                estimate.at(field).number(field) == *value,
+                                "The gate requires estimate.at(field).number(field) == *value");
+                        else
+                            CHECK_MESSAGE(estimate.at(field).is_null(),
+                                          "The gate requires estimate.at(field).is_null()");
+                    };
+                    check_optional("width", native.width);
+                    check_optional("smoothness", native.smoothness);
+                    check_optional("n_points", native.n_points);
+                    check_optional("tolerance", native.tolerance);
+                    check_optional("max_terms", native.max_terms);
+                }
+                const auto& points = background.at("anchors").array("anchors");
+                REQUIRE_MESSAGE(points.size() == experiment.background.size(),
+                                "The gate requires points.size() == experiment.background.size()");
+                for (std::size_t i = 0; i < points.size(); ++i) {
+                    CHECK_MESSAGE(
+                        points[i].at("id").string("id") == experiment.background[i]->id.value(),
+                        "The gate requires points[i].at(\"id\").string(\"id\") == "
+                        "experiment.background[i]->id.value()");
+                    CHECK_MESSAGE(
+                        points[i].at("position").number("position") ==
+                            experiment.background[i]->position.get(),
+                        "The gate requires points[i].at(\"position\").number(\"position\") == "
+                        "experiment.background[i]->position.get()");
+                    CHECK_MESSAGE(
+                        points[i].at("intensity").number("intensity") ==
+                            experiment.background[i]->intensity.value.get(),
+                        "The gate requires points[i].at(\"intensity\").number(\"intensity\") == "
+                        "experiment.background[i]->intensity.value.get()");
+                    CHECK_MESSAGE(points[i].at("free").boolean("free") ==
+                                      experiment.background[i]->intensity.free.get(),
+                                  "The gate requires points[i].at(\"free\").boolean(\"free\") == "
+                                  "experiment.background[i]->intensity.free.get()");
+                }
+                const auto& term_value = background.get("terms");
+                const bool has_terms = std::holds_alternative<A>(term_value.data);
+                CHECK_MESSAGE(has_terms, "The gate requires has_terms");
+                if (has_terms) {
+                    const auto& terms = term_value.array("terms");
+                    REQUIRE_MESSAGE(
+                        terms.size() == experiment.background_terms.size(),
+                        "The gate requires terms.size() == experiment.background_terms.size()");
+                    for (std::size_t i = 0; i < terms.size(); ++i) {
+                        const auto& term = *experiment.background_terms[i];
+                        CHECK_MESSAGE(terms[i].at("id").string("id") == term.id.value(),
+                                      "The gate requires terms[i].at(\"id\").string(\"id\") == "
+                                      "term.id.value()");
+                        CHECK_MESSAGE(terms[i].at("order").number("order") == term.order.get(),
+                                      "The gate requires terms[i].at(\"order\").number(\"order\") "
+                                      "== term.order.get()");
+                        CHECK_MESSAGE(terms[i].at("coefficient").number("coefficient") ==
+                                          term.coef.value.get(),
+                                      "The gate requires "
+                                      "terms[i].at(\"coefficient\").number(\"coefficient\") == "
+                                      "term.coef.value.get()");
+                        CHECK_MESSAGE(terms[i].at("free").boolean("free") == term.coef.free.get(),
+                                      "The gate requires terms[i].at(\"free\").boolean(\"free\") "
+                                      "== term.coef.free.get()");
+                        if (term.coef.uncertainty.get())
+                            CHECK_MESSAGE(terms[i].at("uncertainty").number("uncertainty") ==
+                                              *term.coef.uncertainty.get(),
+                                          "The gate requires "
+                                          "terms[i].at(\"uncertainty\").number(\"uncertainty\") "
+                                          "== *term.coef.uncertainty.get()");
+                        else
+                            CHECK_MESSAGE(
+                                terms[i].at("uncertainty").is_null(),
+                                "The gate requires terms[i].at(\"uncertainty\").is_null()");
+                    }
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("E11 dev larger native context preserves actual input without a cumulative work quota") {
+    auto project = edi::load_project(
+        (repo() / "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project").string());
+    ControllerHost host(project);
+    const auto original = host.controller.context();
+    REQUIRE_MESSAGE(edi::json::parse(original).get("error").is_null(),
+                    "E11 owner856 the ordinary native context is valid before larger work");
+    const auto original_name = project.metadata.name;
+    // Historical quota provenance: original d2 Limits::context_bytes=1048576.
+    // Native loaded metadata follows core FS identity rules, independently of
+    // the stricter new-project GUI name editor. This never saves a long path.
+    const std::size_t historical_context_bytes = 1048576;
+    project.metadata.name.append(historical_context_bytes + 257, 'x');
+    const auto large = host.controller.context();
+    const auto decoded = edi::json::parse(large);
+    REQUIRE_MESSAGE(
+        decoded.get("error").is_null(),
+        "E11 owner856 valid larger context cannot be refused by the old work-byte quota");
+    CHECK_MESSAGE(large.size() > historical_context_bytes,
+                  "E11 owner856 the independent context input actually crosses the historical "
+                  "admission boundary");
+    CHECK_MESSAGE(
+        decoded.at("project").at("name").string("name") == project.metadata.name,
+        "E11 owner856 larger native metadata remains exact rather than silently truncated");
+    project.metadata.name = original_name;
+    CHECK_MESSAGE(host.controller.context() == original,
+                  "E11 owner856 larger read-only context does not mutate science or retained "
+                  "context identity");
+}
+
+TEST_CASE(
+    "E11 dev FIRST Responses stream accepts valid cumulative work and retains typed refusal") {
+    // Literal lifecycle provenance:77ba02de tests/fixtures/assistant/response_events.py,
+    // from the official Responses message lifecycle. No model/scientific answers.
+    edi::assistant::OpenAiStream stream("independent-turn", "independent-request",
+                                        [](const auto&) {});
+    const auto send = [&](const J& event) {
+        return stream.feed("data: " + edi::json::write(event) + "\n\n");
+    };
+    const O item{{"id", "independent-message"},
+                 {"type", "message"},
+                 {"role", "assistant"},
+                 {"status", "in_progress"},
+                 {"content", A{}}};
+    const O empty_part{
+        {"type", "output_text"}, {"text", ""}, {"annotations", A{}}, {"logprobs", A{}}};
+    REQUIRE_MESSAGE(
+        send(O{{"type", "response.output_item.added"},
+               {"output_index", 0},
+               {"sequence_number", 0},
+               {"item", item}})
+            .ok,
+        "E11 owner856 the actual FIRST SSE parser accepts the original message-start identity");
+    REQUIRE_MESSAGE(
+        send(O{{"type", "response.content_part.added"},
+               {"item_id", "independent-message"},
+               {"output_index", 0},
+               {"content_index", 0},
+               {"sequence_number", 1},
+               {"part", empty_part}})
+            .ok,
+        "E11 owner856 the original typed content part starts before its streamed text");
+    const std::string chunk(513, 'x');
+    std::string expected;
+    for (int i = 0; i < 8193; ++i) {
+        const auto accepted = send(O{{"type", "response.output_text.delta"},
+                                     {"item_id", "independent-message"},
+                                     {"output_index", 0},
+                                     {"content_index", 0},
+                                     {"sequence_number", i + 2},
+                                     {"delta", chunk},
+                                     {"logprobs", A{}}});
+        REQUIRE_MESSAGE(accepted.ok,
+                        "E11 owner856 valid FIRST text events cannot fail at cumulative event or "
+                        "retained-work quotas");
+        expected += chunk;
+    }
+    CHECK_MESSAGE(expected.size() > 4194304,
+                  "E11 owner856 the independent FIRST input crosses the original four-MiB "
+                  "retained-work boundary");
+    const O part{
+        {"type", "output_text"}, {"text", expected}, {"annotations", A{}}, {"logprobs", A{}}};
+    REQUIRE_MESSAGE(
+        send(O{{"type", "response.output_text.done"},
+               {"item_id", "independent-message"},
+               {"output_index", 0},
+               {"content_index", 0},
+               {"sequence_number", 8195},
+               {"text", expected},
+               {"logprobs", A{}}})
+            .ok,
+        "E11 owner856 larger completed FIRST text is not an arbitrary total-output error");
+    REQUIRE_MESSAGE(
+        send(O{{"type", "response.content_part.done"},
+               {"item_id", "independent-message"},
+               {"output_index", 0},
+               {"content_index", 0},
+               {"sequence_number", 8196},
+               {"part", part}})
+            .ok,
+        "E11 owner856 the actual typed large content part settles its original identity");
+    const O completed{{"type", "message"},
+                      {"id", "independent-message"},
+                      {"role", "assistant"},
+                      {"status", "completed"},
+                      {"content", A{part}}};
+    REQUIRE_MESSAGE(
+        send(O{{"type", "response.output_item.done"},
+               {"output_index", 0},
+               {"sequence_number", 8197},
+               {"item", completed}})
+            .ok,
+        "E11 owner856 the completed large original item remains valid through full wire transfer");
+    REQUIRE_MESSAGE(send(O{{"type", "response.completed"},
+                           {"sequence_number", 8198},
+                           {"response", O{{"id", "independent-response"},
+                                          {"status", "completed"},
+                                          {"output", A{completed}}}}})
+                        .ok,
+                    "E11 owner856 the FIRST response reaches its original terminal after larger "
+                    "cumulative wire input");
+    CHECK_MESSAGE(
+        stream.finish().ok,
+        "E11 owner856 valid larger FIRST work finishes normally rather than requiring a new task");
+    const auto output = edi::json::parse(stream.output()).array("output");
+    REQUIRE_MESSAGE(output.size() == 1,
+                    "E11 owner856 one completed original item is retained exactly once");
+    CHECK_MESSAGE(output.front().at("content").array("content").front().at("text").string(
+                      "text") == expected,
+                  "E11 owner856 original completed provider text remains exact without silent "
+                  "quota truncation");
+    edi::assistant::OpenAiStream malformed("negative-turn", "negative-request",
+                                           [](const auto&) {});
+    CHECK_MESSAGE(
+        !malformed.feed("data: {not-json}\n\n").ok,
+        "E11 owner856 removing arbitrary work quotas preserves actual malformed-protocol refusal");
+}
+
+// Owner pending-message semantics, independently of Qt VM draft guards. These
+// exercise the original public Controller update/admit/terminal owners directly.
+namespace {
+void pending_connection(ControllerHost& host) {
+    const auto ready = host.controller.provider_event(
+        edi::json::write(O{{"schema", "edi.assistant/1"},
+                           {"type", "connection"},
+                           {"connection_id", "independent-connection"},
+                           {"status", "ready"},
+                           {"capabilities", A{O{{"id", "gpt-6.1-sol"},
+                                                {"display_name", "Independent fixture"},
+                                                {"efforts", A{"high"}},
+                                                {"attachment_types", A{}}}}}}));
+    REQUIRE_MESSAGE(ready.ok,
+                    "Pending file-only inputs retain the original supported connection admission");
+}
+std::vector<edi::assistant::SelectedFile> pending_files(unsigned first, unsigned count) {
+    std::vector<edi::assistant::SelectedFile> values;
+    for (unsigned i = first; i < first + count; ++i) {
+        const auto text = "data_independent_" + std::to_string(i) + "\n";
+        values.push_back({"independent-file-" + std::to_string(i),
+                          "input-" + std::to_string(i) + ".cif",
+                          std::vector<std::uint8_t>(text.begin(), text.end())});
+    }
+    return values;
+}
+edi::assistant::Reply pending_message(ControllerHost& host, const std::string& text = {},
+                                      const std::string& model = "gpt-6.1-sol") {
+    return host.controller.user_command(
+        edi::json::write(O{{"schema", "edi.assistant/1"},
+                           {"type", "message"},
+                           {"text", text},
+                           {"connection_id", "independent-connection"},
+                           {"model", model},
+                           {"effort", "high"}}));
+}
+void finish_pending_turn(ControllerHost& host) {
+    REQUIRE_MESSAGE(!host.requests.empty(),
+                    "A genuinely admitted original message has an actual provider request");
+    const auto request = host.requests.back();
+    const auto done = host.controller.provider_event(
+        edi::json::write(O{{"schema", "edi.assistant/1"},
+                           {"type", "turn_finished"},
+                           {"connection_id", "independent-connection"},
+                           {"turn_id", request.at("turn_id")},
+                           {"request_id", request.at("request_id")},
+                           {"status", "completed"}}));
+    REQUIRE_MESSAGE(
+        done.ok,
+        "Pending-message consumption is observed after the actual original turn terminal");
+}
+}  // namespace
+
+TEST_CASE("E11 pending Controller rejects consumed handles as another file-only draft") {
+    auto project = background_project("line-segment", "manual");
+    ControllerHost host(project);
+    pending_connection(host);
+    REQUIRE_MESSAGE(
+        host.controller.update_selected_files("independent-selected", 0, pending_files(0, 2), {})
+            .ok,
+        "Original public Controller admits genuinely new file handles");
+    const auto selected = edi::json::parse(host.controller.context()).at("selected_files");
+    REQUIRE_MESSAGE(pending_message(host).ok,
+                    "Literal empty user text is admitted with genuinely pending new handles");
+    const auto& sent = host.requests.back().at("history").array("history").back();
+    CHECK_MESSAGE(
+        sent.at("text").string("text").empty(),
+        "File-only submission preserves exact empty text without a fabricated objective");
+    finish_pending_turn(host);
+    const auto requests = host.requests.size();
+    const auto repeated = pending_message(host);
+    CHECK_FALSE_MESSAGE(
+        repeated.ok,
+        "Consumed retained task handles alone cannot admit another empty user message");
+    CHECK_MESSAGE(host.requests.size() == requests,
+                  "Refused repeated empty input sends no second provider request");
+    CHECK_MESSAGE(
+        edi::json::write(edi::json::parse(host.controller.context()).at("selected_files")) ==
+            edi::json::write(selected),
+        "Refused repeated file-only input preserves all retained task file descriptors/bytes "
+        "authority");
+    if (repeated.ok)
+        finish_pending_turn(host);  // Preserve the reached red and still exercise the independent
+                                    // retained-input positive.
+    REQUIRE_MESSAGE(
+        pending_message(host,
+                        "Read the already attached inputs without changing the scientific model.")
+            .ok,
+        "A genuine later nonempty user message may still use retained task attachments");
+}
+
+TEST_CASE("E11 pending Controller separates six per message from retained task capacity") {
+    auto project = background_project("line-segment", "manual");
+    ControllerHost host(project);
+    pending_connection(host);
+    SUBCASE("fresh seven refuses before any collection or provider side effect") {
+        const auto original = host.controller.context();
+        const auto update = host.controller.update_selected_files("independent-selected", 0,
+                                                                  pending_files(0, 7), {});
+        CHECK_FALSE_MESSAGE(update.ok,
+                            "The direct Controller also enforces the owner-selected six fresh "
+                            "attachments per pending message");
+        CHECK_MESSAGE(host.controller.context() == original,
+                      "Excess fresh admission preserves the original selected-input context");
+        CHECK_FALSE_MESSAGE(pending_message(host).ok,
+                            "Refused excess input cannot make an empty no-file message sendable");
+        CHECK_MESSAGE(host.requests.empty(),
+                      "Excess direct admission does not fabricate a provider turn");
+    }
+    SUBCASE("six consumed plus six fresh remain valid retained task inputs") {
+        REQUIRE_MESSAGE(
+            host.controller
+                .update_selected_files("independent-selected", 0, pending_files(0, 6), {})
+                .ok,
+            "The first six pending handles are a supported per-message batch");
+        REQUIRE_MESSAGE(pending_message(host).ok,
+                        "The first actual six-file draft is admitted once");
+        finish_pending_turn(host);
+        REQUIRE_MESSAGE(
+            host.controller
+                .update_selected_files("independent-selected", 1, pending_files(6, 6), {})
+                .ok,
+            "Six previously consumed handles do not become a lifetime six-file collection limit");
+        CHECK_MESSAGE(
+            edi::json::parse(host.controller.context())
+                    .at("selected_files")
+                    .at("files")
+                    .array("files")
+                    .size() == 12,
+            "All twelve independently admitted task handles remain available across two messages");
+        REQUIRE_MESSAGE(pending_message(host).ok,
+                        "Only the six fresh handles make the second literal-empty draft eligible");
+        finish_pending_turn(host);
+        CHECK_FALSE_MESSAGE(
+            pending_message(host).ok,
+            "A second completed batch cannot make a third empty draft eligible without new files");
+    }
+    SUBCASE("cumulative four then two then one preserves original pending six") {
+        REQUIRE_MESSAGE(
+            host.controller
+                .update_selected_files("independent-selected", 0, pending_files(0, 4), {})
+                .ok,
+            "First pending picker/drop batch enters its original collection");
+        REQUIRE_MESSAGE(
+            host.controller
+                .update_selected_files("independent-selected", 1, pending_files(4, 2), {})
+                .ok,
+            "Cumulative pending batches can reach six");
+        const auto original = host.controller.context();
+        CHECK_FALSE_MESSAGE(
+            host.controller
+                .update_selected_files("independent-selected", 2, pending_files(6, 1), {})
+                .ok,
+            "A seventh cumulative pending handle is refused at the shared admission owner");
+        CHECK_MESSAGE(
+            host.controller.context() == original,
+            "Cumulative excess refusal preserves original pending IDs/generation/descriptors");
+    }
+}
+
+TEST_CASE("E11 pending Controller failed preadmission does not consume genuine attachments") {
+    auto project = background_project("line-segment", "manual");
+    ControllerHost host(project);
+    pending_connection(host);
+    REQUIRE_MESSAGE(
+        host.controller.update_selected_files("independent-selected", 0, pending_files(0, 1), {})
+            .ok,
+        "Original input is genuinely pending before admission refusal");
+    const auto original = host.controller.context();
+    CHECK_FALSE_MESSAGE(pending_message(host, {}, "unoffered-independent-model").ok,
+                        "Unrecognized model refusal occurs before successful message admission");
+    CHECK_MESSAGE(host.requests.empty(),
+                  "A preadmission refusal cannot dispatch an unrelated provider request");
+    CHECK_MESSAGE(host.controller.context() == original,
+                  "Failed preadmission preserves the exact selected input context");
+    REQUIRE_MESSAGE(pending_message(host).ok,
+                    "The same pending input remains sendable after a corrected actual admission");
+    finish_pending_turn(host);
+    CHECK_FALSE_MESSAGE(
+        pending_message(host).ok,
+        "Only successful admission/settlement consumes the original pending eligibility");
+}

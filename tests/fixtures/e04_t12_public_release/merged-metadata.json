@@ -1,0 +1,50 @@
+{
+  "tests/fixtures/c13_t6_background/PROVENANCE.md": {
+    "after_sha256": "7d3547e6ea9770fc0c759bc576b0fd6517ffaf5ecda8b1c3db3a81a77406b4d7",
+    "before_sha256": "8de5de0479836c068a2055988179bccc7da1fc842c72736806ca57b6b30d140c"
+  },
+  "tests/fixtures/c13_t6_background/declarations.py": {
+    "after_sha256": "57b8b854efc0bb53b308bc32228a48da486b6b741c64675524513e5f1fcaaa61",
+    "before_sha256": "b00ff785b07e79155d9aa4494f8802105895ee53c7106106909042a190be8be7"
+  },
+  "tests/fixtures/c13_t6_background/freeze_cli_bounds.py": {
+    "after_sha256": "9cefa7a49b53d76ded2ee39dc5f41b62c9834a8049df16ad07ed589f5a15287b",
+    "before_sha256": "dbc8393cb3440676b11946a86404bb7501a96113f229b28a1e1b68ff2fa08e6c"
+  },
+  "tests/fixtures/c13_t6_background/generate.py": {
+    "after_sha256": "60b800877d6c0fb2465d3e2a5686bb6cf33626ca597be759dc7bba9807130d11",
+    "before_sha256": "b2b61e6823e7fc40cac9747beda62b7dd5e0bba234bed1322ec95aeae6e8e998"
+  },
+  "tests/fixtures/c13_t6_background/pearl.dat": {
+    "after_sha256": "ceb04a9ff25422f194e85ff07fd579c8570d86015fa5dd844de8232f5c765df1",
+    "before_sha256": "a3bdc3cc7c7fa8a6b2fe26f8fdfaed709a9bc13dd504406862b33883dd6ba79f"
+  },
+  "tests/fixtures/c13_t6_background/project.py": {
+    "after_sha256": "33889a17e6bde1fc8253139034fea5d7fbfec33945bfb74c551846b9a94418ef",
+    "before_sha256": "e97195945a686d2bb56ba18273c3723362307dfd094a13fc5ef7116c5095a586"
+  },
+  "tests/fixtures/c13_t6_background/reference.json": {
+    "after_sha256": "08252a2980d3dc8d83c1fd717f3fe1ed0d6f113e1906a2a43c4e397dcbb2b452",
+    "before_sha256": "d103a6465ddfc0979c7a0ceff47ada85c8fe3bf73c139d1e7a8ef88fb7874318"
+  },
+  "tests/fixtures/e04_t1/README.md": {
+    "after_sha256": "c585a5601946f14b69fa89b2164372b04cd7b31ce5f9fc92a180d87f8315e833",
+    "before_sha256": "297c6d72df2d149aa34c50b0020457bafc1623941280fb14af37945aa1f596a9"
+  },
+  "tests/fixtures/e04_t10/README.md": {
+    "after_sha256": "f920b9c419abbe6526f2ab3f4050f8b9d8f74b4110f1d072409969b0009ecf42",
+    "before_sha256": "bb1d5d83e28d4b7fd82924e3952a3f02584660ad6d619086cff5777151ee6c4c"
+  },
+  "tests/fixtures/e04_t10/generate.py": {
+    "after_sha256": "62f09c9c03784fe86810c0fbd3f6571569b95b1f670a3753b015416e08d9dbdc",
+    "before_sha256": "5d707573046110f07e0b2a713a9fa7b2dde518506666f98384643dad4140b172"
+  },
+  "tests/fixtures/e04_t10/generated.hpp": {
+    "after_sha256": "aae7391b800c07306a4d00e39de04d155057a418a079c4c5bfaf8cd8f69250d4",
+    "before_sha256": "5ca1b207601dca42dfdc8ac39a037127cd8d9c3fff6f6b744e5981fa862c3534"
+  },
+  "tests/unit/cpp/test_e04_t10_scene.cpp": {
+    "after_sha256": "05b5918c04e034053cb25f2fded6e9c23fa87f641c48e8bc4a1f7d1685d2024a",
+    "before_sha256": "627a0137b8451c3d72ea3150a3479d1b9d182e4afc8e748788101fa88b8f6240"
+  }
+}

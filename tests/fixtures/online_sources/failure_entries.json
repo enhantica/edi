@@ -1,0 +1,23 @@
+[
+  {
+    "id": "corrupt-data",
+    "kind": "data",
+    "radiation": "neutron",
+    "technique": "powder constant wavelength",
+    "files": [{"path": "data/corrupt.xye", "format": "xye"}]
+  },
+  {
+    "id": "valid-data",
+    "kind": "data",
+    "radiation": "neutron",
+    "technique": "powder constant wavelength",
+    "files": [{"path": "data/three_points.xye", "format": "xye"}]
+  },
+  {
+    "id": "unsupported-probe",
+    "kind": "data",
+    "radiation": "xray",
+    "technique": "single crystal constant wavelength",
+    "files": [{"path": "data/unsupported-probe.int", "format": "int"}]
+  }
+]

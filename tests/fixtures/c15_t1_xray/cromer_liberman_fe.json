@@ -1,0 +1,49 @@
+{
+  "source": "ESRF DABAX f1f2_CromerLiberman.dat, FPRIME 3F + Kissel-Pratt",
+  "distribution": "rietx/src/rietx/data/f1f2_CromerLiberman.dat",
+  "libraries_commit": "57d1cf5fcad9ba4fd86224eb4047af35214766cd",
+  "sha256": "23d71f80155b649a2ee1be106ddee3fe6a314fbc27ab5f6918d02eef7306a23e",
+  "hc_eV_A": 12398.419843320025,
+  "interpolation": "ADR-0066 153d5cfb: fp linear in log E; fpp log-log",
+  "smooth_rows": [
+    [
+      10000.7,
+      -0.0263664,
+      2.24097
+    ],
+    [
+      10042.2,
+      -0.0162108,
+      2.22547
+    ]
+  ],
+  "edge_rows": [
+    [
+      7087.2,
+      -5.40507,
+      0.470698
+    ],
+    [
+      7116.67,
+      -7.21977,
+      3.94646
+    ]
+  ],
+  "edge_wavelength": 1.7457805292951887,
+  "outside_wavelengths": [
+    4.275317187351733,
+    0.1746256315960567
+  ],
+  "cases": [
+    [
+      1.2384703783879378,
+      -0.02382355456784281,
+      2.237078876341192
+    ],
+    [
+      1.2359087048787258,
+      -0.01874576001025524,
+      2.2293289171974893
+    ]
+  ]
+}

@@ -1,0 +1,406 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#ifndef EDI_APP_EXPERIMENT_MODELS_HPP
+#define EDI_APP_EXPERIMENT_MODELS_HPP
+
+#include <QStringList>
+#include <QtNumeric>
+#include <QtQml/qqmlregistration.h>
+#include <functional>
+
+#include "edi/categories.hpp"
+#include "edi/model.hpp"
+#include "option_list_model.hpp"
+#include "parameter_item.hpp"
+#include "row_table_model.hpp"
+
+namespace edi { struct BackgroundPointInput; }
+
+namespace edi_app {
+
+class ParameterRegistry;
+class ProjectEditor;
+
+// A category's shown parameter fields: the core's *_categories fields — never the model's storage
+// walk. Roles `parameter` (ParameterItem), `name` (the `.edi` item name),
+// `displayName`, `shortName` (the field's symbol), `displayUnits` and `usedByProfile` (false for a
+// field outside the profile's set, shown because it is free). `usedCount` counts the fields the profile uses:
+// the sidebar shows only those (edi ADR-0017 §5).
+class ParameterListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to a category")
+    Q_PROPERTY(int usedCount READ usedCount NOTIFY usedCountChanged)
+
+   public:
+    using Fields = std::function<std::vector<edi::CategoryField>()>;
+    ParameterListModel(Fields fields, ParameterRegistry& registry, QObject* parent);
+    void sync();
+    int usedCount() const { return used_count_; }
+    // The shown field named `name` (its `.edi` item name), or null: for a label that depends on another field.
+    Q_INVOKABLE edi_app::ParameterItem* parameterNamed(const QString& name) const;
+
+   signals:
+    void usedCountChanged();
+
+   private:
+    Fields fields_;
+    ParameterRegistry& registry_;
+    int used_count_ = 0;
+};
+
+// The line-segment background points: `position` (text-editable) and `intensity` (ParameterItem).
+// What a defined background edit did: whether it `applied`, whether the result was `published`, and why not.
+struct BackgroundEditOutcome {
+    Q_GADGET
+    QML_VALUE_TYPE(backgroundEditOutcome)
+    Q_PROPERTY(bool applied MEMBER applied CONSTANT)
+    Q_PROPERTY(bool published MEMBER published CONSTANT)
+    Q_PROPERTY(QString message MEMBER message CONSTANT)
+
+   public:
+    bool applied = false, published = false;
+    QString message;
+    bool operator==(const BackgroundEditOutcome&) const = default;
+};
+
+class BackgroundListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+
+   public:
+    BackgroundListModel(edi::ExperimentBase& experiment, ProjectEditor& editor, ParameterRegistry& registry,
+                        QObject* parent);
+    void sync();
+    Q_INVOKABLE bool setId(int row, const QString& id);
+    Q_INVOKABLE bool setPosition(int row, double position);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE edi_app::BackgroundEditOutcome changeDefined(const QString& operation, const QString& id, double position, double intensity, bool free);
+    Q_PROPERTY(QString operationError READ operationError NOTIFY operationErrorChanged)
+    QString operationError() const { return operation_error_; }
+    Q_INVOKABLE void remove(int row);
+ signals:
+    void operationErrorChanged();
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override {
+        return role == QLatin1String("id") ? setId(row, value.toString())
+               : role == QLatin1String("position") && setPosition(row, value.toDouble());
+    }
+
+   private:
+    edi::ExperimentBase& experiment_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+    QString operation_error_;
+    BackgroundEditOutcome applyDefined(const edi::BackgroundPointInput& input);
+};
+
+// The polynomial or Chebyshev background terms: `id` and `order` (text-editable, each unique; the order within the
+// type's range) and `coef` (ParameterItem), with append (the lowest free order) and remove.
+class BackgroundTermListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+
+   public:
+    BackgroundTermListModel(edi::ExperimentBase& experiment, ProjectEditor& editor, ParameterRegistry& registry,
+                            QObject* parent);
+    void sync();
+    Q_INVOKABLE bool setId(int row, const QString& id);
+    Q_INVOKABLE bool setOrder(int row, int order);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void remove(int row);
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override {
+        return role == QLatin1String("id") ? setId(row, value.toString())
+               : role == QLatin1String("order") && setOrder(row, value.toInt());
+    }
+
+   private:
+    edi::ExperimentBase& experiment_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+};
+
+// The reflections the loaded file carried (`_refln`), read-only: `hkl` ("h k l"),
+// `dSpacing`, `position` (2θ or TOF), `fSquaredCalc` and, for a magnetic structure seen by neutrons,
+// `fMPerpSquaredCalc` (|M⊥|², edi ADR-0078) and `fSquaredTotalCalc` (F² + |M⊥|², as crysta computes it), numbers as
+// read; NaN where a cell is not one.
+class ReflectionListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+    // Whether the reflections carry |M⊥|²: the table then shows it beside F²calc.
+    Q_PROPERTY(bool magnetic READ magnetic NOTIFY magneticChanged)
+
+   public:
+    ReflectionListModel(const edi::ExperimentBase& experiment, QObject* parent);
+    void sync();
+    bool magnetic() const { return magnetic_; }
+
+   signals:
+    void magneticChanged();
+
+   private:
+    const edi::ExperimentBase& experiment_;
+    bool magnetic_ = false;
+};
+
+// A single crystal's reflections: `h`, `k`, `l`, the measured F² and its su, the calculated F² and the
+// normalised residual (F²meas - F²calc) / su, one row per measured reflection; NaN where nothing is
+// calculated yet. The point lists feed the F²calc-vs-F²meas chart.
+class SingleCrystalReflectionModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+    Q_PROPERTY(QList<double> calculated READ calculated NOTIFY calculatedChanged)
+    Q_PROPERTY(QList<double> measured READ measured NOTIFY measuredChanged)
+    Q_PROPERTY(QList<double> measuredSu READ measuredSu NOTIFY measuredSuChanged)
+    Q_PROPERTY(double low READ low NOTIFY lowChanged)
+    Q_PROPERTY(double high READ high NOTIFY highChanged)
+    Q_PROPERTY(bool calculatedShown READ calculatedShown NOTIFY calculatedShownChanged)
+    // The same points as F: Fcalc, Fmeas = sqrt(F²meas) and its su F²su / (2 Fmeas), where F²meas > 0 (NaN elsewhere).
+    Q_PROPERTY(QList<double> calculatedF READ calculatedF NOTIFY calculatedFChanged)
+    Q_PROPERTY(QList<double> measuredF READ measuredF NOTIFY measuredFChanged)
+    Q_PROPERTY(QList<double> measuredFSu READ measuredFSu NOTIFY measuredFSuChanged)
+    Q_PROPERTY(double lowF READ lowF NOTIFY lowFChanged)
+    Q_PROPERTY(double highF READ highF NOTIFY highFChanged)
+    // Whether the fit uses each reflection (F² > n su(F²) under the fit's cutoff, every one without), and the cutoff's
+    // n, NaN without one.
+    Q_PROPERTY(QList<bool> used READ used NOTIFY usedChanged)
+    Q_PROPERTY(double fitCutoff READ fitCutoff NOTIFY fitCutoffChanged)
+    // The smallest and the largest reflection wavelength of a time-of-flight single crystal, NaN without one.
+    Q_PROPERTY(double wavelengthLow READ wavelengthLow NOTIFY wavelengthLowChanged)
+    Q_PROPERTY(double wavelengthHigh READ wavelengthHigh NOTIFY wavelengthHighChanged)
+    // The column the table is sorted by (empty: file order) and its direction.
+    Q_PROPERTY(QString sortRole READ sortRole NOTIFY sortRoleChanged)
+    Q_PROPERTY(bool sortAscending READ sortAscending NOTIFY sortAscendingChanged)
+
+   public:
+    SingleCrystalReflectionModel(const edi::ExperimentBase& experiment, const edi::Project& project, QObject* parent);
+    void sync();
+    // The chart's points alone, during a held slider (edi ADR-0070); the table follows with the next sync.
+    void syncChart();
+    // A running fit's frame: its calculated F² shown in place of the experiment's own until the next sync.
+    void showFrame(std::shared_ptr<const std::vector<double>> calculated);
+    QString sortRole() const { return sort_role_; }
+    bool sortAscending() const { return sort_ascending_; }
+    // Sorts the rows numerically by a column, ascending first and reversed by a second call on the same column;
+    // a value that is not a number goes last either way. The chart's points keep the file order.
+    Q_INVOKABLE void sortBy(const QString& role);
+    QList<double> calculated() const { return calculated_; }
+    QList<double> measured() const { return measured_; }
+    QList<double> measuredSu() const { return measured_su_; }
+    double low() const { return low_; }
+    double high() const { return high_; }
+    bool calculatedShown() const { return calculated_shown_; }
+    /// Original native reflection order, before optional table sorting.
+    qsizetype fileRowCount() const noexcept { return file_rows_.size(); }
+    /// Actual published cell; invalid for an absent row/role. Does not sync or sort.
+    QVariant fileValue(qsizetype row, const QString& role) const;
+    /// Whether calculated cells currently display a running fit frame.
+    bool showingFrame() const noexcept { return bool(frame_); }
+    // The hover read-out of one reflection: h k l, the measured value with its su by the project's IUCr rule and the
+    // calculated value to the same decimals, in F² or F; rich text, one line each.
+    Q_INVOKABLE QString hoverText(int row, bool squared) const;
+    QList<double> calculatedF() const { return calculated_f_; }
+    QList<double> measuredF() const { return measured_f_; }
+    QList<double> measuredFSu() const { return measured_f_su_; }
+    double lowF() const { return low_f_; }
+    double highF() const { return high_f_; }
+    QList<bool> used() const { return used_; }
+    double fitCutoff() const { return fit_cutoff_; }
+    double wavelengthLow() const { return wavelength_low_; }
+    double wavelengthHigh() const { return wavelength_high_; }
+
+   signals:
+    // Any of the points' properties below changed (the chart redraws once for them all).
+    void pointsChanged();
+    void calculatedChanged();
+    void measuredChanged();
+    void measuredSuChanged();
+    void lowChanged();
+    void highChanged();
+    void calculatedShownChanged();
+    void calculatedFChanged();
+    void measuredFChanged();
+    void measuredFSuChanged();
+    void lowFChanged();
+    void highFChanged();
+    void usedChanged();
+    void fitCutoffChanged();
+    void wavelengthLowChanged();
+    void wavelengthHighChanged();
+    void sortRoleChanged();
+    void sortAscendingChanged();
+
+   private:
+    void publish();
+    void refresh(bool table = true);
+
+    QList<Row> file_rows_;
+    QString sort_role_;
+    bool sort_ascending_ = true;
+    std::shared_ptr<const std::vector<double>> frame_;  // a running fit's F²calc, when one is shown
+    const edi::ExperimentBase& experiment_;
+    const edi::Project& project_;
+    QList<double> calculated_;
+    QList<double> measured_;
+    QList<double> measured_su_;
+    double low_ = 0.0;
+    double high_ = 1.0;
+    bool calculated_shown_ = false;
+    QList<double> calculated_f_;
+    QList<double> measured_f_;
+    QList<double> measured_f_su_;
+    double low_f_ = 0.0;
+    double high_f_ = 1.0;
+    double wavelength_low_ = qQNaN();
+    double wavelength_high_ = qQNaN();
+    QList<bool> used_;
+    double fit_cutoff_ = qQNaN();
+};
+
+// The excluded regions: `start`, `end` pairs, editable, with append and remove.
+class ExcludedRegionListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+
+   public:
+    ExcludedRegionListModel(edi::ExperimentBase& experiment, ProjectEditor& editor, QObject* parent);
+    void sync();
+    Q_INVOKABLE bool setId(int row, const QString& id);
+    Q_INVOKABLE bool setStart(int row, double start);
+    Q_INVOKABLE bool setEnd(int row, double end);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void remove(int row);
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override {
+        return role == QLatin1String("id") ? setId(row, value.toString())
+               : role == QLatin1String("start") ? setStart(row, value.toDouble())
+               : role == QLatin1String("end") ? setEnd(row, value.toDouble())
+                                              : false;
+    }
+
+   private:
+    edi::ExperimentBase& experiment_;
+    ProjectEditor& editor_;
+};
+
+// The experiment's linked structures (phases): roles `structureId`, `scale` (ParameterItem), `enabled`,
+// `colorIndex` (the structure's place in the project, its colour) and `weightFraction`, the read-only
+// Hill-Howard weight fraction as a map of `value` and `uncertainty` (exactly 1 for a single enabled structure, empty
+// when there is none). `structureNames` lists the project's
+// structures, the choices of a row's name. A row is added naming a structure not yet linked, removed while
+// another remains, and disabled — kept and saved, but neither calculated nor fitted.
+class LinkedStructureListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+    Q_PROPERTY(QStringList structureNames READ structureNames NOTIFY structureNamesChanged)
+    Q_PROPERTY(bool canAppend READ canAppend NOTIFY canAppendChanged)
+    Q_PROPERTY(bool canRemove READ canRemove NOTIFY canRemoveChanged)
+
+   public:
+    LinkedStructureListModel(edi::Project& project, edi::ExperimentBase& experiment, ProjectEditor& editor,
+                             ParameterRegistry& registry, QObject* parent);
+    void sync();
+    QStringList structureNames() const { return structure_names_; }
+    bool canAppend() const { return can_append_; }
+    bool canRemove() const { return can_remove_; }
+    Q_INVOKABLE bool setStructureId(int row, const QString& id);
+    Q_INVOKABLE bool setEnabled(int row, bool enabled);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void remove(int row);
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override {
+        return role == QLatin1String("structureId") ? setStructureId(row, value.toString())
+               : role == QLatin1String("enabled")   ? setEnabled(row, value.toBool())
+                                                    : false;
+    }
+
+   signals:
+    void structureNamesChanged();
+    void canAppendChanged();
+    void canRemoveChanged();
+
+   private:
+    edi::Project& project_;
+    edi::ExperimentBase& experiment_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+    QStringList structure_names_;
+    bool can_append_ = false;
+    bool can_remove_ = false;
+};
+
+// The preferred-orientation rows: `structureId`, the texture axis `indexH/K/L` (the library's bounds,
+// edits.hpp), and `marchR`, `marchRandomFract` (ParameterItems); one row per textured linked structure.
+class PrefOrientListModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+    Q_PROPERTY(bool canAppend READ canAppend NOTIFY canAppendChanged)
+
+   public:
+    PrefOrientListModel(edi::ExperimentBase& experiment, ProjectEditor& editor, ParameterRegistry& registry,
+                        QObject* parent);
+    void sync();
+    bool canAppend() const { return can_append_; }
+    Q_INVOKABLE bool setStructureId(int row, const QString& id);
+    Q_INVOKABLE bool setIndex(int row, const QString& axis, int value);
+    Q_INVOKABLE void append();
+    Q_INVOKABLE void remove(int row);
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override {
+        if (role == QLatin1String("structureId")) {
+            return setStructureId(row, value.toString());
+        }
+        return role.startsWith(QLatin1String("index")) && setIndex(row, role.mid(5).toLower(), value.toInt());
+    }
+
+   signals:
+    void canAppendChanged();
+
+   private:
+    edi::ExperimentBase& experiment_;
+    ProjectEditor& editor_;
+    ParameterRegistry& registry_;
+    bool can_append_ = true;
+};
+
+// The scattering-source items of the experiment's probe: roles `name` (the
+// `.edi` item name), `token` (the stored value, empty when absent), `effectiveToken` (what the engine
+// uses), `isDeclared` and `options` (OptionListModel of the known values).
+class ScatteringSourceViewModel : public RowTableModel {
+    Q_OBJECT
+    QML_ELEMENT
+    QML_UNCREATABLE("Belongs to an experiment")
+
+   public:
+    ScatteringSourceViewModel(edi::ExperimentBase& experiment, ProjectEditor& editor, QObject* parent);
+    void sync();
+    // Select a known value for the named item (select_scattering_source); true on success.
+    Q_INVOKABLE bool select(const QString& name, const QString& token);
+    Q_INVOKABLE edi_app::OptionListModel* optionsFor(const QString& name) const;
+
+   protected:
+    bool setRole(int row, const QString& role, const QVariant& value) override {
+        return role == QLatin1String("token") && select(get(row, QStringLiteral("name")).toString(), value.toString());
+    }
+
+   private:
+    edi::ExperimentBase& experiment_;
+    ProjectEditor& editor_;
+    QHash<QString, OptionListModel*> options_;
+};
+
+}  // namespace edi_app
+
+#endif  // EDI_APP_EXPERIMENT_MODELS_HPP

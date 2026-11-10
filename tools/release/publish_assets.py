@@ -1,0 +1,261 @@
+# SPDX-License-Identifier: BSD-3-Clause
+"""Publish the already qualified assets without overwriting a release identity."""
+
+import argparse
+import hashlib
+import json
+import subprocess
+from pathlib import Path
+
+from plan import markdown_notes, release_body, release_date, validate_history
+from prepare import published_history
+
+
+def optional_api(repo: str, path: str) -> dict | None:
+    """Distinguish a missing release/tag from an authentication or service failure."""
+    result = subprocess.run(
+        ['gh', 'api', f'repos/{repo}/{path}'], capture_output=True, check=False
+    )
+    if result.returncode:
+        if b'HTTP 404' in result.stderr:
+            return None
+        raise RuntimeError('Release publication metadata could not be read')
+    return json.loads(result.stdout)
+
+
+def find_release(repo: str, tag: str, title: str | None = None) -> dict | None:
+    """The release with this tag, draft or published, read by its ID.
+
+    GitHub's ``releases/tags/{tag}`` route answers for published releases only, so a draft is
+    found by listing every release the token can see. With a title, a draft that lost its tag
+    to an edit (GitHub then shows ``untagged-...``) is found by that title, so it can be
+    re-tagged instead of reserved again.
+    """
+    pages = subprocess.run(
+        ['gh', 'api', '--paginate', '--slurp', f'repos/{repo}/releases?per_page=100'],
+        capture_output=True,
+        check=False,
+    )
+    if pages.returncode:
+        raise RuntimeError('Release publication metadata could not be read')
+    matches = [
+        item
+        for page in json.loads(pages.stdout)
+        for item in page
+        if item['tag_name'] == tag
+        or (
+            title is not None
+            and item['draft']
+            and item['name'] == title
+            and item['tag_name'].startswith('untagged-')
+        )
+    ]
+    if len(matches) > 1:
+        raise ValueError('Multiple releases use the same calendar tag')
+    if not matches:
+        return None
+    found = optional_api(repo, f'releases/{matches[0]["id"]}')
+    if found is None:
+        raise RuntimeError('A listed release could not be read')
+    return found
+
+
+def create_draft(repo: str, payload: dict) -> dict:
+    """Create a draft release and read it back by the ID GitHub returned."""
+    created = json.loads(
+        subprocess.check_output(
+            ['gh', 'api', '--method', 'POST', f'repos/{repo}/releases', '--input', '-'],
+            input=json.dumps({**payload, 'draft': True}).encode(),
+        )
+    )
+    existing = optional_api(repo, f'releases/{created["id"]}')
+    if existing is None or existing['tag_name'] != payload['tag_name'] or not existing['draft']:
+        raise RuntimeError('Created release could not be verified')
+    return existing
+
+
+def restore_tag(repo: str, existing: dict, tag: str, commit: str) -> dict:
+    """Give a draft of this source back the tag an edit dropped, then read it back."""
+    if existing['tag_name'] == tag:
+        return existing
+    if not existing['draft'] or not existing['tag_name'].startswith('untagged-'):
+        raise ValueError('Release tag already names a different release')
+    if existing['target_commitish'] != commit:
+        raise ValueError('The reserved version belongs to another source')
+    return edit_draft(repo, existing, {'tag_name': tag})
+
+
+def edit_draft(repo: str, existing: dict, fields: dict) -> dict:
+    """Change a draft and read it back with its tag kept.
+
+    GitHub drops a draft's tag (it becomes ``untagged-...``) when an edit leaves ``tag_name``
+    out, as the claim of v2026.11.10 did on run 42415725958, so every edit sends it.
+    """
+    tag = fields.get('tag_name', existing['tag_name'])
+    subprocess.run(
+        [
+            'gh',
+            'api',
+            '--method',
+            'PATCH',
+            f'repos/{repo}/releases/{existing["id"]}',
+            '--input',
+            '-',
+        ],
+        input=json.dumps({**fields, 'tag_name': tag}).encode(),
+        check=True,
+        capture_output=True,
+    )
+    edited = optional_api(repo, f'releases/{existing["id"]}')
+    if (
+        edited is None
+        or edited['tag_name'] != tag
+        or any(edited.get(key) != value for key, value in fields.items())
+    ):
+        raise RuntimeError('The draft could not be updated with its tag kept')
+    return edited
+
+
+def claim_reservation(repo: str, existing: dict, commit: str, body: str) -> dict:
+    """Give the draft that reserved this version its full text, then read it back.
+
+    A reservation is a draft with no assets whose text is only its release date. Any other
+    draft or release is returned unchanged for the ordinary identity checks.
+    """
+    date = release_date(existing['body'])
+    if not existing['draft'] or existing['assets'] or existing['body'] != release_body('', date):
+        return existing
+    if existing['target_commitish'] != commit:
+        raise ValueError('The reserved version belongs to another source')
+    if date != release_date(body):
+        raise ValueError('The reserved version was reserved on another date')
+    return edit_draft(repo, existing, {'body': body})
+
+
+def check_progression(history: dict, previous: dict, release: dict) -> None:
+    """Refuse stale plans while allowing a retry of the identical published release."""
+    validate_history(history)
+    validate_history(previous)
+    prior = {**history, 'releases': [item for item in history['releases'] if item != release]}
+    if previous not in (prior, history):
+        raise ValueError('Published history moved; prepare and qualify a new release')
+    if release not in history['releases']:
+        raise ValueError('Release is missing from the qualified history')
+
+
+def check_existing(
+    existing: dict,
+    release: dict,
+    notes: str,
+    assets: dict[str, str],
+    *,
+    replace_draft_assets: bool = False,
+) -> set[str]:
+    """Find matching assets and optionally allow replacements in a matching draft."""
+    if existing['target_commitish'] != release['commit'] or existing['body'] != notes:
+        raise ValueError('Release tag already names different source or notes')
+    found = set()
+    for asset in existing['assets']:
+        name = asset['name']
+        if name not in assets:
+            raise ValueError('An existing release asset has a different identity')
+        if asset.get('digest') == 'sha256:' + assets[name]:
+            found.add(name)
+        elif not (replace_draft_assets and existing['draft']):
+            raise ValueError('An existing release asset has a different identity')
+    if not existing['draft'] and found != set(assets):
+        raise ValueError('Published releases cannot be repaired with unqualified assets')
+    return found
+
+
+def publish_draft(repo: str, existing: dict, release: dict, notes: str, assets: dict) -> None:
+    """Publish the verified draft by its ID and read it back as the latest release."""
+    if check_existing(existing, release, notes, assets) != set(assets):
+        raise ValueError('All qualified assets must be uploaded before publication')
+    subprocess.run(
+        [
+            'gh',
+            'api',
+            '--method',
+            'PATCH',
+            f'repos/{repo}/releases/{existing["id"]}',
+            '-F',
+            'draft=false',
+            '-f',
+            'make_latest=true',
+            '-f',
+            f'tag_name={existing["tag_name"]}',
+        ],
+        check=True,
+        capture_output=True,
+    )
+    published = optional_api(repo, f'releases/{existing["id"]}')
+    if published is None or published['draft'] or published['tag_name'] != existing['tag_name']:
+        raise RuntimeError('Published release could not be verified')
+    if check_existing(published, release, notes, assets) != set(assets):
+        raise RuntimeError('Published release assets could not be verified')
+
+
+def publish(repo: str, folder: Path, *, finalize: bool = False) -> None:
+    """Create/reuse a matching draft, then finalize only after repository deployment."""
+    release = json.loads((folder / 'release.json').read_text())
+    history = json.loads((folder / 'assets/release-history.json').read_text())
+    check_progression(history, published_history(repo), release)
+    notes = (folder / 'notes.md').read_text()
+    if notes != markdown_notes(release):
+        raise ValueError('Release notes differ from the qualified titles')
+    body = release_body(notes, release['date'])
+    assets = {}
+    for path in (folder / 'assets').iterdir():
+        if not path.is_file() or path.is_symlink():
+            raise ValueError('Release assets must be regular files')
+        with path.open('rb') as stream:
+            assets[path.name] = hashlib.file_digest(stream, 'sha256').hexdigest()
+    tag = 'v' + release['version']
+    existing = find_release(repo, tag, 'edi ' + release['version'])
+    if existing is not None:
+        existing = restore_tag(repo, existing, tag, release['commit'])
+    if existing is None:
+        if finalize:
+            raise ValueError('Create and verify the draft before finalizing publication')
+        if optional_api(repo, f'git/ref/tags/{tag}') is not None:
+            raise ValueError('A tag already exists without its qualified release')
+        existing = create_draft(
+            repo,
+            {
+                'tag_name': tag,
+                'target_commitish': release['commit'],
+                'name': 'edi ' + release['version'],
+                'body': body,
+                'prerelease': False,
+                'make_latest': 'false',
+            },
+        )
+    existing = claim_reservation(repo, existing, release['commit'], body)
+    if existing['prerelease'] or existing['name'] != 'edi ' + release['version']:
+        raise ValueError('Release tag already names a different release')
+    found = check_existing(existing, release, body, assets)
+    if finalize:
+        publish_draft(repo, existing, release, body, assets)
+    else:
+        for name in sorted(set(assets) - found):
+            subprocess.run(
+                ['gh', 'release', 'upload', tag, str(folder / 'assets' / name), '--repo', repo],
+                check=True,
+            )
+        verified = optional_api(repo, f'releases/{existing["id"]}')
+        if verified is None or check_existing(verified, release, body, assets) != set(assets):
+            raise RuntimeError('Uploaded release assets could not be verified')
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--repo', required=True)
+    parser.add_argument('--folder', required=True, type=Path)
+    parser.add_argument('--finalize', action='store_true')
+    args = parser.parse_args()
+    publish(args.repo, args.folder, finalize=args.finalize)
+
+
+if __name__ == '__main__':
+    main()

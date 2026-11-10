@@ -1,0 +1,169 @@
+{
+  "kind": "app UI regression pins",
+  "styles": [
+    {
+      "key": "meas.0",
+      "light": "#618EC8",
+      "dark": "#6E92CB"
+    },
+    {
+      "key": "meas.1",
+      "light": "#8B9762",
+      "dark": "#94935C"
+    },
+    {
+      "key": "meas.2",
+      "light": "#C877B7",
+      "dark": "#C375C2"
+    },
+    {
+      "key": "calc",
+      "light": "#AD1A6B",
+      "dark": "#FC4F81"
+    },
+    {
+      "key": "bkg",
+      "light": "#8A8A8A",
+      "dark": "#969696"
+    },
+    {
+      "key": "resid",
+      "light": "#737373",
+      "dark": "#B0B0B0"
+    },
+    {
+      "key": "bragg.0",
+      "light": "#C58A03",
+      "dark": "#C58901"
+    },
+    {
+      "key": "bragg.1",
+      "light": "#C877B7",
+      "dark": "#C375C2"
+    },
+    {
+      "key": "bragg.2",
+      "light": "#A27957",
+      "dark": "#C59B77"
+    },
+    {
+      "key": "bragg.3",
+      "light": "#9B82E9",
+      "dark": "#9B82E9"
+    },
+    {
+      "key": "bragg.4",
+      "light": "#DE7141",
+      "dark": "#E37646"
+    },
+    {
+      "key": "structure.0",
+      "light": "#C58A03",
+      "dark": "#C58901"
+    },
+    {
+      "key": "structure.1",
+      "light": "#C877B7",
+      "dark": "#C375C2"
+    },
+    {
+      "key": "structure.2",
+      "light": "#A27957",
+      "dark": "#C59B77"
+    },
+    {
+      "key": "structure.3",
+      "light": "#9B82E9",
+      "dark": "#9B82E9"
+    },
+    {
+      "key": "structure.4",
+      "light": "#DE7141",
+      "dark": "#E37646"
+    },
+    {
+      "key": "excluded",
+      "light": "#8C8C8C",
+      "dark": "#8C8C8C"
+    }
+  ],
+  "point": {
+    "x": 83.6,
+    "y": 255,
+    "lines": [
+      {
+        "text": "x: 83.600",
+        "style": "",
+        "segments": []
+      },
+      {
+        "text": "meas: 255",
+        "style": "meas.0",
+        "segments": []
+      },
+      {
+        "text": "bkg: 160",
+        "style": "bkg",
+        "segments": []
+      },
+      {
+        "text": "calc: 286.466",
+        "style": "calc",
+        "segments": []
+      },
+      {
+        "text": "meas − calc: -31.466",
+        "style": "resid",
+        "segments": [
+          {
+            "text": "meas",
+            "style": "meas.0"
+          },
+          {
+            "text": " − ",
+            "style": ""
+          },
+          {
+            "text": "calc",
+            "style": "calc"
+          },
+          {
+            "text": ": -31.466",
+            "style": "resid"
+          }
+        ]
+      }
+    ]
+  },
+  "tick": {
+    "id": "bragg/lbco",
+    "style": "bragg.0",
+    "x": 92.4693270164049,
+    "y": 0.15,
+    "lines": [
+      {
+        "text": "lbco",
+        "style": "",
+        "segments": []
+      },
+      {
+        "text": "x: 92.469",
+        "style": "",
+        "segments": []
+      },
+      {
+        "text": "Miller indices: (3 2 1)",
+        "style": "bragg.0",
+        "segments": []
+      }
+    ]
+  },
+  "source": {
+    "app/qml/Components/PatternChart.qml": "8d57c9fe3954534fc3063d33d079d354c8ec1e33ead442e9e55ef4eecc88e161",
+    "app/src/pattern_chart_controller.cpp": "0a259b7707e72b1c234df62ec049d48e71ccfb45502d960e0d678429553d79dc",
+    "app/qml/Style/AppColors.qml": "04e8b2657262843d028139d2fcbb9078324f9408d47a0075f0a18df496b55854",
+    "core/include/edi/presentation.hpp": "c059f510833f460b426da1456edf64fcd6851956dc30e0733faeb032d85a182a"
+  },
+  "project_tree_sha256": "1f6601fbd3508617bb741f6019e7f2bd02a1c9489a9e7b5989c84f670882b60e",
+  "case": "pd-neut-cwl_lbco-hrpt"
+}

@@ -1,0 +1,7 @@
+# Reviewed gitleaks false positives (fingerprint per line).
+# A public download link of the TU Wien data repository: its `token` query parameter selects the file.
+tests/fixtures/c14_t4_neutron/PROVENANCE.md:generic-api-key:20
+# sha256 content digests in the history fixture's manifest (file paths mapped to their hashes).
+tests/fixtures/e04_t12_public_release/history/manifest.json:generic-api-key:8
+tests/fixtures/e04_t12_public_release/history/manifest.json:generic-api-key:37
+tests/fixtures/e04_t12_public_release/history/manifest.json:jfrog-identity-token:576

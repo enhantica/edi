@@ -1,0 +1,126 @@
+# The experiment types each row of the Features page applies to (owner record 2026-11-09). Each row is keyed by
+# its link text; a text several rows share takes `occurrences`, one value per row in page order. A value is `all` (one "All types" tag) or a list
+# of short tokens: pd and sc (sample form), neut and xray (probe), cwl and tof (beam mode). A dimension a row does
+# not name applies to every value of it. `code` names the experiment setting the code accepts only for some types:
+# the site build refuses a tag for a type that refuses the setting, as feature_applicability.json records it
+# (written from the built module by tools/docs/feature_applicability.py and checked against it in CI).
+rows:
+  # Crystal structures
+  From a CIF file: all
+  From the Crystallography Open Database: all
+  From EasyDiffraction’s collection: {occurrences: [all, [neut]]}
+  Created by hand: {occurrences: [all, [neut], all]}
+  From a saved project: {occurrences: [all, [neut], all]}
+  # Magnetic structures (loading)
+  From an `.edi` file: [neut]
+  # Experiments
+  A full experiment from a file: all
+  A full experiment from the web: all
+  Measured data from a file: all
+  Measured data from the web: all
+  Several datasets as experiments: all
+  Several datasets as a scan: [pd]
+  # Structure model
+  Space group and setting: all
+  Unit-cell lengths and angles: all
+  Atom labels and scattering species: all
+  Fractional coordinates: all
+  Occupancies: all
+  Wyckoff positions: all
+  Isotropic Biso and Uiso: all
+  Anisotropic Bani, Uani and beta: all
+  Nuclear neutron structure factors: [neut]
+  X-ray atomic form factors and dispersion: [xray]
+  Select scattering-table and dispersion sources: all
+  Total scattering and PDF: [pd]
+  Incommensurate and modulated structures: all
+  'Symmetry modes: displacive, occupational and magnetic': all
+  Commensurate magnetic structures: [neut]
+  Incommensurate magnetic structures: [neut]
+  Magnetic domains: [neut]
+  Classical polarised neutron diffraction (flipping ratios): [sc, neut]
+  Multiple phases and phase scales: [pd]
+  Derived mass fractions: [pd]
+  # Experiment model
+  Neutron powder: {occurrences: [[pd, neut, cwl], [pd, neut, tof]]}
+  X-ray powder: [pd, xray, cwl]
+  Neutron single crystal: [sc, neut]
+  2D Rietveld fitting: [pd]
+  Gaussian and Lorentzian: {types: [pd, cwl], code: {peak.type: cwl-gaussian}}
+  Pseudo-Voigt · direct width and mixing: {types: [pd, cwl], code: {peak.type: cwl-pseudo-voigt}}
+  Thompson–Cox–Hastings pseudo-Voigt: {types: [pd, cwl], code: {peak.type: cwl-tch-pseudo-voigt}}
+  Bérar–Baldinozzi asymmetry: {types: [pd, cwl], code: {peak.type: cwl-pseudo-voigt-berar-baldinozzi}}
+  Finger–Cox–Jephcoat axial asymmetry: {types: [pd, cwl], code: {peak.type: cwl-tch-pseudo-voigt-fcj}}
+  Jorgensen · Gaussian pulse convolution: {types: [pd, tof], code: {peak.type: tof-jorgensen}}
+  Jorgensen–Von Dreele · mixed profile: {types: [pd, tof], code: {peak.type: tof-jorgensen-von-dreele}}
+  Symmetric pseudo-Voigt: {types: [pd, tof], code: {peak.type: tof-pseudo-voigt}}
+  Gaussian and Lorentzian width terms: [pd, tof]
+  Ikeda–Carpenter pulse profile: [pd, tof]
+  Wavelength and CW zero offset: [cwl]
+  CW displacement and transparency shifts: [pd, cwl]
+  TOF zero, linear and quadratic calibration: [pd, tof]
+  Import an instrument resolution file: [pd]
+  Separate instrument resolution parameters: [pd]
+  X-ray wavelength doublet: [pd, xray, cwl]
+  X-ray polarization and monochromator: [pd, xray, cwl]
+  Hewat cylinder: {types: [pd, cwl], code: {absorption.type: cylinder-hewat}}
+  Lobanov cylinder: {types: [pd, cwl], code: {absorption.type: cylinder-lobanov}}
+  Wavelength-dependent cylinder (ABSCOR1): {types: [pd, tof], code: {absorption.type: cylinder-hewat}}
+  March–Dollase preferred orientation: [pd]
+  Becker–Coppens · type I, type II and mixed: {types: [sc], code: {extinction.type: becker-coppens-mixed}}
+  Gaussian and Lorentzian mosaic distributions: [sc]
+  Larson · isotropic and anisotropic: {types: [sc], code: {extinction.type: larson-anisotropic}}
+  Structural twinning: [sc]
+  Line-segment background: [pd]
+  Polynomial background: [pd]
+  Chebyshev background: [pd]
+  Automatic estimation · arPLS, SNIP and FABC: [pd]
+  Powder excluded regions: [pd]
+  Single-crystal reflection exclusions: [sc]
+  # Analysis and fitting
+  Forward calculation without observations: all
+  Rietveld fitting: [pd]
+  Le Bail intensity extraction: [pd]
+  Pawley intensity extraction: [pd]
+  Single-experiment fitting: all
+  Joint multi-experiment fitting: all
+  Sequential scans: [pd]
+  Independent scans: [pd]
+  Independent free-parameter selection: all
+  Descent strategy from saved analysis settings: all
+  Weighted least squares · Levenberg–Marquardt: all
+  Maximum likelihood: all
+  Bayesian analysis · MCMC sampling: all
+  Covariance, uncertainties and correlations: all
+  Profile and background-subtracted R factors: [pd]
+  Phase Bragg and F factors: [pd]
+  Single-crystal factors and reflection subsets: [sc]
+  # Projects and results
+  Open and save a complete project: all
+  Import/export a project archive: all
+  Import TOPAS projects: [pd]
+  Import FullProf projects: all
+  Import GSAS-II projects: all
+  Atoms and symmetry copies: all
+  Atom labels: all
+  Bonds: all
+  Unit-cell outline: all
+  Crystal axes: all
+  Rotation, pan and zoom: all
+  Views along a, b and c: all
+  Atom radii and displacement ellipsoids: all
+  Magnetic-moment arrows: [neut]
+  Polyhedra around atoms: all
+  Pattern and reflection charts: [pd]
+  Single-crystal calculated versus measured F²: [sc]
+  Parameter correlation matrix: all
+  Stacked patterns for multiple datasets: [pd]
+  Intensity map for multiple datasets: [pd]
+  Parameter evolution across a scan: [pd]
+  Interactive and offline HTML reports: all
+  PDF reports: all
+  CIF reports: all
+  Saved-report freshness checks: all
+  # Installation
+  Code signing on macOS: all
+  Code signing on Windows: all

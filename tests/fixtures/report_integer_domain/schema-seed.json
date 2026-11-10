@@ -1,0 +1,1445 @@
+{
+  "schema_version": 1,
+  "generated": "2026-10-14 00:00 UTC",
+  "sections": [
+    "summary",
+    "analysis",
+    "structures",
+    "experiments",
+    "correlations"
+  ],
+  "contents": [
+    {
+      "key": "charts",
+      "title": "Charts",
+      "included": true
+    },
+    {
+      "key": "correlations",
+      "title": "Correlations",
+      "included": true
+    },
+    {
+      "key": "reflections",
+      "title": "Reflections",
+      "included": true
+    },
+    {
+      "key": "data",
+      "title": "Data",
+      "included": false
+    }
+  ],
+  "name": "lbco_hrpt_s2",
+  "title": "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
+  "authors": "",
+  "description": "Cubic perovskite · Preferred orientation · Starting model 2",
+  "structure_ids": [
+    "lbco"
+  ],
+  "experiment_ids": [
+    "hrpt"
+  ],
+  "analysis_categories": [
+    {
+      "id": "software",
+      "title": "Software",
+      "rows": [
+        {
+          "label": "Framework",
+          "text": "edi 0.0.0-dev",
+          "units": ""
+        },
+        {
+          "label": "Calculator",
+          "text": "crysta",
+          "units": ""
+        }
+      ],
+      "table": {
+        "columns": [],
+        "rows": []
+      }
+    },
+    {
+      "id": "minimizer",
+      "title": "Minimizer",
+      "rows": [
+        {
+          "label": "Type",
+          "text": "crysta",
+          "units": ""
+        },
+        {
+          "label": "Maximum iterations",
+          "text": "1000",
+          "units": ""
+        },
+        {
+          "label": "χ² change tolerance",
+          "text": "crysta's default",
+          "units": ""
+        }
+      ],
+      "table": {
+        "columns": [],
+        "rows": []
+      }
+    },
+    {
+      "id": "fitting_mode",
+      "title": "Fitting mode",
+      "rows": [
+        {
+          "label": "Type",
+          "text": "Single experiment",
+          "units": ""
+        }
+      ],
+      "table": {
+        "columns": [],
+        "rows": []
+      }
+    },
+    {
+      "id": "fit_result",
+      "title": "Fit result",
+      "rows": [
+        {
+          "label": "Overall status",
+          "text": "Not fitted yet",
+          "units": ""
+        }
+      ],
+      "table": {
+        "columns": [],
+        "rows": []
+      }
+    }
+  ],
+  "parameters": [
+    {
+      "unique_name": "lbco.cell.length_a",
+      "label": "a",
+      "value": 3.88,
+      "su": null,
+      "text": "3.88",
+      "units": "Å",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "lbco.atom_site.La.occupancy",
+      "label": "Occ.",
+      "value": 0.5,
+      "su": 0,
+      "text": "0.5",
+      "units": "",
+      "start": null,
+      "free": false
+    },
+    {
+      "unique_name": "lbco.atom_site.La.adp_iso",
+      "label": "B iso",
+      "value": 0.5,
+      "su": null,
+      "text": "0.5",
+      "units": "Å²",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "lbco.atom_site.Ba.occupancy",
+      "label": "Occ.",
+      "value": 0.5,
+      "su": 0,
+      "text": "0.5",
+      "units": "",
+      "start": null,
+      "free": false
+    },
+    {
+      "unique_name": "lbco.atom_site.Ba.adp_iso",
+      "label": "B iso",
+      "value": 0.5,
+      "su": null,
+      "text": "0.5",
+      "units": "Å²",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "lbco.atom_site.Co.occupancy",
+      "label": "Occ.",
+      "value": 1,
+      "su": 0,
+      "text": "1",
+      "units": "",
+      "start": null,
+      "free": false
+    },
+    {
+      "unique_name": "lbco.atom_site.Co.adp_iso",
+      "label": "B iso",
+      "value": 0.5,
+      "su": null,
+      "text": "0.5",
+      "units": "Å²",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "lbco.atom_site.O.occupancy",
+      "label": "Occ.",
+      "value": 1,
+      "su": 0,
+      "text": "1",
+      "units": "",
+      "start": null,
+      "free": false
+    },
+    {
+      "unique_name": "lbco.atom_site.O.adp_iso",
+      "label": "B iso",
+      "value": 0.5,
+      "su": null,
+      "text": "0.5",
+      "units": "Å²",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "hrpt.peak.broad_gauss_u",
+      "label": "U",
+      "value": 0.1,
+      "su": null,
+      "text": "0.1",
+      "units": "°²",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "hrpt.peak.broad_gauss_v",
+      "label": "V",
+      "value": -0.1,
+      "su": null,
+      "text": "-0.1",
+      "units": "°²",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "hrpt.peak.broad_gauss_w",
+      "label": "W",
+      "value": 0.1,
+      "su": null,
+      "text": "0.1",
+      "units": "°²",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "hrpt.peak.broad_lorentz_x",
+      "label": "X",
+      "value": 0,
+      "su": 0,
+      "text": "0",
+      "units": "°",
+      "start": null,
+      "free": false
+    },
+    {
+      "unique_name": "hrpt.peak.broad_lorentz_y",
+      "label": "Y",
+      "value": 0.001,
+      "su": null,
+      "text": "0.001",
+      "units": "°",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "hrpt.instrument.calib_twotheta_offset",
+      "label": "2θ offset",
+      "value": 0.6,
+      "su": null,
+      "text": "0.6",
+      "units": "°",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "hrpt.instrument.setup_wavelength",
+      "label": "Wavelength",
+      "value": 1.494,
+      "su": 0,
+      "text": "1.494",
+      "units": "Å",
+      "start": null,
+      "free": false
+    },
+    {
+      "unique_name": "hrpt.linked_structure.lbco.scale",
+      "label": "Scale",
+      "value": 10,
+      "su": null,
+      "text": "10",
+      "units": "",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "hrpt.absorption.mu_r",
+      "label": "μ R",
+      "value": 0,
+      "su": 0,
+      "text": "0",
+      "units": "",
+      "start": null,
+      "free": false
+    },
+    {
+      "unique_name": "hrpt.preferred_orientation.lbco.march_r",
+      "label": "r",
+      "value": 0.8,
+      "su": null,
+      "text": "0.8",
+      "units": "",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "hrpt.preferred_orientation.lbco.march_random_fract",
+      "label": "f rand",
+      "value": 0,
+      "su": 0,
+      "text": "0",
+      "units": "",
+      "start": null,
+      "free": false
+    },
+    {
+      "unique_name": "hrpt.background.1.intensity",
+      "label": "Intensity",
+      "value": 169,
+      "su": null,
+      "text": "169",
+      "units": "",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "hrpt.background.2.intensity",
+      "label": "Intensity",
+      "value": 164.1,
+      "su": null,
+      "text": "164.1",
+      "units": "",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "hrpt.background.3.intensity",
+      "label": "Intensity",
+      "value": 166.91,
+      "su": null,
+      "text": "166.91",
+      "units": "",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "hrpt.background.4.intensity",
+      "label": "Intensity",
+      "value": 175.27,
+      "su": null,
+      "text": "175.27",
+      "units": "",
+      "start": null,
+      "free": true
+    },
+    {
+      "unique_name": "hrpt.background.5.intensity",
+      "label": "Intensity",
+      "value": 174.56,
+      "su": null,
+      "text": "174.56",
+      "units": "",
+      "start": null,
+      "free": true
+    }
+  ],
+  "fitted": false,
+  "correlations": {
+    "labels": [
+      "a",
+      "b"
+    ],
+    "values": [
+      1,
+      0,
+      0,
+      1
+    ],
+    "level": 0,
+    "available": 2,
+    "empty_text": ""
+  },
+  "evolution": null,
+  "structures": [
+    {
+      "id": "lbco",
+      "categories": [],
+      "scene": {
+        "current": true,
+        "has_copies": true,
+        "cell_basis": [
+          [
+            3.88,
+            0,
+            0
+          ],
+          [
+            2.3758147903458654e-16,
+            3.88,
+            0
+          ],
+          [
+            2.3758147903458654e-16,
+            2.3758147903458654e-16,
+            3.88
+          ]
+        ],
+        "atoms": [
+          {
+            "centre": [
+              0,
+              0,
+              0
+            ],
+            "row": 0,
+            "cluster_id": 1,
+            "table_radius": 2.07,
+            "radius": 0.4316248370981447,
+            "radius_substituted": false,
+            "ellipsoid": false,
+            "semi_axes": [
+              0,
+              0,
+              0
+            ],
+            "orientation": [
+              1,
+              0,
+              0,
+              0
+            ],
+            "label": "La/Ba",
+            "asymmetric": true,
+            "drawn": true,
+            "parts": [
+              {
+                "row": 0,
+                "site_id": "La",
+                "element": "La",
+                "occupancy": 0.5,
+                "fraction": 0.5,
+                "color": "#70D4FF"
+              },
+              {
+                "row": 8,
+                "site_id": "Ba",
+                "element": "Ba",
+                "occupancy": 0.5,
+                "fraction": 0.5,
+                "color": "#00C900"
+              }
+            ],
+            "major": 0
+          }
+        ],
+        "bonds": [
+          {
+            "row": 0,
+            "atom_1": 8,
+            "atom_2": 9,
+            "start": [
+              1.9400000000000004,
+              1.9400000000000002,
+              1.94
+            ],
+            "end": [
+              2.3758147903458654e-16,
+              1.9400000000000002,
+              1.94
+            ],
+            "distance": 1.9400000000000002,
+            "color_1": "#F090A0",
+            "color_2": "#FF0D0D"
+          }
+        ],
+        "cell_edges": [
+          {
+            "start": [
+              0,
+              0,
+              0
+            ],
+            "end": [
+              3.88,
+              0,
+              0
+            ]
+          },
+          {
+            "start": [
+              2.3758147903458654e-16,
+              2.3758147903458654e-16,
+              3.88
+            ],
+            "end": [
+              3.8800000000000003,
+              2.3758147903458654e-16,
+              3.88
+            ]
+          },
+          {
+            "start": [
+              2.3758147903458654e-16,
+              3.88,
+              0
+            ],
+            "end": [
+              3.8800000000000003,
+              3.88,
+              0
+            ]
+          },
+          {
+            "start": [
+              4.751629580691731e-16,
+              3.8800000000000003,
+              3.88
+            ],
+            "end": [
+              3.880000000000001,
+              3.8800000000000003,
+              3.88
+            ]
+          },
+          {
+            "start": [
+              0,
+              0,
+              0
+            ],
+            "end": [
+              2.3758147903458654e-16,
+              3.88,
+              0
+            ]
+          },
+          {
+            "start": [
+              2.3758147903458654e-16,
+              2.3758147903458654e-16,
+              3.88
+            ],
+            "end": [
+              4.751629580691731e-16,
+              3.8800000000000003,
+              3.88
+            ]
+          },
+          {
+            "start": [
+              3.88,
+              0,
+              0
+            ],
+            "end": [
+              3.8800000000000003,
+              3.88,
+              0
+            ]
+          },
+          {
+            "start": [
+              3.8800000000000003,
+              2.3758147903458654e-16,
+              3.88
+            ],
+            "end": [
+              3.880000000000001,
+              3.8800000000000003,
+              3.88
+            ]
+          },
+          {
+            "start": [
+              0,
+              0,
+              0
+            ],
+            "end": [
+              2.3758147903458654e-16,
+              2.3758147903458654e-16,
+              3.88
+            ]
+          },
+          {
+            "start": [
+              2.3758147903458654e-16,
+              3.88,
+              0
+            ],
+            "end": [
+              4.751629580691731e-16,
+              3.8800000000000003,
+              3.88
+            ]
+          },
+          {
+            "start": [
+              3.88,
+              0,
+              0
+            ],
+            "end": [
+              3.8800000000000003,
+              2.3758147903458654e-16,
+              3.88
+            ]
+          },
+          {
+            "start": [
+              3.8800000000000003,
+              3.88,
+              0
+            ],
+            "end": [
+              3.880000000000001,
+              3.8800000000000003,
+              3.88
+            ]
+          }
+        ],
+        "axes": [
+          {
+            "letter": "a",
+            "vector": [
+              3.88,
+              0,
+              0
+            ],
+            "color": "#DC2828"
+          },
+          {
+            "letter": "b",
+            "vector": [
+              2.3758147903458654e-16,
+              3.88,
+              0
+            ],
+            "color": "#28B428"
+          },
+          {
+            "letter": "c",
+            "vector": [
+              2.3758147903458654e-16,
+              2.3758147903458654e-16,
+              3.88
+            ],
+            "color": "#2850DC"
+          }
+        ],
+        "labels": [
+          {
+            "atom": 0,
+            "anchor": [
+              0,
+              0,
+              0
+            ],
+            "text": "independent label"
+          }
+        ],
+        "legend": [
+          {
+            "element": "La",
+            "color": "#70D4FF"
+          },
+          {
+            "element": "Ba",
+            "color": "#00C900"
+          },
+          {
+            "element": "Co",
+            "color": "#F090A0"
+          },
+          {
+            "element": "O",
+            "color": "#FF0D0D"
+          }
+        ],
+        "substituted_elements": [],
+        "frame": {
+          "target": [
+            2.1608667507229096,
+            2.2835638771031728,
+            1.7575821908086244
+          ],
+          "view_direction": [
+            0.36917029919249134,
+            0.23946181569242683,
+            0.8979818088466005
+          ],
+          "view_up": [
+            -0.09105125514969287,
+            0.970905782671669,
+            -0.2214760260397936
+          ],
+          "half_width": 3.3514077940949036,
+          "half_height": 3.275344112569791,
+          "pad": 0.4316248370981447
+        }
+      },
+      "view": {
+        "direction": [
+          0.36917029919249134,
+          0.23946181569242683,
+          0.8979818088466005
+        ],
+        "up": [
+          -0.09105125514969287,
+          0.970905782671669,
+          -0.2214760260397936
+        ],
+        "magnification": 0.9,
+        "pan_x": 0,
+        "pan_y": 0,
+        "projection": "orthographic"
+      },
+      "drawing": {
+        "fitted_half_height": 3.5907940651016825,
+        "spheres": [
+          {
+            "position": [
+              1.9400000000000004,
+              1.9400000000000002,
+              1.94
+            ],
+            "scale": [
+              0.3367491648096547,
+              0.3367491648096547,
+              0.3367491648096547
+            ],
+            "rotation": [
+              1,
+              0,
+              0,
+              0
+            ],
+            "color": "#F090A0",
+            "atom": 8
+          }
+        ],
+        "cylinders": [
+          {
+            "position": [
+              1.4550000000000003,
+              1.9400000000000002,
+              1.94
+            ],
+            "scale": [
+              0.06,
+              0.9700000000000001,
+              0.06
+            ],
+            "rotation": [
+              0.7071067811865476,
+              0,
+              -0.0,
+              0.7071067811865476
+            ],
+            "color": "#F090A0",
+            "atom": 0
+          }
+        ],
+        "shared": [
+          0
+        ],
+        "triad": [
+          {
+            "letter": "a",
+            "color": "#DC2828",
+            "origin": [
+              0,
+              0,
+              0
+            ],
+            "direction": [
+              1,
+              0,
+              0
+            ],
+            "shaft_length": 4.455256599702212,
+            "shaft_radius": 0.03231714658591514,
+            "head_length": 0.305217495533643,
+            "head_radius": 0.10054223382284712,
+            "letter_anchor": [
+              4.94001379849094,
+              0,
+              0
+            ]
+          },
+          {
+            "letter": "b",
+            "color": "#28B428",
+            "origin": [
+              0,
+              0,
+              0
+            ],
+            "direction": [
+              6.123233995736766e-17,
+              1,
+              0
+            ],
+            "shaft_length": 4.455256599702212,
+            "shaft_radius": 0.03231714658591514,
+            "head_length": 0.305217495533643,
+            "head_radius": 0.10054223382284712,
+            "letter_anchor": [
+              3.0248860430328437e-16,
+              4.94001379849094,
+              0
+            ]
+          },
+          {
+            "letter": "c",
+            "color": "#2850DC",
+            "origin": [
+              0,
+              0,
+              0
+            ],
+            "direction": [
+              6.123233995736766e-17,
+              6.123233995736766e-17,
+              1
+            ],
+            "shaft_length": 4.455256599702212,
+            "shaft_radius": 0.03231714658591514,
+            "head_length": 0.305217495533643,
+            "head_radius": 0.10054223382284712,
+            "letter_anchor": [
+              3.0248860430328437e-16,
+              3.0248860430328437e-16,
+              4.94001379849094
+            ]
+          }
+        ]
+      },
+      "along": [
+        {
+          "direction": [
+            1,
+            0,
+            0
+          ],
+          "up": [
+            0,
+            0,
+            1
+          ],
+          "magnification": 0.9,
+          "pan_x": 0,
+          "pan_y": 0,
+          "projection": "orthographic"
+        },
+        {
+          "direction": [
+            -6.123233995736766e-17,
+            -1,
+            -0.0
+          ],
+          "up": [
+            -0.0,
+            0,
+            1
+          ],
+          "magnification": 0.9,
+          "pan_x": 0,
+          "pan_y": 0,
+          "projection": "orthographic"
+        },
+        {
+          "direction": [
+            6.123233995736766e-17,
+            6.123233995736766e-17,
+            1
+          ],
+          "up": [
+            6.842277657836021e-49,
+            1,
+            -6.123233995736766e-17
+          ],
+          "magnification": 0.9,
+          "pan_x": 0,
+          "pan_y": 0,
+          "projection": "orthographic"
+        }
+      ],
+      "labels": [
+        {
+          "atom": 0,
+          "anchor": [
+            0,
+            0,
+            0
+          ],
+          "text": "independent label"
+        }
+      ]
+    }
+  ],
+  "experiments": [
+    {
+      "id": "hrpt",
+      "categories": [],
+      "pattern": {
+        "current": true,
+        "x": {
+          "title": "2θ (°)",
+          "segments": [],
+          "min": 10,
+          "max": 164.85,
+          "scale": "linear"
+        },
+        "y_main": {
+          "title": "Intensity",
+          "segments": [
+            {
+              "text": "meas",
+              "style": "meas.0"
+            },
+            {
+              "text": ", ",
+              "style": ""
+            },
+            {
+              "text": "calc",
+              "style": "calc"
+            },
+            {
+              "text": ", ",
+              "style": ""
+            },
+            {
+              "text": "bkg",
+              "style": "bkg"
+            }
+          ],
+          "min": 67.8,
+          "max": 5710.615300476877,
+          "scale": "linear"
+        },
+        "y_residual": {
+          "title": "Residual",
+          "segments": [
+            {
+              "text": "meas",
+              "style": "meas.0"
+            },
+            {
+              "text": " − ",
+              "style": ""
+            },
+            {
+              "text": "calc",
+              "style": "calc"
+            }
+          ],
+          "min": -4238.876311392626,
+          "max": 2060.6608150734537,
+          "scale": "linear"
+        },
+        "series": [
+          {
+            "kind": "measured",
+            "pane": "main",
+            "id": "meas",
+            "label": "Measured (Imeas)",
+            "style": "meas.0",
+            "x": [
+              10
+            ],
+            "y": [
+              167
+            ],
+            "rows": [
+              0
+            ],
+            "bar_low": [
+              154.4
+            ],
+            "bar_high": [
+              179.6
+            ]
+          },
+          {
+            "kind": "calculated",
+            "pane": "main",
+            "id": "calc",
+            "label": "Total calculated (Icalc)",
+            "style": "calc",
+            "x": [
+              10
+            ],
+            "y": [
+              169
+            ],
+            "rows": [
+              0
+            ],
+            "bar_low": [],
+            "bar_high": []
+          },
+          {
+            "kind": "background",
+            "pane": "main",
+            "id": "bkg",
+            "label": "Background (Ibkg)",
+            "style": "bkg",
+            "x": [
+              10
+            ],
+            "y": [
+              169
+            ],
+            "rows": [
+              0
+            ],
+            "bar_low": [],
+            "bar_high": []
+          },
+          {
+            "kind": "residual",
+            "pane": "residual",
+            "id": "resid",
+            "label": "Residual (Imeas − Icalc)",
+            "style": "resid",
+            "x": [
+              10
+            ],
+            "y": [
+              -2
+            ],
+            "rows": [
+              0
+            ],
+            "bar_low": [],
+            "bar_high": []
+          },
+          {
+            "kind": "bragg",
+            "pane": "bragg",
+            "id": "bragg/lbco",
+            "label": "lbco",
+            "style": "bragg.0",
+            "x": [
+              22.800444528353708
+            ],
+            "y": [
+              0.15
+            ],
+            "rows": [
+              0
+            ],
+            "bar_low": [],
+            "bar_high": []
+          }
+        ],
+        "excluded": [
+          [
+            0,
+            5
+          ],
+          [
+            165,
+            180
+          ]
+        ],
+        "layout": [
+          {
+            "pane": "main",
+            "stretch": 0.7,
+            "fixed_px": 0
+          },
+          {
+            "pane": "bragg",
+            "stretch": 0,
+            "fixed_px": 18
+          },
+          {
+            "pane": "residual",
+            "stretch": 0.3,
+            "fixed_px": 0
+          }
+        ],
+        "hover": [
+          [],
+          [],
+          [],
+          [],
+          [
+            "1 0 0",
+            "",
+            "",
+            "1 1 0",
+            "",
+            "",
+            "1 1 1",
+            "",
+            "",
+            "2 0 0",
+            "",
+            "",
+            "2 1 0",
+            "",
+            "",
+            "2 1 1",
+            "",
+            "",
+            "2 2 0",
+            "",
+            "",
+            "3 0 0",
+            "",
+            "",
+            "2 2 1",
+            "",
+            "",
+            "3 1 0",
+            "",
+            "",
+            "3 1 1",
+            "",
+            "",
+            "2 2 2",
+            "",
+            "",
+            "3 2 0",
+            "",
+            "",
+            "3 2 1",
+            "",
+            "",
+            "4 0 0",
+            "",
+            "",
+            "4 1 0",
+            "",
+            "",
+            "3 2 2",
+            "",
+            "",
+            "4 1 1",
+            "",
+            "",
+            "3 3 0",
+            "",
+            "",
+            "3 3 1",
+            "",
+            "",
+            "4 2 0",
+            "",
+            "",
+            "4 2 1",
+            "",
+            "",
+            "3 3 2",
+            "",
+            "",
+            "4 2 2",
+            "",
+            "",
+            "5 0 0",
+            "",
+            "",
+            "4 3 0",
+            "",
+            "",
+            "5 1 0",
+            "",
+            "",
+            "4 3 1",
+            "",
+            ""
+          ]
+        ],
+        "bragg_labels": [
+          {
+            "text": "lbco",
+            "style": "bragg.0",
+            "centre": 0.5
+          }
+        ],
+        "title": "",
+        "legend": false
+      }
+    }
+  ],
+  "pattern_styles": [
+    {
+      "key": "meas.0",
+      "light": "#009DE4",
+      "dark": "#03A9F4",
+      "mark": "line+markers+bars",
+      "width_px": 2,
+      "opacity": 1,
+      "marker_px": 5
+    },
+    {
+      "key": "meas.1",
+      "light": "#795548",
+      "dark": "#AE8779",
+      "mark": "line+markers+bars",
+      "width_px": 2,
+      "opacity": 1,
+      "marker_px": 5
+    },
+    {
+      "key": "meas.2",
+      "light": "#45A849",
+      "dark": "#4CAF50",
+      "mark": "line+markers+bars",
+      "width_px": 2,
+      "opacity": 1,
+      "marker_px": 5
+    },
+    {
+      "key": "calc",
+      "light": "#F44336",
+      "dark": "#EF9A9A",
+      "mark": "line",
+      "width_px": 2,
+      "opacity": 1,
+      "marker_px": 0
+    },
+    {
+      "key": "bkg",
+      "light": "#607D8B",
+      "dark": "#B0BEC5",
+      "mark": "line",
+      "width_px": 1,
+      "opacity": 1,
+      "marker_px": 0
+    },
+    {
+      "key": "resid",
+      "light": "#8BC34A",
+      "dark": "#C5E1A5",
+      "mark": "line",
+      "width_px": 1,
+      "opacity": 1,
+      "marker_px": 0
+    },
+    {
+      "key": "bragg.0",
+      "light": "#D78000",
+      "dark": "#FF9800",
+      "mark": "ticks",
+      "width_px": 1,
+      "opacity": 1,
+      "marker_px": 0
+    },
+    {
+      "key": "bragg.1",
+      "light": "#009688",
+      "dark": "#1CA091",
+      "mark": "ticks",
+      "width_px": 1,
+      "opacity": 1,
+      "marker_px": 0
+    },
+    {
+      "key": "bragg.2",
+      "light": "#E91E63",
+      "dark": "#FF4979",
+      "mark": "ticks",
+      "width_px": 1,
+      "opacity": 1,
+      "marker_px": 0
+    },
+    {
+      "key": "excluded",
+      "light": "#8C8C8C",
+      "dark": "#8C8C8C",
+      "mark": "band",
+      "width_px": 0,
+      "opacity": 0.15,
+      "marker_px": 0
+    }
+  ],
+  "structure_styles": [
+    {
+      "key": "background",
+      "light": "#FFFFFF",
+      "dark": "#212121",
+      "value": 0
+    },
+    {
+      "key": "cell.edge",
+      "light": "#222222",
+      "dark": "#E6E8EE",
+      "value": 0
+    },
+    {
+      "key": "cell.edge.radius",
+      "light": "",
+      "dark": "",
+      "value": 0.0025
+    },
+    {
+      "key": "bond.radius",
+      "light": "",
+      "dark": "",
+      "value": 0.06
+    },
+    {
+      "key": "axis.a",
+      "light": "#DC2828",
+      "dark": "#DC2828",
+      "value": 0
+    },
+    {
+      "key": "axis.b",
+      "light": "#28B428",
+      "dark": "#28B428",
+      "value": 0
+    },
+    {
+      "key": "axis.c",
+      "light": "#2850DC",
+      "dark": "#2850DC",
+      "value": 0
+    },
+    {
+      "key": "axis.shaft.radius",
+      "light": "",
+      "dark": "",
+      "value": 0.009
+    },
+    {
+      "key": "axis.head.radius",
+      "light": "",
+      "dark": "",
+      "value": 0.028
+    },
+    {
+      "key": "axis.head.length",
+      "light": "",
+      "dark": "",
+      "value": 0.085
+    },
+    {
+      "key": "axis.overhang",
+      "light": "",
+      "dark": "",
+      "value": 0.09
+    },
+    {
+      "key": "axis.clearance",
+      "light": "",
+      "dark": "",
+      "value": 0.04
+    },
+    {
+      "key": "axis.letter.offset",
+      "light": "",
+      "dark": "",
+      "value": 0.05
+    },
+    {
+      "key": "label",
+      "light": "#222222",
+      "dark": "#E6E8EE",
+      "value": 0
+    },
+    {
+      "key": "label.halo",
+      "light": "#FFFFFF",
+      "dark": "#212121",
+      "value": 0
+    },
+    {
+      "key": "light.ambient",
+      "light": "",
+      "dark": "",
+      "value": 0.68
+    },
+    {
+      "key": "light.key",
+      "light": "",
+      "dark": "",
+      "value": 1.25
+    },
+    {
+      "key": "light.key.right",
+      "light": "",
+      "dark": "",
+      "value": 0.3
+    },
+    {
+      "key": "light.key.up",
+      "light": "",
+      "dark": "",
+      "value": 0.45
+    },
+    {
+      "key": "light.key.toward",
+      "light": "",
+      "dark": "",
+      "value": 0.85
+    },
+    {
+      "key": "light.fill",
+      "light": "",
+      "dark": "",
+      "value": 0.34
+    },
+    {
+      "key": "light.fill.right",
+      "light": "",
+      "dark": "",
+      "value": -0.4
+    },
+    {
+      "key": "light.fill.up",
+      "light": "",
+      "dark": "",
+      "value": -0.2
+    },
+    {
+      "key": "light.fill.toward",
+      "light": "",
+      "dark": "",
+      "value": -0.45
+    },
+    {
+      "key": "material.specular",
+      "light": "",
+      "dark": "",
+      "value": 0.2
+    },
+    {
+      "key": "material.shininess",
+      "light": "",
+      "dark": "",
+      "value": 90
+    }
+  ]
+}

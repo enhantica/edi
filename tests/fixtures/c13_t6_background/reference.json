@@ -1,0 +1,219 @@
+{
+  "schema": 1,
+  "engine": "FullProf.2k 8.40 (Feb2026-ILL)",
+  "cases": {
+    "cecoal": {
+      "project": "pd-neut-tof_cecoal-polaris_chebyshev",
+      "type": "chebyshev",
+      "origin": 7000.0,
+      "coefficients": [
+        26833.258,
+        4390.511,
+        2629.871,
+        -513.844,
+        284.709,
+        163.451,
+        240.858,
+        -72.052,
+        15.094,
+        126.006,
+        -12.868,
+        -280.939,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "sum_coefficients": [
+        26833.0,
+        4390.5,
+        2629.8,
+        -513.84,
+        284.68,
+        163.45,
+        240.86,
+        -72.054,
+        15.088,
+        126.0,
+        -12.867,
+        -280.94,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "sum_uncertainties": [
+        57.719,
+        97.802,
+        87.875,
+        77.563,
+        66.269,
+        64.445,
+        62.032,
+        60.759,
+        56.791,
+        56.089,
+        51.214,
+        45.441,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "source_sha256": {
+        "cecoal.pcr": "4c453bde47e18eda8bdb867ef955e373b19c25a49db405fe0030e4599d5c1252",
+        "cecoal.dat": "3c702bc31c5c6b435a3cb8d4b72cde2495a6a521ce336fd1be20e4df6c429790",
+        "cecoal.sum": "6e62f6f7ea4a3c060e75904dcb849868b90e8f80f539f9d910089d3a78f215b5"
+      },
+      "sha256": {
+        "cecoal.bac": "bcec31ae58832cd51363bda8f79ddcf54ff84afd5976ef245b0f0cab1c735fd1",
+        "cecoal.pcr": "a0fe646b64bcee55240d650ab7f36e5aa89bd084801facf91e04f4ba8f47929f",
+        "cecoal.sum": "6e62f6f7ea4a3c060e75904dcb849868b90e8f80f539f9d910089d3a78f215b5",
+        "cecoal.dat": "3c702bc31c5c6b435a3cb8d4b72cde2495a6a521ce336fd1be20e4df6c429790"
+      },
+      "command": "printf 'oracle\\n\\n\\n\\n' | fp2k",
+      "edits": "Ppl=2; all codewords and Number of fitted parameters=0; DAT alias oracle.dat; scientific parameters unchanged",
+      "bac_header": [
+        "!",
+        "Background",
+        "of:",
+        "oracle"
+      ],
+      "exit_code": 0,
+      "zero": 3.93042,
+      "x_min": 3001.58912,
+      "x_max": 19004.65892,
+      "bac_tolerance": 0.03
+    },
+    "pearl": {
+      "project": "pd-neut-tof_ceo2-pearl_polynomial",
+      "type": "polynomial",
+      "origin": 7000.0,
+      "coefficients": [
+        2181.025,
+        221.415,
+        376.639,
+        -1931.69,
+        1965.935,
+        -588.875
+      ],
+      "sum_coefficients": [
+        2181.0,
+        221.4,
+        376.46,
+        -1931.8,
+        1965.9,
+        -588.88
+      ],
+      "sum_uncertainties": [
+        7.7196,
+        24.987,
+        71.849,
+        62.626,
+        129.94,
+        67.867
+      ],
+      "source_sha256": {
+        "Ceo2_PEARL.pcr": "12455e9758b27039ed61f307efbfc37cdd79803b0ab0f2e7687419ac2fecb767",
+        "Ceo2_PEARL.dat": "a3bdc3cc7c7fa8a6b2fe26f8fdfaed709a9bc13dd504406862b33883dd6ba79f",
+        "Ceo2_PEARL.sum": "4abca556b316be6556cbb56027ef73a4c377305ce182250814d95ac9c5c8a141"
+      },
+      "sha256": {
+        "pearl.bac": "8a07d2e3bcbbd82b16db457242a65d66681138adfbb5340e1bc1cc9a6eda7b76",
+        "pearl.pcr": "916c5237d148b243d5aa294e505ad5b2e8f83cb19e7ae574738b749a1b2fb5a5",
+        "pearl.sum": "4abca556b316be6556cbb56027ef73a4c377305ce182250814d95ac9c5c8a141",
+        "pearl.dat": "ceb04a9ff25422f194e85ff07fd579c8570d86015fa5dd844de8232f5c765df1"
+      },
+      "command": "printf 'oracle\\n\\n\\n\\n' | fp2k",
+      "edits": "Ppl=2; all codewords and Number of fitted parameters=0; DAT alias oracle.dat; scientific parameters unchanged",
+      "bac_header": [
+        "!",
+        "Background",
+        "of:",
+        "oracle"
+      ],
+      "exit_code": 0,
+      "zero": 3.05177,
+      "x_min": 1500.24997,
+      "x_max": 19400.186569999998,
+      "bac_tolerance": 0.004
+    },
+    "lab6": {
+      "project": "pd-neut-cwl_lab6-11b-echidna_tch-fcj",
+      "type": "polynomial",
+      "origin": 80.0,
+      "coefficients": [
+        781.932,
+        75.473,
+        292.094,
+        -3.451,
+        -326.104,
+        0.0
+      ],
+      "sum_coefficients": [
+        781.95,
+        75.495,
+        292.12,
+        -3.4942,
+        -326.9,
+        0.0
+      ],
+      "sum_uncertainties": [
+        3.4534,
+        8.6992,
+        22.259,
+        15.57,
+        28.132,
+        0.0
+      ],
+      "source_sha256": {
+        "ECH0030684_LaB6_1p622A.pcr": "87662d7d37bac643d8c9aaac88417b1647ee3b905464c9c4b16012a8b4f37073",
+        "ECH0030684_LaB6_1p622A.dat": "c41427269a36cad15936de9c11fea8c6719293a6e5acfe4146291efa8ed26cbc",
+        "ECH0030684_LaB6_1p622A.sum": "3f180a9bc12686e71741afc921fd613e5544854172097fdf070d476cfeb181bf"
+      },
+      "sha256": {
+        "lab6.bac": "1ab5ea1951b7b89964c47ecf7a732e230e1ff070ea95c3f4e72e4be43e3123b2",
+        "lab6.pcr": "0ad090313062326dcd3bf16e34b71fc04f8c06ac52f789bc7310ffcd50e98010",
+        "lab6.sum": "3f180a9bc12686e71741afc921fd613e5544854172097fdf070d476cfeb181bf",
+        "lab6.dat": "c41427269a36cad15936de9c11fea8c6719293a6e5acfe4146291efa8ed26cbc"
+      },
+      "command": "printf 'oracle\\n\\n\\n\\n' | fp2k",
+      "edits": "Ppl=2; all codewords and Number of fitted parameters=0; DAT alias oracle.dat; scientific parameters unchanged",
+      "bac_header": [
+        "!",
+        "Background",
+        "of:",
+        "oracle"
+      ],
+      "exit_code": 0,
+      "zero": -0.21356,
+      "x_min": 4.1642399999999995,
+      "x_max": 163.75634,
+      "bac_tolerance": 0.001
+    }
+  }
+}

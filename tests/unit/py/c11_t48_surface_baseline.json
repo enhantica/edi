@@ -1,0 +1,288 @@
+{
+  "protected_tier": "tests/unit/**",
+  "base": "21b41862eac907b165b187e856ef45db7a14ae52",
+  "members": {
+    "Absorption": [
+      "abscor1",
+      "abscor2",
+      "type"
+    ],
+    "Analysis": [
+      "calculate",
+      "fit",
+      "fitting_mode"
+    ],
+    "AtomSite": [
+      "adp_iso",
+      "fract_x",
+      "fract_y",
+      "fract_z",
+      "id",
+      "occupancy",
+      "type_symbol",
+      "wyckoff_letter"
+    ],
+    "BackgroundPoint": [
+      "intensity",
+      "position"
+    ],
+    "BankMetric": [
+      "chi_square",
+      "n_points",
+      "name",
+      "rwp"
+    ],
+    "BeamMode": [
+      "CONSTANT_WAVELENGTH",
+      "TIME_OF_FLIGHT"
+    ],
+    "CachedModel": [
+      "calculate",
+      "get",
+      "paths",
+      "project",
+      "rebuilds",
+      "refine",
+      "set",
+      "set_free",
+      "structure_factors"
+    ],
+    "Cell": [
+      "angle_alpha",
+      "angle_beta",
+      "angle_gamma",
+      "cubic",
+      "length_a",
+      "length_b",
+      "length_c"
+    ],
+    "Experiment": [
+      "absorption",
+      "background",
+      "data",
+      "dataset_weight",
+      "excluded_regions",
+      "experiment_type",
+      "instrument",
+      "linked_structure",
+      "name",
+      "peak"
+    ],
+    "ExperimentFactory": [
+      "from_dict",
+      "from_scratch"
+    ],
+    "ExperimentType": [
+      "beam_mode",
+      "radiation_probe",
+      "sample_form",
+      "scattering_type"
+    ],
+    "FitOutcome": [
+      "banks",
+      "converged",
+      "descent",
+      "elapsed_ms",
+      "engine_esd",
+      "engine_values",
+      "esd",
+      "iterations",
+      "iterations_history",
+      "n_points_fitted",
+      "n_points_loaded",
+      "pre_fit",
+      "reduced_chi_square",
+      "rwp",
+      "start",
+      "status",
+      "terminal_unevaluable_trials",
+      "unevaluable_trials",
+      "values"
+    ],
+    "FitPreamble": [
+      "banks",
+      "joint",
+      "n_free",
+      "n_points_fitted",
+      "n_points_loaded",
+      "pre_fit"
+    ],
+    "FitStatus": [
+      "CANCELLED",
+      "DONE",
+      "ERROR",
+      "MAX_ITER",
+      "NO_STEP"
+    ],
+    "Instrument": [
+      "calib_d_to_tof_linear",
+      "calib_d_to_tof_offset",
+      "calib_d_to_tof_quadratic",
+      "calib_twotheta_offset",
+      "setup_twotheta_bank",
+      "setup_wavelength"
+    ],
+    "IoError": [
+      "add_note",
+      "args",
+      "with_traceback"
+    ],
+    "IterationRecord": [
+      "elapsed_ms",
+      "iteration",
+      "reduced_chi2",
+      "rwp",
+      "unevaluable_trials"
+    ],
+    "LinkedStructure": [
+      "scale",
+      "structure_id"
+    ],
+    "MeasuredPattern": [
+      "axis",
+      "intensity_meas",
+      "intensity_meas_su",
+      "time_of_flight",
+      "two_theta"
+    ],
+    "Parameter": [
+      "cif_names",
+      "description",
+      "display_name",
+      "display_units",
+      "edi_names",
+      "esd",
+      "free",
+      "latex_name",
+      "latex_units",
+      "max_value",
+      "min_value",
+      "units",
+      "value"
+    ],
+    "Peak": [
+      "broad_gauss_sigma_0",
+      "broad_gauss_sigma_1",
+      "broad_gauss_sigma_2",
+      "broad_gauss_size",
+      "broad_gauss_strain",
+      "broad_gauss_u",
+      "broad_gauss_v",
+      "broad_gauss_w",
+      "broad_lorentz_gamma_0",
+      "broad_lorentz_gamma_1",
+      "broad_lorentz_gamma_2",
+      "broad_lorentz_size",
+      "broad_lorentz_strain",
+      "broad_lorentz_x",
+      "broad_lorentz_y",
+      "cutoff_fwhm",
+      "decay_beta_0",
+      "decay_beta_1",
+      "rise_alpha_0",
+      "rise_alpha_1",
+      "type"
+    ],
+    "PeakProfileType": [
+      "CWL_PSEUDO_VOIGT",
+      "TOF_JORGENSEN",
+      "TOF_JORGENSEN_VON_DREELE"
+    ],
+    "Project": [
+      "analysis",
+      "cached",
+      "calculate",
+      "experiment",
+      "experiments",
+      "load",
+      "load_complete",
+      "refine",
+      "refine_joint",
+      "save_as",
+      "structure",
+      "structure_factors",
+      "structures"
+    ],
+    "RadiationProbe": [
+      "NEUTRON",
+      "XRAY"
+    ],
+    "SampleForm": [
+      "POWDER",
+      "SINGLE_CRYSTAL"
+    ],
+    "ScatteringType": [
+      "BRAGG",
+      "TOTAL"
+    ],
+    "SpaceGroup": [
+      "coord_system_code",
+      "name_h_m"
+    ],
+    "Structure": [
+      "atom_sites",
+      "cell",
+      "load_cif",
+      "name",
+      "scattering_lengths_fm",
+      "space_group"
+    ],
+    "StructureFactory": [
+      "from_cif_path",
+      "from_dict"
+    ],
+    "Verbosity": [
+      "COMPACT",
+      "FULL",
+      "OFF"
+    ]
+  },
+  "module": "edi",
+  "names": [
+    "Absorption",
+    "Analysis",
+    "AtomSite",
+    "BackgroundPoint",
+    "BankMetric",
+    "BeamMode",
+    "CachedModel",
+    "Cell",
+    "Experiment",
+    "ExperimentFactory",
+    "ExperimentType",
+    "FitOutcome",
+    "FitPreamble",
+    "FitStatus",
+    "Instrument",
+    "IoError",
+    "IterationRecord",
+    "LinkedStructure",
+    "MeasuredPattern",
+    "Parameter",
+    "Peak",
+    "PeakProfileType",
+    "Project",
+    "RadiationProbe",
+    "SampleForm",
+    "ScatteringType",
+    "SpaceGroup",
+    "Structure",
+    "StructureFactory",
+    "Verbosity",
+    "covered_tag_allowlist",
+    "covered_tag_categories",
+    "error_report",
+    "human_report",
+    "iteration_line",
+    "machine_report",
+    "np",
+    "parameter_specs",
+    "parameter_table",
+    "pre_fit_line",
+    "progress_report",
+    "stream_header",
+    "summary_line"
+  ],
+  "repo": "edi",
+  "schema": 1
+}

@@ -1,0 +1,2 @@
+file_path,descent,chi_square_tolerance,max_iterations,termination
+experiments/d20_scan/01_213_002p3440.dat,fast_descent,0.000001,1000,chi_converged

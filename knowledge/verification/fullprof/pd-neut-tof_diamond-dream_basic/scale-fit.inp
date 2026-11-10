@@ -1,0 +1,66 @@
+COMM  Diamond - DREAM (ESS) McStas-simulated reduced TOF data
+! Current global Chi2 (Bragg contrib.) =      18.14    
+! Files => DAT-file: diamond.dat,  PCR-file: diamond
+!Job Npr Nph Nba Nex Nsc Nor Dum Iwg Ilo Ias Res Ste Nre Cry Uni Cor Opt Aut
+  -1   9   1   8   2   0   0   0   0   0   0   0   0   0   0   1   0   0   1
+!
+!Ipr Ppl Ioc Mat Pcr Ls1 Ls2 Ls3 NLI Prf Ins Rpa Sym Hkl Fou Sho Ana
+   0   2   1   0   2   0   4   0   0   2  10   1   0   0   0   0   0
+!
+!  Bkpos        Wdt    Iabscor for Pattern#  1
+     150.000   30.00     0
+!NCY  Eps  R_at  R_an  R_pr  R_gl    TOF-min      <Step>       TOF-max 
+100  0.05  1.00  1.00  1.00  1.00    8675.1074     29.0146  66503.6875
+!
+!2Theta/TOF/E(Kev)   Background  for Pattern#  1
+     10000.0000        -0.2284          0.00
+     14000.0000         0.3915          0.00
+     21000.0000         0.6957          0.00
+     27500.0000         0.5692          0.00
+     40000.0000         0.3028          0.00
+     50000.0000         0.6136          0.00
+     61000.0000         0.7375          0.00
+     70000.0000         0.6141          0.00
+! 
+! Excluded regions (LowT  HighT) for Pattern#  1
+        0.00     9999.00
+    70001.00   200000.00
+! 
+!
+       1    !Number of refined parameters
+!
+!    Zero       Code      Dtt1      Code       Dtt2     Code  Dtt_1overd    Code  2ThetaBank  -> Patt#  1
+     0.00000    0.00 28385.86133    0.00     0.00000    0.00     0.00000    0.00    90.000
+!-------------------------------------------------------------------------------
+!  Data for PHASE number:   1  ==> Current R_Bragg for Pattern#  1:  16.4439
+!-------------------------------------------------------------------------------
+Diamond
+!
+!Nat Dis Ang Pr1 Pr2 Pr3 Jbt Irf Isy Str Furth       ATZ    Nvk Npr More
+   1   0   0 0.0 0.0 1.0   0   0   0   0   0      27673.344   0   9   0
+!
+!
+F d -3 m:1               <--Space group symbol
+!Atom   Typ       X        Y        Z     Biso       Occ     In Fin N_t Spc /Codes
+C      C       0.12500  0.12500  0.12500  0.89263   0.08333   0   0   0    0  
+                  0.00     0.00     0.00     0.00      0.00
+!-------> Profile Parameters for Pattern #   1  ----> Phase #   1
+!  Scale          Extinc       Bov      Str1      Str2      Str3    Strain-Mode
+   14.5708        0.0000    0.0000    0.0000    0.0000    0.0000         0
+      11.00000      0.00      0.00      0.00      0.00      0.00
+!      Sigma-2       Sigma-1       Sigma-0       Sigma-Q   Iso-GStrain     Iso-GSize     Ani-LSize   Size-Model
+        0.0000     4887.9180    46937.7188        0.0000        0.0000        0.0000        0.0000       0
+          0.00          0.00          0.00          0.00          0.00          0.00          0.00
+!      Gamma-2       Gamma-1       Gamma-0   Iso-LorStrain   Iso-LorSize
+        0.0000        0.0000        0.0000        0.0000        0.0000
+          0.00          0.00          0.00          0.00          0.00
+!     a          b         c        alpha      beta       gamma      # Cell Info
+   3.567000   3.567000   3.567000  90.000000  90.000000  90.000000   
+       0.00       0.00       0.00       0.00       0.00       0.00
+!      Pref1      Pref2        alph0       beta0       alph1       beta1       alphQ       betaQ
+    0.000000    0.000000    0.000000    0.014330    0.022544    0.000000    0.000000    0.000000
+        0.00        0.00        0.00        0.00        0.00        0.00        0.00        0.00
+!Absorption correction parameters
+   0.00000    0.00   0.00000    0.00            ABS: ABSCOR1  ABSCOR2
+!  2Th1/TOF1    2Th2/TOF2  Pattern to plot
+   10000.000   66503.688       1

@@ -1,0 +1,5 @@
+{% extends "gui.html" %}
+{% block extrahead %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ 'assets/interfaces.css' | url }}?v={{ config.extra.gui_assets_version }}">
+{% endblock %}

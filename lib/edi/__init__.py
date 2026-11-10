@@ -1,0 +1,1569 @@
+# SPDX-License-Identifier: BSD-3-Clause
+"""edi — the user-facing diffraction-analysis API (dist: easydiffraction).
+
+Thin Python surface over the C++ product core (ADR-0009): the compiled ``_edi`` nanobind module
+plus a small pure-Python sugar layer (factories, presentation only). Product logic lives in the
+C++ core, consumed 1:1 by the bindings.
+
+edi-py carries crysta-py's public surface: every name crysta declares public, and every member of
+a declared class, EXISTS here under the same spelling with the same meaning; edi adds output and
+visualisation under edi-only names. That direction is a standing constraint on edi, and what is
+PROVEN of it is existence only — ``tools/checks/python_surface_superset.py`` reads the declaration
+crysta's C++ package installs and resolves each name by attribute lookup (no signature, default or
+type is compared): today at crysta's pull-request gate (the consumer prefix), and by edi's own
+verify against the fetched crysta main, which carries the declaration. Whether a script works
+under ``s/crysta/edi/`` is demonstrated, not described: crysta's ``tools/substitution/`` scripts
+run against both libraries at that consumer job and must agree, for the paths they cover. edi
+never imports crysta-py.
+"""
+
+import html as _html
+import os as _os
+import subprocess as _subprocess  # aliased: a bare name stays off the surface (I1)
+import sys as _sys
+from collections.abc import (
+    Callable as _Callable,  # aliased: a bare name stays off the surface (I1)
+)
+from importlib import import_module as _import_module
+from importlib import util as _importlib_util
+from pathlib import Path as _Path
+from typing import ClassVar as _ClassVar  # aliased: a bare name would join the public surface (I1)
+
+
+def _visible_cpu_count() -> int:
+    """Cores this process may run on — the affinity mask on Linux, else the machine count.
+
+    Mirrors crysta::threading::visible_concurrency; this preamble computes the team size in
+    Python because it runs before the compiled extension (and libgomp) load.
+    """
+    try:
+        return len(_os.sched_getaffinity(0))
+    except AttributeError:
+        return _os.cpu_count() or 1
+
+
+# The engine's shipped threading policy must be in the environment BEFORE the compiled extension
+# — and with it the OpenMP runtime — loads: libgomp reads OMP_WAIT_POLICY/OMP_NUM_THREADS in its
+# ELF constructor at load time (measured), so this preamble, ahead of every native import below
+# (numpy included, so the OpenBLAS timeout default is planted before its pool spins up), is the
+# only in-process seam. Presence, not value: a wait variable PRESENT with ANY value — empty
+# included, hence `in _os.environ`, not a truthiness test — stands the WHOLE policy down (wait
+# AND team), keeping the old behaviour (spin at a full-occupancy team) measurable. A caller
+# OMP_NUM_THREADS still wins over the max(1, cores - 2) rule.
+if not (
+    'OMP_WAIT_POLICY' in _os.environ
+    or 'GOMP_SPINCOUNT' in _os.environ
+    or 'KMP_BLOCKTIME' in _os.environ
+):
+    _os.environ['OMP_WAIT_POLICY'] = 'passive'
+    if 'OMP_NUM_THREADS' not in _os.environ:
+        _os.environ['OMP_NUM_THREADS'] = str(max(1, _visible_cpu_count() - 2))
+    # The same passive-wait default for the OTHER pool in an edi process: neither crysta nor
+    # edi links a BLAS, but numpy's OpenBLAS rides along, and its idle workers busy-wait ~2^26
+    # cycles after every wake — measured burning a process-CPU/wall ratio of ~3 through the
+    # serial gaps the wait policy exists to quiet. The timeout exponent (clamped to 4..30 by
+    # OpenBLAS) only shortens the idle spin before the worker sleeps; numpy's parallelism and
+    # results are untouched, and a caller-set value — or any wait knob above — wins.
+    _os.environ.setdefault('OPENBLAS_THREAD_TIMEOUT', '4')
+
+
+# The compiled extension is emitted PER BUILD CONFIGURATION into <build-dir>/python/edi, never
+# into this source package — six build configurations sharing one source-tree artifact silently
+# relinked stale objects over one another, so runtime evidence could not name the configuration
+# it came from. A packaged install carries `_edi` inside the package and none of this runs; a
+# source tree (identified by the repo's pyproject.toml two levels up) resolves the configuration
+# explicitly: EDI_EXTENSION_DIR when set, else the same selection tools/ci/core-build.sh makes as
+# the producer (CRYSTA_CONSUMER_SRC -> build/ci-consumer, else build/ci — keep the two selections
+# in lockstep). Every edge fails closed, naming the contract.
+_here = _Path(__file__).resolve().parent
+if (_here.parent.parent / 'pyproject.toml').exists():
+    _stray = sorted(str(stray) for stray in _here.glob('_edi.*'))
+    if _stray:
+        raise ImportError(
+            f'stale source-tree extension artifact(s) {_stray}: the extension is emitted per '
+            'build configuration into <build-dir>/python/edi and a shared source-tree '
+            'artifact is refused by design; delete the stray file(s) and rebuild '
+            '(pixi run core-build).'
+        )
+    # CRYSTA_CONSUMER_SRC used to be a PATH at build time and a bare truthy FLAG at import — and
+    # only the build validated it, so a typo'd, wrongly-relative or stale-exported value
+    # silently redirected the import to a possibly stale build/ci-consumer. Now the consumer
+    # artifact is selected only by (a) the explicit selector
+    # EDI_USE_CONSUMER_BUILD (any non-empty value), (b) the repo's hidden control — the exact
+    # 'hidden-surface-control' literal, exempt BY NAME so no accidental value reaches it — or
+    # (c) a CRYSTA_CONSUMER_SRC carrying the source-tree witness CMakeLists.txt — exactly the
+    # check tools/ci/build-crysta.sh applies at build time. A value that fails the validation
+    # selects nothing. ONE definition, shared verbatim by all four selection sites: here,
+    # verification._consumer_source_selects, python_surface_superset.resolve_prefix and
+    # crysta-consumer.sh. When the consumer artifact is selected and the source path names a
+    # real tree, the tree's current commit is compared against the sha the artifact was linked
+    # with (.crysta-linked-sha), refusing a stale artifact by naming both — results are never
+    # silently attributed to a crysta that was never built.
+    _consumer_src = _os.environ.get('CRYSTA_CONSUMER_SRC')
+    _consumer_src_is_tree = (
+        bool(_consumer_src) and (_Path(_consumer_src) / 'CMakeLists.txt').is_file()
+    )
+    _consumer_selected = (
+        bool(_os.environ.get('EDI_USE_CONSUMER_BUILD'))
+        or _consumer_src == 'hidden-surface-control'
+        or _consumer_src_is_tree
+    )
+    if not _os.environ.get('EDI_EXTENSION_DIR') and _consumer_selected and _consumer_src_is_tree:
+        _artifact = _here.parent.parent / 'build' / 'ci-consumer'
+        try:
+            _linked_sha = (_artifact / '.crysta-linked-sha').read_text('utf-8').strip()
+        except OSError as _error:
+            raise ImportError(
+                f'EDI_USE_CONSUMER_BUILD selects the consumer artifact at {_artifact}, but it '
+                f'carries no linked-source record ({_error}) — rebuild it '
+                '(CRYSTA_CONSUMER_SRC=... pixi run core-build)'
+            ) from None
+        try:
+            _live = _subprocess.run(
+                ['git', '-C', _consumer_src, 'rev-parse', 'HEAD'],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            _live_head = _live.stdout.strip() if _live.returncode == 0 else ''
+        except OSError:
+            _live_head = ''
+        if _live_head and _live_head != _linked_sha:
+            raise ImportError(
+                f'the consumer artifact at {_artifact} was linked with stale crysta source '
+                f'{_linked_sha} but the live source {_consumer_src!r} is now at {_live_head} — '
+                'refusing to attribute results to a crysta that was never built; rebuild the '
+                'artifact (CRYSTA_CONSUMER_SRC=... pixi run core-build)'
+            )
+    _ext_dir = _os.environ.get('EDI_EXTENSION_DIR') or str(
+        _here.parent.parent
+        / 'build'
+        / ('ci-consumer' if _consumer_selected else 'ci')
+        / 'python'
+        / 'edi'
+    )
+    __path__.append(str(_Path(_ext_dir).resolve()))
+if _importlib_util.find_spec('edi._edi') is None:
+    raise ImportError(
+        "edi's compiled extension `edi._edi` is not importable: build it per configuration "
+        '(pixi run core-build) and, for a non-default location, set EDI_EXTENSION_DIR to the '
+        '<build-dir>/python/edi directory that configuration emitted.'
+    )
+
+from edi._collection import (  # noqa: E402 - after the __path__ resolution
+    Collection,
+    download_all_tutorials,
+    download_data,
+    download_tutorial,
+    list_data,
+    list_tutorials,
+    load_collection,
+)
+from edi._edi import (  # noqa: E402 - the __path__ resolution above must run first
+    AbsorptionBase,
+    AbsorptionFactory,
+    Alias,
+    Aliases,
+    AtomSite,
+    AtomSiteAniso,
+    AtomSiteAnisoCollection,
+    AtomSiteMoment,
+    AtomSites,
+    AtomSitesCartnTransform,
+    BankMetric,
+    BeamModeEnum,
+    BraggPdExperiment,
+    Cell,
+    Constraint,
+    Constraints,
+    CwlGaussian,
+    CwlInstrumentBase,
+    CwlLorentzian,
+    CwlPdInstrumentBase,
+    CwlPdNeutronInstrument,
+    CwlPdXrayInstrument,
+    CwlPseudoVoigt,
+    CwlPseudoVoigtBerarBaldinozzi,
+    CwlTchPseudoVoigt,
+    CwlTchPseudoVoigtFcj,
+    CylinderHewatAbsorption,
+    Diagnostic,
+    DomainValidationError,
+    ExpandedAtomSiteMoments,
+    ExpandedAtomSites,
+    ExperimentBase,
+    Experiments,
+    ExperimentType,
+    FitParameterCorrelationItem,
+    FitPreamble,
+    FitResultBase,
+    FitStatus,
+    Geom,
+    GeomBond,
+    InstrumentBase,
+    InstrumentFactory,
+    IoError,
+    IterationRecord,
+    LeastSquaresFitResult,
+    LineSegment,
+    LinkedStructure,
+    LinkedStructures,
+    MagneticFormFactor,
+    NoAbsorption,
+    Parameter,
+    PdCwlData,
+    PdDataBase,
+    PdExperimentBase,
+    PdTofData,
+    PeakBase,
+    PeakFactory,
+    PeakProfileTypeEnum,
+    PolynomialTerm,
+    PowderCwlReflnData,
+    PowderReflnDataBase,
+    PowderTofReflnData,
+    PrefOrient,
+    PrefOrients,
+    Project,
+    ProjectMetadata,
+    PropagationVector,
+    RadiationProbeEnum,
+    ReportModel,
+    SampleFormEnum,
+    ScanFileRecord,
+    ScanPreamble,
+    ScatteringTypeEnum,
+    ScExperimentBase,
+    SchemaValidationError,
+    Severity,
+    SpaceGroup,
+    SpaceGroupSymop,
+    Structure,
+    StructureGeometry,
+    Structures,
+    SyntaxValidationError,
+    TofJorgensen,
+    TofJorgensenVonDreele,
+    TofPdInstrument,
+    TofPseudoVoigt,
+    ValidationError,
+    VerbosityEnum,
+    WeightFraction,
+    error_report,
+    iteration_line,
+    machine_report,
+    parameter_table,
+    progress_report,
+    scan_progress_line,
+    scan_summary,
+    stream_header,
+    summary_line,
+)
+from edi._edi import (  # noqa: E402 - the __path__ resolution above must run first
+    __build_commit__ as __build_commit__,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _calc_report as _calc_report,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _default_descent as _default_descent,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _descent_ids as _descent_ids,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _entity_path as _entity_path,  # Crysta's one name -> path decision
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _experiment_from_edi_text as _experiment_from_edi_text,
+)
+from edi._edi import (  # noqa: E402 -: the crysta-vs-edi parity hooks
+    _folds_reflections as _folds_reflections,
+)
+from edi._edi import (  # noqa: E402 -
+    _model_dump as _model_dump,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _read_plain_data as _edi_read_plain_data,  # Crysta's plain-data reader
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _single_crystal_from_scratch as _single_crystal_from_scratch,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _single_crystal_with_reflections as _single_crystal_with_reflections,
+)
+from edi._edi import (  # noqa: E402 -
+    _structure_factor_evaluations as _structure_factor_evaluations,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    _structure_from_edi_text as _structure_from_edi_text,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    log_level as log_level,
+)
+from edi._edi import (  # noqa: E402 - after the __path__ resolution
+    set_log_level as set_log_level,
+)
+
+# Messages at warning and above by default (owner record 2026-11-09); 'info' shows more.
+set_log_level('warning')
+
+__all__ = [
+    'AbsorptionBase',
+    'AbsorptionFactory',
+    'Alias',
+    'Aliases',
+    'Analysis',
+    'AtomSite',
+    'AtomSiteAniso',
+    'AtomSiteAnisoCollection',
+    'AtomSiteMoment',
+    'AtomSites',
+    'AtomSitesCartnTransform',
+    'BankMetric',
+    'BeamModeEnum',
+    'BraggPdExperiment',
+    'Cell',
+    'Collection',
+    'Constraint',
+    'Constraints',
+    'CwlGaussian',
+    'CwlInstrumentBase',
+    'CwlLorentzian',
+    'CwlPdInstrumentBase',
+    'CwlPdNeutronInstrument',
+    'CwlPdXrayInstrument',
+    'CwlPseudoVoigt',
+    'CwlPseudoVoigtBerarBaldinozzi',
+    'CwlTchPseudoVoigt',
+    'CwlTchPseudoVoigtFcj',
+    'CylinderHewatAbsorption',
+    'Diagnostic',
+    'DomainValidationError',
+    'ExpandedAtomSiteMoments',
+    'ExpandedAtomSites',
+    'ExperimentBase',
+    'ExperimentFactory',
+    'ExperimentType',
+    'Experiments',
+    'FitParameterCorrelationItem',
+    'FitPreamble',
+    'FitResultBase',
+    'FitStatus',
+    'Geom',
+    'GeomBond',
+    'InstrumentBase',
+    'InstrumentFactory',
+    'IoError',
+    'IterationRecord',
+    'LeastSquaresFitResult',
+    'LineSegment',
+    'LinkedStructure',
+    'LinkedStructures',
+    'MagneticFormFactor',
+    'NoAbsorption',
+    'Parameter',
+    'PdCwlData',
+    'PdDataBase',
+    'PdExperimentBase',
+    'PdTofData',
+    'PeakBase',
+    'PeakFactory',
+    'PeakProfileTypeEnum',
+    'PolynomialTerm',
+    'PowderCwlReflnData',
+    'PowderReflnDataBase',
+    'PowderTofReflnData',
+    'PrefOrient',
+    'PrefOrients',
+    'Project',
+    'ProjectMetadata',
+    'PropagationVector',
+    'RadiationProbeEnum',
+    'Report',
+    'ReportModel',
+    'SampleFormEnum',
+    'ScExperimentBase',
+    'ScanFileRecord',
+    'ScanPreamble',
+    'ScatteringTypeEnum',
+    'SchemaValidationError',
+    'Severity',
+    'SpaceGroup',
+    'SpaceGroupSymop',
+    'Structure',
+    'StructureFactory',
+    'StructureGeometry',
+    'Structures',
+    'SyntaxValidationError',
+    'TofJorgensen',
+    'TofJorgensenVonDreele',
+    'TofPdInstrument',
+    'TofPseudoVoigt',
+    'ValidationError',
+    'VerbosityEnum',
+    'WeightFraction',
+    'download_all_tutorials',
+    'download_data',
+    'download_tutorial',
+    'error_report',
+    'iteration_line',
+    'list_data',
+    'list_tutorials',
+    'load_collection',
+    'log_level',
+    'machine_report',
+    'parameter_table',
+    'progress_report',
+    'scan_progress_line',
+    'scan_summary',
+    'set_log_level',
+    'stream_header',
+    'summary_line',
+]
+
+
+# The scan modes, underscored so the constant does not join the public surface. It mirrors the
+# engine's closed set (edi/model.hpp `is_scan_fitting_mode`, which mirrors crysta's): the routing
+# below must not be able to know about one scan mode and not the other. An unknown token never
+# reaches this dispatch — the loader and the `fitting_mode` setter refuse it — so this set decides
+# routing only, never validity.
+_SCAN_FITTING_MODES = frozenset({'sequential', 'independent'})
+
+
+# The fit's printed output, by name (python -m edi fit's --verbosity).
+_FIT_VERBOSITY = {
+    'off': VerbosityEnum.OFF,
+    'compact': VerbosityEnum.COMPACT,
+    'full': VerbosityEnum.FULL,
+}
+
+
+class Analysis:
+    """The analysis facade (ruled C) — delegation only, no product logic (ADR-0009).
+
+    Mirrors ``project.analysis`` in diffraction-lib: ``fit()`` runs the fit the project's
+    fitting mode selects (``'sequential'`` -> ``fit_sequential``, ``'joint'`` ->
+    ``fit_joint``, else ``fit``), ``calculate()`` is the
+    model-only forward pattern (no arguments, results land in each experiment's
+    ``data.intensity_calc``), and ``fitting_mode`` lives here in the diffraction-lib spelling
+    (the engine ``Project.fitting_mode`` is public too - crysta parity). The direct
+    ``project.fit()/fit_joint()/calculate()`` shortcuts remain, per the ruling; the
+    calculator/minimiser selection will land on this facade as it arrives.
+    """
+
+    def __init__(self, project: Project) -> None:
+        self._project = project
+
+    @property
+    def fitting_mode(self) -> str:
+        return self._project.fitting_mode
+
+    @fitting_mode.setter
+    def fitting_mode(self, value: str) -> None:
+        self._project.fitting_mode = value
+
+    @property
+    def template_file(self) -> str:
+        """The scan's template dataset: one of its files, whose data the template experiment holds.
+
+        Setting it replaces that data with the file's and changes no parameter; a file outside the
+        scan is refused with a ValueError naming it.
+        """
+        return self._project._template_file
+
+    @template_file.setter
+    def template_file(self, file: str) -> None:
+        self._project._template_file = file
+
+    @property
+    def descent(self) -> str:
+        # The descent-strategy selection is MODEL STATE on this facade (like fitting_mode),
+        # never a fit-call argument. The id set is crysta's own registry, resolved from the
+        # linked engine — `crysta fit --list-descents` prints the same listing. Reading it
+        # gives the EFFECTIVE id (the engine default when nothing was selected); assigning an
+        # unknown id raises ValueError naming the registered set; assigning None restores the
+        # default selection. The engine
+        # `Project.descent` is public too — the `fitting_mode` shape exactly.
+        return self._project.descent
+
+    @descent.setter
+    def descent(self, value: str | None) -> None:
+        self._project.descent = value
+
+    def fit(
+        self,
+        *,
+        on_iteration: _Callable[[IterationRecord], None] | None = None,
+        on_start: _Callable[[FitPreamble], None] | None = None,
+        on_scan_start: _Callable[[ScanPreamble], None] | None = None,
+        on_file_complete: _Callable[[ScanFileRecord], None] | None = None,
+        should_cancel: _Callable[[], bool] | None = None,
+        verbosity: str | None = None,
+    ) -> FitResultBase:
+        """Fit per the declared ``_fitting_mode.type``, the closed four-value set.
+
+        In a notebook it prints, while it fits, the same table as ``python -m edi fit``: the
+        header, the starting row, one row per iteration and the summary, or a scan's progress
+        lines and summary. ``verbosity`` chooses: ``'compact'`` (that table), ``'full'`` (with the
+        parameter table, and a scan's iteration rows) or ``'off'``; by default ``'compact'`` in a
+        notebook and ``'off'`` elsewhere. A caller that subscribes ``on_iteration``, ``on_start``,
+        ``on_scan_start`` or ``on_file_complete`` prints its own output instead.
+
+        ``single`` fits one experiment; ``joint`` fits several banks at once; the two scan modes
+        fit every file in the declared ``_sequential_fit`` block, one after another and serially,
+        writing one ``analysis/results.csv`` row per file — ``sequential`` seeding each file from
+        the previous fit's converged parameters, ``independent`` seeding each from the same
+        initial parameters. Any other value is refused when the project loads and when
+        ``fitting_mode`` is assigned, so this dispatch never sees one.
+
+        ``should_cancel`` is polled between iterations; once it answers true the fit stops
+        cleanly and returns a ``CANCELLED`` result — a scan records no row for the unfinished
+        file, writes nothing back, and its ``analysis/results.csv`` is the resume point. A
+        ``KeyboardInterrupt`` raised inside any of these callbacks (Ctrl+C) is the same clean
+        cancel.
+        """
+        # Review-1 F1: only genuine call-time options cross this seam — the fit's
+        # inputs (grid, observed, sigma, patterns) come from the model alone, so no data
+        # argument exists to forward. The descent selection is model state too (the `descent`
+        # property above), so it crosses no signature either. ONE named native entry per
+        # declared mode, each reached by its own exact token. Routing on `sequential` alone and
+        # letting everything else fall through to
+        # `fit()` is what made an `independent` project perform a plausible single fit of the
+        # template and write no results.csv. Validity is not decided here — the loader and the
+        # `fitting_mode` setter refuse anything outside the closed set, so a lookalike never
+        # reaches this dispatch; these four branches only choose the entry point. The two
+        # scan-event subscribers are meaningful only for the scan modes — a single/joint fit
+        # has no file walk to report, so passing one there is a caller error and refuses
+        # rather than being silently dropped.
+        subscribed = (on_iteration, on_start, on_scan_start, on_file_complete)
+        if verbosity is None:
+            # A notebook's kernel shows the table; a script or a library caller stays quiet.
+            verbosity = 'compact' if 'ipykernel' in _sys.modules else 'off'
+        if verbosity not in _FIT_VERBOSITY:
+            choices = ', '.join(_FIT_VERBOSITY)
+            raise ValueError(f'verbosity must be one of {choices}, not {verbosity!r}')
+        if verbosity != 'off' and all(callback is None for callback in subscribed):
+            # Imported here: the module imports this package.
+            from edi.__main__ import human_fit  # noqa: PLC0415
+
+            return human_fit(
+                self._project, _FIT_VERBOSITY[verbosity], self._project.name, cancel=should_cancel
+            )
+        if self._project.fitting_mode == 'sequential':
+            return self._project.fit_sequential(
+                on_iteration=on_iteration,
+                on_start=on_start,
+                on_scan_start=on_scan_start,
+                on_file_complete=on_file_complete,
+                should_cancel=should_cancel,
+            )
+        if self._project.fitting_mode == 'independent':
+            return self._project.fit_independent(
+                on_iteration=on_iteration,
+                on_start=on_start,
+                on_scan_start=on_scan_start,
+                on_file_complete=on_file_complete,
+                should_cancel=should_cancel,
+            )
+        if on_scan_start is not None or on_file_complete is not None:
+            raise ValueError(
+                'on_scan_start/on_file_complete are scan-mode subscribers - this project '
+                f"declares _fitting_mode.type '{self._project.fitting_mode}'"
+            )
+        if self._project.fitting_mode == 'joint':
+            return self._project.fit_joint(
+                on_iteration=on_iteration, on_start=on_start, should_cancel=should_cancel
+            )
+        return self._project.fit(
+            on_iteration=on_iteration, on_start=on_start, should_cancel=should_cancel
+        )
+
+    def calculate(self) -> None:
+        # The model is the single source of truth — no grid/bank/cutoff/scattering argument
+        # exists; results land in each experiment's data.intensity_calc.
+        self._project.calculate()
+
+    @property
+    def aliases(self) -> Aliases:
+        """The project's parameter aliases (diffraction-lib ``analysis.aliases``)."""
+        return self._project._aliases
+
+    @property
+    def constraints(self) -> Constraints:
+        """The project's constraints (diffraction-lib ``analysis.constraints``)."""
+        return self._project._constraints
+
+
+def _analysis(self: Project) -> Analysis:
+    """The analysis facade over this project (see :class:`Analysis`)."""
+    return Analysis(self)
+
+
+Project.analysis = property(_analysis)
+
+
+from edi import _project_output as _output  # noqa: E402 - after the extension's resolution
+
+# edi's data folder, beside the package in a source checkout: the report's vendored chart
+# libraries are there.
+_DATA_DIR = _here / 'data'
+if not _DATA_DIR.is_dir():
+    _DATA_DIR = _here.parent.parent / 'data'
+
+
+class Report:
+    """The report facade (ADR-0036 §7), mirroring diffraction-lib's ``project.report``.
+
+    Delegation only (ADR-0009). Its settings are the project's: ``html``, ``pdf`` and ``cif``
+    (what ``save()`` writes) and ``html_offline`` and ``excluded`` in ``reports/report.edi``,
+    ``correlation_threshold`` and ``x_axis`` in ``analysis/analysis.edi``. Each reads its default
+    until stated, without stating it, and a value a file could not hold is refused, naming the
+    item. ``save_cif`` writes the CIF report alone. ``model``, ``as_html``, ``save_html`` and
+    ``save`` take the same keywords, each None keeping the stored setting and a given one
+    replacing it for that call only; none of them
+    changes a setting. Two more keywords are choices of the call alone, as the app makes them
+    from its Preferences and its Analysis page: ``colour_scheme``, a figure palette's token
+    (by default ``'earth'``; ``'classic'``, ``'soft'``, ``'natural'`` and ``'colourBlindSafe'``,
+    ``data/palettes/PROVENANCE.md``), and
+    ``correlation_experiment``, the name of the experiment whose parameters the correlation chart
+    shows in a fit of several (by default the first). ``check`` judges every saved report with
+    those defaults, so a report is out of date only when the project changed.
+    """
+
+    # A setting it does not have is refused: a misspelt option ignored in silence would leave
+    # the report as it was.
+    __slots__ = ('_project',)
+
+    def __init__(self, project: Project) -> None:
+        self._project = project
+
+    @property
+    def html(self) -> bool:
+        """Whether ``save()`` writes the HTML report (by default it does)."""
+        value = self._project._report_html
+        return True if value is None else value
+
+    @html.setter
+    def html(self, value: bool) -> None:
+        self._project._report_html = bool(value)
+
+    @property
+    def pdf(self) -> bool:
+        """Whether the PDF report is ticked; the app writes it, ``save()`` leaves it."""
+        return bool(self._project._report_pdf)
+
+    @pdf.setter
+    def pdf(self, value: bool) -> None:
+        self._project._report_pdf = bool(value)
+
+    @property
+    def cif(self) -> bool:
+        """Whether ``save()`` writes the CIF report (by default it does not)."""
+        return bool(self._project._report_cif)
+
+    @cif.setter
+    def cif(self, value: bool) -> None:
+        self._project._report_cif = bool(value)
+
+    @property
+    def html_offline(self) -> bool:
+        """Whether the HTML report embeds plotly.js and three.js, so it opens offline.
+
+        By default it loads them from the web.
+        """
+        return bool(self._project._report_html_offline)
+
+    @html_offline.setter
+    def html_offline(self, value: bool) -> None:
+        self._project._report_html_offline = bool(value)
+
+    @property
+    def correlation_threshold(self) -> float | None:
+        """The correlation chart's threshold, 0 to 1; None for the automatic rule."""
+        return self._project._correlation_threshold
+
+    @correlation_threshold.setter
+    def correlation_threshold(self, value: float | None) -> None:
+        self._project._correlation_threshold = value
+
+    @property
+    def x_axis(self) -> str:
+        """The charts' x axis, ``'native'`` (2θ or TOF, the default) or ``'d_spacing'``."""
+        value = self._project._pattern_x_axis
+        return 'native' if value is None else value
+
+    @x_axis.setter
+    def x_axis(self, value: str) -> None:
+        self._project._pattern_x_axis = value
+
+    @property
+    def excluded(self) -> list[str]:
+        """The report's groups left out, by key; by default the data. An empty list: none."""
+        value = self._project._report_excluded
+        return ['data'] if value is None else value.split()
+
+    @excluded.setter
+    def excluded(self, keys: list[str]) -> None:
+        self._project._report_excluded = ' '.join(keys)
+
+    def model(
+        self,
+        *,
+        offline: bool | None = None,
+        x_axis: str | None = None,
+        correlation_threshold: float | None = None,
+        excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
+    ) -> ReportModel:
+        """The report as data, as the HTML report, the app and a notebook show it."""
+        return self._project._report_model(
+            offline, x_axis, correlation_threshold, excluded, colour_scheme, correlation_experiment
+        )
+
+    def as_html(
+        self,
+        *,
+        offline: bool | None = None,
+        x_axis: str | None = None,
+        correlation_threshold: float | None = None,
+        excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
+    ) -> str:
+        """The report as one HTML file's text."""
+        return self._project._report_html_text(
+            _DATA_DIR,
+            offline,
+            x_axis,
+            correlation_threshold,
+            excluded,
+            colour_scheme,
+            correlation_experiment,
+        )
+
+    def save_html(
+        self,
+        path: str | _Path | None = None,
+        *,
+        offline: bool | None = None,
+        x_axis: str | None = None,
+        correlation_threshold: float | None = None,
+        excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
+    ) -> None:
+        """Write the HTML report to ``path``, by default ``<project>/reports/<name>.html``.
+
+        It says where, as ``save_as`` does, and returns nothing a notebook would echo. A failed
+        write leaves the file already at ``path`` as it was.
+        """
+        written = self._save_html(
+            path,
+            offline=offline,
+            x_axis=x_axis,
+            correlation_threshold=correlation_threshold,
+            excluded=excluded,
+            colour_scheme=colour_scheme,
+            correlation_experiment=correlation_experiment,
+        )
+        print(f"Saving report to '{written}'")
+
+    def _save_html(
+        self,
+        path: str | _Path | None = None,
+        *,
+        offline: bool | None = None,
+        x_axis: str | None = None,
+        correlation_threshold: float | None = None,
+        excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
+    ) -> _Path:
+        """``save_html``'s write, returning the path written (python -m edi report names it)."""
+        text = self.as_html(
+            offline=offline,
+            x_axis=x_axis,
+            correlation_threshold=correlation_threshold,
+            excluded=excluded,
+            colour_scheme=colour_scheme,
+            correlation_experiment=correlation_experiment,
+        )
+        return self._write(path, '.html', text)
+
+    def save_cif(self, path: str | _Path | None = None) -> None:
+        """Write the report as a CIF to ``path``, by default ``<project>/reports/<name>.cif``.
+
+        Every item is written under its official CIF name, else its ``_edi_`` one, each value with
+        its s.u. It says where and returns nothing a notebook would echo. A failed write leaves the
+        file already at ``path`` as it was.
+        """
+        written = self._write(path, '.cif', self._project._report_cif_text())
+        print(f"Saving report to '{written}'")
+
+    def _write(self, path: str | _Path | None, suffix: str, text: str) -> _Path:
+        if path is None:
+            folder = self._project.metadata.path
+            if folder is None:
+                raise ValueError('the project has no folder: save it first, or give a path')
+            path = _Path(folder) / 'reports' / f'{self._project.name or "report"}{suffix}'
+        path = _Path(path)
+        # Written whole and renamed over the old file as project output (edi ADR-0039), so a
+        # failed write leaves the old file and nothing behind a link is written. A path outside
+        # the project is the caller's own: only its folder is the root there.
+        folder = self._project.metadata.path
+        root = _Path(folder) if folder is not None else None
+        if root is None or not path.absolute().is_relative_to(root.absolute()):
+            root = path.parent
+        _output.write_project_file(root.absolute(), path.absolute(), text)
+        return path
+
+    def save(
+        self,
+        *,
+        offline: bool | None = None,
+        x_axis: str | None = None,
+        correlation_threshold: float | None = None,
+        excluded: list[str] | None = None,
+        colour_scheme: str | None = None,
+        correlation_experiment: str | None = None,
+    ) -> list[_Path]:
+        """Save report: each ticked format but the PDF into ``<project>/reports/``, with its row.
+
+        Returns the paths written.
+
+        A ticked PDF is written by the app; its file and row are left as they were.
+        """
+        written, pdf_left = self._project._report_save(
+            _DATA_DIR,
+            offline,
+            x_axis,
+            correlation_threshold,
+            excluded,
+            colour_scheme,
+            correlation_experiment,
+        )
+        if pdf_left:
+            print(
+                'The PDF report is written by the app; its saved file, if any, is left as it was'
+            )
+        return [_Path(path) for path in written]
+
+    def check(self) -> list[tuple[str, str]]:
+        """Each saved report and its state: ``'current'``, ``'out of date'`` or ``'missing'``."""
+        states = self._project._report_states(_DATA_DIR)
+        return [(name, state) for name, _format, state in states]
+
+    def _repr_html_(self) -> str:  # noqa: PLW3201 - IPython's rich display hook
+        # A notebook shows the report in a frame of its own, so its styles and scripts stay
+        # inside it.
+        return (
+            '<iframe style="width: 100%; height: 800px; border: none" srcdoc="'
+            + _html.escape(self.as_html(), quote=True)
+            + '"></iframe>'
+        )
+
+
+def _report(self: Project) -> Report:
+    """The report facade over this project (see :class:`Report`)."""
+    return Report(self)
+
+
+Project.report = property(_report)
+
+from edi import _display  # noqa: E402 - after the extension's resolution
+
+
+def _display_of(self: Project) -> _display.Display:
+    """Charts and tables after each step (see :class:`edi._display.Display`, ADR-0079)."""
+    return _display.Display(self)
+
+
+Project.display = property(_display_of)
+
+
+# A tuple, so a tuple of pairs still compares equal; its experiment is kept in an attribute,
+# which a non-empty __slots__ on a tuple cannot hold.
+class _ExcludedRegions(tuple):  # noqa: SLOT001
+    """An experiment's excluded regions as ``(start, end)`` pairs (diffraction-lib).
+
+    The rows of the app's Excluded regions table. ``create`` adds one; assigning a list of pairs
+    to ``experiment.excluded_regions`` replaces them all (ADR-0079).
+    """
+
+    def create(self, *, start: float, end: float, id: str | None = None) -> None:
+        """Add the region from ``start`` to ``end``; an ``id`` is not kept (diffraction-lib)."""
+        del id
+        experiment = self._experiment
+        experiment.excluded_regions = [*experiment.excluded_regions, (start, end)]
+
+
+# The class that binds the native tuple property: the shared base of the powder experiments.
+_excluded_regions_owner = next(
+    cls for cls in BraggPdExperiment.__mro__ if 'excluded_regions' in vars(cls)
+)
+_excluded_regions_native = vars(_excluded_regions_owner)['excluded_regions']
+
+
+def _excluded_regions_get(self: ExperimentBase) -> _ExcludedRegions:
+    regions = _ExcludedRegions(_excluded_regions_native.__get__(self))
+    regions._experiment = self
+    return regions
+
+
+def _excluded_regions_set(self: ExperimentBase, regions) -> None:
+    _excluded_regions_native.__set__(self, [tuple(region) for region in regions])
+
+
+_excluded_regions_owner.excluded_regions = property(
+    _excluded_regions_get, _excluded_regions_set, doc=_excluded_regions_native.__doc__
+)
+
+
+# The TOF profile coefficient keys.
+_TOF_PEAK_PARAM_KEYS = frozenset({
+    'rise_alpha_0',
+    'rise_alpha_1',
+    'decay_beta_0',
+    'decay_beta_1',
+    'broad_gauss_sigma_0',
+    'broad_gauss_sigma_1',
+    'broad_gauss_sigma_2',
+    'broad_gauss_size',
+    'broad_gauss_strain',
+    'broad_lorentz_gamma_0',
+    'broad_lorentz_gamma_1',
+    'broad_lorentz_gamma_2',
+    'broad_lorentz_size',
+    'broad_lorentz_strain',
+})
+
+
+def _reject_unknown(spec, allowed, where):
+    """Fail on a misspelled/unsupported model key rather than silently ignoring it."""
+    unknown = set(spec) - allowed
+    if unknown:
+        raise KeyError(
+            f'{where}: unrecognized key(s) {sorted(unknown)}; allowed {sorted(allowed)}'
+        )
+
+
+# Allowlists at every accepted dict boundary — a typo raises instead of silently defaulting.
+# (Scattering element symbols are intentionally open map keys and are not validated here.)
+_PARAMETER_KEYS = frozenset({'value', 'uncertainty', 'free'})
+_CELL_KEYS = frozenset({
+    'length_a',
+    'length_b',
+    'length_c',
+    'angle_alpha',
+    'angle_beta',
+    'angle_gamma',
+})
+_ATOM_SITE_KEYS = frozenset({
+    'id',
+    'type_symbol',
+    'wyckoff_letter',
+    'adp_type',
+    'fract',  # composite (x, y, z) shorthand
+    'fract_x',
+    'fract_y',
+    'fract_z',
+    'occupancy',
+    'adp_iso',
+})
+_ATOM_SITE_ANISO_KEYS = frozenset({
+    'id',
+    'adp_11',
+    'adp_22',
+    'adp_33',
+    'adp_12',
+    'adp_13',
+    'adp_23',
+})
+_SPACE_GROUP_KEYS = frozenset({'name_h_m', 'coord_system_code', 'it_number'})
+_STRUCTURE_KEYS = frozenset({
+    'name',
+    'space_group',
+    'cell',
+    'atom_sites',
+    'atom_site_aniso',
+    'scattering_lengths_fm',
+})
+# The categorised experiment dict grammar: the dict mirrors the object tree exactly.
+_EXPERIMENT_KEYS = frozenset({
+    'name',
+    'experiment_type',
+    'peak',
+    'instrument',
+    'linked_structure',
+    'background',
+    'excluded_regions',
+})
+_EXPERIMENT_TYPE_KEYS = frozenset({
+    'sample_form',
+    'beam_mode',
+    'radiation_probe',
+    'scattering_type',
+})
+_TOF_PEAK_KEYS = _TOF_PEAK_PARAM_KEYS | {'type', 'cutoff_fwhm'}
+_TOF_INSTRUMENT_KEYS = frozenset({
+    'calib_d_to_tof_offset',
+    'calib_d_to_tof_linear',
+    'calib_d_to_tof_quadratic',
+    'calib_d_to_tof_reciprocal',
+    'setup_twotheta_bank',
+})
+_LINKED_STRUCTURE_KEYS = frozenset({'structure_id', 'scale'})
+
+# The constant-wavelength key family, mirroring the shipped crysta grammar: six
+# profiles, the TCH pseudo-Voigt the default; the beam modes are exactly 'time-of-flight' and
+# 'constant wavelength' (WITH a space), cross-checked against the peak-type family per the
+# four-case matrix. The CW peak/instrument key sets replace (never extend) the TOF ones when the
+# peak type selects CW — a TOF key on a CW spec is rejected exactly as any other unknown key, and
+# vice versa — and each CW profile adds only its own keys.
+_TOF_PEAK_TYPES = frozenset({'tof-jorgensen', 'tof-jorgensen-von-dreele', 'tof-pseudo-voigt'})
+_CW_PEAK_TYPES = frozenset({
+    'cwl-gaussian',
+    'cwl-lorentzian',
+    'cwl-pseudo-voigt',
+    'cwl-pseudo-voigt-berar-baldinozzi',
+    'cwl-tch-pseudo-voigt',
+    'cwl-tch-pseudo-voigt-fcj',
+})
+_RESERVED_CW_PEAK_TYPES = frozenset()
+# The keys each CW profile carries beyond U, V, W (the typed-family rule), and their defaults.
+_TCH_KEYS = {'broad_lorentz_x': 0.0, 'broad_lorentz_y': 0.0}
+_MIXING_KEYS = {'mixing_eta_0': 0.0, 'mixing_eta_1': 0.0}
+_CW_PROFILE_KEYS = {
+    'cwl-gaussian': {},
+    'cwl-lorentzian': {},
+    'cwl-pseudo-voigt': _MIXING_KEYS,
+    'cwl-pseudo-voigt-berar-baldinozzi': {
+        **_MIXING_KEYS,
+        'asym_beba_a0': 0.0,
+        'asym_beba_b0': 0.0,
+        'asym_beba_a1': 0.0,
+        'asym_beba_b1': 0.0,
+        'asym_beba_limit': 180.0,
+    },
+    'cwl-tch-pseudo-voigt': _TCH_KEYS,
+    'cwl-tch-pseudo-voigt-fcj': {**_TCH_KEYS, 'asym_fcj_1': 0.0, 'asym_fcj_2': 0.0},
+}
+_BEAM_MODE_TOF = 'time-of-flight'
+_BEAM_MODE_CW = 'constant wavelength'
+_SAMPLE_FORM_SINGLE_CRYSTAL = 'single crystal'
+
+
+def _single_crystal_experiment(name, beam_mode, radiation_probe, scattering_type):
+    """A single crystal from scratch: neutron and Bragg, with diffraction-lib's defaults."""
+    if radiation_probe not in {'', 'neutron'}:
+        raise ValueError(
+            f"radiation_probe '{radiation_probe}' is not supported for a single crystal"
+        )
+    if scattering_type not in {'', 'bragg'}:
+        raise ValueError(f"scattering_type '{scattering_type}' is not supported")
+    return _single_crystal_from_scratch(name, beam_mode)
+
+
+_CW_PEAK_KEYS = frozenset({
+    'type',
+    'cutoff_fwhm',
+    'broad_gauss_u',
+    'broad_gauss_v',
+    'broad_gauss_w',
+})
+_CW_INSTRUMENT_KEYS = frozenset({'setup_wavelength', 'calib_twotheta_offset'})
+# The optional CW line shifts — accepted from a spec, never engaged by default.
+_CW_LINE_SHIFT_KEYS = frozenset({'calib_sample_displacement', 'calib_sample_transparency'})
+# The X-ray CW monochromator polarization and K-alpha doublet — accepted from an X-ray spec only.
+_XRAY_POLARIZATION_KEYS = frozenset({
+    'setup_polarization_coefficient',
+    'setup_monochromator_twotheta',
+    'setup_wavelength_2',
+    'setup_wavelength_2_to_1_ratio',
+})
+
+_PEAK_PROFILE_BY_TOKEN = {
+    'tof-jorgensen': PeakProfileTypeEnum.TOF_JORGENSEN,
+    'tof-jorgensen-von-dreele': PeakProfileTypeEnum.TOF_JORGENSEN_VON_DREELE,
+    'cwl-gaussian': PeakProfileTypeEnum.CWL_GAUSSIAN,
+    'cwl-lorentzian': PeakProfileTypeEnum.CWL_LORENTZIAN,
+    'cwl-pseudo-voigt': PeakProfileTypeEnum.CWL_PSEUDO_VOIGT,
+    'cwl-pseudo-voigt-berar-baldinozzi': PeakProfileTypeEnum.CWL_PSEUDO_VOIGT_BERAR_BALDINOZZI,
+    'cwl-tch-pseudo-voigt': PeakProfileTypeEnum.CWL_TCH_PSEUDO_VOIGT,
+    'cwl-tch-pseudo-voigt-fcj': PeakProfileTypeEnum.CWL_TCH_PSEUDO_VOIGT_FCJ,
+    'tof-pseudo-voigt': PeakProfileTypeEnum.TOF_PSEUDO_VOIGT,
+}
+_BEAM_MODE_BY_TOKEN = {
+    _BEAM_MODE_TOF: BeamModeEnum.TIME_OF_FLIGHT,
+    _BEAM_MODE_CW: BeamModeEnum.CONSTANT_WAVELENGTH,
+}
+_SAMPLE_FORM_BY_TOKEN = {
+    'powder': SampleFormEnum.POWDER,
+    'single crystal': SampleFormEnum.SINGLE_CRYSTAL,
+}
+_RADIATION_PROBE_BY_TOKEN = {
+    'neutron': RadiationProbeEnum.NEUTRON,
+    'xray': RadiationProbeEnum.XRAY,
+}
+_SCATTERING_TYPE_BY_TOKEN = {'bragg': ScatteringTypeEnum.BRAGG, 'total': ScatteringTypeEnum.TOTAL}
+
+
+def _parameter(spec):
+    """Map a ``{value, uncertainty, free}`` dict *or* a bare scalar to a core ``Parameter``.
+
+    Quantities that can be free are written as the full dict; fixed conveniences (fractional
+    coordinates, occupancies, ADPs) may be a plain number, taken as a fixed value (uncertainty
+    0, not free). An omitted ``uncertainty`` key defaults to present ``0.0`` (compat); an
+    explicit ``'uncertainty': None`` marks a parameter that can be free with no prior
+    uncertainty (the ``value()`` state), not a zero uncertainty.
+    """
+    if isinstance(spec, dict):
+        _reject_unknown(spec, _PARAMETER_KEYS, 'parameter spec')
+        return Parameter(spec['value'], spec.get('uncertainty', 0.0), spec.get('free', False))
+    return Parameter(float(spec))
+
+
+class StructureFactory:
+    """Build a Structure datablock from a plain dict — sugar over the core ``Structure``.
+
+    Presentation-only (ADR-0009): a notebook constructor mirroring diffraction-lib. The dict is the
+    in-memory model shape, not a persisted format.
+    """
+
+    @classmethod
+    def from_scratch(cls, *, name) -> 'Structure':
+        """Create a minimal default structure with the given name.
+
+        diffraction-lib ``StructureFactory.from_scratch``.
+        """
+        structure = Structure()
+        structure.name = name
+        return structure
+
+    @classmethod
+    def from_cif_str(cls, cif_str) -> 'Structure':
+        """Create a structure by parsing CIF/.edi text.
+
+        diffraction-lib ``StructureFactory.from_cif_str``.
+        """
+        return _structure_from_edi_text(cif_str)
+
+    @classmethod
+    def from_cif_path(cls, cif_path) -> 'Structure':
+        """Create a structure by reading and parsing a CIF/.edi file.
+
+        diffraction-lib ``StructureFactory.from_cif_path``.
+        """
+        return _structure_from_edi_text(_Path(cif_path).read_text(encoding='utf-8'), str(cif_path))
+
+    @staticmethod
+    def from_dict(spec):
+        _reject_unknown(spec, _STRUCTURE_KEYS, 'StructureFactory.from_dict')
+        structure = Structure()
+        if 'name' in spec:
+            structure.name = spec['name']
+        if 'space_group' in spec:
+            # The space-group category — a dict {name_h_m, coord_system_code}. The old
+            # plain-string form is a retired spelling and refuses rather than half-loading.
+            group_spec = spec['space_group']
+            if not isinstance(group_spec, dict):
+                raise KeyError(
+                    "StructureFactory.from_dict: unrecognized bare-string 'space_group' — the "
+                    "space-group CATEGORY is a dict {'name_h_m': ..., 'coord_system_code': ...}"
+                )
+            _reject_unknown(
+                group_spec, _SPACE_GROUP_KEYS, 'StructureFactory.from_dict space_group'
+            )
+            # A number or a new name selects its group's default setting: a given code goes last.
+            if 'it_number' in group_spec:
+                structure.space_group.it_number = int(group_spec['it_number'])
+            if 'name_h_m' in group_spec:
+                structure.space_group.name_h_m = group_spec['name_h_m']
+            if 'coord_system_code' in group_spec:
+                structure.space_group.coord_system_code = group_spec['coord_system_code']
+
+        cell = Cell()
+        cell_spec = spec.get('cell', {})
+        _reject_unknown(cell_spec, _CELL_KEYS, 'StructureFactory.from_dict cell')
+        for edge in sorted(_CELL_KEYS):
+            if edge in cell_spec:
+                setattr(cell, edge, _parameter(cell_spec[edge]))
+        structure.cell = cell
+
+        sites = []
+        for site_spec in spec.get('atom_sites', ()):
+            _reject_unknown(site_spec, _ATOM_SITE_KEYS, 'StructureFactory.from_dict atom_site')
+            site = AtomSite()
+            site.id = site_spec.get('id', '')
+            site.type_symbol = site_spec.get('type_symbol', '')
+            site.wyckoff_letter = site_spec.get('wyckoff_letter', '')
+            site.adp_type = site_spec.get('adp_type', 'Biso')
+            fract_x, fract_y, fract_z = site_spec.get('fract', (0.0, 0.0, 0.0))
+            site.fract_x = _parameter(site_spec.get('fract_x', fract_x))
+            site.fract_y = _parameter(site_spec.get('fract_y', fract_y))
+            site.fract_z = _parameter(site_spec.get('fract_z', fract_z))
+            site.occupancy = _parameter(site_spec.get('occupancy', 1.0))
+            site.adp_iso = _parameter(site_spec.get('adp_iso', 0.0))
+            sites.append(site)
+        # The keyed collection has no wholesale setter. The declared sites are admitted as ONE
+        # list, so a duplicate id is refused by name instead of being collapsed by add()'s
+        # upsert.
+        structure.atom_sites._assign(sites)
+
+        # The anisotropic sites' tensors, in each site's declared type. Without them, each
+        # anisotropic site holds the tensor of its isotropic value.
+        tensors = []
+        for tensor_spec in spec.get('atom_site_aniso', ()):
+            _reject_unknown(
+                tensor_spec, _ATOM_SITE_ANISO_KEYS, 'StructureFactory.from_dict atom_site_aniso'
+            )
+            tensor = AtomSiteAniso()
+            tensor.id = tensor_spec.get('id', '')
+            for component in ('adp_11', 'adp_22', 'adp_33', 'adp_12', 'adp_13', 'adp_23'):
+                setattr(tensor, component, _parameter(tensor_spec.get(component, 0.0)))
+            tensors.append(tensor)
+        if 'atom_site_aniso' in spec:
+            structure.atom_site_aniso._assign(tensors)
+
+        # Element -> b_c (fm) for crysta::NeutronScattering (empty => the engine's default table).
+        structure.scattering_lengths_fm = {
+            str(element): float(b_c)
+            for element, b_c in spec.get('scattering_lengths_fm', {}).items()
+        }
+        return structure
+
+
+def _cw_instrument_keys(experiment):
+    """The instrument keys a CW spec may carry: the X-ray polarization pair on X-ray only."""
+    keys = _CW_INSTRUMENT_KEYS | _CW_LINE_SHIFT_KEYS
+    if experiment.experiment_type.radiation_probe == RadiationProbeEnum.XRAY:
+        keys |= _XRAY_POLARIZATION_KEYS
+    return keys
+
+
+def _engage_cw_members(experiment, peak_type):
+    """Engage a CW experiment's members at their defaults, its profile's own slots included."""
+    for member in sorted(_CW_PEAK_KEYS - {'type', 'cutoff_fwhm'}):
+        setattr(experiment.peak, member, Parameter(0.0))
+    for member, default in _CW_PROFILE_KEYS.get(peak_type, _TCH_KEYS).items():
+        setattr(experiment.peak, member, Parameter(default))
+    for member in sorted(_CW_INSTRUMENT_KEYS):
+        setattr(experiment.instrument, member, Parameter(0.0))
+
+
+def _resolve_factory_kind(peak_spec, experiment_type_spec, where):
+    """Resolve (peak_type_token, beam_mode_token, is_cw) for a factory spec, fail-closed.
+
+    Mirrors the loader's four-case matrix: a reserved rung token is refused BY NAME, an unknown
+    token is refused, a beam mode must be one of the two shipped tokens and must match the
+    peak-type family. An absent ``peak.type`` keeps the historical TOF path; an absent
+    ``experiment_type.beam_mode`` is not an error (the mode comes from the peak family alone).
+    """
+    peak_type = peak_spec.get('type', '')
+    if peak_type in _RESERVED_CW_PEAK_TYPES:
+        raise ValueError(
+            f"{where}: peak type '{peak_type}' is a reserved constant-wavelength profile this "
+            'build cannot compute yet'
+        )
+    if peak_type and peak_type not in _TOF_PEAK_TYPES and peak_type not in _CW_PEAK_TYPES:
+        raise ValueError(
+            f"{where}: unsupported peak type '{peak_type}' (expected one of "
+            f'{sorted(_TOF_PEAK_TYPES | _CW_PEAK_TYPES)})'
+        )
+    is_cw = peak_type in _CW_PEAK_TYPES
+    beam_mode = experiment_type_spec.get('beam_mode', '')
+    if beam_mode:
+        if beam_mode not in _BEAM_MODE_BY_TOKEN:
+            raise ValueError(
+                f"{where}: beam_mode '{beam_mode}' is not a known beam mode "
+                f"(expected '{_BEAM_MODE_TOF}' or '{_BEAM_MODE_CW}')"
+            )
+        if (beam_mode == _BEAM_MODE_CW) != is_cw:
+            raise ValueError(
+                f"{where}: beam_mode '{beam_mode}' contradicts peak type "
+                f"'{peak_type or 'tof-jorgensen'}'"
+            )
+    return peak_type, beam_mode, is_cw
+
+
+def _apply_background(experiment, points):
+    background = []
+    for position, intensity in points:
+        point = LineSegment()
+        point.position = float(position)
+        point.intensity = _parameter(intensity)
+        background.append(point)
+    experiment.background = background
+
+
+def _apply_experiment_type(experiment, spec, where):
+    """Set the typed experiment-type axes from their verbatim tokens, fail-closed."""
+    _reject_unknown(spec, _EXPERIMENT_TYPE_KEYS, where)
+    for key, table in (
+        ('sample_form', _SAMPLE_FORM_BY_TOKEN),
+        ('beam_mode', _BEAM_MODE_BY_TOKEN),
+        ('radiation_probe', _RADIATION_PROBE_BY_TOKEN),
+        ('scattering_type', _SCATTERING_TYPE_BY_TOKEN),
+    ):
+        if key in spec:
+            token = spec[key]
+            if token not in table:
+                raise ValueError(
+                    f"{where}: {key} '{token}' is not a known token "
+                    f'(expected one of {sorted(table)})'
+                )
+            setattr(experiment.experiment_type, key, table[token])
+
+
+def _apply_plain_experiment_keys(experiment, spec):
+    """Apply the top-level experiment keys that are plain assignments, not category parsing.
+
+    `name` and `excluded_regions` carry no sub-grammar and no parameter wrapping, so they do not
+    belong beside the category blocks — and inlining them pushed `from_dict` past its branch
+    ceiling. Keeping them here lets the dict be the whole model declaration (nothing set on the
+    object after `from_dict` returns) without growing that function.
+    """
+    if 'name' in spec:
+        experiment.name = spec['name']
+    if 'excluded_regions' in spec:
+        experiment.excluded_regions = list(spec['excluded_regions'])
+
+
+def _unlinked(experiment):
+    """The experiment with no linked structure: one made from code links nothing (ADR-0079)."""
+    for key in [link.structure_id for link in experiment.linked_structures]:
+        del experiment.linked_structures[key]
+    return experiment
+
+
+class ExperimentFactory:
+    """Build an ExperimentBase from a dict mirroring the categorised tree — sugar over the core.
+
+    Registry-backed since the structural adoption: ``registry()`` lists the selector token of
+    every registered concrete experiment; ``register()`` is the extension seam a later
+    experiment kind uses.
+
+
+    The dict grammar IS the object grammar — ``experiment_type`` / ``peak`` /
+    ``instrument`` / ``linked_structure`` / ``background``, with the four experiment-type axes
+    given as their verbatim tokens and ``peak.type`` selecting the key family
+    (a ``'cwl-*'`` profile swaps in the CW peak/instrument key sets, which REPLACE the TOF
+    ones). No factory default frees a parameter; freeing one is the caller's act.
+    """
+
+    _registry: _ClassVar[dict] = {'bragg-pd': BraggPdExperiment}
+
+    @classmethod
+    def registry(cls) -> dict:
+        return dict(cls._registry)
+
+    @classmethod
+    def register(cls, token_or_cls, experiment_cls=None) -> type:
+        if experiment_cls is None:
+            experiment_cls = token_or_cls
+            token = getattr(experiment_cls, 'tag', None) or experiment_cls.__name__
+        else:
+            token = token_or_cls
+        cls._registry[token] = experiment_cls
+        return experiment_cls
+
+    @classmethod
+    def supported_tags(cls) -> list:
+        return sorted(t for t, c in cls._registry.items() if c is not None)
+
+    @classmethod
+    def default_tag(cls) -> str:
+        return 'bragg-pd'
+
+    @classmethod
+    def create(cls, tag='bragg-pd') -> 'BraggPdExperiment':
+        experiment_cls = cls._registry.get(tag)
+        if experiment_cls is None:
+            msg = f"'{tag}' has no registered concrete experiment class"
+            raise ValueError(msg)
+        return experiment_cls()
+
+    @classmethod
+    def create_default_for(cls, _value) -> 'BraggPdExperiment':
+        return cls.create('bragg-pd')
+
+    @classmethod
+    def from_cif_str(cls, cif_str) -> 'BraggPdExperiment':
+        """Create an experiment from CIF/.edi text.
+
+        diffraction-lib ``ExperimentFactory.from_cif_str``.
+        """
+        return _experiment_from_edi_text(cif_str)
+
+    @classmethod
+    def from_cif_path(cls, cif_path) -> 'BraggPdExperiment':
+        """Create an experiment by reading and parsing a CIF/.edi file.
+
+        diffraction-lib ``ExperimentFactory.from_cif_path``.
+        """
+        return _experiment_from_edi_text(
+            _Path(cif_path).read_text(encoding='utf-8'), str(cif_path)
+        )
+
+    @classmethod
+    def from_data_path(
+        cls,
+        *,
+        name,
+        data_path,
+        sample_form='',
+        beam_mode='',
+        radiation_probe='',
+        scattering_type='',
+    ) -> 'BraggPdExperiment':
+        """A from_scratch experiment with measured data read from a plain 2-3 column file.
+
+        ``x y [sy]``, separated by whitespace or commas, read by crysta's plain-data reader: a
+        line that is not two or three numbers is skipped, a missing ``sy`` is ``sqrt(max(y, 1))``,
+        any ``sy < 1e-4`` becomes ``1.0``, rows with ``y <= 0`` are dropped, and the rows are
+        sorted by ``x`` keeping the first of a repeated ``x``.
+        """
+        experiment = cls.from_scratch(
+            beam_mode=beam_mode,
+            name=name,
+            sample_form=sample_form,
+            radiation_probe=radiation_probe,
+            scattering_type=scattering_type,
+        )
+        if sample_form == _SAMPLE_FORM_SINGLE_CRYSTAL:
+            # A single crystal reads reflections: a FullProf .int or a plain h k l F2 su
+            # [wavelength] file.
+            return _single_crystal_with_reflections(experiment, str(data_path))
+        rows = _edi_read_plain_data(str(data_path))
+        x, y, sy = rows['x'], rows['y'], rows['sigma']
+        if beam_mode == _BEAM_MODE_CW:
+            experiment.data = PdCwlData(
+                two_theta=x,
+                intensity_meas=y,
+                intensity_meas_su=sy,
+            )
+        else:
+            experiment.data = PdTofData(
+                time_of_flight=x,
+                intensity_meas=y,
+                intensity_meas_su=sy,
+            )
+        return experiment
+
+    @staticmethod
+    def from_scratch(
+        peak_type='',
+        beam_mode='',
+        name='',
+        sample_form='',
+        radiation_probe='',
+        scattering_type='',
+    ):
+        """A default ExperimentBase of the given peak type token — every parameter fixed.
+
+        The from-scratch starting point: the same fail-closed resolution as
+        ``from_dict``. An omitted ``peak_type`` is derived from ``beam_mode`` —
+        ``'constant wavelength'`` selects the TCH pseudo-Voigt, anything else the historical
+        ``tof-jorgensen``. A CW experiment starts with its profile's peak parameters and both CW
+        instrument parameters present, fixed at 0.
+        """
+        if sample_form == _SAMPLE_FORM_SINGLE_CRYSTAL:
+            return _unlinked(
+                _single_crystal_experiment(name, beam_mode, radiation_probe, scattering_type)
+            )
+        peak_spec = {}
+        if peak_type:
+            peak_spec['type'] = peak_type
+        elif beam_mode == _BEAM_MODE_CW:
+            peak_spec['type'] = 'cwl-tch-pseudo-voigt'
+        else:
+            peak_spec['type'] = 'tof-jorgensen'
+        type_spec = {'beam_mode': beam_mode} if beam_mode else {}
+        peak_type, beam_mode, is_cw = _resolve_factory_kind(
+            peak_spec, type_spec, 'ExperimentFactory.from_scratch'
+        )
+        experiment = BraggPdExperiment()
+        if name:
+            experiment.name = name
+        type_axes = {}
+        if sample_form:
+            type_axes['sample_form'] = sample_form
+        if radiation_probe:
+            type_axes['radiation_probe'] = radiation_probe
+        if scattering_type:
+            type_axes['scattering_type'] = scattering_type
+        if type_axes:
+            _apply_experiment_type(experiment, type_axes, 'ExperimentFactory.from_scratch')
+        experiment.peak.type = _PEAK_PROFILE_BY_TOKEN[peak_type]
+        if beam_mode:
+            experiment.experiment_type.beam_mode = _BEAM_MODE_BY_TOKEN[beam_mode]
+        if is_cw:
+            _engage_cw_members(experiment, peak_type)
+        return _unlinked(experiment)
+
+    @staticmethod
+    def from_dict(spec):
+        _reject_unknown(spec, _EXPERIMENT_KEYS, 'ExperimentFactory.from_dict')
+        experiment = BraggPdExperiment()
+        _apply_plain_experiment_keys(experiment, spec)
+
+        peak_spec = spec.get('peak', {})
+        type_spec = spec.get('experiment_type', {})
+        peak_type, _beam_mode, is_cw = _resolve_factory_kind(
+            peak_spec, type_spec, 'ExperimentFactory.from_dict'
+        )
+        _apply_experiment_type(
+            experiment, type_spec, 'ExperimentFactory.from_dict experiment_type'
+        )
+        if peak_type:
+            experiment.peak.type = _PEAK_PROFILE_BY_TOKEN[peak_type]
+
+        # The key family is selected by the peak type: CW replaces (never extends) the TOF sets,
+        # so a TOF key on a CW spec is rejected exactly as any other unknown key, and vice versa.
+        if is_cw:
+            own = _CW_PROFILE_KEYS.get(peak_type, _TCH_KEYS)
+            peak_keys = _CW_PEAK_KEYS | set(own)
+            instrument_keys = _cw_instrument_keys(experiment)
+            for member, default in own.items():  # the profile's own slots, at their defaults
+                setattr(experiment.peak, member, Parameter(default))
+        else:
+            peak_keys, instrument_keys = _TOF_PEAK_KEYS, _TOF_INSTRUMENT_KEYS
+        _reject_unknown(peak_spec, peak_keys, 'ExperimentFactory.from_dict peak')
+        for name in sorted(peak_keys - {'type', 'cutoff_fwhm'}):
+            if name in peak_spec:
+                setattr(experiment.peak, name, _parameter(peak_spec[name]))
+        if 'cutoff_fwhm' in peak_spec:
+            experiment.peak.cutoff_fwhm = float(peak_spec['cutoff_fwhm'])
+
+        instrument_spec = spec.get('instrument', {})
+        _reject_unknown(instrument_spec, instrument_keys, 'ExperimentFactory.from_dict instrument')
+        for name in sorted(instrument_keys):
+            if name in instrument_spec:
+                setattr(experiment.instrument, name, _parameter(instrument_spec[name]))
+
+        linked_spec = spec.get('linked_structure', {})
+        _reject_unknown(
+            linked_spec, _LINKED_STRUCTURE_KEYS, 'ExperimentFactory.from_dict linked_structure'
+        )
+        if 'structure_id' in linked_spec:
+            experiment.linked_structure.structure_id = linked_spec['structure_id']
+        if 'scale' in linked_spec:
+            experiment.linked_structure.scale = _parameter(linked_spec['scale'])
+
+        if 'background' in spec:
+            _apply_background(experiment, spec['background'])
+        return experiment
+
+
+# Keep the verification module reachable without loading its optional numerical tools
+# when someone imports edi to fit a project.
+def __getattr__(name: str):
+    if name == 'verification':
+        return _import_module('.verification', __name__)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+
+
+def __dir__():
+    return sorted({*globals(), 'verification'})

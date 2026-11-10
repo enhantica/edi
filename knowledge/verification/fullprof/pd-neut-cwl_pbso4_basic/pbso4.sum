@@ -1,0 +1,137 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 01/07/2026  Time: 21:01:05.593                              
+
+ => PCR file code: pbso4
+ => DAT file code: pbso4                -> Relative contribution: 1.0000                                                            
+ => Title: PbSO4 D1A(ILL),Rietveld Round Robin, R.J. Hill,JApC 25,589(1992)
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => The    7th default profile function was selected
+
+ => Data in D1A,D2B format as prepared by D1A(D2B)SUM for pattern:  1
+ => Analysis of refinement at the end
+ => Wavelengths:  1.91200 1.91200
+ => Cos(Monochromator angle)=   0.0000
+ => Absorption correction (AC), muR-eff =   0.0000  0.0000
+ => Base of peaks: 2.0*HW*   30.00
+ ==> Angular range, step and number of points:
+     2Thmin:      10.000000  2Thmax:     155.449997  Step:       0.050000  No. of points:   2910
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    6.328 g/cm3
+ => Scor: 2.8388
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 PbSO4                                   P n m a             
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   217  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Pb      0.18754(   0)  0.25000(   0)  0.16709(   0)  1.381(  0)  0.500(  0)    4
+ S       0.06532(   0)  0.25000(   0)  0.68401(   0)  0.362(  0)  0.500(  0)    4
+ O1      0.90822(   0)  0.25000(   0)  0.59542(   0)  2.037(  0)  0.500(  0)    4
+ O2      0.19390(   0)  0.25000(   0)  0.54359(   0)  1.504(  0)  0.500(  0)    4
+ O3      0.08114(   0)  0.02713(   0)  0.80863(   0)  1.343(  0)  1.000(  0)    8
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              8.47799   0.00000
+                              5.39648   0.00000
+                              6.95772   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+ => overall scale factor :   1.467900      0.000000    
+ => Eta(p-v) or m(p-vii) :    0.00000   0.00000
+ => Overall tem. factor  :    0.00000   0.00000
+ => Halfwidth parameters :    0.13949   0.00000
+                             -0.41407   0.00000
+                              0.38820   0.00000
+ => Preferred orientation:    0.00000   0.00000
+                              0.00000   0.00000
+ => Asymmetry parameters :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => X and y parameters   :    0.00000   0.00000
+                              0.08638   0.00000
+ => Strain parameters    :    0.00000   0.00000
+                              0.00000   0.00000
+                              0.00000   0.00000
+ => Size parameters (G,L):    0.00000   0.00000
+                              0.00000   0.00000
+
+ => Add. shape parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:    -0.1436    0.0000
+ => Cos(2theta)-shift parameter :   0.0000  0.0000
+ => Sin(2theta)-shift parameter :   0.0000  0.0000
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle:500
+ => N-P+C:  2909
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  3.47     Rwp:  4.24     Rexp:    1.95 Chi2:  4.72      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  8.18     Rwp:  7.90     Rexp:    3.64 Chi2:  4.72    
+ => Deviance:  0.233E+04     Dev*  :  0.7989    
+ => DW-Stat.:    0.3065     DW-exp:     1.8848
+ => N-sigma of the GoF:      141.756
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  2909
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  3.47     Rwp:  4.24     Rexp:    1.95 Chi2:  4.72      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  8.18     Rwp:  7.90     Rexp:    3.64 Chi2:  4.72    
+ => Deviance:  0.233E+04     Dev*  :  0.7989    
+ => DW-Stat.:    0.3065     DW-exp:     1.8848
+ => N-sigma of the GoF:      141.756
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   4.72    
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     PbSO4
+ => Bragg R-factor:   3.62       Vol:  318.325( 0.000)  Fract(%):  100.00( 0.00)
+ => Rf-factor=  2.32             ATZ:        1213.030   Brindley:  1.0000
+
+ 
+              CPU Time:     0.391 seconds
+                            0.007 minutes
+
+ => Run finished at:     Date: 01/07/2026  Time: 21:01:05.985                              

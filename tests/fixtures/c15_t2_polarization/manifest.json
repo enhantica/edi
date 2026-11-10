@@ -1,0 +1,23 @@
+{
+  "upstream": "https://github.com/easyscience/diffraction-lib",
+  "sha": "0d9f10e412a0cd08d4dd0af95845dd9bb597dcdf",
+  "files": {
+    "lif_single_polarized.pcr": "ee0ccb367617e839ddfc2ae6c3a9904e1daba03e2d0cb8aab7c95233ae5bde4f",
+    "lif_single_polarized.dat": "06ba190e26656de021c199beef857cdf61acf5e05ca62564cb325d40d9628cae",
+    "lif_single_polarized.prf": "1b1186880704ddbdae5b6e39b0444bdb177d9b5c13ad99dd0b7f5463d1b7d849",
+    "lif_single_polarized.sum": "d2b25204f6853cab5bc2b64fc931595f0b8803e8ae0f73383fd91937434a3e67",
+    "lif_single_polarized.bac": "423eabac3ebd8ea65c5761f79594adc82fc79ba24c7b63313292ac8c76b974c2"
+  },
+  "K": 0.5,
+  "Cthm": 0.8,
+  "monochromator_twotheta_deg": 26.5650511771,
+  "author_run": {
+    "executable": "fp2k",
+    "executable_sha256": "b8cb5cdb00ef55f2fef9004ef070324a459f2fcc92ad5c4613f2ea06118c9f1f",
+    "command": "printf 'lif_single_polarized\\n\\n\\n' | fp2k",
+    "files": {
+      "lif_single_polarized.prf": "16d518498fdf0b2dff554c1b7f34f07e46a3c08ad41f5900d6db150edfc3bff8",
+      "lif_single_polarized.sum": "93061d4aff7f2b192211cec96a438168f1edab35840e07f6e378c3af25d32d63"
+    }
+  }
+}

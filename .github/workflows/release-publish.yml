@@ -1,0 +1,103 @@
+name: Publish qualified calendar release
+
+on:
+  workflow_dispatch:
+    inputs:
+      installer_run:
+        description: Desktop installers run ID qualified on main with release_plan_run
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: pages-publication
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: write
+      actions: write
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Check the distribution builder on a fixture release
+        run: python tools/release/distribution.py --dry-run --output dry-run
+      - name: Stage immutable qualified artifacts
+        run: python tools/release/promote.py --repo "$GITHUB_REPOSITORY" --run "$INSTALLER_RUN" --output publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INSTALLER_RUN: ${{ inputs.installer_run }}
+      # The crysta SDKs every product of this release was built with (edi ADR-0083), attached beside them.
+      - name: The pinned crysta commit
+        id: crysta
+        run: bash tools/ci/crysta-source.sh
+      - uses: actions/cache/restore@v4
+        with:
+          path: crysta-sdk-archives
+          key: crysta-sdk-linux-64-${{ steps.crysta.outputs.sha }}
+          fail-on-cache-miss: true
+      - uses: actions/cache/restore@v4
+        with:
+          path: crysta-sdk-archives
+          key: crysta-sdk-osx-arm64-${{ steps.crysta.outputs.sha }}
+          fail-on-cache-miss: true
+      - name: Attach the crysta SDKs
+        env:
+          SHA: ${{ steps.crysta.outputs.sha }}
+        run: |
+          for platform in linux-64 osx-arm64; do
+            cp "crysta-sdk-archives/crysta-sdk-$SHA-$platform.tar.gz" publication/assets/
+          done
+      - name: Write and check the three copies of the release
+        run: python tools/release/distribution.py --publication publication --output copies --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Attach every file of the release copy, component archives and SHA256SUMS included
+        run: |
+          rm -rf publication/assets
+          cp -R copies/release publication/assets
+      - name: Keep the off-GitHub copy for download.easydiffraction.org
+        uses: actions/upload-artifact@v4
+        with:
+          name: offsite-${{ github.run_attempt }}
+          path: copies/offsite
+          retention-days: 90
+      - name: Prepare the release draft and verify its assets
+        run: python tools/release/publish_assets.py --repo "$GITHUB_REPOSITORY" --folder publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Preserve the site and assemble repositories with their release feed
+        run: python tools/ci/pages_update.py --repo "$GITHUB_REPOSITORY" --component release --incoming copies/pages --site site
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          name: pages-site-release-${{ github.run_attempt }}
+          path: site
+          retention-days: 90
+      - name: Deploy release to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: pages-site-release-${{ github.run_attempt }}
+      - name: Publish the verified download assets
+        run: python tools/release/publish_assets.py --repo "$GITHUB_REPOSITORY" --folder publication --finalize
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Refresh the public release notes
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main -f component=docs
+        env:
+          GH_TOKEN: ${{ github.token }}

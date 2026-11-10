@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "task": "",
+  "drive_seq": 47,
+  "kind": "execution evidence, not a correctness golden",
+  "oracle": "The committed review-10 controls are byte-identical across subjects. Their relational and refusal assertions distinguish the pre-fix edi implementation from the corrected implementation.",
+  "crysta_source": "fcea5f817c985cf94af731625d56f38e3fae0061",
+  "test_sources": [
+    {
+      "path": "tests/system/py/test_e09_t58_cli_persistence.py",
+      "sha256": "235cf368c63c8b2a85b4d875bc0839c06da80a7bdd603463b3f7205f1e87bddd"
+    },
+    {
+      "path": "tests/system/py/test_e09_t58_start_tied_numeric.py",
+      "sha256": "e5f83803a6db69497d84dea8064706542a2b2d165dc8089293a62081b52c1eee"
+    },
+    {
+      "path": "tests/system/py/test_e09_t58_float_build_protocol.py",
+      "sha256": "f7c6280b12ca52a1c0a845153a15b49d857d9c93dc7bdd210605814a8d02c7c8"
+    }
+  ],
+  "method": "A disposable worktree at the pre-fix commit compiled only edi against the same installed crysta prefix used by HEAD. Both subjects ran the exact 39 nodes with the canonical Pixi Python, their own lib and extension paths, CRYSTA_CONSUMER_SRC unset, and the same fitting corpus. The logs record collection, individual outcomes, imports, and summaries.",
+  "source_logs": "<author-runs>/e09t58-seq47/{base,head}.{log,xml}",
+  "runs": {
+    "base": {
+      "edi_commit": "80b0844",
+      "pytest_exit": 1,
+      "failed": 24,
+      "passed": 15,
+      "log_sha256": "c628a9f3b3dd6505dc99c3a935e6017906c095f8b04d7d44f18895dcdbfab492",
+      "junit_sha256": "e6314adfc0603a5e38a3c7e75d75e7f5777c20a5d45cf555a163cfdcba5523a1"
+    },
+    "head": {
+      "edi_commit": "cc82bafad6cfd584db76654efa93ad38477d0c8a",
+      "pytest_exit": 0,
+      "failed": 0,
+      "passed": 39,
+      "log_sha256": "87979d158d6942f126795ef3af4d735432d0433cbb4b5e09f2214172c6f7efe1",
+      "junit_sha256": "b1638f1c75e5d5de938b3dcb84fc7fd47fa58ec311d0ae3517abc1705fe19799"
+    }
+  },
+  "expected_red": {
+    "all_axis_result_landing": {
+      "count": 18,
+      "arrangements": [
+        "fixed-positive-positive",
+        "positive-fixed-positive",
+        "positive-positive-fixed",
+        "positive-positive-positive",
+        "absent-zero-fixed",
+        "zero-absent-fixed"
+      ],
+      "modes": ["memory", "saved", "crysta-calc"]
+    },
+    "conflicting_initial_declarations": [
+      "conflicting-positive",
+      "absent-versus-positive"
+    ],
+    "numeric_boundary": [
+      "y=nan;z=.",
+      "y=inf;z=.",
+      "dotted-exponent-comma"
+    ],
+    "consumer_provenance": ["extension-alias"]
+  }
+}

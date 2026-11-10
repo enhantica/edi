@@ -1,0 +1,374 @@
+// SPDX-License-Identifier: BSD-3-Clause
+pragma Singleton
+
+import QtQuick
+import QtCore
+
+import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
+
+import edi.app
+
+// edi's application preferences (edi ADR-0017 §12), shown by edi's own dialog (AppPreferencesDialog) in
+// place of the base's: the base's dialog offers no way to hide or add a row, and edi changes several. The
+// values persist in the app's settings file (the base's Settings mechanism, `EaGlobals.Vars.settingsFile`;
+// a demo or test run has its own fresh file) under edi's own category, and `apply` hands them to the base
+// once the window is complete — after the base's hidden dialog has loaded its own, older keys, so edi's win.
+// Unavailable zoom and language controls keep their defaults. Update availability is independent
+// of the optional notification setting (ADR-0072).
+QtObject {
+    id: preferences
+
+    property bool dialogShown: false
+    // The tab the dialog shows when it next opens, by name ("performance"); empty keeps the last one.
+    property string dialogTab: ""
+    property bool assistantShown: false
+    property bool assistantCopyTechnicalDetails: false
+    property real assistantWidth: AppSizes.assistantDefaultWidth
+
+    // Tooltips: the level, "All", "Important" or "Off", and how long the pointer rests on a control before one opens, in
+    // ms, read from the settings file once it is loaded. With no level stored, the on/off flag stored before levels
+    // decides it: off is Off, on or unset Important; that flag itself is kept as it was.
+    property bool toolTips: true
+    property string toolTipLevel: "Important"
+    property int toolTipDelay: 1000
+    // The level the app bar's switch turns back on: the last one that was not Off.
+    property string toolTipLastLevel: "Important"
+    property bool toolTipsLoaded: false
+    function loadToolTips() {
+        const level = String(settings.value("toolTipLevel", ""));
+        toolTipLevel = ["All", "Important", "Off"].includes(level) ? level : toolTips ? "Important" : "Off";
+        toolTipDelay = Number(settings.value("toolTipDelay", 1000));
+        const last = String(settings.value("toolTipLastLevel", "Important"));
+        toolTipLastLevel = last === "All" ? "All" : "Important";
+        toolTipsLoaded = true;
+    }
+    // A choice is written at once, so a window opened next, or the next start, finds it; in the browser it is also
+    // copied to the page's storage at once, as a reload before the periodic copy would lose it.
+    onToolTipLevelChanged: {
+        if (!toolTipsLoaded)
+            return;
+        if (toolTipLevel !== "Off")
+            toolTipLastLevel = toolTipLevel;
+        settings.setValue("toolTipLevel", toolTipLevel);
+        settings.setValue("toolTipLastLevel", toolTipLastLevel);
+        settings.sync();
+        ApplicationInfo.storeSettings();
+    }
+    onToolTipDelayChanged: {
+        if (!toolTipsLoaded)
+            return;
+        settings.setValue("toolTipDelay", toolTipDelay);
+        settings.sync();
+        ApplicationInfo.storeSettings();
+    }
+    property bool autoCollapse: true
+    // Where the workflow pages show their sidebar: "Right" (the default) or "Left" (WorkflowPage).
+    property string sideBarSide: "Right"
+    readonly property bool sideBarOnLeft: sideBarSide === "Left"
+    // Threads per calculation (Performance): the engine's thread count for every fill, 0 is Auto, the engine's own
+    // policy. A machine's setting, never saved in a project.
+    property int engineThreads: 0
+    // Parallel fits in a scan (Performance): how many files of a scan are fitted at once, 1 one after another. A
+    // machine's setting, never saved in a project (the owner, 2026-11-04).
+    property int scanWorkers: 1
+    // What the engine runs with: one file at a time where the app runs single-threaded.
+    readonly property int scanWorkersApplied: ApplicationInfo.engineThreadsSelectable ? Math.max(1, Math.min(scanWorkers, ApplicationInfo.scanWorkersMaximum)) : 1
+    // The message level (Develop; edi ADR-0062, owner record 2026-11-09): "Debug", "Info", "Warning" or "Error",
+    // for the run log and for crysta's and edi's messages; errors always show.
+    property string loggingLevel: "Warning"
+    onLoggingLevelChanged: {
+        RunLog.level = loggingLevel;
+        ApplicationInfo.setMessageLevel(loggingLevel);
+    }
+    // Where Help and feedback posts (Develop; edi ADR-0063): the feedback service's `/feedback` address. A user may set
+    // their own or clear it, which turns Send off.
+    property string feedbackEndpoint: "https://edi-feedback.savanna-animas-0g.workers.dev/feedback"
+    // What Help and feedback offers to send as the user's contact, each optional, kept for the next message.
+    property string feedbackName: ""
+    property string feedbackEmail: ""
+    property string feedbackAffiliation: ""
+    // The newest changelog date the user has seen in What's new (edi ADR-0067), empty before the first start.
+    property string whatsNewSeen: ""
+    property string whatsNewReleaseSeen: ""
+    property string whatsNewPreviewSeen: ""
+    property bool updateNotifications: true
+    Component.onCompleted: {
+        RunLog.level = loggingLevel;
+        ApplicationInfo.setMessageLevel(loggingLevel);
+        loadToolTips();
+    }
+    // How a followed scan redraws the pattern (Analysis, Settings; edi ADR-0029): FitViewModel.patternUpdates, 2 is
+    // adaptive. The open project's fit takes it, whichever project is open.
+    property int scanPatternUpdates: 2
+    // Which rows the Analysis table adds on top of what a fit can free (Analysis, Settings; the owner, 2026-10-26): the
+    // values this fit cannot determine by default, the setup values and those symmetry or a constraint sets on request
+    // (the owner, 2026-10-27).
+    property bool analysisShowNotMeasured: true
+    property bool analysisShowBySymmetry: false
+    property bool analysisShowByConstraint: false
+    property bool analysisShowFixedSettings: false
+    // Whether a finished fit opens its results window (Prompts; the owner, 2026-10-26). Off, the status bar's fit status
+    // still opens it.
+    property bool showFitResults: true
+    // How the Stacked view draws its lines (Develop; edi ADR-0041): "auto" (the default) on the GPU when Qt draws with
+    // one and painted without (RenderingInfo), "gpu" or "software" whatever was detected.
+    property string scanRenderer: "auto"
+    // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
+    // own; this only starts a new one.
+    property string newProjectSuRule: "iucr_99"
+    // The figure palette of experiments and structures (data/palettes, edi ADR-0038): a palette's token, "earth" (the
+    // default) or another of ApplicationInfo.colourSchemes; a stored earlier palette reads as its nearest new one
+    // (ApplicationInfo.colourSchemeOrDefault). Every chart, legend, icon and report the app draws follows it, a report
+    // in its light colours. The Stacked and Map colours are scanStackedPalette and scanMapColours.
+    property string colourScheme: "earth"
+    // How the structure view colours the magnetic moment arrows: "atom", "greyed" (the default) or "single" (edi ADR-0078).
+    property string momentColours: "greyed"
+    // The patterns' palette stored before the one palette (the owner, 2026-10-22, until 2026-10-26): read once into
+    // colourScheme, then cleared, so a choice made there carries over.
+    property string patternColourScheme: ""
+    // Whether a new project's HTML reports load their chart libraries ("online", the default) or embed them
+    // ("embedded"): its `_report.html_offline` (edi ADR-0036 §7). A project keeps its own; this only starts a new one.
+    property string newReportLibraries: "online"
+
+    // ADR-0031 §5: every preference back to its default, as Preferences' Reset does; the open project is untouched.
+    function resetToDefaults() {
+        ApplicationInfo.resetPreferences();
+    }
+
+    property Settings settings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Edi.Preferences"
+        property alias toolTips: preferences.toolTips
+        property alias autoCollapse: preferences.autoCollapse
+        property alias sideBarSide: preferences.sideBarSide
+    }
+
+    property Settings feedbackSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Feedback"
+        property alias name: preferences.feedbackName
+        property alias email: preferences.feedbackEmail
+        property alias affiliation: preferences.feedbackAffiliation
+    }
+
+    property Settings whatsNewSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "WhatsNew"
+        property alias seen: preferences.whatsNewSeen
+        property alias releaseSeen: preferences.whatsNewReleaseSeen
+        property alias previewSeen: preferences.whatsNewPreviewSeen
+    }
+
+    // ADR-0031: the Appearance tab's colour scheme, and the Projects tab's defaults for new projects.
+    property Settings updateSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Updates"
+        property alias notifications: preferences.updateNotifications
+    }
+
+    property Settings appearanceSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Appearance"
+        property alias colourScheme: preferences.colourScheme
+        // After colourScheme: the settings load in this order, so the earlier patterns' choice wins once.
+        property alias patternColourScheme: preferences.patternColourScheme
+        property alias momentColours: preferences.momentColours
+    }
+
+    property Settings assistantSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Assistant"
+        property alias width: preferences.assistantWidth
+        property alias copyTechnicalDetails: preferences.assistantCopyTechnicalDetails
+    }
+
+    property Settings projectsSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Projects"
+        property alias newProjectSuRule: preferences.newProjectSuRule
+        property alias newReportLibraries: preferences.newReportLibraries
+    }
+
+    // Also the Performance tab's two counts: the thread count was a Develop preference, and its key stays here so a
+    // saved count carries over.
+    property Settings developSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "develop"
+        property alias engineThreads: preferences.engineThreads
+        property alias scanWorkers: preferences.scanWorkers
+        property alias loggingLevel: preferences.loggingLevel
+        // Stored under a key no earlier build wrote: those saved an empty address, which would outrank the default.
+        property alias feedbackAddress: preferences.feedbackEndpoint
+    }
+
+    // ADR-0031 §2: the one pattern chart's settings (every page shows the same chart): its y scale ("linear", "sqrt"
+    // or "log"; the x axis is the project's), whether it draws each structure's curve over the background (the chart
+    // toolbar's switch; on by default, the owner, 2026-10-21), the toolbar's legend and hover-coordinate switches and
+    // its pointer mode ("zoom" or "pan"), and how a followed scan redraws.
+    property string patternYScale: "linear"
+    // The two pages' former names of the one y scale.
+    property alias analysisYScale: preferences.patternYScale
+    property alias experimentYScale: preferences.patternYScale
+    property bool structureCurves: true
+    property bool patternLegendShown: false
+    property bool patternHoverShown: true
+    // How the pattern charts draw the measured data: "band" (measured ± s.u., the default), "line", "points" or
+    // "linePoints" (the owner, 2026-10-22).
+    property string patternMeasuredStyle: "band"
+    property string patternPointerMode: "zoom"
+    // A scan's Stacked and Map views (edi ADR-0041): the palette or colour map the stacked patterns take their colours
+    // from (one of ApplicationInfo.colourSchemes or ApplicationInfo.scanColourMaps; empty follows colourScheme) and the
+    // map's colour map (one of ApplicationInfo.scanColourMaps; Blue-Red by default, the owner, 2026-10-26). The Map's
+    // direction is the project's (ScanViewModel.mapDirection).
+    property string scanStackedPalette: ""
+    property string scanMapColours: "blue-red"
+    // The Map's colour between datasets' rows: smooth, or stepped in bands (the owner, 2026-10-22).
+    property bool scanMapSmooth: true
+    // The Stacked colours reversed, last dataset first (the owner, 2026-10-22).
+    property bool scanStackedReversed: false
+    // The Stacked legend shown (its toolbar button; off by default, the owner, 2026-10-26).
+    property bool scanStackedLegendShown: false
+    // Every pattern chart shows only the included range (the toolbar's eraser button; edi ADR-0044).
+    property bool chartIncludedOnly: false
+    // Pattern, Stacked and the Map draw every curve with its background subtracted; off by default (the owner,
+    // 2026-10-26).
+    property bool chartSubtractBackground: false
+    // A single crystal's chart plots F² (calc against meas) or F ("f_squared" or "f").
+    property string singleCrystalQuantity: "f_squared"
+    // Every chart of several datasets (Stacked, single-crystal Stacked and the Map) draws the selected one on top and
+    // fades the others to chartFadedOpacity; off, all are drawn alike and only the selection's label marks it (the
+    // owner, 2026-10-24).
+    property bool chartHighlightSelected: true
+    readonly property real chartFadedOpacity: 0.3
+    // A curve hidden by a click on a pattern chart's legend (the owner, 2026-10-25): "keep" the y range as it is, every
+    // fit counting the hidden curve, or "fit" it once to the curves still shown, later fits counting only those.
+    property string chartHiddenRange: "keep"
+
+    // What every page's Text tab shows (the owner, 2026-10-27): "editable", the categories the user sets, or
+    // "everything", the measured data and the program's output too, read-only. One setting for every Text tab.
+    property string textShow: "editable"
+
+    property Settings textSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "TextTab"
+        property alias show: preferences.textShow
+    }
+
+    property Settings chartSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Charts"
+        property alias includedOnly: preferences.chartIncludedOnly
+        property alias subtractBackground: preferences.chartSubtractBackground
+        property alias singleCrystalQuantity: preferences.singleCrystalQuantity
+        property alias highlightSelected: preferences.chartHighlightSelected
+        property alias hiddenRange: preferences.chartHiddenRange
+    }
+
+    property Settings analysisSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Analysis"
+        property alias scanPatternUpdates: preferences.scanPatternUpdates
+        property alias showNotMeasured: preferences.analysisShowNotMeasured
+        property alias showBySymmetry: preferences.analysisShowBySymmetry
+        property alias showByConstraint: preferences.analysisShowByConstraint
+        property alias showFixedSettings: preferences.analysisShowFixedSettings
+        property alias showFitResults: preferences.showFitResults
+    }
+
+    property Settings patternChartSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "PatternChart"
+        property alias yScale: preferences.patternYScale
+        property alias structureCurves: preferences.structureCurves
+        property alias legendShown: preferences.patternLegendShown
+        property alias hoverShown: preferences.patternHoverShown
+        property alias measuredStyle: preferences.patternMeasuredStyle
+        property alias pointerMode: preferences.patternPointerMode
+    }
+
+    property Settings scanViewSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "ScanViews"
+        property alias stackedPalette: preferences.scanStackedPalette
+        property alias mapColours: preferences.scanMapColours
+        property alias mapSmooth: preferences.scanMapSmooth
+        property alias stackedReversed: preferences.scanStackedReversed
+        property alias stackedLegend: preferences.scanStackedLegendShown
+        property alias renderer: preferences.scanRenderer
+    }
+
+    property Binding toolTipLevelShared: Binding {
+        target: EaGlobals.Vars
+        property: "toolTipLevel"
+        value: preferences.toolTipLevel
+    }
+    // Until every tooltip asks the level, the older on/off switch follows it.
+    property Binding toolTipSwitchShared: Binding {
+        target: EaGlobals.Vars
+        property: "showToolTips"
+        value: preferences.toolTipLevel !== "Off"
+    }
+    property Binding toolTipDelayShared: Binding {
+        target: EaGlobals.Vars
+        property: "toolTipDelay"
+        value: preferences.toolTipDelay
+    }
+    property Binding fitPatternUpdates: Binding {
+        target: Session.project ? Session.project.fit : null
+        property: "patternUpdates"
+        value: preferences.scanPatternUpdates
+        when: Session.project !== null
+    }
+    // A project opens with its blocks' positions in the selected palette; the open project's blocks keep theirs when
+    // the palette changes, and the report's charts take its colours, bound here with the open project, not on the
+    // Report page, which loads only once reached.
+    property Binding sessionColours: Binding {
+        target: Session
+        property: "colourScheme"
+        value: preferences.colourScheme
+    }
+    property Binding projectColours: Binding {
+        target: Session.project
+        property: "colourScheme"
+        value: preferences.colourScheme
+        when: Session.project !== null
+    }
+    property Binding reportColours: Binding {
+        target: Session.project ? Session.project.report : null
+        property: "colourScheme"
+        value: preferences.colourScheme
+        when: Session.project !== null
+    }
+
+    // A stored palette no longer offered becomes the one it reads as, so the chosen palette and the one drawn agree
+    // and the settings file keeps the one shown.
+    onColourSchemeChanged: ApplicationInfo.preferencesColourChanged()
+    // A stored Stacked choice no longer offered (an earlier palette's token) follows the palette again, so the Stacked
+    // lines and the choice Preferences shows agree (the owner's report, 2026-10-27).
+    onScanStackedPaletteChanged: ApplicationInfo.preferencesStackedPaletteChanged()
+    onPatternColourSchemeChanged: ApplicationInfo.preferencesLegacyPaletteChanged()
+    onAutoCollapseChanged: EaGlobals.Vars.autoCollapseSideBarGroups = autoCollapse
+    onEngineThreadsChanged: ApplicationInfo.persistPreference(0)
+    // Saved at once too: a restart or a new window soon after the toggle must find it, and no write is left pending
+    // for the settings' own schedule when the window closes.
+    onScanWorkersAppliedChanged: ApplicationInfo.setScanWorkers(scanWorkersApplied)
+    // Saved at once, as the thread count is.
+    onScanWorkersChanged: ApplicationInfo.persistPreference(4)
+    // Opens the dialog on its Performance tab: what the pages' read-only Performance lines do.
+    function openPerformance() {
+        preferences.dialogTab = "performance";
+        preferences.dialogShown = true;
+    }
+    onChartIncludedOnlyChanged: ApplicationInfo.persistPreference(1)
+
+    // Saved at once too: the renderer choice is read by the next start, which may follow at once.
+    onScanRendererChanged: ApplicationInfo.persistPreference(2)
+
+    // Saved at once too: no write of an earlier choice is left pending to land over what is read next.
+    onScanPatternUpdatesChanged: ApplicationInfo.persistPreference(3)
+
+    function apply() {
+        ApplicationInfo.applyPreferences();
+    }
+}

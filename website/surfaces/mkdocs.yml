@@ -1,0 +1,295 @@
+site_name: EasyDiffraction
+site_description: Diffraction analysis, your way. Application, Python and command line in one place.
+site_url: http://127.0.0.1:8873/
+docs_dir: docs
+site_dir: site
+theme:
+  variant: modern
+  custom_dir: overrides
+  logo: assets/logo-light.svg
+  favicon: assets/icon.png
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: lucide/sun
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: lucide/moon
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - content.code.copy
+    - content.tabs.link
+extra_css:
+  - assets/brand-colors.css?v=1
+  - assets/wordmark.css?v=header-2
+  - assets/site-components.css?v=cif-5
+  - assets/experiment-tags.css?v=5
+  - assets/parameter-reference.css?v=3
+extra_javascript:
+  - assets/example-catalogue.js?v=5
+  # Written by build.py from the app's settings.
+  - assets/feedback-form.js
+  - assets/contact-form.js?v=1
+extra:
+  interface_icons:
+    Application: [fa5/desktop]
+    Web application: [fa5/globe]
+    Web app: [fa5/globe]
+    Desktop application: [fa5/desktop]
+    Desktop app: [fa5/desktop]
+    Python: [simple/python]
+    Command line: [fa5/terminal]
+    Standalone executable: [fa5/terminal]
+    Python package: [simple/python]
+    Python scripts: [simple/python]
+    Jupyter notebooks: [simple/jupyter]
+  # The tabs and pages that have no icon of their own elsewhere: a tab's own page, and pages the build writes.
+  tab_icons:
+    Home: home
+    User guide: book-open
+    Physics: atom
+    About: info-circle
+  page_icons:
+    What's new: bullhorn
+  section_icons:
+    Getting started: rocket
+    Powder: chart-area
+    Single crystal: cube
+    Simulation: calculator
+    Multiple datasets: layer-group
+    Diffraction model: atom
+    Peak profiles: shapes
+    Intensity corrections: sliders-h
+    Experiment model: microscope
+    Fitting and statistics: calculator
+  workflow_icons:
+    Project: archive
+    Structure: layer-group
+    Experiment: microscope
+    Analysis: calculator
+    Report: clipboard-list
+nav:
+- Home: index.md
+- User guide:
+  - Foundations:
+    - user-guide/index.md
+    - Features: user-guide/features.md
+    - Concept: user-guide/concepts.md
+    - Data formats: user-guide/data-formats.md
+    - Parameters: user-guide/parameters.md
+    - Glossary: user-guide/glossary.md
+  - Analysis workflow:
+    - user-guide/analysis-workflow/index.md
+    - Project: user-guide/analysis-workflow/project.md
+    - Structure: user-guide/analysis-workflow/structure.md
+    - Experiment: user-guide/analysis-workflow/experiment.md
+    - Analysis: user-guide/analysis-workflow/analysis.md
+    - Report: user-guide/analysis-workflow/report.md
+  - AI assistant:
+    - user-guide/ai-assistant/index.md
+  - Tutorials:
+    - user-guide/tutorials/index.md
+- Application:
+  - Start here:
+    - application/index.md
+    - In your browser: application/browser.md
+    - On your desktop: application/desktop.md
+    - Application layout: application/workspace.md
+  - Analysis workflow:
+    - application/analysis-workflow/index.md
+    - Project:
+      - application/project/index.md
+      - Get started: application/project/get-started.md
+      - Examples: application/project/examples.md
+      - Recent projects: application/project/recent-projects.md
+      - Standard uncertainties: application/project/standard-uncertainties.md
+    - Structure:
+      - application/structure/index.md
+      - Structures: application/structure/structures.md
+      - Space group: application/structure/space-group.md
+      - Cell: application/structure/cell.md
+      - Atom sites: application/structure/atom-sites.md
+      - Atomic displacement: application/structure/atomic-displacement.md
+      - Magnetic space group: application/structure/magnetic-space-group.md
+      - Propagation vectors: application/structure/propagation-vectors.md
+      - Magnetic moments: application/structure/magnetic-moments.md
+      - Scattering lengths: application/structure/scattering-lengths.md
+      - Magnetic form factors: application/structure/magnetic-form-factors.md
+      - Symmetry operators: application/structure/symmetry-operators.md
+      - Atoms in the cell: application/structure/atoms-in-the-cell.md
+      - Bonds: application/structure/bonds.md
+      - Magnetic operators: application/structure/magnetic-operators.md
+      - Moments in the cell: application/structure/moments-in-the-cell.md
+      - Appearance: application/structure/appearance.md
+    - Experiment:
+      - application/experiment/index.md
+      - Experiments: application/experiment/experiments.md
+      - Calculation range: application/experiment/calculation-range.md
+      - Background: application/experiment/background.md
+      - Instrument: application/experiment/instrument.md
+      - Peak profile: application/experiment/peak-profile.md
+      - Excluded regions: application/experiment/excluded-regions.md
+      - Extinction: application/experiment/extinction.md
+      - Linked structures: application/experiment/linked-structures.md
+      - Background estimation: application/experiment/background-estimation.md
+      - Absorption: application/experiment/absorption.md
+      - Preferred orientations: application/experiment/preferred-orientations.md
+      - Observed reflections: application/experiment/observed-reflections.md
+      - Scattering source: application/experiment/scattering-source.md
+      - Fitted reflections: application/experiment/fitted-reflections.md
+      - Data source: application/experiment/data-source.md
+      - Measured data: application/experiment/measured-data.md
+      - Reflections: application/experiment/reflections.md
+      - Performance: application/experiment/performance.md
+    - Analysis:
+      - application/analysis/index.md
+      - Parameters: application/analysis/parameters.md
+      - Minimizer: application/analysis/minimizer.md
+      - Fitting mode: application/analysis/fitting-mode.md
+      - Fitted reflections: application/analysis/fitted-reflections.md
+      - Aliases: application/analysis/aliases.md
+      - Constraints: application/analysis/constraints.md
+      - Joint-fit weights: application/analysis/joint-fit-weights.md
+      - Sequential fit: application/analysis/sequential-fit.md
+      - Scan extraction rules: application/analysis/scan-extraction-rules.md
+      - Fit start values: application/analysis/fit-start-values.md
+      - Fit result: application/analysis/fit-result.md
+      - Experiment fit result: application/analysis/experiment-fit-result.md
+      - Structure fit result: application/analysis/structure-fit-result.md
+      - Parameters shown: application/analysis/parameters-shown.md
+      - Pattern updates during a scan: application/analysis/pattern-updates.md
+      - Performance: application/analysis/performance.md
+    - Report:
+      - application/report/index.md
+      - Export: application/report/export.md
+      - Contents: application/report/contents.md
+      - Saved reports: application/report/saved-reports.md
+  - Tutorials:
+    - application/tutorials/index.md
+    # app-tutorial-pages
+- Python:
+  - Start here:
+    - python/index.md
+    - Setup: python/setup.md
+    - API quick reference: python/reference.md
+    - Data and tutorials: python/data.md
+  - Analysis workflow:
+    - python/analysis-workflow/index.md
+    - Project: python/projects.md
+    - Structure: python/structures.md
+    - Experiment: python/experiments.md
+    - Analysis:
+      - Calculate a pattern: python/calculate.md
+      - Fit a project: python/fit.md
+      - Inspect results: python/results.md
+    - Report: python/reports.md
+  - Tutorials:
+    - python/tutorials/index.md
+    # python-tutorial-pages
+- Command line:
+  - Start here:
+    - cli/index.md
+    - Standalone executable: cli/standalone.md
+    - Python package: cli/python.md
+    - Command reference: cli/reference.md
+    - Data and tutorials: cli/data.md
+  - Analysis workflow:
+    - cli/analysis-workflow/index.md
+    - Project: cli/files.md
+    - Structure: cli/structures.md
+    - Experiment: cli/experiments.md
+    - Analysis:
+      - Calculate a pattern: cli/calculate.md
+      - Fit a project: cli/fit.md
+      - Batch workflows: cli/batch.md
+    - Report: cli/reports.md
+  - Tutorials:
+    - cli/tutorials/index.md
+    # cli-tutorial-pages
+- Physics:
+  - Start here:
+    - physics/index.md
+    - Conventions: physics/conventions.md
+    - Model catalogue: physics/models.md
+    - Parameter explanations: physics/parameters.md
+  - Physical models:
+    - physics/physical-models/index.md
+    - Diffraction model:
+      - physics/diffraction-model/index.md
+      - Rietveld method: physics/rietveld.md
+      - Crystallography: physics/crystallography.md
+      - Scattering and structure factors: physics/diffraction.md
+      - Magnetic structures: physics/magnetic.md
+      - Atomic displacement: physics/displacement.md
+    - Peak profiles:
+      - physics/profiles/index.md
+      - Constant wavelength: physics/profiles/cw.md
+      - Time of flight: physics/profiles/tof.md
+    - Intensity corrections:
+      - physics/corrections/index.md
+      - Absorption: physics/corrections/absorption.md
+      - Extinction: physics/corrections/extinction.md
+      - Preferred orientation: physics/corrections/orientation.md
+      - Lorentz and polarization: physics/corrections/intensity.md
+    - Experiment model:
+      - physics/experiment-model/index.md
+      - Calibration and peak positions: physics/calibration.md
+      - Background: physics/background.md
+    - Fitting and statistics:
+      - physics/fitting/index.md
+      - Minimization and uncertainty: physics/minimization.md
+      - Reliability factors: physics/reliability.md
+- About:
+  - about/index.md
+  - Get in touch: about/community.md
+  - Licence: about/licence.md
+  - Citation: about/citation.md
+  - What's new: changelog.md
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      # CIF and Edi blocks take the app's Text-view colours (website/edi_highlight.py).
+      custom_fences:
+        - name: edi
+          class: highlight
+          format: !!python/name:edi_highlight.fence
+        - name: cif
+          class: highlight
+          format: !!python/name:edi_highlight.fence
+  - pymdownx.details
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:zensical.extensions.emoji.to_svg
+      emoji_index: !!python/name:zensical.extensions.emoji.twemoji
+      options:
+        custom_icons:
+          - overrides/.icons
+  - pymdownx.arithmatex:
+      generic: true
+copyright: 'EasyDiffraction · <a href="https://easydiffraction.org/dev/">Contributor documentation</a>'
+validation:
+  invalid_links: true
+  invalid_link_anchors: true

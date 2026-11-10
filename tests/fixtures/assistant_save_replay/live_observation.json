@@ -1,0 +1,209 @@
+{
+  "kind": "Live diagnostic observation, not a scientific oracle or CI acceptance",
+  "platform": "Linux native app, Weston/Xwayland",
+  "prompt": "live_request.txt",
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "managed_login_available": true,
+  "login_refresh_requested": false,
+  "build_started": false,
+  "binary_sha256": "cc4456c0d934ea09ef4e4c1500b0113b6c92244030e28fbc03eff70a3853c33d",
+  "binary_contains_tooltip_fix_symbol": true,
+  "clean_source_build_claimed": false,
+  "model_tool_calls_scripted": false,
+  "modes": [
+    {
+      "show_actions": false,
+      "completed_observation": true,
+      "terminal_boundary": "completed",
+      "attention_required": false,
+      "exception_class": null,
+      "one_user_send_submitted": true,
+      "opened_real_project": "<checkout>/build/tests-seq18/lbco-off/last-open/previous",
+      "requested_new_project_parent": "<checkout>/build/tests-seq18/lbco-off/last-open",
+      "created_where": "Documents",
+      "adopted_fit_observed": true,
+      "applied_undo_observed": true,
+      "native_save_replies": [
+        {
+          "active": true,
+          "committed": true,
+          "destination": "/tmp/qt_temp-GJABeI/Documents/LBCO-HRPT-20261102-171453",
+          "message": "Project saved.",
+          "path": "/tmp/qt_temp-GJABeI/Documents/LBCO-HRPT-20261102-171453",
+          "presentation_complete": false,
+          "recovery_directory": "",
+          "reopened": false,
+          "saved": true,
+          "status": "succeeded",
+          "uncertain": false
+        }
+      ],
+      "save_observations": [
+        {
+          "reason": "native_save_project_completed",
+          "session_path": "/tmp/qt_temp-GJABeI/Documents/LBCO-HRPT-20261102-171453",
+          "session_location_text": "/tmp/qt_temp-GJABeI/Documents/LBCO-HRPT-20261102-171453",
+          "folder_exists_before_teardown": true,
+          "project_file_exists": true,
+          "created_where": "Documents",
+          "error": "",
+          "actual_project_label_items": [
+            {
+              "text": "",
+              "display": "",
+              "visible": true
+            }
+          ]
+        },
+        {
+          "reason": "final",
+          "session_path": "/tmp/qt_temp-GJABeI/Documents/LBCO-HRPT-20261102-171453",
+          "session_location_text": "/tmp/qt_temp-GJABeI/Documents/LBCO-HRPT-20261102-171453",
+          "folder_exists_before_teardown": true,
+          "project_file_exists": true,
+          "created_where": "Documents",
+          "error": "",
+          "actual_project_label_items": [
+            {
+              "text": "",
+              "display": "",
+              "visible": true
+            }
+          ]
+        },
+        {
+          "reason": "before_teardown",
+          "session_path": "/tmp/qt_temp-GJABeI/Documents/LBCO-HRPT-20261102-171453",
+          "session_location_text": "/tmp/qt_temp-GJABeI/Documents/LBCO-HRPT-20261102-171453",
+          "folder_exists_before_teardown": true,
+          "project_file_exists": true,
+          "created_where": "Documents",
+          "error": "",
+          "actual_project_label_items": [
+            {
+              "text": "",
+              "display": "",
+              "visible": true
+            }
+          ]
+        }
+      ],
+      "reported_missing_folder_error_reproduced": false,
+      "evidence": "build/tests-seq18/lbco-off",
+      "receipt_sha256": {
+        "RESULT.json": "c2217124a00f83f3dac2b2b5957c909235255f7d052699cbbd6770d5208a754e",
+        "native-tools.jsonl": "9a2c1924fdae0daa354ff368eb1949b2db9a6533f9283dbfe6e9ff7aa92a7d74",
+        "save-observations.jsonl": "0686c1f8447ef91a0bd959d62cfb5fd16b8b4709f3a142b7548c206175ee5202",
+        "final-canonical-history.json": "a9539eac8314cbd6690c78ba876dd8e2cf046ca715714bc93edd0f89c9180814",
+        "final-ui.json": "66add20bfa69f454ee75d97438982670b2aedfc0e45ba081bfc91f21a98d1a72"
+      }
+    },
+    {
+      "show_actions": true,
+      "completed_observation": true,
+      "terminal_boundary": "completed",
+      "attention_required": false,
+      "exception_class": null,
+      "one_user_send_submitted": true,
+      "opened_real_project": "<checkout>/build/tests-seq18/lbco-on/last-open/previous",
+      "requested_new_project_parent": "<checkout>/build/tests-seq18/lbco-on/last-open",
+      "created_where": "Documents",
+      "adopted_fit_observed": true,
+      "applied_undo_observed": true,
+      "native_save_replies": [
+        {
+          "active": true,
+          "committed": true,
+          "destination": "/tmp/qt_temp-jCTbLb/Documents/LBCO-HRPT-20261102-171948",
+          "message": "Project saved.",
+          "path": "/tmp/qt_temp-jCTbLb/Documents/LBCO-HRPT-20261102-171948",
+          "presentation_complete": false,
+          "recovery_directory": "",
+          "reopened": false,
+          "saved": true,
+          "status": "succeeded",
+          "uncertain": false
+        }
+      ],
+      "save_observations": [
+        {
+          "reason": "native_save_project_in_progress",
+          "session_path": "/tmp/qt_temp-jCTbLb/Documents/LBCO-HRPT-20261102-171948",
+          "session_location_text": "/tmp/qt_temp-jCTbLb/Documents/LBCO-HRPT-20261102-171948",
+          "folder_exists_before_teardown": true,
+          "project_file_exists": true,
+          "created_where": "Documents",
+          "error": "",
+          "actual_project_label_items": [
+            {
+              "text": "",
+              "display": "",
+              "visible": true
+            }
+          ]
+        },
+        {
+          "reason": "native_save_project_completed",
+          "session_path": "/tmp/qt_temp-jCTbLb/Documents/LBCO-HRPT-20261102-171948",
+          "session_location_text": "/tmp/qt_temp-jCTbLb/Documents/LBCO-HRPT-20261102-171948",
+          "folder_exists_before_teardown": true,
+          "project_file_exists": true,
+          "created_where": "Documents",
+          "error": "",
+          "actual_project_label_items": [
+            {
+              "text": "",
+              "display": "",
+              "visible": true
+            }
+          ]
+        },
+        {
+          "reason": "final",
+          "session_path": "/tmp/qt_temp-jCTbLb/Documents/LBCO-HRPT-20261102-171948",
+          "session_location_text": "/tmp/qt_temp-jCTbLb/Documents/LBCO-HRPT-20261102-171948",
+          "folder_exists_before_teardown": true,
+          "project_file_exists": true,
+          "created_where": "Documents",
+          "error": "",
+          "actual_project_label_items": [
+            {
+              "text": "",
+              "display": "",
+              "visible": true
+            }
+          ]
+        },
+        {
+          "reason": "before_teardown",
+          "session_path": "/tmp/qt_temp-jCTbLb/Documents/LBCO-HRPT-20261102-171948",
+          "session_location_text": "/tmp/qt_temp-jCTbLb/Documents/LBCO-HRPT-20261102-171948",
+          "folder_exists_before_teardown": true,
+          "project_file_exists": true,
+          "created_where": "Documents",
+          "error": "",
+          "actual_project_label_items": [
+            {
+              "text": "",
+              "display": "",
+              "visible": true
+            }
+          ]
+        }
+      ],
+      "reported_missing_folder_error_reproduced": false,
+      "evidence": "build/tests-seq18/lbco-on",
+      "receipt_sha256": {
+        "RESULT.json": "f2e8d7c46495eeb67865a430c8474df1ce47b06599e54fb0f7673e98a71410a4",
+        "native-tools.jsonl": "1d64f849452ce7d5d9f8a74093d44423f0c16112d76fd03933bfeb9c99ab4522",
+        "save-observations.jsonl": "410da8d0d7f4366962ec9bd95da1fc047cbc4aa5242239bc1d6cde40f787deb0",
+        "final-canonical-history.json": "0b851d397083928290edd637762b5885ac1297c3ae4b87a341991d7e69de098a",
+        "final-ui.json": "0ad98f4e84a8f75f3d2c4fe0be1ec851b9503b829bc0714a0b477ad6c0975ca7"
+      }
+    }
+  ],
+  "owned_processes_exited": true,
+  "process_closure_receipt_sha256": "f3f00ea5c278d1a2d4958f2350d22fc3a1c55ce501bea1174472e3d01c9a26fc",
+  "receipt_consistency_checked": true
+}

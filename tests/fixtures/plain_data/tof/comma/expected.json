@@ -1,0 +1,28 @@
+{
+  "file": "pattern.csv",
+  "rows": [
+    [
+      3500.0,
+      4,
+      0.5
+    ],
+    [
+      3600,
+      9,
+      1.25
+    ],
+    [
+      3700.0,
+      16,
+      2.5
+    ]
+  ],
+  "counts": {
+    "skipped": 0,
+    "nonpositive": 0,
+    "duplicates": 0,
+    "reordered": 0,
+    "derived": 0
+  },
+  "beam": "tof"
+}

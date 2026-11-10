@@ -1,0 +1,45 @@
+/* One stable colour for each app area, shared by figures and enlarged views. */
+:root {--gui-area-navigation:#3285c4;--gui-area-main:#159890;--gui-area-sidebar:#cc8a2f;--gui-area-status:#8b6fb0}
+[data-gui-area="navigation"] {--gui-area-colour:var(--gui-area-navigation)}
+[data-gui-area="main"] {--gui-area-colour:var(--gui-area-main)}
+[data-gui-area="sidebar"] {--gui-area-colour:var(--gui-area-sidebar)}
+[data-gui-area="status"] {--gui-area-colour:var(--gui-area-status)}
+.gui-area-icon {display:inline-flex;align-items:center;flex:none;color:var(--gui-area-colour);vertical-align:middle}
+.gui-area-icon .twemoji {margin:0}
+.gui-area-icon svg {color:inherit;opacity:1}
+.md-typeset .gui-area-icon svg[fill="none"] {fill:none}
+.md-typeset figure.gui-figure { display: block; width: 100%; max-width: 100%; margin: 1.6rem 0 2.4rem; text-align: left; }
+.gui-image-link { display: block; width: 100%; cursor: zoom-in; line-height: 0; text-decoration: none; border-radius: var(--ed-screenshot-radius); }
+.gui-image-link:focus-visible { outline: 2px solid var(--md-accent-fg-color); outline-offset: 5px; }
+.md-typeset .gui-capture, .gui-lightbox .gui-capture { display: block; width: 100%; height: auto; overflow: visible; border: 0; border-radius: 0; background: transparent; }
+.gui-image-frame { fill: none; stroke: var(--ed-image-border); stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: none; }
+.gui-capture [data-gui-region] { fill: var(--gui-area-colour); fill-opacity: 0; stroke: var(--gui-area-colour); stroke-width: 0; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; transition: fill-opacity .15s; }
+.gui-capture [data-gui-region].is-active { fill-opacity: .12; stroke-width: 2; }
+.gui-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.md-typeset .gui-viewer .gui-figure { margin: .7rem 0 1.6rem; }
+.md-typeset .gui-view-description { min-block-size: var(--gui-description-height, 0px); margin: 0 0 .8rem; text-align: left; line-height: 1.6; }
+.gui-lightbox { box-sizing: border-box; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; border: 0; padding: clamp(1rem, 3vw, 2.5rem); background: var(--md-default-bg-color, #fff); color: var(--md-default-fg-color, #222); }
+.gui-lightbox[open] { display: flex; flex-direction: column; gap: 1rem; }
+.gui-lightbox::backdrop { background: rgb(0 0 0 / .2); }
+.gui-lightbox-header { display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.gui-lightbox-header h2 { margin: 0; font: inherit; font-size: .9rem; font-weight: 500; }
+.gui-lightbox-close { display: grid; place-items: center; flex-shrink: 0; width: 2.25rem; height: 2.25rem; border-radius: 50%; border: 1px solid var(--md-default-fg-color--lightest, #ddd); background: transparent; color: inherit; cursor: pointer; }
+.gui-lightbox-close:hover { background: var(--md-accent-fg-color--transparent); }
+.gui-lightbox-close:focus-visible { outline: 2px solid var(--md-accent-fg-color); outline-offset: 3px; }
+.gui-lightbox-close svg { width: 1.2rem; height: 1.2rem; }
+.gui-lightbox-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: var(--ed-screenshot-radius); }
+.gui-lightbox .gui-capture { flex: none; max-width: 100%; max-height: 100%; width: auto; height: auto; }
+@media (prefers-reduced-motion: reduce) { .gui-capture [data-gui-region] { transition: none; } }
+
+html.gui-lightbox-open { overflow: hidden; }
+
+.gui-direction { display: none; fill: var(--md-default-bg-color); fill-opacity: .55; pointer-events: none; }
+.gui-direction.is-active { display: block; }
+
+.gui-capture [data-gui-navigation] { fill: var(--gui-area-colour); fill-opacity: .12; stroke: var(--gui-area-colour); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+
+@font-face { font-family: "edi-gui-icons"; src: url("gui-icons/fontawesome-5-solid.otf") format("opentype"); font-style: normal; font-weight: 900; font-display: block; }
+.gui-fa { display: inline-block; font-family: "edi-gui-icons"; font-weight: 900; font-style: normal; line-height: 1; min-width: 1em; text-align: center; margin-right: .3em; }
+
+/* A step whose screenshot has not been captured yet: a quiet box of the screenshots' proportions. */
+.md-typeset figure.gui-placeholder .gui-placeholder-box { display: flex; align-items: center; justify-content: center; aspect-ratio: 1480 / 800; border: 1px dashed var(--md-default-fg-color--lighter); border-radius: .6rem; color: var(--md-default-fg-color--light); font-size: .8rem; }

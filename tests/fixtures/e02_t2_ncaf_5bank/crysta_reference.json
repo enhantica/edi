@@ -1,0 +1,1803 @@
+{
+  "metadata": {
+    "analysis.fitting_mode": "joint",
+    "experiments[wish_1_10].background.0.position": 6056.0952,
+    "experiments[wish_1_10].background.1.position": 7099.4761,
+    "experiments[wish_1_10].background.10.position": 15614.8096,
+    "experiments[wish_1_10].background.11.position": 17264.0254,
+    "experiments[wish_1_10].background.12.position": 19283.4707,
+    "experiments[wish_1_10].background.13.position": 20192.2207,
+    "experiments[wish_1_10].background.14.position": 22346.2969,
+    "experiments[wish_1_10].background.15.position": 24433.0586,
+    "experiments[wish_1_10].background.16.position": 27563.2012,
+    "experiments[wish_1_10].background.17.position": 30356.7695,
+    "experiments[wish_1_10].background.18.position": 33049.3672,
+    "experiments[wish_1_10].background.19.position": 35203.4414,
+    "experiments[wish_1_10].background.2.position": 8008.2271,
+    "experiments[wish_1_10].background.20.position": 38826.4766,
+    "experiments[wish_1_10].background.21.position": 44447.2695,
+    "experiments[wish_1_10].background.22.position": 50068.0625,
+    "experiments[wish_1_10].background.23.position": 55587.8828,
+    "experiments[wish_1_10].background.24.position": 63586.3867,
+    "experiments[wish_1_10].background.25.position": 74289.4531,
+    "experiments[wish_1_10].background.26.position": 86385.1953,
+    "experiments[wish_1_10].background.27.position": 98097.9844,
+    "experiments[wish_1_10].background.28.position": 114791.3281,
+    "experiments[wish_1_10].background.29.position": 128630.5156,
+    "experiments[wish_1_10].background.3.position": 8816.0059,
+    "experiments[wish_1_10].background.30.position": 147091.25,
+    "experiments[wish_1_10].background.31.position": 167026.9219,
+    "experiments[wish_1_10].background.32.position": 187448.0156,
+    "experiments[wish_1_10].background.33.position": 208808.5312,
+    "experiments[wish_1_10].background.34.position": 231077.7812,
+    "experiments[wish_1_10].background.35.position": 252332.8281,
+    "experiments[wish_1_10].background.4.position": 9724.7568,
+    "experiments[wish_1_10].background.5.position": 10532.5352,
+    "experiments[wish_1_10].background.6.position": 11710.5459,
+    "experiments[wish_1_10].background.7.position": 12619.2969,
+    "experiments[wish_1_10].background.8.position": 13393.418,
+    "experiments[wish_1_10].background.9.position": 14470.4561,
+    "experiments[wish_1_10].background.count": 36,
+    "experiments[wish_1_10].dataset_weight": 1,
+    "experiments[wish_1_10].excluded_regions": [
+      [
+        0,
+        7000
+      ],
+      [
+        240000,
+        300000
+      ]
+    ],
+    "experiments[wish_1_10].instrument.setup_twotheta_bank": 27.081,
+    "experiments[wish_1_10].peak.cutoff_fwhm": 20,
+    "experiments[wish_1_10].peak.type": "tof-jorgensen",
+    "experiments[wish_2_9].background.0.position": 7246.0732,
+    "experiments[wish_2_9].background.1.position": 9265.5195,
+    "experiments[wish_2_9].background.10.position": 28113.6875,
+    "experiments[wish_2_9].background.11.position": 30320.1172,
+    "experiments[wish_2_9].background.12.position": 34770.3828,
+    "experiments[wish_2_9].background.13.position": 40155.5703,
+    "experiments[wish_2_9].background.14.position": 48341.8086,
+    "experiments[wish_2_9].background.15.position": 58540.0156,
+    "experiments[wish_2_9].background.16.position": 69139.8672,
+    "experiments[wish_2_9].background.17.position": 80953.6328,
+    "experiments[wish_2_9].background.18.position": 94214.6562,
+    "experiments[wish_2_9].background.19.position": 107677.6328,
+    "experiments[wish_2_9].background.2.position": 11097.9795,
+    "experiments[wish_2_9].background.20.position": 120889.3047,
+    "experiments[wish_2_9].background.21.position": 132602.0938,
+    "experiments[wish_2_9].background.3.position": 13080.0303,
+    "experiments[wish_2_9].background.4.position": 15473.4473,
+    "experiments[wish_2_9].background.5.position": 16931.9355,
+    "experiments[wish_2_9].background.6.position": 18614.8086,
+    "experiments[wish_2_9].background.7.position": 20596.8594,
+    "experiments[wish_2_9].background.8.position": 22504.1133,
+    "experiments[wish_2_9].background.9.position": 26169.0332,
+    "experiments[wish_2_9].background.count": 22,
+    "experiments[wish_2_9].dataset_weight": 1,
+    "experiments[wish_2_9].excluded_regions": [
+      [
+        0,
+        7000
+      ],
+      [
+        134000,
+        300000
+      ]
+    ],
+    "experiments[wish_2_9].instrument.setup_twotheta_bank": 58.33,
+    "experiments[wish_2_9].peak.cutoff_fwhm": 20,
+    "experiments[wish_2_9].peak.type": "tof-jorgensen",
+    "experiments[wish_3_8].background.0.position": 9089.7529,
+    "experiments[wish_3_8].background.1.position": 11580.4033,
+    "experiments[wish_3_8].background.10.position": 32616.3047,
+    "experiments[wish_3_8].background.11.position": 36150.3359,
+    "experiments[wish_3_8].background.12.position": 40963.3516,
+    "experiments[wish_3_8].background.13.position": 47265.5195,
+    "experiments[wish_3_8].background.14.position": 53391.1758,
+    "experiments[wish_3_8].background.15.position": 62005.2383,
+    "experiments[wish_3_8].background.16.position": 71866.8672,
+    "experiments[wish_3_8].background.17.position": 82913.9922,
+    "experiments[wish_3_8].background.18.position": 90385.9375,
+    "experiments[wish_3_8].background.19.position": 99649.2188,
+    "experiments[wish_3_8].background.2.position": 13667.165,
+    "experiments[wish_3_8].background.20.position": 107356.7656,
+    "experiments[wish_3_8].background.21.position": 115337.3203,
+    "experiments[wish_3_8].background.3.position": 15551.9824,
+    "experiments[wish_3_8].background.4.position": 17739.7168,
+    "experiments[wish_3_8].background.5.position": 20364.9961,
+    "experiments[wish_3_8].background.6.position": 22653.7031,
+    "experiments[wish_3_8].background.7.position": 24740.4648,
+    "experiments[wish_3_8].background.8.position": 27130.1406,
+    "experiments[wish_3_8].background.9.position": 29957.3672,
+    "experiments[wish_3_8].background.count": 22,
+    "experiments[wish_3_8].dataset_weight": 1,
+    "experiments[wish_3_8].excluded_regions": [
+      [
+        0,
+        9000
+      ],
+      [
+        116000,
+        300000
+      ]
+    ],
+    "experiments[wish_3_8].instrument.setup_twotheta_bank": 90,
+    "experiments[wish_3_8].peak.cutoff_fwhm": 20,
+    "experiments[wish_3_8].peak.type": "tof-jorgensen",
+    "experiments[wish_4_7].background.0.position": 9089.7529,
+    "experiments[wish_4_7].background.1.position": 10671.6523,
+    "experiments[wish_4_7].background.10.position": 23798.0566,
+    "experiments[wish_4_7].background.11.position": 25447.2715,
+    "experiments[wish_4_7].background.12.position": 28072.5508,
+    "experiments[wish_4_7].background.13.position": 30058.3418,
+    "experiments[wish_4_7].background.14.position": 32582.6504,
+    "experiments[wish_4_7].background.15.position": 34804.0391,
+    "experiments[wish_4_7].background.16.position": 37160.0625,
+    "experiments[wish_4_7].background.17.position": 40323.8594,
+    "experiments[wish_4_7].background.18.position": 46894.5391,
+    "experiments[wish_4_7].background.19.position": 50630.5156,
+    "experiments[wish_4_7].background.2.position": 12287.21,
+    "experiments[wish_4_7].background.20.position": 54602.0938,
+    "experiments[wish_4_7].background.21.position": 58439.043,
+    "experiments[wish_4_7].background.22.position": 66519.8203,
+    "experiments[wish_4_7].background.23.position": 75001.5,
+    "experiments[wish_4_7].background.24.position": 83649.2188,
+    "experiments[wish_4_7].background.25.position": 92770.3828,
+    "experiments[wish_4_7].background.26.position": 101524.3047,
+    "experiments[wish_4_7].background.27.position": 107313.3906,
+    "experiments[wish_4_7].background.3.position": 14037.3975,
+    "experiments[wish_4_7].background.4.position": 15451.0088,
+    "experiments[wish_4_7].background.5.position": 16763.6504,
+    "experiments[wish_4_7].background.6.position": 18076.291,
+    "experiments[wish_4_7].background.7.position": 19456.2461,
+    "experiments[wish_4_7].background.8.position": 20465.9688,
+    "experiments[wish_4_7].background.9.position": 21879.5801,
+    "experiments[wish_4_7].background.count": 28,
+    "experiments[wish_4_7].dataset_weight": 1,
+    "experiments[wish_4_7].excluded_regions": [
+      [
+        0,
+        9000
+      ],
+      [
+        108000,
+        300000
+      ]
+    ],
+    "experiments[wish_4_7].instrument.setup_twotheta_bank": 121.66,
+    "experiments[wish_4_7].peak.cutoff_fwhm": 20,
+    "experiments[wish_4_7].peak.type": "tof-jorgensen",
+    "experiments[wish_5_6].background.0.position": 11136.874,
+    "experiments[wish_5_6].background.1.position": 13313.3877,
+    "experiments[wish_5_6].background.10.position": 22827.2266,
+    "experiments[wish_5_6].background.11.position": 24644.7285,
+    "experiments[wish_5_6].background.12.position": 26439.791,
+    "experiments[wish_5_6].background.13.position": 28257.293,
+    "experiments[wish_5_6].background.14.position": 31196.7109,
+    "experiments[wish_5_6].background.15.position": 34034.4062,
+    "experiments[wish_5_6].background.16.position": 37265.5195,
+    "experiments[wish_5_6].background.17.position": 41214.6602,
+    "experiments[wish_5_6].background.18.position": 44827.2266,
+    "experiments[wish_5_6].background.19.position": 49830.9648,
+    "experiments[wish_5_6].background.2.position": 9162.3037,
+    "experiments[wish_5_6].background.20.position": 52905.0117,
+    "experiments[wish_5_6].background.21.position": 58204.9375,
+    "experiments[wish_5_6].background.22.position": 62916.9805,
+    "experiments[wish_5_6].background.23.position": 70186.9844,
+    "experiments[wish_5_6].background.24.position": 74204.9375,
+    "experiments[wish_5_6].background.25.position": 82103.2188,
+    "experiments[wish_5_6].background.26.position": 91958.8672,
+    "experiments[wish_5_6].background.27.position": 102712.0391,
+    "experiments[wish_5_6].background.3.position": 14906.5078,
+    "experiments[wish_5_6].background.4.position": 16454.75,
+    "experiments[wish_5_6].background.5.position": 17352.2812,
+    "experiments[wish_5_6].background.6.position": 18743.4551,
+    "experiments[wish_5_6].background.7.position": 20179.5078,
+    "experiments[wish_5_6].background.8.position": 21368.7363,
+    "experiments[wish_5_6].background.9.position": 22176.0391,
+    "experiments[wish_5_6].background.count": 28,
+    "experiments[wish_5_6].dataset_weight": 1,
+    "experiments[wish_5_6].excluded_regions": [
+      [
+        0,
+        9000
+      ],
+      [
+        104000,
+        300000
+      ]
+    ],
+    "experiments[wish_5_6].instrument.setup_twotheta_bank": 152.827,
+    "experiments[wish_5_6].peak.cutoff_fwhm": 20,
+    "experiments[wish_5_6].peak.type": "tof-jorgensen",
+    "structure.atom_sites[Al1].type_symbol": "Al",
+    "structure.atom_sites[Al1].wyckoff_letter": "a",
+    "structure.atom_sites[Ca1].type_symbol": "Ca",
+    "structure.atom_sites[Ca1].wyckoff_letter": "b",
+    "structure.atom_sites[F1].type_symbol": "F",
+    "structure.atom_sites[F1].wyckoff_letter": "c",
+    "structure.atom_sites[F2].type_symbol": "F",
+    "structure.atom_sites[F2].wyckoff_letter": "c",
+    "structure.atom_sites[F3].type_symbol": "F",
+    "structure.atom_sites[F3].wyckoff_letter": "a",
+    "structure.atom_sites[Na1].type_symbol": "Na",
+    "structure.atom_sites[Na1].wyckoff_letter": "a",
+    "structure.space_group.name_h_m": "I 21 3"
+  },
+  "parameters": [
+    [
+      "structure.cell.length_a",
+      10.250256,
+      0,
+      false
+    ],
+    [
+      "structure.cell.length_b",
+      10.250256,
+      0,
+      false
+    ],
+    [
+      "structure.cell.length_c",
+      10.250256,
+      0,
+      false
+    ],
+    [
+      "structure.cell.angle_alpha",
+      90,
+      0,
+      false
+    ],
+    [
+      "structure.cell.angle_beta",
+      90,
+      0,
+      false
+    ],
+    [
+      "structure.cell.angle_gamma",
+      90,
+      0,
+      false
+    ],
+    [
+      "structure.atom_sites[Ca1].fract_x",
+      0.4664,
+      0.001,
+      true
+    ],
+    [
+      "structure.atom_sites[Ca1].fract_y",
+      0,
+      0,
+      false
+    ],
+    [
+      "structure.atom_sites[Ca1].fract_z",
+      0.25,
+      0,
+      false
+    ],
+    [
+      "structure.atom_sites[Ca1].occupancy",
+      1,
+      0,
+      false
+    ],
+    [
+      "structure.atom_sites[Ca1].adp_iso",
+      0.93284,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[Al1].fract_x",
+      0.25193,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[Al1].fract_y",
+      0.25193,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[Al1].fract_z",
+      0.25193,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[Al1].occupancy",
+      1,
+      0,
+      false
+    ],
+    [
+      "structure.atom_sites[Al1].adp_iso",
+      0.81973,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[Na1].fract_x",
+      0.08526,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[Na1].fract_y",
+      0.08526,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[Na1].fract_z",
+      0.08526,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[Na1].occupancy",
+      1,
+      0,
+      false
+    ],
+    [
+      "structure.atom_sites[Na1].adp_iso",
+      2.27039,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[F1].fract_x",
+      0.13761,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[F1].fract_y",
+      0.30558,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[F1].fract_z",
+      0.11963,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[F1].occupancy",
+      1,
+      0,
+      false
+    ],
+    [
+      "structure.atom_sites[F1].adp_iso",
+      0.94591,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[F2].fract_x",
+      0.36233,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[F2].fract_y",
+      0.36318,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[F2].fract_z",
+      0.18704,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[F2].occupancy",
+      1,
+      0,
+      false
+    ],
+    [
+      "structure.atom_sites[F2].adp_iso",
+      1.44298,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[F3].fract_x",
+      0.46106,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[F3].fract_y",
+      0.46106,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[F3].fract_z",
+      0.46106,
+      0.0001,
+      true
+    ],
+    [
+      "structure.atom_sites[F3].occupancy",
+      1,
+      0,
+      false
+    ],
+    [
+      "structure.atom_sites[F3].adp_iso",
+      0.94745,
+      0.0001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].peak.rise_alpha_0",
+      0.014439,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.rise_alpha_1",
+      0.05507,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.decay_beta_0",
+      0.004707,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.decay_beta_1",
+      0.137368,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.broad_gauss_sigma_0",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.broad_gauss_sigma_1",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.broad_gauss_sigma_2",
+      15.4063,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.broad_gauss_size",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.broad_gauss_strain",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.broad_lorentz_gamma_0",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.broad_lorentz_gamma_1",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.broad_lorentz_gamma_2",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.broad_lorentz_size",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].peak.broad_lorentz_strain",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].instrument.calib_d_to_tof_offset",
+      13.6578,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].instrument.calib_d_to_tof_linear",
+      4985.32,
+      0.1,
+      true
+    ],
+    [
+      "experiments[wish_1_10].instrument.calib_d_to_tof_quadratic",
+      1.85733,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].linked_structure.scale",
+      36.902,
+      0.01,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.0.intensity",
+      284.5072,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_1_10].background.1.intensity",
+      112.1667,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.2.intensity",
+      142.9331,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.3.intensity",
+      120.6792,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.4.intensity",
+      288.1802,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.5.intensity",
+      201.0202,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.6.intensity",
+      169.6467,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.7.intensity",
+      234.1778,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.8.intensity",
+      215.8656,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.9.intensity",
+      210.9948,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.10.intensity",
+      254.9502,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.11.intensity",
+      230.8279,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.12.intensity",
+      220.9526,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.13.intensity",
+      232.319,
+      0.01,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.14.intensity",
+      237.1177,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.15.intensity",
+      234.4061,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.16.intensity",
+      238.7035,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.17.intensity",
+      226.3624,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.18.intensity",
+      221.7019,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.19.intensity",
+      227.3917,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.20.intensity",
+      224.6774,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.21.intensity",
+      216.2185,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.22.intensity",
+      216.9035,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.23.intensity",
+      213.4604,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.24.intensity",
+      216.2199,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.25.intensity",
+      212.9889,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.26.intensity",
+      212.3878,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.27.intensity",
+      212.5949,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.28.intensity",
+      211.3093,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.29.intensity",
+      210.9814,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.30.intensity",
+      222.9456,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.31.intensity",
+      210.31,
+      0.1,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.32.intensity",
+      222.3267,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.33.intensity",
+      254.2876,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.34.intensity",
+      123.6263,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_1_10].background.35.intensity",
+      161.2677,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_2_9].peak.rise_alpha_0",
+      0.041011,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_2_9].peak.rise_alpha_1",
+      0.020064,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_2_9].peak.decay_beta_0",
+      0.005354,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_2_9].peak.decay_beta_1",
+      0.080438,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_2_9].peak.broad_gauss_sigma_0",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_2_9].peak.broad_gauss_sigma_1",
+      65.2756,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].peak.broad_gauss_sigma_2",
+      23.1054,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].peak.broad_gauss_size",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_2_9].peak.broad_gauss_strain",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_2_9].peak.broad_lorentz_gamma_0",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_2_9].peak.broad_lorentz_gamma_1",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_2_9].peak.broad_lorentz_gamma_2",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_2_9].peak.broad_lorentz_size",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_2_9].peak.broad_lorentz_strain",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_2_9].instrument.calib_d_to_tof_offset",
+      13.9125,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].instrument.calib_d_to_tof_linear",
+      10389.9,
+      1,
+      true
+    ],
+    [
+      "experiments[wish_2_9].instrument.calib_d_to_tof_quadratic",
+      1.85233,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_2_9].linked_structure.scale",
+      36.748,
+      0.01,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.0.intensity",
+      234.289,
+      0.01,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.1.intensity",
+      259.7563,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.2.intensity",
+      365.2946,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.3.intensity",
+      378.7136,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.4.intensity",
+      331.3478,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.5.intensity",
+      328.3179,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.6.intensity",
+      360.2188,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.7.intensity",
+      388.7258,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.8.intensity",
+      338.81,
+      0.1,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.9.intensity",
+      280.6174,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.10.intensity",
+      265.1288,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.11.intensity",
+      259.2434,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.12.intensity",
+      253.6668,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.13.intensity",
+      237.649,
+      0.01,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.14.intensity",
+      228.0771,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.15.intensity",
+      221.2817,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.16.intensity",
+      220.3422,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.17.intensity",
+      226.6136,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.18.intensity",
+      218.5642,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.19.intensity",
+      220.3111,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.20.intensity",
+      217.6018,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_2_9].background.21.intensity",
+      173.0543,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].peak.rise_alpha_0",
+      -0.012056,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_3_8].peak.rise_alpha_1",
+      0.122605,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_3_8].peak.decay_beta_0",
+      0.006013,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_3_8].peak.decay_beta_1",
+      0.027211,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_3_8].peak.broad_gauss_sigma_0",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_3_8].peak.broad_gauss_sigma_1",
+      62.0718,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].peak.broad_gauss_sigma_2",
+      16.9229,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].peak.broad_gauss_size",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_3_8].peak.broad_gauss_strain",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_3_8].peak.broad_lorentz_gamma_0",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_3_8].peak.broad_lorentz_gamma_1",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_3_8].peak.broad_lorentz_gamma_2",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_3_8].peak.broad_lorentz_size",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_3_8].peak.broad_lorentz_strain",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_3_8].instrument.calib_d_to_tof_offset",
+      -12.9275,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].instrument.calib_d_to_tof_linear",
+      15105.5,
+      1,
+      true
+    ],
+    [
+      "experiments[wish_3_8].instrument.calib_d_to_tof_quadratic",
+      1.00785,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_3_8].linked_structure.scale",
+      36.8073,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.0.intensity",
+      432.7,
+      1,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.1.intensity",
+      502.2203,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.2.intensity",
+      411.9241,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.3.intensity",
+      469.0353,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.4.intensity",
+      404.1036,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.5.intensity",
+      375.4321,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.6.intensity",
+      344.2768,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.7.intensity",
+      331.0701,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.8.intensity",
+      335.2022,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.9.intensity",
+      353.1218,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.10.intensity",
+      298.5371,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.11.intensity",
+      283.6908,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.12.intensity",
+      253.9048,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.13.intensity",
+      254.3469,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.14.intensity",
+      235.4982,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.15.intensity",
+      240.6914,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.16.intensity",
+      239.3277,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.17.intensity",
+      242.9129,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.18.intensity",
+      241.0819,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.19.intensity",
+      235.3664,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.20.intensity",
+      238.8687,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_3_8].background.21.intensity",
+      246.3332,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].peak.rise_alpha_0",
+      -0.011541,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_4_7].peak.rise_alpha_1",
+      0.122669,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_4_7].peak.decay_beta_0",
+      0.006439,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_4_7].peak.decay_beta_1",
+      0.014556,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_4_7].peak.broad_gauss_sigma_0",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_4_7].peak.broad_gauss_sigma_1",
+      29.1732,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].peak.broad_gauss_sigma_2",
+      18.2938,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].peak.broad_gauss_size",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_4_7].peak.broad_gauss_strain",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_4_7].peak.broad_lorentz_gamma_0",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_4_7].peak.broad_lorentz_gamma_1",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_4_7].peak.broad_lorentz_gamma_2",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_4_7].peak.broad_lorentz_size",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_4_7].peak.broad_lorentz_strain",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_4_7].instrument.calib_d_to_tof_offset",
+      -15.0959,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].instrument.calib_d_to_tof_linear",
+      18660.1,
+      1,
+      true
+    ],
+    [
+      "experiments[wish_4_7].instrument.calib_d_to_tof_quadratic",
+      -0.47488,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_4_7].linked_structure.scale",
+      36.5398,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.0.intensity",
+      481.8813,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.1.intensity",
+      556.9685,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.2.intensity",
+      488.2691,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.3.intensity",
+      550.5247,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.4.intensity",
+      525.056,
+      0.01,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.5.intensity",
+      442.4509,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.6.intensity",
+      456.0425,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.7.intensity",
+      411.1474,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.8.intensity",
+      507.8658,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.9.intensity",
+      395.0757,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.10.intensity",
+      390.5872,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.11.intensity",
+      384.57,
+      0.1,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.12.intensity",
+      349.1585,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.13.intensity",
+      331.9346,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.14.intensity",
+      308.9883,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.15.intensity",
+      355.682,
+      0.01,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.16.intensity",
+      317.7253,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.17.intensity",
+      290.2116,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.18.intensity",
+      259.8611,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.19.intensity",
+      255.6591,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.20.intensity",
+      245.4916,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.21.intensity",
+      263.711,
+      0.01,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.22.intensity",
+      249.9817,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.23.intensity",
+      257.2658,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.24.intensity",
+      257.2862,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.25.intensity",
+      254.043,
+      0.01,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.26.intensity",
+      258.822,
+      0.01,
+      true
+    ],
+    [
+      "experiments[wish_4_7].background.27.intensity",
+      239.8107,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].peak.rise_alpha_0",
+      -0.009641,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_5_6].peak.rise_alpha_1",
+      0.110639,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_5_6].peak.decay_beta_0",
+      0.006661,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_5_6].peak.decay_beta_1",
+      0.010364,
+      1e-05,
+      true
+    ],
+    [
+      "experiments[wish_5_6].peak.broad_gauss_sigma_0",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_5_6].peak.broad_gauss_sigma_1",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_5_6].peak.broad_gauss_sigma_2",
+      15.7193,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].peak.broad_gauss_size",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_5_6].peak.broad_gauss_strain",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_5_6].peak.broad_lorentz_gamma_0",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_5_6].peak.broad_lorentz_gamma_1",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_5_6].peak.broad_lorentz_gamma_2",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_5_6].peak.broad_lorentz_size",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_5_6].peak.broad_lorentz_strain",
+      0,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_5_6].instrument.calib_d_to_tof_offset",
+      -13.4911,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].instrument.calib_d_to_tof_linear",
+      20772.9,
+      1,
+      true
+    ],
+    [
+      "experiments[wish_5_6].instrument.calib_d_to_tof_quadratic",
+      -1.08308,
+      0,
+      false
+    ],
+    [
+      "experiments[wish_5_6].linked_structure.scale",
+      36.8812,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.0.intensity",
+      533.9158,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.1.intensity",
+      575.7117,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.2.intensity",
+      297.3517,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.3.intensity",
+      562.1926,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.4.intensity",
+      548.5989,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.5.intensity",
+      508.8675,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.6.intensity",
+      434.6514,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.7.intensity",
+      467.4032,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.8.intensity",
+      401.4937,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.9.intensity",
+      481.5579,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.10.intensity",
+      488.4811,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.11.intensity",
+      383.2773,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.12.intensity",
+      388.4478,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.13.intensity",
+      380.4313,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.14.intensity",
+      346.669,
+      0.01,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.15.intensity",
+      328.6776,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.16.intensity",
+      311.2177,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.17.intensity",
+      323.0811,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.18.intensity",
+      283.7182,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.19.intensity",
+      271.3703,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.20.intensity",
+      256.6674,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.21.intensity",
+      258.9107,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.22.intensity",
+      260.464,
+      0.01,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.23.intensity",
+      262.1284,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.24.intensity",
+      261.0777,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.25.intensity",
+      268.0457,
+      0.001,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.26.intensity",
+      267.76,
+      0.1,
+      true
+    ],
+    [
+      "experiments[wish_5_6].background.27.intensity",
+      262.8635,
+      0.001,
+      true
+    ]
+  ]
+}

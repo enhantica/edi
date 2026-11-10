@@ -1,0 +1,4 @@
+Source: easydiffractionbeta ec1d04ee:easyDiffractionApp/Examples/Co2SiO4_D20@ILL/experiments/d20.cif
+License: BSD-3-Clause (upstream repository)
+SHA-256: 59392841031ff696157ca4e38ecbf732ed5fbec6e4350a85b7360cc2cb1c0eb7
+Classic CIF negative input; no correctness values are derived from it.

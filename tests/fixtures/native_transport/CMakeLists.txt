@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.20)
+project(recorded_transport C)
+add_library(recorded_curl SHARED recorded_curl.c)
+target_include_directories(recorded_curl PRIVATE "${CURL_HEADERS}")
+add_library(offline_guard SHARED offline_guard.c)
+target_link_libraries(offline_guard PRIVATE dl)

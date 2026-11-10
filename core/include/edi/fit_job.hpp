@@ -1,0 +1,130 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#ifndef EDI_FIT_JOB_HPP
+#define EDI_FIT_JOB_HPP
+
+#include <cstdint>
+#include <functional>
+#include <utility>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "edi/model.hpp"
+#include "edi/presentation.hpp"
+#include "edi/worker.hpp"
+
+// ADR-0020 §9: a fit on the worker. The fit runs on a snapshot of the project by its fitting mode —
+// Project::fit for `single`, Project::fit_joint for `joint`, Project::fit_sequential and fit_independent for the
+// scan modes, the entries the CLI's fit takes — and its
+// preamble, every accepted iteration and its end arrive on the owner thread as the worker's ordered,
+// never-dropped deliveries (work::Emit), the end last. The live project is written once, on the owner
+// thread, when the fit ends: the fitted values, uncertainties and fit start, with the pattern the fit's
+// own last calculation left, all or nothing. A scan writes its results to `analysis/results.csv` as crysta's
+// driver fits each file, and nothing to the live project: the template stays as it was (edi ADR-0017 §19).
+// Qt-free; every member runs on the owner thread.
+
+namespace edi {
+
+/// A specific typed native refusal; None includes unknown failures.
+enum class FitFailureReason : std::uint8_t { None, UnanchoredCwDilation };
+
+// How a fit ended, on the owner thread.
+struct FitReport {
+    // DONE, MAX_ITER, NO_STEP or CANCELLED: the live project holds the fit's result, a cancelled fit's
+    // partial one as crysta returns it. ERROR: the fit was refused or failed, and `refusal` says why.
+    // SUPERSEDED: an input was written on the live project while the fit ran. Neither of these two
+    // writes anything.
+    FitStatus status = FitStatus::ERROR;
+    std::string refusal;
+    // What the fit returned; absent when it was refused.
+    std::optional<FitResultBase> result;
+    FitFailureReason reason = FitFailureReason::None;
+    bool adopted() const noexcept {
+        return status == FitStatus::DONE || status == FitStatus::MAX_ITER || status == FitStatus::NO_STEP ||
+               status == FitStatus::CANCELLED;
+    }
+};
+
+// One pattern frame of a running fit: each experiment's pattern at one iteration's parameters, in the
+// project's experiment order (capture_pattern of a copy the job calculates; `current` is true).
+using FitFrame = std::vector<PatternSource>;
+
+class FitJob {
+   public:
+    struct Hooks {
+        // Once, before the first iteration: the fit's facts and the pre-fit record.
+        std::function<void(const FitPreamble&)> started;
+        // Once per accepted iteration, in order.
+        std::function<void(const IterationRecord&)> iterated;
+        // A frame, between iterations. The job calculates the next one only after `frame_shown`, so a slow
+        // owner sees fewer frames and the fit is never queued behind them. Empty: no frames are calculated.
+        std::function<void(const FitFrame&)> frame;
+        // Once, last: nothing of this fit is delivered afterwards. The report stays owned by
+        // this job until its next completed fit or destruction.
+        std::function<void(const FitReport&)> finished;
+        // The scan hooks follow `finished` so callers that list the first four in order keep their meaning.
+        // A scan: once, before its first file, the number of files and the rows results.csv already holds.
+        std::function<void(const ScanPreamble&)> scan_started;
+        // A scan: once per file it fitted, after the file's results.csv row is on disk, in order.
+        std::function<void(const ScanFileRecord&)> file_completed;
+        // A scan while it is followed (`follow`): a file just fitted and its pattern as the fit left it, right after
+        // its `file_completed`, in place of the frames a single fit draws. Nothing is calculated for it. The job
+        // sends the next only after `frame_shown`, with the next file it fits (edi ADR-0029).
+        std::function<void(const std::string& file, const FitFrame&)> file_frame;
+    };
+    // Test instrumentation: production constructs a FitJob without it.
+    struct Seams {
+        // Worker thread: each time crysta asks whether to stop (between iterations), numbered from 1,
+        // before the job's token is read. A test cancels at a chosen iteration from here.
+        std::function<void(int)> polled;
+    };
+
+    /// The optional nonthrowing checkpoint is called on the fit worker for cancellation.
+    FitJob(Project& live, work::Worker& worker, Hooks hooks, Seams seams = {}, CancelCallback checkpoint = {});
+    // Cancels a fit in progress; nothing of it is delivered afterwards.
+    ~FitJob();
+    FitJob(const FitJob&) = delete;
+    FitJob& operator=(const FitJob&) = delete;
+
+    // Fits the live project as it is now. False, and nothing starts, while a fit is running. A scan resumes
+    // from the rows results.csv holds (crysta's driver); the caller clears them for a fresh run.
+    // `scan_template`, for a scan: the template to fit from when the live project shows one of its datasets.
+    bool start(const Project* scan_template = nullptr);
+    // Asks a running fit to stop at crysta's next check; it still ends with `finished`.
+    void cancel();
+    // The owner has shown the last frame: the job may calculate the next.
+    void frame_shown();
+    // Whether a running scan draws each file it fits (Follow).
+    void follow(bool on);
+    // Whether a followed scan draws every file ("every pattern", edi ADR-0029): each file's pattern waits, once the
+    // file is fitted, until the last one is shown, so a file is fitted while the one before it is drawn. It waits a
+    // second at most, so a window that does not draw cannot stall the scan, and never in the single-thread build,
+    // whose scan runs on the thread that would draw.
+    void wait_for_patterns(bool on);
+    // Whether a followed scan sends every file's pattern as it is fitted, never waiting for one to be shown ("every
+    // pattern, display catches up", edi ADR-0029): the owner draws them in order at its own pace.
+    void send_every_pattern(bool on);
+    // From `start` until `finished` has run.
+    bool running() const noexcept;
+    // The running fit's job on the worker, or 0.
+    work::Ticket ticket() const noexcept;
+
+   private:
+    struct State;
+    std::shared_ptr<State> state_;
+};
+
+// A system test's view of each scan file as the worker finishes it, before the app hears of it
+// (edi_app --test-observer). Null, and never called, outside those tests.
+using WorkerFileObserver = void (*)(const std::string& file_name);
+void set_worker_file_observer(WorkerFileObserver observer);
+// Test instrumentation, the same way: told before each scan file's fit its name and the fitted parameters' start
+// values, keyed by results.csv column (crysta's scan file start observer). None by default.
+using ScanFileStartObserver = void (*)(const std::string& file,
+                                       const std::vector<std::pair<std::string, double>>& starts);
+void set_scan_file_start_observer(ScanFileStartObserver observer);
+
+}  // namespace edi
+
+#endif  // EDI_FIT_JOB_HPP

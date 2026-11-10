@@ -1,0 +1,470 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#include "engine_setup.hpp"
+#include "session.hpp"
+#include <QThread>
+#include <QJSEngine>
+#include <stdexcept>
+
+#include <QDir>
+#include <QFile>
+#include <QFont>
+#include <QFontDatabase>
+#include <QGuiApplication>
+#include <QQmlContext>
+#include <QQmlEngine>
+#include <QQmlIncubationController>
+#include <QQuickWindow>
+#include <QFileInfo>
+#include <QSettings>
+#include <QVariant>
+#include <QStandardPaths>
+#include <QTemporaryDir>
+#include <QPointer>
+#include <QTimer>
+#include <QWheelEvent>
+#include <QWindow>
+#include <QUrl>
+#include <utility>
+
+#if defined(Q_OS_WASM)
+#include <emscripten.h>
+#include <cstdlib>
+
+// ADR-0023: the browser's settings. The settings file lives in the page's memory, which a reload empties, so
+// its text is kept in the browser's local storage under one key: read back before any QML loads, written
+// again whenever the file changes. A storage the browser refuses (a private window, blocked site data) leaves
+// the settings for the session only.
+EM_JS_DEPS(edi_settings, "$stringToNewUTF8");
+EM_JS(char*, edi_settings_load, (), {
+    try {
+        const text = globalThis.localStorage.getItem("edi.settings.ini");
+        return text === null ? 0 : stringToNewUTF8(text);
+    } catch (e) {
+        return 0;
+    }
+});
+EM_JS(void, edi_settings_store, (const char* text), {
+    try {
+        globalThis.localStorage.setItem("edi.settings.ini", UTF8ToString(text));
+    } catch (e) {
+    }
+});
+
+// ADR-0023: the browser's wheel events as the desktop's trackpad gestures. Qt's wasm platform hands every browser
+// wheel event to Qt Quick as a mouse wheel's (no scroll phase, not synthesized, the pixel delta copied into the
+// angle delta), so a Flickable reads a touchpad's few pixels as small fractions of a 120-unit wheel notch and
+// scrolls a short, damped distance. A macOS desktop sends the same gesture with scroll phases, and the Flickable
+// moves the content by the pixel deltas, the operating system's momentum included. The page records each wheel
+// event's deltaMode: pixel-mode events are passed on as one gesture (ScrollBegin, then ScrollUpdate per event, the
+// momentum events the browser forwards included, and ScrollEnd once they stop), with their own deltas and
+// timestamps. Line- and page-mode events (a mouse wheel in some browsers) stay a wheel's.
+EM_JS(void, edi_watch_wheel_mode, (), {
+    if (!globalThis.__ediWheelWatch) {
+        globalThis.__ediWheelWatch = true;
+        globalThis.addEventListener("wheel", (e) => { globalThis.__ediWheelDeltaMode = e.deltaMode; },
+                                    { capture: true, passive: true });
+    }
+});
+EM_JS(int, edi_wheel_delta_mode, (), { return globalThis.__ediWheelDeltaMode ?? 0; });
+
+namespace {
+class WheelGestures final : public QObject {
+   public:
+    explicit WheelGestures(QObject* parent) : QObject(parent) {
+        edi_watch_wheel_mode();
+        end_.setSingleShot(true);
+        end_.setInterval(kGestureGapMs);
+        QObject::connect(&end_, &QTimer::timeout, this, [this] { finish(); });
+    }
+
+   protected:
+    bool eventFilter(QObject* watched, QEvent* event) override {
+        if (event->type() != QEvent::Wheel || forwarding_) {
+            return false;
+        }
+        auto* window = qobject_cast<QWindow*>(watched);
+        const auto* wheel = static_cast<const QWheelEvent*>(event);
+        if (window == nullptr || wheel->phase() != Qt::NoScrollPhase || wheel->source() != Qt::MouseEventNotSynthesized
+            || wheel->pixelDelta().isNull() || edi_wheel_delta_mode() != 0) {
+            return false;
+        }
+        if (window_ != window) {
+            finish();
+            window_ = window;
+            send(*wheel, Qt::ScrollBegin, QPoint(), wheel->timestamp() > 1 ? wheel->timestamp() - 1 : 1);
+        }
+        send(*wheel, Qt::ScrollUpdate, wheel->pixelDelta(), wheel->timestamp());
+        last_position_ = wheel->position();
+        last_global_ = wheel->globalPosition();
+        last_timestamp_ = wheel->timestamp();
+        device_ = wheel->pointingDevice();
+        end_.start();
+        return true;
+    }
+
+   private:
+    // Longer than any gap between one gesture's events, its momentum included, also on a page busy drawing (a
+    // software-rendered page handles a wheel event in up to 250 ms); a late end only delays the return to bounds.
+    static constexpr int kGestureGapMs = 400;
+
+    void send(const QWheelEvent& from, Qt::ScrollPhase phase, QPoint delta, quint64 timestamp) {
+        QWheelEvent event(from.position(), from.globalPosition(), delta, delta, from.buttons(), from.modifiers(), phase,
+                          from.inverted(), Qt::MouseEventSynthesizedByApplication, from.pointingDevice());
+        event.setTimestamp(timestamp);
+        forwarding_ = true;
+        QCoreApplication::sendEvent(window_, &event);
+        forwarding_ = false;
+    }
+    void finish() {
+        end_.stop();
+        if (window_.isNull()) {
+            window_ = nullptr;
+            return;
+        }
+        QWheelEvent event(last_position_, last_global_, QPoint(), QPoint(), Qt::NoButton, Qt::NoModifier,
+                          Qt::ScrollEnd, false, Qt::MouseEventSynthesizedByApplication, device_);
+        event.setTimestamp(last_timestamp_ + kGestureGapMs);
+        forwarding_ = true;
+        QCoreApplication::sendEvent(window_, &event);
+        forwarding_ = false;
+        window_ = nullptr;
+    }
+
+    QPointer<QWindow> window_;
+    QPointF last_position_, last_global_;
+    quint64 last_timestamp_ = 0;
+    const QPointingDevice* device_ = nullptr;
+    QTimer end_;
+    bool forwarding_ = false;
+};
+}  // namespace
+#endif
+
+namespace edi_app {
+
+namespace {
+
+// The pages are built in the background after a project opens (edi ADR-0052): asynchronous loaders, incubated here in
+// slices of about 50 ms per turn of the event loop while any is pending, so input and drawing go on between slices and
+// an answer to the user never waits much longer than a tenth of a second. The window's own controller incubates only
+// around frames it draws, which left an idle window building its pages for seconds; 12 ms slices took about half as
+// long again as 50 ms ones. The timer waits 1 ms between slices: at 0 ms a slice was always due, so a caller processing
+// events until a condition held (a test waiting for layout to settle) never got back control while pages were built.
+class PageIncubation : public QObject, public QQmlIncubationController {
+   public:
+    explicit PageIncubation(QObject* parent) : QObject(parent) {
+        timer_.setInterval(1);
+        QObject::connect(&timer_, &QTimer::timeout, &timer_, [this] { incubateFor(50); });
+    }
+
+   protected:
+    void incubatingObjectCountChanged(int count) override {
+        if (count > 0) {
+            timer_.start();
+        } else {
+            timer_.stop();
+        }
+    }
+
+   private:
+    QTimer timer_;
+};
+
+// A bundled font file's family, registered from the base's font resources; empty when the file is missing.
+QString registered_family(const char* file) {
+    return QFontDatabase::applicationFontFamilies(
+               QFontDatabase::addApplicationFont(
+                   QStringLiteral(":/qt/qml/EasyApplication/Gui/Resources/Fonts/") + QString::fromUtf8(file)))
+        .value(0);
+}
+#if defined(Q_OS_WASM)
+// The browser's settings file and the text last written to the page's storage.
+QString& browser_settings_file() {
+    static QString path;
+    return path;
+}
+QByteArray& browser_settings_stored() {
+    static QByteArray text;
+    return text;
+}
+#endif
+
+// ADR-0031 §3, §6: today's settings.ini carried over into the one store. Only a key the store does not hold is copied,
+// so a key is carried once and never overwritten, and the old file is left as it is. The keys that moved go to their new
+// groups.
+void carry_over_settings(const QString& old_file, const QString& store_file) {
+    if (!QFile::exists(old_file)) {
+        return;
+    }
+    QSettings store(store_file, QSettings::IniFormat);
+    const QSettings old(old_file, QSettings::IniFormat);
+    for (const QString& key : old.allKeys()) {
+        QString to = key;
+        QVariant value = old.value(key);
+        if (key == QLatin1String("Edi.Preferences/newProjectSuRule")) {
+            to = QStringLiteral("Projects/newProjectSuRule");
+        } else if (key == QLatin1String("Edi.Preferences/newReportLibraries")) {
+            to = QStringLiteral("Projects/newReportLibraries");
+            if (value.toString() == QLatin1String("true") || value.toString() == QLatin1String("false")) {
+                value = value.toBool() ? QStringLiteral("embedded") : QStringLiteral("online");
+            }
+        } else if (key == QLatin1String("Edi.RecentProjects/projectPaths")) {
+            to = QStringLiteral("Projects/recent");
+        } else if (key == QLatin1String("analysis/scanPatternUpdates")) {
+            to = QStringLiteral("Analysis/scanPatternUpdates");
+        }
+        if (!store.contains(to)) {
+            store.setValue(to, value);
+        }
+    }
+    store.sync();
+}
+
+// The settings file configure_engine chose, which the app's own C++ settings read and write too.
+QString& configured_settings_file() {
+    static QString file;
+    return file;
+}
+
+// Set by use_fresh_settings(): the process-lifetime directory a demo or a test run keeps its settings in.
+QString& fresh_config_dir() {
+    static QString dir;
+    return dir;
+}
+// Set by select_freetype_engine(): the platform specification the QGuiApplication starts from.
+QByteArray& platform_spec() {
+    static QByteArray spec;
+    return spec;
+}
+}  // namespace
+
+static void configure_engine_settings(QQmlEngine& engine) {
+    // A controller drives one engine; QObject parenting owns it until this engine retires.
+    engine.setIncubationController(new PageIncubation(&engine));
+    // The base's Settings objects write here (Globals/Vars.qml `pySettingsPath`); without it they would
+    // point inside the read-only module resources. A demo or a test run uses its fresh directory.
+    const QString config_dir = fresh_config_dir().isEmpty()
+                                   ? QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation)
+                                   : fresh_config_dir();
+    QDir().mkpath(config_dir);
+    // ADR-0031 §3: the one store, QSettings' ini file of the user scope (organisation EasyScience, application
+    // EasyDiffraction), with today's settings.ini carried over once; a demo or a test run's user scope is its fresh
+    // folder (use_fresh_settings), and the browser keeps its storage.
+    QString settings_file = QDir(config_dir).filePath(QStringLiteral("settings.ini"));
+#if !defined(Q_OS_WASM)
+    const QString legacy = settings_file;
+    settings_file = settings_store_path();
+    QDir().mkpath(QFileInfo(settings_file).absolutePath());
+    carry_over_settings(legacy, settings_file);
+#endif
+#if defined(Q_OS_WASM)
+    // Once per process: touchpad scrolling as the desktop's (WheelGestures above).
+    static WheelGestures* const gestures = [] {
+        auto* filter = new WheelGestures(QCoreApplication::instance());
+        QCoreApplication::instance()->installEventFilter(filter);
+        return filter;
+    }();
+    static_cast<void>(gestures);
+    if (fresh_config_dir().isEmpty()) {
+        if (char* stored = edi_settings_load()) {
+            QFile file(settings_file);
+            if (file.open(QIODevice::WriteOnly)) {
+                file.write(stored);
+            }
+            std::free(stored);
+        }
+        // The base's Settings write the file on their own schedule; a check per second keeps the stored copy
+        // at most a second behind it, and a preference that must survive a reload stores it at once
+        // (store_settings_now).
+        browser_settings_file() = settings_file;
+        auto* timer = new QTimer(&engine);
+        timer->setInterval(1000);
+        QObject::connect(timer, &QTimer::timeout, timer, [] { store_settings_now(); });
+        timer->start();
+    }
+#endif
+    configured_settings_file() = settings_file;
+    engine.rootContext()->setContextProperty(QStringLiteral("pySettingsPath"),
+                                             QUrl::fromLocalFile(settings_file).toString());
+    engine.rootContext()->setContextProperty(QStringLiteral("pyIsTestMode"), false);
+}
+
+QString settings_file_path() { return configured_settings_file(); }
+
+QString settings_store_path() {
+    const QSettings store(QSettings::IniFormat, QSettings::UserScope, QStringLiteral("EasyScience"),
+                          QStringLiteral("EasyDiffraction"));
+    return store.fileName();
+}
+
+void store_settings_now() {
+#if defined(Q_OS_WASM)
+    if (browser_settings_file().isEmpty()) {
+        return;  // a demo or a test run, or the engine is not configured yet
+    }
+    QFile file(browser_settings_file());
+    if (!file.open(QIODevice::ReadOnly)) {
+        return;
+    }
+    const QByteArray text = file.readAll();
+    if (text != browser_settings_stored()) {
+        edi_settings_store(text.constData());
+        browser_settings_stored() = text;
+    }
+#endif
+}
+
+namespace {
+struct SessionBinding final : QObject {
+    explicit SessionBinding(QQmlEngine& engine, Session* object) : QObject(&engine), session(object) {}
+    Session* session;
+};
+SessionBinding* session_binding(QQmlEngine& engine) {
+    for (auto* child : engine.children()) if (auto* binding = dynamic_cast<SessionBinding*>(child)) return binding;
+    return nullptr;
+}
+}
+void configure_engine(QQmlEngine& engine, std::unique_ptr<Session> session) {
+    if (!session || session->parent() || session->thread() != engine.thread() ||
+        engine.thread() != QThread::currentThread() || session->engine_bound_ || session_binding(engine))
+        throw std::invalid_argument("Invalid or repeated per-engine Session composition");
+    auto* object = session.get();
+    auto binding = std::make_unique<SessionBinding>(engine, object);
+    object->setParent(&engine);
+    object->engine_bound_ = true;
+    QJSEngine::setObjectOwnership(object, QJSEngine::CppOwnership);
+    (void)session.release();
+    (void)binding.release();
+    configure_engine_settings(engine);
+}
+void configure_engine(QQmlEngine& engine) { configure_engine(engine, AssistantWorkReportOptions{}); }
+void configure_engine(QQmlEngine& engine, AssistantWorkReportOptions options) {
+    if (session_binding(engine) || engine.thread() != QThread::currentThread())
+        throw std::invalid_argument("Repeated or wrong-thread engine configuration");
+    configure_engine(engine, std::make_unique<Session>(nullptr, options));
+}
+Session* Session::create(QQmlEngine* engine, QJSEngine* script_engine) {
+    if (!engine || static_cast<QJSEngine*>(engine) != script_engine || engine->thread() != QThread::currentThread()) {
+        if (script_engine) script_engine->throwError(QStringLiteral("Session requires its configured owner engine"));
+        return nullptr;
+    }
+    const auto* binding = session_binding(*engine);
+    if (!binding || !binding->session || binding->session->thread() != engine->thread()) {
+        if (!binding) new SessionBinding(*engine, nullptr);
+        script_engine->throwError(QStringLiteral("Configure this engine before resolving edi Session"));
+        return nullptr;
+    }
+    return binding->session;
+}
+
+void use_design_font() {
+    // The application's default font, set before any QML loads: the base's design font, PT Sans
+    // (Style/Fonts.qml `fontFamily`), from the module resources. Without it Qt falls back to its generic
+    // "Sans Serif", which macOS lacks: Qt warns while populating family aliases, and the Qt Quick Test
+    // tier fails on that warning. One text pipeline on every platform (ADR-0015 §10): Qt Quick draws text
+    // from distance fields of the glyph outlines, its default, stated here so that no platform or
+    // environment default decides it.
+    QQuickWindow::setTextRenderType(QQuickWindow::QtTextRendering);
+    const int id = QFontDatabase::addApplicationFont(
+        QStringLiteral(":/qt/qml/EasyApplication/Gui/Resources/Fonts/PT_Sans/PTSans-Regular.ttf"));
+    const QStringList families = QFontDatabase::applicationFontFamilies(id);
+    if (families.isEmpty()) {
+        qWarning("edi_app: the design font PT Sans is missing from the module resources");
+        return;
+    }
+    // One hinting on every platform: none, so glyphs keep the shapes and advances the font designs; left
+    // to the platform, Linux takes fontconfig's slight hinting (ADR-0015 §10).
+    QFont font(families.constFirst());
+    font.setHintingPreference(QFont::PreferNoHinting);
+    QGuiApplication::setFont(font);
+    // PT Sans and PT Mono lack some characters the pages render: the Greek letters and the subscripts ₀ and
+    // ₅ to ₉. Each family's are drawn from its bundled Noto counterpart, so none comes from the platform and
+    // monospace text stays monospace (ADR-0015 §10): Noto Sans behind PT Sans, Noto Sans Mono behind PT
+    // Mono. A substitution heads the fonts Qt tries for a glyph its family lacks, for every text in that
+    // family, also those whose QML sets `font.family`. Noto Sans Mono also follows Noto Sans behind PT Sans for
+    // the few symbols only it has, such as ⊥ and the angle brackets of ⟨j0⟩ in the dictionary's names.
+    const std::pair<const char*, const char*> fallbacks[] = {
+        {"PT_Sans/PTSans-Regular.ttf", "Noto_Sans/NotoSans-Regular.ttf"},
+        {"PT_Sans/PTSans-Regular.ttf", "Noto_Sans_Mono/NotoSansMono-Regular.ttf"},
+        {"PT_Mono/PTMono-Regular.ttf", "Noto_Sans_Mono/NotoSansMono-Regular.ttf"}};
+    for (const auto& [family_file, fallback_file] : fallbacks) {
+        const QString family = registered_family(family_file);
+        const QString fallback = registered_family(fallback_file);
+        if (family.isEmpty() || fallback.isEmpty()) {
+            qWarning("edi_app: %s or its fallback %s is missing from the module resources", family_file,
+                     fallback_file);
+            continue;
+        }
+        QFont::insertSubstitution(family, fallback);
+    }
+}
+
+QString fresh_settings_dir() { return fresh_config_dir(); }
+
+void use_fresh_settings() {
+    static QTemporaryDir dir;  // removed at exit
+    // A directory that could not be created has an empty path, which configure_engine() would read as
+    // "the user's own settings": refuse instead, before any settings path is published or QML loads.
+    if (!dir.isValid()) {
+        qFatal("edi_app: cannot create a fresh settings directory for this demo or test run (%s); refusing "
+               "to run on the user's own settings",
+               qPrintable(dir.errorString()));
+    }
+    fresh_config_dir() = dir.path();
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, dir.path());
+}
+
+void select_freetype_engine(int argc, char** argv) {
+    // A -platform argument outranks QT_QPA_PLATFORM, and Qt removes it from the arguments: it is kept as
+    // given, for require_freetype_engine() to judge.
+    for (int i = 1; i + 1 < argc; ++i) {
+        if (qstrcmp(argv[i], "-platform") == 0 || qstrcmp(argv[i], "--platform") == 0) {
+            platform_spec() = argv[i + 1];
+        }
+    }
+    if (!platform_spec().isEmpty()) {
+        return;
+    }
+    QByteArray platform = qgetenv("QT_QPA_PLATFORM");
+#if defined(Q_OS_MACOS)
+    if (platform.isEmpty()) {
+        platform = "cocoa";
+    }
+#elif defined(Q_OS_WIN)
+    if (platform.isEmpty()) {
+        platform = "windows";
+    }
+#endif
+    if (platform.isEmpty()) {
+        return;  // Linux (xcb, wayland): FreeType through fontconfig already
+    }
+    QList<QByteArray> parts = platform.split(':');  // "<name>[:<option>]..."
+    const QByteArray& name = parts.constFirst();
+    if ((name == "cocoa" || name == "windows") && !platform.contains("fontengine=")) {
+        parts.append("fontengine=freetype");
+    }
+    platform_spec() = parts.join(':');
+    qputenv("QT_QPA_PLATFORM", platform_spec());
+}
+
+void require_freetype_engine() {
+    // Public means only, no Qt private API: the platform in use must have been started with the FreeType
+    // engine. On Linux every platform draws with FreeType. On macOS and Windows only cocoa and windows take
+    // fontengine=freetype, so another platform (macOS offscreen is CoreText-only), or a -platform argument
+    // without the option, fails here. That FreeType then renders the glyphs is the UI test's to prove: it
+    // compares them with the committed images (ADR-0015 §10).
+#if defined(Q_OS_MACOS) || defined(Q_OS_WIN)
+    const QString name = QGuiApplication::platformName();
+    const QList<QByteArray> started = platform_spec().split(':');
+    const bool freetype = (name == QLatin1String("cocoa") || name == QLatin1String("windows")) &&
+                          started.constFirst() == name.toLatin1() && started.contains("fontengine=freetype");
+    if (!freetype) {
+        qFatal("edi_app: text must render with Qt's FreeType font engine (owner decision, ADR-0015), but the "
+               "'%s' platform was started as '%s', without fontengine=freetype; run on cocoa or windows",
+               qPrintable(name), platform_spec().constData());
+    }
+#endif
+}
+
+}  // namespace edi_app

@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.20)
+project(recorded_file_failures CXX)
+add_library(recorded_file_failures SHARED failures.cpp)
+target_compile_features(recorded_file_failures PRIVATE cxx_std_17)
+target_link_libraries(recorded_file_failures PRIVATE dl)
+add_executable(file_operation_control control.cpp)
+target_compile_features(file_operation_control PRIVATE cxx_std_17)

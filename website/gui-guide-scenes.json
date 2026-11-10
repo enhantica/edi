@@ -1,0 +1,225 @@
+{
+  "application/project/index.md": {
+    "What is saved": "guide-project-actions",
+    "Browser file handling": "guide-project-open",
+    "Move to another interface": "guide-project-save"
+  },
+  "application/project/get-started.md": {
+    "Enter the project details": "03-project-details",
+    "Open a project": "guide-project-open",
+    "Save or save a copy": "guide-project-save"
+  },
+  "application/project/examples.md": {
+    "Find an example": "15-project-examples"
+  },
+  "application/project/recent-projects.md": {
+    "Recent projects and recovery": "guide-project-recent"
+  },
+  "application/project/standard-uncertainties.md": {
+    "Choose uncertainty formatting": "guide-project-uncertainties"
+  },
+  "application/structure/index.md": {
+    "Structure viewer controls": "07-structure-loaded"
+  },
+  "application/structure/structures.md": {
+    "Load, create or duplicate": "guide-structure-create"
+  },
+  "application/structure/space-group.md": {
+    "Choose the space-group setting": "guide-structure-symmetry"
+  },
+  "application/structure/cell.md": {
+    "Enter the unit cell": "guide-structure-cell"
+  },
+  "application/structure/atom-sites.md": {
+    "Edit a site": "guide-structure-atoms"
+  },
+  "application/structure/atomic-displacement.md": {
+    "Choose and edit displacement parameters": "guide-structure-displacement"
+  },
+  "application/structure/scattering-lengths.md": {
+    "Override a structure's scattering lengths": "guide-structure-scattering"
+  },
+  "application/structure/appearance.md": {
+    "Change the appearance": "guide-structure-appearance"
+  },
+  "application/experiment/index.md": {
+    "Read the pattern": "10-experiment-loaded"
+  },
+  "application/experiment/experiments.md": {
+    "Select or create an experiment": "guide-experiment-create",
+    "Load a powder pattern": "guide-experiment-data"
+  },
+  "application/experiment/calculation-range.md": {
+    "Use this group": "guide-experiment-calculation-range"
+  },
+  "application/experiment/background.md": {
+    "Choose a background representation": "guide-experiment-background",
+    "Estimate the background": "guide-experiment-background",
+    "A practical sequence": "13-analysis-basic"
+  },
+  "application/experiment/instrument.md": {
+    "Set the measurement conditions": "guide-experiment-instrument"
+  },
+  "application/experiment/peak-profile.md": {
+    "Choose a profile": "guide-experiment-profile",
+    "Set the calculation window": "guide-experiment-cutoff"
+  },
+  "application/experiment/excluded-regions.md": {
+    "Exclude an interval": "guide-experiment-exclusions"
+  },
+  "application/experiment/extinction.md": {
+    "Use this group": "group-extinction"
+  },
+  "application/experiment/linked-structures.md": {
+    "Choose the contributing phases": "guide-experiment-links"
+  },
+  "application/experiment/background-estimation.md": {
+    "Estimation settings": "guide-experiment-estimation"
+  },
+  "application/experiment/absorption.md": {
+    "Set absorption": "guide-experiment-absorption"
+  },
+  "application/experiment/preferred-orientations.md": {
+    "Set preferred orientation": "guide-experiment-orientation"
+  },
+  "application/experiment/observed-reflections.md": {
+    "Use this group": "group-reflns"
+  },
+  "application/experiment/scattering-source.md": {
+    "Choose the experiment's reference table": "guide-experiment-scattering"
+  },
+  "application/experiment/data-source.md": {
+    "Use this group": "guide-experiment-data-source"
+  },
+  "application/experiment/measured-data.md": {
+    "Inspect the range and points": "guide-experiment-data-settings"
+  },
+  "application/experiment/performance.md": {
+    "Use this group": "11-experiment-settings"
+  },
+  "application/analysis/index.md": {
+    "Load or prepare the project": "guide-project-actions",
+    "Compare the starting pattern": "10-experiment-loaded",
+    "Choose free parameters": "13-analysis-basic",
+    "Select a fitting mode": "guide-analysis-modes",
+    "Start and inspect the fit": "13-analysis-basic",
+    "Save the project and report": "guide-report-saved",
+    "Inspect parameter correlations": "guide-analysis-correlations",
+    "Read recorded fit statistics": {
+      "Fit result": "joint-result",
+      "Experiment fit result": "joint-experiment-results",
+      "Structure fit result": "joint-structure-results"
+    }
+  },
+  "application/analysis/parameters.md": {
+    "Choose independent parameters": "13-analysis-basic"
+  },
+  "application/analysis/minimizer.md": {
+    "Choose the search settings": "guide-analysis-minimizer"
+  },
+  "application/analysis/fitting-mode.md": {
+    "Select the mode in the app": "guide-analysis-modes",
+    "Fit a scan": "scan-mode",
+    "Fit the shown scan dataset on its own": "scan-mode"
+  },
+  "application/analysis/fitted-reflections.md": {
+    "Use this group": "group-refine-ls"
+  },
+  "application/analysis/aliases.md": {
+    "Name parameters with aliases": "guide-analysis-aliases"
+  },
+  "application/analysis/constraints.md": {
+    "Define constraints": "guide-analysis-constraints"
+  },
+  "application/analysis/joint-fit-weights.md": {
+    "Fit several experiments jointly": "joint-weights"
+  },
+  "application/analysis/sequential-fit.md": {
+    "Use this group": "scan-declaration"
+  },
+  "application/analysis/scan-extraction-rules.md": {
+    "Use this group": "scan-extraction"
+  },
+  "application/analysis/fit-start-values.md": {
+    "Inspect the last starting values": "guide-analysis-start-values"
+  },
+  "application/analysis/fit-result.md": {
+    "Use this group": "joint-result"
+  },
+  "application/analysis/experiment-fit-result.md": {
+    "Use this group": "joint-experiment-results"
+  },
+  "application/analysis/structure-fit-result.md": {
+    "Use this group": "joint-structure-results"
+  },
+  "application/analysis/parameters-shown.md": {
+    "Choose which parameters are shown": "guide-analysis-shown-parameters"
+  },
+  "application/analysis/pattern-updates.md": {
+    "Choose updates during a scan": "guide-analysis-pattern-updates"
+  },
+  "application/analysis/performance.md": {
+    "Use this group": "scan-performance-analysis"
+  },
+  "application/report/index.md": {
+    "Review the document": "14-report-basic",
+    "Save the project too": "guide-project-save"
+  },
+  "application/report/export.md": {
+    "Choose output formats": "guide-report-export",
+    "Save the report": "guide-report-saved"
+  },
+  "application/report/contents.md": {
+    "Choose the contents": "guide-report-contents"
+  },
+  "application/report/saved-reports.md": {
+    "Keep saved reports current": "guide-report-saved"
+  },
+  "application/tutorials/cases/pd-neut-cwl_cosio-d20_scan-213f.md": {
+    "Choose a dataset": "scan-experiment-before",
+    "Choose the starting-point rule": "scan-mode",
+    "Inspect the scan declaration": {
+      "Sequential fit": "scan-declaration",
+      "Scan extraction rules": "scan-extraction"
+    },
+    "Run, stop and continue": "scan-progress-controls",
+    "Inspect the scan views": {
+      "Stacked": "scan-analysis-stacked",
+      "Map": "scan-analysis-map",
+      "Evolution": "scan-evolution",
+      "Correlations": "scan-correlations"
+    },
+    "Save the scan": "scan-report-basic"
+  },
+  "application/structure/magnetic-space-group.md": {
+    "Use this group": "group-space-group-magn"
+  },
+  "application/structure/propagation-vectors.md": {
+    "Use this group": "group-propagation"
+  },
+  "application/structure/magnetic-moments.md": {
+    "Use this group": "group-moments"
+  },
+  "application/structure/magnetic-form-factors.md": {
+    "Use this group": "group-form-factors"
+  },
+  "application/structure/symmetry-operators.md": {
+    "Use this group": "group-symop"
+  },
+  "application/structure/magnetic-operators.md": {
+    "Use this group": "group-magn-operators"
+  },
+  "application/structure/atoms-in-the-cell.md": {
+    "Use this group": "group-expanded-atoms"
+  },
+  "application/structure/moments-in-the-cell.md": {
+    "Use this group": "group-expanded-moments"
+  },
+  "application/structure/bonds.md": {
+    "Use this group": "group-bonds"
+  },
+  "application/experiment/reflections.md": {
+    "Use this group": "group-refln"
+  },
+  "application/experiment/fitted-reflections.md": {}
+}

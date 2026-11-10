@@ -1,0 +1,28 @@
+{
+  "file": "pattern.xy",
+  "rows": [
+    [
+      3500.0,
+      0.25,
+      1
+    ],
+    [
+      3600,
+      4,
+      2
+    ],
+    [
+      3700.0,
+      9,
+      3
+    ]
+  ],
+  "counts": {
+    "skipped": 0,
+    "nonpositive": 0,
+    "duplicates": 0,
+    "reordered": 0,
+    "derived": 3
+  },
+  "beam": "tof"
+}

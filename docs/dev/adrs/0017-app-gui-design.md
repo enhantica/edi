@@ -1,0 +1,1390 @@
+# ADR-0017 — The edi app's GUI design: layout, naming, colours and icons
+
+- **Status:** Proposed (the owner's ideas of 2026-09-29, confirmed one by one in the loop)
+- **Date:** 2026-09-29
+- **Implementation:** 🟡 Partial — §1–§14 are built (ideas 10 and 18 withdrawn by the owner); the two parts of
+  §14's calculator decision deferred (writing
+  `crysta` on save, switching the five `cryspy` examples) landed with; §15 is built and
+  §16
+- **Priority:** Medium
+- **Forward constraint (binding on new features):** a new page, group, field or button follows the layout,
+  naming, colour and icon rules below; a change to one of them changes this ADR in the same commit.
+
+**Amended 2026-10-24 ([ADR-0051](0051-names-and-numbers-from-the-dictionary.md)):** the titles, icons and field names of §3, §5, §8 and §21 are crysta dictionary values
+read through the display bridge, not app code; the choices themselves are unchanged.
+
+## Context
+
+ADR-0015 fixes the app's stack: easydiffractionbeta v0.9.9 is the layout authority, gui-components v0.9.1 is the
+base, consumed unmodified, and every sidebar group is one `.edi` category. What it does not record is the design
+detail the owner decides by looking at the running app: which group opens, what a tab or group is called, which
+buttons show, what colour a datablock has. The owner asked on 2026-09-29 that every such choice and its
+clarification be written down *"with layout, colors, etc. So, that in the future development it is clear what we
+want."* This ADR is that record. It gathers the decisions it rests on and adds ideas, each cited by number.
+
+The decisions it rests on, unchanged here:
+
+- **Sidebar groups are `.edi` categories** (ADR-0015 §3): a group exists exactly when the core returns its
+  category; Basic or Extras is a per-category choice in `app/src/category_list_model.cpp`.
+- **A loop in `.edi` is a table in the GUI**: every loop category's content is a
+  `TableView`, with its row count in the group title.
+- **Theme:** the base's themes (Light, Dark, System); System follows the platform's colour scheme live
+  (`app/qml/Globals/AppState.qml`). Every colour is a token of the base's `EaStyle.Colors`.
+- **Fonts:** as ADR-0015 §10 records them — PT Sans for text, PT Mono for `.edi` text, Baloo 2 for the
+  wordmark, Font Awesome 5 Solid for icons. This ADR does not restate them.
+
+## Decision
+
+### 1. Home and About
+
+- **The wordmark and the version are one composition on Home and in About**, from one component
+  (`Components/WordmarkWithVersion.qml`), so the two cannot drift apart (ideas 2 and 3; the owner's review of
+  2026-09-29): the wordmark (`Components/Wordmark.qml`, the mark and "easy" over "diffraction") centred
+  horizontally as one unit, then the version line `Version <version> (<date>)` centred on its own below it,
+  one x-height of the version's font apart (measured, `FontMetrics.xHeight`; the owner, 2026-09-29, was two
+  font units). The wordmark carries no caption: the version never hangs under the name.
+- **The wordmark's size** is the same in both: a mark of 5 base font units (`AppSizes.homeMarkDiameter`,
+  easydiffractionbeta's Home size; idea 2). In About a click on the mark opens the homepage.
+- **About** has no tabs and stacks, each centred: the wordmark and version, the description, two links, and the
+  copyright footer (the owner, 2026-10-21). The first link names edi's own licences by their identifiers
+  (`BSD-3-Clause`, `GPL-3.0-only`) after the licence icon, each opening its text (`LICENSE`, `COPYING`) as plain
+  text in a popup; the second, *Third-party licences* after the same icon, opens a popup with the third-party
+  table: component, version and licence, its rows with the header's margins, looking enabled and selecting nothing.
+  The space above and below the links is the space the description and the copyright had between them. **Home** stacks the wordmark and version, then Start, then the two link columns.
+- **The description** reads *"EasyDiffraction is a software for calculating diffraction patterns based on
+  structural models and refining their parameters against experimental data."* (`ApplicationInfo.description`,
+  idea 1). It wraps, centred, at a width of 1.15 × one third of its one-line width, so it takes three lines of
+  similar width.
+- **Online documentation** opens `https://docs.easydiffraction.org/app/` (`ApplicationInfo.docsUrl`, idea 4),
+  from Home and from the app bar. **Amended 2026-11-02 (ADR-0065):** the documentation is `https://enhantica.github.io/edi/`, and Home's links
+  are two columns, Learn and Contact and about.
+
+### 2. The main area and the Experiment type group
+
+- **The supported minimum app size** (the owner, 2026-10-25) is 1024 × 640 logical pixels, `AppSizes.minimumAppWidth`
+  and `minimumAppHeight`, one value for both of its uses. It was checked on every page at that size (`edi_app --demo
+  <dir> --demo-only minimum-`): every page's sidebar reaches each input by scrolling, a group's fields stay on one row,
+  and every chart toolbar keeps whole groups (§15). The desktop window cannot be made smaller (its `minimumWidth` and
+  `minimumHeight`). The browser's page can: below either dimension the app shows only the empty view's background, as
+  *No structures defined* does, with *Increase the window size* centred in the empty view's font, over everything,
+  dialogs included, and takes no pointer input. Nothing beneath is torn down, so growing the page back shows the same
+  page, tab, selection and scroll position. Later work that adds controls keeps this minimum.
+- **Main-area tab names name the view** (owner, 2026-10-05; until then they were the current block's icon and name,
+  ideas 6–8 and 23): **Project** on Project, **Structure** on Structure, **Pattern** on Experiment and Analysis (Analysis
+  had *Fitting*), **Summary** on Report; the Analysis tabs read Pattern, Correlations and Evolution (owner, 2026-10-11). The block
+  is named by the selector row above the view (§7). **Every tab is text only** (owner, 2026-10-05), in the main view
+  and the sidebar alike. `Components/IconTabButton.qml` is the base's `TabButton` with its content drawn as one icon
+  line (§10); without an icon it draws the name alone.
+- **Experiment type** sits in the Experiments explorer, between its table and its buttons (owner, 2026-10-05), and
+  has no sidebar group of its own. It shows the selected experiment's type axes as a grid **three wide**, filled
+  row by row: sample form, beam mode and probe on the first row; scattering type, dimensionality and
+  polarization on the second. Each box is `(sideBarContentWidth − 2 × fieldSpacing) / 3` wide; the rows are
+  `groupContentSpacing` apart. The four axes can be changed while the experiment has no measured data and are
+  fixed once it has. A change makes the experiment again with the new type, keeping its name, its linked
+  structure and, within one beam mode, its range. Dimensionality (1D) and polarization (None, shown for a
+  neutron probe only) are placeholders, disabled until implemented (§4).
+- **The sidebar tabs** read **Main · Extra · Text** (owner, 2026-10-05). Code keys them by a stable id
+  (`sideBar.tab.basic`, `sideBar.tab.extras`, `sideBar.tab.text`), never by the label.
+
+### 3. Sidebar groups: titles, which one opens, borders
+
+- **Titles** follow easydiffractionbeta's group names where a category matches one. **A loop category's title is
+  plural**, since it names the rows it counts; the count follows in brackets (idea 19). **Exception —
+  Background**: its title names the category, not its rows, since the category holds line-segment points and
+  will hold polynomial (Chebyshev) coefficients alike (the owner, 2026-09-29); it stays *Background (N)*. The
+  full title table:
+
+  | `.edi` category | Title | Loop | Icon (Font Awesome 5) |
+  |---|---|:--:|---|
+  | `metadata` | Project | | `archive` |
+  | `space_group` | Space group | | `satellite` |
+  | `cell` | Cell | | `cube` |
+  | `atom_site` | Atom sites | ✓ | `atom` |
+  | `scattering_length` | Scattering lengths | ✓ | `ruler` |
+  | `experiment_type` | Experiment type | | `radiation` |
+  | `data` | **Measured data** (was *Measured range*, idea 15): the axis summary over the points table; the count is the number of measured points (the owner, 2026-09-29), which the core's category list does not count, so `ExperimentViewModel` marks `data` a loop of that many rows | ✓ | `arrows-alt-h` |
+  | `data_range` | Calculation range | | `arrows-alt-h` |
+  | `instrument` | Instrument | | `microscope` |
+  | `peak` | Peak profile | | `shapes` |
+  | `background` | Background (the plural rule's exception, above) | ✓ | `wave-square` |
+  | `linked_structure` | **Linked structures** (was *Linked structure*) | ✓ | `layer-group` |
+  | `excluded_region` | Excluded regions | ✓ | `eraser` |
+  | `absorption` | Absorption | | `tint` |
+  | `preferred_orientation` | **Preferred orientations** (was *Preferred orientation*) | ✓ | `compass` |
+  | `scattering_source` | Scattering source | | `atom` |
+  | `refln` | Reflections | ✓ | `list` |
+  | `minimizer` | Minimizer | | `level-down-alt` |
+  | `fitting_mode` | Fitting mode | | `sliders-h` |
+  | `alias` | Aliases | ✓ | `tag` |
+  | `constraint` | Constraints | ✓ | `equals` |
+  | `joint_fit` | **Joint-fit weights** (was *Joint fit*) | ✓ | `link` |
+  | `sequential_fit` | Sequential fit | | `list-ol` |
+  | `sequential_fit_extract` | **Scan extraction rules** (was *Scan extraction*) | ✓ | `filter` |
+  | `fit_parameter` | **Fit start values** (was *Fit start state*) | ✓ | `history` |
+
+  The block lists keep theirs: `Structures (N)` (`layer-group`) and `Experiments (N)` (`microscope`).
+- **The first group of every tab starts unfolded, every other folded** (the owner, 2026-10-25, replacing
+  "all foldable groups start folded" of 2026-09-29): on every page and every sidebar tab (Main, Extra, Settings and
+  the rest), the first group the tab shows is open while nothing is remembered for it, and a group the user has
+  opened or folded keeps that state, by one rule (`SideBarGroups.isOpen`) every foldable group asks. Get started on
+  Project → Main and the block lists (Structures, Experiments) stay open at the start (owner, 2026-09-29,
+  2026-10-05). The base's auto-collapse is kept: opening a group folds the others on its tab. Groups that cannot
+  fold — the shared block selector (§7), the untitled Analysis Parameters and Fitting groups, the Text tab's
+  groups — are not affected. The demo opens each group its capture shows with a click.
+- **Order:** groups follow the core's page order of categories, except where the app lists a different one
+  (`presentation_order` in `app/src/category_list_model.cpp`; presentation only — the Analysis table and the
+  files keep the core's order): on Experiment → Basic **Background is shown directly above Instrument**
+  (the owner, 2026-09-29) and **Linked structures last** (the owner, 2026-10-04, when Excluded regions moved to
+  Basic), giving block selector · Experiments · Experiment type · Background · Instrument · Peak profile ·
+  Excluded regions · Linked structures.
+- **Measured data is on Extras** (the owner, 2026-09-29), not Basic: its summary fields and data table are
+  the first group of Experiment → Extras, above Peak profile's Extras part (the core's order among the Extras
+  groups puts it first). Sidebar only: the core's category order, the files and the Analysis table are
+  unchanged. Calculation range (a calculation-only experiment's grid) stays on Basic.
+- **Background** shows at most four table rows (the owner, 2026-10-04; five before), then scrolls (`maxRowCountShow`, as the other tables);
+  Its buttons stay below it: Add point, Id from position and Estimate for points, and Add term, Id from order and
+  Estimate for a polynomial or Chebyshev background's terms, each with its longer wording as a tooltip (the owner,
+  2026-10-11; the singular names and Id from order, 2026-10-20, so each names the id column it fills). The terms
+  table shows each term's id before its order, as the points table does.
+- **The last group a tab shows draws no bottom border** (idea 11). The base's `GroupBox` takes `last` from its
+  parent's last child, which in a column with a `Repeater` is the last delegate whether it is shown or not
+  (gui-components#55), so edi sets `last` itself (`Globals/SideBarGroups.qml`). "Shown" is the group's tab
+  rule (`CategoryGroup.shown`), not `visible`, which is also false while the page is hidden.
+  `CategoryGroup.admitted` is the explicit presentation input to that rule and defaults to true;
+  tier/extras and measured-data requirements still apply. Its readonly `shown` drives both `listed`
+  and `visible`, so logical ordering and the group's own visibility agree without filtering by
+  effective ancestor visibility. Project excludes `su_format` and `report` through this input:
+  standard uncertainties have their specialized group, and report settings belong to Report.
+  The former Project-only `visible` override left those hidden generated groups logically listed,
+  allowing a trailing hidden report group to steal the last-group border. Structure Basic/Extras,
+  Experiment Basic/Extras and Analysis Extras retain default admission and their original tier/data
+  rules. Category models, native interface eligibility, content loading, remembered open state and
+  backend sidebar ordering are unchanged; this is not a schema filter or scientific permission.
+
+### 4. Actions not yet implemented are shown, disabled
+
+A button easydiffractionbeta had, or the owner asks for, whose function edi does not have yet, is **shown and
+disabled** rather than left out, so the layout is final:
+
+- **Create structure** (easydiffractionbeta's Define structure manually, now implemented, §18) beside **Load
+  structure from file** in Structures, two half-width buttons in a row, the second with the `plus-circle` icon, as
+  easydiffractionbeta's (idea 13). Experiments has **Load experiment** and **Create experiment** in the same
+  places (§18).
+- **Autodetect** (tooltip: reset to the autodetected background) beside **Add point** in Background, the
+  `magic` wand icon (idea 17; the owner, 2026-10-11, in place of `undo-alt`). Now implemented as **Estimate**,
+  in the same place with the same icon: it opens the estimate dialog of
+  [ADR-0040](0040-automatic-background-estimation.md).
+- **Open project from URL…** in Project → Basic → Get started, `link` icon (the owner, 2026-09-29, idea
+  27). Get started's four buttons sit two by two: *Create a new project*, *Open an existing project*; *Save
+  project as…* (§13), *Open project from URL…*.
+- **Set automatically** to the right of **cutoff (FWHM)** in Extras → Peak profile, on the same row, field and
+  button half the row each with their bottoms aligned, `magic` icon, and the tooltip *Not available yet* (the
+  owner, 2026-09-29): there is no automatic cutoff yet. A disabled button takes no hover, so its tooltip hangs
+  on the item around it.
+- **In Preferences** (§12): Updates' **Check on application start** (unchecked) and **Check now**, and
+  Experimental's **Zoom** (at 100 %) and **Language** (English) — each with the *Not available yet* tooltip on
+  the item around it. None takes effect whatever a settings file says: no update check runs at start, no zoom
+  and no language is applied.
+- **A button sharing a row with a field is exactly as tall as the field's box** (the field's height less its
+  title inset) and shares its bottom, so both edges line up (the owner, 2026-09-29). The base sizes the two
+  from different things — a text field's box from its text line plus twice its padding, a sidebar button from
+  the fixed `sideBarButtonHeight` token (2.75 font units) — so side by side the button stood taller. Rows of
+  buttons only (Background's Append and Reset, the block lists' Load and Define) are all one height already;
+  the cutoff row is the only field-and-button row.
+
+### 5. Parameter fields: rows, widths, profile-unused fields, labels
+
+- **Peak profile has no subheadings for now**. Under the profile selector its fields run **one row per
+  family** (the owner's review of 2026-09-29), every row five fields wide so the columns line up and a
+  shorter row leaves its last cells empty (`ExperimentViewModel.peakBackToBack` / `peakGaussian` /
+  `peakLorentzian` /
+  `peakOther`, by `.edi` name prefix):
+
+  | Profile | Row 1 | Row 2 | Row 3 | Asymmetry row |
+  |---|---|---|---|---|
+  | TOF Jorgensen–Von Dreele | α₀ α₁ β₀ β₁ (`rise_*`, `decay_*`) | σ₀ σ₁ σ₂ size G strain G (`broad_gauss_*`) | γ₀ γ₁ γ₂ size L strain L (`broad_lorentz_*`) | — |
+  | TOF Jorgensen | α₀ α₁ β₀ β₁ | σ₀ σ₁ σ₂ size G strain G | — | — |
+  | TOF pseudo-Voigt | — | σ₀ σ₁ σ₂ size G strain G | γ₀ γ₁ γ₂ size L strain L | — |
+  | CW pseudo-Voigt, CW Thompson–Cox–Hastings, and any CW profile | — | U V W (`broad_gauss_u/v/w`) | X Y (`broad_lorentz_x/y`) | the declared `asym_*` fields, as now |
+
+  A fourth row takes any peak field of no family; the asymmetry fields keep their own row after them, five
+  wide as the others.
+- **A field the selected profile does not use is not shown in the sidebar.** The core keeps such a field in
+  its category while it is free (ADR-0015 §3), so a switch of profile (TOF JvD to pseudo-Voigt or to
+  Jorgensen, CW to TOF fields in the file) used to leave it as an input labelled "… (not used by this
+  profile)", whose label ran over its neighbours. Now `ParameterGrid` hides it and the other fields close
+  up, a family row with no used field disappears, and the field stays in the Analysis table, where it can be
+  fixed. Its value is unchanged and stays in the file.
+- **Every field's title is set the same way, as the combo box's** (the owner, 2026-09-29): left-aligned,
+  inset from the field's left edge by the base combo box's own content padding (read at run time from a base
+  `ComboBox`, not a number of edi's; 0.75 font units in v0.9.1), as wide as the field less that inset, and
+  ending in "…" when longer, so no title runs past its field or over a neighbour. The vertical gap, font and
+  colour are the base's own, the same for text fields and combo boxes. `Globals/FieldTitles.qml` applies it to
+  `ParameterField`, `ValueField`, `SelectorField` and the Experiment type boxes — so to Space group, Cell,
+  Atom-site fields, Measured data, Instrument, Peak profile, Absorption, Minimizer, Fitting mode and the rest.
+  The base draws a text field's title right-aligned and a combo box's inset from the left; edi follows the
+  latter everywhere.
+- **Minimizer's max iterations shows the bound the fit uses**: the declared `_minimizer.max_iterations`, or,
+  when none is declared, the fit's own cap (`edi::default_max_iterations()`, 50) — as the tolerance beside it
+  shows crysta's default. A project that declares none showed an empty field before.
+- **Minimizer's stop rule** (the owner, 2026-11-04): a selector, χ² change or Shift/s.u., on the left of one row, and on
+  its right one value field holding the chosen rule's value (`_minimizer.chi_square_tolerance` or
+  `_minimizer.shift_tolerance`, declared or crysta's default). A new project declares Shift/s.u. 0.1 (the owner,
+  2026-11-04), which also ends on the χ² change when that passes first; a project that declares no rule shows the χ²
+  change, which is what it fits with. Below them, the iteration bound, and beside it, for a project with a magnetic
+  structure only, "Magnetic moments near zero": Try exact zero (also when none is declared) or Keep free
+  (`_minimizer.moments_near_zero`).
+- **Fields share the full row** unless a rule above says otherwise: a row of fields takes the sidebar content
+  width, split evenly (the base's `GroupRow` fields, and `ParameterGrid` with `fillRows`, as Instrument).
+  Absorption now does so too: μR alone takes the row, ABSCOR1 and ABSCOR2 half each (the owner, 2026-09-29; it
+  was three columns wide). The sweep found no other half-empty row; the exceptions are deliberate — Peak
+  profile's five-wide rows above, and Experiment type's grid three wide (§2).
+
+### 6. Measured data: the increment
+
+**inc** shows one value when every step between neighbouring points reads the same at the field's display
+precision (the base's three significant digits, `Utils.toDefaultPrecision`), and otherwise the smallest and
+largest step as `min–max` (TOF data, merged scans; idea 16). The steps come from `RangeViewModel.stepMinimum`
+and `stepMaximum`.
+
+### 7. The block selector and the Text tab
+
+- **One block selector per page, in a row at the top of the main area** (owner, 2026-10-05; it was under the
+  sidebar's tab bar before, and the main view's tab bar for one build): on the Structure, Experiment and Analysis
+  pages, under the main view's tab bar and above the chart toolbar, a row (`Components/MainAreaBlockSelector.qml`,
+  `objectName` `mainArea.blocks`) on the chart background: a compact combo box (`Components/BlockSelector.qml`),
+  then the previous and next buttons (held, they repeat at about the keyboard's rate, as the arrow keys do; owner,
+  2026-10-06), the last one's right edge on the right edge of the chart toolbar below
+  (which differs by page: each chart states it as `toolbarRightInset`). The chart toolbar's margin is above the
+  row, and one margin, the chart's own above its toolbar, separates it from the chart, with no line (the owner
+  compared the two, 2026-10-05); the row and the chart toolbar below it start at the main area's margin
+  (`AppSizes.mainAreaMargin`, 2 em, the pattern chart's room right of its plot areas; the owner, 2026-10-05); the box and the buttons are a toolbar group's spacing apart. The
+  charts give up that height. Every line of the box reads in the Experiments table's column order: the block's
+  number (minor colour), its icon in its colour (§8), for an experiment its fit outcome (§17), then its name, a
+  long one cut in the middle. The row is hidden while the project holds no block of the page's kind.
+- **Long lists are searchable** (owner, 2026-10-05): every combo box that lists project items (the block selector,
+  the alias parameter) is a `Components/SearchableComboBox.qml`, which puts a search field at the top of its list
+  when it holds more than 10 entries. The field filters by any part of an entry's text, ignoring case; Enter picks
+  the first entry left.
+- **Block selectors: one component, one shared current block** (the owner, 2026-09-29). Every selector that
+  chooses among a project's blocks is a `BlockSelector` — the shared one on Structure and Experiment, and the
+  experiment selector of Analysis — so all read number, coloured icon and
+  name, in the box and the list alike. Each reads and writes the project's one current index
+  (`ProjectViewModel.currentExperimentIndex` / `currentStructureIndex`), never another selector, so choosing
+  an experiment on the Experiment page makes it current on Analysis and the other way round; after a choice the
+  box follows the shared index again. Structures are chosen on the Structure page only (its selector and its
+  Structures table share `currentStructureIndex`). The Analysis parameter table lists every parameter of the
+  project, so a change of experiment keeps a selected row that is still shown (§11).
+- **One project at a time, so no project selector** (the owner, 2026-09-29): the app does not open several
+  projects together, so the Project, Analysis and Report Text tabs — one block each — have no selector. No Text
+  tab has a selector of its own: on Structure and Experiment the shared block selector serves it. The shared
+  block selector and the Analysis Basic experiment selector stay, as they choose among several blocks.
+- **The Text tab's text view fills the whole tab** (idea 5, as the owner revised it on 2026-09-29): the
+  sidebar's full width, edge to edge, from the top of the tab's view — right under the tab bar on Project,
+  Analysis and Report; right under the shared block selector's border on Structure and Experiment, never
+  over the selector — down to the sidebar's bottom, on every page's Text tab. It
+  has no border and no inset box: its `textViewBackground` runs to the sidebar's edges, where the sidebar's own
+  edge line stays; only the text keeps its padding of one font unit inside it. While the Text tab is shown,
+  `WorkflowPage` lets the base's tab view reach the sidebar's bottom instead of stopping above Continue (a
+  binding on the view's `anchors.bottomMargin`; the other tabs keep the base's). The view never gets shorter
+  than 5 font units. This replaces fixed height plus the window's growth.
+- **Every category of a file has a group** (the owner, 2026-10-25 and 2026-10-27). A category a block's file
+  carries with no designed group gets one in Extras, made from crysta's dictionary and the block's text
+  (`GeneratedCategory`, `GeneratedGroup.qml`): a loop as the shared table, single items as labelled fields with their
+  units, the dictionary's title and labels; read-only for output categories and for the items the program writes
+  (the project's times and location); an edit is the block's text with the value, applied as the Text tab applies
+  an edit. Only what a user sets or reads gets one: not the file header, the calculator, the Cartesian transform,
+  the curves' presentation order, the block list or the correlation pairs, and not the bond settings, which get a
+  designed group. The Project page shows `project.edi`'s categories this way, and the Structure view's settings are
+  each structure's own, saved with it (`_structure_view`).
+- **The Text tab is coloured, editable and applied** (the owner, 2026-10-25 and 2026-10-27). The
+  text takes easydiffraction's colours as theme tokens, each readable on both themes: datablock names orange
+  (`textDatablock`), item names blue (`textItem`), loop column names green (`textLoopColumn`) and `loop_` grey
+  (`textLoop`). At the tab's top right, **Show** (a toolbar combo box) chooses *Editable*, the default, which shows the
+  block's input categories and can be edited, or *Everything*, which adds the measured data and the program's
+  output (the categories crysta's dictionary marks as output) and is read-only. Show is one application setting, the same on every Text
+  tab and in Preferences > Appearance, saved with the preferences, not the project. **✓**, right of Show, is
+  enabled only while the text differs from the block's; it applies the edit as opening a file holding it would: the
+  project's files are saved to a scratch folder, the block's file replaced by the edit with the output categories it
+  did not show added back, and the folder opened with every check an open runs (`edi::project_with_file_text`).
+  A refused edit changes nothing, stays in the view, and the reason shows under the controls. An applied edit
+  replaces the project in one Undo step. Under Everything ✓ is disabled and its tooltip says to switch Show to
+  Editable. Leaving an unapplied edit (another block, page or Show choice) asks "Discard changes?": Apply applies it
+  as ✓ does and leaves, a refused apply staying on the text; Don't apply drops it; Cancel keeps it and returns to it.
+  ✓ is red with a white check while enabled, and Show and ✓ float over the text's top right. One category's items
+  follow each other without blank lines, one blank line between categories. A scan project's text applies too: an
+  edit reaches its template as a page's edit does, and a changed scan declaration lists and reads the scan again.
+- **Continue is a pill** (the owner, 2026-09-29), on every page and tab that shows it: the base button's own
+  background (`themeBackground`, hovered `themeBackgroundHovered1`) and 1-px border (`appBarComboBoxBorder`)
+  shown, fully rounded ends (radius half its height, `sideBarButtonHeight`), as wide as its icon and text plus
+  one font unit on each side, horizontally centred, one font unit above the sidebar's bottom (the base's 0.5
+  plus half; it was 1.5 before the owner moved it a third of the way down, 2026-09-29). `WorkflowPage` sets
+  these on the base `SideBar`'s `continueButton`; the width reads the base button's unnamed icon-and-text row,
+  and the raise is a binding on its bottom margin. The base is unmodified; the base's fade above Continue moves
+  with it.
+- **On the Text tab** the pill floats over the text view with nothing else: the base's grey fade stays hidden
+  there (`WorkflowPage` finds it as the `SideBar`'s child with a gradient). The text's last lines scroll clear
+  of the pill: the view's bottom margin is the pill's height plus half a font unit
+  (`AppSizes.textViewContinueClearance`). Report, which has no Continue, has no such margin
+  (`TextTab.underContinue: false`).
+
+### 8. Datablock colours and iconified names
+
+Every datablock has a colour and an icon, as in easydiffractionbeta (ideas 12 and 20), from
+`Style/AppColors.qml`. The colours are the figure palette's (Preferences, Appearance: Earth, the default, Classic,
+Soft, Natural or Colour-blind safe; ADR-0038), read from the palettes in `data/palettes` (PROVENANCE.md there) through
+the core's `figure_colour`, which the charts' style table and the report read too. Experiments and structures share
+one order of eleven colours: each block holds a position (`colour_positions`), keeps it while it exists, and a new one
+takes the next free position, Earth keeping its first two for experiments; past eleven, shades of the first two. A
+report always takes the light colours:
+
+| Block | Icon | Colour at its position (light / dark theme), Earth |
+|---|---|---|
+| experiment | `microscope` | first `#618EC8` / `#6E92CB`, then `#8B9762` / `#94935C`, the two Earth keeps for experiments; a third experiment the next free position |
+| structure | `layer-group` | from the third position on: `#C58A03` / `#C58901`, then `#C877B7` / `#C375C2`, `#A27957` / `#C59B77`, … |
+
+An element's colour is the Jmol colour of the core's element table (`data/elements/element-styles.tsv`, ADR-0022
+§4, the same values as easydiffractionbeta's `Logic/Tables.py`), of the type symbol's element: its first capital
+letter and the lower-case letter after it (`Co2+` is Co, `162Dy` is Dy, `2H` is H). An element the table does not
+have takes the minor foreground colour. The app holds no element colour of its own (`AppColors.element()` asks the
+core through `ApplicationInfo.elementColor`). The colour follows
+the site's type symbol as it is edited: the parameter registry reads each atom parameter's element again at
+every publish (`ParameterRegistry::refreshElements`), not only when the set of parameters is rebuilt. An experiment's colour is
+the one its measured data takes in the pattern chart, and a structure's is the one its Bragg ticks take (§15).
+
+- **Block tables:** the Structures and Experiments tables have a colour column after `No.`, one table row high,
+  with the block's icon in its colour (tooltip *Calculated pattern color* / *Measured pattern color*), as
+  easydiffractionbeta's Models and Experiments tables.
+- **Every loop table has one design** (the owner, 2026-09-29): a `No.` column first (row numbers from 1,
+  in the minor colour); where the rows are datablocks — Structures, Experiments, Linked structures, Joint-fit
+  weights — the block's icon in its colour next (`IconCell`, §10); left-aligned text columns (names, labels,
+  paths) and centred number columns under centred headers, numbers at display precision (`TextCell`); the
+  base's header style and cell insets. Joint-fit weights was the one table without `No.` and icon, its names
+  flush with the table's edge; it now follows the rule. The sweep found the others already do: Measured
+  data, Background, Excluded regions, Preferred orientations, Reflections, Atom sites, Scattering lengths,
+  Scan extraction rules, Fit start values.
+- **Linked structures:** each row shows, after `No.`, the linked structure's `layer-group` icon in that
+  structure's colour (found by its name among the project's structures), then its name, the scale, and a
+  remove button — disabled, since an experiment keeps its one linked structure (§4) — as easydiffractionbeta's
+  Associated phases.
+- **The block selector** (§7) shows the same icon and colour before each name.
+- **Atom sites** (Structure page): each row shows, after `No.`, the atom-site category's icon in the site's element
+  colour, as the Analysis parameter names below carry it (the owner, 2026-10-03).
+- **Analysis parameter names** (`Globals/ParameterNames.qml`) are easydiffractionbeta's shortest names with
+  icons and pretty labels: the block's icon in the block's colour; the category's icon (the sidebar group's,
+  §3), for an atom site in its element's colour; the row — an atom's label, or a loop row's number counted
+  from 1 (a background point, a preferred orientation, a linked structure: every loop category whose rows
+  carry parameters, by the core's `ParameterEntry::row_label`) — in the category icon's colour; the parameter's icon in the minor colour; then its short name,
+  never bold (e.g. *[lbco] [atom] O [fill] occ*). In the parameter table the value is bold exactly when the parameter
+  is free (its vary box on), and regular otherwise (owner, 2026-10-05). The parameter icons are easydiffractionbeta's by `.edi` name:
+  `length_*`, `angle_*` `ruler`; `fract_*` `map-marker-alt`; `occupancy` `fill`; `adp_*` `arrows-alt`; `scale`
+  `weight`; `setup_wavelength` and `calib_d_to_tof_*` `radiation`, except `calib_d_to_tof_offset` and the other
+  `calib_*` `arrows-alt-h`; `setup_twotheta_bank` `hashtag`; `broad_*`, `rise_*`, `decay_*` `shapes`;
+  `asym_*` `balance-scale-left`; background `intensity` `mountain`; none otherwise. The path stays in the
+  name's tooltip, and the name filter still matches the path.
+
+### 9. The Project description
+
+The Project page's main area (`Pages/Project/DescriptionTab.qml`) lists, under the name, title and description:
+
+- **Location** — always, the project's directory; for a bundled example the path of its working copy, where a
+  save writes (idea 21). There is no separate *Example* row: the example's id is the working copy's folder
+  name, in the path. The demo shows the working copy's temporary root as `<temporary>` (`Session.projectLocation`),
+  so its images do not depend on the run's directory.
+- **Structures (N)** and **Experiments (N)** — the count in brackets after the label, and as the value the
+  datablock **names** (never file names: a block's file follows from its name, `structures/<name>.edi`),
+  comma-separated, each after its block icon in its colour (§8), wrapping when they do not fit a line — as
+  easydiffractionbeta's *Model file: lbco.cif, coo.cif* (idea 22; `Pages/Project/BlockNames.qml`). A list longer than
+  15 shows its first and last seven names with *…* between (a scan's datasets; owner, 2026-10-06).
+- No *Warnings* row: the loader's warnings are the status bar's messages (§14).
+
+### 10. An icon before a name sits on the name's centre line
+
+Wherever an icon precedes a name — the main-area tab titles, the Project description's block names, the block
+selector (box and list), the colour columns of the Structures, Experiments and Linked structures tables, and
+the Analysis parameter names — icon and text are drawn by one component, `Components/IconLine.qml` (the owner's
+review of 2026-09-29: the icons sat high). Its rule: the text pieces share the line's baseline; each icon is
+placed so the middle of its drawn glyph (its tight bounding box, measured in the icon font) lies on the middle
+of a capital's height of the text (`H`, measured in the text font). Neither the icon font's baseline nor its
+line box is used: Font Awesome's metrics differ from PT Sans's, and either one draws the icon high. The line is
+one text line high whatever it holds, so an icon alone centred in a table cell (`Components/IconCell.qml`, the
+colour column) lies on the centre line of the centred text beside it. Pieces are separated by half a font
+unit; a bold piece uses PT Sans Bold by its family and style (ADR-0015 §10). Where a line replaces a
+control's content, it is given the control's full height to centre in: the block selector's list rows drop the
+base menu item's vertical padding (16 on each side of a row 2.5 font units tall, which leaves no height and
+clipped the line to a sliver). Rich text is no longer used for
+icons: its inline glyphs sit on the font baseline and could not follow this rule.
+
+### 11. The Analysis parameter table has a row selected
+
+**A row of the Analysis parameter table is always selected while the table shows any** (the owner, 2026-09-29),
+so the slider and its two limit boxes always show a parameter: the first shown row when a project opens, when
+the current experiment changes, and when the name filter or the variability filter hides the selected row; a
+row the user selected stays selected while it is shown (`ParametersGroup.ensureSelection`, over
+`ParameterFilterModel.parameterAt` / `shows`). The selected row is the table's current row, marked as the block
+tables' current row is (below). This replaces empty start: the demo's `13-analysis-basic` now shows the first row
+selected with the slider filled; `t2-04-analysis-slider` still clicks that row, and `t2-07-dark-analysis` keeps it.
+The slider spans the selected value ± a half width, set when a row is selected or its value is committed (not while
+dragging; `ParameterItem::sliderHalfWidth`): 0.05 Å for a lattice constant (`length_a`, `length_b`, `length_c`; the
+owner, 2026-10-04), half the value's magnitude (at least 0.001) otherwise.
+
+**A table's current row is marked by an accent bar at its left edge** (the owner, 2026-10-12), not by a background
+tint: the Experiments and Structures tables' current block and the parameter table's selected row. Every row keeps
+its alternating background, the current one too, and hover is unchanged. The bar is the tab bar underline's: 2
+logical px of `themeAccent`, here the full row height, inside the table frame. When another row becomes current
+the bar moves to it as the underline moves between tabs: the same smoothed motion over 250 ms, with its speed
+limit off, since a row is shorter than a tab. It appears on, and leaves, a row in place. Every table marks its
+current row the same way (the owner, 2026-10-21): the bar, which the base ListView draws for its `currentRow` or its
+one selected row, and the row's number in the first column, bold in the accent colour. Every table's rows are
+`Components/TableRow.qml` (ADR-0029); `tableHighlight` is no longer used.
+
+### 12. Preferences, and the sidebar's side
+
+- **edi shows its own Preferences dialog** (`Components/AppPreferencesDialog.qml`), rebuilt from the base's
+  pieces as the About dialog is, with the base's tabs and layout and two of edi's own: Prompts, Updates,
+  Appearance, Projects, Performance, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
+  window always creates it; it stays hidden, as the app bar's Preferences button opens edi's dialog
+  (`Preferences.dialogShown`) instead of setting the base's flag.
+- **Appearance**: Theme; **Palette — Earth (the default), Classic, Soft, Natural or Colour-blind safe** (the
+  experiments', structures' and chart roles' colours, §8, §15, in every chart, icon and report the app draws;
+  ADR-0038), listed from the core, with the colour order under it (ADR-0038 §7); a stored earlier palette reads and
+  is kept as its nearest new one;
+  **Sidebar — Left or Right** (the owner, 2026-09-29); One sidebar group open at a time (the owner, 2026-10-27; it
+  was Auto collapse). **The 1D plotting row is removed** (the owner, 2026-09-29): edi has no choice of chart library.
+- **Projects**: only the defaults a new project takes. New projects' uncertainties (the IUCr recommendation or
+  always 2 digits; a project's own rule is on its Project page's Extra tab) and new reports' libraries (online, the
+  default, or embedded; a project's own is the Report page's Embed box).
+- **Updates and Experimental**: shown disabled (§4).
+- **Performance** (the owner, 2026-11-04): how the app runs on this machine, never saved in a project.
+  - **Threads per calculation** (the owner, 2026-10-10, then named Engine threads under Develop): "Auto", the
+    engine's own thread policy, or a count from 1 to twice the cores the platform reports (at least 16, at most 64;
+    a browser can report fewer cores than the machine has), for a single calculation, a single fit and the
+    Experiment page. It replaces `OMP_NUM_THREADS` and never changes a result. Saved under `develop/engineThreads`
+    (0 is Auto), the key it had under Develop, and applied when the window is complete and on every change; the
+    diagnostics show the preference and the resulting engine workers. How the engine applies it: ADR-0020 §10.
+  - **Parallel fits in a scan**: how many files of a sequential or independent scan are fitted at once, default 1.
+    The box lists 1 to 5 and also takes a typed whole number, taken at 1 and at the cores the platform reports when
+    past them (`RowNumberBox`, the dialog's box with typing). Each file of a group starts from where the previous
+    group ended, so the count can change a scan's results; 1 fits the files one after another. Saved under
+    `develop/scanWorkers` and handed to the engine with `edi::set_scan_workers`.
+  - While parallel fits is above 1 each scan fit runs on one thread, and the threads box says so after its value
+    ("Auto · 1 per scan fit").
+  - Where the app runs single-threaded (a browser without WebAssembly threads), both show 1, disabled, with a tooltip
+    saying why, and a scan fits one file at a time.
+  - The pages' Settings tabs show the count that applies there, read-only, linking here (ADR-0031 §2).
+- **Persistence**: tool tips, auto collapse and the sidebar's side persist in the app's settings file (the
+  base's `Settings` mechanism and file, `EaGlobals.Vars.settingsFile`) under edi's own category
+  `Edi.Preferences` (`Globals/Preferences.qml`); the theme and the logging level keep the base's own
+  persistence. Once the window is complete, `Preferences.apply` hands edi's values to the base — after the
+  hidden base dialog has loaded its own keys, so edi's win — and forces what is not available off: no update
+  check at start, zoom 100 %. A demo or test run has its own fresh settings file, so the sidebar is on the
+  right there.
+- **The sidebar on the left**: the whole sidebar — its tabs, content and Continue — moves to the window's left,
+  the main area with its tabs to the right, live when the preference changes. `WorkflowPage` re-anchors the
+  base `ContentPage`'s two containers (reached as the parents of the main content and the sidebar) and moves the
+  sidebar's border to its edge towards the main area. Nothing is mirrored: text, icons and the order of numbers
+  and columns stay as they are. The base is unmodified.
+- **The sidebar's width** (the owner, 2026-10-22): the sidebar reaches from the window's edge to the centre of the
+  Experiment button in the top bar, so its edge sits under that button on every page that has one. The width is read
+  from the top bar's layout (the centred tabs' position and the button's), not a fixed number, so it follows the window
+  and any change to the buttons: 610 px at the 1280 px minimum window width, 930 px at 1920 px (the base's own was
+  584 px), the same on every page. Each workflow tab is as wide as it is when selected
+  (`Components/WorkflowTabButton.qml`): the base widens only the selected tab, for its bold name, so the tabs, and
+  with them the sidebar's edge, shifted by a pixel or two whenever the page changed. The sidebar on the left keeps the
+  same width. `Main.qml` sets it into the base's `Sizes`, which edi builds
+  with this one value writable (ADR-0015 §2). A number that still does not fit its cell follows §21.
+- **One green** (the owner, 2026-10-22): a free parameter's bold value, the status bar's Success and its ✓ count, a
+  succeeded fit's outcome, an included dataset's mark and an available recent project's mark all draw the base's
+  `Colors.green`, in both themes. The report figures' light palette keeps its own copy of the light value, and the
+  residual curve its own lighter green (ADR-0038).
+
+### 13. Saving
+
+Saving is active:
+
+- **Save** (app bar, highlighted; Ctrl/Cmd+S) writes the project to its own directory; it is enabled while the
+  project has unsaved changes. **Save as** (Ctrl/Cmd+Shift+S, and **Save project as…** in Project → Basic →
+  Get started, beside Create and Open, `file-export`) asks for a directory (a folder dialog) and writes the
+  project there, which is its directory from then on. **The app bar has no Save as button** (the owner,
+  2026-09-29): its left group stays Save, Undo, Redo, Reset, as easydiffractionbeta's. A project with no
+  directory of its own — a bundled example, which lives in a temporary working copy — is saved as on its first
+  Save (`Session.needsSaveAs`); once saved, it is no longer the example's copy.
+- **The core writes**: `Session.save` / `saveAs` stage the project with `edi::save_project_as` beside its folder and
+  publish the checked stage (ADR-0069); the core's `edi::save_project_as` (`core/include/edi/io.hpp`): the last-modified time advances before the write and is
+  restored if it fails, and the directory is remembered only after it succeeds — the Python binding's
+  `save_as` rule, which the binding still spells out itself (a follow-up can move it onto the core
+  function). Every datablock is written: `project.edi`, `structures/<name>.edi`, `experiments/<name>.edi`,
+  `analysis/analysis.edi`. QML writes no file.
+- **The modified state** (`ProjectViewModel.modified`) is set by every edit that goes through the project's
+  one edit path (`apply`: values, vary flags, names, types, loaded or removed blocks) and cleared by a
+  successful save; opening a project starts it clear, and the demo's timestamp pin leaves it as it was. The
+  window title leads with "• " while it is set.
+- **A refused save** opens a dialog, *The project was not saved*, with the core's message: the Messages
+  dialog's fixed content width (§14), the message wrapped inside it.
+- Redo stays disabled. Undo undoes the last fit (§17); it is disabled while the model holds no fit start state.
+- **Phase 2 must gate** the round trip (save, then reopen the directory: the same project, file for file), the
+  modified state (set by an edit, cleared by a save, clear after an open) and an example's first Save going to
+  Save as (and a later Save writing where it was saved as).
+
+### 14. Messages: a status-bar counter and a popup
+
+
+- **One list of messages** (`Session.loadWarnings`, a `WarningListModel`, the only source): the loader's
+  warnings from the last open, and every message a view used to show in red — the calculation's refusal
+  (idea 25), one row per distinct refusal text, which the chart placeholders no longer show (they keep their
+  grey title and points/range line). Each row is a *warning* or an *error*. A new open replaces the list. A
+  dismissed message leaves the list and stays away until it is raised again: a refusal is raised again by the
+  next recalculation that is refused (after a model change); a load warning by the next open.
+- **The status bar's first item, always present** (owner, 2026-10-05; it was the last before): the `exclamation-triangle` icon, the key *Messages*, and
+  the number of messages **not viewed yet** (`WarningListModel.unviewedCount`; idea 24, *"the number of
+  not-viewed warning messages"*), in the status bar's own style: in the theme's red while it is above 0, and
+  0 in the normal value colour once the dialog has been opened, although the list keeps its messages until
+  they are dismissed. A message raised later counts again. Each message carries its own viewed state and
+  the count is derived from them, so a removed message (a dismissal, a refusal that no longer holds) takes
+  away exactly its own share: a viewed one leaves the count as it is, a not-viewed one lowers it by one. Named *Messages*, not *Warnings*, since it holds
+  errors too.
+- **Every dialog sits on whole pixels** (`Components/AppDialog.qml`: About, Preferences, Messages and the
+  save refusal; the base's project-description dialog is placed the same way where edi opens it). The base
+  centres a dialog with a half, so one of odd height lay on a half pixel and its edges were drawn differently
+  on Linux and macOS (edi PR 97, the three-row Messages dialog); edi rounds the centred position. A closed dialog
+  that has no parent item yet stays at (0, 0); attaching a parent restores the same rounded
+  centring bindings. It is not opened, reparented or given a window merely to measure geometry.
+- **A click opens the Messages dialog**, the same dialog as About and Preferences (the base `Dialog`: title
+  bar, padding, background without an outline, OK). **Width fixed**: 38 font units
+  (`AppSizes.messagesDialogContentWidth`, about Preferences' width), whatever the messages. **Height fits the
+  rows** (the owner, 2026-09-29): the list is as tall as its rows (the table's content height; rows wrap), at
+  least one single-line row, and at most what keeps the whole dialog inside the window between the app bar
+  and the status bar less one font unit at each — above that it scrolls. It resizes while open as messages are
+  dismissed, and stays centred. The list is a sidebar table (the base `TableView`, headerless and with
+  alternating rows, as Examples and Recent projects), and its 1-px `appBarComboBoxBorder` frame is drawn again
+  above the rows and the empty state, so nothing covers its edges. Each row: the kind's icon (warning
+  `exclamation-triangle` orange; error `times-circle` red), the message wrapped onto as many lines as it needs
+  (never elided, never widening the dialog; an error's text in red), and the row's dismiss button (the tables'
+  `minus-circle` `TableViewButton`). Empty, the one row shows a muted `inbox` icon and *No messages* on one
+  line, centred. **Dismiss all** is in the dialog's button row, beside OK (the base `DialogButtonBox`,
+  right-aligned), disabled when the list is empty. Opening the dialog marks the messages viewed.
+- **Removed**: the Project description's *Warnings* row (§9), the red banner that popped up after an open, and
+  the chart placeholders' red *Calculation refused* line.
+- **Unsupported engines warn** (the owner's decision of 2026-09-29, "2 + (b)"): the loader (`load_project`,
+  `core/src/io.cpp`) warns `unsupported _minimizer.type "<value>" - using crysta` for an analysis block's
+  minimizer other than `crysta`, and `unsupported _calculator.type "<value>" - using crysta` for an
+  experiment's calculator other than `crysta`, once per distinct value; the run uses crysta either way. Both
+  land in the message list as warnings. A third engine choice warns the same way: `project.edi`'s
+  `_rendering_plot.type`, the plot renderer diffraction-lib declares (`auto`, `plotly`, `asciichartpy`). Each
+  host draws with its own, so `auto` is the one supported value, and any other warns
+  `unsupported _rendering_plot.type "<value>" - using auto`; a missing value (`?`) declares no choice. No
+  committed project declared another value before this task. The calculator warning comes from a project's load; a single
+  experiment file loaded into an open project (Load experiment(s)) passes no warnings today.
+- **The other two parts of the calculator decision came with the crysta follow-up**:
+  - *Writing `crysta` on save.* edi saves through crysta's writer, which now writes
+    `_calculator.type crysta` in every experiment file, whatever the loaded file declared. A project opened
+    with an unsupported calculator warns once and is saved as `crysta`; edi writes nothing itself.
+  - *The bundled examples say `crysta`.* The five examples that declared `_calculator.type cryspy`
+    (`cosio-d20` start-1 and start-4, `ncaf-wish-2bank` start-3, `si-sepd` start-2 and start-5) are crysta's
+    seed projects byte for byte. crysta's seeds switched to `crysta` and the examples with them, so they
+    open without the calculator warning.
+- **An example that always has messages** (idea 26): `pd-neut-tof_fe_pseudo-voigt` (non-executing, so no CLI
+  gate runs it) declares `_minimizer.type "bumps (lm)"`, `_calculator.type cryspy` and
+  `_rendering_plot.type plotly` on purpose, so opening it lists three warnings —
+  `unsupported _calculator.type "cryspy" - using crysta`,
+  `unsupported _minimizer.type "bumps (lm)" - using crysta` and
+  `unsupported _rendering_plot.type "plotly" - using auto` (the owner's widening of idea 26: *"and something
+  else for that project to see more warning messages"*). Its comments and `PROVENANCE.md` say so. It is a
+  verification project, so since 2026-10-10 the app no longer lists it among its examples (ADR-0031); the demo
+  opens a copy of it from the CLI projects instead.
+- **The UI test's images show it** (`t4-03` to `t4-06`): the count before the messages are viewed, the list,
+  the count after, and a refused calculation's error row over the neutral chart placeholder. (`t4-01` and
+  `t4-02` show the Experiment type grid, §2, and Measured data's single increment, §6.)
+
+### 15. The pattern chart
+
+**One pattern view on every page** (the owner, 2026-10-21). The Experiment page, the Analysis page and the Structure
+page's second main-area tab, *Pattern*, beside *Structure* and disabled until an experiment exists, show the same chart
+in full sync: the experiment and dataset selector (on the Structure page's Pattern tab the block selector lists the
+experiments), the axis selectors, zoom and pan, and every toolbar toggle. Its view settings are one set: the y scale,
+the legend, hover-coordinate and structure-curve switches and the pan or box-zoom choice are app settings (ADR-0031
+§7), and the x axis is the project's own, which the report follows. The first build moved one app-owned chart into the shown page by reparenting; the owner's Mac then showed a
+stale copy of the pattern after a zoom and kept the structure fills after the switch went off, neither of which an
+OpenGL capture on Linux shows. So the fallback is taken: each page has its own chart, and every one follows one shared
+view (`AppState.patternViewRanges`, the ranges with the title of the x axis they were set on, and the toolbar's
+choices; only the shown chart writes them). A hidden chart draws nothing and is drawn once when shown; a range is reset
+when the x axis changes, once, on the chart where it changes, so a chart shown again after the change keeps the ranges
+given for its new axis. The structure curves switch in place: a curve not drawn holds no points (Qt Graphs kept an
+area's last drawing when the area was hidden or removed). The Report page's charts stay separate.
+
+**Long structure names fit** (the owner, 2026-10-21): the panes' shared left edge moves right far enough for the
+widest tick-row label (the structure's icon and name), so a name never runs into the plot.
+
+The Experiment and Analysis pages draw the pattern on Qt Graphs, from the core's one description (ADR-0021). The
+chart computes nothing: it draws the series, bands and axes `edi::present_pattern` returns. Its proportions,
+borders, tick counts, legend, toolbar, colours and fonts are easydiffractionbeta's, read from its chart
+code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-10-02); the tick labels stay round.
+
+- **Panes.** Three panes on one shared x range, on the chart background (white in the light theme) over the whole
+  chart area: the main pane (measured with uncertainty, calculated, background, excluded bands), one row of Bragg
+  ticks per structure, the residual. Of the height the toolbar and the x axis leave, the main pane takes 0.7 and the
+  residual 0.3, each less half of what the tick rows take between them; a structure's row is 1.5 em high, in a
+  pane half an em higher. With nothing measured there is no residual pane: the tick rows are then directly under
+  the main pane, which takes the rest of the height. The x labels and title are under the lowest pane shown and
+  only there — the residual, else the tick rows, else the main pane — and the plot areas share their left and right
+  edges, so a tick is under its peak.
+- **Borders and grid.** Every pane's plot area has a border closed on all four sides, in the chart's axis colour:
+  the main pane's, the residual's and the Bragg rows'. Every pane has a grid line down it at each x tick, in the grid
+  colour, so each is one column through all the panes; the main and the residual panes also have one across at each
+  y tick, and the Bragg rows have none across. Borders and grid lines are one border thickness wide (1 px), drawn
+  by the chart itself under everything else, and every plot area begins and ends on a whole pixel, so they are
+  sharp. The border is drawn over the grid, and a grid line on a pane's edge is not drawn, so every side keeps the
+  axis colour (the owner, 2026-10-02). The panes' Qt Graphs theme keeps one colour scheme whatever the app's theme,
+  since a scheme change restores Qt Graphs' own axis colours. Nothing else is drawn around a plot area: no axis line and no tick mark outside it. Qt Graphs' own tick
+  marks, axis lines and grid are transparent in every pane's theme; they are two pixels wide and would cross the
+  tick labels. The Bragg rows are their ticks over that grid, inside their border, and nothing else: no line across,
+  no tick mark and no band behind them. Qt Graphs draws those marks with shader effects, which the offscreen
+  platform's software renderer skips, so a look is checked on a capture from an OpenGL platform (the UI test's).
+- **Ranges and ticks.** Tick labels are round values. A fitted main y range is what is presented and a tenth of
+  its span beyond each end (easydiffractionbeta's rule), with about five round ticks inside it; the x axis has about
+  five. A range the user chose keeps its bounds and takes round ticks inside them. **While a parameter's slider is
+  held** (the owner, 2026-10-25), a fitted main range holds while the calculated curve stays inside it and grows
+  only when the curve leaves it, so dragging a slider does not lay the axis, the grid and every series out again on
+  each step. Letting the slider go fits the range once to the measured and calculated curves, shrinking as well as
+  growing: a scale set far too high and then pulled down ends with the measured pattern at full height. A typed
+  value or a spin-box step fits it at once. Another experiment, dataset, axis, scale or x range, a fit and a reset
+  fit the range again.
+- **The residual's range.** The residual pane is linear on every scale (ADR-0021 §5), its range centred on 0, with
+  three ticks: 0 and the greatest round value inside the range, on either side. **On the linear scale it has the
+  main pane's scale:** one intensity unit is as high in it as in the main pane, so its half range is half the main
+  range times the two plot areas' height ratio, and a residual larger than that is cut at the pane's edge. On the
+  square-root and log scales an intensity unit has no one height in the main pane — its height depends on the
+  intensity — so there is no scale to follow: the range is fitted to the residual in view, the greatest absolute
+  value and a tenth beyond it. Both panes label original values on every scale, so they still read against each
+  other.
+- **Draw order.** The grid and borders, then the measured markers and their error bars, then the lines: measured,
+  background, calculated on top. The legend, the excluded bands and the hover text are over the panes.
+- **Margins.** One em (the owner, 2026-10-02, after easydiffractionbeta's chart) from the chart's top to the
+  toolbar and below the x title. The main area's margin, `AppSizes.mainAreaMargin` (2 em), from the plot areas'
+  right border to the chart's right edge, from the chart's left edge to the toolbar's drop-downs, and from the
+  toolbar buttons' bottom to the main plot area's top border (the owner, 2026-10-05).
+- **Toolbar.** One line centred under the block selector row (the owner, 2026-10-11): the axis boxes, then, a
+  toolbar group's spacing apart, a row of square buttons (2.5 em, with a fill and a border in the axis colour):
+  legend, hover coordinates, each structure's curve (shown only when the chart has a calculated pattern), a spacer,
+  pan, box zoom, reset (the Home icon, as the structure view's), Home last. The
+  y scale is a drop-down of linear, square root and log in the toolbar drop-down style (`ToolbarComboBox.qml`, §16)
+  (the owner, 2026-10-02), and right of it the x axis, the experiment's own (2θ or time-of-flight) or d-spacing
+  (owner, 2026-10-05). On d the chart draws the core's d-spacing capture of the pattern, which needs a calculated
+  one; each chart keeps its own choice, and switching starts the view over. Closed, each box names its axis, *y: linear* and *x: 2θ*, *x: TOF* or
+  *x: d-spacing*, the list naming each choice as the closed box does after its axis (`ToolbarComboBox.closedTexts`;
+  the owner, 2026-10-22). The controls are `AppSizes.toolbarControlSize` tall and
+  `AppSizes.toolbarSpacing` apart within a group.
+- **The legend's side** follows the x axis (owner, 2026-10-05): the top right of the main pane on a 2θ axis, the top
+  left on a time-of-flight or d-spacing axis, where the strong peaks are at the other end. The legend and
+  the hover coordinates are on at the start; pan and box zoom exclude each other, and box zoom is on at the start. An
+  icon is in the accent colour while hovered or checked. `ChartToolButton.qml` and `ChartLegend.qml` are shared
+  with the structure view (§16), whose toolbar is a row of the same buttons; `ChartToolbar.qml` is the pattern
+  chart's own button list.
+- **Legend.** Inside the main plot's top right corner: one line per series in the series' colour — *Measured
+  (meas)*, *Total calculated (calc)*, *Background (bkg)*, *Residual (meas − calc)*, and per structure *Bragg
+  peaks*, the structure icon and the structure's name. The names are the y titles' (the owner, 2026-10-21), and
+  *meas − calc* is coloured as the residual pane's title colours it: `meas` in the measured colour, `calc` in the
+  calculated colour (`edi::legend_label`). The legend's rows and the excluded bands reach QML as typed
+  list models with named roles (`ChartLegendModel`, `ChartBandModel`), as every app model does, never as a list
+  of dictionaries.
+- **Hiding a curve from the legend** (the owner, 2026-10-25, as plotly's legend does): a click on a legend row hides its
+  curve, its row drawn in the disabled colour, and a second click shows it; the row's tooltip says *Click to hide* or
+  *Click to show*. A structure's row hides its ticks and its curve together; on the single-crystal charts a row hides
+  its experiment's reflections. The pattern charts of Experiment and Analysis and the single-crystal charts do this;
+  a report figure does not. The hidden rows are kept per chart while the app runs, not in the project, and cleared
+  when another project opens. What the y range does is a preference, *When a curve is hidden*: **Keep the y range**
+  (the default; the owner wanted nothing to jump), where hiding and showing change nothing and every later fit counts
+  the hidden curves too, or **Fit the range to visible curves**, where hiding and showing fit the range once to the
+  curves still shown and later fits count only those (`edi::PatternView::uncounted`). A hidden curve's points are not
+  read by the pointer.
+- **Each structure's curve** (the owner, 2026-10-14 and 2026-10-21): a toolbar switch with the structure icon, tooltip
+  *Show each structure's curve*, draws every linked structure's calculated curve (crysta's
+  `component_intensities_net`, its ADR-0096) as a soft fill from the background up to the curve, 0.25 opaque, with a
+  1.5 px outline, both in the structure's colour (ADR-0038); the fills are not stacked, and they are drawn under the
+  measured data and the other curves. Off by default; the switch is an app setting (`Preferences.structureCurves`),
+  remembered between sessions, and a report figure never draws the curves. The legend names each curve by its
+  structure. The experiment's data table shows the same curves, one column per structure headed by its name, after
+  `bkg`.
+- **Pointer.** Box zoom sets the x range and the main y range to the dragged box, drawn as the base's chart draws it: a border in the theme's
+  app-border colour filled with the same colour half transparent (the owner, 2026-10-02). Pan moves the x range by the dragged distance. One wheel
+  notch multiplies the x span by 0.8 (towards the user: by 1.25), keeping the x under the pointer fixed. A right click resets, as the reset button
+  does. A box zoom, a wheel zoom and a reset move the ranges over easydiffractionbeta's chart animation time (EaStyle.Times.chartAnimation, 250
+  ms) with Qt Charts' series-animation easing (OutQuart); each frame is an ordinary refresh, the pattern presented and decimated for that frame's
+  ranges, so no point of a frame's range is missing; a pan or a scale change first ends a running one at its end, a wheel notch continues from it,
+  and a chart that is hidden draws no frame: its animation ends at its target, drawn when the chart is shown again (the owner, 2026-10-02). With
+  hover coordinates on, the pointer shows diffraction-lib's read-out of a point within plotly's default hover distance, 20 px (a Bragg tick by its
+  x alone), beside that point, and nothing elsewhere (the owner, 2026-10-02): over the data or the residual, `x`, `meas`, `bkg`, `calc` and
+  `meas − calc` at that row, each value in its series' colour, `meas − calc` named and coloured as the residual pane's title (the owner, 2026-10-21); over a Bragg tick, the structure's name, `x` and `Miller indices: (h k l)`, the Miller
+  indices alone in the tick's colour (the owner, 2026-10-03). Numbers take their items' display formats with a comma between thousands (`edi::hover_readout`, ADR-0051).
+- **Y scales.** Square root and log are display mappings (ADR-0021 §5), and the y-scale button cycles linear,
+  square root, log. On each the main y axis labels original values. A square-root axis has its ticks at round
+  display values, so its labels are their squares (0, 2 500, 10 000, 22 500). A log axis has its ticks at whole
+  decades, one per decade, or every second or third when there are more than five. A fitted log range is the
+  measured values' decades: from the decade at or below the least measured value to the decade at or above the
+  greatest presented one, and six decades when nothing is measured. A calculated value far below the measured ones
+  — a pattern with no background is 1e-70 between its peaks — leaves the pane at the bottom and does not stretch
+  the axis. A log range the user chose is widened to the whole decades that hold it, so every log range — fitted,
+  zoomed, panned — has its ticks at whole decades: a box drawn inside one decade shows that decade between two
+  ticks. On a change of scale every series is presented again, the measured markers and bars included.
+- **Refresh.** A chart is refreshed only while it is shown: on the page the window shows, and on its page's
+  selected tab (`WorkflowPage.current`, bound to the window's page view; `PatternChart.shown`). A page that is not
+  shown stays loaded, laid out and visible in that view, clipped out of it, so `visible` does not say it. A chart not
+  shown keeps its last drawing and notes that it is out of date — a publication, another experiment, a resize, a
+  scale or a theme — and is refreshed once, from the latest result, when it is shown. So a parameter change is one
+  calculation, one refresh of the shown chart and none of the hidden one (the owner, 2026-10-02). Each calculation
+  the worker runs is announced as it begins and ends (`ProjectViewModel.calculationStarted`,
+  `calculationFinished`; ADR-0020 §7).
+- **Measured points and bars** are one scene-graph item behind the main pane's lines (`MeasuredLayer`): it paints
+  every marker and bar into one image, which every Qt Quick renderer draws, the offscreen platform's software one
+  included. The benchmark that chose it over Qt Graphs' scatter series is `pixi run -e app app-chart-bench`; its
+  table is under *The measured layer's benchmark* below.
+- **The measured style** (the owner, 2026-10-22): one box between the axis boxes and the legend button, its four
+  entries named as the axis boxes name theirs (`meas: band`, `meas: line`, `meas: points`, `meas: line + points`;
+  first four buttons, made one box the same day), chooses how the measured pattern is drawn, one app setting for every pattern chart (ADR-0031 §7,
+  `PatternChart`): **band**, the default, two 1 px lines at measured + s.u. and measured − s.u. with a fill of 0.3
+  opacity between them, the residual then drawn the same way, (meas − calc) ± s.u., in its pane; **line**, the 2 px
+  line; **points**, the markers with their bars; **line and points**, all three, as the chart drew before. A point
+  without an s.u. has a band of no width; a lower end the log scale cannot show reaches the pane's bottom, as a bar
+  does. A report's figures keep the line and points.
+- **Colours and widths** (light / dark); the one table is `edi::pattern_style_table()`:
+
+| Series | Colours | Mark |
+|---|---|---|
+| Measured, at the experiment's position (Earth) | `#618EC8` / `#6E92CB`, then `#8B9762` / `#94935C` (§8) | by the measured style: a band of 1 px edges and a 0.3 fill, a 2 px line, 5 px markers with 1 px bars, or line and points; drawn under the calculated curves |
+| Total calculation (every palette) | the palette's role colour, `#AD1A6B` / `#FC4F81` | 2 px line, no fill |
+| Background (every palette) | the palette's role colour, `#8A8A8A` / `#969696` | 1 px dashed line, 4 px on and 3 off, its legend sample dashed too (the owner, 2026-10-22) |
+| Residual (every palette) | the palette's difference colour, `#737373` / `#B0B0B0` | 1 px line (the owner, 2026-10-02); in the band style a band as the measured one's |
+| Bragg ticks, at the structure's position (Earth) | `#C58A03` / `#C58901`, then `#C877B7` / `#C375C2`, then `#A27957` / `#C59B77` (§8) | 1 px ticks (the owner, 2026-10-02) |
+| Excluded band | `#8C8C8C` at opacity 0.15, both themes | a filled rectangle in each pane's plot area, under its grid and border (the owner, 2026-10-02: no band crosses the gaps between the panes) |
+
+  An experiment's block colour (§8) is its measured series' colour, and a structure's is its ticks' colour.
+- **Titles.** The x title by the beam mode (`2θ (°)`, `TOF (µs)`), `Intensity` and `Residual` (the owner, 2026-10-02), drawn by the
+  chart itself beside the panes: Qt Graphs draws an axis title over the axis labels.
+- **Fonts and labels.** The tick labels, the titles and the legend are the app's label: its font at its size
+  (`EaStyle.Sizes.fontPixelSize`), as in easydiffractionbeta's chart. A y label ends beside its plot area and an x
+  label is centred under its tick, close under the plot area: the chart moves them over the 15 px Qt Graphs keeps
+  for the tick marks it does not draw.
+
+#### The measured layer's benchmark
+
+`pixi run -e app app-chart-bench` replaces the measured points of a 50 000-point pattern 200 times at each width and
+times each replacement to the frame that shows it. Candidate A is a Qt Graphs `ScatterSeries` with a line series for
+the bars; candidate B is `MeasuredLayer`. Measured on the development machine on 2026-10-02 (Linux, Qt 6.11.2; the
+`xcb` rows render through Mesa's software OpenGL, the machine has no GPU), in milliseconds:
+
+| Platform | Columns | Points drawn | Candidate | First population | Replacement, median | Replacement, p95 |
+|---|---:|---:|---|---:|---:|---:|
+| offscreen | 400 | 1 373 | A | 58.71 | 33.47 | 43.80 |
+| offscreen | 400 | 1 373 | B | 4.40 | 5.70 | 6.48 |
+| offscreen | 1 200 | 3 678 | A | 156.58 | 134.51 | 200.08 |
+| offscreen | 1 200 | 3 678 | B | 7.56 | 5.38 | 6.31 |
+| offscreen | 2 400 | 6 355 | A | 302.19 | 274.12 | 575.49 |
+| offscreen | 2 400 | 6 355 | B | 11.86 | 13.14 | 17.13 |
+| xcb | 400 | 1 373 | A | 377.10 | 89.33 | 160.21 |
+| xcb | 400 | 1 373 | B | 9.88 | 10.45 | 17.35 |
+| xcb | 1 200 | 3 678 | A | 256.50 | 163.62 | 248.04 |
+| xcb | 1 200 | 3 678 | B | 29.72 | 15.44 | 25.88 |
+| xcb | 2 400 | 6 355 | A | 434.67 | 198.73 | 303.84 |
+| xcb | 2 400 | 6 355 | B | 34.48 | 20.84 | 34.78 |
+
+The targets were a p95 of at most 8 ms at 1 200 columns, at most 16 ms at 2 400, and a first population of at most
+100 ms. A misses every one on both platforms, by a factor of 20 and more at 1 200 columns. B meets the 1 200-column
+and first-population targets on offscreen and misses the 2 400-column one by 1.13 ms; on the software-OpenGL `xcb`
+platform it misses both replacement targets. B is the chart's measured layer: the lower p95 at 1 200 columns on
+both platforms. The targets are not acceptance limits (the owner, 2026-10-02); a GPU machine's numbers join this
+table when one is measured.
+
+### 16. The structure view
+
+The Structure page draws the structure on Qt Quick 3D, from the core's one description (ADR-0022). The view
+computes no geometry: it draws what `edi::present_structure` and `edi::scene_drawing` return and the values of
+`edi::structure_style_table()`. Its function is diffraction-lib's structure view (`display/structure/`,
+`templates/structure.html.j2` at `cb2cda7b`; the owner, 2026-10-02), its buttons easydiffractionbeta's style
+(§15), and its placement the one diffraction-lib's published renders show.
+
+- **Drawing.** Atoms and bonds are Qt Quick 3D instances fed from C++: one `StructureInstances` table per mesh
+  (spheres for the atoms with one site, cylinders for the half-bonds and the cell edges), packed once per
+  presentation into Qt's instance buffer, so two draw calls whatever the number of atoms. A pointer event moves the
+  camera only. There is no QML object per atom, bond, edge or label, and no `Repeater3D`, `InstanceList` or
+  `RandomInstancing`. A shared site (lbco's La/Ba) is a sphere in wedges of relative occupancy about the home
+  view's direction, in its parts' colours, all shared sites in one mesh (`SharedSiteGeometry`), so a site of two
+  equal parts shows a left and a right half in the home view. The triad is three cylinders and three cones. The
+  labels and the axis letters are one painted item at the places `edi::project` gives.
+- **Camera.** The cameras draw the core's projection: the orthographic one (the default) through Qt's own
+  orthographic camera set from the core, so Qt's picks are parallel rays too; the perspective one, with a 30° field
+  of view and its screen pan, through a custom camera with the core's matrices; both are fitted as diffraction-lib fits its home view, with a band at the top kept
+  clear for the toolbar and the legend (the toolbar's height with its margins). So a label and its atom agree in
+  both projections. The home view — the initial one, the reset and the views along a, b and c — shows the
+  structure at **`kHomeZoom` = 0.9** of that fitted size, a bit smaller with more margin (the owner, 2026-10-02);
+  the zoom is the core's `default_view` magnification, so the report draws the same view, and the fit holds the axis
+  arrows and their letters too, leaving an even margin on every side (the owner, 2026-10-13); the orientation rule is
+  diffraction-lib's, unchanged. The lights are diffraction-lib's (the owner, 2026-10-02): an ambient term and two headlights
+  that follow the camera, a key shining from the camera-local direction (right, up, towards the camera) (0.3, 0.45,
+  0.85) and a fill from (−0.4, −0.2, −0.45); the material is Phong-like, specular 0.2 with shininess 90, the same in
+  both themes. The scene is lit in linear light and written out as sRGB (linear tone mapping), as three.js renders
+  it. Light units do not carry over one to one (three.js's physical units carry the Lambert 1/π); Qt's brightness
+  is the three.js intensity × 1.5/π, calibrated on the capture of lbco against diffraction-lib's render: each
+  element's median colour within about ten levels, Co's within five. The Phong highlight (specular 0.2, shininess
+  90) has no one-to-one counterpart in Qt's principled shading: the atoms, bonds and wedges are a dielectric with
+  roughness 0.25 and specular amount 1, matched to the render's small, soft spot on every sphere. The orthographic
+  camera stands far back along the view direction: Qt's lighting takes each view ray from the camera's position,
+  and from there the rays are parallel, as an orthographic camera's are in three.js, so every atom carries the
+  same highlight.
+- **Placement.** Inside the view: the colour scheme and the toolbar in one line centred under the block selector
+  row, a toolbar group's spacing apart, one em from the top edge; the element legend at the bottom left, the main
+  area's margin (§15) from the left; the hover label beside the pointer. The pointer hint and the download button
+  are gone (the owner, 2026-10-11).
+- **Colours.** Every style colour is EasyApp's `EaStyle.Colors`, bound and never written as a literal, as
+  easydiffractionbeta's structure view (`StructureViewTab.qml`) uses them (the owner, 2026-10-02), so all follow the
+  theme switch: the scene's background `chartBackground`, painted opaque behind the 3D item and its clear colour;
+  the cell edges `grey`; the a, b and c axes and their letters `red`, `green` and `blue`; the labels
+  `themeForeground` over a halo of the background; the legend panel `mainContentBackgroundHalfTransparent`
+  with a `chartGridLine` border; the buttons' `chartAxis` border. A theme switch redraws once. The atom colours
+  are diffraction-lib's palettes, the same in both themes.
+- **Toolbar.** diffraction-lib's modebar, as `ChartToolButton`s with the chart toolbar's spacing and spacer:
+  the features group first, then the camera group ending in Home at the right (owner, 2026-10-05). Camera: projection (`cube`; *Parallel (orthographic) view* or *Perspective view*), `a`, `b`, `c` (*View along a*,
+  … — the letter in bold in its axis colour, a label on the button), reset (`home`, *Reset view*: the home view, the
+  projection kept). Features, one button per feature the structure has, in diffraction-lib's order: atoms (`atom`;
+  all, asymmetric unit, none — *Atoms: all / asymmetric unit / none*, or *Atoms: show / hide* with no atom outside
+  the asymmetric unit), labels (`tag`), bonds (`link`, when crysta found a bond), cell (`vector-square`), axes
+  (`location-arrow`); a structure with no site has only cell and axes. A feature that is on shows its icon in the
+  accent colour. The colour scheme is a drop-down (Jmol, VESTA; ADR-0047) before the buttons, in the toolbar drop-down style
+  (`ToolbarComboBox.qml`, shared with the pattern chart's y scale): the sidebar drop-downs' background, the base's
+  translucent combo-box colour over the content background (the owner, 2026-10-02), at the buttons' height, as narrow as its
+  widest entry with the arrow and the padding.
+- **Appearance.** The atom view (`covalent`, `vdw`, `ionic`) and the atom scale (above 0, at most 1), which
+  diffraction-lib's modebar does not carry, are an Appearance group on the Structure page's Extras tab, as in
+  easydiffractionbeta, laid out and styled as the Instrument group (the owner, 2026-10-02): a muted caption above
+  each field, the two fields side by side in equal columns over the group's width, with the same components (a
+  `SelectorField` and the base's `ParamTextField`). The elements whose radius was substituted are listed under
+  them. The options are view state
+  of the open project, shared by every structure's view, and not saved in the project file.
+- **Refresh and freshness.** The view is prepared only while it is shown, by the pattern chart's rule above
+  (`StructureView.shown`, bound to `WorkflowPage.current` and the page's selected tab): a view not shown presents
+  nothing, draws nothing and places no camera — a publication, another structure, an option, a theme or a size — and
+  is presented once, from the latest source, when it is shown. Its `current` still turns false at once when an edit
+  stales the geometry. A refused calculation keeps the last published frame; the frame is current only once the
+  latest request has published its geometry and the view has presented it, whatever presents the kept frame again
+  (an option, a theme, a refresh, being shown): the controller keeps the frame's source and reads the latest
+  request's freshness from the structure's live source (ADR-0022 §1), as the chart reads its pattern.
+- **Animation.** The a, b, c and Home buttons turn and fit the view over 1000 ms with an out-quint easing, as
+  easydiffractionbeta turns its view (EasyApp's theme-change animation; the owner, 2026-10-02): the camera's
+  orientation turns along the shorter arc, its zoom changes by a constant ratio and its pan linearly, and the labels
+  follow every frame. A click during a turn starts the new one from where the view is; a drag, a wheel notch or a
+  pan stops it there. The pattern chart's box zoom, wheel zoom and reset animate as §15 says.
+- **Pointer.** A left drag of (dx, dy) pixels turns the scene dx degrees about the screen's vertical axis, then dy
+  about its horizontal one; one wheel notch away multiplies the magnification by 1.25 (towards, 0.8), keeping the
+  point under the pointer in the orthographic projection; a right drag pans. The magnification stays between 0.05
+  and 100. No inertia. Hovering names the atom whose surface the pick hits, picking along the core's ray under the pointer: a sphere by its instance index, a shared
+  site by the ordinal its triangles carry; the label shows the atom's label, its parts' elements and occupancies,
+  and its fractional coordinates and symmetry code as crysta gave them.
+- **Where the 3D item exists.** Only where Qt Quick draws through a graphics API Qt Quick 3D supports (OpenGL,
+  software OpenGL included, Direct3D 11 and 12, Vulkan, Metal); elsewhere (the offscreen platform the Qt Quick Test
+  tier runs on) the view shows one line of text, with the same state. The scene itself — the instance tables, the
+  models, the camera and the lights — is a node the view always creates, which the 3D item imports, so the tables
+  and their object names exist on every platform. The drawn cases run through `pixi run -e app
+  app-test-3d` on the capture platform. In the browser the procedural meshes (`SphereGeometry`, `CylinderGeometry`,
+  `ConeGeometry`) are built synchronously: the single-thread web build has no thread for their default asynchronous
+  generation (ADR-0023 §3).
+
+**The style table** (`edi::structure_style_table()`; light / dark; a share of `H` is of the fitted half height for
+the viewport, ADR-0022 §6). Its colours are diffraction-lib's, for the renderers that draw diffraction-lib's look;
+the app takes its colours from `EaStyle.Colors` instead (above), and its dimensions and lights from this table:
+
+| Key | Light | Dark | Value | Source |
+|---|---|---|---|---|
+| `background` | `#FFFFFF` | `#212121` | | diffraction-lib's `display/theme.py` |
+| `cell.edge` | `#222222` | `#E6E8EE` | | diffraction-lib's foreground |
+| `cell.edge.radius` | | | 0.0025 · `H` | thin lines, as diffraction-lib's |
+| `bond.radius` | | | 0.06 Å | diffraction-lib |
+| `axis.a`, `axis.b`, `axis.c` | `#DC2828`, `#28B428`, `#2850DC` | the same | | diffraction-lib (as VESTA) |
+| `axis.shaft.radius` | | | 0.009 · `H` | diffraction-lib |
+| `axis.head.radius` | | | 0.028 · `H` | diffraction-lib |
+| `axis.head.length` | | | 0.085 · `H` | diffraction-lib |
+| `axis.overhang` | | | max(0.09 · `H`, pad + head length + `axis.clearance`) beyond the cell edge | diffraction-lib |
+| `axis.clearance` | | | 0.04 · `H` | diffraction-lib |
+| `axis.letter.offset` | | | 0.05 · `H` beyond the tip | diffraction-lib |
+| `label` | `#222222` | `#E6E8EE` | | diffraction-lib's foreground |
+| `label.halo` | `#FFFFFF` | `#212121` | | the scene's background |
+| `light.ambient`, `light.key`, `light.fill` | | | 0.68, 1.25, 0.34 | diffraction-lib's three.js intensities; drawn × 1.5/π |
+| `light.key.right`, `.up`, `.toward` | | | 0.3, 0.45, 0.85 | diffraction-lib's key headlight, camera-local |
+| `light.fill.right`, `.up`, `.toward` | | | −0.4, −0.2, −0.45 | diffraction-lib's fill headlight, camera-local |
+| `material.specular`, `material.shininess` | | | 0.2, 90 | diffraction-lib's Phong highlight |
+
+**Mesh detail** is tuning inside this design (the owner, 2026-10-02), chosen by the number of drawn atoms:
+
+| Drawn atoms | Sphere segments × rings | Cylinder segments |
+|---|---:|---:|
+| up to 500 | 32 × 16 | 16 |
+| up to 5 000 | 16 × 8 | 8 |
+| above | 10 × 5 | 6 |
+
+These first values are tuned on GPU hardware, and the measured table replaces this note.
+
+**Measured on the development machine's software OpenGL** (Xwayland on headless Weston, Mesa llvmpipe, no GPU; a
+1280 × 768 view, the scene rotating; Qt Quick 3D's own frame time, median of 10 samples, milliseconds). These are
+not a performance reference (the owner, 2026-10-02): they show the view draws on that display and what a capture
+costs.
+
+| Spheres | Cylinders | Mesh | Antialiasing | Frame |
+|---:|---:|---|---|---|
+| 90 | 218 | Qt's built-in | MSAA | 185.51 and 153.41 |
+| 90 | 218 | Qt's built-in | none | 127.45 |
+| 90 | 218 | 16 × 8, 8 | MSAA | 17.81 |
+| 90 | 218 | 16 × 8, 8 | none | 11.98 |
+| 5 760 | 8 352 | 16 × 8, 8 | MSAA | 466.43 |
+| 6 119 | 44 000 | 16 × 8, 8 | MSAA | 823.00 |
+
+**Measured on GPU hardware** (the CI Mac runner `andrewsazonovs-Virtual-Machine`, Qt Quick 3D on Metal, `bank_frames`
+dispatch 37097612066 at edi `0fcccf32`; ten runs of the drawn cases, each 50 samples after 5 discarded; milliseconds).
+The median is the banked value, the median of the ten runs' medians; the range is theirs; the p95 is the median of the
+ten runs' p95. The drawn records do not yet report the mesh detail, the atom and bond counts, or the update's
+calculation share.
+
+| Dataset | Metric | Median | Range of the ten medians | p95 |
+|---|---|---:|---|---:|
+| T1 | A1 frame | 18.2 | 16.3 to 20.3 | 37.8 |
+| G1 | A1 frame | 17.4 | 16.7 to 20.9 | 38.2 |
+| T1 | A2 update | 67.8 | 59.1 to 70.0 | 82.5 |
+| G1 | A2 update | 259.8 | 258.8 to 260.5 | 272.4 |
+
+Frame time and update latency on GPU hardware, with the core's presentation and update times, are measured and
+ratcheted, never limits; their tables join this section when measured. The app's A1 frame and A2 update medians join
+bank and tool (`tools/ci/latency_bank.py`, ADR-0020 §5): `pixi run -e app app-bank-frames` runs the drawn cases ten
+times, collects each run's records into a table of the latency schema with the machine, the commit and the renderer,
+compares the ten runs' medians with the machine's app rows, and banks them when the machine has none or a re-bank is
+owed. A machine's core and app rows are banked separately, each keeping the other. Rows drawn by a software renderer
+(llvmpipe) are reported and never compared, and the tool refuses to bank them, as it refuses any record the drawn case
+marks not bankable. The macOS runner runs the task on a `bank_frames` dispatch; the owner's Mac runs it by hand. Every
+bank row names the committed revision it measured: a run measures the checkout's HEAD and refuses uncommitted changes,
+and each timed executable names the commit it was built from itself: a latency probe carries `edi-build-commit:<sha>`
+in its bytes, which the tool reads from the file it is about to run and hands to the probe to record, and the app test
+runner prints `edi_app_tests: built at <sha>`, which a drawn run's table carries (`-dirty` when built with uncommitted
+changes); a table naming no revision is never banked. The tool reads only a directory's `run-NN.json` tables and
+refuses to write its bank rows into it.
+
+### 17. Fitting: the status bar's fit buttons, the results and Undo
+
+(the owner, 2026-10-02)
+
+- **Fitting is run from the status bar only** (the owner, 2026-10-26; the Analysis page's Fitting group, with Start
+  fitting, Reset fits and Follow, is gone). The **Fit** button runs the project's fit on the worker (ADR-0020 §9) and
+  reads **Stop**, with a stop icon, while it runs: a stop keeps the partial result. In a scan project it follows the
+  datasets' fits (owner, 2026-10-06; §19). While a fit runs the parameter table is disabled and every edit is refused.
+  The Analysis page's parameter table fills the sidebar down to its value slider, about half of the next row showing.
+- **Reset** and **Follow** stand before the Fit button in a project's sequential and independent modes only
+  (ADR-0046). Follow is enabled only while a scan runs and starts on; while on, the pattern tab shows the file being
+  fitted. Reset clears every dataset's fit result.
+- **The chart follows the fit**: a frame of the current iteration's pattern at most once per display frame, then the
+  fitted pattern when the fit ends. A fit that writes nothing puts back the pattern the project holds.
+- **The status bar's keys** (the owner, 2026-10-03): every item shows its key only while all the shown items fit the
+  bar's width with their keys, measured from the items themselves; otherwise each shows its icon and value. (It
+  replaced a fixed window-width threshold.)
+- **The status bar's fit area** (owner, 2026-10-05) is right-aligned after the items. While a fit runs it shows the
+  live values, then a progress bar (`Components/FitProgressBar.qml`) with its text inside, at the right before the Fit
+  button, where the values' changing width does not move it (owner, 2026-10-06): a single fit
+  fills the bar with moving stripes and reads `fitting · it 12`, then `4s · χ² 12.40 → 7.50`; a scan will fill it by
+  file count. After the run the bar and the live values go, and a summary stays: the outcome, then `it 23 · 7s · χ²
+  12.40 → 7.01`. One order everywhere: progress, then the counts, then time, then χ², every separator the same
+  ` · ` (`FitOutcomes.separator`).
+- **The status bar's fit buttons** (the owner, 2026-10-26) are its last items: Reset and Follow in a scan project,
+  then the Fit button in the right corner, after the outcome, the values and, while a fit runs, the progress bar. They
+  are shown on every page whenever the Analysis page is available, so a fit can be run again after changing a value
+  elsewhere. The Fit button reads *Fit*, *Continue* or *Stop* with the matching icon. While it can act it is black
+  with white text in light mode and white with black text in dark mode, its background turning the accent blue on
+  hover with the base's colour animation (`Components/StatusBarFitButton.qml`, `AppColors.fitButtonBackground`);
+  otherwise it looks like the other buttons. The outcome, Reset and Follow (`Components/StatusBarButton.qml`) are
+  white with a 1 px border in the bar's border colour in light mode and black with a border just off the bar's
+  background in dark mode, the theme's text, the accent while Follow is on and the disabled colour while a button
+  cannot act; on hover their icon and word turn the accent blue (`AppColors.statusButtonBackground`,
+  `statusButtonBorder`). The Fit button's tool tip, shown only while tool tips are on, says *Fit the free parameters*.
+  When the bar runs short of room Reset and Follow drop their words before the Fit button does, each then a circle
+  round its icon. All are framed fit-area items whose body is two font sizes tall and as round as the progress bar,
+  which has that height too, the outlined ones drawing their 1 px border outside it and the Fit button having none
+  while it can act, so every button's body is the same height (the owner, 2026-10-26); they share one spacing: half a
+  font size before the icon, a little less between icon and word, a little more after the word, so the three look
+  even. The status bar has the tab bars' height, three font sizes, with the buttons centred in it
+  (`Base/Gui/Style/Sizes.qml`, which edi builds in place of the base's; the owner, 2026-10-26).
+- **One look per fit outcome** (owner, 2026-10-05), from `Globals/FitOutcomes.qml` for every place that shows one
+  (the status-bar summary, the results window's Overall status row, the Experiments table's Fit column): *Success*
+  (green check circle), *Max iterations* and *No step* (amber exclamation circle; the result is kept), *Stopped*
+  (stop circle) and *Superseded* (minus circle), whose word is in the text colour and icon in the grey of the icons
+  around it so they never look disabled (the owner, 2026-10-26), and *Failed* (red cross circle). No underline; the summary's
+  outcome highlights on hover, as every clickable status-bar item does, and opens the results.
+- **The Fit column** of the Experiments table, and each experiment's line in the block selector, show the outcome
+  icon on each experiment the last fit fitted: the first after a single fit, every bank after a joint fit. Any
+  other experiment is *Not fitted*: a thin unfilled ring the size of the outcome icons, in the minor colour (owner,
+  2026-10-05). The icon font edi takes from the EasyApplication base is Font Awesome 5's solid face, which has no
+  hollow circle, so the ring is drawn (`FitOutcomes.ring`, `IconLine`).
+- **A fit-results pop-up** opens when a fit ends with a result (finished, cancelled or stopped early): diffraction-lib's
+  "Least-squares fit results" table, numbered rows of an icon, the metric and its value — minimizer, overall status,
+  fitting time (seconds), iterations, goodness-of-fit (reduced χ²), Rwp, and each bank's Rwp for a joint fit. The
+  table is built from the result the project records (`_fit_result`), so a project opened with one shows its last
+  fit too: the status bar's iterations, reduced χ² and stop reason, and the same table from the Fit status item,
+  outcome, which opens it on a click. The *Show fit results after fitting* preference (Prompts, beside Enable tool
+  tips, on by default; the owner, 2026-10-26) keeps the pop-up closed when a fit ends; the outcome still opens it.
+- **A refused or failed fit** shows its reason in a message dialog; the project is unchanged.
+- **A fitted value outside its admissible range** (the table's min and max) is kept, as the CLI keeps it, and shown in
+  red with a tooltip naming the range, as diffraction-lib's table of fitted parameters does (the owner, 2026-10-02).
+  Bounded fitting is.
+- **Undo** is the app bar's Undo arrow: enabled while the model holds a fit's start state (after a finished or
+  stopped fit), it restores the pre-fit state (`undo_fit`, one level) and clears the fit area.
+
+#### Status-action accessibility
+
+FIRST `FitStatusItem` owns the status-bar outcome and Fit/Continue/Refit/Stop,
+Reset and Follow controls. Effective clickability, visibility and enabled state
+project to one `accessibleAction` binding: a live action exposes its existing
+value text and tooltip as button name/description, and ignores its decorative or
+duplicate labels. Passive/unavailable items keep readable child text and no
+button role. Accessibility focusable/focused metadata explicitly follows that
+same availability, including true-to-false transitions. Desktop focus remains
+on the original control; the web representation below reports its own actual
+focus. Control.enabled, hover and tooltips are unchanged.
+
+ApplicationInfo owns the exact Qt Accessible press-signal connection to one thin
+QML forwarding method on the SAME control. Availability changes first disconnect
+that route synchronously, reconnecting only while live; component destruction
+retires it too. This avoids both an always-connected no-op press action and a
+notifying QML Connections endpoint waiting for deferred deletion. Qt owns the
+connection lifetime without a retained connection map or new scientific input
+source. The original guarded `statusItemPress` bridge rechecks the actual owner,
+context, visible/enabled state and live `clickable` property before emitting its
+same `clicked` signal. The original pointer TapHandler and QML fit/start/cancel,
+reset/follow/results handlers remain unchanged.
+
+This extends the FIRST custom Accessible role/name/native-press pattern in
+ExamplesGroup. It does not restore the retired Start fitting group or change
+labels, fitting policy, geometry, colours, animations, clocks, scientific results
+or Undo. Source-defined action enumeration and focus metadata must be exercised
+through initial passive/unavailable, available, retired and reentrant states;
+a guarded native no-op alone is not evidence of truthful accessibility.
+
+#### Web status actions follow actual accessible-object lifetime
+
+Pinned Qt's web accessibility bridge creates its HTML button or generic element
+from the initial native role and caches it by interface. Later attached-role
+changes do not rebuild that element. A real available Fit action was therefore
+still exposed as generic after its initial passive state; changing the browser
+selector or press-connection spelling would not repair that representation.
+
+On WebAssembly only, the original FitStatusItem is ignored in the accessibility
+tree while a nonvisual Loader child exists exactly for its existing
+accessibleAction interval. That child has a fixed Button role before its first
+component-complete ObjectShow, with the original value text and tooltip. It fills
+the same full control rectangle but contributes no layout, painting, pointer or
+key handler. Its sole accessibility Press calls the existing guarded C++
+statusItemPress on the original control; the original native role/NoRole,
+connection retirement, physical TapHandler and scientific clicked path remain.
+Desktop creates no child and retains its original accessibility representation.
+
+Qt's accessible tree flattens ignored ancestors, so the sole child action remains
+reachable and passive labels remain readable. Loader retirement invalidates its
+own component context, detaches and hides the child before deferred deletion;
+normal Qt hide/destruction retires the browser node. There is no fake QObject
+destruction, manual interface/cache surgery, global Qt patch, new timer or
+helper flag. Name changes while actionable retain the same fixed-role child.
+Inactive/passive fit metrics instantiate no Button child and expose no new Press.
+
+Accessibility SetFocus truthfully focuses that web child and reports the child's
+actual activeFocus. It does not fake focus on the ignored outer control or force
+a focus hand-off. The first status controls have no focus-driven visual, keyboard or
+business consumer beyond their accessibility metadata. Public outer identity,
+physical input and native focus behavior remain; web assistive focus belongs to
+its sole platform representation. No nonfocusable shortcut conceals this choice.
+
+This shared lifetime covers outcome/results, Reset, Follow and
+Fit/Stop/Continue/Refit, including visibility, enabled and fit-availability changes.
+Passive fit statistics remain passive. Plain StatusBarItem's always-active
+Messages action is its separate existing path, not another dynamic-role owner;
+its pointer/layout behavior is unchanged. Independent actual focus, one-action,
+press, same-geometry, availability, reentry/retirement and both-kit web coverage
+are required; source repair is not final browser or scientific acceptance.
+
+### 18. Creating experiments
+
+(the owner, 2026-10-05)
+
+- **Load experiment** loads `.edi` experiment files, several at once, each with its type, data and parameters.
+  **Create experiment** adds a new experiment without data, selected, named `experiment1`, `experiment2`, …:
+  powder, constant wavelength, neutron, Bragg, linked to every structure of the project. Each is one step of the
+  app bar's Undo.
+- **An experiment without data is a simulation**: its pattern is calculated over a grid whose start, end and step
+  (2θ or TOF) are editable, from defaults per beam mode (2θ 10–150° by 0.05°, TOF 2000–20000 µs by 10 µs).
+- **Load data…** (the owner, 2026-10-06) is in the File cell of an experiment made with Create
+  experiment; once data is loaded the button shows the file's name and loads another file in its place. An
+  experiment loaded from `.edi` shows its file, or a disabled Load data… when it is a simulation. It
+  opens a file dialog for *Data files (\*.xye \*.xy \*.dat \*.txt \*.csv)* or *All files*, or the browser's file
+  chooser in the web app, and reads the file with crysta's plain-data reader: two or three
+  columns `x y [σ]`, x in the experiment's unit (2θ in degrees, TOF in µs). The rows replace the simulation's
+  grid; the range fields stay, disabled, showing the data's start, end and step, and the type selectors lock.
+  Instrument, peak, background and excluded regions stay as they were. An experiment still named `experimentN`
+  takes the file's name without its extension, and the File column shows the file's name. A second load replaces
+  the data; each load is one Undo step, which puts back what was there before. One message in the status bar's
+  Messages says how many points were read and what the reader skipped or changed. The data is saved in the
+  experiment's `.edi`, so the project never needs the file again, and the file's name with it
+  (`_data_source.file_name`), so the File column shows it after the project is opened again.
+- **Experiments with and without data mix** (the owner, 2026-10-06): Create experiment is always available outside
+  a scan project. A calculation covers every experiment; a fit leaves out those without data.
+- **Create structure** adds a structure named `structure1`, `structure2`, … holding easydiffractionbeta's default
+  phase (`_DEFAULT_CIF_BLOCK`: P b n m, a = 10, b = 6, c = 5 Å, angles 90°, one O site at 0 0 0, occupancy 1,
+  B_iso 0), selected and linked to no experiment. A new experiment links every structure. **Removing a structure**
+  removes every experiment's link to it in the same Undo step, with a message naming the experiments.
+
+### 19. A scan's datasets
+
+(the owner, 2026-10-05)
+
+- **A scan project lists its datasets as experiments**: in the block selector and the Experiments table, one row per
+  data file the scan fits (`edi::scan_datasets`, crysta's own file list, in fitting order), each the template
+  experiment over that file. A selector line reads `datablock · file · value unit`; the table's columns are No. · Fit
+  · Datablock · File · one per extract rule with its unit, with no colour column and no remove button. Every entry is
+  in the experiment's colour. The status bar counts the datasets, its tooltip *1 template experiment, N datasets*.
+- **Showing a dataset** loads its measured points, read from its file when it is shown and never before, into the
+  model with the template's parameters, and, for a dataset the scan has fitted, its fitted values and
+  uncertainties from `analysis/results.csv` (`Edit::scan_view`); the pages then show that dataset and the pattern
+  calculated from it. A project opens on the first dataset. Showing a dataset is not an edit of the project.
+- **The template is held apart from the shown dataset.** An admitted edit of the experiment or the structures while a
+  dataset is shown makes the shown values the template's, over the template's own data file; a project-wide setting
+  (name, title, description, fitting mode, minimizer) goes to the template unchanged otherwise. A save writes the
+  template, never a dataset's data; a refused edit changes nothing.
+- **A dataset's Fit outcome** comes from its results row: *Success* when it converged; otherwise *Max iterations* when
+  its iteration count reached the bound, else *No step*; *Not fitted* without a row. Its extracted values come from
+  its row, or from its file when a view shows its entry.
+- **The Evolution tab** (Analysis, after Correlations; text only like every tab, §2) draws one fitted parameter across
+  the datasets (`Components/EvolutionChart.qml`, `EvolutionViewModel`): a point per fitted dataset with its
+  uncertainty as an error bar, drawn as the pattern chart draws measured points. The page's selector row keeps listing the
+  datasets, as on the Pattern tab; a selector in the chart's own toolbar, beside the x box, lists every free
+  parameter, then any other one `analysis/results.csv` records, already before a dataset is fitted. Until one is, a
+  fitted template experiment is plotted as one point, its current value and s.u. at its dataset's x, so a parameter
+  can be chosen before the scan starts, its range padded to show its error bar; the scan's first fitted dataset
+  replaces it (owner, 2026-11-04). With neither, the chart has no axes and shows "No fitted results yet" as the other
+  empty views show theirs; the points appear as the datasets are fitted. x is the first extract rule's
+  value with its unit, or the file's place in the scan (the box at the chart's top left, *x: …* closed as the
+  pattern chart's). A click on a point shows that dataset, on every page; a line marks the shown one, placed from the
+  dataset's own x so it moves only when the shown dataset does (owner, 2026-10-06), drawn as a 2 px line edged by
+  1 px of half-transparent colour on each side (owner, 2026-10-22; the Stacked and Map tabs draw the same look as an
+  open rectangle, ADR-0041 §8). Two buttons at the toolbar's right end, as on the pattern chart's toolbar, are the
+  project's `_evolution_chart` view settings, saved and undone with the other chart settings (owner, 2026-11-03), and
+  the only project settings that change while a fit runs, so the chart answers them during a scan (owner,
+  2026-11-04): *Error bars* (shown unless hidden) and *Range*, which fits the y range to the values with their error bars instead of the
+  values only, so that by default a much longer bar, such as a moment's above the ordering temperature, is clipped at
+  the plot's edge instead of flattening every point. The pointer zooms as on the
+  pattern chart, without its toolbar: a drag zooms to the box, the wheel or touchpad about the pointer, a right click
+  resets. Above 5000
+  points the chart draws, per x bucket, only the lowest and the highest, so every excursion stays visible. The tab
+  is disabled in a project that is not a scan.
+- **Running a scan.** In the sequential or independent mode the status bar's Fit button runs crysta's driver from the
+  template on the worker (`edi::FitJob`, the scan entry points of the core), which writes `analysis/results.csv` as it
+  fits each file; the template itself is left as it was. The button follows the datasets' fits (owner, 2026-10-06):
+  **Fit** while none is fitted, **Continue** while some are not (after a Stop too), which fits from the first dataset
+  without a row (the driver resumes from the file), and **disabled** once every dataset is fitted. **Reset** clears
+  every dataset's fit result, one Undo step that writes them back, and so enables Fit again. **Stop** keeps the rows
+  written so far.
+  While a scan runs the status bar's bar fills by files, with *count · percent · file* inside, and the ok and fail
+  counts, the time, the time left and the last χ² beside it. Joint is not offered in a project that declares a scan.
+- **Follow** is on when a scan starts and enabled only while one runs: the pattern tab then shows each file as it is
+  fitted, its data with the pattern calculated at its fitted values, drawn by the job after the file's row is
+  written. Choosing a dataset turns it off; pressing it turns it on again.
+- **The template dataset** (`_sequential_fit.template_file`): a single fit on a shown dataset makes its result the
+  template and that dataset the template dataset. Its entry in the selector and its row in the Experiments table
+  carry the word *template* in the accent blue. A scan project opens on it, else on the first dataset.
+- **Outdated.** A run records which template it fitted from (`analysis/scan-run.json`); results from another
+  template than the one held now stay shown, and the Evolution tab marks them out of date. The status bar's outcome
+  button reads *Outdated* in amber with the history icon, and its results window shows the previous results under an
+  amber note: *These results are from before your parameter changes. Fit again to update them.* The Fit button reads
+  **Refit** and is enabled even when every dataset is fitted: it fits every file again from the template, the old
+  results going to Undo, which restores them; Reset still clears them without fitting (the owner, 2026-10-26). The
+  mark survives saving and reopening, and goes when a run of the current template replaces them.
+- **After a scan** the status bar's summary reads *outcome · fitted/files · N ok · N fail · χ² min–max*, a fail count
+  above zero in red, and the results window shows the run as a whole: Overall status, files fitted, converged,
+  failed, the fitting time and the χ² range, with *Show evolution*, which opens the Evolution tab. The outcome is the
+  run's own when it failed or was stopped, else Stopped while files are left, else the worst file's (Max iterations,
+  No step, Success). The time is recorded in `analysis/scan-run.json`; results no run of the app wrote show none.
+
+### 20. The Correlations tab's toolbar
+
+The Correlations tab (`Components/CorrelationChart.qml`, data in ADR-0034) draws diffraction-lib's lower triangle by
+default. Its toolbar holds the correlation level and the parameter count, then two toggle buttons drawn as the pattern
+chart's (the owner, 2026-10-12): **names** shows the parameter names along both axes and the colour bar, both hidden at
+the start, since the cell's tool tip names both parameters and the matrix then takes the space; hidden, the axes are
+labelled by each parameter's number in the Analysis table instead (the owner, 2026-10-27); **full matrix** mirrors
+the lower triangle above the diagonal, off at the start. The diagonal stays blank in both. Like the boxes, both buttons
+are disabled while the shown experiment has no correlations, and the space below the matrix equals the space between
+the toolbar and the matrix (the owner, 2026-10-13).
+
+### 21. Standard uncertainties follow the project's rule
+
+A value with a standard uncertainty is shown as the project writes it: its uncertainty rounded to two digits
+(`iucr_99`, the default since the owner's record of 2026-10-24) or by IUCr recommendation 12, one digit or two from 10
+to 19 (`iucr_19`), and the value rounded to the same digit. The value
+and s.u. cells, and the report, take both texts from one core function (`edi::su_text`, over crysta's), so the screen,
+the Text tab and the files agree. A value the cells write in scientific notation (at or above a million, or below 1e-4;
+the owner, 2026-10-10) keeps that notation. The rule is a project setting: the Project page's Extra tab has **Standard
+uncertainties**, saved in `project.edi` as `_su_format.rule`, and Preferences (Projects) only sets it for new
+projects (the owner, 2026-10-13).
+
+A number that does not fit its table cell is never cut short (the owner, 2026-10-22). When the text the rule writes is
+wider than the cell, the cell shows the same number in scientific notation with the same significant digits
+(`0.000000010` is `1.0e-8`, `1250000` is `1.25e6`), and hovering shows every digit the number holds, written plainly. An s.u. that does not fit takes
+its own shortest scientific form, with the one or two significant digits the rule gives, never its value's exponent:
+beside 3.700e-6 the column's `0.008e-6` becomes `8e-9`. A number that fits keeps its
+form, and the check runs again whenever the column's width changes. It applies to every numeric table cell: the
+parameter values on every page, the Analysis table's s.u., min and max, the editable number cells (excluded regions,
+atom sites, scattering lengths, constraints), the measured data and reflections tables, the fit's start values, a
+scan's extracted values and the fit results dialog's agreement factors. It changes only what the screen shows: the
+saved files, the Report and the CLI write the numbers as before.
+
+## Consequences
+
+- The design choices the owner makes by eye are reviewable against a written rule; the phase-2 reviewer checks
+  that this ADR describes what the code does.
+- Renamed titles and tabs change the UI-test images for the pages that show them; those are re-blessed in
+  phase 2, with each capture checked against its idea.
+- Disabled placeholders commit the layout to buttons that do nothing yet; each is enabled by the task that
+  implements its function.
+
+## Alternatives considered
+
+| Alternative | Verdict (why rejected / deferred) |
+|---|---|
+| Keep singular loop titles (easydiffractionbeta's *Background*) | Rejected by the owner (idea 19): a loop names its rows, and the title carries their count. |
+| Leave unimplemented actions out until they work | Rejected (ideas 13, 17): the owner wants the final layout visible now. |
+| Fix `last` in gui-components | Deferred: the base is consumed unmodified (ADR-0015 §1); reported upstream as gui-components#55. |
+
+
+### Native Text-tab edit transactions
+
+ApplicationInfo executes TextTab's block presentation, kept-edit/refusal map operations, apply and leave/discard/return transactions. The original maps and action record stay on the view, and Session/BlockText retain actual text application and output preservation. An answer consumes the original action record before invoking it. Source changes retain their captured file/block/source/text references; a Show choice shares the same original continuation value for leave and drop. Native callbacks retain function arity, distinct/shared identity, creation scope and deletion strictness. Qt's existing queue owns guards for non-capturing QML-scope callbacks. No edit store, controller, parser or evaluated script is added.
+
+QML retains only the Show selector's inline declarative Qt.binding restoration. Native code decides when that installation executes. Native and browser compilation and complete kept-edit, refusal, destruction/reentry and error verification remain required after migration.
+
+
+## Native procedures for shared toolbar, icon, sidebar and status controls
+
+ApplicationInfo executes ToolbarLines row packing and width projection, IconLine elision and width accumulation, SideBarGroups repeater-aware ordering and remembered-state decisions, and StatusBar width/text reductions. These extend the original controls in §3, §10 and §17 and the grouped chart-toolbar rule in ADR-0041. ColourMapComboBox uses the same native callback bridge for its existing map-title projection. The controls keep their original view properties, visual delegates, native scientific/model actions and named forwarding functions. Toolbar layout still queues the same named layout function; this change introduces no second layout record, sidebar-state store, status model or controller.
+
+The implementation uses the current QML context and VM property, coercion, method and intrinsic iterator operations. Array methods and callback arguments remain real script operations, including original receiver/read timing, custom iterators, exceptions, repeated child reads and setter/reentry behavior. Original callback captures, formal arity and QML lifetime handling remain explicit. Status translations retain their original context and extraction markers. Direct geometry/style bindings and platform rendering remain in QML. Compilation and complete runtime verification follow the complete source migration.
+
+
+### Native numeric and axis presentation
+
+NumberText's scientific, uncertainty-aware, full/compact and width-fitted spelling procedures and axis tick/precision selection now execute in ApplicationInfo through its existing stateless script-operation bridge. The first numeric rule remains §21 and NumberText; ProjectViewModel::suText still delegates to edi::su_text/crysta for the project's uncertainty rule. This move does not change that scientific formatter, saved values, fitting calculations, Undo or report data. The QML singleton retains its named one-call functions and the same argument/return surfaces.
+
+Native code retains the original typeof/finite guards, arithmetic and default-hint addition, regex literals, UTF-16 numeric indexing, string/number methods, rounding limits and exponent/negative-zero behavior using the pinned VM. Global/context names and prototype methods remain observable, with the original callback captures and arity for every/map and actual Set construction. Axis input traverses the intrinsic for-of protocol, including original close/error behavior. No locale substitution, new rounding policy, format cache, controller or evaluated script is introduced. The view's FontMetrics and project remain the existing measurement/uncertainty authorities. Desktop/browser compilation and complete scientific/presentation runtime checks follow the complete source migration.
+
+
+## Native scene, legend and shared chart presentation
+
+ApplicationInfo executes StructureView's pointer/hover/colour-choice procedures, StructureScene's pick dispatch, ChartLegend's hit/mark/rich-label/segment construction, BlockSelector's step/selection/segment procedures, CorrelationChart's number/value/width/commit procedures, and FactorText/FitOutcomes formatting. These extend the first scene in ADR-0022, chart legend and block layout in §7/§10/§15, fit-outcome rule in §17, and agreement-factor escaping in ADR-0045. Existing native structure/chart/correlation controllers and scientific formatters remain authoritative; no view state, camera, model, controller or store is duplicated.
+
+Script property/method/context access, coercion, arithmetic, regex literals and global replacements, callbacks and literal member/order semantics stay on the current VM bridge. Legend callback captures preserve the original per-entry ink function and mutable label-map behavior. Style/translation reads retain their original contexts and extraction markers. Shared report/live correlation colours use the same native procedure. Typed QML forwarding signatures retain the original argument/result conversions. Only inline declarative Qt.binding installers remain at the selection and number-edit boundaries, called by native code at the original points. The visual scene, materials, axes, delegates, bindings and host rendering APIs remain QML declarations. Full compilation and live pointer, formatting, model/reentry, Undo and error verification follows the complete source migration.
+
+
+## Native common-control and working-indicator procedures
+
+ApplicationInfo executes ToolbarComboBox's font-dependent width measurement and delayed binding installation, IconTabButton's title pieces, DigitText's digit/run projection, PaletteStrip's occupied colour positions, ParameterNames' ordered icon/name pieces and BlockNames' bounded row/line projection. The first rules remain the controls in §2/§8/§10/§15 and ADR-0038's palette ownership. Existing view records and native models/setters remain authoritative; no table, palette or naming model/cache is added. The original constant icon-prefix table remains ordered, and every admitted name still uses its current script startsWith method. The delayed callback contains only its original compiled Qt.binding installer.
+
+AssistantWorking's elapsed text/state, initial/random variant choice, cadence/deadline/phase and animation-start/stop procedures also execute natively. Its existing view fields, Timers and RotationAnimator retain all state and scheduling. The current context's Date.now and Math.random calls occur at their original points, with the same intervals, fixed deadline, phase arithmetic, restart/stop order and exception behavior; no second clock, random source, animation controller or scheduler is introduced.
+
+All procedures retain current-VM property/context/method access, coercion, regex, array/literal/iterator semantics, repeated reads, setter order, font dependencies and translations. QML keeps visual objects, ordinary bindings, one-call forwarding functions and the necessary compiled binding installer. Desktop/browser compilation and complete font/layout/timing/lifecycle/reentry/error verification follows the complete source migration.
+
+
+## Native table-row setup and prepared member invocation
+
+ApplicationInfo executes TableRow's editing/activation, focus-policy traversal, cell signal setup and hover/click discovery/retirement procedures. DataTable and the original view/signal owners remain authoritative. Existing Qt callbacks retain their captured table/cell references and named delayed fitColumns identity. The only supplied inline callback installs the original compiled opacity binding with the discovered child and hover object; native code chooses its original installation point. No row controller, selection store, extra lifetime guard or focus policy is introduced.
+
+The member-call thunk bridge roots the original receiver, evaluates the argument thunk once, then resolves and calls the member on that receiver. This is the pinned Qt ordinary-dot-call sequence: argument effects precede a throwing getter or noncallable error, while replacing the receiver's method during argument evaluation is visible to the later lookup. The Math/string thunk helpers and common-control procedures share this rule, including nested random/measurement/formatting, concatenation and parameter-piece construction. Computed-subscript and optional-call forms retain their distinct original sequences; no universal early-callee rule is imposed. Earlier separately precomputed receiver/argument expressions remain part of the final finite source/error-order sweep rather than being certified by this helper change alone. Native and browser compilation and full persistence/selection/font/timing/lifetime/reentry/error verification follow the complete source migration.
+
+
+## Native searchable-popup procedures
+
+ApplicationInfo executes SearchableComboBox's folding/matching/pick algorithm, option and fitted measurement, popup positioning/placement, acceptance transaction, initial setup and opening/request/timer lifecycle. The first control remains §7's project/vocabulary picker. Existing control/popup/header/ListView/Timer objects and opening/request records retain their authority and state; no popup controller, filter model, timer or store is added. Every original identity/currentness check, property read, repeated check after layout/write, effect and exception point remains in its original sequence. Closed-list model binding, selection and focus policy are retained.
+
+The current VM handles String/regex/method/context operations, typed casts and arithmetic. The only inline callbacks install the original compiled alignment, closed-list model and focus bindings at native-selected original points; clear/focus and visual declarations remain direct Qt host actions. The pinned ordinary dot-call rule above applies to argument thunks; unlike an early-callee policy, a getter runs after argument effects. Full desktop/browser compilation and filtering/geometry/selection/coldness/destruction/reentry/error verification follows the complete source migration.
+
+
+## Native remaining form, filter and local-base procedures
+
+ApplicationInfo executes DescriptionTab's focus/name/title/authors/description commits; parameter-picker write/follow/deferred-follow and shown-group iteration; atom-site/ADP cold measurement and selectors; appearance, space-group and linked-structure commits; reflection display/placement; example/recent row opening transactions; and the app-owned ProjectDescriptionDialog, ToolTip and Sizes procedures. The first implementations remain the form/table rules in §5/§7/§11, the original structure/experiment native models (ADR-0022/ADR-0049/ADR-0051), parameter filtering (ADR-0046), settings/examples and project creation boundaries (ADR-0031). Existing project/scientific/native setters remain the only writes; native validation, conversion, Undo and refusal text are unchanged. No form/filter/controller/store is introduced.
+
+The current VM retains original admission, getter/read order, guards, regex, arithmetic, signal/reentry and exception behavior. Cold ADP measurement reads no values without a beta row. The ADP selector captures its original site/type/model before restoring the compiled binding and queues its original delayed setType callback; no new owner-change or retirement guard is added. Parameter model rebuilds retain the same immediate follow and named deferred follow identity. Example/recent continuations retain their original row/context reads at execution. Local base overlays retain the original validator/title limit, path separators, popup placement and scale rounding; no upstream package is edited.
+
+Only compiled Qt.binding installers remain inline, with native code deciding their original execution points; selector follow functions that only install those bindings remain named for Qt queue identity. Ordinary visual bindings and direct existing native actions stay QML. Desktop/browser compilation and full scientific/form/lifecycle/refusal/IME/Undo/reentry/error verification follows the complete source migration.
+
+
+## Native palette, results, parameter-menu and list projections
+
+ApplicationInfo now executes the original AppColors position/kind/element admission and projection rules, FitResults structure-header/column projections and passive-row traversal, result-width measurement and Evolution navigation, About licence/component population and width reduction, and the app-owned ParamTextField formatting and lazy menu dispatch. The first paths are the palette and readability rules (§8, ADR-0038/ADR-0047), fit results (ADR-0045), component/licence ownership (ADR-0015), and parameter fields (ADR-0029). Existing colour, scientific, fit-result and formatting owners remain authoritative; this change adds no controller, cache, model or alternative scientific policy.
+
+The same bridge also owns AssistantPlan group/budget text, skill selection, generated/measured table column and component-intensity maps, uncertainty option labels and example tooltip filtering/joining. The original native assistant/schema/table owners and actual QML context remain the sources. Native VM closures retain the original callback arity, mutable method receivers, repeated reads, array holes, nullish/NaN fallbacks, UTF-16 strings, translation scope, property capture, exception and reentry behavior. Ordinary dot calls preserve the pinned Qt compiler order: receiver first, arguments next, member lookup/call last.
+
+The local ParamTextField override still creates its original QML menu component only on the first opening and routes the same mouse button/source cases; the upstream package is unchanged. The actual rendering hierarchy, metrics, native model setters and direct bindings/actions remain in QML. Complete desktop/browser compilation and runtime verification follows the source migration.
+
+
+## Native window and project-creation lifecycle
+
+ApplicationInfo owns Main's remaining workflow-loader count/readiness and preparing-tab selection, assistant action-page/manual-takeover branches, browser-save notices/errors/button preparation, result/refusal presentation, unsaved-name escaping and ordered startup continuation. AppState's project-change chart reset runs through the same existing bridge. The first implementations are the workflow and fit presentation in this ADR, project/save/browser ownership (ADR-0052), persisted geometry/settings (ADR-0031), chart state (ADR-0041) and rendering observation. Direct rendering, coordinate mapping, property bindings and one-action signal forwarding stay at their real QML/Qt boundary.
+
+The original GetStarted Create preparation/defaults/name/title admission, intent retirement, dialog-open/reject/close/accept handlers, and deferred creation now execute in that owner. Existing Session, assistant intent APIs, original form validators/defaults and native project outcome remain authoritative. Original createLife/createIntent/createOperation/assistantCreate view values remain the only lifecycle tokens; no state store, controller, extra retirement guard or alternate creation policy is added. The original accepted values and model references are captured at the original points, with the same repeated project/token checks and original error/currentness handling. Close-tail and creation continuations remain distinct per invocation. Scope-only startup/open continuations retain Qt's existing QML context-lifetime guard; callbacks with original local captures retain those actual managed values without a new guard.
+
+The same VM supplies custom iterator completion/close, string/regex formatting, context/global name resolution, receiver/argument/member-call order, translations, error propagation and reentry. Browser project operations remain implemented outside assistant-only availability branches. Complete desktop/browser build and runtime/failure repair follows the source migration.
+
+
+## Final guarded event procedures and retained host boundaries
+
+ApplicationInfo executes the remaining warning viewed/dismiss actions, focus-driven current structure/experiment/parameter selection, RecentProjects refresh guards, Structure/Analysis tab fallback, reflection-sort/header preparation, slider pressed-state callback and TextInput/status visual-feedback timer sequencing. These extend the first existing warning/status, table selection, parameter editing, workflow and local-base implementations in this ADR and ADR-0029/ADR-0046/ADR-0051. Existing model setters, Undo and sorting remain authoritative. The native bridge keeps the same actual QML scope, original guards/repeated reads, receiver/argument/member order, exceptions and interruption behavior. The empty commented-out hover handler is removed; it had no action. No controller or state store is added.
+
+The retained application QML executable boundaries are concrete: FitProgressBar's Canvas path/clip/stripe paint loop; real compiled Qt.binding expression installers and their stable named installer forwarders; Fonts.fontPath's component-relative Qt.resolvedUrl resource adapter; Main's remote-pointer mapFromItem/coordinate drawing dispatch; declarative property/layout/colour/arithmetic bindings, object literals and single existing native/Qt action or property-set forwarders. The standalone report retains only its actual DOM/CSS/Plotly/THREE/resource/camera/viewport/buffer/download adapters, including height-dependent pane placement and renderer-number decoding; portable report projections and wedges are native. The app web COI service worker remains the browser isolation/install/fetch host adapter. Vendored library bodies and the documentation audience script are not application business procedures.
+
+This is source migration completion at those explicit boundaries, not build/runtime qualification. Normal native/frontend/desktop/browser/standalone/offline/scientific/assistant/lifecycle/Undo/error checks, classification of every observed failure and resulting production repairs remain required.
+
+
+## Typed and qualified migrated view bindings
+
+Delegate-owned selected/sent file and skill metadata, the joint-fit project and window assistant host now use their actual owning IDs in nested bindings. CategoryGroup declares its existing bound component relationship; the legend tooltip names its actual MouseArea. Main's workflow-page property now declares the real WorkflowPage type already returned by the native page selector. The generic loaded text item retains its original dynamic dirty-property relation through ApplicationInfo instead of imposing a TextTab-only cast. These extend this ADR's actual component/selection/lazy-loader boundaries without a new owner, cache, warning suppression or behavior fallback.
+
+GeneratedGroup's GeneratedCategory ID is renamed from data to categoryData across its declarative reads and both existing native generated-category entrances. This avoids collision with QQuickItem.data and observes the actual GeneratedCategory NOTIFY-bearing properties, restoring the intended dictionary-generated single/loop view and edit source. No GeneratedCategory state, validation or native edit policy changes. Original model setters, array projection, property/reentry order and cold collapsed behavior remain. Normal lint/compiler/runtime checks verify the repair; no source change is made to the correctly declared native enums.
+
+
+## Pinned native VM compiler interface
+
+The bridge accesses Qt's generic Object getter and resolve-getter function addresses through Object::staticVTable(), which the pinned Qt private API exposes publicly. It calls the same base getter with the same receiver/null and has-property parameters; it deliberately does not dispatch through the QQmlContextWrapper override while probing only its ordinary Object properties. The ordinary getter/proxy/prototype distinction, actual receiver, context capture, pending exception and original lookup/call order remain unchanged. No protected-member access cast, visibility macro or alternate lookup implementation is introduced.
+
+The shared global-call helper defaults omitted arguments to its existing empty argument list, preserving zero-argument calls throughout the migrated chart/recent/working procedures. The local curveSlots name avoids Qt's slots macro while leaving the computed value and write untouched. These compiler repairs retain this ADR's existing owner and procedure contracts. The separately observed generated-MOC wrong-header build-path failure requires a physical build graph; correctly declared production enums and opaque snapshot types are unchanged. Normal compilation/lint/runtime verification remains the executor's responsibility.
+
+
+## Dedicated mutable-property notifications
+
+AssistantMarkdown's document/editor/source/markdown/text colour/accent/body font/mono font/table border/shade/base properties and AssistantViewModel.sessionDraft now declare their own dedicated NOTIFY signals, extending this ADR's existing mutable-QObject property contract and native assistant presentation/session owners. No shared invalidation signal, CONSTANT annotation or lint suppression stands in for a changing property.
+
+Markdown setters retain their original equality checks, assignments, presentation revisions, render/format/default-font order and existing currentness checks. A guarded exit notification observes a surviving owner after those effects, including early return paths; it emits only when the exposed value changed. Document/editor lifetime connections also notify the automatic QPointer-to-null transition and retire only the corresponding old notification connection. They do not clear extra view state or introduce owner-change resets. The initial body-font setup still runs even when its internal initialization flag was unset and the exposed font value already compared equal.
+
+The session-draft property notifies both its public setter and its existing saved-session restoration assignment. Restoration keeps its original file publication, draft-restored/sessions/selected signal order; a scope-exit notification observes only a surviving same native state through the existing observed-value publication bookkeeping, and the original publication guard remains after that scope for reentry. Browser unavailable setters still change no value and emit nothing. This adds the required observable property contract without a new store/controller, persistence write or altered draft/session admission policy. Normal property-gate, compiler and reentry/runtime checks qualify the repair.
+
+
+### Dedicated notifications across native view projections
+
+The existing mutable-property rule applies to each exposed value, including prior native owners whose broad event signals also drove several properties. AssistantViewModel now gives each skill-source/session/cache/consent value its own signal. Its existing State::observed publication bookkeeping and FileProjection currentness checks compare values before emission, record them before callbacks, and stop when reentry retires the owner. The existing broad events remain available at their original call sites; their dedicated-property publications reuse the same owner rather than creating a second cache or controller. Existing context comparisons keep their ordering and legacy context event, with separate consent signals. Session draft and markdown notifications follow the preceding section.
+
+BlockText remains lazy: file-only invalidation never generates text, and unobserved invalidation still defers text generation to a read. Its initial-observed or last-notified file identity is notification bookkeeping only; file() continues to query the actual native source on every read. File identity is read during invalidation only when its dedicated signal has a listener; a source exception is propagated without substituting an empty identity, and owner survival is checked before recording the result. The bookkeeping never supplies a file() result or generates text. Text/error comparisons keep their original order, while input-only listeners now trigger the same required text computation and receive their own comparison-based signal. Owner survival is checked between publications. GeneratedCategory and ExperimentViewModel retain their original broad changed/description events and publish dedicated signals by comparing actual fields with their last notified values. This is notification bookkeeping, never a getter or second model projection.
+
+EdiTextHighlighter's MEMBER properties retain MOC's actual per-member equality check. Each dedicated colour signal forwards to the existing colorsChanged event and rehighlight connection, retaining that effect before later property observers. Manual broad-event consumers continue to work. The original native view owners and setters remain authoritative; no shared NOTIFY signal, CONSTANT annotation, lint suppression or alternate model is introduced. Full normal MOC/property checks, compilation and actual reentry/lazy-view behavior remain execution obligations.
+
+
+### Superseded property publication ownership
+
+A surviving QObject does not make an outer notification tail current. Each Markdown property now owns a separate publication version and last-notified value. A setter claims its property before render/format/document callbacks; its completion records the value and retires that version before emitting. Nested updates, pointer destruction and pointer round trips retire only the affected property's older tail. An unrelated accent change cannot suppress a pending source notification. Pointer lifetime callbacks use the same comparison/version path. The newly added lifetime-connection bookkeeping checks its pointer publication after disconnect/connect hooks as well, so their reentry cannot overwrite a newer connection or continue an older pointer setter; unrelated property work remains independent. Exposed values, render currentness, source/default-font ordering and live pointer getters remain in their original owners.
+
+GeneratedCategory and ExperimentViewModel keep notification-only observed values and a read/synchronization publication identity. The original native computation and option/source callbacks precede their original field commit. That commit claims its publication identity; the legacy event remains at its original point. Each dedicated emission records its value before callbacks and checks publication identity before the next tail step. A nested no-op synchronization can therefore publish an already committed but not yet notified outer value, while a nested new synchronization retires the older tail. Original native field-write ordering is retained, including a new original commit after a source/option callback; no alternative model state is served from notification metadata.
+
+BlockText gives each invalidation a publication identity and compares input/file notifications against notification-only observations recorded before callbacks. After any text/error/input/file callback, a superseded tail stops before another derived getter or notification. The original text computation may itself reenter before committing its result, so the completed original computation claims the ensuing publication. File and input reads remain live, never return bookkeeping and only seed an as-yet-unobserved value; each notified value is recorded before its signal. No old input is parsed during invalidation to manufacture a baseline, so a previous read refusal cannot prevent computation of a new source. File-only invalidation never computes text, and source exceptions remain exceptions. No additional cache supplies text, input or file values.
+
+AssistantViewModel uses its existing observed map for per-property publication versions as well as values. A nested publication during a getter or legacy context event retires only that property's pending dedicated emission, including return-to-earlier-value sequences. Draft restoration and the public draft setter share the same observed-value publication path, recording before callbacks; a restoration tail cannot repeat a draft already published by a nested setter. Existing FileProjection checks, legacy events, setter/restoration effect order and unavailable-browser behavior remain in force. Full normal MOC, reentry/lifetime, lazy-view and platform checks remain required.
+
+
+### Retire native Markdown callbacks before derived teardown
+
+AssistantMarkdown's own callbacks now use a private QObject lifetime context owned by that same presentation item. QQuickItem base teardown can emit windowChanged after AssistantMarkdown's derived members have been destroyed; waiting for QObject's later automatic disconnection allows a captured-this render callback to access those dead members. The explicit derived destructor removes its owned window event filter and destroys the private context while every derived member is still alive. Context destruction disconnects incoming functors and removes their queued deliveries before base teardown begins, without a post-destruction member flag or a change to public document/editor values.
+
+The context covers the self windowChanged and desktop clipboard callbacks, editor/document lifetime callbacks, and every PassiveDocument contents/layout callback, including old externally parented documents/layouts retained after a newer document is selected. It is declared last so construction unwinding also destroys it before the fields those callbacks use. It owns no model, document, editor, window or clipboard state and introduces no service/controller. Alive callbacks retain their captured actual owner, existing property publication/currentness checks, rendering, formatting, clipboard and DPI behavior. External observers' connections remain untouched. Qt's ordinary item virtual/polish/scenegraph lifecycle stays with QQuickItem; no live callback is disabled and no public setter/reset is invoked as a teardown substitute. Normal lifetime, reentry, rendering and platform verification remains required.

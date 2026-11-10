@@ -1,0 +1,476 @@
+{
+  "kind": "Native diagnostic observation, not an independent scientific oracle or exact replay",
+  "reconstruction": "Final project with only the two call aliases and its named constraint removed. Earlier fits/Undo and later final fit are retained; original input/tool receipts do not contain the pre-call fitted project bytes.",
+  "head": "32cfc9c685b0700936a4b901d271251404a45d20",
+  "binary_sha256": "97a5cdbf42f417ad93ff079880c75f5b3ff0030e36d1037c398a42fef9676c2b",
+  "analysis_before_sha256": "8b35f058bb4c791dcce480909f4ad1100b5757d09e008f657c144280cb1366bd",
+  "analysis_after_sha256": "a7ba457fbf42209c193d589334c192770d0a659a74f19917cbb213ccdaf4058a",
+  "call": {
+    "tool": "add_relations",
+    "call_id": "d6441c16-8ebc-4d79-8272-473d20d8a9c5",
+    "arguments": {
+      "aliases": [
+        {
+          "id": "B_Co1",
+          "path": "structure.atom_sites[Co1].adp_iso"
+        },
+        {
+          "id": "B_Co2",
+          "path": "structure.atom_sites[Co2].adp_iso"
+        }
+      ],
+      "constraints": [
+        {
+          "enabled": true,
+          "expression": "B_Co2 = B_Co1",
+          "id": "shared_cobalt_Biso"
+        }
+      ],
+      "purpose": "Test a common isotropic displacement for the two octahedral cobalt sites"
+    }
+  },
+  "tool_results": [
+    {
+      "action_error": "control_commit_unconfirmed",
+      "action_field": "relation",
+      "atomic": false,
+      "calculation_pending": false,
+      "complete": false,
+      "message": "The genuine group click did not expand its controls",
+      "schema": "edi.assistant.outgoing/1",
+      "status": "partial",
+      "steps_completed": 6
+    }
+  ],
+  "error": null,
+  "activity": [
+    {
+      "active": true,
+      "time": 1793634086942
+    }
+  ],
+  "active_at_end": true,
+  "group_press_records": [
+    {
+      "kind": "original_title_mousearea_pressed_changed",
+      "groupName": "group.alias",
+      "originalGroup": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")",
+      "originalTitle": "Button_QMLTYPE_128(0x55a66fc5d570)",
+      "receiver": "QQuickMouseArea(0x55a66fc22ac0)",
+      "receiverPressed": true,
+      "titleBounds": {
+        "x": 677,
+        "y": 350,
+        "width": 111.765625,
+        "height": 42
+      },
+      "mainActive": true
+    },
+    {
+      "kind": "original_title_mousearea_pressed_changed",
+      "groupName": "group.alias",
+      "originalGroup": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")",
+      "originalTitle": "Button_QMLTYPE_128(0x55a66fc5d570)",
+      "receiver": "QQuickMouseArea(0x55a66fc22ac0)",
+      "receiverPressed": false,
+      "titleBounds": {
+        "x": 677,
+        "y": 350,
+        "width": 111.765625,
+        "height": 42
+      },
+      "mainActive": true
+    },
+    {
+      "kind": "original_title_clicked",
+      "groupName": "group.alias",
+      "originalGroup": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")",
+      "originalTitle": "Button_QMLTYPE_128(0x55a66fc5d570)",
+      "receiver": "Button_QMLTYPE_128(0x55a66fc5d570)",
+      "receiverPressed": false,
+      "titleBounds": {
+        "x": 677,
+        "y": 350,
+        "width": 111.765625,
+        "height": 42
+      },
+      "mainActive": true
+    },
+    {
+      "kind": "original_title_mousearea_clicked",
+      "groupName": "group.alias",
+      "originalGroup": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")",
+      "originalTitle": "Button_QMLTYPE_128(0x55a66fc5d570)",
+      "receiver": "QQuickMouseArea(0x55a66fc22ac0)",
+      "receiverPressed": false,
+      "titleBounds": {
+        "x": 677,
+        "y": 350,
+        "width": 111.765625,
+        "height": 42
+      },
+      "mainActive": true
+    }
+  ],
+  "pointer_records": [
+    {
+      "kind": "all_header_press",
+      "name": "group.alias",
+      "group": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")",
+      "title": "Button_QMLTYPE_128(0x55a66fc5d570)",
+      "pressed": true,
+      "time": 1793634112974
+    },
+    {
+      "kind": "all_header_press",
+      "name": "group.alias",
+      "group": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")",
+      "title": "Button_QMLTYPE_128(0x55a66fc5d570)",
+      "pressed": false,
+      "time": 1793634113772
+    },
+    {
+      "kind": "pointer_moved",
+      "time": 1793634163156,
+      "active": true,
+      "headers": [
+        {
+          "name": "group.fit_result_phase",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66d7f5cd0, \"group.fit_result_phase\")",
+          "title": "Button_QMLTYPE_128(0x55a66d615a80)",
+          "rect": [
+            677,
+            604,
+            178.640625,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.fit_result_bank",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66ffc5250, \"group.fit_result_bank\")",
+          "title": "Button_QMLTYPE_128(0x55a66c2b7650)",
+          "rect": [
+            677,
+            562,
+            192.5,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.fit_result",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66dfe2840, \"group.fit_result\")",
+          "title": "Button_QMLTYPE_128(0x55a66ff2b270)",
+          "rect": [
+            677,
+            520,
+            104.296875,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.fit_parameter",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66b1d3110, \"group.fit_parameter\")",
+          "title": "Button_QMLTYPE_128(0x55a6708b6020)",
+          "rect": [
+            677,
+            478,
+            166.28125,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.constraint",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66c090d80, \"group.constraint\")",
+          "title": "Button_QMLTYPE_128(0x55a66b449280)",
+          "rect": [
+            677,
+            436,
+            136.921875,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.alias",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")",
+          "title": "Button_QMLTYPE_128(0x55a66fc5d570)",
+          "rect": [
+            677,
+            203,
+            111.765625,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.fitting_mode",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66d72d920, \"group.fitting_mode\")",
+          "title": "Button_QMLTYPE_128(0x55a66ff160e0)",
+          "rect": [
+            677,
+            161,
+            127.359375,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.minimizer",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66fcc0c30, \"group.minimizer\")",
+          "title": "Button_QMLTYPE_128(0x55a66bdc5ff0)",
+          "rect": [
+            677,
+            119,
+            109.96875,
+            42
+          ],
+          "visible": true
+        }
+      ],
+      "groups": [
+        {
+          "name": "group.constraint",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66c090d80, \"group.constraint\")",
+          "title": "Button_QMLTYPE_128(0x55a66b449280)",
+          "alive": true,
+          "titleAlive": true,
+          "declared": true
+        },
+        {
+          "name": "group.alias",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")",
+          "title": "Button_QMLTYPE_128(0x55a66fc5d570)",
+          "alive": true,
+          "titleAlive": true,
+          "declared": true
+        }
+      ]
+    },
+    {
+      "kind": "pointer_pressed",
+      "time": 1793634164067,
+      "active": true,
+      "headers": [
+        {
+          "name": "group.fit_result_phase",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66d7f5cd0, \"group.fit_result_phase\")",
+          "title": "Button_QMLTYPE_128(0x55a66d615a80)",
+          "rect": [
+            677,
+            604,
+            178.640625,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.fit_result_bank",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66ffc5250, \"group.fit_result_bank\")",
+          "title": "Button_QMLTYPE_128(0x55a66c2b7650)",
+          "rect": [
+            677,
+            562,
+            192.5,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.fit_result",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66dfe2840, \"group.fit_result\")",
+          "title": "Button_QMLTYPE_128(0x55a66ff2b270)",
+          "rect": [
+            677,
+            520,
+            104.296875,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.fit_parameter",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66b1d3110, \"group.fit_parameter\")",
+          "title": "Button_QMLTYPE_128(0x55a6708b6020)",
+          "rect": [
+            677,
+            478,
+            166.28125,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.constraint",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66c090d80, \"group.constraint\")",
+          "title": "Button_QMLTYPE_128(0x55a66b449280)",
+          "rect": [
+            677,
+            436,
+            136.921875,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.alias",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")",
+          "title": "Button_QMLTYPE_128(0x55a66fc5d570)",
+          "rect": [
+            677,
+            203,
+            111.765625,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.fitting_mode",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66d72d920, \"group.fitting_mode\")",
+          "title": "Button_QMLTYPE_128(0x55a66ff160e0)",
+          "rect": [
+            677,
+            161,
+            127.359375,
+            42
+          ],
+          "visible": true
+        },
+        {
+          "name": "group.minimizer",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66fcc0c30, \"group.minimizer\")",
+          "title": "Button_QMLTYPE_128(0x55a66bdc5ff0)",
+          "rect": [
+            677,
+            119,
+            109.96875,
+            42
+          ],
+          "visible": true
+        }
+      ],
+      "groups": [
+        {
+          "name": "group.constraint",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66c090d80, \"group.constraint\")",
+          "title": "Button_QMLTYPE_128(0x55a66b449280)",
+          "alive": true,
+          "titleAlive": true,
+          "declared": true
+        },
+        {
+          "name": "group.alias",
+          "group": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")",
+          "title": "Button_QMLTYPE_128(0x55a66fc5d570)",
+          "alive": true,
+          "titleAlive": true,
+          "declared": true
+        }
+      ]
+    }
+  ],
+  "group_lifetime_records": [],
+  "observer_gaps": [
+    {
+      "code": "signal_not_exposed",
+      "object": "CategoryGroup_QMLTYPE_198(0x55a66c090d80, \"group.constraint\")",
+      "signal": "destroyed",
+      "detail": "original property is not a connectable signal"
+    },
+    {
+      "code": "signal_not_exposed",
+      "object": "Button_QMLTYPE_128(0x55a66b449280)",
+      "signal": "destroyed",
+      "detail": "original property is not a connectable signal"
+    },
+    {
+      "code": "signal_not_exposed",
+      "object": "QQuickMouseArea(0x55a66e8d4220)",
+      "signal": "destroyed",
+      "detail": "original property is not a connectable signal"
+    },
+    {
+      "key": "CategoryGroup_QMLTYPE_198(0x55a66c090d80, \"group.constraint\")|exclusive_mouse_grabber_unexposed|QQuickWindow::mouseGrabberItem is C++ public only, not an original QML property/invokable; no guessed getter/filter/handler added",
+      "group": "CategoryGroup_QMLTYPE_198(0x55a66c090d80, \"group.constraint\")",
+      "name": "group.constraint",
+      "code": "exclusive_mouse_grabber_unexposed",
+      "detail": "QQuickWindow::mouseGrabberItem is C++ public only, not an original QML property/invokable; no guessed getter/filter/handler added"
+    },
+    {
+      "code": "signal_not_exposed",
+      "object": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")",
+      "signal": "destroyed",
+      "detail": "original property is not a connectable signal"
+    },
+    {
+      "code": "signal_not_exposed",
+      "object": "Button_QMLTYPE_128(0x55a66fc5d570)",
+      "signal": "destroyed",
+      "detail": "original property is not a connectable signal"
+    },
+    {
+      "code": "signal_not_exposed",
+      "object": "QQuickMouseArea(0x55a66fc22ac0)",
+      "signal": "destroyed",
+      "detail": "original property is not a connectable signal"
+    },
+    {
+      "key": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")|exclusive_mouse_grabber_unexposed|QQuickWindow::mouseGrabberItem is C++ public only, not an original QML property/invokable; no guessed getter/filter/handler added",
+      "group": "CategoryGroup_QMLTYPE_198(0x55a66c0181a0, \"group.alias\")",
+      "name": "group.alias",
+      "code": "exclusive_mouse_grabber_unexposed",
+      "detail": "QQuickWindow::mouseGrabberItem is C++ public only, not an original QML property/invokable; no guessed getter/filter/handler added"
+    }
+  ],
+  "raw_result_sha256": "5d77851dacddf8a315ba17fea178dd58dcbd395b8b5e559ebee4a6d230b54c12",
+  "raw_result_path": "build/tests-seq16/replay4/RESULT.json",
+  "raw_dispatch_sha256": "18ce86f4189e02f0a9c5d4a1860cb3806f26c8f85fe8c60112a93aaad9013a1f",
+  "table": {
+    "command": "build/app/app/edi_app_tests -input tests/unit/app/tst_table_geometry.qml RenderedTableGeometry::test_generic_id_width_learns_only_real_shown_rows_and_keeps_visited_maximum",
+    "exit": "1",
+    "receipt": "build/tests-seq16/table.xml",
+    "failure": "The actual live table and declared containing GroupBox expansion settle within the same geometry clock",
+    "before": "Width grew when the wider row was drawn and retained the visited maximum.",
+    "after": "Width fits whole-model content before scrolling, stays unchanged through scrolling, and shrinks after the unseen longest content changes. Original settling clock and row/visibility/ink checks retained."
+  },
+  "prior_attempts": [
+    {
+      "path": "build/tests-seq16/replay/RESULT.json",
+      "scope": "Diagnostic QML property setup failed before dispatch"
+    },
+    {
+      "path": "build/tests-seq16/replay2/RESULT.json",
+      "scope": "Driver omitted the ordinary panel open before connection; no tool dispatch"
+    }
+  ],
+  "conclusions": {
+    "outcome": "control_commit_unconfirmed",
+    "active_whole_observed_run": true,
+    "failing_press_position": [
+      745.4609375,
+      457
+    ],
+    "pressed_group_header": "No group header emitted pressedChanged at the failing press; only the earlier Aliases expansion was recorded. The window received the failing press within the current Constraints title rectangle. Non-header recipient is not established.",
+    "rebuilt_between_pointer_arrival_and_press": "No rebuild observed: identical live original group/title identities and declared title at both boundaries, with no observed invalidation or owner change. QObject destroyed is not exposed to this QML observer; gaps are retained.",
+    "before_aliases": [],
+    "after_alias_ids": [
+      "B_Co1",
+      "B_Co2"
+    ],
+    "after_constraints": [],
+    "provider_sessions": 0,
+    "prior_reproduction": {
+      "path": "build/tests-seq16/replay3/RESULT.json",
+      "sha256": "af79be81f8b50a2e430d9be801b77f036b0de4994de57138e3c66378d7075a2c",
+      "outcome": "control_commit_unconfirmed"
+    }
+  },
+  "build": {
+    "exit": 0,
+    "marker": "77e34e5c409e469751987f27f37ca66d72e7e92c-dirty",
+    "scope": "Existing native kit, targets assistant_real_owner_probe and edi_app_tests, -j 4 after no-build guard. Not a clean release or CI qualification."
+  }
+}

@@ -1,0 +1,176 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 01/07/2026  Time: 21:31:55.045                              
+
+ => PCR file code: arg_si
+ => DAT file code: arg_si               -> Relative contribution: 1.0000                                                            
+ => Title:  Backscattering Bank (2theta= 144.845)  Si- Argonne
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => Neutron Time-Of-Flight data                                                                                                     
+ => Abcisa variable is T.O.F. in microsecs
+ => The    9th default profile function was selected
+
+ => Data read from GSAS file for pattern:  1
+ => Absorption correction type: 2
+ => Base of peaks: 2.0*HW*   30.00
+ ==> T.O.F. range, and number of points:
+    TOFmin:    2000.000000  TOFmax:   29995.000000
+    No. of points:   5600
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    2.327 g/cm3
+ => Scor: 2.6190
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 Standard-Si                             F d -3 m            
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   430  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Si      0.12500(   0)  0.12500(   0)  0.12500(   0)  0.541(  0)  0.042(  0)    8
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              5.43238   0.00000
+                              5.43238   0.00000
+                              5.43238   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :    381.315307617     0.000000000
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+         0.000000    0.000000
+        29.649200    0.000000
+         5.079000    0.000000
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        5.432382    0.000000
+        5.432382    0.000000
+        5.432382    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter alpha0,beta0,beta1,alphaQ,betaQ: 
+        0.000000    0.000000    0.038020
+        0.000000    0.235422    0.000000
+        0.010902    0.000000    0.000000
+        0.000000    0.000000    0.000000
+
+
+ => Absorption parameters: 
+                              0.00000       0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:    -8.5673    0.0000
+ => Cosine Fourier Background Parameters ==>
+                               154.32      0.0000    
+                               1.3400      0.0000    
+                               37.000      0.0000    
+                               12.332      0.0000    
+                               17.706      0.0000    
+                               4.7850      0.0000    
+                               6.8080      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+                               0.0000      0.0000    
+ 
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):   7476.91      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):     -1.54      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle: 50
+ => N-P+C:  5600
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  8.73     Rwp:  6.36     Rexp:    3.66 Chi2:  3.02      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  20.1     Rwp:  12.4     Rexp:    7.16 Chi2:  3.02    
+ => Deviance:  0.322E+05     Dev*  :   5.741    
+ => DW-Stat.:    0.9734     DW-exp:     1.9171
+ => N-sigma of the GoF:      106.860
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  3124
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  5.93     Rwp:  5.83     Rexp:    2.78 Chi2:  4.39      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  10.1     Rwp:  11.2     Rexp:    5.36 Chi2:  4.39    
+ => Deviance:  0.130E+05     Dev*  :   4.152    
+ => DW-Stat.:    1.2000     DW-exp:     1.8888
+ => N-sigma of the GoF:      134.009
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   5.41    
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     Standard-Si
+ => Bragg R-factor:   2.03       Vol:  160.314( 0.000)  Fract(%):  100.00( 0.00)
+ => Rf-factor=  13.9             ATZ:         224.724   Brindley:  1.0000
+
+ 
+              CPU Time:     0.148 seconds
+                            0.002 minutes
+
+ => Run finished at:     Date: 01/07/2026  Time: 21:31:55.191                              

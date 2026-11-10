@@ -1,0 +1,277 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#include "web_page_hooks.hpp"
+
+#include <QQmlApplicationEngine>
+
+#if defined(Q_OS_WASM)
+#include <emscripten.h>
+
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QMetaObject>
+#include <QPointer>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <functional>
+#include <string>
+
+#include "app_info.hpp"
+#include "session.hpp"
+
+namespace {
+
+QPointer<QQmlApplicationEngine> g_engine;
+
+QObject* named(const char* name) {
+    if (g_engine == nullptr || g_engine->rootObjects().isEmpty()) {
+        return nullptr;
+    }
+    return g_engine->rootObjects().constFirst()->findChild<QObject*>(QLatin1String(name));
+}
+
+// The control's own action: a button's clicked handler, a tab button's click (which checks it in its bar).
+bool press(QObject* control) {
+    if (control == nullptr) {
+        return false;
+    }
+    if (control->metaObject()->indexOfMethod("click()") >= 0) {
+        return QMetaObject::invokeMethod(control, "click");
+    }
+    return QMetaObject::invokeMethod(control, "clicked");
+}
+
+QJsonObject state() {
+    QObject* preferences = named("preferences");
+    QObject* develop = named("preferences.tab.develop");
+    QObject* diagnostics = named("diagnostics");
+    auto* text = qobject_cast<QQuickItem*>(named("diagnostics.text"));
+    auto* info = g_engine != nullptr ? g_engine->singletonInstance<ApplicationInfo*>("edi.app", "ApplicationInfo")
+                                     : nullptr;
+    if (preferences == nullptr || develop == nullptr || diagnostics == nullptr || text == nullptr || info == nullptr) {
+        return {{QStringLiteral("error"), QStringLiteral("the Preferences, Develop or Diagnostics controls were not found")}};
+    }
+    return {
+        {QStringLiteral("preferencesVisible"), preferences->property("visible").toBool()},
+        {QStringLiteral("developSelected"), develop->property("checked").toBool()},
+        {QStringLiteral("diagnosticsVisible"), diagnostics->property("visible").toBool()},
+        {QStringLiteral("textVisible"), text->isVisible()},
+        {QStringLiteral("text"), text->property("text").toString()},
+        {QStringLiteral("providerText"), info->diagnostics()},
+    };
+}
+
+QJsonObject act(const std::string& action) {
+    if (action == "open") {
+        if (!press(named("appBar.button.preferences")) || !press(named("preferences.tab.develop")) ||
+            !press(named("preferences.diagnostics"))) {
+            return {{QStringLiteral("error"), QStringLiteral("Preferences, Develop or Diagnostics could not be opened")}};
+        }
+        return state();
+    }
+    if (action == "read") {
+        return state();
+    }
+    if (action == "close") {
+        QObject* diagnostics = named("diagnostics");
+        QObject* preferences = named("preferences");
+        if (diagnostics == nullptr || preferences == nullptr || !QMetaObject::invokeMethod(diagnostics, "close") ||
+            !QMetaObject::invokeMethod(preferences, "close")) {
+            return {{QStringLiteral("error"), QStringLiteral("Diagnostics or Preferences could not be closed")}};
+        }
+        return state();
+    }
+    return {{QStringLiteral("error"), QStringLiteral("unknown action (open, read, close)")}};
+}
+
+}  // namespace
+
+// Called by the page on the main thread, which is Qt's: the result stays valid until the next call.
+extern "C" EMSCRIPTEN_KEEPALIVE const char* edi_develop_diagnostics(const char* action) {
+    static std::string result;
+    result = QJsonDocument(act(action)).toJson(QJsonDocument::Compact).toStdString();
+    return result.c_str();
+}
+
+// The one effectively visible item named `object_name`: its scene rectangle, visibility and enabled state, read
+// only. Declared items are the window's QObject children, view delegates only its visual ones, so both are searched.
+extern "C" EMSCRIPTEN_KEEPALIVE const char* edi_control_geometry(const char* object_name) {
+    static std::string result;
+    const QString name = QString::fromUtf8(object_name);
+    QList<QQuickItem*> matches;
+    QObject* root = g_engine != nullptr && !g_engine->rootObjects().isEmpty() ? g_engine->rootObjects().constFirst()
+                                                                               : nullptr;
+    if (root != nullptr) {
+        matches = root->findChildren<QQuickItem*>(name);
+        if (auto* window = qobject_cast<QQuickWindow*>(root)) {
+            const std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    if (child->objectName() == name && !matches.contains(child)) {
+                        matches.append(child);
+                    }
+                    walk(child);
+                }
+            };
+            walk(window->contentItem());
+        }
+    }
+    QList<QQuickItem*> shown;
+    for (QQuickItem* item : matches) {
+        if (item->isVisible()) {
+            shown.append(item);
+        }
+    }
+    QJsonObject state;
+    if (shown.size() == 1) {
+        const QRectF rect = shown.constFirst()->mapRectToScene(shown.constFirst()->boundingRect());
+        QQuickItem* item = shown.constFirst();
+        state = {{QStringLiteral("objectName"), item->objectName()},
+                 {QStringLiteral("x"), rect.x()},
+                 {QStringLiteral("y"), rect.y()},
+                 {QStringLiteral("width"), rect.width()},
+                 {QStringLiteral("height"), rect.height()},
+                 {QStringLiteral("visible"), true},
+                 {QStringLiteral("enabled"), item->isEnabled()},
+                 {QStringLiteral("activeFocus"), item->hasActiveFocus()}};
+        // What it says: its own text, else its visible descendants' texts in order (a tooltip's column of labels).
+        if (item->metaObject()->indexOfProperty("text") >= 0) {
+            state[QStringLiteral("text")] = item->property("text").toString();
+        } else {
+            QStringList texts;
+            const std::function<void(QQuickItem*)> collect = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    if (!child->isVisible()) {
+                        continue;
+                    }
+                    if (child->metaObject()->indexOfProperty("text") >= 0) {
+                        texts.append(child->property("text").toString());
+                    } else {
+                        collect(child);
+                    }
+                }
+            };
+            collect(item);
+            if (!texts.isEmpty()) {
+                state[QStringLiteral("text")] = texts.join(QLatin1Char('\n'));
+            }
+        }
+        if (item->metaObject()->indexOfProperty("checkable") >= 0 && item->property("checkable").toBool()) {
+            state[QStringLiteral("checked")] = item->property("checked").toBool();
+        }
+    } else {
+        const QString why = matches.isEmpty() ? QStringLiteral("no item is named '%1'")
+                            : shown.isEmpty() ? QStringLiteral("no visible item is named '%1'")
+                                              : QStringLiteral("%2 visible items are named '%1'").arg(shown.size());
+        state = {{QStringLiteral("error"), why.arg(name)}};
+    }
+    result = QJsonDocument(state).toJson(QJsonDocument::Compact).toStdString();
+    return result.c_str();
+}
+
+// The status bar's live fit progress: its bar's text and effective visibility, and whether the fit is running.
+extern "C" EMSCRIPTEN_KEEPALIVE const char* edi_fit_progress() {
+    static std::string result;
+    auto* bar = qobject_cast<QQuickItem*>(named("statusBar.fit.progress"));
+    QObject* fit = named("statusBar.fit");
+    const QJsonObject state =
+        bar == nullptr || fit == nullptr
+            ? QJsonObject{{QStringLiteral("error"), QStringLiteral("the status bar's fit progress was not found")}}
+            : QJsonObject{{QStringLiteral("text"), bar->property("text").toString()},
+                          {QStringLiteral("visible"), bar->isVisible()},
+                          {QStringLiteral("running"), fit->property("running").toBool()},
+                          {QStringLiteral("scanPatternUpdates"), fit->property("scanPatternUpdates").toInt()},
+                          {QStringLiteral("scanShownFile"), fit->property("scanShownFile").toString()}};
+    result = QJsonDocument(state).toJson(QJsonDocument::Compact).toStdString();
+    return result.c_str();
+}
+
+// The pattern-update preference set to `mode`: the mode the status bar's fit then has, or -1 without one.
+extern "C" EMSCRIPTEN_KEEPALIVE int edi_pattern_updates(int mode) {
+    QObject* preferences = g_engine != nullptr ? g_engine->singletonInstance<QObject*>("edi.app", "Preferences") : nullptr;
+    QObject* fit = named("statusBar.fit");
+    if (preferences == nullptr || fit == nullptr) {
+        return -1;
+    }
+    preferences->setProperty("scanPatternUpdates", mode);
+    return fit->property("patternUpdates").toInt();
+}
+
+// Session::openExample(id) on Qt's main thread: 1 started (the project opens when its download lands and
+// openingExample clears; exampleOpenFinished tells), 0 refused (Session names why), -1 no Session.
+extern "C" EMSCRIPTEN_KEEPALIVE int edi_open_example(const char* example_id) {
+    auto* session = g_engine != nullptr ? g_engine->singletonInstance<edi_app::Session*>("edi.app", "Session") : nullptr;
+    if (session == nullptr) {
+        return -1;
+    }
+    return session->openExample(QString::fromUtf8(example_id)) ? 1 : 0;
+}
+
+EM_JS_DEPS(edi_develop, "$UTF8ToString,$stringToUTF8OnStack,$withStackSave");
+EM_JS(void, edi_install_web_page_hooks, (), {
+    const call = (action) => {
+        const state = JSON.parse(UTF8ToString(withStackSave(() => _edi_develop_diagnostics(stringToUTF8OnStack(action)))));
+        if (state.error) {
+            throw new Error(`ediDevelopDiagnostics(${action}): ${state.error}`);
+        }
+        return state;
+    };
+    globalThis.ediDevelopDiagnostics = (action) => {
+        if (action !== "close") {
+            return call(action);
+        }
+        call("close");
+        // Resolved once both dialogs have closed, after their close transitions.
+        return new Promise((resolve, reject) => {
+            const started = Date.now();
+            const poll = () => {
+                const state = call("read");
+                if (!state.preferencesVisible && !state.diagnosticsVisible) {
+                    resolve(state);
+                } else if (Date.now() - started > 10000) {
+                    reject(new Error("ediDevelopDiagnostics(close): the dialogs did not close"));
+                } else {
+                    setTimeout(poll, 20);
+                }
+            };
+            poll();
+        });
+    };
+    globalThis.ediControlGeometry = (objectName) => {
+        const state = JSON.parse(UTF8ToString(withStackSave(() => _edi_control_geometry(stringToUTF8OnStack(String(objectName))))));
+        if (state.error) {
+            throw new Error(`ediControlGeometry: ${state.error}`);
+        }
+        return state;
+    };
+    globalThis.ediFitProgress = () => {
+        const state = JSON.parse(UTF8ToString(_edi_fit_progress()));
+        if (state.error) {
+            throw new Error(`ediFitProgress: ${state.error}`);
+        }
+        return state;
+    };
+    globalThis.ediPatternUpdates = (mode) => {
+        const taken = _edi_pattern_updates(Number(mode));
+        if (taken < 0) {
+            throw new Error("ediPatternUpdates: no preferences or no open project");
+        }
+        return taken;
+    };
+    globalThis.ediOpenExample = (exampleId) => {
+        const opened = withStackSave(() => _edi_open_example(stringToUTF8OnStack(String(exampleId))));
+        if (opened < 0) {
+            throw new Error("ediOpenExample: the app's Session is not available");
+        }
+        return opened === 1;
+    };
+});
+
+void edi_app::install_web_page_hooks(QQmlApplicationEngine& engine) {
+    g_engine = &engine;
+    edi_install_web_page_hooks();
+}
+
+#else
+
+void edi_app::install_web_page_hooks(QQmlApplicationEngine& /*engine*/) {}
+
+#endif

@@ -1,0 +1,15 @@
+{
+  "before_sha256": "3bbd306d42fc286647076478b98fadce37724386ed06916ffe62e3d5b1fe5b33",
+  "after_sha256": "16f07eeaf9007ce60dc4b0597a13aa5ac492b1b01db10604797f8ec7f2416dbc",
+  "changed_comment_lines": [
+    63,
+    64,
+    129,
+    178,
+    180,
+    499,
+    914
+  ],
+  "line_count": 1504,
+  "invariant": "Only whole-line comments change; every executable line, function span, classification and summary remains unchanged."
+}

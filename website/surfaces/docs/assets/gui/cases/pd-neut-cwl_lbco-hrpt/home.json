@@ -1,0 +1,561 @@
+{
+    "description": "Start a new analysis",
+    "fit_phase": "",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "highlights": [
+        "home.start"
+    ],
+    "id": "home",
+    "image": "home.webp",
+    "image_sha256": "5709a75ad8432a0767b16f34310284ba58c71476796fbd4a626a132e018a7fd9",
+    "items": {
+        "ApplicationWindow": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
+        "ApplicationWindowContentControl": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
+        "Main": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
+        "appBar": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                77
+            ]
+        },
+        "appBar.button.preferences": {
+            "bounds": [
+                1431,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "cog",
+            "label": "",
+            "visible_bounds": [
+                1431,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.redo": {
+            "bounds": [
+                84,
+                21,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "redo",
+            "label": "",
+            "visible_bounds": [
+                84,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.reset": {
+            "bounds": [
+                119,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "backspace",
+            "label": "",
+            "visible_bounds": [
+                119,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.save": {
+            "bounds": [
+                14,
+                21,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "save",
+            "label": "",
+            "visible_bounds": [
+                14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.undo": {
+            "bounds": [
+                49,
+                21,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "undo",
+            "label": "",
+            "visible_bounds": [
+                49,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.separator": {
+            "bounds": [
+                1354,
+                33,
+                1,
+                12
+            ],
+            "enabled": false,
+            "label": "",
+            "visible_bounds": [
+                1354,
+                33,
+                1,
+                12
+            ]
+        },
+        "appBar.tab.analysis": {
+            "bounds": [
+                812.359375,
+                0,
+                67.84375,
+                77
+            ],
+            "enabled": false,
+            "icon": "calculator",
+            "label": "Analysis",
+            "visible_bounds": [
+                812.359375,
+                0,
+                67.84375,
+                77
+            ]
+        },
+        "appBar.tab.experiment": {
+            "bounds": [
+                727.453125,
+                0,
+                84.90625,
+                77
+            ],
+            "enabled": false,
+            "icon": "microscope",
+            "label": "Experiment",
+            "visible_bounds": [
+                727.453125,
+                0,
+                84.90625,
+                77
+            ]
+        },
+        "appBar.tab.home": {
+            "bounds": [
+                542,
+                0,
+                53.46875,
+                77
+            ],
+            "enabled": true,
+            "icon": "home",
+            "label": "Home",
+            "visible_bounds": [
+                542,
+                0,
+                53.46875,
+                77
+            ]
+        },
+        "appBar.tab.project": {
+            "bounds": [
+                595.46875,
+                0,
+                59.734375,
+                77
+            ],
+            "enabled": false,
+            "icon": "archive",
+            "label": "Project",
+            "visible_bounds": [
+                595.46875,
+                0,
+                59.734375,
+                77
+            ]
+        },
+        "appBar.tab.report": {
+            "bounds": [
+                880.203125,
+                0,
+                58.25,
+                77
+            ],
+            "enabled": false,
+            "icon": "clipboard-list",
+            "label": "Report",
+            "visible_bounds": [
+                880.203125,
+                0,
+                58.25,
+                77
+            ]
+        },
+        "appBar.tab.structure": {
+            "bounds": [
+                655.203125,
+                0,
+                72.25,
+                77
+            ],
+            "enabled": false,
+            "icon": "layer-group",
+            "label": "Structure",
+            "visible_bounds": [
+                655.203125,
+                0,
+                72.25,
+                77
+            ]
+        },
+        "appBar.workflow": {
+            "bounds": [
+                542,
+                0,
+                396.453125,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                542,
+                0,
+                396.453125,
+                77
+            ]
+        },
+        "assistant.toggle": {
+            "bounds": [
+                1361,
+                21,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "robot",
+            "label": "",
+            "visible_bounds": [
+                1361,
+                21,
+                35,
+                35
+            ]
+        },
+        "home.about": {
+            "bounds": [
+                742.921875,
+                544,
+                150.515625,
+                19
+            ],
+            "enabled": true,
+            "icon": "info-circle",
+            "label": "About EasyDiffraction",
+            "visible_bounds": [
+                742.921875,
+                544,
+                150.515625,
+                19
+            ]
+        },
+        "home.changes": {
+            "bounds": [
+                587,
+                511,
+                91.34375,
+                19
+            ],
+            "enabled": true,
+            "icon": "bullhorn",
+            "label": "What's new",
+            "visible_bounds": [
+                587,
+                511,
+                91.34375,
+                19
+            ]
+        },
+        "home.cite": {
+            "bounds": [
+                742.921875,
+                511,
+                89.984375,
+                19
+            ],
+            "enabled": true,
+            "icon": "quote-right",
+            "label": "How to cite",
+            "visible_bounds": [
+                742.921875,
+                511,
+                89.984375,
+                19
+            ]
+        },
+        "home.contact": {
+            "bounds": [
+                742.921875,
+                478,
+                150.515625,
+                85
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                742.921875,
+                478,
+                150.515625,
+                85
+            ]
+        },
+        "home.documentation": {
+            "bounds": [
+                587,
+                544,
+                113.921875,
+                19
+            ],
+            "enabled": true,
+            "icon": "external-link-alt",
+            "label": "Documentation",
+            "visible_bounds": [
+                587,
+                544,
+                113.921875,
+                19
+            ]
+        },
+        "home.feedback": {
+            "bounds": [
+                742.921875,
+                478,
+                133.890625,
+                19
+            ],
+            "enabled": true,
+            "icon": "comments",
+            "label": "Help and feedback",
+            "visible_bounds": [
+                742.921875,
+                478,
+                133.890625,
+                19
+            ]
+        },
+        "home.learn": {
+            "bounds": [
+                587,
+                478,
+                113.921875,
+                85
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                587,
+                478,
+                113.921875,
+                85
+            ]
+        },
+        "home.start": {
+            "bounds": [
+                573,
+                404,
+                334,
+                39
+            ],
+            "enabled": true,
+            "icon": "rocket",
+            "label": "Start",
+            "visible_bounds": [
+                573,
+                404,
+                334,
+                39
+            ]
+        },
+        "home.tutorials": {
+            "bounds": [
+                587,
+                478,
+                75.8125,
+                19
+            ],
+            "enabled": true,
+            "icon": "graduation-cap",
+            "label": "Tutorials",
+            "visible_bounds": [
+                587,
+                478,
+                75.8125,
+                19
+            ]
+        },
+        "home.version": {
+            "bounds": [
+                660,
+                350,
+                160.234375,
+                19
+            ],
+            "enabled": true,
+            "label": "Version demo (demo build)",
+            "visible_bounds": [
+                660,
+                350,
+                160.234375,
+                19
+            ]
+        },
+        "label": {
+            "ambiguous": true
+        },
+        "workflow.home.mainContent": {
+            "bounds": [
+                0,
+                77,
+                1480,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                77,
+                1480,
+                681
+            ]
+        },
+        "workflow.home.sidebarHost": {
+            "bounds": [
+                770,
+                77,
+                710,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                710,
+                681
+            ]
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "pixel_size": [
+        1480,
+        800
+    ],
+    "qt_version": "6.11.2",
+    "schema": 1,
+    "script_sha256": "5a28f6259705a33056c8a0242fd187a5b22fc3a598a2ef03f8bf7b5682641f9f",
+    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "state": {
+        "experiments": 0,
+        "fit_outcome": "",
+        "fit_result_rows": 0,
+        "fit_results_open": false,
+        "fit_running": false,
+        "fit_status": "",
+        "has_project": false,
+        "page": "home",
+        "scan_failed": 0,
+        "scan_fitted": 0,
+        "scan_total": 0,
+        "sidebar": "",
+        "sidebar_tabs": [
+        ],
+        "structures": 0
+    }
+}

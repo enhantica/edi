@@ -1,0 +1,134 @@
+{
+  "engine": {
+    "commit": "e1f0452810006d1dd529f26a26cbcd3ad835f33c",
+    "invocation": "OMP_NUM_THREADS=1 crysta fit <variant> --max-iter 0"
+  },
+  "schema": "-crysta-start-admissibility-v1",
+  "variants": {
+    "refine-cosio-d20-s1": {
+      "accepted": true,
+      "edi_input_sha256": "0edca3be032c96b9fb4cc95441dfd8d439f9862774cc2c2dedbc2ab9871e8d7f",
+      "message": ""
+    },
+    "refine-cosio-d20-s2": {
+      "accepted": true,
+      "edi_input_sha256": "2ef6348657c0df22ce2cfc2feb000c3f1ffe6ac6b22a64bd968a4e8af10c33d7",
+      "message": ""
+    },
+    "refine-cosio-d20-s3": {
+      "accepted": true,
+      "edi_input_sha256": "12512a1854d85ab838ad453a7502e24c58585e592a62ee9625fb2e61763156ab",
+      "message": ""
+    },
+    "refine-cosio-d20-s4": {
+      "accepted": true,
+      "edi_input_sha256": "5bea0b05e630f701d410168e9509272459a8b3077375f6ac8323e77a5dbc623a",
+      "message": ""
+    },
+    "refine-cosio-d20-s5": {
+      "accepted": true,
+      "edi_input_sha256": "f7836adced932db1df67b6a3f1726fa66e55f745e7ad1c87f619ab0cfbbadd35",
+      "message": ""
+    },
+    "refine-lbco-hrpt-s1": {
+      "accepted": true,
+      "edi_input_sha256": "46818c4ea2a1a647527097b3f4cf8c9533af8cf020f6cb55e1e55cd06df6e825",
+      "message": ""
+    },
+    "refine-lbco-hrpt-s2": {
+      "accepted": true,
+      "edi_input_sha256": "95ec9baea4c96efa9657af9124f62de640d8f5a860cd17a54aa57174ff64e3ac",
+      "message": ""
+    },
+    "refine-lbco-hrpt-s3": {
+      "accepted": true,
+      "edi_input_sha256": "13ec4f9b97e6cce49cdaed2b5b0380ba322d70473b42fbbb4135b90ce59397e2",
+      "message": ""
+    },
+    "refine-lbco-hrpt-s4": {
+      "accepted": true,
+      "edi_input_sha256": "f53a65d8ad5ad2992734e561e1fb3d66d5a563cdfefd04f07892c44cbde037fe",
+      "message": ""
+    },
+    "refine-lbco-hrpt-s5": {
+      "accepted": true,
+      "edi_input_sha256": "f9132d88e4dcc43742f0846417eec123f8f36f4497a6c38e34116ab2999e4859",
+      "message": ""
+    },
+    "refine-ncaf-wish-2bank-s1": {
+      "accepted": true,
+      "edi_input_sha256": "db8a7a0ad20a78c650dcb2e32737500e882f3a7bf35097b4a86078859c786271",
+      "message": ""
+    },
+    "refine-ncaf-wish-2bank-s2": {
+      "accepted": true,
+      "edi_input_sha256": "71fe934ec33e68da602a6071a294b3f3dd6f0e90e915d6fbefeceebcb092fa2e",
+      "message": ""
+    },
+    "refine-ncaf-wish-2bank-s3": {
+      "accepted": true,
+      "edi_input_sha256": "51e03089175a9a5438024f395fcafbf083a1ec3c8e05342edd06b34df33b92b3",
+      "message": ""
+    },
+    "refine-ncaf-wish-2bank-s4": {
+      "accepted": true,
+      "edi_input_sha256": "e7d2daf78f0e16ddee8b86195997cb0caedefdcffb2f07c5d1338ad916566044",
+      "message": ""
+    },
+    "refine-ncaf-wish-2bank-s5": {
+      "accepted": true,
+      "edi_input_sha256": "815512fab4017fda6b53167ecff2897a43e6b8ec883afe1088a588cde47aa27c",
+      "message": ""
+    },
+    "refine-ncaf-wish-5bank-s1": {
+      "accepted": true,
+      "edi_input_sha256": "0dfb3f1785057ba5a689f0f432a53bee661539ee3b7a339b962065107ac978b8",
+      "message": ""
+    },
+    "refine-ncaf-wish-5bank-s2": {
+      "accepted": true,
+      "edi_input_sha256": "883ebcc385ff34f6383e972702a0d92dadea9815167b7a8037af723b42ffdb44",
+      "message": ""
+    },
+    "refine-ncaf-wish-5bank-s3": {
+      "accepted": true,
+      "edi_input_sha256": "a16c807c21c4ee7f69c3efa837877ed8e7eaa95612371151c7abccc18f641322",
+      "message": ""
+    },
+    "refine-ncaf-wish-5bank-s4": {
+      "accepted": true,
+      "edi_input_sha256": "8f3080e178265ff414dc89553a9125614c4a6328938613d744f481f57d87d36d",
+      "message": ""
+    },
+    "refine-ncaf-wish-5bank-s5": {
+      "accepted": true,
+      "edi_input_sha256": "2c63e67f0bc0cc0c48b9452a9b00ddbe5205328c5d4bf3107f3d217a4ddf4cfc",
+      "message": ""
+    },
+    "refine-si-sepd-s1": {
+      "accepted": true,
+      "edi_input_sha256": "34f645fbe4c6e4b535739d4cca67e437134b4dc20b8a87a71818d5a33fe903e1",
+      "message": ""
+    },
+    "refine-si-sepd-s2": {
+      "accepted": true,
+      "edi_input_sha256": "3cfce7b20922a450c7a7ac47dddc5befb08e21bc368dba78718082cfa4d4ea36",
+      "message": ""
+    },
+    "refine-si-sepd-s3": {
+      "accepted": true,
+      "edi_input_sha256": "ad8b9570d3a71f38f1d81a0c3ab7490cf073171ba0402373ebdd79c4ced7c1e3",
+      "message": ""
+    },
+    "refine-si-sepd-s4": {
+      "accepted": true,
+      "edi_input_sha256": "a14c3bb9a56572bf8377f31629b0fdba6b4f6249524c1b5783393256b7806363",
+      "message": ""
+    },
+    "refine-si-sepd-s5": {
+      "accepted": true,
+      "edi_input_sha256": "928afb10f2f49aea2943d7141406093f35201469a8cf5c962a533ab60af0d885",
+      "message": ""
+    }
+  }
+}

@@ -1,0 +1,1 @@
+Create a new project using the attached LBCO CIF and HRPT neutron powder data, wavelength 1.49 Å, in the last folder I opened. Fit the structure, try improvements and undo a trial if it makes the fit worse, and save the project. Show me the report when finished.

@@ -1,0 +1,9 @@
+_edi.schema_version 3
+
+_metadata.name             sc-neut-cwl_cosio-heidi
+_metadata.title "Co₂SiO₄ [Pnma] at 300 K, 55 K and 2.5 K · HEiDi @ MLZ (FRM II)"
+_metadata.description "Single crystal · Three temperatures fitted independently, moments at 2.5 K"
+_metadata.authors .
+_metadata.created          "09 Nov 2026 18:00:00"
+_metadata.last_modified    "09 Nov 2026 18:00:00"
+_metadata.timestamp        ?

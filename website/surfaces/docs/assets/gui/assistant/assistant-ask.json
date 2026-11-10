@@ -1,0 +1,1016 @@
+{
+    "description": "Attach the two files and ask for the fit",
+    "fit_phase": "",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "highlights": [
+        "assistant.composer"
+    ],
+    "id": "assistant-ask",
+    "image": "assistant-ask.webp",
+    "image_sha256": "a8196c05c21488d93ddf4539e553794d17a2b2caa90033ef753d5f68ffe5f324",
+    "items": {
+        "ApplicationWindow": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
+        "ApplicationWindowContentControl": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
+        "AssistantPanel": {
+            "bounds": [
+                770,
+                77,
+                710,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                710,
+                681
+            ]
+        },
+        "Main": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                800
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                800
+            ]
+        },
+        "SideBarGroup": {
+            "bounds": [
+                784,
+                168,
+                682,
+                92
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                168,
+                682,
+                92
+            ]
+        },
+        "appBar": {
+            "bounds": [
+                0,
+                0,
+                1480,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                0,
+                1480,
+                77
+            ]
+        },
+        "appBar.button.preferences": {
+            "bounds": [
+                1431,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "cog",
+            "label": "",
+            "visible_bounds": [
+                1431,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.redo": {
+            "bounds": [
+                84,
+                21,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "redo",
+            "label": "",
+            "visible_bounds": [
+                84,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.reset": {
+            "bounds": [
+                119,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "backspace",
+            "label": "",
+            "visible_bounds": [
+                119,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.save": {
+            "bounds": [
+                14,
+                21,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "save",
+            "label": "",
+            "visible_bounds": [
+                14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.undo": {
+            "bounds": [
+                49,
+                21,
+                35,
+                35
+            ],
+            "enabled": false,
+            "icon": "undo",
+            "label": "",
+            "visible_bounds": [
+                49,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.separator": {
+            "bounds": [
+                1354,
+                33,
+                1,
+                12
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1354,
+                33,
+                1,
+                12
+            ]
+        },
+        "appBar.tab.analysis": {
+            "bounds": [
+                812.359375,
+                0,
+                67.84375,
+                77
+            ],
+            "enabled": false,
+            "icon": "calculator",
+            "label": "Analysis",
+            "visible_bounds": [
+                812.359375,
+                0,
+                67.84375,
+                77
+            ]
+        },
+        "appBar.tab.experiment": {
+            "bounds": [
+                727.453125,
+                0,
+                84.90625,
+                77
+            ],
+            "enabled": false,
+            "icon": "microscope",
+            "label": "Experiment",
+            "visible_bounds": [
+                727.453125,
+                0,
+                84.90625,
+                77
+            ]
+        },
+        "appBar.tab.home": {
+            "bounds": [
+                542,
+                0,
+                53.46875,
+                77
+            ],
+            "enabled": true,
+            "icon": "home",
+            "label": "Home",
+            "visible_bounds": [
+                542,
+                0,
+                53.46875,
+                77
+            ]
+        },
+        "appBar.tab.project": {
+            "bounds": [
+                595.46875,
+                0,
+                59.734375,
+                77
+            ],
+            "enabled": true,
+            "icon": "archive",
+            "label": "Project",
+            "visible_bounds": [
+                595.46875,
+                0,
+                59.734375,
+                77
+            ]
+        },
+        "appBar.tab.report": {
+            "bounds": [
+                880.203125,
+                0,
+                58.25,
+                77
+            ],
+            "enabled": false,
+            "icon": "clipboard-list",
+            "label": "Report",
+            "visible_bounds": [
+                880.203125,
+                0,
+                58.25,
+                77
+            ]
+        },
+        "appBar.tab.structure": {
+            "bounds": [
+                655.203125,
+                0,
+                72.25,
+                77
+            ],
+            "enabled": false,
+            "icon": "layer-group",
+            "label": "Structure",
+            "visible_bounds": [
+                655.203125,
+                0,
+                72.25,
+                77
+            ]
+        },
+        "appBar.workflow": {
+            "bounds": [
+                542,
+                0,
+                396.453125,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                542,
+                0,
+                396.453125,
+                77
+            ]
+        },
+        "assistant.avatarCircle": {
+            "bounds": [
+                1446,
+                85,
+                26.25,
+                26.25
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1446,
+                85,
+                26.25,
+                26.25
+            ]
+        },
+        "assistant.clear": {
+            "bounds": [
+                1217,
+                84,
+                114,
+                27
+            ],
+            "enabled": true,
+            "icon": "plus",
+            "label": "New session",
+            "visible_bounds": [
+                1217,
+                84,
+                114,
+                27
+            ]
+        },
+        "assistant.composer": {
+            "bounds": [
+                794.5,
+                600.5,
+                661,
+                46.2
+            ],
+            "enabled": true,
+            "label": "Fit the crystal structure to this measured pattern.",
+            "visible_bounds": [
+                794.5,
+                600.5,
+                661,
+                46.200000000000045
+            ]
+        },
+        "assistant.connection": {
+            "bounds": [
+                1446,
+                80,
+                26.25,
+                35
+            ],
+            "enabled": true,
+            "icon": "user",
+            "label": "ChatGPT account",
+            "visible_bounds": [
+                1446,
+                80,
+                26.25,
+                35
+            ]
+        },
+        "assistant.file.3caee370-4933-47ae-9e76-113063561cb0": {
+            "bounds": [
+                804.1,
+                676.2,
+                645.8,
+                19
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                804.1,
+                676.2,
+                645.8000000000001,
+                19
+            ]
+        },
+        "assistant.file.e6594fc7-26bb-4285-8c38-a2dd7d23e2a0": {
+            "bounds": [
+                804.1,
+                657.2,
+                645.8,
+                19
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                804.1,
+                657.2,
+                645.8000000000001,
+                19
+            ]
+        },
+        "assistant.files.add": {
+            "bounds": [
+                794.5,
+                705.7,
+                26.25,
+                26.25
+            ],
+            "enabled": true,
+            "icon": "plus",
+            "label": "",
+            "visible_bounds": [
+                794.5,
+                705.7,
+                26.25,
+                26.25
+            ]
+        },
+        "assistant.messages": {
+            "bounds": [
+                784,
+                133,
+                682,
+                432
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                133,
+                682,
+                432
+            ]
+        },
+        "assistant.modelEffort": {
+            "bounds": [
+                956.5,
+                705.7,
+                122.125,
+                27
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                956.5,
+                705.7,
+                122.125,
+                27
+            ]
+        },
+        "assistant.nextUserMessage": {
+            "bounds": [
+                1394.5,
+                705.7,
+                26.25,
+                26.25
+            ],
+            "enabled": false,
+            "icon": "chevron-down",
+            "label": "",
+            "visible_bounds": [
+                1394.5,
+                705.7,
+                26.25,
+                26.25
+            ]
+        },
+        "assistant.panel": {
+            "bounds": [
+                770,
+                77,
+                710,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                710,
+                681
+            ]
+        },
+        "assistant.previousUserMessage": {
+            "bounds": [
+                1360.5,
+                705.7,
+                26.25,
+                26.25
+            ],
+            "enabled": false,
+            "icon": "chevron-up",
+            "label": "",
+            "visible_bounds": [
+                1360.5,
+                705.7,
+                26.25,
+                26.25
+            ]
+        },
+        "assistant.send": {
+            "bounds": [
+                1428.5,
+                705.7,
+                26.25,
+                26.25
+            ],
+            "enabled": true,
+            "icon": "arrow-up",
+            "label": "Send",
+            "visible_bounds": [
+                1428.5,
+                705.7,
+                26.25,
+                26.25
+            ]
+        },
+        "assistant.sessions": {
+            "bounds": [
+                1117,
+                84,
+                93,
+                27
+            ],
+            "enabled": true,
+            "icon": "history",
+            "label": "Sessions",
+            "visible_bounds": [
+                1117,
+                84,
+                93,
+                27
+            ]
+        },
+        "assistant.showActions": {
+            "bounds": [
+                828.5,
+                705.7,
+                121,
+                26.25
+            ],
+            "enabled": true,
+            "icon": "eye",
+            "label": "Show actions",
+            "visible_bounds": [
+                828.5,
+                705.7,
+                121,
+                26.25
+            ]
+        },
+        "assistant.toggle": {
+            "bounds": [
+                1361,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "columns",
+            "label": "",
+            "visible_bounds": [
+                1361,
+                21,
+                35,
+                35
+            ]
+        },
+        "assistant.usage": {
+            "bounds": [
+                1338,
+                84,
+                101,
+                27
+            ],
+            "enabled": true,
+            "icon": "tachometer-alt",
+            "label": "29% used",
+            "visible_bounds": [
+                1338,
+                84,
+                101,
+                27
+            ]
+        },
+        "group.examples": {
+            "bounds": [
+                770,
+                274,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "database",
+            "label": "Examples",
+            "visible_bounds": [
+                770,
+                274,
+                710,
+                42
+            ]
+        },
+        "group.getStarted": {
+            "bounds": [
+                770,
+                119,
+                710,
+                155
+            ],
+            "enabled": true,
+            "icon": "rocket",
+            "label": "Get started",
+            "visible_bounds": [
+                770,
+                119,
+                710,
+                155
+            ]
+        },
+        "group.recentProjects": {
+            "bounds": [
+                770,
+                316,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "archive",
+            "label": "Recent projects",
+            "visible_bounds": [
+                770,
+                316,
+                710,
+                42
+            ]
+        },
+        "label": {
+            "ambiguous": true
+        },
+        "mainArea.project.tab.description": {
+            "bounds": [
+                0,
+                77,
+                55.734375,
+                42
+            ],
+            "enabled": true,
+            "label": "Project",
+            "visible_bounds": [
+                0,
+                77,
+                55.734375,
+                42
+            ]
+        },
+        "project.create": {
+            "bounds": [
+                784,
+                168,
+                334,
+                39
+            ],
+            "enabled": true,
+            "icon": "plus-circle",
+            "label": "Create a new project",
+            "visible_bounds": [
+                784,
+                168,
+                334,
+                39
+            ]
+        },
+        "project.open": {
+            "bounds": [
+                1132,
+                168,
+                334,
+                39
+            ],
+            "enabled": true,
+            "icon": "upload",
+            "label": "Open project…",
+            "visible_bounds": [
+                1132,
+                168,
+                334,
+                39
+            ]
+        },
+        "project.openUrl": {
+            "bounds": [
+                1132,
+                221,
+                334,
+                39
+            ],
+            "enabled": false,
+            "icon": "link",
+            "label": "Open project from URL…",
+            "visible_bounds": [
+                1132,
+                221,
+                334,
+                39
+            ]
+        },
+        "project.saveAs": {
+            "bounds": [
+                784,
+                221,
+                334,
+                39
+            ],
+            "enabled": false,
+            "icon": "file-export",
+            "label": "Save project as…",
+            "visible_bounds": [
+                784,
+                221,
+                334,
+                39
+            ]
+        },
+        "sideBar.tab.basic": {
+            "bounds": [
+                770,
+                77,
+                43.515625,
+                42
+            ],
+            "enabled": true,
+            "label": "Main",
+            "visible_bounds": [
+                770,
+                77,
+                43.515625,
+                42
+            ]
+        },
+        "sideBar.tab.extras": {
+            "bounds": [
+                813.515625,
+                77,
+                45.125,
+                42
+            ],
+            "enabled": false,
+            "label": "Extra",
+            "visible_bounds": [
+                813.515625,
+                77,
+                45.125,
+                42
+            ]
+        },
+        "sideBar.tab.settings": {
+            "bounds": [
+                897.328125,
+                77,
+                62.8125,
+                42
+            ],
+            "enabled": false,
+            "label": "Settings",
+            "visible_bounds": [
+                897.328125,
+                77,
+                62.8125,
+                42
+            ]
+        },
+        "sideBar.tab.text": {
+            "bounds": [
+                858.640625,
+                77,
+                38.6875,
+                42
+            ],
+            "enabled": false,
+            "label": "Text",
+            "visible_bounds": [
+                858.640625,
+                77,
+                38.6875,
+                42
+            ]
+        },
+        "statusBar": {
+            "bounds": [
+                0,
+                758,
+                1480,
+                42
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                758,
+                1480,
+                42
+            ]
+        },
+        "statusBar.calculator": {
+            "bounds": [
+                274.959375,
+                772,
+                122.84375,
+                14
+            ],
+            "enabled": true,
+            "icon": "calculator",
+            "label": "",
+            "visible_bounds": [
+                274.959375,
+                772,
+                122.84375,
+                14
+            ]
+        },
+        "statusBar.project": {
+            "bounds": [
+                126.58125,
+                772,
+                131.578125,
+                14
+            ],
+            "enabled": true,
+            "icon": "archive",
+            "label": "",
+            "visible_bounds": [
+                126.58125,
+                772,
+                131.578125,
+                14
+            ]
+        },
+        "statusBar.value": {
+            "ambiguous": true
+        },
+        "statusBar.warnings": {
+            "bounds": [
+                14,
+                772,
+                95.78125,
+                14
+            ],
+            "enabled": true,
+            "icon": "exclamation-triangle",
+            "label": "",
+            "visible_bounds": [
+                14,
+                772,
+                95.78125,
+                14
+            ]
+        },
+        "workflow.home.sidebarHost": {
+            "bounds": [
+                770,
+                77,
+                710,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                710,
+                681
+            ]
+        },
+        "workflow.project.mainContent": {
+            "bounds": [
+                0,
+                77,
+                770,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                77,
+                770,
+                681
+            ]
+        },
+        "workflow.project.manualSidebar": {
+            "bounds": [
+                770,
+                77,
+                710,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                710,
+                681
+            ]
+        },
+        "workflow.project.sidebarHost": {
+            "bounds": [
+                770,
+                77,
+                710,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                710,
+                681
+            ]
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "pixel_size": [
+        1480,
+        800
+    ],
+    "qt_version": "6.11.2",
+    "schema": 1,
+    "script_sha256": "99e6e32c79073649f8592e204e5966766bb231b3dcbf4e2626fbc800fb34b4f0",
+    "source_revision": "a4b6be4f6926cc6b17811f3263d7a34afff75a6d",
+    "state": {
+        "experiments": 0,
+        "fit_outcome": "",
+        "fit_result_rows": 0,
+        "fit_results_open": false,
+        "fit_running": false,
+        "fit_status": "",
+        "has_project": false,
+        "page": "project",
+        "scan_failed": 0,
+        "scan_fitted": 0,
+        "scan_total": 0,
+        "sidebar": "",
+        "sidebar_tabs": [
+            {
+                "checked": true,
+                "enabled": true,
+                "id": "sideBar.tab.basic",
+                "label": "Main"
+            },
+            {
+                "checked": false,
+                "enabled": false,
+                "id": "sideBar.tab.extras",
+                "label": "Extra"
+            },
+            {
+                "checked": false,
+                "enabled": false,
+                "id": "sideBar.tab.text",
+                "label": "Text"
+            },
+            {
+                "checked": false,
+                "enabled": false,
+                "id": "sideBar.tab.settings",
+                "label": "Settings"
+            }
+        ],
+        "structures": 0
+    }
+}

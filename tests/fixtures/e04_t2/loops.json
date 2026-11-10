@@ -1,0 +1,3039 @@
+{
+  "provenance": ".edi loop_ declarations, no app category lists",
+  "categories": [
+    "alias",
+    "atom_site",
+    "background",
+    "constraint",
+    "data",
+    "excluded_region",
+    "fit_parameter",
+    "joint_fit",
+    "linked_structure",
+    "preferred_orientation",
+    "refln",
+    "scattering_length",
+    "sequential_fit_extract"
+  ],
+  "loops": [
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi/alias",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi",
+      "sha256": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6",
+      "category": "alias",
+      "columns": [
+        "id",
+        "parameter_unique_name"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi/constraint",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi",
+      "sha256": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6",
+      "category": "constraint",
+      "columns": [
+        "id",
+        "expression"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi/sequential_fit_extract",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi",
+      "sha256": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6",
+      "category": "sequential_fit_extract",
+      "columns": [
+        "id",
+        "target",
+        "pattern",
+        "required"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi/joint_fit",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi",
+      "sha256": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6",
+      "category": "joint_fit",
+      "columns": [
+        "experiment_id",
+        "weight"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi/fit_parameter",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/analysis/analysis.edi",
+      "sha256": "0d463ba37e85baf7de2e4c08ac0d596a3756a50edea40b993b3120a9ae0209c6",
+      "category": "fit_parameter",
+      "columns": [
+        "id",
+        "start_value",
+        "start_uncertainty",
+        "start_tied"
+      ],
+      "rows": 38
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi",
+      "sha256": "7053aa291373fc6df17e3d2ced5008a098ef314f65e06a1204f6d0ecbb1ae518",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi",
+      "sha256": "7053aa291373fc6df17e3d2ced5008a098ef314f65e06a1204f6d0ecbb1ae518",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi/background",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi",
+      "sha256": "7053aa291373fc6df17e3d2ced5008a098ef314f65e06a1204f6d0ecbb1ae518",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 14
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi/data",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi",
+      "sha256": "7053aa291373fc6df17e3d2ced5008a098ef314f65e06a1204f6d0ecbb1ae518",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 1507
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/structures/cosio.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project",
+      "page": "structure",
+      "block": "cosio",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/structures/cosio.edi",
+      "sha256": "4538c66b979d5783c2c3b5ba8c06494a54efeea3fc83c5488e89d5a10c0bb899",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 6
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/analysis/analysis.edi/alias",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/analysis/analysis.edi",
+      "sha256": "fde9a40134aaf6794cde3e396a01067e1018d78871c394d4646c95052416f726",
+      "category": "alias",
+      "columns": [
+        "id",
+        "parameter_unique_name"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/analysis/analysis.edi/constraint",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/analysis/analysis.edi",
+      "sha256": "fde9a40134aaf6794cde3e396a01067e1018d78871c394d4646c95052416f726",
+      "category": "constraint",
+      "columns": [
+        "id",
+        "expression"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/analysis/analysis.edi/sequential_fit_extract",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/analysis/analysis.edi",
+      "sha256": "fde9a40134aaf6794cde3e396a01067e1018d78871c394d4646c95052416f726",
+      "category": "sequential_fit_extract",
+      "columns": [
+        "id",
+        "target",
+        "pattern",
+        "required"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi",
+      "sha256": "64471a50122fa6cb4fa669400fea1f0c45f885d14012e702cdd7db7d0198297e",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi",
+      "sha256": "64471a50122fa6cb4fa669400fea1f0c45f885d14012e702cdd7db7d0198297e",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi/background",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi",
+      "sha256": "64471a50122fa6cb4fa669400fea1f0c45f885d14012e702cdd7db7d0198297e",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 14
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi/data",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi",
+      "sha256": "64471a50122fa6cb4fa669400fea1f0c45f885d14012e702cdd7db7d0198297e",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "d_spacing",
+        "intensity_meas",
+        "intensity_meas_su",
+        "intensity_calc",
+        "intensity_bkg",
+        "calc_status"
+      ],
+      "rows": 1507
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi/refln",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi",
+      "sha256": "64471a50122fa6cb4fa669400fea1f0c45f885d14012e702cdd7db7d0198297e",
+      "category": "refln",
+      "columns": [
+        "id",
+        "structure_id",
+        "d_spacing",
+        "sin_theta_over_lambda",
+        "index_h",
+        "index_k",
+        "index_l",
+        "f_calc",
+        "f_squared_calc",
+        "two_theta"
+      ],
+      "rows": 237
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/structures/cosio.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project",
+      "page": "structure",
+      "block": "cosio",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/structures/cosio.edi",
+      "sha256": "1b3afde2d3a8184d6cb9789fa3fc8fa5dd026756a51e44a2cca6b80b9df8103a",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 6
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi",
+      "sha256": "9b9b01ad0ed3bfe12206653fa14976675e56ba87460484b969ec8433147ba6d3",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi/background",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi",
+      "sha256": "9b9b01ad0ed3bfe12206653fa14976675e56ba87460484b969ec8433147ba6d3",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 14
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi/data",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi",
+      "sha256": "9b9b01ad0ed3bfe12206653fa14976675e56ba87460484b969ec8433147ba6d3",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "d_spacing",
+        "intensity_meas",
+        "intensity_meas_su",
+        "intensity_calc",
+        "intensity_bkg",
+        "calc_status"
+      ],
+      "rows": 1418
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi/refln",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi",
+      "sha256": "9b9b01ad0ed3bfe12206653fa14976675e56ba87460484b969ec8433147ba6d3",
+      "category": "refln",
+      "columns": [
+        "id",
+        "structure_id",
+        "d_spacing",
+        "sin_theta_over_lambda",
+        "index_h",
+        "index_k",
+        "index_l",
+        "f_calc",
+        "f_squared_calc",
+        "two_theta"
+      ],
+      "rows": 237
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/structures/cosio.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project",
+      "page": "structure",
+      "block": "cosio",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/structures/cosio.edi",
+      "sha256": "7ec9ca0fb52e1c29aa6a5aa68ca0e6a58db75ccc369a613f32d2036221994b48",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 6
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi",
+      "sha256": "05b04c3d9d5ce502e2ef4f43bf1e3119eb2ecc6f05a621eeed605fea7b0455da",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi/background",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi",
+      "sha256": "05b04c3d9d5ce502e2ef4f43bf1e3119eb2ecc6f05a621eeed605fea7b0455da",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 14
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi/data",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi",
+      "sha256": "05b04c3d9d5ce502e2ef4f43bf1e3119eb2ecc6f05a621eeed605fea7b0455da",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "d_spacing",
+        "intensity_meas",
+        "intensity_meas_su",
+        "intensity_calc",
+        "intensity_bkg",
+        "calc_status"
+      ],
+      "rows": 1418
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi/refln",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project",
+      "page": "experiment",
+      "block": "d20",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi",
+      "sha256": "05b04c3d9d5ce502e2ef4f43bf1e3119eb2ecc6f05a621eeed605fea7b0455da",
+      "category": "refln",
+      "columns": [
+        "id",
+        "structure_id",
+        "d_spacing",
+        "sin_theta_over_lambda",
+        "index_h",
+        "index_k",
+        "index_l",
+        "f_calc",
+        "f_squared_calc",
+        "two_theta"
+      ],
+      "rows": 237
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/structures/cosio.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project",
+      "page": "structure",
+      "block": "cosio",
+      "file": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/structures/cosio.edi",
+      "sha256": "7ec9ca0fb52e1c29aa6a5aa68ca0e6a58db75ccc369a613f32d2036221994b48",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 6
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project",
+      "page": "experiment",
+      "block": "echidna",
+      "file": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi",
+      "sha256": "0dcbf61f0569cf94d306635dc2c644ad5af8b8042638b2a110523407093a2d20",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project",
+      "page": "experiment",
+      "block": "echidna",
+      "file": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi",
+      "sha256": "0dcbf61f0569cf94d306635dc2c644ad5af8b8042638b2a110523407093a2d20",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi/background",
+      "project": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project",
+      "page": "experiment",
+      "block": "echidna",
+      "file": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi",
+      "sha256": "0dcbf61f0569cf94d306635dc2c644ad5af8b8042638b2a110523407093a2d20",
+      "category": "background",
+      "columns": [
+        "id",
+        "order",
+        "coef"
+      ],
+      "rows": 6
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi/data",
+      "project": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project",
+      "page": "experiment",
+      "block": "echidna",
+      "file": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi",
+      "sha256": "0dcbf61f0569cf94d306635dc2c644ad5af8b8042638b2a110523407093a2d20",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 3200
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/structures/lab6.edi/scattering_length",
+      "project": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project",
+      "page": "structure",
+      "block": "lab6",
+      "file": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/structures/lab6.edi",
+      "sha256": "06d8ee9eadd4dd9c5f72aed4f264446172a15f81a0571e4a02adfba6156a53fd",
+      "category": "scattering_length",
+      "columns": [
+        "type_symbol",
+        "length_fm"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/structures/lab6.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project",
+      "page": "structure",
+      "block": "lab6",
+      "file": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/structures/lab6.edi",
+      "sha256": "06d8ee9eadd4dd9c5f72aed4f264446172a15f81a0571e4a02adfba6156a53fd",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/analysis/analysis.edi/joint_fit",
+      "project": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/analysis/analysis.edi",
+      "sha256": "622953d9f61a1927cfdde76b6296bf57805006e83817b80cd36f851b35d8ef79",
+      "category": "joint_fit",
+      "columns": [
+        "experiment_id",
+        "weight"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project",
+      "page": "experiment",
+      "block": "echidna",
+      "file": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi",
+      "sha256": "372e3a1cee4228b17a254007a48d906f313db9dd2a9292df69e707a7dd4246ef",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project",
+      "page": "experiment",
+      "block": "echidna",
+      "file": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi",
+      "sha256": "372e3a1cee4228b17a254007a48d906f313db9dd2a9292df69e707a7dd4246ef",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi/background",
+      "project": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project",
+      "page": "experiment",
+      "block": "echidna",
+      "file": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi",
+      "sha256": "372e3a1cee4228b17a254007a48d906f313db9dd2a9292df69e707a7dd4246ef",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 3194
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi/data",
+      "project": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project",
+      "page": "experiment",
+      "block": "echidna",
+      "file": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi",
+      "sha256": "372e3a1cee4228b17a254007a48d906f313db9dd2a9292df69e707a7dd4246ef",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 3200
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/structures/lab6.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project",
+      "page": "structure",
+      "block": "lab6",
+      "file": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/structures/lab6.edi",
+      "sha256": "ae52d392119f81a94e77ba4128ee2afc447fbcd3bdd9cdc6e2fea56eba54074d",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi/preferred_orientation",
+      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi",
+      "sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+      "category": "preferred_orientation",
+      "columns": [
+        "structure_id",
+        "march_r",
+        "index_h",
+        "index_k",
+        "index_l",
+        "march_random_fract"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi",
+      "sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi",
+      "sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi/background",
+      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi",
+      "sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 5
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi/data",
+      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi",
+      "sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 3098
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/structures/lbco.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project",
+      "page": "structure",
+      "block": "lbco",
+      "file": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/structures/lbco.edi",
+      "sha256": "1c8421e95c44cad8dce012f78e57ed2bcabd783c76443eddf0d5d16873cba5c3",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 4
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi",
+      "sha256": "58a44cc8c5a6493056634cc5442c548bbf44cce5c615b22b16173d0ec771e8ce",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi",
+      "sha256": "58a44cc8c5a6493056634cc5442c548bbf44cce5c615b22b16173d0ec771e8ce",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi/background",
+      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi",
+      "sha256": "58a44cc8c5a6493056634cc5442c548bbf44cce5c615b22b16173d0ec771e8ce",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 5
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi/data",
+      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi",
+      "sha256": "58a44cc8c5a6493056634cc5442c548bbf44cce5c615b22b16173d0ec771e8ce",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 3098
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/structures/lbco.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project",
+      "page": "structure",
+      "block": "lbco",
+      "file": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/structures/lbco.edi",
+      "sha256": "1c8421e95c44cad8dce012f78e57ed2bcabd783c76443eddf0d5d16873cba5c3",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 4
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/analysis/analysis.edi/joint_fit",
+      "project": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/analysis/analysis.edi",
+      "sha256": "494db6eaa33dd5b4e18e6fc2d28282486b2d9bfc50a8e52098e6ad34422062fd",
+      "category": "joint_fit",
+      "columns": [
+        "experiment_id",
+        "weight"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project",
+      "page": "experiment",
+      "block": "d1a",
+      "file": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi",
+      "sha256": "1397212f018457de21bd98ccc52918112db1eb46163c18860250735769522496",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project",
+      "page": "experiment",
+      "block": "d1a",
+      "file": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi",
+      "sha256": "1397212f018457de21bd98ccc52918112db1eb46163c18860250735769522496",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi/background",
+      "project": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project",
+      "page": "experiment",
+      "block": "d1a",
+      "file": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi",
+      "sha256": "1397212f018457de21bd98ccc52918112db1eb46163c18860250735769522496",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 8
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi/data",
+      "project": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project",
+      "page": "experiment",
+      "block": "d1a",
+      "file": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi",
+      "sha256": "1397212f018457de21bd98ccc52918112db1eb46163c18860250735769522496",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 2920
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/structures/pbso4.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project",
+      "page": "structure",
+      "block": "pbso4",
+      "file": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/structures/pbso4.edi",
+      "sha256": "d14b19ea6dc7f6f3a129fa5fb3538f7413fc3cb727950c2f70fb9e2e6e3f2520",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 5
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project",
+      "page": "experiment",
+      "block": "polaris",
+      "file": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi",
+      "sha256": "940231cb84abc21ad60fe760c793b603e8acbb6cb20478d94dfe858d250c33c0",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project",
+      "page": "experiment",
+      "block": "polaris",
+      "file": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi",
+      "sha256": "940231cb84abc21ad60fe760c793b603e8acbb6cb20478d94dfe858d250c33c0",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project",
+      "page": "experiment",
+      "block": "polaris",
+      "file": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi",
+      "sha256": "940231cb84abc21ad60fe760c793b603e8acbb6cb20478d94dfe858d250c33c0",
+      "category": "background",
+      "columns": [
+        "id",
+        "order",
+        "coef"
+      ],
+      "rows": 24
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project",
+      "page": "experiment",
+      "block": "polaris",
+      "file": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi",
+      "sha256": "940231cb84abc21ad60fe760c793b603e8acbb6cb20478d94dfe858d250c33c0",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 3693
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/structures/cecoal.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project",
+      "page": "structure",
+      "block": "cecoal",
+      "file": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/structures/cecoal.edi",
+      "sha256": "f6939b1d7fe11a4b7e8451ec9a4acb468c21522ef4a29af3995b86758e910616",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 5
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project",
+      "page": "experiment",
+      "block": "pearl",
+      "file": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi",
+      "sha256": "dd405b91a0eea1bcc0c82d7763a7ae7ad2987b94169b9bb4e50454a140c57efd",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project",
+      "page": "experiment",
+      "block": "pearl",
+      "file": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi",
+      "sha256": "dd405b91a0eea1bcc0c82d7763a7ae7ad2987b94169b9bb4e50454a140c57efd",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project",
+      "page": "experiment",
+      "block": "pearl",
+      "file": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi",
+      "sha256": "dd405b91a0eea1bcc0c82d7763a7ae7ad2987b94169b9bb4e50454a140c57efd",
+      "category": "background",
+      "columns": [
+        "id",
+        "order",
+        "coef"
+      ],
+      "rows": 6
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project",
+      "page": "experiment",
+      "block": "pearl",
+      "file": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi",
+      "sha256": "dd405b91a0eea1bcc0c82d7763a7ae7ad2987b94169b9bb4e50454a140c57efd",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 2524
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/structures/ceo2.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project",
+      "page": "structure",
+      "block": "ceo2",
+      "file": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/structures/ceo2.edi",
+      "sha256": "aedac6b487103b77e50f106e073b5701214efed16a787a9832391ce2c3b4b79c",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/analysis/analysis.edi/joint_fit",
+      "project": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/analysis/analysis.edi",
+      "sha256": "c859cfebc586252e3b1572cd54f854592d55a143b97302621120483df4733340",
+      "category": "joint_fit",
+      "columns": [
+        "experiment_id",
+        "weight"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project",
+      "page": "experiment",
+      "block": "dream",
+      "file": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi",
+      "sha256": "8fd1f452e2d02e32dddef6ef8cfedd101d954092f99a2e302b203d46868c0a9c",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project",
+      "page": "experiment",
+      "block": "dream",
+      "file": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi",
+      "sha256": "8fd1f452e2d02e32dddef6ef8cfedd101d954092f99a2e302b203d46868c0a9c",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project",
+      "page": "experiment",
+      "block": "dream",
+      "file": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi",
+      "sha256": "8fd1f452e2d02e32dddef6ef8cfedd101d954092f99a2e302b203d46868c0a9c",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 8
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project",
+      "page": "experiment",
+      "block": "dream",
+      "file": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi",
+      "sha256": "8fd1f452e2d02e32dddef6ef8cfedd101d954092f99a2e302b203d46868c0a9c",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 2000
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/structures/diamond.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project",
+      "page": "structure",
+      "block": "diamond",
+      "file": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/structures/diamond.edi",
+      "sha256": "57650796c81a5963ee142a26847f89d9dac23cb6bc018406c77c6141a68f2613",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/analysis/analysis.edi/joint_fit",
+      "project": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/analysis/analysis.edi",
+      "sha256": "7936851a579a0171a425595f5090909d327362a0da203615725f2f2ceacbf642",
+      "category": "joint_fit",
+      "columns": [
+        "experiment_id",
+        "weight"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project",
+      "page": "experiment",
+      "block": "beer",
+      "file": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi",
+      "sha256": "21dcae63234608537b5d9f17a25e2d0554978df3f39d8476660a382e965739dd",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project",
+      "page": "experiment",
+      "block": "beer",
+      "file": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi",
+      "sha256": "21dcae63234608537b5d9f17a25e2d0554978df3f39d8476660a382e965739dd",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project",
+      "page": "experiment",
+      "block": "beer",
+      "file": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi",
+      "sha256": "21dcae63234608537b5d9f17a25e2d0554978df3f39d8476660a382e965739dd",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 31
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project",
+      "page": "experiment",
+      "block": "beer",
+      "file": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi",
+      "sha256": "21dcae63234608537b5d9f17a25e2d0554978df3f39d8476660a382e965739dd",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 2997
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/structures/fe.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project",
+      "page": "structure",
+      "block": "fe",
+      "file": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/structures/fe.edi",
+      "sha256": "9ee23e6fff7c5eb544677380a5c3176ee7425e3e790cbe7b50dca77472a16c29",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/analysis/analysis.edi/joint_fit",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/analysis/analysis.edi",
+      "sha256": "362967ebcac29cd81a538ba27f01b70d61eb04bfcbf8d2de0ba4e13bb271e428",
+      "category": "joint_fit",
+      "columns": [
+        "experiment_id",
+        "weight"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi",
+      "sha256": "053751e9274de8a61c12fe3b8b0d96dca3f88ff0748db36ecd0ab88466e4d841",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi",
+      "sha256": "053751e9274de8a61c12fe3b8b0d96dca3f88ff0748db36ecd0ab88466e4d841",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi",
+      "sha256": "053751e9274de8a61c12fe3b8b0d96dca3f88ff0748db36ecd0ab88466e4d841",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 27
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi",
+      "sha256": "053751e9274de8a61c12fe3b8b0d96dca3f88ff0748db36ecd0ab88466e4d841",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "d_spacing",
+        "intensity_meas",
+        "intensity_meas_su",
+        "intensity_calc",
+        "intensity_bkg",
+        "calc_status"
+      ],
+      "rows": 4043
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi/refln",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi",
+      "sha256": "053751e9274de8a61c12fe3b8b0d96dca3f88ff0748db36ecd0ab88466e4d841",
+      "category": "refln",
+      "columns": [
+        "id",
+        "structure_id",
+        "d_spacing",
+        "sin_theta_over_lambda",
+        "index_h",
+        "index_k",
+        "index_l",
+        "f_calc",
+        "f_squared_calc",
+        "time_of_flight"
+      ],
+      "rows": 1229
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi",
+      "sha256": "d08b3b01b671bf5d362da48a3e73442ed91b5f52a69d9ca5955091779c58796e",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi",
+      "sha256": "d08b3b01b671bf5d362da48a3e73442ed91b5f52a69d9ca5955091779c58796e",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi",
+      "sha256": "d08b3b01b671bf5d362da48a3e73442ed91b5f52a69d9ca5955091779c58796e",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 28
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi",
+      "sha256": "d08b3b01b671bf5d362da48a3e73442ed91b5f52a69d9ca5955091779c58796e",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "d_spacing",
+        "intensity_meas",
+        "intensity_meas_su",
+        "intensity_calc",
+        "intensity_bkg",
+        "calc_status"
+      ],
+      "rows": 4121
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi/refln",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi",
+      "sha256": "d08b3b01b671bf5d362da48a3e73442ed91b5f52a69d9ca5955091779c58796e",
+      "category": "refln",
+      "columns": [
+        "id",
+        "structure_id",
+        "d_spacing",
+        "sin_theta_over_lambda",
+        "index_h",
+        "index_k",
+        "index_l",
+        "f_calc",
+        "f_squared_calc",
+        "time_of_flight"
+      ],
+      "rows": 1687
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/structures/ncaf.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project",
+      "page": "structure",
+      "block": "ncaf",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/structures/ncaf.edi",
+      "sha256": "f61f4922cf075908b47b4fd3b14c32f7aefef8e339d6161a5fece184396f865b",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 6
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/analysis/analysis.edi/joint_fit",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/analysis/analysis.edi",
+      "sha256": "bc78689c1a4491d308a0611490dceed83edb4898244ae092ec555ee91a548484",
+      "category": "joint_fit",
+      "columns": [
+        "experiment_id",
+        "weight"
+      ],
+      "rows": 3
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_2_9",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi",
+      "sha256": "761e2bed99259c0c0e679bdbfa5455671422ea953774f5450ba3edff6bd2200b",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_2_9",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi",
+      "sha256": "761e2bed99259c0c0e679bdbfa5455671422ea953774f5450ba3edff6bd2200b",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_2_9",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi",
+      "sha256": "761e2bed99259c0c0e679bdbfa5455671422ea953774f5450ba3edff6bd2200b",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 15
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_2_9",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi",
+      "sha256": "761e2bed99259c0c0e679bdbfa5455671422ea953774f5450ba3edff6bd2200b",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 4166
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi",
+      "sha256": "e63425979da16bed1c0cb0061700d1855a5847fb48e5ce0477bf293284cf204e",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi",
+      "sha256": "e63425979da16bed1c0cb0061700d1855a5847fb48e5ce0477bf293284cf204e",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi",
+      "sha256": "e63425979da16bed1c0cb0061700d1855a5847fb48e5ce0477bf293284cf204e",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 20
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi",
+      "sha256": "e63425979da16bed1c0cb0061700d1855a5847fb48e5ce0477bf293284cf204e",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 4043
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi",
+      "sha256": "bb48d4b9c197737a2d35ef406dd3257bbe20dde70a6907bec5d14c8fd2e591a1",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi",
+      "sha256": "bb48d4b9c197737a2d35ef406dd3257bbe20dde70a6907bec5d14c8fd2e591a1",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi",
+      "sha256": "bb48d4b9c197737a2d35ef406dd3257bbe20dde70a6907bec5d14c8fd2e591a1",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 21
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi",
+      "sha256": "bb48d4b9c197737a2d35ef406dd3257bbe20dde70a6907bec5d14c8fd2e591a1",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 4114
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/structures/ncaf.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project",
+      "page": "structure",
+      "block": "ncaf",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/structures/ncaf.edi",
+      "sha256": "1f231ef2dc1ec210d95b9f52452dacb6102b7c515b6af603f205199a3aaf0e1d",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 6
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/analysis/analysis.edi/joint_fit",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/analysis/analysis.edi",
+      "sha256": "39fbca0c5cfba66ab4e126f6070c173209bdec5b984a7462a84e702363e3570f",
+      "category": "joint_fit",
+      "columns": [
+        "experiment_id",
+        "weight"
+      ],
+      "rows": 5
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_1_10.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_1_10",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_1_10.edi",
+      "sha256": "6893edefb924126beb3817b349dc4f263ff11308172d7cfff70dd9b003b6b67c",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_1_10.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_1_10",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_1_10.edi",
+      "sha256": "6893edefb924126beb3817b349dc4f263ff11308172d7cfff70dd9b003b6b67c",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_1_10.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_1_10",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_1_10.edi",
+      "sha256": "6893edefb924126beb3817b349dc4f263ff11308172d7cfff70dd9b003b6b67c",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 36
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_1_10.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_1_10",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_1_10.edi",
+      "sha256": "6893edefb924126beb3817b349dc4f263ff11308172d7cfff70dd9b003b6b67c",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 4182
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_2_9",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi",
+      "sha256": "cf1953881302612f1dd7f659ac76026c2f75dfd929f6a846b7c0c822328eef19",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_2_9",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi",
+      "sha256": "cf1953881302612f1dd7f659ac76026c2f75dfd929f6a846b7c0c822328eef19",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_2_9",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi",
+      "sha256": "cf1953881302612f1dd7f659ac76026c2f75dfd929f6a846b7c0c822328eef19",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 22
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_2_9",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi",
+      "sha256": "cf1953881302612f1dd7f659ac76026c2f75dfd929f6a846b7c0c822328eef19",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 4166
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_3_8",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi",
+      "sha256": "58437073a03edf8861f09c22d0ddc85637268b35e189f76dc430b62068af0bfa",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_3_8",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi",
+      "sha256": "58437073a03edf8861f09c22d0ddc85637268b35e189f76dc430b62068af0bfa",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_3_8",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi",
+      "sha256": "58437073a03edf8861f09c22d0ddc85637268b35e189f76dc430b62068af0bfa",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 22
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_3_8",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi",
+      "sha256": "58437073a03edf8861f09c22d0ddc85637268b35e189f76dc430b62068af0bfa",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 3970
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi",
+      "sha256": "5642c0c37de594406461d2b66ef20d09c46e4cd3af26d1f92e4615714179a6ae",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi",
+      "sha256": "5642c0c37de594406461d2b66ef20d09c46e4cd3af26d1f92e4615714179a6ae",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi",
+      "sha256": "5642c0c37de594406461d2b66ef20d09c46e4cd3af26d1f92e4615714179a6ae",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 28
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi",
+      "sha256": "5642c0c37de594406461d2b66ef20d09c46e4cd3af26d1f92e4615714179a6ae",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 4043
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi",
+      "sha256": "555792faa1e574fad3b12a810b6aa7dc67abad14977453c97d65a9d0b8826b3b",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi",
+      "sha256": "555792faa1e574fad3b12a810b6aa7dc67abad14977453c97d65a9d0b8826b3b",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi",
+      "sha256": "555792faa1e574fad3b12a810b6aa7dc67abad14977453c97d65a9d0b8826b3b",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 28
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi",
+      "sha256": "555792faa1e574fad3b12a810b6aa7dc67abad14977453c97d65a9d0b8826b3b",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 4114
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/structures/ncaf.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project",
+      "page": "structure",
+      "block": "ncaf",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/structures/ncaf.edi",
+      "sha256": "1f231ef2dc1ec210d95b9f52452dacb6102b7c515b6af603f205199a3aaf0e1d",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 6
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/analysis/analysis.edi/joint_fit",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/analysis/analysis.edi",
+      "sha256": "39fbca0c5cfba66ab4e126f6070c173209bdec5b984a7462a84e702363e3570f",
+      "category": "joint_fit",
+      "columns": [
+        "experiment_id",
+        "weight"
+      ],
+      "rows": 5
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_1_10.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_1_10",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_1_10.edi",
+      "sha256": "1daf13e94e0fde89c44822d226109b527c2bde097c33b8f20465d6e83ba7b1d5",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_1_10.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_1_10",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_1_10.edi",
+      "sha256": "1daf13e94e0fde89c44822d226109b527c2bde097c33b8f20465d6e83ba7b1d5",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_1_10.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_1_10",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_1_10.edi",
+      "sha256": "1daf13e94e0fde89c44822d226109b527c2bde097c33b8f20465d6e83ba7b1d5",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 36
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_1_10.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_1_10",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_1_10.edi",
+      "sha256": "1daf13e94e0fde89c44822d226109b527c2bde097c33b8f20465d6e83ba7b1d5",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 4182
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_2_9",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi",
+      "sha256": "7258aadc1cef7d305d237f7c5e031ee27251f0756159b61ad726cb24bfed435b",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_2_9",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi",
+      "sha256": "7258aadc1cef7d305d237f7c5e031ee27251f0756159b61ad726cb24bfed435b",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_2_9",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi",
+      "sha256": "7258aadc1cef7d305d237f7c5e031ee27251f0756159b61ad726cb24bfed435b",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 22
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_2_9",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi",
+      "sha256": "7258aadc1cef7d305d237f7c5e031ee27251f0756159b61ad726cb24bfed435b",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 4166
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_3_8",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi",
+      "sha256": "947f6b21e94bdfcf541ef46896b7fed26b91512da0c54084b429b75e24dbc05c",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_3_8",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi",
+      "sha256": "947f6b21e94bdfcf541ef46896b7fed26b91512da0c54084b429b75e24dbc05c",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_3_8",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi",
+      "sha256": "947f6b21e94bdfcf541ef46896b7fed26b91512da0c54084b429b75e24dbc05c",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 22
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_3_8",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi",
+      "sha256": "947f6b21e94bdfcf541ef46896b7fed26b91512da0c54084b429b75e24dbc05c",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 3970
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi",
+      "sha256": "a0afd8a05804802f03de14361fb212c63a3549e61c6e32895fd83ee534312843",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi",
+      "sha256": "a0afd8a05804802f03de14361fb212c63a3549e61c6e32895fd83ee534312843",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi",
+      "sha256": "a0afd8a05804802f03de14361fb212c63a3549e61c6e32895fd83ee534312843",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 28
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_4_7",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi",
+      "sha256": "a0afd8a05804802f03de14361fb212c63a3549e61c6e32895fd83ee534312843",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 4043
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi/excluded_region",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi",
+      "sha256": "bf45ed7b5f511d26c9d49adf0b13224a87d06245504d377dd5cfe4d4ffadaeb7",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi",
+      "sha256": "bf45ed7b5f511d26c9d49adf0b13224a87d06245504d377dd5cfe4d4ffadaeb7",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi",
+      "sha256": "bf45ed7b5f511d26c9d49adf0b13224a87d06245504d377dd5cfe4d4ffadaeb7",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 28
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "experiment",
+      "block": "wish_5_6",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi",
+      "sha256": "bf45ed7b5f511d26c9d49adf0b13224a87d06245504d377dd5cfe4d4ffadaeb7",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 4114
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/structures/ncaf.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project",
+      "page": "structure",
+      "block": "ncaf",
+      "file": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/structures/ncaf.edi",
+      "sha256": "44fe96e2d76e9a75815b831c6d060773e6129c8589aa5da5cd7e5b9e6b853eee",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 6
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project",
+      "page": "experiment",
+      "block": "sepd",
+      "file": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi",
+      "sha256": "0b1167d3ccd41b2da642e443d5beb606932eea98580cd08364e21e51a4350152",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project",
+      "page": "experiment",
+      "block": "sepd",
+      "file": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi",
+      "sha256": "0b1167d3ccd41b2da642e443d5beb606932eea98580cd08364e21e51a4350152",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 14
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project",
+      "page": "experiment",
+      "block": "sepd",
+      "file": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi",
+      "sha256": "0b1167d3ccd41b2da642e443d5beb606932eea98580cd08364e21e51a4350152",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "d_spacing",
+        "intensity_meas",
+        "intensity_meas_su",
+        "intensity_calc",
+        "intensity_bkg",
+        "calc_status"
+      ],
+      "rows": 5600
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi/refln",
+      "project": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project",
+      "page": "experiment",
+      "block": "sepd",
+      "file": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi",
+      "sha256": "0b1167d3ccd41b2da642e443d5beb606932eea98580cd08364e21e51a4350152",
+      "category": "refln",
+      "columns": [
+        "id",
+        "structure_id",
+        "d_spacing",
+        "sin_theta_over_lambda",
+        "index_h",
+        "index_k",
+        "index_l",
+        "f_calc",
+        "f_squared_calc",
+        "time_of_flight"
+      ],
+      "rows": 267
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/structures/si.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project",
+      "page": "structure",
+      "block": "si",
+      "file": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/structures/si.edi",
+      "sha256": "531d657005b89223d20b18265ace558c8fba96473890fb91a86e77dd80ca8f94",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi/linked_structure",
+      "project": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project",
+      "page": "experiment",
+      "block": "sepd",
+      "file": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi",
+      "sha256": "4e49721b5e31d508798e5ad56db99fa37ba83bfd324df051776713402deeffc0",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi/background",
+      "project": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project",
+      "page": "experiment",
+      "block": "sepd",
+      "file": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi",
+      "sha256": "4e49721b5e31d508798e5ad56db99fa37ba83bfd324df051776713402deeffc0",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 14
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi/data",
+      "project": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project",
+      "page": "experiment",
+      "block": "sepd",
+      "file": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi",
+      "sha256": "4e49721b5e31d508798e5ad56db99fa37ba83bfd324df051776713402deeffc0",
+      "category": "data",
+      "columns": [
+        "time_of_flight",
+        "id",
+        "d_spacing",
+        "intensity_meas",
+        "intensity_meas_su",
+        "intensity_calc",
+        "intensity_bkg",
+        "calc_status"
+      ],
+      "rows": 5600
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi/refln",
+      "project": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project",
+      "page": "experiment",
+      "block": "sepd",
+      "file": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi",
+      "sha256": "4e49721b5e31d508798e5ad56db99fa37ba83bfd324df051776713402deeffc0",
+      "category": "refln",
+      "columns": [
+        "id",
+        "structure_id",
+        "d_spacing",
+        "sin_theta_over_lambda",
+        "index_h",
+        "index_k",
+        "index_l",
+        "f_calc",
+        "f_squared_calc",
+        "time_of_flight"
+      ],
+      "rows": 267
+    },
+    {
+      "tag": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/structures/si.edi/atom_site",
+      "project": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project",
+      "page": "structure",
+      "block": "si",
+      "file": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/structures/si.edi",
+      "sha256": "531d657005b89223d20b18265ace558c8fba96473890fb91a86e77dd80ca8f94",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_lif_single/project/analysis/analysis.edi/joint_fit",
+      "project": "docs/user/cli/pd-xray-cwl_lif_single/project",
+      "page": "analysis",
+      "block": "analysis",
+      "file": "docs/user/cli/pd-xray-cwl_lif_single/project/analysis/analysis.edi",
+      "sha256": "76917b3672c7268e7fee9fb901c0ed8ffdd5ffcf29c6fc1083d470ad5b501e72",
+      "source_bytes": "current",
+      "category": "joint_fit",
+      "columns": [
+        "experiment_id",
+        "weight"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi/linked_structure",
+      "project": "docs/user/cli/pd-xray-cwl_lif_single/project",
+      "page": "experiment",
+      "block": "cu_ka",
+      "file": "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi",
+      "sha256": "5b084a1364f4fbe8afc90fa44dc785eb0b674ad2954d8e66dce50e7a0194f9ad",
+      "source_bytes": "current",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi/background",
+      "project": "docs/user/cli/pd-xray-cwl_lif_single/project",
+      "page": "experiment",
+      "block": "cu_ka",
+      "file": "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi",
+      "sha256": "5b084a1364f4fbe8afc90fa44dc785eb0b674ad2954d8e66dce50e7a0194f9ad",
+      "source_bytes": "current",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 0
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi/data",
+      "project": "docs/user/cli/pd-xray-cwl_lif_single/project",
+      "page": "experiment",
+      "block": "cu_ka",
+      "file": "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi",
+      "sha256": "5b084a1364f4fbe8afc90fa44dc785eb0b674ad2954d8e66dce50e7a0194f9ad",
+      "source_bytes": "current",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 6001
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_lif_single/project/structures/lif.edi/atom_site",
+      "project": "docs/user/cli/pd-xray-cwl_lif_single/project",
+      "page": "structure",
+      "block": "lif",
+      "file": "docs/user/cli/pd-xray-cwl_lif_single/project/structures/lif.edi",
+      "sha256": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe",
+      "source_bytes": "current",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi/preferred_orientation",
+      "project": "tests/fixtures/e04_t1/editable-project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi",
+      "sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+      "category": "preferred_orientation",
+      "columns": [
+        "structure_id",
+        "march_r",
+        "index_h",
+        "index_k",
+        "index_l",
+        "march_random_fract"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi/excluded_region",
+      "project": "tests/fixtures/e04_t1/editable-project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi",
+      "sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi/linked_structure",
+      "project": "tests/fixtures/e04_t1/editable-project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi",
+      "sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi/background",
+      "project": "tests/fixtures/e04_t1/editable-project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi",
+      "sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 5
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi/data",
+      "project": "tests/fixtures/e04_t1/editable-project",
+      "page": "experiment",
+      "block": "hrpt",
+      "file": "tests/fixtures/e04_t1/editable-project/experiments/hrpt.edi",
+      "sha256": "4a7aa10f25ecc085a7b8b9f0f621b44feab8b1b3864bb185b2d349991fecd162",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 3098
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/editable-project/structures/lbco.edi/atom_site",
+      "project": "tests/fixtures/e04_t1/editable-project",
+      "page": "structure",
+      "block": "lbco",
+      "file": "tests/fixtures/e04_t1/editable-project/structures/lbco.edi",
+      "sha256": "7f69d050d5ba4d9e5a43e551377f8be5d71b487418c83645044cbec0c3c16af2",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 4
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/editable-project/structures/lbco.edi/scattering_length",
+      "project": "tests/fixtures/e04_t1/editable-project",
+      "page": "structure",
+      "block": "lbco",
+      "file": "tests/fixtures/e04_t1/editable-project/structures/lbco.edi",
+      "sha256": "7f69d050d5ba4d9e5a43e551377f8be5d71b487418c83645044cbec0c3c16af2",
+      "category": "scattering_length",
+      "columns": [
+        "type_symbol",
+        "length_fm"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/warning-project/experiments/experiment.edi/linked_structure",
+      "project": "tests/fixtures/e04_t1/warning-project",
+      "page": "experiment",
+      "block": "experiment",
+      "file": "tests/fixtures/e04_t1/warning-project/experiments/experiment.edi",
+      "sha256": "a5ef0a715347c0d43cedb9a83b6a29c2cb00eecc5084478177b6944c7d3bab45",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/warning-project/experiments/experiment.edi/data",
+      "project": "tests/fixtures/e04_t1/warning-project",
+      "page": "experiment",
+      "block": "experiment",
+      "file": "tests/fixtures/e04_t1/warning-project/experiments/experiment.edi",
+      "sha256": "a5ef0a715347c0d43cedb9a83b6a29c2cb00eecc5084478177b6944c7d3bab45",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 3
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/warning-project/experiments/experiment.edi/background",
+      "project": "tests/fixtures/e04_t1/warning-project",
+      "page": "experiment",
+      "block": "experiment",
+      "file": "tests/fixtures/e04_t1/warning-project/experiments/experiment.edi",
+      "sha256": "a5ef0a715347c0d43cedb9a83b6a29c2cb00eecc5084478177b6944c7d3bab45",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/warning-project/structures/structure.edi/atom_site",
+      "project": "tests/fixtures/e04_t1/warning-project",
+      "page": "structure",
+      "block": "structure",
+      "file": "tests/fixtures/e04_t1/warning-project/structures/structure.edi",
+      "sha256": "3eafe9649956cbc14b8f4be0f687089c0c7234f32ecd48232d75fe93c8d5a166",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "wyckoff_letter",
+        "type_symbol",
+        "adp_type",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "occupancy",
+        "adp_iso"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi/linked_structure",
+      "project": "tests/fixtures/e04_t1/xray-project",
+      "page": "experiment",
+      "block": "experiment",
+      "file": "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi",
+      "sha256": "a5ef0a715347c0d43cedb9a83b6a29c2cb00eecc5084478177b6944c7d3bab45",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi/data",
+      "project": "tests/fixtures/e04_t1/xray-project",
+      "page": "experiment",
+      "block": "experiment",
+      "file": "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi",
+      "sha256": "a5ef0a715347c0d43cedb9a83b6a29c2cb00eecc5084478177b6944c7d3bab45",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 3
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi/background",
+      "project": "tests/fixtures/e04_t1/xray-project",
+      "page": "experiment",
+      "block": "experiment",
+      "file": "tests/fixtures/e04_t1/xray-project/experiments/experiment.edi",
+      "sha256": "a5ef0a715347c0d43cedb9a83b6a29c2cb00eecc5084478177b6944c7d3bab45",
+      "category": "background",
+      "columns": [
+        "id",
+        "position",
+        "intensity"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "tests/fixtures/e04_t1/xray-project/structures/structure.edi/atom_site",
+      "project": "tests/fixtures/e04_t1/xray-project",
+      "page": "structure",
+      "block": "structure",
+      "file": "tests/fixtures/e04_t1/xray-project/structures/structure.edi",
+      "sha256": "3eafe9649956cbc14b8f4be0f687089c0c7234f32ecd48232d75fe93c8d5a166",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "wyckoff_letter",
+        "type_symbol",
+        "adp_type",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "occupancy",
+        "adp_iso"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi/excluded_region",
+      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "page": "experiment",
+      "block": "pbsox",
+      "file": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi",
+      "sha256": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
+      "source_bytes": "current",
+      "category": "excluded_region",
+      "columns": [
+        "id",
+        "start",
+        "end"
+      ],
+      "rows": 2
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi/linked_structure",
+      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "page": "experiment",
+      "block": "pbsox",
+      "file": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi",
+      "sha256": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
+      "source_bytes": "current",
+      "category": "linked_structure",
+      "columns": [
+        "structure_id",
+        "scale"
+      ],
+      "rows": 1
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi/background",
+      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "page": "experiment",
+      "block": "pbsox",
+      "file": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi",
+      "sha256": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
+      "source_bytes": "current",
+      "category": "background",
+      "columns": [
+        "id",
+        "order",
+        "coef"
+      ],
+      "rows": 6
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi/data",
+      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "page": "experiment",
+      "block": "pbsox",
+      "file": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi",
+      "sha256": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9",
+      "source_bytes": "current",
+      "category": "data",
+      "columns": [
+        "two_theta",
+        "id",
+        "intensity_meas",
+        "intensity_meas_su"
+      ],
+      "rows": 6001
+    },
+    {
+      "tag": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/structures/pbso4.edi/atom_site",
+      "project": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project",
+      "page": "structure",
+      "block": "pbso4",
+      "file": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/structures/pbso4.edi",
+      "sha256": "177c342c60fd3a0b087cb542e5aa7c31209fda745816cd21fd512fab0a780401",
+      "source_bytes": "current",
+      "category": "atom_site",
+      "columns": [
+        "id",
+        "type_symbol",
+        "fract_x",
+        "fract_y",
+        "fract_z",
+        "wyckoff_letter",
+        "multiplicity",
+        "occupancy",
+        "adp_iso",
+        "adp_type"
+      ],
+      "rows": 5
+    }
+  ]
+}

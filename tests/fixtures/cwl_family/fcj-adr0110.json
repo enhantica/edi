@@ -1,0 +1,115 @@
+{
+  "kind": "regression-pin",
+  "cause": "crysta continuous FCJ integral, intentionally distinct from FullProf's Prof_Val",
+  "algorithm_commit": "b2022d2280c2cf2b2cf68ee7d87c1b91f96b6bfb",
+  "platform": "Linux",
+  "machine": "x86_64",
+  "edi_source": "ffd45ceac5c0bf917f224d441813ecb86b4d9f34",
+  "engine_source": "361b2b641b5187e263b50242a8374382d22fb5de",
+  "sdk_manifest": {
+    "cmake_options": [
+      "-G",
+      "Ninja",
+      "-DCMAKE_BUILD_TYPE=Release",
+      "-DCRYSTA_CXX_PACKAGE=ON",
+      "-DCRYSTA_LTO=OFF",
+      "-DCRYSTA_SANITIZE=OFF",
+      "-DCRYSTA_COVERAGE=OFF",
+      "-DCRYSTA_LLVM_COVERAGE=OFF"
+    ],
+    "crysta_version": "0.1.0",
+    "fingerprint": {
+      "macos_deployment_target": null,
+      "packages": [
+        {
+          "build": "h235f0fe_19",
+          "name": "gcc_impl_linux-64",
+          "version": "14.3.0"
+        },
+        {
+          "build": "h2185e75_19",
+          "name": "gxx_impl_linux-64",
+          "version": "14.3.0"
+        },
+        {
+          "build": "he0feb66_19",
+          "name": "libgcc",
+          "version": "15.2.0"
+        },
+        {
+          "build": "hf649bbc_119",
+          "name": "libgcc-devel_linux-64",
+          "version": "14.3.0"
+        },
+        {
+          "build": "h934c35e_19",
+          "name": "libstdcxx",
+          "version": "15.2.0"
+        },
+        {
+          "build": "h9f08a49_119",
+          "name": "libstdcxx-devel_linux-64",
+          "version": "14.3.0"
+        },
+        {
+          "build": "he0feb66_19",
+          "name": "libgomp",
+          "version": "15.2.0"
+        },
+        {
+          "build": "h4ee821c_9",
+          "name": "sysroot_linux-64",
+          "version": "2.28"
+        },
+        {
+          "build": "h54a6638_2",
+          "name": "eigen",
+          "version": "3.4.0"
+        },
+        {
+          "build": "ha0421bc_0",
+          "name": "sleef",
+          "version": "3.9.0"
+        }
+      ]
+    },
+    "identity": "git:361b2b641b5187e263b50242a8374382d22fb5de",
+    "platform": "linux-64",
+    "schema": 1,
+    "source_sha": "361b2b641b5187e263b50242a8374382d22fb5de",
+    "source_tree": "30628b4ddd16397db63162bf678924399aa33be0",
+    "tested": {
+      "configuration": "Release, non-LTO",
+      "corpus": {
+        "passed": 45,
+        "total": 45
+      },
+      "cpp_tier": {
+        "passed": 1457,
+        "total": 1457
+      },
+      "job": "checks",
+      "job_name": "checks (Linux)",
+      "run_attempt": "1",
+      "run_id": "42580052908",
+      "sha256": {
+        "bin/crysta": "79406264dd61866b41223b379368fc4389d51e871e0634d5ba610ede1e1def5c",
+        "lib/crysta-runtime/libgcc_s.so.1": "e1e904051f77f9569c2ea53c83bb4083c26575e0fbd4010e46f1cb8b21037ad1",
+        "lib/crysta-runtime/libgomp.so.1": "23edb748d6c9584e337fc00cb22eba3bf535478204d6e5eddbb637b7f417fd25",
+        "lib/crysta-runtime/libsleef.so.3": "aa23952c9f163ba7bb89c8f7bdaf9350f7cf3c4dafdd86ca96d6646fffbb6a7a",
+        "lib/crysta-runtime/libstdc++.so.6": "9581ad615b7c073423f57b69a3b148a89f8ea76fc909124211f9007909b807a6",
+        "lib/libcrysta_core.a": "1b1dc52c90aced5bb2c67ae42b36ca4cd74efbe8e2357b5ead1e38b98c1c2f04"
+      }
+    }
+  },
+  "module_sha256": "8e73417b55cffb3b600527eb798d24cd5df4cf8cd39793c51d38da499a3c3077",
+  "generator_sha256": "46fcb054bfe6b4248028939cf96ecb2f14f981e47349ecc824e070ab33941548",
+  "input_sha256": {
+    "fcj/experiments/bank.edi": "279184aaf4c6d81e5d32eee50cf63b1e973c59503be7e1cf2288d8857ab33571",
+    "fcj/structures/phase.edi": "be439161f0bd6b5b6109d820c41e4bbe2630bfb1e3111dd2b1da69b1d633a76c",
+    "tch/experiments/bank.edi": "bc45af518136558f0dc853cdb89b5a84dc1ae0821c21513ced4ca9cc8533b29d",
+    "tch/structures/phase.edi": "be439161f0bd6b5b6109d820c41e4bbe2630bfb1e3111dd2b1da69b1d633a76c"
+  },
+  "historical_fcj_sha256": "c062010e061a1c696f02a96bce14ae42f35e2f46787ed01f8aeb4eb481443795",
+  "pin": "uEYjRvRnHUBm8frXUBcpQNxl3LjKvDBAhYNa+5HhLUD7ps/RWKEkQGGur1Y+kQdAbbNmqW6a4D8="
+}

@@ -1,0 +1,131 @@
+# Native reference and browser invocation
+
+`native.json` and `native-report.txt` were refreshed by `generate.py` using
+`python -m edi fit ... --dry --report machine --verbosity full` after the example
+adopted the Shift/s.u. stopping rule. The input is the committed
+`docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project`. Its ordered path/content
+SHA-256 binds every file. The fixture records the native extension's embedded
+build commit and binary SHA-256. The previous reference remains in Git history
+with the input it measured. This reference comes from the native CLI and serves
+both ordinary and size-optimized WebAssembly comparisons.
+The reference report's numeric formatting has ten significant digits; the declared relative comparison
+bound is 1e-9, with a 1e-11 absolute floor. Every free fitted parameter, terminal status, convergence and
+reduced chi-square belongs to the comparison; elapsed times and exact iteration histories do not.
+
+Regenerate only with a native edi extension and a pinned Python environment:
+
+```sh
+python tests/fixtures/e04_t11_wasm/generate.py
+```
+
+The core numerical vehicles are the compiled wasm `crysta` CLI, separate for each thread kit. Set
+`EDI_WASM_CLI_SINGLETHREAD` and `EDI_WASM_CLI_MULTITHREAD` to their generated JavaScript entrypoints, then
+run the system Python gates. They copy the committed project before executing a fit.
+`EDI_WASM_ZIP` selects the single delivered archive; its default location is `build/wasm/*.zip`.
+These environment variables select real artifacts and never replace a result or a browser capability.
+
+The browser checks are a dedicated task check, separate from the disabled desktop app tests:
+
+```sh
+node --experimental-websocket tests/system/manual/e04_t11_browser.mjs <extracted-webapp> singlethread <persistent-output> <chrome>
+node --experimental-websocket tests/system/manual/e04_t11_browser.mjs <extracted-webapp> multithread <persistent-output> <chrome>
+node --experimental-websocket tests/system/manual/e04_t11_browser.mjs <extracted-webapp> shim <persistent-output> <chrome>
+```
+
+The progress check follows the current status bar: the former `Fit iterationsN` label is now
+`fitting · it N`. A Stop/Cancel control (including the Stop icon prefix) and a live iteration
+label are both required in multithread and shim modes. The control is observed in AX;
+the live bar is read through `window.ediFitProgress()` with actual native running,
+effective visibility and positive iteration text, as specified in
+[the native progress bridge contract](../web_parallel/README.md). The bar keeps its ProgressBar role. Completed `it N` summaries, Success,
+maximum-iteration settings, a control alone and an iteration label alone remain negative controls.
+The observer records changed labels and newly inserted accessibility nodes before their first update.
+
+File requests use real pointer input on the app's button instead of a synthetic click on its
+accessibility element. `Page.fileChooserOpened.backendNodeId` identifies the real file input;
+the former `backendDOMNodeId` lookup confused this event with an AX node. The chooser event's
+backend node must still equal the file input captured from the app's own request. The pointer
+action and chooser event are awaited together so a refused request retains its failure evidence. Structure remains single-file and full experiment remains batch. The
+`--file-request-case=load-data` case creates an experiment and opens **Load ▾ → Measured data into → From file…**.
+It requires a single-file chooser, and the full `all` case includes it. The driver never opens the input directly. Structure and Experiment groups start open
+(edi ADR-0017 section 3); the former unconditional header toggles closed them before Load.
+The driver preserves their open state and still requires the real chooser and native results.
+
+Use Node with the WebSocket API (the shown flag enables it on Node 20) and pinned Chrome headless shell 146 with SwiftShader (the feasibility-check browser). The driver
+records screenshots, the browser's own isolation flag, requested wasm URLs, runtime exceptions and
+the fitting accessibility tree and progress-mutation history. It uses an isolated browser profile, serves under a subfolder,
+blocks the isolation shim for the non-isolated single-thread case, supplies real headers for the
+multi-thread case, and supplies no headers for the separate service-worker case. Browser controls
+are located by their user-facing accessibility names, and clicks use real pointer input after the native page settles and its mirrored rectangle is mapped to the visible page.
+No fixed delay substitutes for a ready page, completed fit, accepted file picker or completed download.
+The driver expects a browser-visible Qt accessibility tree; if the kit does not expose the controls,
+the driver activates Qt's documented screen-reader control first. A tree
+that still lacks a table delegate is a harness limitation to adapt, not independent evidence of a rendering failure.
+
+A passing browser run must open the bundled LBCO/HRPT example, show Structure and Experiment, run
+Start fitting to the results popup, download the saved project, extract its project folder, and reopen that folder through
+the browser directory picker. Captures still require a human view of the chart and structure drawing; the
+accessibility labels alone do not prove rendered geometry. The initial frozen baselines had no wasm artifact. No live GUI
+workflow success is claimed until the complete driver passes. Native numerical parity and the browser GUI flow
+are different checks, and both are required before accepting the complete task.
+
+Append `--startup-only` to run only initialization, real canvas, browser isolation and automatic kit
+selection. This is gate 3 evidence only and never a substitute for the full gate 4 GUI workflow.
+Qt accessibility activation: https://doc.qt.io/qt-6.10/wasm.html#accessibility-and-screen-readers.
+
+Qt's accessibility mirror uses page-deck coordinates and can scroll the document when it focuses a hidden element. The harness maps the deck translation, waits for rendered page stability, and uses `focus({preventScroll:true})` to keep those hidden mirrors from moving the canvas. The real pointer input and Qt actions remain intact.
+
+Qt omits the results popup table from the browser AX tree. Its modal visibility check uses the independent gui-components v0.9.1 `Colors.qml` tokens (`dialogBackground = contentBackground = #f4f4f4`, `chartPlotAreaBackground = #fff`), requires the broad overlay across chart and sidebar, and proves its disappearance on Escape. Done status and the captured popup remain separate witnesses. The component reference is commit `a573a9695e53a0807de197785e12f9facd06da05`.
+
+The browser case disables Chromium's optional `FileSystemAccessLocal` feature and verifies that `showOpenFilePicker` is absent. This exercises Qt's actual Blob/anchor zip-download fallback, as used by browsers without the native picker API. A native save-picker path is not claimed: CDP's file-chooser interception aborts `showSaveFilePicker`. Folder reopening still uses the real intercepted directory picker.
+
+Reopening closes the live project with the public reset action first and proves Structure, Experiment and
+Analysis are disabled. The upload must enable Analysis from that empty state. A second real download must
+retain every archive path and file byte, including project identity, README and the complete saved fit record;
+the first saved chi square also matches the independent native CLI oracle. Only the value of the project's
+`_metadata.last_modified` field is normalized, using the existing project round-trip convention.
+Fresh chooser/download events are required for every action.
+
+Append `--reopen-control=noop` or `--reopen-control=refuse` for deliberate negative controls: the former
+prevents the real folder input's change handler, the latter supplies a folder whose project schema is invalid.
+Each must fail specifically waiting for the formerly disabled Analysis tab to become enabled. A setup error
+or unrelated fit failure is not a successful negative control. These controls never count as passing workflows.
+
+The default full invocation also exercises all four request cases. For serial diagnostics, append
+`--file-requests-only --file-request-case=overlap`, `replacement`, `cancel-structure` or `cancel-experiment`.
+These scoped cases do not claim a complete gate 4 workflow. Append `--file-request-case=none` to run the
+fit/save/reopen proof separately. Inputs come from `routing.py`; its copied scientific data are inputs,
+not numerical reference results. Folder overlap holds actual browser Blob reads until both requests are
+observably pending. Project replacement checks a real bundled example and the entire saved project tree
+after the late upload completes. Cancel cases begin with a newly created empty project and require new
+Structure or Experiment counts after the next picker. Every retry uses a fresh request.
+
+The Structure case requires an actual one-file import and a single-file picker. A separate CDP escape
+attempt supplied two files: Qt's single-file path read only the first, so requiring both reads would
+misstate its contract. Chooser cardinality is independently guarded by the fast source seam gates,
+including a mutant that switches Structure to a multiple-file request. Those gates also sweep every
+QML receiver for request identity, terminal cancellation and initiating-project ownership. These checks
+complement the real browser cases; neither source patterns nor unchanged empty-project labels alone
+prove an asynchronous upload transition. Navigation requires the requested native tab to become selected.
+
+The browser catalogue routes use separate `catalogue-native.json` pins captured by
+`generate_catalogue.py` from `pd-neut-cwl_lbco-hrpt` and `pd-neut-tof_ncaf-wish`.
+These are native CLI parity regression pins, bound to their complete input bytes and
+retained transcripts. They do not replace an external physics reference. The original
+`native.json`, transcript and start-model numerical backend controls remain unchanged.
+The browser retains its original chi-square and Rwp comparison bounds; its exact
+iteration pin now belongs to the selected catalogue input.
+
+`catalogue_scientific/` separately retains the complete saved native operands and
+covariance/weighted-Jacobian captures for those inputs. Generate them with
+`generate_catalogue_scientific.py` and the existing native conditioning executable.
+The browser uses the existing complete-operand comparator, its original value/pattern
+bounds, and the same conditioning-derived uncertainty checks. The older
+`web_parallel/` captures are retained for their original numerical vehicles.
+
+The native saved files use rounded uncertainty spelling. Each positive uncertainty in
+the complete parity reference is restored from its independently captured native
+covariance column only when decimal rounding reproduces the actual saved native token.
+Experiment and positive background-point identities disambiguate equal rounded values;
+ambiguous bindings refuse. `native_precision_bindings` retains every before/after token
+and column. The existing conditioning writer then verifies the unrounded native operands.

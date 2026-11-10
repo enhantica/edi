@@ -1,0 +1,24 @@
+_edi.schema_version 3
+
+_fitting_mode.type joint
+
+_minimizer.type "lmfit (leastsq)"
+_minimizer.max_iterations 1000
+_minimizer.chi_square_tolerance 1e-8
+_minimizer.stop_rule shift_su
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+expt_s2 0.5
+expt_n2 0.5
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_ferrite ferrite.atom_site.Fe.adp_iso
+biso_austenite austenite.atom_site.Fe.adp_iso
+
+loop_
+_constraint.expression
+"biso_austenite = biso_ferrite"

@@ -1,0 +1,157 @@
+{
+  "task": "",
+  "drive_seq": 45,
+  "kind": "execution evidence, not a correctness golden",
+  "oracle": "Exact pre-fit axis state is restored after fit/save/load/undo, with one snapshot row per basic and a byte-identical second undo. The assertions are unchanged between subjects.",
+  "test_source": {
+    "path": "tests/system/py/test_e09_t58_cli_persistence.py",
+    "sha256": "427ab3b825d059af5c6d2be930de0266141afb7d3f651427c7de6569cb2ef3d5"
+  },
+  "crysta_source": "fcea5f817c985cf94af731625d56f38e3fae0061",
+  "method": "Build pre-mirror edi worktree using HEAD installed crysta-prefix; run each exact node listed below with pixi Python -m pytest -vv -o addopts= -p no:cacheprovider. Set PYTHONPATH to each subject/lib, EDI_EXTENSION_DIR to each subject/build/ci/python/edi; remove CRYSTA_CONSUMER_SRC; share HEAD build/crysta-src/tests/fitting as EDI_CRYSTA_CORPUS_ROOT. Both actual package and extension paths are recorded in the logs.",
+  "source_logs": "<author-runs>/e09t58-seq45/{base,head}-proof.{log,xml}",
+  "runs": {
+    "base": {
+      "edi_commit": "f778434151fa36739ee532cc91a3e897ac61dbb8",
+      "pytest_exit": 1,
+      "log_sha256": "c9ecd61e935b836e1c627696304b2ae491782b43eff5836e193a8968bbd3f98d",
+      "junit_sha256": "8433cc17519e8287b2ea5537441da9323bbfd85fe470a4d0f67a85b5b09899f8",
+      "results": [
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-absent-zero]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('absent', 'absent', 'zero'): {'fract_x': (0.25193, None, True), 'fract_y': (0.25193, None, True), 'fract_z': (0.25193, None, True)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-fixed-zero]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('absent', 'fixed', 'zero'): {'fract_x': (0.25193, None, True), 'fract_y': (0.25193, 0.0, False), 'fract_z': (0.25193, None, True)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-zero-absent]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('absent', 'zero', 'absent'): {'fract_x': (0.25193, None, True), 'fract_y': (0.25193, None, True), 'fract_z': (0.25193, None, True)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-zero-fixed]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('absent', 'zero', 'fixed'): {'fract_x': (0.25193, None, True), 'fract_y': (0.25193, None, True), 'fract_z': (0.25193, 0.0, False)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-zero-zero]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('absent', 'zero', 'zero'): {'fract_x': (0.25193, None, True), 'fract_y': (0.25193, None, True), 'fract_z': (0.25193, None, True)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[fixed-absent-zero]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('fixed', 'absent', 'zero'): {'fract_x': (0.25193, 0.0, False), 'fract_y': (0.25193, None, True), 'fract_z': (0.25193, None, True)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[fixed-zero-absent]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('fixed', 'zero', 'absent'): {'fract_x': (0.25193, 0.0, False), 'fract_y': (0.25193, 0.0, True), 'fract_z': (0.25193, 0.0, True)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[zero-absent-absent]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('zero', 'absent', 'absent'): {'fract_x': (0.25193, 0.0, True), 'fract_y': (0.25193, 0.0, True), 'fract_z': (0.25193, 0.0, True)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[zero-absent-fixed]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('zero', 'absent', 'fixed'): {'fract_x': (0.25193, 0.0, True), 'fract_y': (0.25193, 0.0, True), 'fract_z': (0.25193, 0.0, False)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[zero-absent-zero]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('zero', 'absent', 'zero'): {'fract_x': (0.25193, 0.0, True), 'fract_y': (0.25193, 0.0, True), 'fract_z': (0.25193, 0.0, True)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[zero-fixed-absent]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('zero', 'fixed', 'absent'): {'fract_x': (0.25193, 0.0, True), 'fract_y': (0.25193, 0.0, False), 'fract_z': (0.25193, 0.0, True)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[zero-zero-absent]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('zero', 'zero', 'absent'): {'fract_x': (0.25193, 0.0, True), 'fract_y': (0.25193, 0.0, True), 'fract_z': (0.25193, 0.0, True)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_mixed_optional_axis_priors_survive_saved_undo[absent-zero-fixed]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('absent', 'zero', 'fixed'): {'fract_x': (0.25193, None, True), 'fract_y': (0.25193, None, True), 'fract_z': (0.25193, 0.0, False)}"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_mixed_optional_axis_priors_survive_saved_undo[zero-absent-fixed]",
+          "outcome": "failed",
+          "failure_message": "AssertionError: F1/F2 edi save/load/undo must recover every tied axis value, optional uncertainty, and free flag exactly: ('zero', 'absent', 'fixed'): {'fract_x': (0.25193, 0.0, True), 'fract_y': (0.25193, 0.0, True), 'fract_z': (0.25193, 0.0, False)}"
+        }
+      ]
+    },
+    "head": {
+      "edi_commit": "ad9c03c201ccfb20a44786047ca77acb2bf3010a",
+      "pytest_exit": 0,
+      "log_sha256": "73b53f40b4fddf19e674700fd3ab788d135067aaa4ba195409874f555617050d",
+      "junit_sha256": "4cfa548c6cc5118f175385236d3d67f380ab91096fc895865b40c4c7c1235f1c",
+      "results": [
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-absent-zero]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-fixed-zero]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-zero-absent]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-zero-fixed]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-zero-zero]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[fixed-absent-zero]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[fixed-zero-absent]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[zero-absent-absent]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[zero-absent-fixed]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[zero-absent-zero]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[zero-fixed-absent]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[zero-zero-absent]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_mixed_optional_axis_priors_survive_saved_undo[absent-zero-fixed]",
+          "outcome": "passed"
+        },
+        {
+          "node": "tests/system/py/test_e09_t58_cli_persistence.py::test_edi_mixed_optional_axis_priors_survive_saved_undo[zero-absent-fixed]",
+          "outcome": "passed"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "before_pages": [
+    "pd-neut-cwl_LBCO_basic",
+    "pd-neut-cwl_LBCO_preferred-orientation",
+    "pd-neut-cwl_LaB6_11B",
+    "pd-neut-cwl_LaB6_absorption",
+    "pd-neut-cwl_LaB6_basic",
+    "pd-neut-cwl_LaB6_fcj-asymmetry",
+    "pd-neut-cwl_PbSO4_basic",
+    "pd-neut-cwl_PbSO4_beba-asymmetry",
+    "pd-neut-cwl_Y2O3_isotropic-adp",
+    "pd-neut-tof_Fe_pseudo-voigt",
+    "pd-neut-tof_NCAF_jorgensen-von-dreele",
+    "pd-neut-tof_Si_jorgensen",
+    "pd-neut-tof_Si_jorgensen-von-dreele",
+    "pd-neut-tof_Si_jorgensen-von-dreele-size-strain",
+    "pd-neut-tof_diamond_dream",
+    "pd-xray-cwl_LiF_single"
+  ]
+}

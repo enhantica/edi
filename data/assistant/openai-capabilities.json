@@ -1,0 +1,61 @@
+{
+  "schema": "edi.assistant.openai-capabilities/1",
+  "reviewed_on": "2026-10-15",
+  "models": [
+    {
+      "id": "gpt-6-astra",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "sources": [
+        "https://developers.openai.com/api/docs/guides/deployment-checklist"
+      ]
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "sources": [
+        "https://developers.openai.com/api/docs/guides/deployment-checklist",
+        "https://developers.openai.com/api/docs/models/gpt-6.1-sol"
+      ]
+    },
+    {
+      "id": "gpt-6-sol",
+      "efforts": [
+        "none",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "sources": [
+        "https://developers.openai.com/api/docs/guides/deployment-checklist"
+      ]
+    },
+    {
+      "id": "gpt-6-luna",
+      "efforts": [
+        "none",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "sources": [
+        "https://developers.openai.com/api/docs/guides/deployment-checklist"
+      ]
+    }
+  ]
+}

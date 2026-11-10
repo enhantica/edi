@@ -1,0 +1,1256 @@
+{
+    "actions": [
+        {
+            "action": "platform:light",
+            "scene": "home"
+        },
+        {
+            "action": "theme:light",
+            "scene": "home"
+        },
+        {
+            "action": "home.start",
+            "scene": "project-details"
+        },
+        {
+            "action": "project.create",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.name=pd-xray-cwl_lam7o3-p021",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.title=La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma] - P02.1 @ PETRA III",
+            "scene": "project-details"
+        },
+        {
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-GFCxjC/pd-xray-cwl_lam7o3-p021",
+            "scene": "project-details"
+        },
+        {
+            "action": "createProject.accept",
+            "scene": "project-created"
+        },
+        {
+            "action": "pin-time:01 Jan 2026 12:00:00",
+            "scene": "project-created"
+        },
+        {
+            "action": "appBar.tab.structure",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "expand:group.structures",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "structures.load",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "structures.load.web",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.source",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "choose:EasyDiffraction Database",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=pd-xray-cwl_lam7o3-p021-lam7o3",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-web-0"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "structure-loaded-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "structure-loaded-0"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "expand:group.experiments",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "experiments.load",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "experiments.load.experimentWeb",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "fill:onlineLoad.field.id=pd-xray-cwl_lam7o3-p021-p021",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "onlineLoad.search",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-web-0"
+        },
+        {
+            "action": "onlineLoad.row.0",
+            "scene": "experiment-loaded-0"
+        },
+        {
+            "action": "wait-online",
+            "scene": "experiment-loaded-0"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "relations-start"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:group.alias",
+            "scene": "relations-start"
+        },
+        {
+            "action": "expand:group.alias",
+            "scene": "relations-start"
+        },
+        {
+            "action": "aliases.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:aliases.list:0:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:alias.id.0",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:alias.id.0=biso_Ti",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "alias.parameter.0",
+            "scene": "relations-start"
+        },
+        {
+            "action": "type:lam7o3.atom_site.Ti.adp_iso",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "aliases.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:aliases.list:1:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:alias.id.1",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:alias.id.1=biso_Cr",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "alias.parameter.1",
+            "scene": "relations-start"
+        },
+        {
+            "action": "type:lam7o3.atom_site.Cr.adp_iso",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "aliases.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:aliases.list:2:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:alias.id.2",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:alias.id.2=biso_Mn",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "alias.parameter.2",
+            "scene": "relations-start"
+        },
+        {
+            "action": "type:lam7o3.atom_site.Mn.adp_iso",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "aliases.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:aliases.list:3:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:alias.id.3",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:alias.id.3=biso_Fe",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "alias.parameter.3",
+            "scene": "relations-start"
+        },
+        {
+            "action": "type:lam7o3.atom_site.Fe.adp_iso",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "aliases.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:aliases.list:4:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:alias.id.4",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:alias.id.4=biso_Co",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "alias.parameter.4",
+            "scene": "relations-start"
+        },
+        {
+            "action": "type:lam7o3.atom_site.Co.adp_iso",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "aliases.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:aliases.list:5:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:alias.id.5",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:alias.id.5=biso_Ni",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "alias.parameter.5",
+            "scene": "relations-start"
+        },
+        {
+            "action": "type:lam7o3.atom_site.Ni.adp_iso",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "aliases.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:aliases.list:6:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:alias.id.6",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:alias.id.6=biso_Cu",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "alias.parameter.6",
+            "scene": "relations-start"
+        },
+        {
+            "action": "type:lam7o3.atom_site.Cu.adp_iso",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "aliases.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:aliases.list:7:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:alias.id.7",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:alias.id.7=biso_O1",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "alias.parameter.7",
+            "scene": "relations-start"
+        },
+        {
+            "action": "type:lam7o3.atom_site.O1.adp_iso",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "aliases.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:aliases.list:8:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:alias.id.8",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:alias.id.8=biso_O2",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "alias.parameter.8",
+            "scene": "relations-start"
+        },
+        {
+            "action": "type:lam7o3.atom_site.O2.adp_iso",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:group.constraint",
+            "scene": "relations-start"
+        },
+        {
+            "action": "expand:group.constraint",
+            "scene": "relations-start"
+        },
+        {
+            "action": "constraints.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:constraint.id.0",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.id.0=1",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.expression.0=biso_Cr = biso_Ti",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "constraints.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:constraint.id.1",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.id.1=2",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.expression.1=biso_Mn = biso_Ti",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "constraints.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:constraints.list:2:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:constraint.id.2",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.id.2=3",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.expression.2=biso_Fe = biso_Ti",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "constraints.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:constraints.list:3:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:constraint.id.3",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.id.3=4",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.expression.3=biso_Co = biso_Ti",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "constraints.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:constraints.list:4:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:constraint.id.4",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.id.4=5",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.expression.4=biso_Ni = biso_Ti",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "constraints.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:constraints.list:5:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:constraint.id.5",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.id.5=6",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.expression.5=biso_Cu = biso_Ti",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "constraints.append",
+            "scene": "relations-start"
+        },
+        {
+            "action": "show:constraints.list:6:begin",
+            "scene": "relations-start"
+        },
+        {
+            "action": "reveal:constraint.id.6",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.id.6=7",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "fill:constraint.expression.6=biso_O2 = biso_O1",
+            "scene": "relations-start"
+        },
+        {
+            "action": "key:Return",
+            "scene": "relations-start"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:Instrument",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=calib",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:Linked structures",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:Cell",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-1-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "choose:Background",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-2-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-2-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "choose:Peak profile",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "reveal:parameters.nameFilter",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "fill:parameters.nameFilter=lorentz_y",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-3-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-3-fit"
+        },
+        {
+            "action": "appBar.tab.experiment",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:group.background_estimate",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "expand:group.background_estimate",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:background_estimate.use_model",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "background_estimate.use_model",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "choose-token:background_estimate.use_model=subtract",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:background_estimate.n_points",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "fill:background_estimate.n_points=20",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "key:Return",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:group.background",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "expand:group.background",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:background.estimate",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "background.estimate",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-4-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "choose:Atomic coordinates",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-5-fit"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "choose:Atomic displacement",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "stage-6-free"
+        },
+        {
+            "action": "statusBar.fit.button",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "wait-fit",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "close-fit-results",
+            "scene": "stage-6-fit"
+        },
+        {
+            "action": "mainArea.analysis.tab.correlations",
+            "scene": "correlations"
+        },
+        {
+            "action": "mainArea.analysis.tab.fitting",
+            "scene": "report"
+        },
+        {
+            "action": "appBar.tab.report",
+            "scene": "report"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "report"
+        }
+    ],
+    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "dependencies": [
+        {
+            "file": "inputs/analysis/analysis.edi",
+            "sha256": "8c43e240eb4f204ad16cd1e80669b719d982c76ba838f3bb29bc675fa960e75a"
+        }
+    ],
+    "error": "",
+    "example": "pd-xray-cwl_lam7o3-p021",
+    "fixture": {
+        "detail": "High-entropy perovskite · Seven cations on one site · Synchrotron X-ray",
+        "id": "pd-xray-cwl_lam7o3-p021",
+        "origin": "P02.1 @ PETRA III",
+        "samples": [
+            "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma]"
+        ],
+        "searchAliases": [
+            "pd-xray-cwl_lam7o3-p021",
+            "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma] · P02.1 @ PETRA III",
+            "High-entropy perovskite · Seven cations on one site · Synchrotron X-ray"
+        ],
+        "sources": [
+            "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/project.edi",
+            "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/analysis/analysis.edi",
+            "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/experiments/p021.edi",
+            "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/structures/lam7o3.edi"
+        ],
+        "values": {
+            "beamMode": [
+                "constant wavelength"
+            ],
+            "dimensionality": [
+                "1d"
+            ],
+            "facilities": [
+                "PETRA III"
+            ],
+            "fittingMode": [
+                "single"
+            ],
+            "instruments": [
+                "P02.1"
+            ],
+            "polarisation": [
+                "__not_applicable__"
+            ],
+            "probe": [
+                "xray"
+            ],
+            "purpose": [
+                "refinement"
+            ],
+            "sampleForm": [
+                "powder"
+            ],
+            "scatteringType": [
+                "bragg"
+            ],
+            "structure": [
+                "crystal"
+            ]
+        }
+    },
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "inputs": {
+        "experiment": {
+            "file": "inputs/experiments/p021.edi",
+            "sha256": "dfcd48810e7d43aea27835c0a31cc0d1efd18124d192552b1bd4606a43d493a9"
+        },
+        "structure": {
+            "file": "inputs/structures/lam7o3.edi",
+            "sha256": "f3ac01debabaf3539ce5bb66a3cbb5f4974bd89ddec736b82bd94f2c10be4e47"
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "scenes": [
+        {
+            "description": "Create the project",
+            "id": "project-created",
+            "image": "project-created.webp",
+            "metadata": "project-created.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Find the structure lam7o3 in the EasyDiffraction collection",
+            "id": "structure-web-0",
+            "image": "structure-web-0.webp",
+            "metadata": "structure-web-0.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Load the structure lam7o3",
+            "id": "structure-loaded-0",
+            "image": "structure-loaded-0.webp",
+            "metadata": "structure-loaded-0.json",
+            "page": "structure",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Find the experiment p021 in the EasyDiffraction collection",
+            "id": "experiment-web-0",
+            "image": "experiment-web-0.webp",
+            "metadata": "experiment-web-0.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Load the experiment p021",
+            "id": "experiment-loaded-0",
+            "image": "experiment-loaded-0.webp",
+            "metadata": "experiment-loaded-0.json",
+            "page": "experiment",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Add the relations the project starts with",
+            "id": "relations-start",
+            "image": "relations-start.webp",
+            "metadata": "relations-start.json",
+            "page": "analysis",
+            "sidebar": "Extra",
+            "status": "captured"
+        },
+        {
+            "description": "Start with every parameter fixed",
+            "id": "nothing-free",
+            "image": "nothing-free.webp",
+            "metadata": "nothing-free.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Scale, 2θ zero and cell",
+            "id": "stage-1-fit",
+            "image": "stage-1-fit.webp",
+            "metadata": "stage-1-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Background",
+            "id": "stage-2-fit",
+            "image": "stage-2-fit.webp",
+            "metadata": "stage-2-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Peak widths",
+            "id": "stage-3-fit",
+            "image": "stage-3-fit.webp",
+            "metadata": "stage-3-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Background from the fitted model",
+            "id": "stage-4-fit",
+            "image": "stage-4-fit.webp",
+            "metadata": "stage-4-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Atom positions",
+            "id": "stage-5-fit",
+            "image": "stage-5-fit.webp",
+            "metadata": "stage-5-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Displacements",
+            "id": "stage-6-fit",
+            "image": "stage-6-fit.webp",
+            "metadata": "stage-6-fit.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Inspect the correlations",
+            "id": "correlations",
+            "image": "correlations.webp",
+            "metadata": "correlations.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Review the report",
+            "id": "report",
+            "image": "report.webp",
+            "metadata": "report.json",
+            "page": "report",
+            "sidebar": "Main",
+            "status": "captured"
+        }
+    ],
+    "schema": 1,
+    "script_sha256": "d197466a2d026a4b3ff244151059a185bd8456d87b21bf3a9c734db6b7a817c0",
+    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "status": "complete",
+    "workflow": "tutorial"
+}

@@ -1,0 +1,74 @@
+{
+  "example": "pd-neut-cwl_y2o3-spodi",
+  "result": {
+    "rwp": 0.0185822,
+    "reduced_chi_square": 2.27778,
+    "success": true,
+    "exit_reason": "done"
+  },
+  "edi_build_commit": "6021e5c7c0501590ae2633643b2f7968bc686027",
+  "axis_ranges": {
+    "initial": {
+      "xaxis": [
+        0.95,
+        153.9
+      ],
+      "xaxis2": [
+        0.95,
+        153.9
+      ],
+      "yaxis": [
+        -6287.675869946965,
+        187293.57261862105
+      ],
+      "yaxis2": [
+        -160873.5415861078,
+        160873.5415861078
+      ]
+    },
+    "refined": {
+      "xaxis": [
+        0.95,
+        153.9
+      ],
+      "xaxis2": [
+        0.95,
+        153.9
+      ],
+      "yaxis": [
+        -6287.675869946965,
+        187293.57261862105
+      ],
+      "yaxis2": [
+        -160873.5415861078,
+        160873.5415861078
+      ]
+    }
+  },
+  "generator_sha256": "d52dbe5637c3fc0c9fe1becb3e9237e0c95a3fb58d03056c8a3656f96d067ef8",
+  "input_sha256": {
+    "analysis/analysis.edi": "66c67a912bae8b08ebc99353737c122ce52832c1bcaddcf6d0ba7ea02298a7db",
+    "experiments/spodi.edi": "3667d488d64698f106dcf09dc5543e17208ce6ba344b5463bd5f4ae4d0ea5b08",
+    "project.edi": "9bd97909f6f888859b5f5d60436402ecd5729bfa914f3cdd9ea20ab329d47ce9",
+    "reports/report.edi": "ccf0a412ae4f61ed0be46e8e7b010680a5b9da02d43db3e3ae88aded07f44ffc",
+    "structures/y2o3.edi": "6a0c455ac2890563bc7313a01cdcd12c19e866ed3d1c8a949d8673e6b4db720b"
+  },
+  "refined_input_sha256": {
+    "analysis/analysis.edi": "c90cb6aaeced1662e6993a6adf5b1de1a05617d8bf2a30166eee3aba5c2a0a3b",
+    "experiments/spodi.edi": "76d2507bd4d9568a03817e8397a1c0457e34dd8667aed0d9414a4d417e2ad522",
+    "project.edi": "9dc71f2f1a1b9c0c99e64c1f1b31fdb69922c61297bcdbf0bd2df8d8d97cb350",
+    "reports/report.edi": "ccf0a412ae4f61ed0be46e8e7b010680a5b9da02d43db3e3ae88aded07f44ffc",
+    "structures/y2o3.edi": "d475cb973c73b2324606eae781fa60e103c85a1dfa280ec8b787d844ac6b7033"
+  },
+  "gui_capture": {
+    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "binary_sha256": "28e3d9673280410e17dec8acb2916048b0ae606f1dd9b2fa42f1609b162c72fb",
+    "manifest_sha256": "8ebba0e29545e894da685c6dfb19c29919c34a85e076f7aa4fe9e5dc111f27e5"
+  },
+  "assets_sha256": {
+    "dark/initial.svg": "b3225581f3b78a6d29e2c27e0f9451a729888665ec5f0356931f443c2607aab9",
+    "dark/refined.svg": "eb795744ba42defccf154cfb48f116e3d8b9a4c27d8dac1167bdc8f10c2ae13a",
+    "initial.svg": "f2aeac56f7367c100806725e1fa412cb3fa02addfe8d3d6af46b77d8f31c2dd0",
+    "refined.svg": "f4f5732684c4a5bc860d692f7d0ebb1a0a901e5d065120812edffd3884b96747"
+  }
+}

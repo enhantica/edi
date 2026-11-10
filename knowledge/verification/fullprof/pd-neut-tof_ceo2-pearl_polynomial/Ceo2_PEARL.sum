@@ -1,0 +1,165 @@
+
+
+        **********************************************************
+        ** PROGRAM FullProf.2k (Version 8.40 - Feb2026-ILL JRC) **
+        **********************************************************
+                       M U L T I -- P A T T E R N                 
+            Rietveld, Profile Matching & Integrated Intensity     
+                 Refinement of X-ray and/or Neutron Data
+
+
+    Date: 25/09/2026  Time: 14:33:11.189                              
+
+ => PCR file code: Ceo2_PEARL
+ => DAT file code: Ceo2_PEARL           -> Relative contribution: 1.0000                                                            
+ => Title:  Refinement of instrumental parameters of PEARL (NPROF=9)
+
+ ==> CONDITIONS OF THIS RUN FOR PATTERN No.:  1
+
+ => Global Refinement of neutron powder data                                                                                        
+ => Neutron Time-Of-Flight data                                                                                                     
+ => Abcisa variable is T.O.F. in microsecs
+ => The    9th default profile function was selected
+
+ => X-Y type of data: 2theta/TOF/E(Kev) Intens sigma for pattern:  1
+ => Absorption correction type: 2
+ => Base of peaks: 2.0*HW*    8.00
+ ==> T.O.F. range, and number of points:
+    TOFmin:    1500.250000  TOFmax:   19400.187500
+    No. of points:   2524
+ =>-------> Pattern#  1
+ => Crystal Structure Refinement for phase: 1
+ => The density (volumic mass) of phase 1 is:    7.219 g/cm3
+ => Scor: 2.6165
+
+ ==> RESULTS OF REFINEMENT:
+
+
+ => No. of fitted parameters:    0
+
+
+------------------------------------------------------------------------------
+ => Phase No.  1 LaMnO3                                  F m 3 m             
+------------------------------------------------------------------------------
+
+ =>  No. of reflections for pattern#:   1:   110  
+
+
+ ==> ATOM PARAMETERS:
+
+  Name      x     sx       y     sy       z      sz      B   sB   occ. socc.  Mult
+ Ce      0.00000(   0)  0.00000(   0)  0.00000(   0)  0.302(  0)  0.021(  0)    4
+ O       0.25000(   0)  0.25000(   0)  0.25000(   0)  0.496(  0)  0.042(  0)    8
+
+ ==> PROFILE PARAMETERS FOR PATTERN#  1
+
+ => Cell parameters      :
+                              5.41049   0.00000
+                              5.41049   0.00000
+                              5.41049   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+                             90.00000   0.00000
+ 
+
+ => Overall scale factor       :   2115.250976562     0.000000000
+ => T.O.F. Extinction parameter:     0.000000    0.000000
+ => Overall temperature  factor:     0.000000    0.000000
+ => T.O.F. Gaussian variances Sig-2, Sig-1, Sig-0: 
+         3.575100    0.000000
+        83.808800    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Gaussian variance Sig-Q:     0.000000    0.000000
+ => T.O.F. Isotropic Gaussian Strain parameter (G-strain):      0.00000     0.00000
+ => T.O.F. Isotropic Gaussian Size   parameter (G-size)  :      0.00000     0.00000
+ => T.O.F. Anisotropic Lorentzian  Size  parameter (Ani-LorSize):      0.00000     0.00000
+ => T.O.F. Lorentzian FWHM Gam-2, Gam-1, Gam-0: 
+         0.000000    0.000000
+         4.840700    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Lorentzian strain and size parameters (LStr,LSiz): 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => Direct cell parameters: 
+        5.410495    0.000000
+        5.410495    0.000000
+        5.410495    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+       90.000000    0.000000
+
+ => Preferred orientation parameters: 
+         0.000000    0.000000
+         0.000000    0.000000
+
+ => T.O.F. Peak shape parameter alpha0,beta0,beta1,alphaQ,betaQ: 
+        0.000000    0.000000    0.025455
+        0.000000    0.251559    0.000000
+        0.029005    0.000000    0.000000
+        0.000000    0.000000    0.000000
+
+
+ => Absorption parameters: 
+                             0.290000E-03   0.00000    
+                              0.00000       0.00000    
+
+
+
+ ==> GLOBAL PARAMETERS FOR PATTERN#  1
+
+
+ => Zero-point:     3.0518    0.0000
+ => Background Polynomial Parameters ==>
+                               2181.0      0.0000    
+                               221.41      0.0000    
+                               376.64      0.0000    
+                              -1931.7      0.0000    
+                               1965.9      0.0000    
+                              -588.88      0.0000    
+ 
+
+ => T.O.F.- dtt1       (    TOFo=dtt1*dsp     ):   4677.93      0.00
+ => T.O.F.- dtt2       (TOF=TOFo+dtt2*dsp*dsp ):      1.76      0.00
+ => T.O.F.- dtt_1OverD (TOF=TOF+dtt_1overD/dsp):      0.00      0.00
+
+ ==> RELIABILITY FACTORS WITH ALL NON-EXCLUDED POINTS FOR PATTERN:  1
+
+  => Cycle:  1 => MaxCycle: 10
+ => N-P+C:  2236
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  4.43     Rwp:  5.29     Rexp:    2.70 Chi2:  3.84      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  11.0     Rwp:  9.24     Rexp:    4.71 Chi2:  3.84    
+ => Deviance:  0.322E+05     Dev*  :   14.42    
+ => DW-Stat.:    0.5239     DW-exp:     1.8685
+ => N-sigma of the GoF:       95.070
+
+ ==> RELIABILITY FACTORS FOR POINTS WITH BRAGG CONTRIBUTIONS FOR PATTERN:  1
+
+ => N-P+C:  1651
+ =>  R-factors (not corrected for background) for Pattern:  1
+ => Rp:  4.32     Rwp:  5.28     Rexp:    2.44 Chi2:  4.68      L.S. refinement
+ => Conventional Rietveld R-factors for Pattern:  1
+ => Rp:  9.22     Rwp:  8.77     Rexp:    4.05 Chi2:  4.68    
+ => Deviance:  0.260E+05     Dev*  :   15.74    
+ => DW-Stat.:    0.5822     DW-exp:     1.8468
+ => N-sigma of the GoF:      105.826
+
+ => Global user-weigthed Chi2 (Bragg contrib.):   5.21    
+
+     -----------------------------------------------------
+     BRAGG R-Factors and weight fractions for Pattern #  1
+     -----------------------------------------------------
+
+ => Phase:  1     LaMnO3
+ => Bragg R-factor:   1.82       Vol:  158.384( 0.000)  Fract(%):  100.00( 0.00)
+ => Rf-factor=  3.31             ATZ:         688.286   Brindley:  1.0000
+
+ 
+              CPU Time:     0.438 seconds
+                            0.007 minutes
+
+ => Run finished at:     Date: 25/09/2026  Time: 14:33:11.626                              

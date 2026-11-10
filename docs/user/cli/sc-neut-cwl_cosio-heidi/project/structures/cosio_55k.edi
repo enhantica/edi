@@ -1,0 +1,45 @@
+data_cosio_55k
+
+_edi.schema_version 3
+
+_cell.length_a 10.28690
+_cell.length_b 5.98890
+_cell.length_c 4.77810
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+
+_space_group.name_h_m "P n m a"
+_space_group.coord_system_code abc
+
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.occupancy
+_atom_site.adp_type
+_atom_site.adp_iso
+Co1 Co 0.00000 0.00000 0.00000 a 1 Uani 0.003
+Co2 Co 0.27603() 0.25000 0.99136() c 1 Uani 0.003
+Si Si 0.09489() 0.25000 0.42824() c 1 Uani 0.003
+O1 O 0.09184() 0.25000 0.76739() c 1 Uani 0.003
+O2 O 0.44849() 0.25000 0.21578() c 1 Uani 0.003
+O3 O 0.164278() 0.03324() 0.28116() d 1 Uani 0.003
+
+loop_
+_atom_site_aniso.id
+_atom_site_aniso.adp_11
+_atom_site_aniso.adp_22
+_atom_site_aniso.adp_33
+_atom_site_aniso.adp_12
+_atom_site_aniso.adp_13
+_atom_site_aniso.adp_23
+Co1 0.003() 0.003() 0.003() 0() 0() 0()
+Co2 0.003() 0.003() 0.003() 0 0() 0
+Si 0.003() 0.003() 0.003() 0 0() 0
+O1 0.003() 0.003() 0.003() 0 0() 0
+O2 0.003() 0.003() 0.003() 0 0() 0
+O3 0.003() 0.003() 0.003() 0() 0() 0()

@@ -1,0 +1,37 @@
+/* Generated from the app experiment tag registry. */
+.ed-tag {display:inline-flex;align-items:center;gap:.28em;white-space:nowrap;border-radius:3px;padding:.08em .38em;margin:.12em .16em .12em 0;font-size:.82em;line-height:1.5;text-decoration:none!important}
+.ed-tag .ed-reference-icon {margin:0}
+.ed-tag:hover,.ed-tag:focus-visible {text-decoration:underline!important;outline-offset:2px}
+.ed-example-filters {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;margin-block:.7rem}
+.ed-example-filters input,.ed-example-filters select,.ed-example-filters button {font:inherit;box-sizing:border-box;height:2.4em;width:100%;min-width:0;padding:.4em .6em;border:1px solid var(--md-default-fg-color--lightest);border-radius:5px;background:var(--md-default-bg-color);color:var(--md-default-fg-color)}
+.ed-example-search {display:flex;gap:.5rem;min-width:0}
+.ed-example-search button {flex:none;width:2.4em;padding:0;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.ed-example-search button svg {width:1em;height:1em;fill:currentColor}
+.ed-example-name {display:block}
+.ed-example-tags {display:block;margin-top:.25em}
+.ed-tutorial-section th {font-weight:700}
+.md-typeset [data-example-catalogue] table:not([class]) {border:none}
+.md-typeset [data-example-catalogue] tr:not(.ed-tutorial-section) > :first-child {border-left:.05rem solid var(--md-typeset-table-color)}
+.md-typeset [data-example-catalogue] tr:not(.ed-tutorial-section) > :last-child {border-right:.05rem solid var(--md-typeset-table-color)}
+.md-typeset [data-example-catalogue] thead th {border-top:.05rem solid var(--md-typeset-table-color)}
+.md-typeset [data-example-catalogue] tbody tr:last-child td,.md-typeset [data-example-catalogue] tbody tr.ed-last-visible td {border-bottom:.05rem solid var(--md-typeset-table-color)}
+.md-typeset [data-example-catalogue] .ed-tutorial-section th {border-top:.05rem solid var(--md-typeset-table-color);background:none}
+.md-typeset [data-example-catalogue] tbody tr.ed-tutorial-section:hover {background-color:transparent;box-shadow:none}
+.ed-tutorial-section .twemoji {margin-right:.35em}
+.ed-tutorial-link {text-align:center;white-space:nowrap;width:1%}
+.ed-tutorial-link svg {flex:none;width:1.2em;height:1.2em;fill:currentColor}
+[data-example-row][hidden],[data-tutorial-section][hidden] {display:none}
+[data-md-color-scheme="default"] .ed-tag--technique {color:#0084c7;background:#0084c721}
+[data-md-color-scheme="slate"] .ed-tag--technique {color:#4fc3f7;background:#4fc3f721}
+[data-md-color-scheme="default"] .ed-tag--neutral {color:#424242;background:#42424221}
+[data-md-color-scheme="slate"] .ed-tag--neutral {color:#dedede;background:#dedede21}
+[data-md-color-scheme="default"] .ed-tag--simulation {color:#8354a9;background:#8354a921}
+[data-md-color-scheme="slate"] .ed-tag--simulation {color:#cba1eb;background:#cba1eb21}
+[data-md-color-scheme="default"] .ed-tag--fitting {color:#398648;background:#39864821}
+[data-md-color-scheme="slate"] .ed-tag--fitting {color:#9ac776;background:#9ac77621}
+[data-md-color-scheme="default"] .ed-tag--mode {color:#96601d;background:#96601d21}
+[data-md-color-scheme="slate"] .ed-tag--mode {color:#e3b06d;background:#e3b06d21}
+[data-md-color-scheme="default"] .ed-tag--structure {color:#00796b;background:#00796b21}
+[data-md-color-scheme="slate"] .ed-tag--structure {color:#4db6ac;background:#4db6ac21}
+[data-md-color-scheme="default"] .ed-tag--magnetic {color:#c2185b;background:#c2185b21}
+[data-md-color-scheme="slate"] .ed-tag--magnetic {color:#f06292;background:#f0629221}

@@ -1,0 +1,44 @@
+_edi.schema_version 3
+_fit_result.result_kind deterministic
+_fit_result.success true
+_fit_result.message done
+_fit_result.iterations 1
+_fit_result.fitting_time 0
+_fit_result.reduced_chi_square 1
+_fit_result.objective_name chi_square
+_fit_result.objective_value 4
+_fit_result.n_data_points 8
+_fit_result.n_parameters 4
+_fit_result.n_free_parameters 4
+_fit_result.degrees_of_freedom 4
+_fit_result.covariance_available true
+_fit_result.exit_reason done
+_fit_result.profile_function cwl-tch-pseudo-voigt
+_fit_result.background_function line-segment
+_fit_result.descent ladder
+loop_
+_fit_parameter.id
+_fit_parameter.start_value
+_fit_parameter.start_uncertainty
+_fit_parameter.start_tied
+structure.CoWitness.crystalaxis_x 9.5 . .
+structure.CoWitness.crystalaxis_y 3.5 . .
+structure.CoWitness.crystalaxis_z 13.5 . .
+structure.cell.angle_beta 118 . .
+loop_
+_fit_parameter_correlation.id
+_fit_parameter_correlation.source_kind
+_fit_parameter_correlation.parameter_unique_name_i
+_fit_parameter_correlation.parameter_unique_name_j
+_fit_parameter_correlation.correlation
+1 deterministic cosio.atom_site_moment.CoWitness.crystalaxis_x cosio.atom_site_moment.CoWitness.crystalaxis_y -0.25
+2 deterministic cosio.atom_site_moment.CoWitness.crystalaxis_x cosio.atom_site_moment.CoWitness.crystalaxis_z 0.55
+3 deterministic cosio.atom_site_moment.CoWitness.crystalaxis_x cosio.cell.angle_beta 0.2
+4 deterministic cosio.atom_site_moment.CoWitness.crystalaxis_y cosio.atom_site_moment.CoWitness.crystalaxis_z 0.15
+5 deterministic cosio.atom_site_moment.CoWitness.crystalaxis_y cosio.cell.angle_beta 0.4
+6 deterministic cosio.atom_site_moment.CoWitness.crystalaxis_z cosio.cell.angle_beta -0.35
+loop_
+_fit_result_bank.experiment_id
+_fit_result_bank.n_data_points
+_fit_result_bank.prof_wr_factor
+d20 8 0.1
