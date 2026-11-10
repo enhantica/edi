@@ -16,6 +16,8 @@ else
   git -C "$work" checkout -q --orphan "$branch"
 fi
 rsync -a --delete --exclude .git "$folder"/ "$work"/
+# The host serves .wasm as text by default; browsers need this type to start the web app.
+printf 'AddType application/wasm .wasm\n' > "$work/.htaccess"
 cd "$work"
 git add -A
 if git diff --cached --quiet 2>/dev/null && git rev-parse -q --verify HEAD >/dev/null; then
