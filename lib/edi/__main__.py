@@ -444,7 +444,8 @@ def _is_scan(project: edi.Project) -> bool:
     # The ONE scan-mode set, from the package (edi/__init__.py), never a second copy here —
     # a duplicated enumeration in the CLI is the same drift class the mode contract just
     # paid for.
-    # Independent without a declared scan fits each experiment alone and prints as a single fit (edi ADR-0081).
+    # Independent without a declared scan fits each experiment alone and prints as a single fit
+    # (edi ADR-0081).
     return project.analysis.fitting_mode in edi._SCAN_FITTING_MODES and project._scan_declared
 
 

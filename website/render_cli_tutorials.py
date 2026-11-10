@@ -249,9 +249,7 @@ def render(case: str, binary: Path) -> Path:  # noqa: PLR0914, PLR0915 - one pag
                 'line fits whatever the project marks free with `()` after a value, so each stage '
                 "marks its parameters in the project's files with a text editor and runs "
                 '`edi fit`, which writes the fitted values back into the project for the next '
-                'stage.'
-                + (BY_HAND if 'project.structures.create(' in source else '')
-                + '\n'
+                'stage.' + (BY_HAND if 'project.structures.create(' in source else '') + '\n'
             ),
             '## Get the project\n',
             tabs(f'download-data {case}'),

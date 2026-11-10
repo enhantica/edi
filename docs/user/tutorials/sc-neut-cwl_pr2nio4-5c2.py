@@ -94,7 +94,14 @@ project.display.pattern('llb_5c2')
 
 # %%
 for tensor in structure.atom_site_aniso:
-    for component in (tensor.adp_11, tensor.adp_22, tensor.adp_33, tensor.adp_12, tensor.adp_13, tensor.adp_23):
+    for component in (
+        tensor.adp_11,
+        tensor.adp_22,
+        tensor.adp_33,
+        tensor.adp_12,
+        tensor.adp_13,
+        tensor.adp_23,
+    ):
         component.free = not component.symmetry_constrained
 
 # %%

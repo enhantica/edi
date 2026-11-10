@@ -7,8 +7,9 @@
 # and edi calculates every reflection up to the project's sin θ/λ limit.
 #
 # The project is the catalogue case `sc-neut-cwl_tb2ti2o7-heidi_simulation`: the files the command
-# line calculates with `python -m edi calc docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project`
-# and the app opens from its Examples.
+# line calculates with
+# `python -m edi calc docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project` and the app
+# opens from its Examples.
 
 # %%
 import easydiffraction as edi

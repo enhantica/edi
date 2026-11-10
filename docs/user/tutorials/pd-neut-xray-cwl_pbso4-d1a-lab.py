@@ -110,7 +110,7 @@ project.display.pattern('lab')
 # %% [markdown]
 # ### Peak asymmetry, D1A
 #
-# The D1A pattern's four Bérar–Baldinozzi terms.
+# The D1A pattern's four Bérar-Baldinozzi terms.
 
 # %%
 d1a.peak.asym_beba_a0.free = True
