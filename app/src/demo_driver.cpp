@@ -1676,9 +1676,15 @@ bool DemoDriver::perform(const QString& action) {
     if (action.startsWith(QLatin1String("choose:"))) {
         // The open popup's entry: a visible, enabled button-like item showing the text, or the text and a count in
         // brackets, as the parameter table's category filter lists "Background (10)".
-        const QString wanted = action.mid(7);
-        const auto shows = [&wanted](const QString& text) {
-            return text == wanted || (text.startsWith(wanted + QStringLiteral(" (")) && text.endsWith(QLatin1Char(')')));
+        // A lower-case option token also finds its label, which starts with a capital (the label rule).
+        const QString given = action.mid(7);
+        const QString capital = given.isEmpty() ? given : given.left(1).toUpper() + given.mid(1);
+        const auto shows = [&given, &capital](const QString& text) {
+            for (const QString& wanted : {given, capital}) {
+                if (text == wanted || (text.startsWith(wanted + QStringLiteral(" (")) && text.endsWith(QLatin1Char(')'))))
+                    return true;
+            }
+            return false;
         };
         QList<QQuickItem*> candidates;
         std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
@@ -1693,7 +1699,7 @@ bool DemoDriver::perform(const QString& action) {
         walk(window_.contentItem()->parentItem() != nullptr ? window_.contentItem()->parentItem()
                                                             : window_.contentItem());
         if (candidates.isEmpty()) {
-            fail(QStringLiteral("step %1: no open entry shows '%2'").arg(steps_[current_].image, wanted));
+            fail(QStringLiteral("step %1: no open entry shows '%2'").arg(steps_[current_].image, given));
             return false;
         }
         return click_item(candidates.last());
