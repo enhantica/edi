@@ -1746,6 +1746,13 @@
           "member": "ExperimentBase::calculation_only",
           "type": "bool",
           "items": []
+        },
+        {
+          "member": "ExperimentBase::sin_theta_over_lambda_max",
+          "type": "std::optional<double>",
+          "items": [
+            "sin_theta_over_lambda_max"
+          ]
         }
       ],
       "owner": "ExperimentBase",
@@ -2880,6 +2887,27 @@
           "type": "ComputedColumn<double>",
           "items": [
             "intensity_calc"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::generated_index_h",
+          "type": "ComputedColumn<std::int32_t>",
+          "items": [
+            "index_h"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::generated_index_k",
+          "type": "ComputedColumn<std::int32_t>",
+          "items": [
+            "index_k"
+          ]
+        },
+        {
+          "member": "ReflnDataBase::generated_index_l",
+          "type": "ComputedColumn<std::int32_t>",
+          "items": [
+            "index_l"
           ]
         }
       ]
@@ -4642,6 +4670,21 @@
       "category": "_refln"
     },
     {
+      "member": "ReflnDataBase::generated_index_h",
+      "type": "ComputedColumn<std::int32_t>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::generated_index_k",
+      "type": "ComputedColumn<std::int32_t>",
+      "category": "_refln"
+    },
+    {
+      "member": "ReflnDataBase::generated_index_l",
+      "type": "ComputedColumn<std::int32_t>",
+      "category": "_refln"
+    },
+    {
       "member": "PrefOrient::structure_id",
       "type": "ItemKey",
       "category": "_preferred_orientation"
@@ -5048,6 +5091,11 @@
       "category": "_reflns"
     },
     {
+      "member": "ExperimentBase::sin_theta_over_lambda_max",
+      "type": "std::optional<double>",
+      "category": "_data_range"
+    },
+    {
       "member": "ExperimentBase::background_estimate_inputs",
       "type": "std::uint64_t",
       "category": "_background_estimate"
@@ -5329,6 +5377,11 @@
     {
       "member": "FitResultBase::banks",
       "type": "std::vector<BankMetric>",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::mode",
+      "type": "std::string",
       "not_storage": "a fit report"
     },
     {
@@ -5647,6 +5700,16 @@
       "member": "FitResultRecord::exit_reason",
       "type": "std::string",
       "category": "_fit_result"
+    },
+    {
+      "member": "FitResultRecord::start_adjustments",
+      "type": "std::vector<std::string>",
+      "not_storage": "the starting values the fit moved off zero, not saved"
+    },
+    {
+      "member": "FitResultRecord::undefined_su",
+      "type": "std::vector<std::string>",
+      "not_storage": "the free parameters whose s.u. the fit could not compute, not saved"
     },
     {
       "member": "FitResultRecord::prof_wr_factor",
