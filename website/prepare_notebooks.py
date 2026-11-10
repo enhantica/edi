@@ -78,9 +78,12 @@ def tag_icon(name: str, color: str) -> str:
     svg = (ICONS / f'{name}.svg').read_text(encoding='utf-8')
     svg = svg.replace('<svg ', f'<svg fill="{color}" ', 1)
     data = base64.b64encode(svg.encode('utf-8')).decode('ascii')
+    # Its size as attributes too: Colab drops the style, and an unsized image fills the cell.
+    box = re.search(r'viewBox="0 0 ([\d.]+) ([\d.]+)"', svg)
+    width = round(14 * float(box.group(1)) / float(box.group(2))) if box else 14
     return (
-        f'<img src="data:image/svg+xml;base64,{data}" alt="" '
-        'style="height:0.85em;vertical-align:-0.1em;margin-right:0.3em">'
+        f'<img src="data:image/svg+xml;base64,{data}" alt="" width="{width}" height="14" '
+        'style="height:0.85em;width:auto;vertical-align:-0.1em;margin-right:0.3em">'
     )
 
 
