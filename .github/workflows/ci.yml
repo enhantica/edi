@@ -132,7 +132,6 @@ jobs:
           EDI_CORE_TARGETS: edi_tests
       - name: C++ unit tests
         run: pixi run --skip-deps cpp-test
-        env:
       - name: Standalone and Python fit output agree
         run: pixi run --skip-deps cli-stream-parity
 
