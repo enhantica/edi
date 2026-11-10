@@ -59,8 +59,6 @@ on GitHub; its dependencies come from PyPI.
 
     To upgrade, run the install command again with `--upgrade`.
 
-Building edi from source is described in the [contributor documentation](https://easydiffraction.org/dev/).
-
 ## In a notebook
 
 Install and launch JupyterLab from the environment where you installed edi.
