@@ -302,6 +302,12 @@ jobs:
           shutil.copy2(package / 'installer.json', delivery / 'installer.json')
           shutil.copy2('build/installer/stage/build-inputs.json', delivery / 'build-inputs.json')
           shutil.copy2('build/installer/online-test/passed.json', delivery / 'qualification.json')
+          # The tested offline installer goes onto the release beside the online one.
+          offline = Path('build/installer/package')
+          offline_metadata = json.loads((offline / 'installer.json').read_text())
+          shutil.copy2(offline / 'installer.json', delivery / 'offline-installer.json')
+          shutil.copy2('build/installer/test/passed.json', delivery / 'offline-qualification.json')
+          os.link(offline / offline_metadata['zip'], delivery / offline_metadata['zip'])
           cli_receipt = Path('build/installer/cli-qualification.json')
           if cli_receipt.is_file():
               cli = json.loads(cli_receipt.read_text())

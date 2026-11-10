@@ -81,6 +81,12 @@ Qt Installer Framework can continue from the primary when the mirror has no meta
 Native update metadata can try the mirror after the primary fails.
 The mirror host itself is populated by the owner; no DNS or hosting change is implied.
 
+**Amended 2026-11-10:** the primary base is a separate Pages site, `https://enhantica.github.io/edi-download/`,
+because the docs site cannot hold the repositories within the Pages size limit. The `enhantica/edi-download`
+repository rebuilds it from a published release's GitHub assets (component repositories, package index,
+`releases/stable.json`, `SHA256SUMS`); release files themselves are downloaded from GitHub Releases. The
+release carries the offline installers and the web app archive too.
+
 Keep versioned third-party report libraries under `third-party/`, separate from application repositories.
 Preserve the existing pinned vendor files and their integrity hashes. Offline reports continue to embed
 those libraries and do not acquire a network dependency merely because a mirror exists.

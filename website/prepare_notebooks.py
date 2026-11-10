@@ -9,11 +9,19 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-# The package index the notebooks install from.
-PACKAGE_INDEX = 'https://download.easydiffraction.org/pypi/simple/'
+# The package index the notebooks install from, and the release they install. The exact version
+# keeps pip from taking the unrelated easydiffraction releases on pypi.org.
+PACKAGE_INDEX = 'https://enhantica.github.io/edi-download/pypi/simple/'
+PACKAGE_VERSION = '2026.11.0'
 
 
-def setup_source(case: str, *, portable: bool = False, index: str = PACKAGE_INDEX) -> str:
+def setup_source(
+    case: str,
+    *,
+    portable: bool = False,
+    index: str = PACKAGE_INDEX,
+    version: str = PACKAGE_VERSION,
+) -> str:
     """The notebook's one install cell: diffraction-lib's, with EasyDiffraction's release added.
 
     It installs only when the package is missing, so a user's own environment is never reinstalled
@@ -27,7 +35,7 @@ def setup_source(case: str, *, portable: bool = False, index: str = PACKAGE_INDE
         'import importlib.util\n'
         '\n'
         "if importlib.util.find_spec('easydiffraction') is None:\n"
-        f'    %pip install easydiffraction --extra-index-url {index}\n'
+        f'    %pip install easydiffraction=={version} --extra-index-url {index}\n'
     )
 
 

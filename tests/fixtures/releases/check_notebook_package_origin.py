@@ -27,7 +27,7 @@ spec = importlib.util.spec_from_file_location(
 PREPARE = importlib.util.module_from_spec(spec)
 sys.modules['prepare_notebooks'] = PREPARE
 spec.loader.exec_module(PREPARE)
-VERSION = '2026.11.6'
+VERSION = PREPARE.PACKAGE_VERSION
 WHEEL_FILE = 'Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-any\n'
 
 
@@ -97,7 +97,7 @@ def environment(primary, **extra):
 def run_setup(python, index, env, cwd):
     source = PREPARE.setup_source('case', index=index.as_uri())
     expected = INSTALL_CELL.replace(
-        'https://download.easydiffraction.org/pypi/simple/', index.as_uri()
+        'https://enhantica.github.io/edi-download/pypi/simple/', index.as_uri()
     )
     assert source == expected, 'Notebook setup retains the exact guarded install contract'
     transformed = TransformerManager().transform_cell(source)

@@ -166,6 +166,33 @@ def validate_cli(folder: Path, version: str, commit: str, platform: str) -> Path
     return archive
 
 
+def validate_offline(folder: Path, version: str, commit: str, platform: str) -> Path | None:
+    """Read the optional tested offline installer of a platform delivery."""
+    name = f'EasyDiffraction-{version}-{platform}-offline.zip'
+    metadata, receipt = folder / 'offline-installer.json', folder / 'offline-qualification.json'
+    archive = folder / name
+    if not metadata.exists() and not archive.exists():
+        return None
+    identity = json.loads(metadata.read_text(encoding='utf-8'))
+    qualification = json.loads(receipt.read_text(encoding='utf-8'))
+    expected = {
+        'version': version,
+        'platform': platform,
+        'kind': 'offline',
+        'zip': name,
+        'edi_commit': commit,
+    }
+    if (
+        any(identity.get(key) != value for key, value in expected.items())
+        or qualification.get('passed') is not True
+        or qualification.get('smoke', {}).get('app_version') != version
+    ):
+        raise ValueError('Qualified offline installer identity differs')
+    if archive.is_symlink() or digest(archive) != identity.get('zip_sha256'):
+        raise ValueError('Qualified offline installer bytes differ')
+    return archive
+
+
 def validate_wheel(folder: Path, version: str, commit: str, platform: str) -> Path | None:
     """Require the exact Python wheel qualified on this release platform."""
     tags = {
@@ -239,7 +266,12 @@ def components_validator(channel: str) -> Callable[[Path, str, str, str], Path |
 
 def stage_optional_assets(output: Path, assets: Path, attempt: int, release: dict) -> None:
     """Add complete sets of standalone ZIPs and wheels when the build provides them."""
-    for validator in (validate_cli, validate_wheel, components_validator('stable')):
+    for validator in (
+        validate_cli,
+        validate_wheel,
+        validate_offline,
+        components_validator('stable'),
+    ):
         archives = [
             validator(
                 output / f'installer-{platform}-{attempt}',
