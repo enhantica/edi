@@ -357,7 +357,9 @@ jobs:
   qualify-release:
     name: record qualified release inputs
     needs: installers
-    if: inputs.release_plan_run != '' && !inputs.windows_only && !inputs.prepare_preview_release && inputs.preview_run == ''
+    if: >-
+      !cancelled() && needs.installers.result == 'success' && inputs.release_plan_run != ''
+      && !inputs.windows_only && !inputs.prepare_preview_release && inputs.preview_run == ''
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
