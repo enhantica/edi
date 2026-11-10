@@ -99,7 +99,7 @@
 /* Keep symbols together; a constrained table cell puts the label below them. */
 .md-typeset td .ed-icon-label {display:inline-flex;flex-wrap:wrap;align-items:center;gap:.2em .3em;max-inline-size:100%;white-space:normal;vertical-align:middle}
 .md-typeset td :is(.ed-icon-group,.ed-interface-icons) {display:inline-flex;align-items:center;gap:.18em;flex:none}
-.md-typeset td .ed-icon-text {flex:0 1 auto;min-inline-size:0;max-inline-size:100%;overflow-wrap:anywhere}
+.md-typeset td .ed-icon-text {flex:0 1 auto;min-inline-size:min-content;max-inline-size:100%;overflow-wrap:normal}
 .md-typeset td .ed-icon-group :is(.twemoji,.ed-reference-icon) {margin:0;flex:none}
 @media (min-width:601px) {
   .md-typeset .ed-workflow-stage-table td:first-child .ed-icon-label {flex-wrap:nowrap;inline-size:max-content;max-inline-size:none}
@@ -169,6 +169,15 @@
 .md-typeset .md-typeset__scrollwrap{display:block;width:auto}
 .md-typeset .md-typeset__table{display:block;width:100%}
 .md-typeset table:not([class]){display:table;width:100%}
+/* The theme gives each header cell a 5rem minimum, so a table of seven columns came out wider than the column (Data
+   formats, Table 1): the columns size from their content instead. */
+.md-typeset table:not([class]) th{min-width:0}
+/* A word in a table cell never breaks between its letters: its column takes the word's width. */
+.md-typeset table:not([class]) :is(th,td){overflow-wrap:normal;word-break:normal}
+/* Inline code never breaks inside a word (owner, 2026-11-10): a short token stays whole and its table column takes
+   the width it needs; a long dotted path breaks only after '.', '_' or '[', where code-breaks.js puts a <wbr>. */
+.md-typeset :not(pre)>code{word-break:normal;overflow-wrap:normal;hyphens:none}
+.md-typeset :not(pre)>code .ed-code-run{white-space:nowrap}
 
 /* CIF and Edi blocks in the app's Text-view colours (AppColors.qml), light and dark (owner record 2026-11-09):
    datablock name, item name, loop column, loop_. */

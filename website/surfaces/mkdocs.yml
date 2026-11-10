@@ -35,15 +35,16 @@ theme:
 extra_css:
   - assets/brand-colors.css?v=1
   - assets/wordmark.css?v=header-2
-  - assets/site-components.css?v=survey-3
+  - assets/site-components.css?v=tables-4
   - assets/experiment-tags.css?v=5
   - assets/parameter-reference.css?v=3
 extra_javascript:
-  - assets/example-catalogue.js?v=5
+  - assets/example-catalogue.js?v=7
   # Written by build.py from the app's settings.
   - assets/feedback-form.js
   - assets/contact-form.js?v=1
   - assets/survey/survey.js?v=7
+  - assets/code-breaks.js?v=2
 extra:
   interface_icons:
     Application: [fa5/desktop]
