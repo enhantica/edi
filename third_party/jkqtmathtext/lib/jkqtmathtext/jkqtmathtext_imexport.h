@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: BSD-3-Clause
 #ifndef JKQTMATHTEXT_IMPORT_H
 #define JKQTMATHTEXT_IMPORT_H
 
