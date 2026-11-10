@@ -45,6 +45,7 @@ SideBarGroup {
 
             SelectorField {
                 objectName: "structure.appearance.atomView"
+                uid: "structure_view.atom_view"
                 width: grid.fieldWidth
                 label: qsTr("Atom view")
                 options: group.options ? group.options.atomViewOptions : null
