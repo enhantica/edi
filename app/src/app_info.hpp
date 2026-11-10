@@ -959,6 +959,12 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE bool reservesExperimentColours(const QString& scheme) const;
     // A local file's path as the app shows it, and the URL of the folder it is in (the Preferences' settings file).
     Q_INVOKABLE QString localPath(const QUrl& file) const { return QDir::toNativeSeparators(file.toLocalFile()); }
+    // The same path as a field shows it: the home folder as "~".
+    Q_INVOKABLE QString shownPath(const QUrl& file) const {
+        const QString path = QDir::toNativeSeparators(file.toLocalFile());
+        const QString home = QDir::toNativeSeparators(QDir::homePath());
+        return path.startsWith(home + QDir::separator()) ? QStringLiteral("~") + path.mid(home.size()) : path;
+    }
     Q_INVOKABLE QUrl folderOf(const QUrl& file) const {
         return QUrl::fromLocalFile(QFileInfo(file.toLocalFile()).absolutePath());
     }

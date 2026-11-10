@@ -36,22 +36,28 @@ AppDialog {
         }
     }
     // A group's title: its icon, then its name, not foldable and without a frame, as a sidebar group's title reads.
-    component GroupTitle: Row {
+    // A later group's title has one more row space above it than below, so it reads with the controls under it.
+    component GroupTitle: Column {
+        id: groupTitle
+
         property string icon
         property string text
         property bool first: true
 
         topPadding: first ? 0 : dialog.rowSpacing
-        spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
-        EaElements.Label {
-            anchors.verticalCenter: parent.verticalCenter
-            font.family: EaStyle.Fonts.iconsFamily
-            text: parent.icon
-        }
-        EaElements.Label {
-            anchors.verticalCenter: parent.verticalCenter
-            text: parent.text
+        Row {
+            spacing: EaStyle.Sizes.fontPixelSize * 0.5
+
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                font.family: EaStyle.Fonts.iconsFamily
+                text: groupTitle.icon
+            }
+            EaElements.Label {
+                anchors.verticalCenter: parent.verticalCenter
+                text: groupTitle.text
+            }
         }
     }
     // A control's label, above it.
@@ -61,8 +67,10 @@ AppDialog {
         elide: Text.ElideRight
         color: EaStyle.Colors.themeForegroundMinor
     }
+    // A long choice ends with "…", as long table cells do.
     component FieldBox: EaElements.ComboBox {
         width: dialog.columnWidth
+        elide: Text.ElideRight
     }
     component FieldButton: EaElements.SideBarButton {
         width: dialog.columnWidth
@@ -72,9 +80,14 @@ AppDialog {
     component FieldSpinBox: EaElements.SpinBox {
         id: spin
 
-        readonly property real iconRight: themeBox.padding
+        // The right edge of a box's arrow, and its size.
+        readonly property real iconRight: themeBox.indicator.x + themeBox.indicator.width
+        readonly property real iconSize: EaStyle.Sizes.fontPixelSize * 0.8
 
         width: dialog.columnWidth
+        // Plain whole numbers, without a thousands separator.
+        textFromValue: value => String(value)
+        valueFromText: text => parseInt(text, 10)
         contentItem: TextInput {
             leftPadding: EaStyle.Sizes.fontPixelSize * 0.75
             rightPadding: EaStyle.Sizes.fontPixelSize * 3.5
@@ -90,10 +103,11 @@ AppDialog {
             selectByMouse: true
         }
         up.indicator: EaElements.Label {
-            x: spin.width - width - spin.iconRight
+            x: spin.iconRight - width
             height: spin.height
             verticalAlignment: Text.AlignVCenter
             font.family: EaStyle.Fonts.iconsFamily
+            font.pixelSize: spin.iconSize
             text: "plus"
             TapHandler {
                 onTapped: {
@@ -103,10 +117,11 @@ AppDialog {
             }
         }
         down.indicator: EaElements.Label {
-            x: spin.width - width - spin.iconRight - EaStyle.Sizes.fontPixelSize * 1.75
+            x: spin.iconRight - width - EaStyle.Sizes.fontPixelSize * 1.5
             height: spin.height
             verticalAlignment: Text.AlignVCenter
             font.family: EaStyle.Fonts.iconsFamily
+            font.pixelSize: spin.iconSize
             text: "minus"
             TapHandler {
                 onTapped: {
@@ -116,12 +131,23 @@ AppDialog {
             }
         }
     }
-    // A value to read, framed like a box but not editable.
-    component ReadOnlyField: EaElements.TextField {
+    // A value to read, drawn as a box is (frame, height, padding, text colour) without its arrow; a long value ends
+    // with "…" and shows whole as the tooltip.
+    component ReadOnlyField: EaElements.ComboBox {
+        id: readOnly
+
+        property string text
+
         width: dialog.columnWidth
-        horizontalAlignment: TextInput.AlignLeft
-        readOnly: true
-        color: EaStyle.Colors.themeForegroundMinor
+        elide: Text.ElideRight
+        textFormat: Text.PlainText
+        model: [text]
+        indicator: null
+        ToolTip.text: text
+        // Nothing to choose: a press opens no list.
+        MouseArea {
+            anchors.fill: parent
+        }
     }
     // One column of a tab, its rows the same distance apart.
     component TabColumn: Column {
@@ -131,13 +157,6 @@ AppDialog {
     // A tab: two columns side by side, or rows that span both.
     component TabRow: Row {
         spacing: dialog.columnSpacing
-    }
-    // A table framed with its header inside the frame.
-    component TableFrame: Rectangle {
-        width: dialog.contentRowWidth
-        height: childrenRect.height + 2
-        color: "transparent"
-        border.color: AppColors.statusButtonBorder
     }
     // A label with its control (and a strip, if any) under it, as one row of a column.
     component Field: Column {
@@ -156,6 +175,7 @@ AppDialog {
     readonly property real contentRowWidth: Math.max(0, pages.availableWidth)
     readonly property real columnWidth: Math.floor((contentRowWidth - columnSpacing) / 2)
     readonly property real rowHeight: themeBox.implicitHeight
+    readonly property string updatesOff: qsTr("Available in installed desktop releases")
     readonly property real stripSpacing: EaStyle.Sizes.fontPixelSize * 0.25
 
     objectName: "preferences"
@@ -196,31 +216,37 @@ AppDialog {
         }
 
         EaElements.AppBarTabButton {
+            width: bar.width / bar.count
             objectName: "preferences.tab.appearance"
             fontIcon: "paint-brush"
             text: qsTr("Appearance")
         }
         EaElements.AppBarTabButton {
+            width: bar.width / bar.count
             objectName: "preferences.tab.interface"
             fontIcon: "sliders-h"
             text: qsTr("Interface")
         }
         EaElements.AppBarTabButton {
+            width: bar.width / bar.count
             objectName: "preferences.tab.projects"
             fontIcon: "archive"
             text: qsTr("Projects")
         }
         EaElements.AppBarTabButton {
+            width: bar.width / bar.count
             objectName: "preferences.tab.performance"
             fontIcon: "tachometer-alt"
             text: qsTr("Performance")
         }
         EaElements.AppBarTabButton {
+            width: bar.width / bar.count
             objectName: "preferences.tab.updates"
             fontIcon: "cloud-download-alt"
             text: qsTr("Updates")
         }
         EaElements.AppBarTabButton {
+            width: bar.width / bar.count
             objectName: "preferences.tab.aiAssistance"
             fontIcon: "robot"
             text: qsTr("AI assistance")
@@ -228,6 +254,7 @@ AppDialog {
             ToolTip.text: ApplicationInfo.assistantUnavailableReason
         }
         EaElements.AppBarTabButton {
+            width: bar.width / bar.count
             objectName: "preferences.tab.advanced"
             fontIcon: "cogs"
             text: qsTr("Advanced")
@@ -255,13 +282,16 @@ AppDialog {
         // A tab shows at once, without the swipe's slide.
         Component.onCompleted: (pages.contentItem as ListView).highlightMoveDuration = 0
 
-        // Appearance: the colours on the left, the charts on the right; rows with strips pair up.
-        TabRow {
-            TabColumn {
-                GroupTitle {
-                    icon: "palette"
-                    text: qsTr("Colours")
-                }
+        // Appearance: the theme, then the charts' colours and behaviour, then the structure view's arrows. Rows with
+        // colour strips pair up.
+        TabColumn {
+            width: dialog.contentRowWidth
+
+            GroupTitle {
+                icon: "adjust"
+                text: qsTr("General")
+            }
+            TabRow {
                 Field {
                     label: qsTr("Theme")
                     FieldBox {
@@ -273,6 +303,13 @@ AppDialog {
                         onActivated: index => ApplicationInfo.preferenceActivated(index, 0)
                     }
                 }
+            }
+            GroupTitle {
+                first: false
+                icon: "chart-area"
+                text: qsTr("Charts")
+            }
+            TabRow {
                 // The figure palette of experiments and structures, the Pattern and Stacked views alike (ADR-0084).
                 Field {
                     label: qsTr("Palette")
@@ -290,41 +327,6 @@ AppDialog {
                         objectName: "preferences.colourOrder"
                         width: dialog.columnWidth
                         colours: ApplicationInfo.paletteColours(Preferences.colourScheme, EaStyle.Colors.isDarkPalette)
-                    }
-                }
-                Field {
-                    label: qsTr("Magnetic moment arrows")
-                    spacing: dialog.stripSpacing
-                    FieldBox {
-                        readonly property var schemes: ["atom", "greyed", "single"]
-
-                        objectName: "preferences.momentColours"
-                        model: [qsTr("Atom colour"), qsTr("Greyed atom colour"), qsTr("Single grey")]
-                        currentIndex: Math.max(0, schemes.indexOf(Preferences.momentColours))
-                        onActivated: index => Preferences.momentColours = schemes[index]
-                        ToolTip.text: qsTr("How the structure view colours the magnetic moment arrows")
-                    }
-                    PaletteStrip {
-                        objectName: "preferences.momentColourStrip"
-                        width: dialog.columnWidth
-                        colours: ApplicationInfo.momentColourSamples(Preferences.momentColours, EaStyle.Colors.isDarkPalette)
-                    }
-                }
-            }
-            TabColumn {
-                GroupTitle {
-                    icon: "chart-area"
-                    text: qsTr("Charts")
-                }
-                Field {
-                    label: qsTr("When a legend click hides a curve")
-                    FieldBox {
-                        readonly property list<string> choices: ["keep", "fit"]
-
-                        objectName: "preferences.hiddenRange"
-                        model: [qsTr("Keep the y range"), qsTr("Fit the range to visible curves")]
-                        currentIndex: Math.max(0, choices.indexOf(Preferences.chartHiddenRange))
-                        onActivated: index => ApplicationInfo.preferenceActivated(index, 4)
                     }
                 }
                 // The Map view's colour map, also chosen on the Map's toolbar.
@@ -348,6 +350,44 @@ AppDialog {
                         dark: EaStyle.Colors.isDarkPalette
                         barWidth: dialog.columnWidth
                         barHeight: Math.round(EaStyle.Sizes.fontPixelSize * 0.4)
+                    }
+                }
+            }
+            TabRow {
+                Field {
+                    label: qsTr("When a legend click hides a curve")
+                    FieldBox {
+                        readonly property list<string> choices: ["keep", "fit"]
+
+                        objectName: "preferences.hiddenRange"
+                        model: [qsTr("Keep the y range"), qsTr("Fit the range to visible curves")]
+                        currentIndex: Math.max(0, choices.indexOf(Preferences.chartHiddenRange))
+                        onActivated: index => ApplicationInfo.preferenceActivated(index, 4)
+                    }
+                }
+            }
+            GroupTitle {
+                first: false
+                icon: "cubes"
+                text: qsTr("Structure view")
+            }
+            TabRow {
+                Field {
+                    label: qsTr("Magnetic moment arrows")
+                    spacing: dialog.stripSpacing
+                    FieldBox {
+                        readonly property var schemes: ["atom", "greyed", "single"]
+
+                        objectName: "preferences.momentColours"
+                        model: [qsTr("Atom colour"), qsTr("Greyed atom colour"), qsTr("Single grey")]
+                        currentIndex: Math.max(0, schemes.indexOf(Preferences.momentColours))
+                        onActivated: index => Preferences.momentColours = schemes[index]
+                        ToolTip.text: qsTr("How the structure view colours the magnetic moment arrows")
+                    }
+                    PaletteStrip {
+                        objectName: "preferences.momentColourStrip"
+                        width: dialog.columnWidth
+                        colours: ApplicationInfo.momentColourSamples(Preferences.momentColours, EaStyle.Colors.isDarkPalette)
                     }
                 }
             }
@@ -483,85 +523,100 @@ AppDialog {
                 icon: "globe"
                 text: qsTr("Online sources")
             }
-            TableFrame {
-                DataTable {
-                    id: onlineTable
-                    objectName: "preferences.online.sources"
-                    x: 1
-                    y: 1
-                    width: parent.width - 2
-                    maxRowCountShow: 6
-                    sourceModel: Session.onlineSources
-                    defaultInfoText: qsTr("No online sources")
-                    columns: [numberColumnWidth, AppSizes.dataColumnWidth * 1.8, -1, AppSizes.dataColumnWidth * 1.6, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
-                    header: EaComponents.ListViewHeader {
-                        EaComponents.ListViewLabel {}
-                        EaComponents.ListViewLabel {
-                            elide: Text.ElideRight
-                            text: qsTr("Name")
-                            horizontalAlignment: Text.AlignLeft
-                        }
-                        EaComponents.ListViewLabel {
-                            elide: Text.ElideRight
-                            text: qsTr("URL")
-                            horizontalAlignment: Text.AlignLeft
-                        }
-                        EaComponents.ListViewLabel {
-                            elide: Text.ElideRight
-                            text: qsTr("Holds")
-                            horizontalAlignment: Text.AlignLeft
-                        }
-                        EaComponents.ListViewLabel {}
-                        EaComponents.ListViewLabel {}
+            DataTable {
+                id: onlineTable
+                objectName: "preferences.online.sources"
+                width: parent.width
+                maxRowCountShow: 6
+                sourceModel: Session.onlineSources
+                defaultInfoText: qsTr("No online sources")
+                columns: [numberColumnWidth, AppSizes.dataColumnWidth * 1.8, -1, AppSizes.dataColumnWidth * 1.6, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+                header: EaComponents.ListViewHeader {
+                    EaComponents.ListViewLabel {}
+                    EaComponents.ListViewLabel {
+                        elide: Text.ElideRight
+                        text: qsTr("Name")
+                        horizontalAlignment: Text.AlignLeft
                     }
-                    delegate: TableRow {
-                        id: onlineRow
-                        required property string name
-                        required property string url
-                        required property var kinds
-                        required property bool builtin
-                        required property var model
-                        required property bool overridden
+                    EaComponents.ListViewLabel {
+                        elide: Text.ElideRight
+                        text: qsTr("URL")
+                        horizontalAlignment: Text.AlignLeft
+                    }
+                    EaComponents.ListViewLabel {
+                        elide: Text.ElideRight
+                        text: qsTr("Holds")
+                        horizontalAlignment: Text.AlignLeft
+                    }
+                    EaComponents.ListViewLabel {}
+                    EaComponents.ListViewLabel {}
+                }
+                delegate: TableRow {
+                    id: onlineRow
+                    required property string name
+                    required property string url
+                    required property var kinds
+                    required property bool builtin
+                    required property var model
+                    required property bool overridden
+                    EaComponents.ListViewLabel {
+                        elide: Text.ElideRight
+                        text: onlineRow.index + 1
+                        horizontalAlignment: Text.AlignHCenter
+                        marksCurrentRow: true
+                    }
+                    // A built-in source's name and URL are read, not edited: the cell's own text is hidden under a
+                    // label that ends with "…" when too long, the whole text its tooltip.
+                    TextCell {
+                        objectName: "preferences.online.source.name." + onlineRow.model.id
+                        horizontalAlignment: Text.AlignLeft
+                        value: onlineRow.name
+                        enabled: !onlineRow.builtin
+                        color: onlineRow.builtin ? "transparent" : activeFocus || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
+                        onCommitted: text => Session.onlineSources.setName(onlineRow.model.id, text)
                         EaComponents.ListViewLabel {
+                            anchors.fill: parent
+                            visible: onlineRow.builtin
+                            horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideRight
-                            text: onlineRow.index + 1
-                            horizontalAlignment: Text.AlignHCenter
-                            marksCurrentRow: true
+                            text: onlineRow.name
                         }
-                        TextCell {
-                            objectName: "preferences.online.source.name." + onlineRow.model.id
-                            horizontalAlignment: Text.AlignLeft
-                            value: onlineRow.name
-                            enabled: !onlineRow.builtin
-                            onCommitted: text => Session.onlineSources.setName(onlineRow.model.id, text)
-                        }
-                        TextCell {
-                            objectName: "preferences.online.source.url." + onlineRow.model.id
-                            horizontalAlignment: Text.AlignLeft
-                            value: onlineRow.url
-                            enabled: !onlineRow.builtin && !onlineRow.overridden
-                            ToolTip.text: onlineRow.overridden ? qsTr("Set for this run by --online-source or EDI_ONLINE_SOURCES") : onlineRow.url
-                            onCommitted: text => Session.onlineSources.setUrl(onlineRow.model.id, text)
-                        }
+                    }
+                    TextCell {
+                        objectName: "preferences.online.source.url." + onlineRow.model.id
+                        horizontalAlignment: Text.AlignLeft
+                        value: onlineRow.url
+                        enabled: !onlineRow.builtin && !onlineRow.overridden
+                        color: !enabled ? "transparent" : activeFocus || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
+                        ToolTip.text: enabled ? onlineRow.url : ""
+                        onCommitted: text => Session.onlineSources.setUrl(onlineRow.model.id, text)
                         EaComponents.ListViewLabel {
-                            objectName: "preferences.online.source.kinds." + onlineRow.model.id
+                            anchors.fill: parent
+                            visible: !parent.enabled
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideRight
-                            text: onlineRow.kinds.map(k => k === "structure" ? qsTr("structures") : k === "experiment" ? qsTr("experiments") : k === "project" ? qsTr("projects") : qsTr("data")).join(", ")
+                            text: onlineRow.url
+                            ToolTip.text: onlineRow.overridden ? qsTr("Set for this run by --online-source or EDI_ONLINE_SOURCES") : ""
                         }
-                        EaComponents.ListViewButton {
-                            objectName: "preferences.online.source.enabled." + onlineRow.model.id
-                            fontIcon: onlineRow.model.enabled ? "toggle-on" : "toggle-off"
-                            ToolTip.text: onlineRow.model.enabled ? qsTr("Leave this source out of the From web… popup") : qsTr("Offer this source in the From web… popup")
-                            onClicked: Session.onlineSources.setEnabled(onlineRow.model.id, !onlineRow.model.enabled)
-                        }
-                        EaComponents.ListViewButton {
-                            objectName: "preferences.online.source.remove." + onlineRow.model.id
-                            fontIcon: "minus-circle"
-                            enabled: !onlineRow.builtin
-                            ToolTip.text: onlineRow.builtin ? qsTr("A built-in source cannot be removed, only disabled") : qsTr("Remove this source")
-                            onClicked: Session.onlineSources.remove(onlineRow.model.id)
-                        }
+                    }
+                    EaComponents.ListViewLabel {
+                        objectName: "preferences.online.source.kinds." + onlineRow.model.id
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideRight
+                        text: onlineRow.kinds.map(k => k === "structure" ? qsTr("structures") : k === "experiment" ? qsTr("experiments") : k === "project" ? qsTr("projects") : qsTr("data")).join(", ")
+                    }
+                    EaComponents.ListViewButton {
+                        objectName: "preferences.online.source.enabled." + onlineRow.model.id
+                        fontIcon: onlineRow.model.enabled ? "toggle-on" : "toggle-off"
+                        ToolTip.text: onlineRow.model.enabled ? qsTr("Leave this source out of the From web… popup") : qsTr("Offer this source in the From web… popup")
+                        onClicked: Session.onlineSources.setEnabled(onlineRow.model.id, !onlineRow.model.enabled)
+                    }
+                    EaComponents.ListViewButton {
+                        objectName: "preferences.online.source.remove." + onlineRow.model.id
+                        fontIcon: "minus-circle"
+                        enabled: !onlineRow.builtin
+                        ToolTip.text: onlineRow.builtin ? qsTr("A built-in source cannot be removed, only disabled") : qsTr("Remove this source")
+                        onClicked: Session.onlineSources.remove(onlineRow.model.id)
                     }
                 }
             }
@@ -639,6 +694,21 @@ AppDialog {
                             validator: IntValidator {
                                 bottom: 1
                             }
+                            // Typed text where every other box's text sits.
+                            contentItem: TextInput {
+                                leftPadding: EaStyle.Sizes.fontPixelSize * 0.75
+                                rightPadding: EaStyle.Sizes.fontPixelSize
+                                text: scanWorkersBox.editText
+                                font: scanWorkersBox.font
+                                color: scanWorkersBox.foregroundColor
+                                selectionColor: EaStyle.Colors.themeAccent
+                                selectedTextColor: EaStyle.Colors.themeBackground
+                                verticalAlignment: Text.AlignVCenter
+                                validator: scanWorkersBox.validator
+                                inputMethodHints: Qt.ImhDigitsOnly
+                                selectByMouse: true
+                                onEditingFinished: scanWorkersBox.take()
+                            }
                             model: {
                                 const counts = [];
                                 for (let count = 1; count <= Math.min(5, maximum); ++count)
@@ -647,9 +717,6 @@ AppDialog {
                             }
                             Component.onCompleted: show()
                             onModelChanged: show()
-                            onAccepted: take()
-                            onActiveFocusChanged: if (!activeFocus)
-                                take()
                             onActivated: index => chosen(parseInt(textAt(index), 10))
                             onChosen: count => {
                                 Preferences.scanWorkers = count;
@@ -707,16 +774,19 @@ AppDialog {
                         model: [qsTr("Show"), qsTr("Don't show")]
                         currentIndex: Preferences.updateNotifications ? 0 : 1
                         onActivated: index => Preferences.updateNotifications = index === 0
-                        ToolTip.text: qsTr("The app checks at startup and every hour")
+                        ToolTip.text: DesktopUpdates.managed ? qsTr("The app checks at startup and every hour") : dialog.updatesOff
                     }
                 }
-                FieldButton {
-                    objectName: "preferences.checkUpdateNow"
-                    enabled: DesktopUpdates.managed && !DesktopUpdates.checking
-                    highlighted: true
-                    fontIcon: "sync-alt"
-                    text: DesktopUpdates.checking ? qsTr("Checking…") : qsTr("Check now")
-                    onClicked: DesktopUpdates.checkNow(true)
+                NotAvailable {
+                    reason: DesktopUpdates.managed ? "" : dialog.updatesOff
+                    FieldButton {
+                        objectName: "preferences.checkUpdateNow"
+                        enabled: DesktopUpdates.managed && !DesktopUpdates.checking
+                        highlighted: true
+                        fontIcon: "sync-alt"
+                        text: DesktopUpdates.checking ? qsTr("Checking…") : qsTr("Check now")
+                        onClicked: DesktopUpdates.checkNow(true)
+                    }
                 }
             }
             TabColumn {
@@ -757,88 +827,84 @@ AppDialog {
                     icon: "book"
                     text: qsTr("Skill sources")
                 }
-                TableFrame {
-                    DataTable {
-                        id: sourceTable
-                        objectName: "preferences.ai.sources"
-                        x: 1
-                        y: 1
-                        width: parent.width - 2
-                        maxRowCountShow: 5
-                        sourceModel: aiPage.original ? aiPage.original.skillSources : null
-                        defaultInfoText: qsTr("No skill sources")
-                        columns: [numberColumnWidth, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
-                        header: EaComponents.ListViewHeader {
-                            EaComponents.ListViewLabel {}
-                            EaComponents.ListViewLabel {
-                                elide: Text.ElideRight
-                                text: qsTr("Source")
-                                horizontalAlignment: Text.AlignLeft
-                            }
-                            EaComponents.ListViewLabel {}
-                            EaComponents.ListViewLabel {}
+                DataTable {
+                    id: sourceTable
+                    objectName: "preferences.ai.sources"
+                    width: parent.width
+                    maxRowCountShow: 5
+                    sourceModel: aiPage.original ? aiPage.original.skillSources : null
+                    defaultInfoText: qsTr("No skill sources")
+                    columns: [numberColumnWidth, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+                    header: EaComponents.ListViewHeader {
+                        EaComponents.ListViewLabel {}
+                        EaComponents.ListViewLabel {
+                            elide: Text.ElideRight
+                            text: qsTr("Source")
+                            horizontalAlignment: Text.AlignLeft
                         }
-                        delegate: TableRow {
-                            id: sourceRow
-                            readonly property string sourceId: model.id || ""
-                            required property string label
-                            required property string path
-                            required property bool builtin
-                            required property string status
-                            required property var model
-                            readonly property var original: aiPage.original
-                            property int presentation: 0
-                            onSourceIdChanged: ApplicationInfo.preferenceSourceRevision()
-                            onOriginalChanged: ApplicationInfo.preferenceSourceRevision()
-                            EaComponents.ListViewLabel {
-                                elide: Text.ElideRight
-                                text: sourceRow.index + 1
-                                horizontalAlignment: Text.AlignHCenter
-                                marksCurrentRow: true
-                            }
-                            EaComponents.ListViewLabel {
-                                objectName: "preferences.ai.source.label." + sourceRow.sourceId
-                                text: sourceRow.builtin ? qsTr("EasyDiffraction") : sourceRow.label.startsWith("https://github.com/") ? sourceRow.label : sourceRow.path
-                                horizontalAlignment: Text.AlignLeft
-                                elide: Text.ElideRight
-                                ToolTip.text: text + (sourceRow.status.length ? "\n" + sourceRow.status : "")
-                            }
-                            EaComponents.ListViewButton {
-                                id: sourceEnabled
-                                objectName: "preferences.ai.source.enabled." + sourceRow.sourceId
-                                fontIcon: sourceRow.model.enabled ? "toggle-on" : "toggle-off"
-                                enabled: ApplicationInfo.assistantAvailable && sourceRow.original && !sourceRow.original.canCancel
-                                ToolTip.text: sourceRow.model.enabled ? qsTr("Disable this skill source") : qsTr("Enable this skill source")
-                                Accessible.name: ToolTip.text
-                                Accessible.checkable: true
-                                Accessible.checked: sourceRow.model.enabled
-                                property var gesture: null
-                                onPressed: ApplicationInfo.preferenceSourceGesture(false, true)
-                                onCanceled: gesture = null
-                                onClicked: ApplicationInfo.preferenceSourceGesture(false, false)
-                                Connections {
-                                    target: sourceRow.original
-                                    function onSkillSourcesChanged() {
-                                        sourceEnabled.gesture = null;
-                                    }
+                        EaComponents.ListViewLabel {}
+                        EaComponents.ListViewLabel {}
+                    }
+                    delegate: TableRow {
+                        id: sourceRow
+                        readonly property string sourceId: model.id || ""
+                        required property string label
+                        required property string path
+                        required property bool builtin
+                        required property string status
+                        required property var model
+                        readonly property var original: aiPage.original
+                        property int presentation: 0
+                        onSourceIdChanged: ApplicationInfo.preferenceSourceRevision()
+                        onOriginalChanged: ApplicationInfo.preferenceSourceRevision()
+                        EaComponents.ListViewLabel {
+                            elide: Text.ElideRight
+                            text: sourceRow.index + 1
+                            horizontalAlignment: Text.AlignHCenter
+                            marksCurrentRow: true
+                        }
+                        EaComponents.ListViewLabel {
+                            objectName: "preferences.ai.source.label." + sourceRow.sourceId
+                            text: sourceRow.builtin ? qsTr("EasyDiffraction") : sourceRow.label.startsWith("https://github.com/") ? sourceRow.label : sourceRow.path
+                            horizontalAlignment: Text.AlignLeft
+                            elide: Text.ElideRight
+                            ToolTip.text: text + (sourceRow.status.length ? "\n" + sourceRow.status : "")
+                        }
+                        EaComponents.ListViewButton {
+                            id: sourceEnabled
+                            objectName: "preferences.ai.source.enabled." + sourceRow.sourceId
+                            fontIcon: sourceRow.model.enabled ? "toggle-on" : "toggle-off"
+                            enabled: ApplicationInfo.assistantAvailable && sourceRow.original && !sourceRow.original.canCancel
+                            ToolTip.text: sourceRow.model.enabled ? qsTr("Disable this skill source") : qsTr("Enable this skill source")
+                            Accessible.name: ToolTip.text
+                            Accessible.checkable: true
+                            Accessible.checked: sourceRow.model.enabled
+                            property var gesture: null
+                            onPressed: ApplicationInfo.preferenceSourceGesture(false, true)
+                            onCanceled: gesture = null
+                            onClicked: ApplicationInfo.preferenceSourceGesture(false, false)
+                            Connections {
+                                target: sourceRow.original
+                                function onSkillSourcesChanged() {
+                                    sourceEnabled.gesture = null;
                                 }
                             }
-                            EaComponents.ListViewButton {
-                                id: sourceRemove
-                                objectName: "preferences.ai.source.remove." + sourceRow.sourceId
-                                fontIcon: "minus-circle"
-                                enabled: ApplicationInfo.assistantAvailable && !sourceRow.builtin && sourceRow.original && !sourceRow.original.canCancel
-                                ToolTip.text: sourceRow.builtin ? qsTr("The built-in source cannot be removed") : qsTr("Remove this skill source")
-                                Accessible.name: ToolTip.text
-                                property var gesture: null
-                                onPressed: ApplicationInfo.preferenceSourceGesture(true, true)
-                                onCanceled: gesture = null
-                                onClicked: ApplicationInfo.preferenceSourceGesture(true, false)
-                                Connections {
-                                    target: sourceRow.original
-                                    function onSkillSourcesChanged() {
-                                        sourceRemove.gesture = null;
-                                    }
+                        }
+                        EaComponents.ListViewButton {
+                            id: sourceRemove
+                            objectName: "preferences.ai.source.remove." + sourceRow.sourceId
+                            fontIcon: "minus-circle"
+                            enabled: ApplicationInfo.assistantAvailable && !sourceRow.builtin && sourceRow.original && !sourceRow.original.canCancel
+                            ToolTip.text: sourceRow.builtin ? qsTr("The built-in source cannot be removed") : qsTr("Remove this skill source")
+                            Accessible.name: ToolTip.text
+                            property var gesture: null
+                            onPressed: ApplicationInfo.preferenceSourceGesture(true, true)
+                            onCanceled: gesture = null
+                            onClicked: ApplicationInfo.preferenceSourceGesture(true, false)
+                            Connections {
+                                target: sourceRow.original
+                                function onSkillSourcesChanged() {
+                                    sourceRemove.gesture = null;
                                 }
                             }
                         }
@@ -1036,8 +1102,10 @@ AppDialog {
                         id: settingsPath
 
                         objectName: "preferences.settingsPath"
-                        text: WebFiles.available ? qsTr("Stored in this browser") : ApplicationInfo.localPath(EaGlobals.Vars.settingsFile)
-                        ToolTip.text: text
+                        // A path keeps its start and its file name: cut in the middle.
+                        elide: Text.ElideMiddle
+                        text: WebFiles.available ? qsTr("Stored in this browser") : ApplicationInfo.shownPath(EaGlobals.Vars.settingsFile)
+                        ToolTip.text: WebFiles.available ? text : ApplicationInfo.localPath(EaGlobals.Vars.settingsFile)
                     }
                 }
                 Field {
