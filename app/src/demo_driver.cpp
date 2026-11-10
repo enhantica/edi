@@ -1526,8 +1526,8 @@ void DemoDriver::next_action() {
             run_step();
             return;
         }
-        // A tutorial's screenshots are WebP at quality 85 (owner record 2026-11-09); the others stay PNG.
-        const bool webp = documentation_ && documentation_workflow_ == "tutorial";
+        // Every documentation screenshot is WebP at quality 85 (owner record 2026-11-10); other captures stay PNG.
+        const bool webp = documentation_;
         const QString path = output_dir_.filePath(steps_[current_].image + (webp ? QStringLiteral(".webp") : QStringLiteral(".png")));
         if (!(webp ? previous_frame_.save(path, "WEBP", 85) : previous_frame_.save(path))) {
             fail(QStringLiteral("cannot write %1").arg(path));
