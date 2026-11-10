@@ -875,7 +875,6 @@ AppDialog {
                                 }
                             }
                         }
-                        }
                     }
                     TabColumn {
                         Field {
