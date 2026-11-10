@@ -129,3 +129,9 @@ covariance column only when decimal rounding reproduces the actual saved native 
 Experiment and positive background-point identities disambiguate equal rounded values;
 ambiguous bindings refuse. `native_precision_bindings` retains every before/after token
 and column. The existing conditioning writer then verifies the unrounded native operands.
+
+
+C06-T8 projects the captured machine record to schema 9 without rerunning its fit.
+The original numeric/input/producer provenance above is retained; the wire-only
+projection and unavailable stop metadata are documented in
+[the version-projection receipt](../c06_t8/README.md).

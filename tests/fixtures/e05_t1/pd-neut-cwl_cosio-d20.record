@@ -1,4 +1,4 @@
-schema=8
+schema=9
 record=fit
 status=done
 mode=single
@@ -9,6 +9,9 @@ n_free=42
 iterations=13
 reduced_chi_square=4.451916557
 rwp=0.03967476009
+stopping_rule=none
+stopping_value=nan
+last_shift_su=nan
 descent=fast_descent
 fast_descent=false
 linear_snap=false
