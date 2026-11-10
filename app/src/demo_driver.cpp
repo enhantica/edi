@@ -646,6 +646,35 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({name + "7-advanced", {"preferences.tab.advanced"}});
         }
     }
+    // The documentation's concept figures, from the Co2SiO4 magnetic case, in both themes, each saved by Save image
+    // (the owner, 2026-11-10). Run only when asked (`--demo-only concepts-`).
+    if (only.startsWith(QLatin1String("concepts-"))) {
+        const QString structure = QStringLiteral("appBar.tab.structure");
+        // Opened and fitted once; the dark figures are the same fit in the other theme.
+        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+            const QString name = QStringLiteral("concepts-") + theme + QStringLiteral("-");
+            const QStringList open = theme == QLatin1String("light")
+                                         ? QStringList{"resize:1760x1000"} + start + open_cli_project("pd-neut-cwl_cosio-d20_2k") +
+                                               QStringList{"preference:chartIncludedOnly=true", "theme:light", analysis, basic,
+                                                           "statusBar.fit.button", "wait-fit", "choose:OK"}
+                                         : QStringList{"theme:dark", analysis};
+            steps_.push_back({name + "1-fit", open + QStringList{"save-image:chart.toolbar.save|" + name + "refinement.png|2"}});
+            steps_.push_back({name + "2-model", {structure, "mainArea.structure.tab.view",
+                                                 "save-image:structure.toolbar.save|" + name + "model.png|2"}});
+        }
+        // The measured pattern alone: the fitted experiment's chart with every other curve hidden, as legend clicks
+        // hide them, and so its residual and tick panes. Last, so the fitted figures come first.
+        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+            const QString name = QStringLiteral("concepts-") + theme + QStringLiteral("-");
+            QStringList actions{"theme:" + theme, analysis};
+            if (theme == QLatin1String("light")) {
+                actions.append(QStringLiteral("preference:structureCurves=false"));
+                actions.append(QStringLiteral("measured-only"));
+            }
+            actions.append("save-image:chart.toolbar.save|" + name + "pattern.png|2");
+            steps_.push_back({name + "3-pattern", actions});
+        }
+    }
     // The sidebar's pins, empty tabs and Performance row, the structure view's atom view names, in both themes (the
     // owner, 2026-11-10). Run only when asked (`--demo-only sidebar-`).
     if (only.startsWith(QLatin1String("sidebar-"))) {
@@ -1686,6 +1715,31 @@ bool DemoDriver::perform(const QString& action) {
         const QDir data(loaded_cli_project_ + QStringLiteral("/experiments/d20_scan"));
         if (loaded_cli_project_.isEmpty() || !QDir(data).removeRecursively()) {
             fail(QStringLiteral("step %1: the scan's data could not be removed").arg(steps_[current_].image));
+            return false;
+        }
+        return true;
+    }
+    // `measured-only`: the shown pattern chart with every curve but the measured data hidden, as legend clicks hide them.
+    if (action == QLatin1String("measured-only")) {
+        QQuickItem* chart = find(QStringLiteral("chart"), false);
+        if (chart == nullptr || !QMetaObject::invokeMethod(chart, "hideAllButMeasured")) {
+            fail(QStringLiteral("step %1: no pattern chart to show measured data only").arg(steps_[current_].image));
+            return false;
+        }
+        return true;
+    }
+    // `save-image:<button>|<file>[|<scale>]`: the shown Save image button's image, saved into the output folder as Save image
+    // saves it (the toolbar left out), for documentation figures.
+    if (action.startsWith(QLatin1String("save-image:"))) {
+        const QString button = action.mid(11).section(QLatin1Char('|'), 0, 0);
+        const QString file = action.section(QLatin1Char('|'), 1, 1);
+        // An optional third part renders it that many times as large (documentation figures at twice the size).
+        const double scale = action.section(QLatin1Char('|'), 2).isEmpty() ? 1.0 : action.section(QLatin1Char('|'), 2).toDouble();
+        QQuickItem* item = find(button, false);
+        if (item == nullptr || file.isEmpty() || scale <= 0.0 ||
+            !QMetaObject::invokeMethod(item, "saveTo", Q_ARG(QVariant, QVariant(QUrl::fromLocalFile(output_dir_.filePath(file)))),
+                                       Q_ARG(QVariant, QVariant(scale)))) {
+            fail(QStringLiteral("step %1: %2 could not save an image").arg(steps_[current_].image, action));
             return false;
         }
         return true;

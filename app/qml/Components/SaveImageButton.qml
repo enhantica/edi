@@ -27,7 +27,9 @@ Row {
         }
         return null;
     }
-    function grab() {
+    // The image as Save image takes it, handed to `done` with the share of its height to cut off at the top: the
+    // toolbar is hidden for the grab, and a chart's toolbar band is cut. `scale` renders it larger, sharp.
+    function capture(done, scale) {
         const line = toolbarLine();
         const shownOpacity = line ? line.opacity : 1;
         // Below the toolbar's band when it is at the top, as a fraction of the height.
@@ -37,6 +39,16 @@ Row {
         save.target.grabToImage(result => {
             if (line)
                 line.opacity = shownOpacity;
+            done(result, cut);
+        }, Qt.size(Math.round(target.width * (scale || 1)), Math.round(target.height * (scale || 1))));
+    }
+    // Saves the image straight to `file` (a URL), as the dialog's choice would, `scale` times as large: the demo
+    // renders documentation figures with it.
+    function saveTo(file, scale) {
+        capture((result, cut) => ApplicationInfo.saveImage(result.image, file, cut), scale);
+    }
+    function grab() {
+        capture((result, cut) => {
             if (WebFiles.available) {
                 ApplicationInfo.downloadImage(result.image, save.fileName + ".png", cut);
             } else {
