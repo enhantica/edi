@@ -365,6 +365,90 @@ def observe_fit_constructor(prefix, observed, probe_defined):
     return {'import': original, 'delegate': target, 'actual': actual, 'typed_delegate': wrapper}
 
 
+def observe_browser_boundaries(prefix, output, observed, observer_object, probe_defined):
+    """Match compiled method and observer signatures under the host C++ ABI."""
+    names = {}
+    for member, scope, methods in (
+        (
+            'web_storage.cpp.o',
+            'edi_app::WebStorage',
+            {
+                'pickOpen': 'boundary_open',
+                'load': 'boundary_load',
+                'pickSave': 'boundary_pick',
+                'write': 'boundary_write',
+                'dropRecovery': 'boundary_drop',
+            },
+        ),
+        (
+            'web_files.cpp.o',
+            'edi_app::WebFiles',
+            {
+                'available': 'boundary_available',
+                'download': 'boundary_download',
+            },
+        ),
+    ):
+        selected = output / member
+        with selected.open('wb') as stream:
+            subprocess.run(
+                [str(prefix / 'bin/llvm-ar'), 'p', str(observed), member],
+                stdout=stream,
+                check=True,
+            )
+        defined = run([str(prefix / 'bin/llvm-nm'), '--defined-only', str(selected)])
+        replacements = {}
+        for method, observer in methods.items():
+            actual = global_function_symbols(defined, scope, method)
+            targets = [
+                words[-1]
+                for line in probe_defined.splitlines()
+                if len(words := line.split()) >= 2
+                and words[-2] == 'T'
+                and words[-1].lstrip('_').startswith(f'Z{len(observer)}{observer}')
+                and '.' not in words[-1]
+            ]
+            if len(actual) != 1 or len(targets) != 1:
+                raise RuntimeError(
+                    'Every browser boundary requires one compiled method and observer'
+                )
+            signature = (
+                run([str(prefix / 'bin/llvm-cxxfilt'), actual[0]]).strip().partition('(')[2]
+            )
+            wrapper = run([str(prefix / 'bin/llvm-cxxfilt'), targets[0]]).strip().partition('(')[2]
+            if scope == 'edi_app::WebStorage':
+                receiver = scope + '*, '
+                if not wrapper.startswith(receiver):
+                    raise RuntimeError('A browser method observer requires its typed receiver')
+                wrapper = wrapper[len(receiver) :]
+            if signature != wrapper:
+                raise RuntimeError('Browser method and observer compiled signatures differ')
+            replacements[actual[0]] = (
+                ('_' if sys.platform == 'darwin' else '') + 'transaction_real_' + method
+            )
+            subprocess.run(
+                [
+                    str(prefix / 'bin/llvm-objcopy'),
+                    f'--redefine-sym={targets[0]}={actual[0]}',
+                    str(observer_object),
+                ],
+                check=True,
+            )
+        names.update(replacements)
+        subprocess.run(
+            [
+                str(prefix / 'bin/llvm-objcopy'),
+                *(f'--redefine-sym={old}={new}' for old, new in replacements.items()),
+                str(selected),
+            ],
+            check=True,
+        )
+        subprocess.run(
+            [str(prefix / 'bin/llvm-ar'), 'r', str(observed), str(selected)], check=True
+        )
+    return names
+
+
 def build(root, native, output, *, frozen_inputs=None):  # noqa: PLR0912, PLR0914, PLR0915 - source, linker and boundary identities are distinct
     root, native, output = (path.resolve() for path in (root, native, output))
     output.mkdir(parents=True, exist_ok=True)
@@ -448,51 +532,11 @@ def build(root, native, output, *, frozen_inputs=None):  # noqa: PLR0912, PLR091
     index = tokens.index('-o')
     binary = output / 'probe'
     tokens[index + 1] = str(binary)
-    symbols = [
-        ''.join(re.findall(r'"([^"]*)"', literal)).removeprefix('__wrap_')
-        for literal in re.findall(r'__asm__\(\s*((?:"[^"]*"\s*)+)\)', source.read_text())
-    ]
-    if len(symbols) != 7 or len(set(symbols)) != 7:
-        raise RuntimeError('Every declared browser boundary must be linked exactly once')
     library = next(arg for arg in tokens if arg.endswith('/libedi_app_module.a'))
     observed = output / 'libedi_app_observed.a'
     shutil.copy2(native / library, observed)
-    names = {symbol: ('_' if sys.platform == 'darwin' else '') + symbol for symbol in symbols}
-    reached = set()
-    for member in ('web_storage.cpp.o', 'web_files.cpp.o'):
-        selected = output / member
-        with selected.open('wb') as stream:
-            subprocess.run(
-                [str(prefix / 'bin/llvm-ar'), 'p', str(observed), member],
-                stdout=stream,
-                check=True,
-            )
-        defined = run([str(prefix / 'bin/llvm-nm'), '--defined-only', str(selected)])
-        replacements = [
-            name
-            for name in names.values()
-            if name in {line.split()[-1] for line in defined.splitlines() if line.split()}
-        ]
-        reached.update(replacements)
-        subprocess.run(
-            [
-                str(prefix / 'bin/llvm-objcopy'),
-                *(f'--redefine-sym={name}=transaction_real_{name}' for name in replacements),
-                str(selected),
-            ],
-            check=True,
-        )
-        subprocess.run(
-            [str(prefix / 'bin/llvm-ar'), 'r', str(observed), str(selected)], check=True
-        )
-    if reached != set(names.values()):
-        raise RuntimeError('Every boundary must replace an actual compiled method definition')
     adapted = output / 'probe.cpp'
-    text = source.read_text()
-    for literal in re.findall(r'__asm__\(\s*((?:"[^"]*"\s*)+)\)', text):
-        label = ''.join(re.findall(r'"([^"]*)"', literal)).removeprefix('__wrap_')
-        text = text.replace(literal, '"' + names[label] + '"')
-    adapted.write_text(text)
+    adapted.write_text(source.read_text())
     browser_stage = output / 'browser_stage.hpp'
     browser_stage.write_text(browser_staging_source(root))
     subprocess.run(
@@ -516,6 +560,7 @@ def build(root, native, output, *, frozen_inputs=None):  # noqa: PLR0912, PLR091
         check=True,
     )
     probe_defined = run([str(prefix / 'bin/llvm-nm'), '--defined-only', str(observer)])
+    browser_names = observe_browser_boundaries(prefix, output, observed, observer, probe_defined)
     fit_constructor = observe_fit_constructor(prefix, observed, probe_defined)
     # Hold actual collection transports, retaining checked indexing and all receivers.
     fetch_member = output / 'online_fetch.cpp.o'
@@ -636,7 +681,8 @@ def build(root, native, output, *, frozen_inputs=None):  # noqa: PLR0912, PLR091
             for path in (sdk / parent).rglob('*')
             if path.is_file()
         },
-        'boundary': symbols,
+        'boundary': sorted(browser_names),
+        'browser_boundary': browser_names,
         'limit': 'Native Session with held I/O/dataset reads and authored file refusals; '
         'not a browser UI or OS-picker measurement',
     }
