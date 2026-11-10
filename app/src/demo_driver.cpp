@@ -646,6 +646,26 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({name + "7-advanced", {"preferences.tab.advanced"}});
         }
     }
+    // The sidebar's pins, empty tabs and Performance row, the structure view's atom view names, in both themes (the
+    // owner, 2026-11-10). Run only when asked (`--demo-only sidebar-`).
+    if (only.startsWith(QLatin1String("sidebar-"))) {
+        const QString structure = QStringLiteral("appBar.tab.structure");
+        const QString settings = QStringLiteral("sideBar.tab.settings");
+        for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
+            const QString name = QStringLiteral("sidebar-") + theme + QStringLiteral("-");
+            const QStringList open = theme == QLatin1String("light")
+                                         ? QStringList{"resize:1280x960"} + start + open_cli_project("pd-neut-cwl_lbco-hrpt_start-2")
+                                         : QStringList{};
+            steps_.push_back({name + "1-pinned", open + QStringList{"theme:" + theme, structure, basic, "expand:group.cell",
+                                                                    "group.cell.pin", "expand:group.atom_site"}});
+            steps_.push_back({name + "2-appearance", {extras, "expand:group.appearance"}});
+            steps_.push_back({name + "3-empty-settings", {settings}});
+            steps_.push_back({name + "4-performance", {"appBar.tab.experiment", settings, "expand:group.performance"}});
+            steps_.push_back({name + "5-report-extra", {"appBar.tab.report", extras}});
+            // Unpinned again, so the next theme starts as this one did.
+            steps_.push_back({name + "6-unpinned", {structure, basic, "group.cell.pin"}});
+        }
+    }
     // An example from an online collection (ADR-0068), opened from the Examples list, the list searched down to the
     // rows that fit the sidebar. Run only when asked (`--demo-only collection-`), with EDI_ONLINE_SOURCES naming the
     // fixture collections under tests/fixtures/online_sources.

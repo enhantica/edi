@@ -4486,7 +4486,8 @@ void ApplicationInfo::resetPreferences() const {
 void ApplicationInfo::applyPreferences() const {
     const auto f = panelUsageEngine(this);
     auto globals = assistantContextField(f, "EaGlobals", "Vars");
-    assistantMemberWrite(f, globals, "autoCollapseSideBarGroups", assistantContextField(f, "preferences", "autoCollapse"));
+    // The app folds its sidebar groups itself, leaving pinned ones open (SideBarGroup).
+    assistantMemberWrite(f, globals, "autoCollapseSideBarGroups", QJSValue(false));
     projectInvoke(f, "ApplicationInfo", "setEngineThreads", {assistantContextField(f, "preferences", "engineThreads")});
     projectInvoke(f, "ApplicationInfo", "setScanWorkers", {assistantContextField(f, "preferences", "scanWorkersApplied")});
     globals = assistantContextField(f, "EaGlobals", "Vars");

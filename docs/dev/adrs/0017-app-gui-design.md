@@ -128,7 +128,10 @@ The decisions it rests on, unchanged here:
   the rest), the first group the tab shows is open while nothing is remembered for it, and a group the user has
   opened or folded keeps that state, by one rule (`SideBarGroups.isOpen`) every foldable group asks. Get started on
   Project → Main and the block lists (Structures, Experiments) stay open at the start (owner, 2026-09-29,
-  2026-10-05). The base's auto-collapse is kept: opening a group folds the others on its tab. Groups that cannot
+  2026-10-05). Opening a group folds the others on its tab, except pinned ones: each foldable group has a pin at the
+  right end of its title, grey, the accent colour when on, and a pinned group stays open when another opens (the owner,
+  2026-11-10). Pins are remembered between sessions (`Preferences.pinnedGroups`); with no pin, every group folds as
+  before. The app folds the groups itself (`SideBarGroup`), so the base's auto-collapse stays off. Groups that cannot
   fold — the shared block selector (§7), the untitled Analysis Parameters and Fitting groups, the Text tab's
   groups — are not affected. The demo opens each group its capture shows with a click.
 - **Order:** groups follow the core's page order of categories, except where the app lists a different one
@@ -137,6 +140,11 @@ The decisions it rests on, unchanged here:
   (the owner, 2026-09-29) and **Linked structures last** (the owner, 2026-10-04, when Excluded regions moved to
   Basic), giving block selector · Experiments · Experiment type · Background · Instrument · Peak profile ·
   Excluded regions · Linked structures.
+- **Every page shows all four sidebar tabs**, Main, Extra, Text and Settings (the owner, 2026-11-10). A tab whose
+  content waits for the page's first block says "Nothing to show yet: start in the Main tab"; a tab the page has no
+  groups for yet (Structure and Project → Settings, Report → Extra and Settings) asks what it could hold, with a link
+  that opens the feedback form as an idea. A group that only reports a Preferences value (Performance) shows the value
+  with a light Preferences link at the right end of its row.
 - **Measured data is on Extras** (the owner, 2026-09-29), not Basic: its summary fields and data table are
   the first group of Experiment → Extras, above Peak profile's Extras part (the core's order among the Extras
   groups puts it first). Sidebar only: the core's category order, the files and the Analysis table are

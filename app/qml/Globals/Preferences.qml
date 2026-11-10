@@ -63,6 +63,11 @@ QtObject {
         ApplicationInfo.storeSettings();
     }
     property bool autoCollapse: true
+    // The folder every Save image starts in, the last one an image was saved to; empty until then, when the
+    // project's reports folder is the start (the owner, 2026-11-10).
+    property string imageFolder: ""
+    // The sidebar groups kept open when another opens, by object name, separated by commas (the owner, 2026-11-10).
+    property string pinnedGroups: ""
     // Where the workflow pages show their sidebar: "Right" (the default) or "Left" (WorkflowPage).
     property string sideBarSide: "Right"
     readonly property bool sideBarOnLeft: sideBarSide === "Left"
@@ -142,6 +147,8 @@ QtObject {
         property alias toolTips: preferences.toolTips
         property alias autoCollapse: preferences.autoCollapse
         property alias sideBarSide: preferences.sideBarSide
+        property alias imageFolder: preferences.imageFolder
+        property alias pinnedGroups: preferences.pinnedGroups
     }
 
     property Settings feedbackSettings: Settings {
@@ -341,7 +348,8 @@ QtObject {
     // and the settings file keeps the one shown.
     onColourSchemeChanged: ApplicationInfo.preferencesColourChanged()
     onPatternColourSchemeChanged: ApplicationInfo.preferencesLegacyPaletteChanged()
-    onAutoCollapseChanged: EaGlobals.Vars.autoCollapseSideBarGroups = autoCollapse
+    // The app folds its sidebar groups itself, leaving pinned ones open (SideBarGroup), so the base's folding stays off.
+    onAutoCollapseChanged: EaGlobals.Vars.autoCollapseSideBarGroups = false
     onEngineThreadsChanged: ApplicationInfo.persistPreference(0)
     // Saved at once too: a restart or a new window soon after the toggle must find it, and no write is left pending
     // for the settings' own schedule when the window closes.
