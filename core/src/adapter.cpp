@@ -5854,11 +5854,6 @@ crysta::DescentRequest declared_request(const Project& project) {
     return request;
 }
 
-// Whether the project declares none of the conditions: its fit keeps the historical direct call.
-bool declares_no_conditions(const Project& project) {
-    return project.descent.empty() && project.minimizer_chi_square_tolerance <= 0.0 &&
-           project.minimizer_stop_rules.empty() && project.minimizer_moments_near_zero.empty();
-}
 
 }  // namespace
 
@@ -5993,22 +5988,14 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // or not anyone subscribed, and an absent subscriber crosses no host boundary at all.
             // (F-bound) /: the project's declared `_minimizer.*` conditions — the iteration budget
             // (absent: the historical 50 cap), the descent and the chi-square stop. A declared
-            // descent or tolerance goes through crysta's registry entry point (DescentRequest, id
-            // validated above); a project declaring neither keeps the historical direct call
-            // byte-for-byte, so the default path cannot move a number by construction. The request's
-            // seed/polish pair mirrors `separable_linear=true` exactly (crysta descent.hpp: the
-            // ordinary provider overloads set both from it).
+            // descent, tolerance or stop rule goes through crysta's registry entry point
+            // (DescentRequest, id validated above), and so does a project declaring none: the request
+            // then carries crysta's defaults (fast descent, the default stop rules), the same fit the
+            // project-analysis path and the CLI run. The request's seed/polish pair mirrors
+            // `separable_linear=true` exactly (crysta descent.hpp).
             crysta::DescentRequest request =
                 declared_request(*this);
             const crysta::FitResultBase result = [&] {
-                if constexpr (!std::is_same_v<std::decay_t<decltype(provider)>, crysta::SingleCrystalResidual>) {
-                  if (declares_no_conditions(*this)) {
-                    return crysta::fit_problem(
-                        provider, /*separable_linear=*/true, request.max_iterations,
-                        collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
-                        should_cancel);  // The cooperative cancel
-                  }
-                }
                 request.on_iteration =
                     collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
                 request.should_cancel = should_cancel;
@@ -6813,19 +6800,11 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                 });
             const auto fit_start = std::chrono::steady_clock::now();
             crysta::IterationHistoryCollector collector(dof, fit_start);
-            // (F-bound) /: the same declared conditions and the same registry-or-historical
-            // split as the single-bank path above.
+            // (F-bound) /: the same declared conditions through the same registry entry point as the
+            // single-bank path above.
             crysta::DescentRequest request =
                 declared_request(*this);
             const crysta::FitResultBase result = [&] {
-                if constexpr (!std::is_same_v<std::decay_t<decltype(provider)>, crysta::SingleCrystalResidual>) {
-                    if (declares_no_conditions(*this)) {
-                        return crysta::fit_problem(
-                            provider, /*separable_linear=*/true, request.max_iterations,
-                            collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
-                            should_cancel);  // The cooperative cancel
-                    }
-                }
                 request.on_iteration =
                     collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
                 request.should_cancel = should_cancel;
