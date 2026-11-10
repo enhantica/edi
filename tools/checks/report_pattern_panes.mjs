@@ -19,11 +19,18 @@ for (const pane of ['main', 'bragg', 'residual']) {
 }
 expect(/readonly property real paneGap: em\b/.test(qml), "the app's pane gap is no longer one em");
 
-// The app's toolbar: each button's icon and its first tooltip, in order.
+// The app's toolbar: each button's icon and its first tooltip, in order. The report draws one
+// dataset per chart, so the app's dataset highlight has no counterpart there.
+const APP_ONLY = new Set(['highlighter']);
 const toolbarQml = readFileSync(new URL('app/qml/Components/ChartToolbar.qml', root), 'utf8');
 const appButtons = [...toolbarQml.matchAll(/fontIcon: "([a-z-]+)"\s*\n\s*toolTip: [^\n]*?qsTr\("([^"]+)"\)/g)].map(
-  ([, icon, tip]) => [icon, tip]);
+  ([, icon, tip]) => [icon, tip]).filter(([icon]) => !APP_ONLY.has(icon));
 expect(appButtons.length === 8, `the app's toolbar has ${appButtons.length} buttons, not the 8 this check knows`);
+// Save image is the toolbar's last button, from its own component.
+const saveQml = readFileSync(new URL('app/qml/Components/SaveImageButton.qml', root), 'utf8');
+const save = saveQml.match(/fontIcon: "([a-z-]+)"\s*\n\s*toolTip: [^\n]*?qsTr\("([^"]+)"\)/);
+expect(save && toolbarQml.includes('SaveImageButton {'), "the app's toolbar has no Save image button");
+if (save) appButtons.push([save[1], save[2]]);
 
 const EM = 16;
 let drawn = null;
