@@ -35,4 +35,4 @@ Have 15 minutes? The [survey](survey.md) asks how you work and what you need, an
 ## Other ways
 
 You can also open an issue on [GitHub](https://github.com/enhantica/edi/issues). If you would like to work on the code,
-start with the [contributor documentation](https://enhantica.github.io/edi/dev/).
+its source is in the [edi repository](https://github.com/enhantica/edi).

@@ -18,8 +18,9 @@ Strict builds verify all internal links and anchors. Check native Previous/Next 
 
 ## Footer credit strip — 2026-11-04
 
-Hide only the credit strip containing EasyDiffraction, Contributor documentation
-and the Zensical generator credit. The selector is `.md-footer-meta`, not the whole
+Hide only the credit strip containing the Zensical generator credit. The site sets no
+copyright line (2026-11-10: the public site does not link to the contributor
+documentation, so the line that carried that link is gone from every page's HTML). The selector is `.md-footer-meta`, not the whole
 footer. Keep `navigation.footer` and the native Previous/Next links on documentation
 pages. Home retains its existing empty footer override. The shared main template
 inherits the ordinary footer. No page navigation or inline attribution is removed.

@@ -293,7 +293,6 @@ markdown_extensions:
           - overrides/.icons
   - pymdownx.arithmatex:
       generic: true
-copyright: 'EasyDiffraction · <a href="https://easydiffraction.org/dev/">Contributor documentation</a>'
 validation:
   invalid_links: true
   invalid_link_anchors: true
