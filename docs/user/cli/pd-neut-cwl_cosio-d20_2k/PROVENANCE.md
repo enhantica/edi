@@ -11,11 +11,11 @@
 - **Model:** the nuclear structure of `pd-neut-cwl_cosio-d20`, with the cell, coordinates, zero shift and profile terms
   of a FullProf 8.40 fit of this pattern, the displacement parameters of a FullProf
   fit of the 56.8 K pattern (Co1 and Co2 share one value), and the magnetic structure of ISODISTORT's description of
-  Co₂SiO₄ in Pnma.1 (irrep mGM1+): its eight operators. The moments start along b at 1 μB, Co1 (0, 1, 0) and
-  Co2 (0, 1, 0), a start any user could choose; from it the fit reaches the same minimum (Rwp 4.73 %, the owner's
-  run of 2026-11-03).
-- **Stop rule:** Shift/s.u. 0.1, as every example (the owner, 2026-11-04): the fit ends at 22 iterations, reduced χ²
-  0.003 above where the χ² change ends it (57 iterations, 6.24573).
+  Co₂SiO₄ in Pnma.1 (irrep mGM1+): its eight operators. The moments start at Co1 (2, 2, 2) and Co2 (0, 2, 0) μB, so the
+  magnetic structure shows clearly before the fit; from it the fit reaches the same minimum as from (0, 1, 0) on both
+  sites (Rwp 4.70 %, Co1 (1.01, 3.02, 0.0) μB and Co2 2.62 μB along b, run of 2026-11-10).
+- **Stop rule:** Shift/s.u. 0.1, as every example (the owner, 2026-11-04): the fit ends at 37 iterations from the
+  start above, reduced χ² 6.25 (2026-11-10).
 - **Form factor:** Co²⁺ in the dipole approximation, ⟨j0⟩ + C₂⟨j2⟩ (the owner, 2026-11-04), with C₂ fitted from 0. At
   the χ² change's end point C₂ = 0.589(54), the value the 213-file scan holds (Shift/s.u. ends at 0.603); counted
   against the total moment J as C₂ = 2/g − 1, so g ≈ 1.26, near the free Co²⁺ ion's g_J = 4/3 (⁴F₉/₂, C₂ = 0.50).
