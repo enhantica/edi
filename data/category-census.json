@@ -5434,6 +5434,26 @@
       "not_storage": "a fit report"
     },
     {
+      "member": "FitResultBase::multistart_probes_started",
+      "type": "int",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::multistart_probes_pruned",
+      "type": "int",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::multistart_probe_iterations",
+      "type": "int",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::multistart_survivor",
+      "type": "std::string",
+      "not_storage": "a fit report"
+    },
+    {
       "member": "FitResultBase::n_points_loaded",
       "type": "std::size_t",
       "not_storage": "a fit report"

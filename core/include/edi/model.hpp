@@ -4662,6 +4662,12 @@ struct FitResultBase {
     std::string stopping_rule;
     double stopping_value = std::numeric_limits<double>::quiet_NaN();
     double last_shift_su = std::numeric_limits<double>::quiet_NaN();
+    // The probes of crysta's default descent (fast descent and the ladder from the start): how many ran and were
+    // dropped, their iterations, and which one continued; zero and empty for a single descent.
+    int multistart_probes_started = 0;
+    int multistart_probes_pruned = 0;
+    int multistart_probe_iterations = 0;
+    std::string multistart_survivor;
     // . Both point counts, named — reporting only one of them under a `pts` heading is: `loaded`
     // is what the project carried, `fitted` is what entered the residual (after each bank's
     // excluded regions), and reduced chi-square is normalised by the FITTED count. On the
