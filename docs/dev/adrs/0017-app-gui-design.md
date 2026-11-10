@@ -66,7 +66,7 @@ The decisions it rests on, unchanged here:
 
 ### 2. The main area and the Experiment type group
 
-- **One main view** (the owner, 2026-11-10; proposal and mockups in the E04-T49 analysis): the Structure, Experiment
+- **One main view** (the owner, 2026-11-10): the Structure, Experiment
   and Analysis pages share one main view, `MainView`, with the tabs Structure, Pattern, Correlations, Stacked, Map and
   Evolution (`mainArea.tab.structure`, `.pattern`, `.correlations`, `.stacked`, `.map`, `.evolution`). It is drawn over
   those pages' main area in the pages' view, which stays put while the pages slide, so the app bar's pages change only
