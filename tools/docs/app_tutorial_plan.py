@@ -94,13 +94,8 @@ def unique_name(expression: str, named: dict[str, str]) -> str:
 
 
 def free(path: str) -> list[str]:
-    return [
-        'reveal:parameters.nameFilter',
-        'fill:parameters.nameFilter=' + path,
-        'parameters.freeHeader',
-        'parameters.freeHeader.free',
-        'parameters.clearFilters',
-    ]
+    """One parameter freed in its own row: its Free box ticked."""
+    return ['tick:' + path]
 
 
 def adp_types(case: str, kind: str) -> list[str]:
@@ -197,11 +192,23 @@ def by_category(
     now = {as_parameter(path, roots) for path in free_now}
     actions = []
     for group in groups(project, chosen, now, fixing=state == 'fixed'):
+        if not group.part and len([p for p in chosen if p.block == group.block]) < 2:
+            # Free · all (Fixed · all) on one row: a row is ticked on its own.
+            raise SystemExit(f'{group.title}: a whole-category action on one row; tick it')
         if group.part:
-            # A part no word selects: its rows one by one, as the page names it in words.
+            # Part of a category: the category shown, then each of its rows ticked (or cleared).
+            block = group.block if several else ''
+            if block:
+                actions += ['reveal:parameters.datablock', 'parameters.datablock']
+                actions += ['choose:' + block]
+            actions += ['reveal:parameters.category', 'parameters.category']
+            actions += ['choose:' + group.title]
             for row in group.rows:
                 path = next(p for p in paths if as_parameter(p, roots) == row)
                 actions += free(path) if state == 'free' else fix(path)
+            # A datablock filter hides the other blocks' categories from the next action.
+            if block:
+                actions += ['parameters.clearFilters']
             continue
         actions += set_category(
             group.title, state, group.block if several else '', group.word, group.unword
@@ -219,13 +226,8 @@ LINKED = 'Linked structures'
 
 
 def fix(path: str) -> list[str]:
-    return [
-        'reveal:parameters.nameFilter',
-        'fill:parameters.nameFilter=' + path,
-        'parameters.freeHeader',
-        'parameters.freeHeader.fixed',
-        'parameters.clearFilters',
-    ]
+    """One parameter fixed in its own row: its Free box cleared."""
+    return ['untick:' + path]
 
 
 def estimate(args: str) -> list[str]:
@@ -744,6 +746,31 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
     # The minimizer settings the case's project declares: descent, tolerance, rule and iterations.
     analysis = PROJECTS / case / 'project/analysis/analysis.edi'
     declared = analysis.read_text(encoding='utf-8') if analysis.exists() else ''
+    # A joint fit's weights, where the project declares any other than the app's default of 1: the
+    # reduced chi2 scales with them.
+    weights = {}
+    table = re.search(r'(?ms)^_joint_fit\.weight\n(.*?)(?:^\s*$|\Z)', declared)
+    for line in table[1].splitlines() if table else []:
+        parts = line.split()
+        if len(parts) == 2:
+            weights[parts[0]] = parts[1]
+    if any(float(weight) != 1.0 for weight in weights.values()):
+        order = [name for name in experiments if name in weights]
+        shot(
+            'joint-weights',
+            'analysis',
+            'Weigh the experiments as the project does',
+            [
+                'appBar.tab.analysis',
+                'sideBar.tab.extras',
+                'reveal:group.joint_fit',
+                'expand:group.joint_fit',
+                *[f'fill:jointFit.weight.{row}={weights[name]}' for row, name in enumerate(order)],
+            ],
+            ['group.joint_fit'],
+            'Extra',
+            phase='setup',
+        )
     rule = re.search(r'(?m)^_minimizer\.stop_rules "?(\w+)"?$', declared)
     bound = re.search(r'(?m)^_minimizer\.max_iterations (\d+)$', declared)
     descent = re.search(r'(?m)^_minimizer\.descent (\w+)$', declared)
@@ -826,7 +853,17 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             (BACKGROUND, r'\.background\[\d+\]\.coef$', r'^for \w+ in \w+\.background_terms:$'),
         ):
             members = {path for path in rest if re.search(in_group, path)}
-            if members and re.search(loop, edits, flags=re.MULTILINE):
+            # A loop is its whole category only when it sets every row the category shows; a loop
+            # with a condition (only Pb and S) is rows ticked one by one (by_category).
+            whole = members and all(
+                not group.part
+                for group in groups(
+                    project,
+                    [as_parameter(path, roots) for path in members],
+                    {as_parameter(path, roots) for path in previous},
+                )
+            )
+            if whole and re.search(loop, edits, flags=re.MULTILINE):
                 owners = {
                     match[1]
                     for match in (

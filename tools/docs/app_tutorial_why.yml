@@ -1,0 +1,58 @@
+# Why each step on an Extra tab is taken, one short sentence per action, by case (the owner, 2026-11-11). The
+# generator (app_builtin_tutorials.py) adds the sentence to the step and refuses an Extra-tab step without one.
+# Keys: constraint:<id> (also given to the aliases the constraint uses), descent, stop-rule, chi-tolerance,
+# background-estimate, fitting-mode:<mode>.
+pd-neut-cwl_lbco-hrpt:
+  constraint:biso_Ba: La and Ba share one site and scatter neutrons similarly, so the pattern cannot tell their displacements apart.
+pd-neut-cwl_cosio-d20:
+  constraint:biso_Co2: The two Co sites scatter alike, so the pattern cannot tell their displacements apart.
+  descent: From this start the default descent stops in a shallower minimum.
+pd-neut-cwl_cosio-d20_2k:
+  constraint:biso_Co2: The two Co sites scatter alike, so the pattern cannot tell their displacements apart.
+  constraint:dl: The two FCJ asymmetry terms cannot be told apart in this pattern, so they move as one.
+pd-neut-cwl_lmo-echidna:
+  constraint:1: Li and Ni mix on one site, so they share its displacement.
+  constraint:2: Li and Ni mix on the other site too, so they share its displacement.
+  constraint:3: Ni fills what Li leaves of the first site, keeping it fully occupied.
+  constraint:4: Li fills what Ni leaves of the second site, keeping it fully occupied.
+  constraint:5: Every Li on the first site swaps with a Ni on the second, so the two mixings are equal.
+pd-neut-tof_ferrite-austenite-beer:
+  constraint:1: Both phases are iron, so the data cannot tell their displacements apart.
+  constraint:2: Both banks see the same sample, so ferrite has one phase fraction.
+  constraint:3: Both banks see the same sample, so austenite has one phase fraction.
+  joint-weights: The project weighs the two banks equally at a half each, so the joint χ² is their average.
+pd-xray-cwl_lam7o3-p021:
+  constraint:1: The seven metals share one site, so they share one displacement.
+  constraint:2: The seven metals share one site, so they share one displacement.
+  constraint:3: The seven metals share one site, so they share one displacement.
+  constraint:4: The seven metals share one site, so they share one displacement.
+  constraint:5: The seven metals share one site, so they share one displacement.
+  constraint:6: The seven metals share one site, so they share one displacement.
+  constraint:7: The two oxygen sites cannot be told apart in their displacements, so they share one.
+  descent: With the default descent the fit stops in a shallower minimum, with O1 x stuck near 0.5.
+  background-estimate: With the peaks fitted, an estimate with the calculated peaks subtracted follows the low-angle background better.
+sc-neut-tof_taurine-senju:
+  constraints: Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.
+pd-neut-cwl_yalo3-al2o3-spodi:
+  stop-rule: Under Shift/s.u. this fit ends on a knife edge that depends on the machine; the χ² change stops it the same everywhere.
+pd-neut-tof_cecoal-polaris:
+  chi-tolerance: The tutorial stops each fit as the case's project does, once χ² improves by less than 0.01 %.
+pd-neut-tof_ceo2-pearl:
+  chi-tolerance: The tutorial stops each fit as the case's project does, once χ² improves by less than 0.01 %.
+pd-neut-tof_ncaf-wish:
+  chi-tolerance: The tutorial stops each fit as the case's project does, once χ² improves by less than 0.01 %.
+pd-neut-cwl_y2o3-spodi:
+  background-estimate: An estimate of 21 points under the peaks gives the fit a good starting background.
+pd-neut-tof_si-sepd:
+  background-estimate: An estimate of 14 points under the peaks gives the fit a good starting background.
+pd-neut-cwl_cosio-d20_scan-213f:
+  fitting-mode:single: The template pattern is fitted alone first, so the scan starts from a good model.
+  fitting-mode:sequential: Back to the scan, each pattern fitted in turn from the one before it.
+  descent: With the default descent the scan can stop in a shallower minimum of the peak widths.
+pd-xray-cwl_latp-bm01_scan:
+  fitting-mode:single: The template pattern is fitted alone first, so the scan starts from a good model.
+  fitting-mode:sequential: Back to the scan, each pattern fitted in turn from the one before it.
+sc-neut-cwl_cosio-heidi:
+  fitting-mode:independent: Each experiment is fitted on its own, against the structure it links.
+pd-neut-xray-cwl_pbso4-d1a-lab:
+  joint-weights: The project weighs the two patterns equally at a half each, so the joint χ² is their average.

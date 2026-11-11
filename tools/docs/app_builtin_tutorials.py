@@ -20,11 +20,15 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/docs'))
 sys.path.insert(0, str(ROOT / 'website'))
 
-from app_groups import Tracker, load_case  # noqa: E402
+from app_groups import Tracker, dictionary, load_case  # noqa: E402
+
+DICTIONARY = dictionary()
 from app_tutorial_plan import CLI_PAGES, free_lists, plan  # noqa: E402
 from render_app_tutorials import stage_sentence  # noqa: E402
 from render_cli_tutorials import stages  # noqa: E402
@@ -72,7 +76,16 @@ def fills(actions: list[str]) -> dict[str, str]:
     return dict(a.removeprefix('fill:').split('=', 1) for a in actions if a.startswith('fill:'))
 
 
-def minimizer_steps(actions: list[str]) -> list[dict]:
+DEFAULT_MAX_ITERATIONS = 50
+
+
+def stage_iterations(case: str) -> int:
+    """The most iterations any fit on the case's Command line page took."""
+    text = (CLI_PAGES / f'{case}.md').read_text(encoding='utf-8')
+    return max((int(n) for n in re.findall(r'done · \w+ · (\d+) iters', text)), default=0)
+
+
+def minimizer_steps(case: str, actions: list[str]) -> list[dict]:
     """The stop rule and the iteration limit the case's project declares."""
     out = []
     for action in actions:
@@ -117,8 +130,13 @@ def minimizer_steps(actions: list[str]) -> list[dict]:
                 )
             )
     bound = fills(actions).get('minimizer.maxIterations')
-    if bound:
-        text = f'Set **Max iterations** to **{bound}** in **Minimizer**.'
+    needed = stage_iterations(case)
+    # The limit only when a stage needs more than the app's default (the owner, 2026-11-11).
+    if bound and needed > DEFAULT_MAX_ITERATIONS:
+        text = (
+            f'Set **Max iterations** to **{bound}** in **Minimizer**, because a stage needs '
+            f'{needed} iterations, more than the default {DEFAULT_MAX_ITERATIONS}.'
+        )
         out.append(
             step(
                 'Iteration limit',
@@ -169,7 +187,8 @@ TRANSLATED = {
 }
 # The plan steps whose actions set up a stage: walked action by action (setup_steps).
 WALKED = re.compile(
-    r'nothing-free|relations-start|background-estimate-.+|stage-\d+-free|group-filter|group-free-all'
+    r'nothing-free|relations-start|joint-weights|background-estimate-.+|stage-\d+-free|group-filter'
+    r'|group-free-all'
     r'|structure-(created|cell|sites|adp)|experiment-(created|instrument|background|linked)'
 )
 
@@ -254,7 +273,7 @@ def control_words(control: str) -> str:
     return f'`{control.split(".", 1)[-1]}`'
 
 
-def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]:  # noqa: PLR0912, PLR0915 - one branch per action family
+def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]:  # noqa: PLR0912, PLR0914, PLR0915 - one branch per action family
     """A plan step's actions, each control action its own tutorial step; anything else refused."""
     actions = item['actions']
     out: list[dict] = []
@@ -330,6 +349,18 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
                 f'token:{control}={token}',
             )
             index += 1
+        elif action.startswith(('tick:', 'untick:')):
+            kind, path = action.split(':', 1)
+            dotted = re.sub(r'\[([^\]]*)\]', r'.\1', path)
+            words = parameter_words(path)
+            add(
+                f'Tick **Free** for **{words}**.'
+                if kind == 'tick'
+                else f'Clear **Free** for **{words}**.',
+                f'parameters.free@{dotted}',
+                f'{kind}:{dotted}',
+            )
+            index += 1
         elif action == 'parameters.freeHeader':
             add(
                 'Click the **Free** column header of the **Parameters** table.',
@@ -339,6 +370,10 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
             index += 1
         elif action in {'parameters.freeHeader.free', 'parameters.freeHeader.fixed'}:
             state = action.rsplit('.', 1)[1]
+            # A stage sets a whole category in one action, never a part a typed word picks out
+            # (the owner, 2026-11-11): a part is its rows, ticked one by one.
+            if context.get('word') and item['id'].startswith('stage-'):
+                raise SystemExit(f'{where}: {state} · all on a typed name filter; tick the rows')
             spec = ':'.join([
                 state,
                 context.get('category') or 'All categories',
@@ -348,9 +383,11 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
             add(f'Choose **{state.capitalize()} · all**.', action, 'free-choice:' + spec)
             index += 1
         elif action == 'parameters.clearFilters':
-            if context.get('category') or context.get('datablock') or context.get('word'):
+            # Only a name or datablock filter needs clearing: the next pick replaces a category, so
+            # a step clearing one would only navigate (the owner, 2026-11-11).
+            if context.get('datablock') or context.get('word'):
                 add("Click the filters' **Clear** button.", action, 'filters-clear')
-            context.update(category='', datablock='', word='')
+                context.update(category='', datablock='', word='')
             index += 1
         elif action == 'background.estimate':
             add('Press **Estimate** in the **Background** group.', action, 'background-estimated:')
@@ -394,11 +431,12 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         if re.fullmatch(r'stage-\d+-free', ident):
             title, text = texts.get(int(ident.split('-')[1]), (item['description'], ''))
         elif ident == 'nothing-free':
-            title = 'Start with nothing free'
-            text = (
-                'Open the **Free** column header of the **Parameters** table and fix every '
-                'parameter.'
-            )
+            # The collection's structures and experiments carry nothing marked free (a starting
+            # model), so a project built from them starts with every parameter fixed: no step
+            # needed. An opened example keeps its marks, and its tutorial fixes them first.
+            if not context.get('marked'):
+                return []
+            title, text = 'Start with nothing free', ''
         else:
             title, text = item['description'], ''
         del text
@@ -518,7 +556,7 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
             )
         ]
     if ident == 'minimizer':
-        return minimizer_steps(actions)
+        return minimizer_steps(case, actions)
     if ident == 'data-from-file':
         need(f'{case}: plan step {ident!r}', actions, 'experiments.load')
         return [
@@ -586,7 +624,106 @@ def tutorial_steps(case: str) -> list[dict]:
     steps: list[dict] = []
     for item in plan(case)['steps']:
         steps += plan_step(case, item, texts, pending, context)
+        # An example opens the case's project, which marks what its finished fit frees.
+        if any(s.get('check', '').startswith('example:') for s in steps):
+            context['marked'] = True
+    return with_reasons(case, steps)
+
+
+WHY = yaml.safe_load((ROOT / 'tools/docs/app_tutorial_why.yml').read_text(encoding='utf-8'))
+# Checks of Extra-tab steps that only choose where (a row's parameter, the table's filters).
+WHERE = ('pick:parameters.', 'free', 'tick:', 'untick:', 'filters-clear', 'max-iterations:')
+
+
+def with_reasons(case: str, steps: list[dict]) -> list[dict]:
+    """Each Extra-tab step with the short sentence saying why it is taken; one without is refused.
+
+    The owner's rule (2026-11-11): an alias, a constraint, a minimizer setting, a fitting mode or
+    an exclusion is never taken without its reason (tools/docs/app_tutorial_why.yml).
+    """
+    reasons = WHY.get(case, {})
+    # Each constraint's id and expression, by its row, and the aliases it names.
+    ids = {
+        m[1]: m[2]
+        for s in steps
+        if (m := re.fullmatch(r'field:constraint\.id\.(\d+)=(.+)', s.get('check', '')))
+    }
+    expressions = {
+        ids.get(m[1], m[1]): m[2]
+        for s in steps
+        if (m := re.fullmatch(r'field:constraint\.expression\.(\d+)=(.+)', s.get('check', '')))
+    }
+    aliases = {
+        m[1]: m[2]
+        for s in steps
+        if (m := re.fullmatch(r'field:alias\.id\.(\d+)=(.+)', s.get('check', '')))
+    }
+
+    def constraint_reason(constraint: str) -> str | None:
+        return reasons.get(f'constraint:{constraint}') or reasons.get('constraints')
+
+    def reason(check: str) -> str | None:
+        if m := re.fullmatch(
+            r'(?:rows:constraints\.append=|field:constraint\.(?:id|expression)\.)(\d+).*', check
+        ):
+            row = str(int(m[1]) - 1) if check.startswith('rows:') else m[1]
+            return constraint_reason(ids.get(row, row))
+        if m := re.fullmatch(
+            r'(?:rows:aliases\.append=|field:alias\.id\.|pick:alias\.parameter\.)(\d+).*', check
+        ):
+            row = str(int(m[1]) - 1) if check.startswith('rows:') else m[1]
+            alias = aliases.get(row, '')
+            for constraint, expression in expressions.items():
+                if re.search(rf'\b{re.escape(alias)}\b', expression):
+                    return constraint_reason(constraint)
+            return None
+        for prefix, key in (
+            ('descent:', 'descent'),
+            ('stop-rule:', 'stop-rule'),
+            ('chi-tolerance:', 'chi-tolerance'),
+            ('field:background_estimate.', 'background-estimate'),
+            ('field:jointFit.weight.', 'joint-weights'),
+            ('token:background_estimate.', 'background-estimate'),
+        ):
+            if check.startswith(prefix):
+                return reasons.get(key)
+        if check.startswith('fitting-mode:'):
+            return reasons.get('fitting-mode:' + check.split(':', 1)[1])
+        return None
+
+    for s in steps:
+        check = s.get('check', '')
+        if s.get('tab') != 'extras' or check.startswith(WHERE):
+            continue
+        why = reason(check)
+        if not why:
+            raise SystemExit(
+                f'{case}: the Extra-tab step {check!r} gives no reason (app_tutorial_why.yml)'
+            )
+        s['why'] = why
+        s['text'] = f'{s["text"]} {why}'
     return steps
+
+
+def parameter_words(path: str) -> str:
+    """A parameter as its table row names it: its row label, if any, and its display name."""
+    match = re.fullmatch(r'(?:\w+(?:\[[^\]]*\])?\.)*?(\w+)(?:\[([^\]]*)\])?\.(\w+)', path)
+    if not match:
+        return path
+    owner, row, name = match.groups()
+    wanted = owner.rstrip('s')
+    display = next(
+        (
+            item['display_name']
+            for item in DICTIONARY['parameters']
+            if item['name'] == name and item['category'].rstrip('s') == wanted
+        ),
+        next(
+            (item['display_name'] for item in DICTIONARY['parameters'] if item['name'] == name),
+            name,
+        ),
+    )
+    return f'{row} {display}' if row else display
 
 
 def stage_expectation(case: str, number: int) -> dict:
@@ -601,8 +738,13 @@ def stage_expectation(case: str, number: int) -> dict:
     done = re.findall(r'done · \w+ · \d+ iters · reduced χ² ([\d.]+)', body)
     if not done:
         raise SystemExit(f'{case}: stage {number} ({title}) has no fit result on its page')
+    # A stage freeing a background's points frees them all, as the Python tutorial's loop does; the
+    # page lists only the points the fit uses, inside the measured range.
+    pattern = r'(.*\.background\[)[^\]]+\]\.intensity$'
+    whole = sorted({m[1] for path in paths if (m := re.match(pattern, path))})
     return {
         'expectFree': sorted(paths),
+        'expectWholeBackground': whole,
         'expectChi2': float(done[-1]),
         'expectChi2Tolerance': 0.01,
     }
