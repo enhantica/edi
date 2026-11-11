@@ -476,6 +476,16 @@ Popup {
                     menu.apply(true);
                 return;
             }
+        case "tick":
+        case "untick":
+            {
+                // "experiment.instrument.calib_twotheta_offset": one parameter's Free box ticked or cleared in
+                // its own row, as a person sets a single parameter.
+                const found = panel.parameterNamed(argument);
+                if (found !== null && Session.project)
+                    Session.project.setParametersFree([found], name === "tick");
+                return;
+            }
         case "results-closed":
             panel.closeResults();
             return;
@@ -926,6 +936,12 @@ Popup {
         case "fitted":
             // Fitted, and its results read and closed.
             return panel.fitsDone > panel.fitsAtStep && (!Preferences.showFitResults || AppState.fitResultsShown > panel.resultsAtStep) && panel.resultsClosed();
+        case "tick":
+        case "untick":
+            {
+                const found = panel.parameterNamed(argument);
+                return found !== null && found.free === (name === "tick");
+            }
         case "results-closed":
             return panel.resultsClosed();
         case "selected":
@@ -1257,7 +1273,10 @@ Popup {
                     panel.arrivedForward = true;
                     panel.show();
                 } else {
-                    panel.back();
+                    // Its popup closed before the step was done (the status bar's Next closes a menu): stay on the
+                    // step and show it again, so Next does it, as it reopens the menu first. Never back to an
+                    // earlier step: Next alone must only go forward (the owner, 2026-11-11).
+                    panel.show();
                 }
                 return;
             }
