@@ -33,7 +33,7 @@ on GitHub; its dependencies come from PyPI.
     Then add the package and check it:
 
     ```console
-    pixi add --pypi "easydiffraction==2026.11.10"
+    pixi add --pypi "easydiffraction==2026.11.11"
     pixi run python -c "import easydiffraction as edi; print(edi.Project)"
     pixi run python -m edi --help
     ```
@@ -52,7 +52,7 @@ on GitHub; its dependencies come from PyPI.
     `.\.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install and check:
 
     ```console
-    python -m pip install "easydiffraction==2026.11.10" --extra-index-url https://download.easydiffraction.org/pypi/simple/
+    python -m pip install "easydiffraction==2026.11.11" --extra-index-url https://download.easydiffraction.org/pypi/simple/
     python -c "import easydiffraction as edi; print(edi.Project)"
     python -m edi --help
     ```
