@@ -10,7 +10,7 @@ installation works in scripts, notebooks, and with `python -m edi`.
 ## Install
 
 Use CPython 3.12 or newer on macOS with Apple Silicon or Linux x86-64; Windows follows in a later
-release. The package comes from the [v2026.11.10 release](https://github.com/enhantica/edi/releases/tag/v2026.11.10)
+release. The package comes from the [v2026.11.11 release](https://github.com/enhantica/edi/releases/tag/v2026.11.11)
 on GitHub; its dependencies come from PyPI.
 
 === "Pixi"
