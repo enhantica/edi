@@ -389,9 +389,15 @@ QList<ChangeDay> ApplicationInfo::changes() const {
 }
 
 Citation ApplicationInfo::citation() const {
-    // The top-level `key: "value"` lines and the authors' names of a CITATION.cff; nothing else is read.
+    // The top-level `key: "value"` lines and the authors of a CITATION.cff, each a `- name:` entity or a person's
+    // `given-names` and `family-names`; nothing else is read. The version and year are this build's own (Zenodo adds
+    // them to each release's record from the release).
     QMap<QString, QString> fields;
-    QStringList authors;
+    struct Author {
+        QString name, given, family;
+    };
+    QList<Author> authors;
+    bool in_authors = false;
     for (const QString& raw : read_resource(QStringLiteral(":/CITATION.cff")).split(QLatin1Char('\n'))) {
         const QString line = raw.trimmed();
         const auto value = [&](qsizetype colon) {
@@ -401,28 +407,56 @@ Citation ApplicationInfo::citation() const {
             }
             return text;
         };
-        if (line.startsWith(QLatin1String("- name:"))) {
-            authors.append(value(line.indexOf(QLatin1Char(':'))));
-        } else if (!raw.startsWith(QLatin1Char(' ')) && !line.startsWith(QLatin1Char('#'))) {
+        if (line.isEmpty() || line.startsWith(QLatin1Char('#'))) continue;
+        if (!raw.startsWith(QLatin1Char(' '))) {
             const qsizetype colon = line.indexOf(QLatin1Char(':'));
             if (colon > 0) {
                 fields.insert(line.left(colon), value(colon));
+                in_authors = line.left(colon) == QLatin1String("authors");
             }
+            continue;
+        }
+        if (!in_authors) continue;
+        QString entry = line;
+        if (entry.startsWith(QLatin1String("- "))) {
+            authors.append({});
+            entry = entry.mid(2).trimmed();
+        }
+        const qsizetype colon = entry.indexOf(QLatin1Char(':'));
+        if (authors.isEmpty() || colon <= 0) continue;
+        const QString key = entry.left(colon);
+        QString text = entry.mid(colon + 1).trimmed();
+        if (text.size() >= 2 && text.startsWith(QLatin1Char('"')) && text.endsWith(QLatin1Char('"'))) text = text.mid(1, text.size() - 2);
+        if (key == QLatin1String("name")) authors.last().name = text;
+        else if (key == QLatin1String("given-names")) authors.last().given = text;
+        else if (key == QLatin1String("family-names")) authors.last().family = text;
+    }
+    // APA: a person as "Sazonov, A.", an entity by its name; BibTeX: "Sazonov, Andrew", an entity in double braces.
+    QStringList shown;
+    QStringList bibtex_names;
+    for (const Author& author : authors) {
+        if (!author.family.isEmpty()) {
+            QStringList initials;
+            for (const QString& part : author.given.split(QLatin1Char(' '), Qt::SkipEmptyParts)) initials.append(part.left(1) + QLatin1Char('.'));
+            shown.append(author.family + (initials.isEmpty() ? QString() : QStringLiteral(", ") + initials.join(QLatin1Char(' '))));
+            bibtex_names.append(author.family + (author.given.isEmpty() ? QString() : QStringLiteral(", ") + author.given));
+        } else if (!author.name.isEmpty()) {
+            shown.append(author.name);
+            bibtex_names.append(QLatin1Char('{') + author.name + QLatin1Char('}'));
         }
     }
-    const QString year = fields.value(QStringLiteral("date-released")).left(4);
+    const QString year = QString::fromUtf8(edi_app::app_date()).right(4);
+    const QString version = QString::fromUtf8(edi_app::app_version());
     const QString doi = fields.value(QStringLiteral("doi"));
     const QString doi_url = doi.isEmpty() ? QString() : QStringLiteral("https://doi.org/") + doi;
     const QString title = fields.value(QStringLiteral("title"));
-    const QString version = fields.value(QStringLiteral("version"));
-    const QString who = authors.join(QStringLiteral(", "));
+    const QString who = shown.size() > 1 ? shown.mid(0, shown.size() - 1).join(QStringLiteral(", ")) + QStringLiteral(", & ") + shown.last()
+                                         : shown.join(QString());
     const QString text = QStringLiteral("%1 (%2). %3 (version %4) [Computer software]. %5")
                              .arg(who, year, title, version, doi_url);
-    // BibTeX separates people with "and"; one entity name stays in double braces so it is not split.
-    const QString bibtex_who = authors.size() == 1 ? QLatin1Char('{') + who + QLatin1Char('}') : authors.join(QStringLiteral(" and "));
     const QString bibtex = QStringLiteral("@software{easydiffraction,\n  author = {%1},\n  title = {%2},\n"
                                           "  year = {%3},\n  version = {%4},\n  doi = {%5},\n  url = {%6}\n}")
-                               .arg(bibtex_who, title, year, version, doi, doi_url);
+                               .arg(bibtex_names.join(QStringLiteral(" and ")), title, year, version, doi, doi_url);
     return {text, bibtex, doi, doi_url};
 }
 
