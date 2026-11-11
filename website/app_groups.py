@@ -157,6 +157,11 @@ def _fittable_rows(project: object) -> tuple[set, set]:
     return cached[1], cached[2]
 
 
+def forget(project: object) -> None:
+    """Read the fittable parameters again after the project changed."""
+    _FITTABLE.pop(id(project), None)
+
+
 def _fittable(project: object, parameter: Parameter) -> bool:
     exact, loose = _fittable_rows(project)
     category = OWNERS.get(parameter.owner, parameter.owner)
@@ -257,6 +262,41 @@ def groups(
             out.append(Group(title, block, ''))
         else:
             out.append(Group(title, block, part=ROWS, rows=tuple(sorted(chosen, key=str))))
+    return _across_blocks(project, out, by_category, free, fixing=fixing)
+
+
+def _across_blocks(
+    project: object,
+    found: list[Group],
+    by_category: dict[tuple[str, str], list[Parameter]],
+    free: set[Parameter],
+    *,
+    fixing: bool,
+) -> list[Group]:
+    """One Free · all over the datablocks where a stage sets a category's every row in all.
+
+    The table without a datablock filter lists a category's rows from every block: six banks'
+    scales are one category of six rows, not six of one.
+    """
+    names = [item.name for item in [*project.structures, *project.experiments]]
+    out = list(found)
+    for title in {title for _block, title in by_category}:
+        blocks = [block for block, t in by_category if t == title]
+        if len(blocks) < 2:
+            continue
+        chosen = {p for block in blocks for p in by_category[block, title]}
+        owners = {p.owner for p in chosen}
+        everything = {
+            p
+            for block in names
+            for owner in owners
+            for p in members(project, block, owner)
+            if offered(project, p) == title
+        }
+        left = (everything & free if fixing else everything - free) - chosen
+        if chosen <= everything and not left and len(chosen) >= 2:
+            out = [g for g in out if not (g.title == title and g.block in blocks)]
+            out.append(Group(title, ''))
     return out
 
 

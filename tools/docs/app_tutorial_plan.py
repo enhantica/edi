@@ -22,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'website'))
 
-from app_groups import Parameter, groups, load_case  # noqa: E402
+from app_groups import Parameter, forget, groups, load_case  # noqa: E402
 from render_cli_tutorials import stages  # noqa: E402
 
 # The case that also shows loading measured data from a file on disk (owner record 2026-11-08).
@@ -192,7 +192,7 @@ def by_category(
     now = {as_parameter(path, roots) for path in free_now}
     actions = []
     for group in groups(project, chosen, now, fixing=state == 'fixed'):
-        if not group.part and len([p for p in chosen if p.block == group.block]) < 2:
+        if not group.part and len([p for p in chosen if group.block in {'', p.block}]) < 2:
             # Free · all (Fixed · all) on one row: a row is ticked on its own.
             raise SystemExit(f'{group.title}: a whole-category action on one row; tick it')
         if group.part:
@@ -854,6 +854,19 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
         for var in re.findall(r'^(\w+)\.background\.auto_estimate\(', edits, flags=re.MULTILINE):
             points = re.escape(exp_root[named[var]]) + r'background\['
             previous = {path for path in previous if not re.match(points, path)}
+        # A stage that changes the sites' displacement type changes what the table offers: the
+        # categories are judged on the project as the stage leaves it.
+        for _var, kind in re.findall(
+            r"^for (\w+) in (?:\w+)\.atom_sites:\n\s+\1\.adp_type = '(\w+)'$",
+            edits,
+            flags=re.MULTILINE,
+        ):
+            for structure in project.structures:
+                for site in structure.atom_sites:
+                    site.adp_type = kind
+            forget(project)
+            # The switch leaves no displacement free, here as on the command line.
+            previous = {path for path in previous if not re.search(r'\.adp_(iso|\d\d)$', path)}
         filters, rest = grouped(paths - previous, loops)
         fix_filters, fix_rest = grouped(previous - paths, list(exp_root.values()))
         # One experiment: its background is the whole Background category. A loop over every

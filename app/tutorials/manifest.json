@@ -5355,14 +5355,6 @@
         },
         {
           "title": "Cells, scales and 2θ zero",
-          "text": "Choose **Al2O3** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=Al2O3",
-          "tab": "basic"
-        },
-        {
-          "title": "Cells, scales and 2θ zero",
           "text": "Choose **Cell** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -5382,55 +5374,7 @@
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Cell:Al2O3",
-          "tab": "basic"
-        },
-        {
-          "title": "Cells, scales and 2θ zero",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Cells, scales and 2θ zero",
-          "text": "Choose **YAlO3** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=YAlO3",
-          "tab": "basic"
-        },
-        {
-          "title": "Cells, scales and 2θ zero",
-          "text": "Choose **Cell** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Cell",
-          "tab": "basic"
-        },
-        {
-          "title": "Cells, scales and 2θ zero",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Cells, scales and 2θ zero",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Cell:YAlO3",
-          "tab": "basic"
-        },
-        {
-          "title": "Cells, scales and 2θ zero",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "check": "free-choice:free:Cell",
           "tab": "basic"
         },
         {
@@ -5772,14 +5716,6 @@
         },
         {
           "title": "Atom positions",
-          "text": "Choose **Al2O3** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=Al2O3",
-          "tab": "basic"
-        },
-        {
-          "title": "Atom positions",
           "text": "Choose **Atomic coordinates** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -5799,55 +5735,7 @@
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Atomic coordinates:Al2O3",
-          "tab": "basic"
-        },
-        {
-          "title": "Atom positions",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Atom positions",
-          "text": "Choose **YAlO3** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=YAlO3",
-          "tab": "basic"
-        },
-        {
-          "title": "Atom positions",
-          "text": "Choose **Atomic coordinates** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Atomic coordinates",
-          "tab": "basic"
-        },
-        {
-          "title": "Atom positions",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Atom positions",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Atomic coordinates:YAlO3",
-          "tab": "basic"
-        },
-        {
-          "title": "Atom positions",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "check": "free-choice:free:Atomic coordinates",
           "tab": "basic"
         },
         {
@@ -7972,14 +7860,6 @@
         },
         {
           "title": "Scales and cells",
-          "text": "Choose **lbco** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=lbco",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and cells",
           "text": "Choose **Cell** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -7988,50 +7868,18 @@
         },
         {
           "title": "Scales and cells",
-          "text": "Tick **Free** for **a**.",
+          "text": "Click the **Free** column header of the **Parameters** table.",
           "page": "analysis",
-          "target": "parameters.free@structures.lbco.cell.length_a",
-          "check": "tick:structures.lbco.cell.length_a",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
           "tab": "basic"
         },
         {
           "title": "Scales and cells",
-          "text": "Click the filters' **Clear** button.",
+          "text": "Choose **Free · all**.",
           "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and cells",
-          "text": "Choose **si** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=si",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and cells",
-          "text": "Choose **Cell** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Cell",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and cells",
-          "text": "Tick **Free** for **a**.",
-          "page": "analysis",
-          "target": "parameters.free@structures.si.cell.length_a",
-          "check": "tick:structures.si.cell.length_a",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and cells",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Cell",
           "tab": "basic"
         },
         {
@@ -8670,38 +8518,6 @@
         },
         {
           "title": "Scales and time-of-flight calibration",
-          "text": "Choose **wish_1_10** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=wish_1_10",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Tick **Free** for **ncaf scale**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.wish_1_10.linked_structures.ncaf.scale",
-          "check": "tick:experiments.wish_1_10.linked_structures.ncaf.scale",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
           "text": "Choose **wish_2_9** as the datablock filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.datablock",
@@ -8730,38 +8546,6 @@
           "page": "analysis",
           "target": "parameters.free@experiments.wish_2_9.instrument.calib_d_to_tof_offset",
           "check": "tick:experiments.wish_2_9.instrument.calib_d_to_tof_offset",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Choose **wish_2_9** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=wish_2_9",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Tick **Free** for **ncaf scale**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.wish_2_9.linked_structures.ncaf.scale",
-          "check": "tick:experiments.wish_2_9.linked_structures.ncaf.scale",
           "tab": "basic"
         },
         {
@@ -8814,38 +8598,6 @@
         },
         {
           "title": "Scales and time-of-flight calibration",
-          "text": "Choose **wish_3_8** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=wish_3_8",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Tick **Free** for **ncaf scale**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.wish_3_8.linked_structures.ncaf.scale",
-          "check": "tick:experiments.wish_3_8.linked_structures.ncaf.scale",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
           "text": "Choose **wish_4_7** as the datablock filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.datablock",
@@ -8874,38 +8626,6 @@
           "page": "analysis",
           "target": "parameters.free@experiments.wish_4_7.instrument.calib_d_to_tof_offset",
           "check": "tick:experiments.wish_4_7.instrument.calib_d_to_tof_offset",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Choose **wish_4_7** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=wish_4_7",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
-          "text": "Tick **Free** for **ncaf scale**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.wish_4_7.linked_structures.ncaf.scale",
-          "check": "tick:experiments.wish_4_7.linked_structures.ncaf.scale",
           "tab": "basic"
         },
         {
@@ -8958,14 +8678,6 @@
         },
         {
           "title": "Scales and time-of-flight calibration",
-          "text": "Choose **wish_5_6** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=wish_5_6",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and time-of-flight calibration",
           "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -8974,18 +8686,18 @@
         },
         {
           "title": "Scales and time-of-flight calibration",
-          "text": "Tick **Free** for **ncaf scale**.",
+          "text": "Click the **Free** column header of the **Parameters** table.",
           "page": "analysis",
-          "target": "parameters.free@experiments.wish_5_6.linked_structures.ncaf.scale",
-          "check": "tick:experiments.wish_5_6.linked_structures.ncaf.scale",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
           "tab": "basic"
         },
         {
           "title": "Scales and time-of-flight calibration",
-          "text": "Click the filters' **Clear** button.",
+          "text": "Choose **Free · all**.",
           "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Linked structures",
           "tab": "basic"
         },
         {
@@ -14103,38 +13815,6 @@
         },
         {
           "title": "Scales, 2θ zeros and cell",
-          "text": "Choose **d1a** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=d1a",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zeros and cell",
-          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zeros and cell",
-          "text": "Tick **Free** for **pbso4 scale**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.d1a.linked_structures.pbso4.scale",
-          "check": "tick:experiments.d1a.linked_structures.pbso4.scale",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zeros and cell",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zeros and cell",
           "text": "Choose **lab** as the datablock filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.datablock",
@@ -14155,38 +13835,6 @@
           "page": "analysis",
           "target": "parameters.free@experiments.lab.instrument.calib_twotheta_offset",
           "check": "tick:experiments.lab.instrument.calib_twotheta_offset",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zeros and cell",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zeros and cell",
-          "text": "Choose **lab** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=lab",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zeros and cell",
-          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zeros and cell",
-          "text": "Tick **Free** for **pbso4 scale**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.lab.linked_structures.pbso4.scale",
-          "check": "tick:experiments.lab.linked_structures.pbso4.scale",
           "tab": "basic"
         },
         {
@@ -14235,6 +13883,30 @@
           "page": "analysis",
           "target": "parameters.clearFilters",
           "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, 2θ zeros and cell",
+          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Linked structures",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, 2θ zeros and cell",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, 2θ zeros and cell",
+          "text": "Choose **Free · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Linked structures",
           "tab": "basic"
         },
         {
@@ -14395,46 +14067,6 @@
         },
         {
           "title": "Peak widths",
-          "text": "Choose **Peak broadening** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Peak broadening",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Peak broadening:d1a",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Choose **d1a** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=d1a",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
           "text": "Choose **Peak mixing** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -14447,46 +14079,6 @@
           "page": "analysis",
           "target": "parameters.free@experiments.d1a.peak.mixing_eta_0",
           "check": "tick:experiments.d1a.peak.mixing_eta_0",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Choose **lab** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=lab",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Choose **Peak broadening** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Peak broadening",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Peak broadening:lab",
           "tab": "basic"
         },
         {
@@ -14527,6 +14119,30 @@
           "page": "analysis",
           "target": "parameters.clearFilters",
           "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Peak widths",
+          "text": "Choose **Peak broadening** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Peak broadening",
+          "tab": "basic"
+        },
+        {
+          "title": "Peak widths",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Peak widths",
+          "text": "Choose **Free · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Peak broadening",
           "tab": "basic"
         },
         {
@@ -15706,14 +15322,6 @@
         },
         {
           "title": "Scales, 2θ zero and cells",
-          "text": "Choose **alpo4_c2221** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=alpo4_c2221",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
           "text": "Choose **Cell** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -15733,95 +15341,7 @@
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Cell:alpo4_c2221",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Choose **alpo4_p63mc** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=alpo4_p63mc",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Choose **Cell** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Cell",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Cell:alpo4_p63mc",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Choose **latp** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=latp",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Choose **Cell** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Cell",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Cell:latp",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "check": "free-choice:free:Cell",
           "tab": "basic"
         },
         {
@@ -20391,14 +19911,6 @@
         },
         {
           "title": "Scales, every site isotropic",
-          "text": "Choose **senju_1** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=senju_1",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
           "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -20407,178 +19919,18 @@
         },
         {
           "title": "Scales, every site isotropic",
-          "text": "Tick **Free** for **taurine scale**.",
+          "text": "Click the **Free** column header of the **Parameters** table.",
           "page": "analysis",
-          "target": "parameters.free@experiments.senju_1.linked_structures.taurine.scale",
-          "check": "tick:experiments.senju_1.linked_structures.taurine.scale",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
           "tab": "basic"
         },
         {
           "title": "Scales, every site isotropic",
-          "text": "Click the filters' **Clear** button.",
+          "text": "Choose **Free · all**.",
           "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **senju_2** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=senju_2",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Tick **Free** for **taurine scale**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.senju_2.linked_structures.taurine.scale",
-          "check": "tick:experiments.senju_2.linked_structures.taurine.scale",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **senju_3** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=senju_3",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Tick **Free** for **taurine scale**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.senju_3.linked_structures.taurine.scale",
-          "check": "tick:experiments.senju_3.linked_structures.taurine.scale",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **senju_4** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=senju_4",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Tick **Free** for **taurine scale**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.senju_4.linked_structures.taurine.scale",
-          "check": "tick:experiments.senju_4.linked_structures.taurine.scale",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **senju_5** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=senju_5",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Tick **Free** for **taurine scale**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.senju_5.linked_structures.taurine.scale",
-          "check": "tick:experiments.senju_5.linked_structures.taurine.scale",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **senju_6** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=senju_6",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Tick **Free** for **taurine scale**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.senju_6.linked_structures.taurine.scale",
-          "check": "tick:experiments.senju_6.linked_structures.taurine.scale",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Linked structures",
           "tab": "basic"
         },
         {
@@ -20608,14 +19960,6 @@
         },
         {
           "title": "Isotropic displacements",
-          "text": "Choose **taurine** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=taurine",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
           "text": "Choose **Atomic displacement** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -20624,122 +19968,18 @@
         },
         {
           "title": "Isotropic displacements",
-          "text": "Tick **Free** for **C1 iso/eq**.",
+          "text": "Click the **Free** column header of the **Parameters** table.",
           "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.C1.adp_iso",
-          "check": "tick:structure.atom_sites.C1.adp_iso",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
           "tab": "basic"
         },
         {
           "title": "Isotropic displacements",
-          "text": "Tick **Free** for **C2 iso/eq**.",
+          "text": "Choose **Free · all**.",
           "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.C2.adp_iso",
-          "check": "tick:structure.atom_sites.C2.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Tick **Free** for **H1 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H1.adp_iso",
-          "check": "tick:structure.atom_sites.H1.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Tick **Free** for **H11 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H11.adp_iso",
-          "check": "tick:structure.atom_sites.H11.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Tick **Free** for **H12 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H12.adp_iso",
-          "check": "tick:structure.atom_sites.H12.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Tick **Free** for **H2 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H2.adp_iso",
-          "check": "tick:structure.atom_sites.H2.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Tick **Free** for **H21 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H21.adp_iso",
-          "check": "tick:structure.atom_sites.H21.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Tick **Free** for **H22 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H22.adp_iso",
-          "check": "tick:structure.atom_sites.H22.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Tick **Free** for **H3 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H3.adp_iso",
-          "check": "tick:structure.atom_sites.H3.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Tick **Free** for **N1 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.N1.adp_iso",
-          "check": "tick:structure.atom_sites.N1.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Tick **Free** for **O1 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.O1.adp_iso",
-          "check": "tick:structure.atom_sites.O1.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Tick **Free** for **O2 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.O2.adp_iso",
-          "check": "tick:structure.atom_sites.O2.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Tick **Free** for **O3 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.O3.adp_iso",
-          "check": "tick:structure.atom_sites.O3.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Tick **Free** for **S1 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.S1.adp_iso",
-          "check": "tick:structure.atom_sites.S1.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Atomic displacement",
           "tab": "basic"
         },
         {
@@ -21129,142 +20369,6 @@
           "page": "analysis",
           "target": "parameters.freeHeader.free",
           "check": "free-choice:free:Atomic displacement",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **taurine** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=taurine",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **Atomic displacement** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Atomic displacement",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **C1 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.C1.adp_iso",
-          "check": "untick:structure.atom_sites.C1.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **C2 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.C2.adp_iso",
-          "check": "untick:structure.atom_sites.C2.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **H1 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H1.adp_iso",
-          "check": "untick:structure.atom_sites.H1.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **H11 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H11.adp_iso",
-          "check": "untick:structure.atom_sites.H11.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **H12 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H12.adp_iso",
-          "check": "untick:structure.atom_sites.H12.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **H2 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H2.adp_iso",
-          "check": "untick:structure.atom_sites.H2.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **H21 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H21.adp_iso",
-          "check": "untick:structure.atom_sites.H21.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **H22 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H22.adp_iso",
-          "check": "untick:structure.atom_sites.H22.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **H3 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.H3.adp_iso",
-          "check": "untick:structure.atom_sites.H3.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **N1 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.N1.adp_iso",
-          "check": "untick:structure.atom_sites.N1.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **O1 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.O1.adp_iso",
-          "check": "untick:structure.atom_sites.O1.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **O2 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.O2.adp_iso",
-          "check": "untick:structure.atom_sites.O2.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **O3 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.O3.adp_iso",
-          "check": "untick:structure.atom_sites.O3.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Clear **Free** for **S1 iso/eq**.",
-          "page": "analysis",
-          "target": "parameters.free@structure.atom_sites.S1.adp_iso",
-          "check": "untick:structure.atom_sites.S1.adp_iso",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
           "tab": "basic"
         },
         {
