@@ -479,8 +479,16 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
             // Never put raw runtime stderr (which may contain user data) in a
             // provider failure card or credential log.
         });
-        connect(process, &QProcess::errorOccurred, this, [this, original = prepared, scope](QProcess::ProcessError) {
-            if (original && process_ == original.data() && generation_ == scope) fail("The official agent process could not continue.");
+        connect(process, &QProcess::errorOccurred, this, [this, original = prepared, scope](QProcess::ProcessError error) {
+            if (!original || process_ != original.data() || generation_ != scope || failed_) return;
+            // A write fails when the guard has already exited; its exit code, read at finished, says why. The
+            // operation deadline still ends a write that fails while the guard runs.
+            if (error == QProcess::WriteError) return;
+            // Name what went wrong: the guard could not start, crashed, or stopped reading before the runtime's answer.
+            static const char* const kinds[] = {"start error", "crashed", "timed out", "read error", "write error", "unknown error"};
+            const auto kind = kinds[std::clamp(static_cast<int>(error), 0, 5)];
+            try { exit_detail_ = QString::fromLatin1(kind) + QStringLiteral(": ") + original->errorString(); } catch (...) {}
+            fail("The official agent process could not continue (%1).");
         });
         connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
                 [this, original = prepared, scope](int code, QProcess::ExitStatus status) {
@@ -678,7 +686,8 @@ void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
         else if (exit_code_ > 128 && exit_code_ < 160) {
             exit_detail_ = QString::number(exit_code_ - 128);
             fail("The official agent was stopped by the system (signal %1).");
-        } else if (exit_code_ > 0 && exit_code_ != 125) {
+        } else if (exit_code_ == 125) fail("The assistant lifetime guard refused to start the official agent.");
+        else if (exit_code_ > 0) {
             exit_detail_ = QString::number(exit_code_);
             fail("The official agent process ended with exit code %1. Unfinished work was interrupted.");
         } else fail("The official agent process ended. Unfinished work was interrupted.");
