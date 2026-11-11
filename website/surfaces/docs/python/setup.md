@@ -10,7 +10,7 @@ installation works in scripts, notebooks, and with `python -m edi`.
 ## Install
 
 Use CPython 3.12 or newer on macOS with Apple Silicon or Linux x86-64; Windows follows in a later
-release. The package comes from the [v2026.11.1 release](https://github.com/enhantica/edi/releases/tag/v2026.11.1)
+release. The package comes from the [v2026.11.8 release](https://github.com/enhantica/edi/releases/tag/v2026.11.8)
 on GitHub; its dependencies come from PyPI.
 
 === "Pixi"
@@ -33,7 +33,7 @@ on GitHub; its dependencies come from PyPI.
     Then add the package and check it:
 
     ```console
-    pixi add --pypi "easydiffraction==2026.11.1"
+    pixi add --pypi "easydiffraction==2026.11.8"
     pixi run python -c "import easydiffraction as edi; print(edi.Project)"
     pixi run python -m edi --help
     ```
@@ -52,7 +52,7 @@ on GitHub; its dependencies come from PyPI.
     `.\.venv\Scripts\Activate.ps1` in Windows PowerShell. Then install and check:
 
     ```console
-    python -m pip install "easydiffraction==2026.11.1" --extra-index-url https://download.easydiffraction.org/pypi/simple/
+    python -m pip install "easydiffraction==2026.11.8" --extra-index-url https://download.easydiffraction.org/pypi/simple/
     python -c "import easydiffraction as edi; print(edi.Project)"
     python -m edi --help
     ```

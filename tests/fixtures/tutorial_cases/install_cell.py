@@ -8,7 +8,7 @@ INSTALL_CELL = (
     'import importlib.util\n'
     '\n'
     "if importlib.util.find_spec('easydiffraction') is None:\n"
-    '    %pip install easydiffraction==2026.11.1 --extra-index-url '
+    '    %pip install easydiffraction==2026.11.8 --extra-index-url '
     'https://download.easydiffraction.org/pypi/simple/\n'
 )
 
