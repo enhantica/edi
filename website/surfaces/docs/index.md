@@ -39,8 +39,8 @@ hide:
 </div>
 
 <figure class="ed-landing__preview">
-  <img src="assets/gui/y2o3/13-analysis-basic.png#only-light" alt="EasyDiffraction Analysis showing measured and calculated patterns, residuals and fitted structural parameters" width="1480" height="800" fetchpriority="high" decoding="async">
-  <img src="assets/gui/y2o3/dark/13-analysis-basic.png#only-dark" alt="EasyDiffraction Analysis showing measured and calculated patterns, residuals and fitted structural parameters" width="1480" height="800" decoding="async">
+  <img src="assets/gui/y2o3/13-analysis-basic.webp#only-light" alt="EasyDiffraction Analysis showing measured and calculated patterns, residuals and fitted structural parameters" width="1480" height="800" fetchpriority="high" decoding="async">
+  <img src="assets/gui/y2o3/dark/13-analysis-basic.webp#only-dark" alt="EasyDiffraction Analysis showing measured and calculated patterns, residuals and fitted structural parameters" width="1480" height="800" decoding="async">
 </figure>
 
 </section>

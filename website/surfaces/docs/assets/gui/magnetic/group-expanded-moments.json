@@ -1,13 +1,13 @@
 {
     "description": "Read every moment in the cell",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "group.expanded_atom_site_moment"
     ],
     "id": "group-expanded-moments",
-    "image": "group-expanded-moments.png",
-    "image_sha256": "b4b02e27c4c076ea36c9d050775f60d45d50354f2818970e9c32a87028f2659b",
+    "image": "group-expanded-moments.webp",
+    "image_sha256": "f4529df3f88e1dd32eb9c1a640ca6da5c5d18c2d1b6b26317938010ce6f7130c",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                420,
+                462,
                 682,
                 253.5
             ],
@@ -68,7 +68,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                420,
+                462,
                 682,
                 253.5
             ]
@@ -89,43 +89,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -134,7 +100,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -186,6 +152,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -328,7 +311,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -337,7 +320,7 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -352,7 +335,7 @@
         "generated.expanded_atom_site_moment.atom_site_id.0": {
             "bounds": [
                 825,
-                459,
+                501,
                 47,
                 39
             ],
@@ -360,7 +343,7 @@
             "label": "Co1",
             "visible_bounds": [
                 825,
-                459,
+                501,
                 47,
                 39
             ]
@@ -368,7 +351,7 @@
         "generated.expanded_atom_site_moment.atom_site_id.1": {
             "bounds": [
                 825,
-                498,
+                540,
                 47,
                 39
             ],
@@ -376,7 +359,7 @@
             "label": "Co1",
             "visible_bounds": [
                 825,
-                498,
+                540,
                 47,
                 39
             ]
@@ -384,7 +367,7 @@
         "generated.expanded_atom_site_moment.atom_site_id.2": {
             "bounds": [
                 825,
-                537,
+                579,
                 47,
                 39
             ],
@@ -392,7 +375,7 @@
             "label": "Co1",
             "visible_bounds": [
                 825,
-                537,
+                579,
                 47,
                 39
             ]
@@ -400,7 +383,7 @@
         "generated.expanded_atom_site_moment.atom_site_id.3": {
             "bounds": [
                 825,
-                576,
+                618,
                 47,
                 39
             ],
@@ -408,7 +391,7 @@
             "label": "Co1",
             "visible_bounds": [
                 825,
-                576,
+                618,
                 47,
                 39
             ]
@@ -416,7 +399,7 @@
         "generated.expanded_atom_site_moment.atom_site_id.4": {
             "bounds": [
                 825,
-                615,
+                657,
                 47,
                 39
             ],
@@ -424,7 +407,7 @@
             "label": "Co1",
             "visible_bounds": [
                 825,
-                615,
+                657,
                 47,
                 39
             ]
@@ -432,7 +415,7 @@
         "generated.expanded_atom_site_moment.atom_site_id.5": {
             "bounds": [
                 825,
-                654,
+                696,
                 47,
                 39
             ],
@@ -440,303 +423,303 @@
             "label": "Co1",
             "visible_bounds": [
                 825,
-                654,
+                696,
                 47,
                 19.5
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_x.0": {
             "bounds": [
-                955,
-                459,
-                67,
+                942,
+                501,
+                72,
                 39
             ],
             "enabled": true,
-            "label": "0.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                955,
-                459,
-                67,
+                942,
+                501,
+                72,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_x.1": {
             "bounds": [
-                955,
-                498,
-                67,
+                942,
+                540,
+                72,
                 39
             ],
             "enabled": true,
-            "label": "0.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                955,
-                498,
-                67,
+                942,
+                540,
+                72,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_x.2": {
             "bounds": [
-                955,
-                537,
-                67,
+                942,
+                579,
+                72,
                 39
             ],
             "enabled": true,
-            "label": "0.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                955,
-                537,
-                67,
+                942,
+                579,
+                72,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_x.3": {
             "bounds": [
-                955,
-                576,
-                67,
+                942,
+                618,
+                72,
                 39
             ],
             "enabled": true,
-            "label": "0.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                955,
-                576,
-                67,
+                942,
+                618,
+                72,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_x.4": {
             "bounds": [
-                955,
-                615,
-                67,
+                942,
+                657,
+                72,
                 39
             ],
             "enabled": true,
-            "label": "0.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                955,
-                615,
-                67,
+                942,
+                657,
+                72,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_x.5": {
             "bounds": [
-                955,
-                654,
-                67,
+                942,
+                696,
+                72,
                 39
             ],
             "enabled": true,
-            "label": "0.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                955,
-                654,
-                67,
+                942,
+                696,
+                72,
                 19.5
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_y.0": {
             "bounds": [
-                1026,
-                459,
+                1018,
+                501,
                 72,
                 39
             ],
             "enabled": true,
-            "label": "1.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                1026,
-                459,
+                1018,
+                501,
                 72,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_y.1": {
             "bounds": [
-                1026,
-                498,
+                1018,
+                540,
                 72,
                 39
             ],
             "enabled": true,
-            "label": "1.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                1026,
-                498,
+                1018,
+                540,
                 72,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_y.2": {
             "bounds": [
-                1026,
-                537,
+                1018,
+                579,
                 72,
                 39
             ],
             "enabled": true,
-            "label": "1.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                1026,
-                537,
+                1018,
+                579,
                 72,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_y.3": {
             "bounds": [
-                1026,
-                576,
+                1018,
+                618,
                 72,
                 39
             ],
             "enabled": true,
-            "label": "1.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                1026,
-                576,
+                1018,
+                618,
                 72,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_y.4": {
             "bounds": [
-                1026,
-                615,
+                1018,
+                657,
                 72,
                 39
             ],
             "enabled": true,
-            "label": "1.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                1026,
-                615,
+                1018,
+                657,
                 72,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_y.5": {
             "bounds": [
-                1026,
-                654,
+                1018,
+                696,
                 72,
                 39
             ],
             "enabled": true,
-            "label": "1.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                1026,
-                654,
+                1018,
+                696,
                 72,
                 19.5
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_z.0": {
             "bounds": [
-                1102,
-                459,
-                356,
+                1094,
+                501,
+                364,
                 39
             ],
             "enabled": true,
-            "label": "0.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                1102,
-                459,
-                356,
+                1094,
+                501,
+                364,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_z.1": {
             "bounds": [
-                1102,
-                498,
-                356,
+                1094,
+                540,
+                364,
                 39
             ],
             "enabled": true,
-            "label": "0.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                1102,
-                498,
-                356,
+                1094,
+                540,
+                364,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_z.2": {
             "bounds": [
-                1102,
-                537,
-                356,
+                1094,
+                579,
+                364,
                 39
             ],
             "enabled": true,
-            "label": "0.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                1102,
-                537,
-                356,
+                1094,
+                579,
+                364,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_z.3": {
             "bounds": [
-                1102,
-                576,
-                356,
+                1094,
+                618,
+                364,
                 39
             ],
             "enabled": true,
-            "label": "0.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                1102,
-                576,
-                356,
+                1094,
+                618,
+                364,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_z.4": {
             "bounds": [
-                1102,
-                615,
-                356,
+                1094,
+                657,
+                364,
                 39
             ],
             "enabled": true,
-            "label": "0.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                1102,
-                615,
-                356,
+                1094,
+                657,
+                364,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.crystalaxis_z.5": {
             "bounds": [
-                1102,
-                654,
-                356,
+                1094,
+                696,
+                364,
                 39
             ],
             "enabled": true,
-            "label": "0.0000",
+            "label": "2.0000",
             "visible_bounds": [
-                1102,
-                654,
-                356,
+                1094,
+                696,
+                364,
                 19.5
             ]
         },
         "generated.expanded_atom_site_moment.list": {
             "bounds": [
                 784,
-                420,
+                462,
                 682,
                 253.5
             ],
@@ -744,7 +727,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                420,
+                462,
                 682,
                 253.5
             ]
@@ -752,103 +735,103 @@
         "generated.expanded_atom_site_moment.site_symmetry.0": {
             "bounds": [
                 876,
-                459,
-                75,
+                501,
+                62,
                 39
             ],
             "enabled": true,
             "label": "1_555",
             "visible_bounds": [
                 876,
-                459,
-                75,
+                501,
+                62,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.site_symmetry.1": {
             "bounds": [
                 876,
-                498,
-                75,
+                540,
+                62,
                 39
             ],
             "enabled": true,
             "label": "1_556",
             "visible_bounds": [
                 876,
-                498,
-                75,
+                540,
+                62,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.site_symmetry.2": {
             "bounds": [
                 876,
-                537,
-                75,
+                579,
+                62,
                 39
             ],
             "enabled": true,
             "label": "1_565",
             "visible_bounds": [
                 876,
-                537,
-                75,
+                579,
+                62,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.site_symmetry.3": {
             "bounds": [
                 876,
-                576,
-                75,
+                618,
+                62,
                 39
             ],
             "enabled": true,
             "label": "1_566",
             "visible_bounds": [
                 876,
-                576,
-                75,
+                618,
+                62,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.site_symmetry.4": {
             "bounds": [
                 876,
-                615,
-                75,
+                657,
+                62,
                 39
             ],
             "enabled": true,
             "label": "1_655",
             "visible_bounds": [
                 876,
-                615,
-                75,
+                657,
+                62,
                 39
             ]
         },
         "generated.expanded_atom_site_moment.site_symmetry.5": {
             "bounds": [
                 876,
-                654,
-                75,
+                696,
+                62,
                 39
             ],
             "enabled": true,
             "label": "1_656",
             "visible_bounds": [
                 876,
-                654,
-                75,
+                696,
+                62,
                 19.5
             ]
         },
         "group.appearance": {
             "bounds": [
                 770,
-                687.5,
+                729.5,
                 710,
                 42
             ],
@@ -857,15 +840,31 @@
             "label": "Appearance",
             "visible_bounds": [
                 770,
-                687.5,
+                729.5,
                 710,
-                42
+                14.5
+            ]
+        },
+        "group.appearance.pin": {
+            "bounds": [
+                1433.2261363926236,
+                728.2261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                729.5,
+                44.54772721475251,
+                14.5
             ]
         },
         "group.expanded_atom_site": {
             "bounds": [
                 770,
-                245,
+                287,
                 710,
                 42
             ],
@@ -874,15 +873,31 @@
             "label": "Atoms in the cell (39)",
             "visible_bounds": [
                 770,
-                245,
+                287,
                 710,
+                42
+            ]
+        },
+        "group.expanded_atom_site.pin": {
+            "bounds": [
+                1433.2261363926236,
+                285.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                287,
+                44.54772721475251,
                 42
             ]
         },
         "group.expanded_atom_site_moment": {
             "bounds": [
                 770,
-                371,
+                413,
                 710,
                 316.5
             ],
@@ -891,15 +906,31 @@
             "label": "Moments in the cell (19)",
             "visible_bounds": [
                 770,
-                371,
+                413,
                 710,
                 316.5
+            ]
+        },
+        "group.expanded_atom_site_moment.pin": {
+            "bounds": [
+                1433.2261363926236,
+                411.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                413,
+                44.54772721475251,
+                43.273863607376256
             ]
         },
         "group.geom_bond": {
             "bounds": [
                 770,
-                287,
+                329,
                 710,
                 42
             ],
@@ -908,15 +939,31 @@
             "label": "Bonds (34)",
             "visible_bounds": [
                 770,
-                287,
+                329,
                 710,
+                42
+            ]
+        },
+        "group.geom_bond.pin": {
+            "bounds": [
+                1433.2261363926236,
+                327.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                329,
+                44.54772721475251,
                 42
             ]
         },
         "group.magnetic_form_factor": {
             "bounds": [
                 770,
-                161,
+                203.00000000000486,
                 710,
                 42
             ],
@@ -925,8 +972,57 @@
             "label": "Magnetic form factors (1)",
             "visible_bounds": [
                 770,
-                161,
+                203.00000000000486,
                 710,
+                42
+            ]
+        },
+        "group.magnetic_form_factor.pin": {
+            "bounds": [
+                1433.2261363926236,
+                201.7261363926286,
+                44.54772721475251,
+                44.547727214752484
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                203.00000000000486,
+                44.54772721475251,
+                42
+            ]
+        },
+        "group.parent_space_group": {
+            "bounds": [
+                770,
+                161.00000000000486,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "satellite",
+            "label": "Parent space group",
+            "visible_bounds": [
+                770,
+                161.00000000000486,
+                710,
+                42
+            ]
+        },
+        "group.parent_space_group.pin": {
+            "bounds": [
+                1433.2261363926236,
+                159.7261363926286,
+                44.54772721475251,
+                44.547727214752484
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                161.00000000000486,
+                44.54772721475251,
                 42
             ]
         },
@@ -947,10 +1043,26 @@
                 42
             ]
         },
+        "group.scattering_length.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.space_group_symop": {
             "bounds": [
                 770,
-                203,
+                245.00000000000486,
                 710,
                 42
             ],
@@ -959,15 +1071,31 @@
             "label": "Symmetry operators (8)",
             "visible_bounds": [
                 770,
-                203,
+                245.00000000000486,
                 710,
-                42
+                42.00000000000003
+            ]
+        },
+        "group.space_group_symop.pin": {
+            "bounds": [
+                1433.2261363926236,
+                243.72613639262863,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                245.00000000000486,
+                44.54772721475251,
+                42.00000000000003
             ]
         },
         "group.space_group_symop_magn_operation": {
             "bounds": [
                 770,
-                329,
+                371,
                 710,
                 42
             ],
@@ -976,8 +1104,24 @@
             "label": "Magnetic operators (8)",
             "visible_bounds": [
                 770,
-                329,
+                371,
                 710,
+                42
+            ]
+        },
+        "group.space_group_symop_magn_operation.pin": {
+            "bounds": [
+                1433.2261363926236,
+                369.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                371,
+                44.54772721475251,
                 42
             ]
         },
@@ -1050,7 +1194,55 @@
                 35
             ]
         },
-        "mainArea.structure.tab.pattern": {
+        "mainArea.divider": {
+            "bounds": [
+                770,
+                77,
+                1,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                1,
+                681
+            ]
+        },
+        "mainArea.tab.correlations": {
+            "bounds": [
+                126.28125,
+                77,
+                86.15625,
+                42
+            ],
+            "enabled": true,
+            "label": "Correlations",
+            "visible_bounds": [
+                126.28125,
+                77,
+                86.15625,
+                42
+            ]
+        },
+        "mainArea.tab.map": {
+            "bounds": [
+                273.015625,
+                77,
+                39.5625,
+                42
+            ],
+            "enabled": false,
+            "label": "Map",
+            "visible_bounds": [
+                273.015625,
+                77,
+                39.5625,
+                42
+            ]
+        },
+        "mainArea.tab.pattern": {
             "bounds": [
                 69.1875,
                 77,
@@ -1066,7 +1258,23 @@
                 42
             ]
         },
-        "mainArea.structure.tab.view": {
+        "mainArea.tab.stacked": {
+            "bounds": [
+                212.4375,
+                77,
+                60.578125,
+                42
+            ],
+            "enabled": false,
+            "label": "Stacked",
+            "visible_bounds": [
+                212.4375,
+                77,
+                60.578125,
+                42
+            ]
+        },
+        "mainArea.tab.structure": {
             "bounds": [
                 0,
                 77,
@@ -1121,7 +1329,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.453125,
@@ -1335,7 +1543,7 @@
         },
         "structure.toolbar.a": {
             "bounds": [
-                529.5,
+                505.5,
                 182,
                 35,
                 35
@@ -1343,7 +1551,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                529.5,
+                505.5,
                 182,
                 35,
                 35
@@ -1351,7 +1559,7 @@
         },
         "structure.toolbar.atoms": {
             "bounds": [
-                175.25,
+                151.25,
                 182,
                 109.25,
                 35
@@ -1359,7 +1567,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                175.25,
+                151.25,
                 182,
                 109.25,
                 35
@@ -1367,7 +1575,7 @@
         },
         "structure.toolbar.axes": {
             "bounds": [
-                442,
+                418,
                 182,
                 35,
                 35
@@ -1376,7 +1584,7 @@
             "icon": "location-arrow",
             "label": "",
             "visible_bounds": [
-                442,
+                418,
                 182,
                 35,
                 35
@@ -1384,7 +1592,7 @@
         },
         "structure.toolbar.b": {
             "bounds": [
-                568,
+                544,
                 182,
                 35,
                 35
@@ -1392,7 +1600,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                568,
+                544,
                 182,
                 35,
                 35
@@ -1400,7 +1608,7 @@
         },
         "structure.toolbar.bonds": {
             "bounds": [
-                326.5,
+                302.5,
                 182,
                 35,
                 35
@@ -1409,7 +1617,7 @@
             "icon": "link",
             "label": "",
             "visible_bounds": [
-                326.5,
+                302.5,
                 182,
                 35,
                 35
@@ -1417,7 +1625,7 @@
         },
         "structure.toolbar.c": {
             "bounds": [
-                606.5,
+                582.5,
                 182,
                 35,
                 35
@@ -1425,7 +1633,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                606.5,
+                582.5,
                 182,
                 35,
                 35
@@ -1433,7 +1641,7 @@
         },
         "structure.toolbar.cell": {
             "bounds": [
-                365,
+                341,
                 182,
                 35,
                 35
@@ -1442,7 +1650,7 @@
             "icon": "vector-square",
             "label": "",
             "visible_bounds": [
-                365,
+                341,
                 182,
                 35,
                 35
@@ -1450,7 +1658,7 @@
         },
         "structure.toolbar.colors": {
             "bounds": [
-                90,
+                66,
                 182,
                 71.25,
                 35
@@ -1458,7 +1666,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                90,
+                66,
                 182,
                 71.25,
                 35
@@ -1466,7 +1674,7 @@
         },
         "structure.toolbar.labels": {
             "bounds": [
-                288,
+                264,
                 182,
                 35,
                 35
@@ -1475,7 +1683,7 @@
             "icon": "tag",
             "label": "",
             "visible_bounds": [
-                288,
+                264,
                 182,
                 35,
                 35
@@ -1483,7 +1691,7 @@
         },
         "structure.toolbar.moments": {
             "bounds": [
-                403.5,
+                379.5,
                 182,
                 35,
                 35
@@ -1492,7 +1700,7 @@
             "icon": "long-arrow-alt-up",
             "label": "",
             "visible_bounds": [
-                403.5,
+                379.5,
                 182,
                 35,
                 35
@@ -1500,7 +1708,7 @@
         },
         "structure.toolbar.projection": {
             "bounds": [
-                491,
+                467,
                 182,
                 35,
                 35
@@ -1509,7 +1717,7 @@
             "icon": "cube",
             "label": "",
             "visible_bounds": [
-                491,
+                467,
                 182,
                 35,
                 35
@@ -1517,7 +1725,7 @@
         },
         "structure.toolbar.reset": {
             "bounds": [
-                645,
+                621,
                 182,
                 35,
                 35
@@ -1526,7 +1734,40 @@
             "icon": "home",
             "label": "",
             "visible_bounds": [
-                645,
+                621,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.save": {
+            "bounds": [
+                659.5,
+                182,
+                45.5,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                659.5,
+                182,
+                45.5,
+                35
+            ]
+        },
+        "structure.toolbar.save.button": {
+            "bounds": [
+                670,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "camera",
+            "label": "",
+            "visible_bounds": [
+                670,
                 182,
                 35,
                 35
@@ -1656,7 +1897,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -1691,7 +1932,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

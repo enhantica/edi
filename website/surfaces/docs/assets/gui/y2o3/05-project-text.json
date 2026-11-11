@@ -1,7 +1,7 @@
 {
     "description": "Project details and controls — Text",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "appBar",
         "workflow.project.mainContent",
@@ -9,8 +9,8 @@
         "statusBar"
     ],
     "id": "05-project-text",
-    "image": "05-project-text.png",
-    "image_sha256": "7cf2278a376c1cf48752b9b673fae2d57088e68603523d9595fbfc9f7633b274",
+    "image": "05-project-text.webp",
+    "image_sha256": "416ea2282a782b66d4a9678e43a4870072915dcfb9e9964e4db8e1520654be3a",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -76,43 +76,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -121,7 +87,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -173,6 +139,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -315,7 +298,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -324,7 +307,7 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -389,7 +372,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-otQAdg/pd-neut-cwl_y2o3-spodi",
+            "label": "/tmp/EasyDiffraction-OxYLYn/pd-neut-cwl_y2o3-spodi",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -468,7 +451,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.703125,
@@ -755,8 +738,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 0,
         "fit_outcome": "",
@@ -791,7 +774,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

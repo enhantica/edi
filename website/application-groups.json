@@ -5,7 +5,9 @@
     ],
     "categories": [
       "metadata",
-      "experiment_type"
+      "experiment_type",
+      "parent_space_group",
+      "save_data"
     ],
     "app_groups": []
   },

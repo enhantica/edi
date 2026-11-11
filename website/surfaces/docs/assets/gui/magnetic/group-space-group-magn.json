@@ -1,13 +1,13 @@
 {
     "description": "Read the magnetic space group",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "group.space_group_magn"
     ],
     "id": "group-space-group-magn",
-    "image": "group-space-group-magn.png",
-    "image_sha256": "58cf9e7273e2072dbc14a23f3c00920e7a757ce6699ef8c6aac6e27eaf081a51",
+    "image": "group-space-group-magn.webp",
+    "image_sha256": "b64fa3eebd39b9765ec316cab94c4ee849b22718c8dce5f479cb074c50043bc0",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                378.0000000000049,
+                378,
                 682,
                 56
             ],
@@ -68,7 +68,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                378.0000000000049,
+                378,
                 682,
                 56
             ]
@@ -89,43 +89,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -134,7 +100,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -186,6 +152,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -328,7 +311,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -337,7 +320,7 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -352,7 +335,7 @@
         "group.atom_site": {
             "bounds": [
                 770,
-                245.00000000000486,
+                245,
                 710,
                 42
             ],
@@ -361,15 +344,31 @@
             "label": "Atom sites (6)",
             "visible_bounds": [
                 770,
-                245.00000000000486,
+                245,
                 710,
-                42.00000000000003
+                42
+            ]
+        },
+        "group.atom_site.pin": {
+            "bounds": [
+                1433.2261363926236,
+                243.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                245,
+                44.54772721475251,
+                42
             ]
         },
         "group.atom_site_aniso": {
             "bounds": [
                 770,
-                287.0000000000049,
+                287,
                 710,
                 42
             ],
@@ -378,15 +377,31 @@
             "label": "Atomic displacement (6)",
             "visible_bounds": [
                 770,
-                287.0000000000049,
+                287,
                 710,
+                42
+            ]
+        },
+        "group.atom_site_aniso.pin": {
+            "bounds": [
+                1433.2261363926236,
+                285.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                287,
+                44.54772721475251,
                 42
             ]
         },
         "group.atom_site_moment": {
             "bounds": [
                 770,
-                490.0000000000024,
+                490,
                 710,
                 42
             ],
@@ -395,15 +410,31 @@
             "label": "Magnetic moments (6)",
             "visible_bounds": [
                 770,
-                490.0000000000024,
+                490,
                 710,
+                42
+            ]
+        },
+        "group.atom_site_moment.pin": {
+            "bounds": [
+                1433.2261363926236,
+                488.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                490,
+                44.54772721475251,
                 42
             ]
         },
         "group.cell": {
             "bounds": [
                 770,
-                203.00000000000486,
+                203,
                 710,
                 42
             ],
@@ -412,15 +443,31 @@
             "label": "Cell",
             "visible_bounds": [
                 770,
-                203.00000000000486,
+                203,
                 710,
+                42
+            ]
+        },
+        "group.cell.pin": {
+            "bounds": [
+                1433.2261363926236,
+                201.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                203,
+                44.54772721475251,
                 42
             ]
         },
         "group.parent_propagation_vector": {
             "bounds": [
                 770,
-                448.0000000000024,
+                448,
                 710,
                 42
             ],
@@ -429,15 +476,31 @@
             "label": "Propagation vectors (1)",
             "visible_bounds": [
                 770,
-                448.0000000000024,
+                448,
                 710,
+                42
+            ]
+        },
+        "group.parent_propagation_vector.pin": {
+            "bounds": [
+                1433.2261363926236,
+                446.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                448,
+                44.54772721475251,
                 42
             ]
         },
         "group.space_group": {
             "bounds": [
                 770,
-                161.00000000000486,
+                161,
                 710,
                 42
             ],
@@ -446,15 +509,31 @@
             "label": "Space group",
             "visible_bounds": [
                 770,
-                161.00000000000486,
+                161,
                 710,
+                42
+            ]
+        },
+        "group.space_group.pin": {
+            "bounds": [
+                1433.2261363926236,
+                159.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                161,
+                44.54772721475251,
                 42
             ]
         },
         "group.space_group_magn": {
             "bounds": [
                 770,
-                329.0000000000049,
+                329,
                 710,
                 119
             ],
@@ -463,9 +542,25 @@
             "label": "Magnetic space group",
             "visible_bounds": [
                 770,
-                329.0000000000049,
+                329,
                 710,
                 119
+            ]
+        },
+        "group.space_group_magn.pin": {
+            "bounds": [
+                1433.2261363926236,
+                327.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                329,
+                44.54772721475251,
+                43.273863607376256
             ]
         },
         "group.structures": {
@@ -485,54 +580,54 @@
                 42
             ]
         },
+        "group.structures.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                42
+            ]
+        },
         "label": {
             "ambiguous": true
         },
-        "magneticSpaceGroup.nameBns": {
-            "bounds": [
-                1012.5,
-                378.0000000000049,
-                225,
-                56
-            ],
-            "enabled": true,
-            "label": "Pnma",
-            "visible_bounds": [
-                1012.5,
-                378.0000000000049,
-                225,
-                56
-            ]
-        },
         "magneticSpaceGroup.nameUni": {
             "bounds": [
-                1241,
-                378.0000000000049,
-                225,
+                1298.125,
+                378,
+                167.875,
                 56
             ],
             "enabled": true,
             "label": "Pnma.1",
             "visible_bounds": [
-                1241,
-                378.0000000000049,
-                225,
+                1298.125,
+                378,
+                167.875,
                 56
             ]
         },
-        "magneticSpaceGroup.numberBns": {
+        "magneticSpaceGroup.selector": {
             "bounds": [
                 784,
-                378.0000000000049,
-                225,
+                378,
+                510.625,
                 56
             ],
             "enabled": true,
-            "label": "62.441",
+            "label": "BNS symbol",
             "visible_bounds": [
                 784,
-                378.0000000000049,
-                225,
+                378,
+                510.625,
                 56
             ]
         },
@@ -602,7 +697,55 @@
                 35
             ]
         },
-        "mainArea.structure.tab.pattern": {
+        "mainArea.divider": {
+            "bounds": [
+                770,
+                77,
+                1,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                1,
+                681
+            ]
+        },
+        "mainArea.tab.correlations": {
+            "bounds": [
+                126.28125,
+                77,
+                86.15625,
+                42
+            ],
+            "enabled": true,
+            "label": "Correlations",
+            "visible_bounds": [
+                126.28125,
+                77,
+                86.15625,
+                42
+            ]
+        },
+        "mainArea.tab.map": {
+            "bounds": [
+                273.015625,
+                77,
+                39.5625,
+                42
+            ],
+            "enabled": false,
+            "label": "Map",
+            "visible_bounds": [
+                273.015625,
+                77,
+                39.5625,
+                42
+            ]
+        },
+        "mainArea.tab.pattern": {
             "bounds": [
                 69.1875,
                 77,
@@ -618,7 +761,23 @@
                 42
             ]
         },
-        "mainArea.structure.tab.view": {
+        "mainArea.tab.stacked": {
+            "bounds": [
+                212.4375,
+                77,
+                60.578125,
+                42
+            ],
+            "enabled": false,
+            "label": "Stacked",
+            "visible_bounds": [
+                212.4375,
+                77,
+                60.578125,
+                42
+            ]
+        },
+        "mainArea.tab.structure": {
             "bounds": [
                 0,
                 77,
@@ -673,7 +832,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -887,7 +1046,7 @@
         },
         "structure.toolbar.a": {
             "bounds": [
-                529.5,
+                505.5,
                 182,
                 35,
                 35
@@ -895,7 +1054,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                529.5,
+                505.5,
                 182,
                 35,
                 35
@@ -903,7 +1062,7 @@
         },
         "structure.toolbar.atoms": {
             "bounds": [
-                175.25,
+                151.25,
                 182,
                 109.25,
                 35
@@ -911,7 +1070,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                175.25,
+                151.25,
                 182,
                 109.25,
                 35
@@ -919,7 +1078,7 @@
         },
         "structure.toolbar.axes": {
             "bounds": [
-                442,
+                418,
                 182,
                 35,
                 35
@@ -928,7 +1087,7 @@
             "icon": "location-arrow",
             "label": "",
             "visible_bounds": [
-                442,
+                418,
                 182,
                 35,
                 35
@@ -936,7 +1095,7 @@
         },
         "structure.toolbar.b": {
             "bounds": [
-                568,
+                544,
                 182,
                 35,
                 35
@@ -944,7 +1103,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                568,
+                544,
                 182,
                 35,
                 35
@@ -952,7 +1111,7 @@
         },
         "structure.toolbar.bonds": {
             "bounds": [
-                326.5,
+                302.5,
                 182,
                 35,
                 35
@@ -961,7 +1120,7 @@
             "icon": "link",
             "label": "",
             "visible_bounds": [
-                326.5,
+                302.5,
                 182,
                 35,
                 35
@@ -969,7 +1128,7 @@
         },
         "structure.toolbar.c": {
             "bounds": [
-                606.5,
+                582.5,
                 182,
                 35,
                 35
@@ -977,7 +1136,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                606.5,
+                582.5,
                 182,
                 35,
                 35
@@ -985,7 +1144,7 @@
         },
         "structure.toolbar.cell": {
             "bounds": [
-                365,
+                341,
                 182,
                 35,
                 35
@@ -994,7 +1153,7 @@
             "icon": "vector-square",
             "label": "",
             "visible_bounds": [
-                365,
+                341,
                 182,
                 35,
                 35
@@ -1002,7 +1161,7 @@
         },
         "structure.toolbar.colors": {
             "bounds": [
-                90,
+                66,
                 182,
                 71.25,
                 35
@@ -1010,7 +1169,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                90,
+                66,
                 182,
                 71.25,
                 35
@@ -1018,7 +1177,7 @@
         },
         "structure.toolbar.labels": {
             "bounds": [
-                288,
+                264,
                 182,
                 35,
                 35
@@ -1027,7 +1186,7 @@
             "icon": "tag",
             "label": "",
             "visible_bounds": [
-                288,
+                264,
                 182,
                 35,
                 35
@@ -1035,7 +1194,7 @@
         },
         "structure.toolbar.moments": {
             "bounds": [
-                403.5,
+                379.5,
                 182,
                 35,
                 35
@@ -1044,7 +1203,7 @@
             "icon": "long-arrow-alt-up",
             "label": "",
             "visible_bounds": [
-                403.5,
+                379.5,
                 182,
                 35,
                 35
@@ -1052,7 +1211,7 @@
         },
         "structure.toolbar.projection": {
             "bounds": [
-                491,
+                467,
                 182,
                 35,
                 35
@@ -1061,7 +1220,7 @@
             "icon": "cube",
             "label": "",
             "visible_bounds": [
-                491,
+                467,
                 182,
                 35,
                 35
@@ -1069,7 +1228,7 @@
         },
         "structure.toolbar.reset": {
             "bounds": [
-                645,
+                621,
                 182,
                 35,
                 35
@@ -1078,7 +1237,40 @@
             "icon": "home",
             "label": "",
             "visible_bounds": [
-                645,
+                621,
+                182,
+                35,
+                35
+            ]
+        },
+        "structure.toolbar.save": {
+            "bounds": [
+                659.5,
+                182,
+                45.5,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                659.5,
+                182,
+                45.5,
+                35
+            ]
+        },
+        "structure.toolbar.save.button": {
+            "bounds": [
+                670,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "camera",
+            "label": "",
+            "visible_bounds": [
+                670,
                 182,
                 35,
                 35
@@ -1208,7 +1400,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -1243,7 +1435,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

@@ -1,12 +1,12 @@
 {
-  "group-bonds.png": "5c8417918121028370afe971fc82515b11be27e8aebfb76e3f1506221d8ef155",
-  "group-expanded-atoms.png": "56985babf4d4674bd27b704dea08757dd2f372a0ce280f9a7c34c1661c247442",
-  "group-expanded-moments.png": "372049026b8f68b4b48188bd593ccc8769db421c4625a73e8bf1dc489a53884b",
-  "group-form-factors.png": "e872c0d811113d7bce549c8e1206b0d1e763c03c5df8c018b8a121713ab70964",
-  "group-magn-operators.png": "17c6538fda450408756bebab3a35cacafd1b298f98e66314117ce742b564848f",
-  "group-moments.png": "3dd32d0e5c4533210e9a7a99dd99442174ba72d8df481f302f8a48cf41858658",
-  "group-open.png": "814f064d71c443ad760d4f0b6065c61360b49634704692ef5646a40ac83018ad",
-  "group-propagation.png": "223dcfbc38a670a7e3250b2d8a26b5212876df76c7452cdd1e4fb5e16e63bd38",
-  "group-space-group-magn.png": "0c006b9653208b1e4fcc382fd0ed785421c4268922161dc4feeb22525788987b",
-  "group-symop.png": "69d28230b5fb159e75a2ff78dc77f4d1c62a31c768a6f9025cc28434d5bfc7c4"
+  "group-bonds.webp": "cc22504ceca0c7f8c8dac162800079b3450fff4ec58bac232d3d2b4563da8bf9",
+  "group-expanded-atoms.webp": "905ef56220e1bfb68e87576748d65b38b5a5dcba756dc9399e516a55272b28d5",
+  "group-expanded-moments.webp": "6546fcf6c98bf0c2f3d884742613a6fa64f58370d61a782cce4a6491c97a4d09",
+  "group-form-factors.webp": "da361e7dc2122a8da3e64091d7864162378f7fe9a901dd53a87715e849046967",
+  "group-magn-operators.webp": "f70e4679d5673f0e8175aa6c520ac0ccac02d0382027e919be5a9addc21df717",
+  "group-moments.webp": "d0c177086946a804856cb8366a9ccff479ec7a95398cf352fc13b2193362e5a5",
+  "group-open.webp": "b2759d3e76c4c845755cb3b8e896596a4696ff6a67deeb033656bb8519472d4d",
+  "group-propagation.webp": "4ee1a0ca14e91ccccc74139f119fb4cced6eabac2aedda295c652d60856540be",
+  "group-space-group-magn.webp": "89f79c0c2bcb7a39fb8fff9ecdfecafd955f8e66dca1d97d3c4902d4c009d99c",
+  "group-symop.webp": "ed70646173cbe1aadbd94c5736eb9057b0f02d8d9a668ca00643a2411f9d53ff"
 }

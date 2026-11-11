@@ -1,13 +1,13 @@
 {
     "description": "Review the saved report status",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "group.reportExport"
     ],
     "id": "guide-report-saved",
-    "image": "guide-report-saved.png",
-    "image_sha256": "2671e453bc93273c8cd8a93221b1854d35857da6f1ca395c184a89e055a9c9e7",
+    "image": "guide-report-saved.webp",
+    "image_sha256": "a502b6a95d157e7d62d81a8984f13d428d1d04898add9bde5d28e81e746ce6a9",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -57,6 +57,22 @@
                 800
             ]
         },
+        "Popup": {
+            "bounds": [
+                460,
+                692,
+                560,
+                66
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                460,
+                692,
+                560,
+                66
+            ]
+        },
         "SideBarGroup": {
             "bounds": [
                 784,
@@ -89,43 +105,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -134,7 +116,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -186,6 +168,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -328,7 +327,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -337,7 +336,7 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -360,6 +359,22 @@
                 42
             ]
         },
+        "group.reportContents.pin": {
+            "bounds": [
+                1433.2261363926236,
+                366.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                368,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.reportExport": {
             "bounds": [
                 770,
@@ -377,6 +392,22 @@
                 249
             ]
         },
+        "group.reportExport.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
+            ]
+        },
         "group.report_file": {
             "bounds": [
                 770,
@@ -391,6 +422,22 @@
                 770,
                 410,
                 710,
+                42
+            ]
+        },
+        "group.report_file.pin": {
+            "bounds": [
+                1433.2261363926236,
+                408.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                410,
+                44.54772721475251,
                 42
             ]
         },
@@ -597,7 +644,7 @@
                 45.125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Extra",
             "visible_bounds": [
                 813.515625,
@@ -613,7 +660,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -765,7 +812,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.026s 3.58→2.28",
+            "label": "1 0.097s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -861,6 +908,22 @@
                 14
             ]
         },
+        "webNotice.text": {
+            "bounds": [
+                474,
+                706,
+                532,
+                38
+            ],
+            "enabled": true,
+            "label": "Report saved: pd-neut-cwl_y2o3-spodi.html, in /tmp/EasyDiffraction-OxYLYn/docs-saved-project/reports",
+            "visible_bounds": [
+                474,
+                706,
+                532,
+                38
+            ]
+        },
         "workflow.home.sidebarHost": {
             "bounds": [
                 770,
@@ -936,8 +999,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -960,7 +1023,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.extras",
                 "label": "Extra"
             },
@@ -972,7 +1035,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

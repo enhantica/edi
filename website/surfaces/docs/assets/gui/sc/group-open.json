@@ -1,12 +1,12 @@
 {
     "description": "Open the example project",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
     ],
     "id": "group-open",
-    "image": "group-open.png",
-    "image_sha256": "014c46f4376a5feb5c8bfab8cdd6b8125f2a91c315d5a6d4c609f296a7e53e81",
+    "image": "group-open.webp",
+    "image_sha256": "87b7adf527df110de26ed89ecabef2e7a7b1e9c8f40646fd36371bf1a45bd854",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -88,43 +88,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -133,7 +99,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -185,6 +151,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -327,7 +310,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -336,7 +319,7 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -359,6 +342,22 @@
                 42
             ]
         },
+        "group.examples.pin": {
+            "bounds": [
+                1433.2261363926236,
+                272.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                274,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.getStarted": {
             "bounds": [
                 770,
@@ -376,6 +375,22 @@
                 155
             ]
         },
+        "group.getStarted.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
+            ]
+        },
         "group.recentProjects": {
             "bounds": [
                 770,
@@ -390,6 +405,22 @@
                 770,
                 316,
                 710,
+                42
+            ]
+        },
+        "group.recentProjects.pin": {
+            "bounds": [
+                1433.2261363926236,
+                314.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                316,
+                44.54772721475251,
                 42
             ]
         },
@@ -485,7 +516,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-eIVPWV/sc-neut-cwl_tb2ti2o7-heidi/project",
+            "label": "/tmp/EasyDiffraction-uSBnUS/sc-neut-cwl_tb2ti2o7-heidi/project",
             "visible_bounds": [
                 183.4,
                 330.40000000000003,
@@ -631,7 +662,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -919,7 +950,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "d5122f9a30b820ddb8e950bd218add712484af4ed386761370e29f6deabec864",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -954,7 +985,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

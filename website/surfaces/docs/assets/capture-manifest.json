@@ -67,6 +67,14 @@
   },
   {
    "theme": "light",
+   "path": "assets/gui/y2o3/05-project-settings.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/05-project-settings.webp"
+  },
+  {
+   "theme": "light",
    "path": "assets/gui/y2o3/06-structure-import.webp"
   },
   {
@@ -104,6 +112,14 @@
   {
    "theme": "dark",
    "path": "assets/gui/y2o3/dark/08-structure-text.webp"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/08-structure-settings.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/08-structure-settings.webp"
   },
   {
    "theme": "light",
@@ -323,11 +339,27 @@
   },
   {
    "theme": "light",
+   "path": "assets/gui/y2o3/14-report-extras.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/14-report-extras.webp"
+  },
+  {
+   "theme": "light",
    "path": "assets/gui/y2o3/14-report-text.webp"
   },
   {
    "theme": "dark",
    "path": "assets/gui/y2o3/dark/14-report-text.webp"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/y2o3/14-report-settings.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/y2o3/dark/14-report-settings.webp"
   },
   {
    "theme": "light",
@@ -667,6 +699,14 @@
   },
   {
    "theme": "light",
+   "path": "assets/gui/scan/scan-project-settings.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-project-settings.webp"
+  },
+  {
+   "theme": "light",
    "path": "assets/gui/scan/scan-structure-basic.webp"
   },
   {
@@ -688,6 +728,14 @@
   {
    "theme": "dark",
    "path": "assets/gui/scan/dark/scan-structure-text.webp"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-structure-settings.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-structure-settings.webp"
   },
   {
    "theme": "light",
@@ -763,11 +811,27 @@
   },
   {
    "theme": "light",
+   "path": "assets/gui/scan/scan-report-extras.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-report-extras.webp"
+  },
+  {
+   "theme": "light",
    "path": "assets/gui/scan/scan-report-text.webp"
   },
   {
    "theme": "dark",
    "path": "assets/gui/scan/dark/scan-report-text.webp"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/scan/scan-report-settings.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/scan/dark/scan-report-settings.webp"
   },
   {
    "theme": "light",
@@ -891,6 +955,14 @@
   },
   {
    "theme": "light",
+   "path": "assets/gui/joint/joint-project-settings.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-project-settings.webp"
+  },
+  {
+   "theme": "light",
    "path": "assets/gui/joint/joint-structure-basic.webp"
   },
   {
@@ -912,6 +984,14 @@
   {
    "theme": "dark",
    "path": "assets/gui/joint/dark/joint-structure-text.webp"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-structure-settings.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-structure-settings.webp"
   },
   {
    "theme": "light",
@@ -987,11 +1067,27 @@
   },
   {
    "theme": "light",
+   "path": "assets/gui/joint/joint-report-extras.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-report-extras.webp"
+  },
+  {
+   "theme": "light",
    "path": "assets/gui/joint/joint-report-text.webp"
   },
   {
    "theme": "dark",
    "path": "assets/gui/joint/dark/joint-report-text.webp"
+  },
+  {
+   "theme": "light",
+   "path": "assets/gui/joint/joint-report-settings.webp"
+  },
+  {
+   "theme": "dark",
+   "path": "assets/gui/joint/dark/joint-report-settings.webp"
   },
   {
    "theme": "light",
@@ -1243,43 +1339,43 @@
   },
   {
    "theme": "light",
-   "path": "assets/concepts/data-acquisition_2d-raw-data.webp"
+   "path": "assets/concepts/data-acquisition_instrument-v2.svg"
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/dark/data-acquisition_2d-raw-data.webp"
+   "path": "assets/concepts/dark/data-acquisition_instrument-v2.svg"
   },
   {
    "theme": "light",
-   "path": "assets/concepts/data-acquisition_instrument.svg"
+   "path": "assets/concepts/data-acquisition_raw-detector.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/dark/data-acquisition_instrument.svg"
+   "path": "assets/concepts/dark/data-acquisition_raw-detector.webp"
   },
   {
    "theme": "light",
-   "path": "assets/concepts/data-analysis_model.png"
+   "path": "assets/concepts/data-analysis_fit.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/dark/data-analysis_model.png"
+   "path": "assets/concepts/dark/data-analysis_fit.webp"
   },
   {
    "theme": "light",
-   "path": "assets/concepts/data-analysis_refinement.png"
+   "path": "assets/concepts/data-analysis_structure.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/dark/data-analysis_refinement.png"
+   "path": "assets/concepts/dark/data-analysis_structure.webp"
   },
   {
    "theme": "light",
-   "path": "assets/concepts/data-reduction_1d-pattern.png"
+   "path": "assets/concepts/data-reduction_pattern.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/dark/data-reduction_1d-pattern.png"
+   "path": "assets/concepts/dark/data-reduction_pattern.webp"
   }
  ]
 }
