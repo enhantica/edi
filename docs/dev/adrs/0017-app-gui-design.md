@@ -43,6 +43,11 @@ The decisions it rests on, unchanged here:
   horizontally as one unit, then the version line `Version <version> (<date>)` centred on its own below it,
   one x-height of the version's font apart (measured, `FontMetrics.xHeight`; the owner, 2026-09-29, was two
   font units). The wordmark carries no caption: the version never hangs under the name.
+- **The version shown** (the owner, 2026-11-11): a release shows its calendar version (`2026.11.1`); any other
+  build the last release it follows and its commit (`2026.11.1+d42e09f`, `.dirty` with uncommitted changes),
+  or `dev+<commit>` before any release tag (`cmake/build_version.cmake`). A desktop installer is given its
+  version; the web app is built again at each stable release's tag (`pages.yml`), so app.easydiffraction.org
+  shows the release, and every later build of `main` shows the release plus its commit.
 - **The wordmark's size** is the same in both: a mark of 5 base font units (`AppSizes.homeMarkDiameter`,
   easydiffractionbeta's Home size; idea 2). In About a click on the mark opens the homepage.
 - **About** has no tabs and stacks, each centred: the wordmark and version, the description, two links, and the
