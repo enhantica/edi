@@ -1224,6 +1224,22 @@ Popup {
         return d;
     }
 
+    // A menu an earlier step opened closes when the tutorial moves on (Next, a click that completes the step, or
+    // Back), unless the step now shown chooses in it.
+    function closeLeftMenus() {
+        const check = panel.current ? panel.current.check ?? "" : "";
+        const header = panel.locate("parameters.freeHeader");
+        const menu = header !== null ? header.menu : null;
+        if (menu && menu.visible && !check.startsWith("free-choice"))
+            menu.close();
+        if (check.startsWith("web-dialog") || check.startsWith("menu-closed"))
+            return;
+        for (const name of Object.values(panel.webEntries)) {
+            const entry = panel.locate(name);
+            if (entry !== null && entry.visible && entry.menu)
+                entry.menu.close();
+        }
+    }
     function back() {
         if (panel.step > 0) {
             --panel.step;
@@ -1232,6 +1248,7 @@ Popup {
     }
     // Opens the step's page, then reveals its control and places the callout once the page is laid out.
     function show() {
+        panel.closeLeftMenus();
         panel.revealTries = 0;
         // What the step counts from, read as it becomes the step: Next may be pressed before its callout has faded in.
         panel.fitsAtStep = panel.fitsDone;
@@ -2220,31 +2237,6 @@ Popup {
                 return `${back} ${keep}${unsaved}`;
             }
         }
-        // The two buttons on one line within the callout, each as wide as its label.
-        Row {
-            objectName: "tutorial.endChoices"
-            visible: panel.atEnd && panel.offersKeep
-            anchors.right: parent.right
-            spacing: EaStyle.Sizes.fontPixelSize
-
-            EaElements.Button {
-                objectName: "tutorial.discard"
-                text: qsTr("Close tutorial")
-                onClicked: panel.stop()
-            }
-            EaElements.Button {
-                objectName: "tutorial.keep"
-                highlighted: true
-                text: qsTr("Keep working")
-                // The tutorial's project stays open as the user's, unsaved until they save it.
-                onClicked: {
-                    RunLog.note("tutorial finished, its project kept");
-                    Session.dropProjectSetAside();
-                    panel.temporary = false;
-                    panel.close();
-                }
-            }
-        }
         // The actions at the bottom right: Stop, Back and Next as the status bar's strip has them (TutorialControls), Next
         // off on the last step, where the end choices stand in for Stop. The arrow keys
         // step back and on and Escape stops, while no text field, list or other control that takes those keys has the
@@ -2280,6 +2272,30 @@ Popup {
                 anchors.right: parent.right
                 spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
+                // The last step's two ways on, left of the arrows on their row, each an icon with a short label (owner
+                // record 2026-11-11, item 8).
+                IconLink {
+                    objectName: "tutorial.discard"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: panel.atEnd && panel.offersKeep
+                    fontIcon: "times-circle"
+                    text: qsTr("Close tutorial")
+                    onClicked: panel.stop()
+                }
+                IconLink {
+                    objectName: "tutorial.keep"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: panel.atEnd && panel.offersKeep
+                    fontIcon: "check-circle"
+                    text: qsTr("Keep working")
+                    // The tutorial's project stays open as the user's, unsaved until they save it.
+                    onClicked: {
+                        RunLog.note("tutorial finished, its project kept");
+                        Session.dropProjectSetAside();
+                        panel.temporary = false;
+                        panel.close();
+                    }
+                }
                 TutorialControls {
                     id: calloutControls
 
