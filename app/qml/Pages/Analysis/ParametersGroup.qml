@@ -491,12 +491,46 @@ SideBarGroup {
                     number: row.parameter ? (row.parameter.fileValue !== "" ? row.parameter.fileSu : row.parameter.hasUncertainty ? NumberText.error(row.parameter.uncertainty, 0, row.parameter.value) : "") : ""
                     narrow: row.parameter && row.parameter.hasUncertainty ? NumberText.ownUncertainty(row.parameter.uncertainty, row.parameter.value) : ""
                     full: row.parameter && row.parameter.hasUncertainty ? NumberText.plainFull(row.parameter.uncertainty) : ""
+                    // Red after a fit for a poorly determined or strongly correlated parameter, its reasons on hover
+                    // (edi ADR-0085).
+                    color: row.parameter && row.parameter.suFlagged ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
+
+                    HoverHandler {
+                        id: suHover
+                    }
+                    EaElements.ToolTip {
+                        text: row.parameter ? row.parameter.suReason : ""
+                        requested: suHover.hovered && text !== ""
+                    }
                 }
-                EaComponents.ListViewLabel {
+                // The change in % right-aligned on its last digit, then its direction as an arrow icon of a fixed
+                // width, as the report and notebook tables draw it.
+                Item {
                     objectName: `parameters.change.${row.index}`
-                    elide: Text.ElideRight
-                    horizontalAlignment: Text.AlignRight
-                    text: row.parameter ? row.parameter.changeText : ""
+                    property int horizontalAlignment: Text.AlignRight
+                    readonly property bool keepsAlignment: true
+                    readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.25
+                    implicitWidth: changePercent.implicitWidth + gap + changeArrow.width
+                    height: parent.height
+                    clip: true
+
+                    EaElements.Label {
+                        id: changeArrow
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: EaStyle.Sizes.fontPixelSize * 0.75
+                        horizontalAlignment: Text.AlignHCenter
+                        font.family: EaStyle.Fonts.iconsFamily
+                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
+                        text: !row.parameter || row.parameter.changeDirection === 0 ? "" : row.parameter.changeDirection > 0 ? "arrow-up" : "arrow-down"
+                    }
+                    EaElements.Label {
+                        id: changePercent
+                        anchors.right: changeArrow.left
+                        anchors.rightMargin: parent.gap
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: row.parameter ? row.parameter.changeText : ""
+                    }
                 }
                 NumberLabel {
                     horizontalAlignment: Text.AlignRight

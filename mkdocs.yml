@@ -118,6 +118,7 @@ nav:
           - "ADR-0082 Built-in tutorials": dev/adrs/0082-built-in-tutorials-from-the-docs-plans.md
           - "ADR-0083 crysta CI build": dev/adrs/0083-edi-builds-crysta-in-its-own-ci.md
           - "ADR-0084 Two palettes": dev/adrs/0084-two-palettes-and-the-gradient-rule.md
+          - "ADR-0085 Red s.u.": dev/adrs/0085-red-su-for-poorly-determined-parameters.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

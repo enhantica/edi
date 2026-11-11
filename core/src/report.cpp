@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "edi/report.hpp"
 
+#include "crysta/dictionary_items.hpp"
+#include "edi/report_model.hpp"
+
 #include "crysta/fit_report.hpp"
 #include "edi/categories.hpp"
 #include "edi/display.hpp"
@@ -167,7 +170,7 @@ std::string iteration_header(const std::string& variant) {
 // shared by the streaming progress line and the `full` parameter table — and it is public so the
 // contract can be exercised on constructed values rather than only on whatever a live fit happens
 // to produce.
-std::string format_change(double current, double previous) {
+std::string change_percent(double current, double previous) {
     // A percentage of zero is undefined, not infinite, and a non-finite operand cannot yield a
     // meaningful one either. Both blank rather than rendering a number a reader would trust.
     if (previous == 0.0 || !std::isfinite(previous) || !std::isfinite(current)) {
@@ -179,11 +182,16 @@ std::string format_change(double current, double previous) {
     if (std::fabs(percent) < 0.05) {
         return {};  // immaterial — show nothing rather than noise
     }
-    const char* arrow = percent < 0.0 ? "\u2193" : "\u2191";
     if (std::fabs(percent) >= 1000.0) {
-        return table_number(std::fabs(percent), {}, false) + " % " + arrow;
+        return table_number(std::fabs(percent), {}, false) + " %";
     }
-    return fixed(std::fabs(percent), 1) + "% " + arrow;
+    return fixed(std::fabs(percent), 1) + "%";
+}
+
+std::string format_change(double current, double previous) {
+    const std::string percent = change_percent(current, previous);
+    if (percent.empty()) return {};
+    return percent + (current < previous ? " \u2193" : " \u2191");
 }
 
 namespace {
@@ -619,6 +627,9 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
     // project's rule. Without it, the item is read off the path, with the default rule and the items' base entries.
     std::map<std::string, std::string> variants;
     std::map<std::string, std::string> uids;
+    // Each result path's parameter, for its correlation mark (su_marks).
+    std::map<std::string, const Parameter*> parameters;
+    std::unordered_map<const Parameter*, SuMarks> marks;
     std::string rule = kDefaultSuRule;
     if (project != nullptr) {
         rule = project->su_rule;
@@ -654,8 +665,10 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
             }
             return keys;
         };
+        marks = su_marks(*project);
         for (const ParameterEntry& entry : entries) {
             for (const std::string& key : keys_of(entry)) {
+                parameters.emplace(key, entry.parameter);
                 if (const auto found = by_parameter.find(entry.parameter); found != by_parameter.end()) {
                     variants.emplace(key, found->second);
                 }
@@ -671,6 +684,8 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
     };
     std::vector<Row> rows;
     bool any_undefined = false;
+    // The flagged rows' reasons, as notes under the table: the app shows these s.u. values red (edi ADR-0085).
+    std::vector<std::string> flagged;
     int name_width = kNameWidth;
     int path_width = kLabelWidth;
     // std::map iterates sorted by identity path, which is the stable display order.
@@ -706,10 +721,21 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
         }
         name_width = std::max(name_width, shown_width(name) + 1);
         path_width = std::max(path_width, shown_width(path) + 1);
+        std::string reasons;
+        const crysta::DictionaryItem* item = uid.empty() ? nullptr : crysta::find_dictionary_item(uid);
+        if (item != nullptr && !item->near_zero && std::isfinite(su) && su > 0.0 && std::fabs(su) > std::fabs(value)) {
+            reasons = su_poor_text();
+        }
+        if (const auto parameter = parameters.find(path); parameter != parameters.end()) {
+            if (const auto mark = marks.find(parameter->second); mark != marks.end() && !mark->second.partner.empty()) {
+                reasons += (reasons.empty() ? "" : "; ") + su_correlated_text(mark->second);
+            }
+        }
+        if (!reasons.empty()) flagged.push_back(path + ": " + reasons);
         rows.push_back({name, path,
                         (in_decimal_range(start) ? number_of(uid, start, 13, variant)
                                                  : padded_left(table_number(start, {}, false), 13)) +
-                            value_cell + su_cell + "   " + format_change(value, start)});
+                            value_cell + su_cell + (reasons.empty() ? "   " : " ! ") + format_change(value, start)});
     }
     out << "  ";
     append_padded(out, "name", name_width);
@@ -729,6 +755,10 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
     }
     if (any_undefined) {
         out << "  - " << kUndefinedSu << ' ' << kUndefinedSuNote << '\n';
+    }
+    if (!flagged.empty()) {
+        out << "  - !       a poorly determined or strongly correlated parameter:\n";
+        for (const std::string& line : flagged) out << "      " << line << '\n';
     }
     return out.str();
 }

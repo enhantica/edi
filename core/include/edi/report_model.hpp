@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include "edi/presentation.hpp"
@@ -16,6 +17,7 @@
 namespace edi {
 
 class Project;
+struct Parameter;
 
 /// The schema version every model carries; a reader refuses another.
 inline constexpr int kReportSchemaVersion = 1;
@@ -145,6 +147,10 @@ struct ReportParameter {
     /// Its value and s.u. apart as the app's Analysis table writes them (file_text), its start likewise, and its
     /// admissible range (`-inf` and `inf` when unbounded).
     std::string value_cell, su_cell, start_cell, min_cell, max_cell;
+    /// The marks its s.u. carries after a fit (su_marks).
+    bool su_poor = false;
+    std::string su_partner;
+    double su_correlation = 0.0;
 };
 
 /// One parameter's evolution over a scan (evolution_series): its points, each with the value's text in the project's
@@ -262,6 +268,22 @@ struct ReportModel {
 /// dictionary labels, units and formats, as the fit results show them. A joint fit gives each bank its own Rwp. Empty when the project holds no fit.
 /// A single crystal's fit is over F²: "R(F²) 5.12 % · wR(F²) 4.25 % · χ² 9.78".
 std::string reliability_text(const Project& project, std::size_t experiment);
+
+/// The two reasons a free parameter's s.u. is shown red after a fit (owner record 2026-11-11 and its amendment, edi
+/// ADR-0085): poorly determined, |s.u.| > |value| for an item crysta's dictionary does not mark `near_zero`; and a
+/// strong correlation, the strongest partner with |r| >= kStrongCorrelation, named for a reader. One red, the
+/// tooltip names each reason that applies. The app's Analysis table, the report and notebook tables and the CLI table
+/// show the same marks.
+inline constexpr double kStrongCorrelation = 0.95;
+struct SuMarks {
+    bool poorly_determined = false;
+    std::string partner;  ///< the strongest partner's name, "Ba B iso (lbco)"; empty for none
+    double correlation = 0.0;
+};
+std::unordered_map<const Parameter*, SuMarks> su_marks(const Project& project);
+/// One plain line for each reason, as every form's tooltip or note says it.
+std::string su_poor_text();
+std::string su_correlated_text(const SuMarks& marks);
 
 /// The report of `project` as `options` ask: the only function that reads a project (ADR-0036 §2).
 ReportModel build_report(const Project& project, const ReportOptions& options);

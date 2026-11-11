@@ -75,6 +75,12 @@ class ParameterItem : public QObject {
     // change, owner record 2026-11-10); both empty before a fit.
     Q_PROPERTY(QString startText READ startText NOTIFY startTextChanged)
     Q_PROPERTY(QString changeText READ changeText NOTIFY startTextChanged)
+    // The change's direction: 1 up, -1 down, 0 none.
+    Q_PROPERTY(int changeDirection READ changeDirection NOTIFY startTextChanged)
+    // After a fit, a free parameter's s.u. is red when the fit determines it poorly or it is strongly correlated with
+    // another (edi::su_marks, edi ADR-0085); the reason says which, one line each.
+    Q_PROPERTY(bool suFlagged READ suFlagged NOTIFY startTextChanged)
+    Q_PROPERTY(QString suReason READ suReason NOTIFY startTextChanged)
     // One unit of the last digit the item's display format shows: the slider's step (edi::display_step).
     Q_PROPERTY(double sliderStep READ sliderStep NOTIFY sliderStepChanged)
     // The item's label for its variant and its `.edi` name, as a field's and a cell's tooltip names it (edi ADR-0051);
@@ -143,6 +149,9 @@ class ParameterItem : public QObject {
     QString fileSu() const { return file_su_; }
     QString startText() const { return start_text_; }
     QString changeText() const { return change_text_; }
+    int changeDirection() const { return change_direction_; }
+    bool suFlagged() const { return !su_reason_.isEmpty(); }
+    QString suReason() const { return su_reason_; }
     double sliderStep() const;
     QString toolTip() const;
     // A number of this item, a slider limit, in its display format; empty for a parameter the dictionary does not know.
@@ -210,12 +219,13 @@ class ParameterItem : public QObject {
     QString last_error_;
     QString path_, uid_, block_kind_, block_name_, category_, row_label_, name_, display_name_, display_units_,
         short_name_, category_icon_, element_symbol_, variant_, file_value_, file_su_,
-        start_text_, change_text_;
+        start_text_, change_text_, su_reason_;
     std::string su_rule_;
     bool exact_ = false;
     double minimum_, maximum_;
     int block_index_ = -1;
     int phase_index_ = -1;
+    int change_direction_ = 0;
 };
 
 }  // namespace edi_app

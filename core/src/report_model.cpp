@@ -35,6 +35,7 @@
 #include "edi/report.hpp"
 #include "edi/parameter_spec.hpp"
 #include "edi/parameter_walk.hpp"
+#include "crysta/dictionary_items.hpp"
 #include "edi/presentation.hpp"
 #include "edi/scan.hpp"
 #include "edi/structure_scene.hpp"
@@ -1210,6 +1211,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
             return shortest(bound);
         }
     };
+    const std::unordered_map<const Parameter*, SuMarks> marks = su_marks(project);
     for (const NamedParameter& named : named_parameters(project)) {
         const Parameter& parameter = *named.parameter;
         const std::optional<double>& su = parameter.uncertainty.get();
@@ -1221,6 +1223,11 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
                                     parameter.start_value.get(), parameter.free.get(),
                                     !fittable.contains(named.unique_name) || fittable.at(named.unique_name)});
         ReportParameter& row = model.parameters.back();
+        if (const auto mark = marks.find(&parameter); mark != marks.end()) {
+            row.su_poor = mark->second.poorly_determined;
+            row.su_partner = mark->second.partner;
+            row.su_correlation = mark->second.correlation;
+        }
         if (const auto place = places.find(&parameter); place != places.end()) {
             row.datablock = place->second.block_name;
             row.category = place->second.category;
@@ -1240,7 +1247,8 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
                 row.value_cell = table_number(row.value, text.value, true);
                 row.su_cell = text.su;
             }
-            if (row.start) row.start_cell = table_number(*row.start, bound_text(row.uid, *row.start), true);
+            // The start in the item's display format, as the CLI table writes it (one rule for every form).
+            if (row.start) row.start_cell = table_number(*row.start, display_text(row.uid, *row.start, type), true);
             row.min_cell = bound_text(row.uid, parameter.spec->range.min);
             row.max_cell = bound_text(row.uid, parameter.spec->range.max);
         } else {
@@ -1310,6 +1318,65 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
                                                structures, positions, scan && scan->place);
     model.structure_styles = structure_style_table();
     return model;
+}
+
+std::unordered_map<const Parameter*, SuMarks> su_marks(const Project& project) {
+    std::unordered_map<const Parameter*, SuMarks> marks;
+    const std::unordered_map<const Parameter*, std::string> variants = parameter_variants(project);
+    std::unordered_map<std::string, const Parameter*> by_name;
+    for (const NamedParameter& named : named_parameters(project)) {
+        by_name.emplace(named.unique_name, named.parameter);
+        const Parameter& parameter = *named.parameter;
+        const std::optional<double> su = parameter.uncertainty.get();
+        if (!parameter.free.get() || !su.has_value() || !std::isfinite(*su) || *su == 0.0 || parameter.spec == nullptr) {
+            continue;
+        }
+        const std::string uid = std::string(parameter.spec->category) + "." + parameter.spec->name;
+        const crysta::DictionaryItem* item = crysta::find_dictionary_item(uid);
+        if (item != nullptr && !item->near_zero && std::fabs(*su) > std::fabs(parameter.value.get())) {
+            marks[&parameter].poorly_determined = true;
+        }
+    }
+    // A reader's name for a partner: its row (an atom id) and label, then its datablock.
+    std::unordered_map<const Parameter*, std::string> names;
+    for (const ParameterEntry& entry : parameter_entries(const_cast<Project&>(project))) {
+        std::string shown;
+        if (entry.parameter->spec != nullptr) {
+            const auto variant = variants.find(entry.parameter);
+            shown = label(std::string(entry.parameter->spec->category) + "." + entry.parameter->spec->name,
+                          variant != variants.end() ? variant->second : std::string());
+        } else {
+            shown = entry.name;
+        }
+        names[entry.parameter] = (entry.row_label.empty() ? "" : entry.row_label + " ") + shown + " (" + entry.block_name + ")";
+    }
+    // The single or joint fit's correlations (a scan's files keep their own).
+    for (const auto& row : project.fit_result.correlations) {
+        if (!row->file_path.empty()) continue;
+        const double r = row->correlation.get();
+        if (!(std::fabs(r) >= kStrongCorrelation)) continue;
+        const auto i = by_name.find(row->parameter_unique_name_i.value());
+        const auto j = by_name.find(row->parameter_unique_name_j.value());
+        if (i == by_name.end() || j == by_name.end()) continue;
+        for (const auto& [self, other] : {std::pair{i->second, j->second}, std::pair{j->second, i->second}}) {
+            if (!self->free.get() || !other->free.get()) continue;
+            SuMarks& mark = marks[self];
+            if (std::fabs(r) > std::fabs(mark.correlation)) {
+                mark.correlation = r;
+                const auto name = names.find(other);
+                mark.partner = name != names.end() ? name->second : row->parameter_unique_name_j.value();
+            }
+        }
+    }
+    return marks;
+}
+
+std::string su_poor_text() { return "s.u. larger than the value"; }
+
+std::string su_correlated_text(const SuMarks& marks) {
+    char r[16];
+    std::snprintf(r, sizeof r, "%.2f", marks.correlation);
+    return "strongly correlated with " + marks.partner + " (r = " + std::string(r) + ")";
 }
 
 }  // namespace edi
