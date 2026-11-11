@@ -156,7 +156,7 @@ Filter the **Atomic displacement** parameters using the category filter, click t
     <p class="gui-view-description">Compare the starting calculation with the measured pattern. The residual shows their difference.</p>
 
     <figure class="ed-interface-preview" data-interface-hero>
-    <a class="gui-image-link" href="../../../assets/learning/gui/initial.svg?v=1d8085790644" data-gui-dark="b88f42e530f3" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Starting model"><svg class="gui-capture" viewBox="0 0 1000 540" width="1000" height="540" role="img" aria-label="Starting model"><title>Starting model</title><defs><clipPath id="interface-initial"><rect y="0" width="1000" height="540" rx="12" /></clipPath></defs><image href="../../../assets/learning/gui/initial.svg?v=1d8085790644" data-gui-dark="b88f42e530f3" width="1000" height="540" clip-path="url(#interface-initial)" /><rect class="gui-image-frame" y="0" width="1000" height="540" rx="12" /></svg></a>
+    <a class="gui-image-link" href="../../../assets/learning/gui/initial.svg?v=f3f0526e701c" data-gui-dark="72e88264219e" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Starting model"><svg class="gui-capture" viewBox="0 0 1000 540" width="1000" height="540" role="img" aria-label="Starting model"><title>Starting model</title><defs><clipPath id="interface-initial"><rect y="0" width="1000" height="540" rx="12" /></clipPath></defs><image href="../../../assets/learning/gui/initial.svg?v=f3f0526e701c" data-gui-dark="72e88264219e" width="1000" height="540" clip-path="url(#interface-initial)" /><rect class="gui-image-frame" y="0" width="1000" height="540" rx="12" /></svg></a>
     </figure>
 
 === "Fitted model"
@@ -164,7 +164,7 @@ Filter the **Atomic displacement** parameters using the category filter, click t
     <p class="gui-view-description">After the fit, compare the same peaks and residual on exactly the same axes and scale.</p>
 
     <figure class="ed-interface-preview" data-interface-hero>
-    <a class="gui-image-link" href="../../../assets/learning/gui/refined.svg?v=262bb0d17ad0" data-gui-dark="dc7d75915e25" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Fitted model"><svg class="gui-capture" viewBox="0 0 1000 540" width="1000" height="540" role="img" aria-label="Fitted model"><title>Fitted model</title><defs><clipPath id="interface-refined"><rect y="0" width="1000" height="540" rx="12" /></clipPath></defs><image href="../../../assets/learning/gui/refined.svg?v=262bb0d17ad0" data-gui-dark="dc7d75915e25" width="1000" height="540" clip-path="url(#interface-refined)" /><rect class="gui-image-frame" y="0" width="1000" height="540" rx="12" /></svg></a>
+    <a class="gui-image-link" href="../../../assets/learning/gui/refined.svg?v=10af47535a15" data-gui-dark="202b2e4b85ab" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Fitted model"><svg class="gui-capture" viewBox="0 0 1000 540" width="1000" height="540" role="img" aria-label="Fitted model"><title>Fitted model</title><defs><clipPath id="interface-refined"><rect y="0" width="1000" height="540" rx="12" /></clipPath></defs><image href="../../../assets/learning/gui/refined.svg?v=10af47535a15" data-gui-dark="202b2e4b85ab" width="1000" height="540" clip-path="url(#interface-refined)" /><rect class="gui-image-frame" y="0" width="1000" height="540" rx="12" /></svg></a>
     </figure>
 
 </div>

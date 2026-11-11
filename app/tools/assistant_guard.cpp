@@ -23,7 +23,14 @@
 
 namespace {
 #ifdef Q_OS_UNIX
+// The runtime runs in its own process group, so the guard can stop it and its tools and still exit with a code
+// that tells the app how the runtime ended.
+std::atomic<pid_t> runtimeGroup{0};
+void stopRuntime() {
+    if (const pid_t group = runtimeGroup.load(); group > 0) ::kill(-group, SIGKILL);
+}
 void stopFamily(int) {
+    stopRuntime();
     ::kill(-::getpid(), SIGKILL);
     std::_Exit(125);
 }
@@ -72,6 +79,9 @@ int main(int argc, char** argv) {
     QProcess process;
     process.setProgram(arguments.at(2));
     process.setArguments(arguments.mid(3));
+#ifndef Q_OS_WIN
+    process.setChildProcessModifier([] { ::setpgid(0, 0); });
+#endif
 #ifdef Q_OS_WIN
     process.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments* args) { args->flags |= CREATE_SUSPENDED; });
 #endif
@@ -106,6 +116,9 @@ int main(int argc, char** argv) {
         launchReady = true;
         if (!resumed) stop();
 #endif
+#ifndef Q_OS_WIN
+        runtimeGroup = static_cast<pid_t>(process.processId());
+#endif
         std::thread([&] {
             char buffer[16384];
             for (;;) {
@@ -136,14 +149,22 @@ int main(int argc, char** argv) {
         if (error == QProcess::FailedToStart) {
 #ifdef Q_OS_WIN
             launchReady = true;
-#endif
             stop();
+#else
+            std::_Exit(127); // The app reports that the system could not start the runtime.
+#endif
         }
     });
-    QObject::connect(&process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), &app, [&](int, QProcess::ExitStatus) {
+    QObject::connect(&process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), &app, [&](int code, QProcess::ExitStatus status) {
         forward(process.readAllStandardOutput(), stdout);
         forward(process.readAllStandardError(), stderr);
+#ifdef Q_OS_WIN
         stop();
+#else
+        // The runtime's own code, or 128 + the signal that stopped it; codes from 125 up read as 124.
+        stopRuntime();
+        std::_Exit(status == QProcess::NormalExit ? std::min(code, 124) : 128 + std::min(code, 31));
+#endif
     });
     process.start();
     return app.exec();

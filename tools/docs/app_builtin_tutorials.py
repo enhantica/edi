@@ -47,7 +47,7 @@ WEB_ENTRIES = {
     'experiment': 'experiments.load.experimentWeb',
     'data': 'experiments.load.dataWeb',
 }
-TAG_FACETS = ('purpose', 'fittingMode', 'sampleForm', 'probe', 'beamMode', 'scatteringType')
+TAGS = ROOT / 'app/examples/tags.json'
 
 
 def step(title: str, text: str, page: str, target: str, check: str, **extra: object) -> dict:
@@ -138,7 +138,7 @@ def minimizer_steps(actions: list[str]) -> list[dict]:
 INERT = re.compile(
     r'(appBar\.tab\.\w+|sideBar\.tab\.\w+|reveal:.+|expand:.+|show:.+|key:(Return|Escape)'
     r'|platform:\w+|theme:\w+|pin-time:.+|wait-fit|wait-online|close-fit-results'
-    r'|parameters\.clearFilters|mainArea\.analysis\.tab\.fitting)'
+    r'|parameters\.clearFilters|mainArea\.tab\.pattern)'
 )
 # The other actions of each plan step that its branch in plan_step turns into tutorial steps. A
 # new project's title and folder are the capture's own (`@`), the tutorial's project is temporary.
@@ -164,7 +164,7 @@ TRANSLATED = {
         r'|fill:minimizer\.maxIterations=\d+|fill:minimizer\.chiSquareTolerance=\S+'
     ),
     r'stage-\d+-fit|scan-fit': r'statusBar\.fit\.button',
-    r'correlations': r'mainArea\.analysis\.tab\.correlations',
+    r'correlations': r'mainArea\.tab\.correlations',
     r'calculated|report': r'',
 }
 # The plan steps whose actions set up a stage: walked action by action (setup_steps).
@@ -191,7 +191,7 @@ def untranslated(case: str, item: dict) -> None:
 NAVIGATION = re.compile(
     r'(appBar\.tab\.\w+|sideBar\.tab\.\w+|reveal:.+|expand:.+|show:.+|key:Return'
     r'|platform:\w+|theme:\w+|pin-time:.+|wait-fit|wait-online|close-fit-results'
-    r'|mainArea\.analysis\.tab\.fitting)'
+    r'|mainArea\.tab\.pattern)'
 )
 # A button that adds a row, and the field naming each new row's index.
 APPENDS = {
@@ -588,9 +588,10 @@ def tutorial_steps(case: str) -> list[dict]:
 
 
 def tags(case: str, metadata: dict) -> list[str]:
-    """The case's curated tags, as the Examples list shows them."""
+    """The case's tags, every facet of tags.json in order, as Examples shows them."""
     values = metadata['examples'][case]['values']
-    return [f'{facet}:{value}' for facet in TAG_FACETS for value in values.get(facet, []) if value]
+    facets = json.loads(TAGS.read_text(encoding='utf-8'))['tags']
+    return [f'{facet}:{value}' for facet in facets for value in values.get(facet, []) if value]
 
 
 def build() -> dict:

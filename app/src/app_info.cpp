@@ -14,6 +14,7 @@
 
 #include "app_build_info.hpp"
 #include "build_version.hpp"
+#include "edi/version.hpp"
 #include "example_list_model.hpp"
 #include "user_action_log.hpp"
 #include "web_files.hpp"
@@ -217,8 +218,26 @@ void ApplicationInfo::useDemoIdentity() { g_demo_identity = true; }
 
 bool ApplicationInfo::demoIdentity() { return g_demo_identity; }
 
+namespace {
+// The version the app shows: its own, or the release a published web app was archived as. The page passes that from
+// its build.json (EDI_RELEASE_VERSION, EDI_RELEASE_COMMIT), and it counts only for this very build, so a copy of one
+// release's page cannot name another build.
+QString shown_version() {
+    static const QString version = [] {
+        const QString release = qEnvironmentVariable("EDI_RELEASE_VERSION");
+        static const QRegularExpression calendar(QStringLiteral(R"(\A[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)\z)"));
+        if (calendar.match(release).hasMatch() &&
+            qEnvironmentVariable("EDI_RELEASE_COMMIT") == QString::fromLatin1(edi::build_commit())) {
+            return release;
+        }
+        return QString::fromUtf8(edi_app::app_version());
+    }();
+    return version;
+}
+}  // namespace
+
 QString ApplicationInfo::version() const {
-    return g_demo_identity ? QStringLiteral("demo") : QString::fromUtf8(edi_app::app_version());
+    return g_demo_identity ? QStringLiteral("demo") : shown_version();
 }
 
 QString ApplicationInfo::releaseDate() const {
@@ -357,7 +376,7 @@ QList<ChangeDay> ApplicationInfo::changes() const {
     if (given.isEmpty()) {
         QFile history(QStringLiteral(":/edi/releases.json"));
         if (history.open(QIODevice::ReadOnly)) {
-            const auto releases = edi_app::release_changes(history.readAll(), QString::fromUtf8(edi_app::app_version()), nullptr, true);
+            const auto releases = edi_app::release_changes(history.readAll(), shown_version(), nullptr, true);
             for (const auto& release : releases) {
                 const auto item = release.toMap();
                 days.append(ChangeDay{item.value(QStringLiteral("date")).toString(),
@@ -446,7 +465,7 @@ Citation ApplicationInfo::citation() const {
         }
     }
     const QString year = QString::fromUtf8(edi_app::app_date()).right(4);
-    const QString version = QString::fromUtf8(edi_app::app_version());
+    const QString version = shown_version();
     const QString doi = fields.value(QStringLiteral("doi"));
     const QString doi_url = doi.isEmpty() ? QString() : QStringLiteral("https://doi.org/") + doi;
     const QString title = fields.value(QStringLiteral("title"));
@@ -829,7 +848,7 @@ QString ApplicationInfo::diagnostics() const {
     QStringList lines;
     const auto add = [&lines](const QString& name, const QString& value) { lines.append(name + QStringLiteral(": ") + value); };
     add(QStringLiteral("EasyDiffraction"),
-        QString::fromUtf8(edi_app::app_version()) + QStringLiteral(" (") + QString::fromUtf8(edi_app::app_date()) +
+        shown_version() + QStringLiteral(" (") + QString::fromUtf8(edi_app::app_date()) +
             QStringLiteral(")"));
     add(QStringLiteral("crysta"), QStringLiteral(EDI_APP_CRYSTA_VERSION));
     add(QStringLiteral("crysta SDK commit"), QStringLiteral(EDI_APP_CRYSTA_COMMIT));

@@ -34,7 +34,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -566,14 +567,6 @@
           "tab": "basic"
         },
         {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
-          "tab": "extras"
-        },
-        {
           "title": "Iteration limit",
           "text": "Set **Max iterations** to **1000** in **Minimizer**.",
           "page": "analysis",
@@ -1036,7 +1029,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -1571,7 +1565,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -1657,14 +1652,6 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:pd-neut-cwl_hs-hrpt-hrpt=hrpt"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
-          "tab": "extras"
         },
         {
           "title": "Iteration limit",
@@ -2111,7 +2098,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -2204,14 +2192,6 @@
           "page": "analysis",
           "target": "minimizer.descent",
           "check": "descent:fast_descent",
-          "tab": "extras"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
           "tab": "extras"
         },
         {
@@ -2801,7 +2781,9 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal",
+        "structure:magnetic"
       ],
       "steps": [
         {
@@ -3030,14 +3012,6 @@
           "page": "analysis",
           "target": "constraint.expression.1",
           "check": "field:constraint.expression.1=dl = sl",
-          "tab": "extras"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
           "tab": "extras"
         },
         {
@@ -3515,7 +3489,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -3912,14 +3887,6 @@
           "page": "analysis",
           "target": "constraint.expression.4",
           "check": "field:constraint.expression.4=occ_Ni2 = occ_Li1",
-          "tab": "extras"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
           "tab": "extras"
         },
         {
@@ -4413,7 +4380,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -4515,14 +4483,6 @@
           "target": "background.estimate",
           "check": "background-estimated:",
           "tab": "basic"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
-          "tab": "extras"
         },
         {
           "title": "Iteration limit",
@@ -4891,7 +4851,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -5008,10 +4969,10 @@
         },
         {
           "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
+          "text": "On **Analysis → Extra**, choose **χ² change** as the **Stop rule**.",
           "page": "analysis",
           "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
+          "check": "stop-rule:chi_square_change",
           "tab": "extras"
         },
         {
@@ -5595,7 +5556,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -5711,14 +5673,6 @@
           "target": "background.estimate",
           "check": "background-estimated:",
           "tab": "basic"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
-          "tab": "extras"
         },
         {
           "title": "Iteration limit",
@@ -6189,7 +6143,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -6282,14 +6237,6 @@
           "page": "analysis",
           "target": "minimizer.stopRule",
           "check": "chi-tolerance:1e-4",
-          "tab": "extras"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
           "tab": "extras"
         },
         {
@@ -6815,7 +6762,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -6908,14 +6856,6 @@
           "page": "analysis",
           "target": "minimizer.stopRule",
           "check": "chi-tolerance:1e-4",
-          "tab": "extras"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
           "tab": "extras"
         },
         {
@@ -7409,7 +7349,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -7523,14 +7464,6 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:pd-neut-tof_lbco-si-mcstas-mcstas=mcstas"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
-          "tab": "extras"
         },
         {
           "title": "Iteration limit",
@@ -8011,7 +7944,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -8216,14 +8150,6 @@
           "page": "analysis",
           "target": "minimizer.stopRule",
           "check": "chi-tolerance:1e-4",
-          "tab": "extras"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
           "tab": "extras"
         },
         {
@@ -9883,7 +9809,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -10240,14 +10167,6 @@
           "page": "analysis",
           "target": "constraint.expression.2",
           "check": "field:constraint.expression.2=n2_austenite_scale = s2_austenite_scale",
-          "tab": "extras"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
           "tab": "extras"
         },
         {
@@ -10811,7 +10730,8 @@
         "sampleForm:powder",
         "probe:xray",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -10897,14 +10817,6 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:pd-xray-cwl_pbso4-lab-lab=lab"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
-          "tab": "extras"
         },
         {
           "title": "Iteration limit",
@@ -11459,7 +11371,8 @@
         "sampleForm:powder",
         "probe:xray",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -11939,14 +11852,6 @@
           "tab": "extras"
         },
         {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
-          "tab": "extras"
-        },
-        {
           "title": "Iteration limit",
           "text": "Set **Max iterations** to **1000** in **Minimizer**.",
           "page": "analysis",
@@ -12368,7 +12273,8 @@
         "probe:neutron",
         "probe:xray",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -12482,14 +12388,6 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:pd-neut-xray-cwl_pbso4-d1a-lab-lab=lab"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
-          "tab": "extras"
         },
         {
           "title": "Iteration limit",
@@ -13310,7 +13208,9 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal",
+        "structure:magnetic"
       ],
       "steps": [
         {
@@ -13348,14 +13248,6 @@
           "page": "analysis",
           "target": "minimizer.descent",
           "check": "descent:fast_descent",
-          "tab": "extras"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
           "tab": "extras"
         },
         {
@@ -13793,7 +13685,8 @@
         "sampleForm:powder",
         "probe:xray",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -13823,14 +13716,6 @@
           "page": "analysis",
           "target": "group.fitting_mode",
           "check": "fitting-mode:single",
-          "tab": "extras"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
           "tab": "extras"
         },
         {
@@ -14532,7 +14417,8 @@
         "sampleForm:single crystal",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -14589,7 +14475,8 @@
         "sampleForm:single crystal",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -14675,14 +14562,6 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:sc-neut-cwl_tb2ti2o7-heidi-heidi=heidi"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
-          "tab": "extras"
         },
         {
           "title": "Start with nothing free",
@@ -14917,7 +14796,8 @@
         "sampleForm:single crystal",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -15003,14 +14883,6 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:sc-neut-cwl_pr2nio4-5c2-llb_5c2=llb_5c2"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
-          "tab": "extras"
         },
         {
           "title": "Start with nothing free",
@@ -15245,7 +15117,9 @@
         "sampleForm:single crystal",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal",
+        "structure:magnetic"
       ],
       "steps": [
         {
@@ -15450,14 +15324,6 @@
           "page": "analysis",
           "target": "group.fitting_mode",
           "check": "fitting-mode:independent",
-          "tab": "extras"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
           "tab": "extras"
         },
         {
@@ -16211,7 +16077,8 @@
         "sampleForm:single crystal",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -17228,14 +17095,6 @@
           "page": "analysis",
           "target": "constraint.expression.14",
           "check": "field:constraint.expression.14=x33_6 = x33_1",
-          "tab": "extras"
-        },
-        {
-          "title": "Stop rule",
-          "text": "On **Analysis → Extra**, choose **Shift/s.u.** as the **Stop rule**.",
-          "page": "analysis",
-          "target": "minimizer.stopRule",
-          "check": "stop-rule:shift_su",
           "tab": "extras"
         },
         {

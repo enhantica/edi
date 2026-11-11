@@ -258,6 +258,8 @@
       }
       const status = build(form, events);
       const endpoint = app ? app.endpoint.replace(/\/feedback$/, '/survey') : '';
+      // The answer in the Get in touch form's notice and words (assets/contact-form.js), as the app shows it.
+      const show = app && window.edNotice ? window.edNotice.noticeFor(form) : null;
       let pending = false;
       form.addEventListener('submit', async submit => {
         submit.preventDefault();
@@ -280,12 +282,16 @@
         } catch {
           code = 0;
         }
-        status.textContent = code === 201 ? 'Thank you! Your answers were sent.' : code === 429 ? app.status.tooMany : code === 0 ? app.status.offline : app.status.failed.replace('%1', String(code));
-        if (code === 201) {
+        const sent = code === 201;
+        const words = sent ? 'Thank you! Your answers were sent.' : window.edNotice ? window.edNotice.answer(code) : app.status.failed.replace('%1', String(code));
+        // The answer shows once: in the notice when there is one, else in the line under Send.
+        status.textContent = show ? '' : words;
+        if (sent) {
           form.reset();
           form.querySelectorAll('[name$="_other"]').forEach(other => (other.hidden = true));
           form.elements.email.disabled = true;
         }
+        if (show) show(code, words);
         pending = false;
       });
     }

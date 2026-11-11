@@ -49,6 +49,9 @@
     };
   }
 
+  // The same notice and words for the website's other form, the survey (assets/survey/survey.js).
+  window.edNotice = { answer, noticeFor };
+
   // The app's reasons, field prompts and privacy line; the subject and message prompts follow the reason, as in the app.
   function fill(form) {
     if (!app) return;
@@ -109,8 +112,9 @@
           code = 0;
         }
         // The answer is the one to this request: the fields stayed as sent while it was pending.
+        // The answer shows only in the notice, so the line under Send is cleared rather than repeating it.
         const words = answer(code);
-        status.textContent = words;
+        status.textContent = '';
         if (code === 201) form.reset();
         show(code, words);
         controls.forEach(element => (element.disabled = false));
