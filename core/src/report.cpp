@@ -766,8 +766,8 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
 const std::vector<std::pair<std::string, std::string>>& fitted_columns() {
     static const std::vector<std::pair<std::string, std::string>> columns{
         {"start", "the value before the fit"},
-        {"value", "the fitted value"},
-        {"s.u.", "its standard uncertainty"},
+        {"value", "the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest"},
+        {"s.u.", "its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix"},
         {"change", "how far the fit moved it, in % of the start: \xE2\x86\x91 up, \xE2\x86\x93 down"},
     };
     return columns;
