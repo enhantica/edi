@@ -716,7 +716,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("concepts-") + theme + QStringLiteral("-");
             const QStringList open = theme == QLatin1String("light")
-                                         ? QStringList{"resize:1612x900"} + start + open_cli_project("pd-neut-cwl_cosio-d20_2k") +
+                                         ? QStringList{"resize:1314x900"} + start + open_cli_project("pd-neut-cwl_cosio-d20_2k") +
                                                QStringList{"preference:chartIncludedOnly=true", "preference:patternMeasuredStyle=line", "theme:light", analysis, basic,
                                                            "statusBar.fit.button", "wait-fit", "choose:OK"}
                                          : QStringList{"theme:dark", analysis};
@@ -732,7 +732,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             // size: the two read as one chart growing.
             QStringList actions{"theme:" + theme, analysis, "mainArea.tab.pattern"};
             if (theme == QLatin1String("light")) {
-                actions.append(QStringLiteral("resize:1612x698"));
+                actions.append(QStringLiteral("resize:1314x709"));
                 actions.append(QStringLiteral("preference:structureCurves=false"));
                 actions.append(QStringLiteral("measured-only"));
             }
