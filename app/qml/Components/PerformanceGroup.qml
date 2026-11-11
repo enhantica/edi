@@ -30,9 +30,13 @@ SideBarGroup {
 
     // The value on the left and, at the right end, a light link with the Preferences icon that opens that tab (the
     // owner, 2026-11-10: better than a link inside the sentence).
+    // One text line high, the link's button no taller than its text, so both sit on the same line and nothing is cut
+    // at the group's top (owner record 2026-11-11, item 3).
     Item {
-        width: EaStyle.Sizes.sideBarContentWidth
-        height: Math.max(line.implicitHeight, link.implicitHeight)
+        implicitWidth: EaStyle.Sizes.sideBarContentWidth
+        implicitHeight: Math.max(line.implicitHeight, link.contentItem.implicitHeight)
+        width: implicitWidth
+        height: implicitHeight
 
         EaElements.Label {
             id: line
@@ -49,6 +53,11 @@ SideBarGroup {
             objectName: "performance.preferences"
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
+            height: parent.height
+            topInset: 0
+            bottomInset: 0
+            topPadding: 0
+            bottomPadding: 0
             fontIcon: "cog"
             text: qsTr("Preferences")
             onClicked: Preferences.openPerformance()
