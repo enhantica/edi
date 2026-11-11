@@ -38,7 +38,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: crysta-sdk-archives
-          key: crysta-sdk-${{ matrix.platform }}-${{ steps.pin.outputs.sha }}
+          key: crysta-sdk-v2-${{ matrix.platform }}-${{ steps.pin.outputs.sha }}
       - name: Mint a crysta read token
         if: steps.cache.outputs.cache-hit != 'true'
         id: token
@@ -71,7 +71,12 @@ jobs:
           out="$GITHUB_WORKSPACE/crysta-sdk-archives"
           mkdir -p "$out"
           (cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci sdk-pack "$SHA" "${{ matrix.platform }}" "$out")
-          git -C "$RUNNER_TEMP/crysta" archive --format=tar.gz -o "$out/crysta-src-$SHA.tar.gz" "$SHA"
+          # The source with the receipt of its Git objects, which crysta's web observer builders read from an
+          # export that has no .git.
+          git -C "$RUNNER_TEMP/crysta" archive --format=tar -o "$RUNNER_TEMP/crysta-src.tar" "$SHA"
+          python3 tools/ci/crysta_source_receipt.py "$RUNNER_TEMP/crysta" "$SHA" "$RUNNER_TEMP/runner-source-objects.json"
+          tar -rf "$RUNNER_TEMP/crysta-src.tar" -C "$RUNNER_TEMP" runner-source-objects.json
+          gzip -n -c "$RUNNER_TEMP/crysta-src.tar" >"$out/crysta-src-$SHA.tar.gz"
           ls -l "$out"
       - uses: actions/upload-artifact@v4
         with:

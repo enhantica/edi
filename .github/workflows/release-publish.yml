@@ -39,12 +39,12 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: crysta-sdk-archives
-          key: crysta-sdk-linux-64-${{ steps.crysta.outputs.sha }}
+          key: crysta-sdk-v2-linux-64-${{ steps.crysta.outputs.sha }}
           fail-on-cache-miss: true
       - uses: actions/cache/restore@v4
         with:
           path: crysta-sdk-archives
-          key: crysta-sdk-osx-arm64-${{ steps.crysta.outputs.sha }}
+          key: crysta-sdk-v2-osx-arm64-${{ steps.crysta.outputs.sha }}
           fail-on-cache-miss: true
       - name: Attach the crysta SDKs
         env:
