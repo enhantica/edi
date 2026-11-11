@@ -17,6 +17,8 @@
   color: var(--md-default-fg-color--light);
   font-size: .82em;
   font-weight: 400;
+  /* Each button is three lines on every platform: name, system and architecture, kind and size. */
+  white-space: nowrap;
 }
 .md-typeset .ed-desktop-version {
   margin: 0 0 -.25rem;

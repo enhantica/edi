@@ -3,7 +3,7 @@
     {
       "platform": "macOS",
       "icon": "apple",
-      "requirements": "macOS 15+ · Apple Silicon",
+      "requirements": "macOS 15+ · arm64",
       "artifact_platform": "macos-arm64"
     },
     {
