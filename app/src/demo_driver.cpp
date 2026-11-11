@@ -1654,6 +1654,7 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
         step = now;
         waited_ms = 0;
         clicked_ms = -1;
+        std::fprintf(stderr, "edi_app --demo: tutorial %s at step %d of %d\n", qPrintable(id), now + 1, count);
         if (qEnvironmentVariableIsSet("EDI_DEMO_TRACE_LABELS")) {
             std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
                 for (QQuickItem* child : parent->childItems()) {
