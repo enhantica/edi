@@ -629,11 +629,11 @@
             "scene": "12-save-refined"
         },
         {
-            "action": "mainArea.analysis.tab.correlations",
+            "action": "mainArea.tab.correlations",
             "scene": "12-correlations"
         },
         {
-            "action": "mainArea.analysis.tab.fitting",
+            "action": "mainArea.tab.pattern",
             "scene": "12-pattern-return"
         },
         {
@@ -1297,7 +1297,7 @@
             "scene": "guide-analysis-correlations"
         },
         {
-            "action": "mainArea.analysis.tab.correlations",
+            "action": "mainArea.tab.correlations",
             "scene": "guide-analysis-correlations"
         },
         {

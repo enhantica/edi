@@ -43,7 +43,7 @@
         ["experiment", "analysis"].forEach(function (page) {
             ["stacked", "map"].forEach(function (view) {
                 shot(prefix + "-" + page + "-" + view, page, "Inspect the scan in the " + view + " view",
-                    ["appBar.tab." + page, "sideBar.tab.basic", "mainArea." + page + ".tab." + view, "wait-scan:" + view],
+                    ["appBar.tab." + page, "sideBar.tab.basic", "mainArea.tab." + view, "wait-scan:" + view],
                     ["workflow." + page + ".mainContent"]);
             });
         });

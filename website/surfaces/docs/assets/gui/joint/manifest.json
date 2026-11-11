@@ -365,7 +365,7 @@
             "scene": "joint-experiment-stacked"
         },
         {
-            "action": "mainArea.experiment.tab.stacked",
+            "action": "mainArea.tab.stacked",
             "scene": "joint-experiment-stacked"
         },
         {
@@ -381,7 +381,7 @@
             "scene": "joint-experiment-map"
         },
         {
-            "action": "mainArea.experiment.tab.map",
+            "action": "mainArea.tab.map",
             "scene": "joint-experiment-map"
         },
         {
@@ -397,7 +397,7 @@
             "scene": "joint-analysis-stacked"
         },
         {
-            "action": "mainArea.analysis.tab.stacked",
+            "action": "mainArea.tab.stacked",
             "scene": "joint-analysis-stacked"
         },
         {
@@ -413,7 +413,7 @@
             "scene": "joint-analysis-map"
         },
         {
-            "action": "mainArea.analysis.tab.map",
+            "action": "mainArea.tab.map",
             "scene": "joint-analysis-map"
         },
         {
@@ -425,7 +425,7 @@
             "scene": "joint-correlations"
         },
         {
-            "action": "mainArea.analysis.tab.correlations",
+            "action": "mainArea.tab.correlations",
             "scene": "joint-correlations"
         }
     ],

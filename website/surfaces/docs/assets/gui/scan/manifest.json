@@ -349,7 +349,7 @@
             "scene": "scan-experiment-stacked"
         },
         {
-            "action": "mainArea.experiment.tab.stacked",
+            "action": "mainArea.tab.stacked",
             "scene": "scan-experiment-stacked"
         },
         {
@@ -365,7 +365,7 @@
             "scene": "scan-experiment-map"
         },
         {
-            "action": "mainArea.experiment.tab.map",
+            "action": "mainArea.tab.map",
             "scene": "scan-experiment-map"
         },
         {
@@ -381,7 +381,7 @@
             "scene": "scan-analysis-stacked"
         },
         {
-            "action": "mainArea.analysis.tab.stacked",
+            "action": "mainArea.tab.stacked",
             "scene": "scan-analysis-stacked"
         },
         {
@@ -397,7 +397,7 @@
             "scene": "scan-analysis-map"
         },
         {
-            "action": "mainArea.analysis.tab.map",
+            "action": "mainArea.tab.map",
             "scene": "scan-analysis-map"
         },
         {
@@ -409,11 +409,11 @@
             "scene": "scan-evolution"
         },
         {
-            "action": "mainArea.analysis.tab.evolution",
+            "action": "mainArea.tab.evolution",
             "scene": "scan-evolution"
         },
         {
-            "action": "mainArea.analysis.tab.fitting",
+            "action": "mainArea.tab.pattern",
             "scene": "scan-progress-controls"
         },
         {
@@ -425,7 +425,7 @@
             "scene": "scan-correlations"
         },
         {
-            "action": "mainArea.analysis.tab.correlations",
+            "action": "mainArea.tab.correlations",
             "scene": "scan-correlations"
         }
     ],
