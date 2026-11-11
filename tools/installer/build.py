@@ -7,6 +7,7 @@ import json
 import os
 import platform
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -146,6 +147,115 @@ def strip_linux_cpp_debug(stage: Path, strip: Path) -> None:
         run([strip, '--strip-debug', candidate])
         if candidate.stat().st_size < runtime.stat().st_size:
             candidate.replace(runtime)
+
+
+MACOS_SYSTEM_PATHS = ('/usr/lib/', '/System/')
+MACHO_MAGICS = {b'\xca\xfe\xba\xbe', b'\xcf\xfa\xed\xfe'}
+MH_EXECUTE = 2
+
+
+def macho_commands(path: Path) -> list[tuple[int, list[str], list[str]]]:
+    """Each 64-bit slice of a Mach-O as (file type, load paths, rpaths); [] for other files."""
+    data = path.read_bytes()
+    if data[:4] == b'\xca\xfe\xba\xbe':
+        count = struct.unpack('>I', data[4:8])[0]
+        offsets = [struct.unpack('>I', data[16 + 20 * i : 20 + 20 * i])[0] for i in range(count)]
+    elif data[:4] == b'\xcf\xfa\xed\xfe':
+        offsets = [0]
+    else:
+        return []
+    slices = []
+    for base in offsets:
+        if data[base : base + 4] != b'\xcf\xfa\xed\xfe':
+            continue
+        filetype, ncmds = struct.unpack('<II', data[base + 12 : base + 20])
+        loads, rpaths, at = [], [], base + 32
+        for _ in range(ncmds):
+            cmd, size = struct.unpack('<II', data[at : at + 8])
+            # LC_LOAD_DYLIB, LC_LOAD_WEAK_DYLIB, LC_REEXPORT_DYLIB, LC_RPATH
+            if cmd in {0xC, 0x80000018, 0x8000001F, 0x8000001C}:
+                offset = struct.unpack('<I', data[at + 8 : at + 12])[0]
+                name = data[at + offset : at + size].split(b'\0')[0].decode()
+                (rpaths if cmd == 0x8000001C else loads).append(name)
+            at += size
+        slices.append((filetype, loads, rpaths))
+    return slices
+
+
+def macho_files(bundle: Path) -> list[Path]:
+    """Every Mach-O file in the bundle, links excluded."""
+    found = []
+    for path in sorted(bundle.rglob('*')):
+        if path.is_symlink() or not path.is_file():
+            continue
+        with path.open('rb') as stream:
+            if stream.read(4) in MACHO_MAGICS:
+                found.append(path)
+    return found
+
+
+def outside_bundle(name: str) -> bool:
+    """An absolute path that is not part of macOS itself."""
+    return name.startswith('/') and not name.startswith(MACOS_SYSTEM_PATHS)
+
+
+def drop_macos_build_rpaths(bundle: Path) -> None:
+    """Remove the build machine's library folders that the toolchain adds as rpaths."""
+    for path in macho_files(bundle):
+        rpaths = {rpath for _, _, found in macho_commands(path) for rpath in found}
+        for rpath in sorted(rpaths):
+            if outside_bundle(rpath):
+                run(['install_name_tool', '-delete_rpath', rpath, path])
+
+
+def expand_macos_path(name: str, loader: Path, executable: Path) -> Path | None:
+    """A load path or rpath with @loader_path and @executable_path filled in; None for @rpath."""
+    for token, folder in (('@loader_path', loader), ('@executable_path', executable)):
+        if name.startswith(token):
+            return Path(str(folder) + name[len(token) :])
+    return Path(name) if name.startswith('/') else None
+
+
+def check_macos_load_paths(bundle: Path) -> None:
+    """Refuse a Mach-O naming a path outside the bundle or a library the bundle does not have.
+
+    An absolute load path or rpath must be part of macOS. An @rpath, @loader_path or
+    @executable_path library must be a file in the bundle: an executable finds it through its own
+    rpaths (a helper is its own process), a library through its own and the application's.
+    """
+    macos = bundle / 'Contents/MacOS'
+    main = macos / bundle.stem
+    main_rpaths = []
+    if main.is_file():
+        main_rpaths = [rpath for _, _, found in macho_commands(main) for rpath in found]
+    inside = bundle.resolve()
+    problems = []
+    for path in macho_files(bundle):
+        shown = path.relative_to(bundle).as_posix()
+        for filetype, loads, rpaths in macho_commands(path):
+            problems += [f'{shown}: rpath {rpath}' for rpath in rpaths if outside_bundle(rpath)]
+            executable = path.parent if filetype == MH_EXECUTE else macos
+            searched = rpaths if filetype == MH_EXECUTE else rpaths + main_rpaths
+            for name in loads:
+                if name.startswith('/'):
+                    if outside_bundle(name):
+                        problems.append(f'{shown}: loads {name}')
+                    continue
+                if name.startswith('@rpath/'):
+                    folders = [expand_macos_path(r, path.parent, executable) for r in searched]
+                    tail = name[len('@rpath/') :]
+                    candidates = [folder / tail for folder in folders if folder is not None]
+                else:
+                    candidates = [expand_macos_path(name, path.parent, executable)]
+                if not any(
+                    c is not None and c.resolve().is_file() and c.resolve().is_relative_to(inside)
+                    for c in candidates
+                ):
+                    problems.append(f'{shown}: {name} is not in the bundle')
+    if problems:
+        raise RuntimeError(
+            'macOS bundle names libraries outside itself:\n  ' + '\n  '.join(problems)
+        )
 
 
 def sign_macos_app(bundle: Path) -> None:
@@ -340,6 +450,8 @@ def build(
         strip_linux_cpp_debug(stage, qt / 'bin/strip')
     collect_notices(stage, qt, crysta, work / 'licence-inputs')
     if SYSTEM == 'macos':
+        drop_macos_build_rpaths(stage / 'EasyDiffraction.app')
+        check_macos_load_paths(stage / 'EasyDiffraction.app')
         sign_macos_app(stage / 'EasyDiffraction.app')
     verify_assistant_payload(stage, app / 'app/assistant-runtime-installed.json')
     (stage / 'bundle-audit.json').write_text(
