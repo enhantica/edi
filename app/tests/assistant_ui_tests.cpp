@@ -439,6 +439,48 @@ private slots:
         QTRY_VERIFY(!area->property("visible").toBool());
         QTRY_VERIFY(!rotation->property("running").toBool());
     }
+    // The Preferences number boxes step by their minus and plus: a click on either reaches the spin box, never the
+    // text field beside it (the owner, 2026-11-11: the Tooltip delay buttons only selected the text).
+    void testPreferencesSpinBoxSteps() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtQuick.Controls
+            import edi.app
+            ApplicationWindow {
+                width: 1400; height: 900; visible: true
+                AppPreferencesDialog { id: preferences }
+                Component.onCompleted: preferences.open()
+            }
+        )", QUrl());
+        QScopedPointer<QObject> root(component.create());
+        QVERIFY2(root, qPrintable(component.errorString()));
+        auto* window = qobject_cast<QQuickWindow*>(root.data());
+        QVERIFY(window && QTest::qWaitForWindowExposed(window));
+        const auto click = [window](QQuickItem* item) {
+            QTRY_VERIFY(item->isVisible() && item->width() > 0);
+            const QPointF centre = item->mapToScene(QPointF(item->width() / 2, item->height() / 2));
+            QTest::mouseClick(window, Qt::LeftButton, {}, centre.toPoint());
+        };
+        auto* tab = root->findChild<QQuickItem*>("preferences.tab.interface");
+        QVERIFY(tab);
+        click(tab);
+        auto* spin = root->findChild<QQuickItem*>("preferences.toolTipDelay");
+        QVERIFY(spin);
+        QTRY_VERIFY(spin->isVisible());
+        auto* up = qvariant_cast<QQuickItem*>(qvariant_cast<QObject*>(spin->property("up"))->property("indicator"));
+        auto* down = qvariant_cast<QQuickItem*>(qvariant_cast<QObject*>(spin->property("down"))->property("indicator"));
+        QVERIFY(up && down);
+        const int start = spin->property("value").toInt();
+        const int step = spin->property("stepSize").toInt();
+        click(up);
+        QTRY_COMPARE(spin->property("value").toInt(), start + step);
+        click(down);
+        click(down);
+        QTRY_COMPARE(spin->property("value").toInt(), start - step);
+    }
 #if defined(Q_OS_UNIX)
     // An attached file stays the same input when only its metadata changes: macOS writes the last-used date as an
     // extended attribute after a file dialog opens a file, which moves its change time but not its bytes.
