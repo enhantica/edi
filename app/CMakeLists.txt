@@ -454,6 +454,8 @@ if(EMSCRIPTEN)
     # writeFile); the stubs stand in for the socket library a WasmFS link leaves out.
     target_sources(edi_app PRIVATE src/wasmfs_socket_stubs.cpp)
     target_link_options(edi_app PRIVATE -sWASMFS -sFORCE_FILESYSTEM)
+    # The start page passes the release version as environment variables, and qtloader needs ENV for that.
+    set_target_properties(edi_app PROPERTIES QT_WASM_EXTRA_EXPORTED_METHODS "ENV")
 endif()
 
 # The measured-layer benchmark (edi ADR-0017 §15): test tooling, never part of the host. It reads the
