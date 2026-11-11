@@ -588,7 +588,7 @@ def tutorial_steps(case: str) -> list[dict]:
 
 
 def tags(case: str, metadata: dict) -> list[str]:
-    """The case's tags, every facet of tags.json in its order, as the case record and the Examples list show them."""
+    """The case's tags, every facet of tags.json in order, as Examples shows them."""
     values = metadata['examples'][case]['values']
     facets = json.loads(TAGS.read_text(encoding='utf-8'))['tags']
     return [f'{facet}:{value}' for facet in facets for value in values.get(facet, []) if value]
