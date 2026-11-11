@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_view_model.hpp"
+#include "assistant_file_primitives.hpp"
 #include "assistant_history.hpp"
 #include "assistant_history_lookup.hpp"
 #include "assistant_data.hpp"
@@ -218,16 +219,7 @@ struct LocalInputSource {
     int descriptor=-1;
     struct stat identity{};
     ~LocalInputSource(){if(descriptor>=0)::close(descriptor);}
-    static bool same(const struct stat& a,const struct stat& b) noexcept {
-#if defined(Q_OS_MACOS)
-        const bool time=a.st_mtimespec.tv_sec==b.st_mtimespec.tv_sec && a.st_mtimespec.tv_nsec==b.st_mtimespec.tv_nsec &&
-            a.st_ctimespec.tv_sec==b.st_ctimespec.tv_sec && a.st_ctimespec.tv_nsec==b.st_ctimespec.tv_nsec;
-#else
-        const bool time=a.st_mtim.tv_sec==b.st_mtim.tv_sec && a.st_mtim.tv_nsec==b.st_mtim.tv_nsec &&
-            a.st_ctim.tv_sec==b.st_ctim.tv_sec && a.st_ctim.tv_nsec==b.st_ctim.tv_nsec;
-#endif
-        return a.st_dev==b.st_dev && a.st_ino==b.st_ino && a.st_mode==b.st_mode && a.st_size==b.st_size && time;
-    }
+    static bool same(const struct stat& a,const struct stat& b) noexcept {return assistant_files::same_file_bytes(a,b);}
     bool current() const noexcept {
         try {
             if(descriptor<0)return false;
@@ -389,16 +381,7 @@ struct SkillDirectory {
     SkillDirectory(const SkillDirectory&)=delete;
     SkillDirectory& operator=(const SkillDirectory&)=delete;
 };
-static bool same_skill_stat(const struct stat& a,const struct stat& b) {
-#if defined(Q_OS_DARWIN)
-    const bool times=a.st_mtimespec.tv_sec==b.st_mtimespec.tv_sec && a.st_mtimespec.tv_nsec==b.st_mtimespec.tv_nsec &&
-        a.st_ctimespec.tv_sec==b.st_ctimespec.tv_sec && a.st_ctimespec.tv_nsec==b.st_ctimespec.tv_nsec;
-#else
-    const bool times=a.st_mtim.tv_sec==b.st_mtim.tv_sec && a.st_mtim.tv_nsec==b.st_mtim.tv_nsec &&
-        a.st_ctim.tv_sec==b.st_ctim.tv_sec && a.st_ctim.tv_nsec==b.st_ctim.tv_nsec;
-#endif
-    return a.st_dev==b.st_dev && a.st_ino==b.st_ino && a.st_mode==b.st_mode && a.st_size==b.st_size && times;
-}
+static bool same_skill_stat(const struct stat& a,const struct stat& b) {return assistant_files::same_file_bytes(a,b);}
 static QString skill_directory_identity(int fd) {
     struct stat info{};
     if(fd<0 || ::fstat(fd,&info) || !S_ISDIR(info.st_mode))throw std::runtime_error("Skill source is not a directory");

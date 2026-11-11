@@ -24,6 +24,11 @@
 #include "assistant_widget_input.hpp"
 #include "project_view_model.hpp"
 #include "online_search.hpp"
+#if defined(Q_OS_UNIX)
+#include "assistant_file_primitives.hpp"
+#include <sys/stat.h>
+#include <sys/xattr.h>
+#endif
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 class WorkingAssistant : public edi_app::AssistantViewModel {
@@ -434,6 +439,45 @@ private slots:
         QTRY_VERIFY(!area->property("visible").toBool());
         QTRY_VERIFY(!rotation->property("running").toBool());
     }
+#if defined(Q_OS_UNIX)
+    // An attached file stays the same input when only its metadata changes: macOS writes the last-used date as an
+    // extended attribute after a file dialog opens a file, which moves its change time but not its bytes.
+    void testMetadataChangeKeepsTheSelectedInput() {
+        // Beside the test binary: /tmp is often a tmpfs that takes no user attributes.
+        QTemporaryDir dir(QCoreApplication::applicationDirPath() + "/selected-input-XXXXXX");
+        QVERIFY(dir.isValid());
+        const QString path = dir.filePath("hrpt.xye");
+        {
+            QFile file(path);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("10.0 100 10\n");
+        }
+        const QByteArray name = QFile::encodeName(path);
+        struct stat before{}, after{};
+        QCOMPARE(::stat(name.constData(), &before), 0);
+        QTest::qWait(20);
+#if defined(Q_OS_MACOS)
+        const int set = ::setxattr(name.constData(), "com.apple.lastuseddate#PS", "0123456789abcdef", 16, 0, 0);
+#else
+        const int set = ::setxattr(name.constData(), "user.edi.lastused", "1", 1, 0);
+#endif
+        if (set != 0) QSKIP("This file system takes no extended attributes");
+        QCOMPARE(::stat(name.constData(), &after), 0);
+        QVERIFY(edi_app::assistant_files::same_file_bytes(before, after));
+        QCOMPARE(::chmod(name.constData(), 0400), 0);
+        QCOMPARE(::stat(name.constData(), &after), 0);
+        QVERIFY(edi_app::assistant_files::same_file_bytes(before, after));
+        // New bytes are a different input.
+        QCOMPARE(::chmod(name.constData(), 0600), 0);
+        {
+            QFile file(path);
+            QVERIFY(file.open(QIODevice::Append));
+            file.write("10.1 101 10\n");
+        }
+        QCOMPARE(::stat(name.constData(), &after), 0);
+        QVERIFY(!edi_app::assistant_files::same_file_bytes(before, after));
+    }
+#endif
 };
 QTEST_MAIN(AssistantUiTests)
 #include "assistant_ui_tests.moc"

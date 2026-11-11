@@ -13,6 +13,10 @@ struct Fd {
     Fd& operator=(Fd&&) noexcept;
     Fd(const Fd&) = delete;
 };
+// The same file with the same bytes as far as its status shows: device, inode, type, size and modification time.
+// Not the change time or the permissions, which move with metadata alone: macOS writes extended attributes (the
+// last-used date after a file dialog) to files it opens. Content is proven apart, by its digest.
+bool same_file_bytes(const struct stat& a, const struct stat& b) noexcept;
 struct Identity {
     struct stat value{};
     explicit Identity(int);
