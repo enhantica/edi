@@ -112,8 +112,9 @@
           code = 0;
         }
         // The answer is the one to this request: the fields stayed as sent while it was pending.
+        // The answer shows only in the notice, so the line under Send is cleared rather than repeating it.
         const words = answer(code);
-        status.textContent = words;
+        status.textContent = '';
         if (code === 201) form.reset();
         show(code, words);
         controls.forEach(element => (element.disabled = false));

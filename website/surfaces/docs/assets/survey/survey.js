@@ -284,7 +284,8 @@
         }
         const sent = code === 201;
         const words = sent ? 'Thank you! Your answers were sent.' : window.edNotice ? window.edNotice.answer(code) : app.status.failed.replace('%1', String(code));
-        status.textContent = words;
+        // The answer shows once: in the notice when there is one, else in the line under Send.
+        status.textContent = show ? '' : words;
         if (sent) {
           form.reset();
           form.querySelectorAll('[name$="_other"]').forEach(other => (other.hidden = true));
