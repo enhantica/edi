@@ -71,8 +71,13 @@
       title: 'Anything else',
       questions: [
         { key: 'comments', kind: 'area', text: 'Anything else you would like to tell us' },
-        { key: 'contact', kind: 'contact' },
       ],
+    },
+    {
+      title: 'About you (optional)',
+      key: 'contact-details',
+      note: 'All fields are optional. Leave them empty to answer anonymously.',
+      questions: [{ key: 'contact', kind: 'contact' }],
     },
   ];
 
@@ -194,18 +199,22 @@
     return out;
   }
 
-  // Name and e-mail side by side, then affiliation with the consent under the e-mail: inputs without a label above,
-  // their placeholders saying what they are, as the Get in touch form's (the owner, 2026-11-10).
+  // The consent first, then the e-mail, usable only while the consent is ticked, then name and affiliation side by
+  // side: inputs without a label above, their placeholders saying what they are (the owner, 2026-11-11).
   function contactFields() {
-    const words = (app && app.contact) || { name: 'Name (optional)', email: 'E-mail (optional)', affiliation: 'Affiliation (optional)' };
-    const input = (type, name) => element('div', { class: 'ed-survey-field', 'data-key': name }, [element('input', { type, name, placeholder: words[name], 'aria-label': words[name] })]);
+    const input = (type, name, text, wide) =>
+      element('div', { class: wide ? 'ed-survey-field ed-survey-wide' : 'ed-survey-field', 'data-key': name }, [element('input', { type, name, placeholder: text, 'aria-label': text })]);
+    const consent = element('input', { type: 'checkbox', name: 'consent' });
+    const email = input('email', 'email', 'E-mail', true);
+    email.querySelector('input').disabled = true;
+    consent.addEventListener('change', () => (email.querySelector('input').disabled = !consent.checked));
     return [
-      input('text', 'name'),
-      input('email', 'email'),
-      input('text', 'affiliation'),
-      element('div', { class: 'ed-survey-field ed-survey-consent-cell', 'data-key': 'consent' }, [
-        element('label', { class: 'ed-survey-consent' }, [element('input', { type: 'checkbox', name: 'consent' }), 'You may e-mail me about my answers.']),
+      element('div', { class: 'ed-survey-field ed-survey-wide ed-survey-consent-cell', 'data-key': 'consent' }, [
+        element('label', { class: 'ed-survey-consent' }, [consent, "I'm happy to be contacted by e-mail about my answers"]),
       ]),
+      email,
+      input('text', 'name', 'Name', false),
+      input('text', 'affiliation', 'Affiliation', false),
     ];
   }
 
@@ -275,6 +284,7 @@
         if (code === 201) {
           form.reset();
           form.querySelectorAll('[name$="_other"]').forEach(other => (other.hidden = true));
+          form.elements.email.disabled = true;
         }
         pending = false;
       });
