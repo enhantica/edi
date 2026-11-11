@@ -32,7 +32,7 @@ SideBarGroup {
         DataTable {
             id: table
             objectName: "structures.list"
-            defaultInfoText: qsTr("No structures defined")
+            defaultInfoText: qsTr("No structures")
             sourceModel: group.project ? group.project.structures : null
             marksCurrentRow: true
             currentRow: group.project ? group.project.currentStructureIndex : -1

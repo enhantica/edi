@@ -32,6 +32,14 @@ EaComponents.MainContent {
     readonly property bool singleCrystals: project !== null && project.singleCrystalExperiments.length > 1
     readonly property bool scanMode: project !== null && project.fit.scanMode
     readonly property bool measured: project !== null && project.fit.measured
+    // The Correlations tab: enabled once a fit has produced correlations to show, as Stacked and Map are only with
+    // something to show (owner record 2026-11-11, item 4). Off again after Undo or in a new project, when the view
+    // goes back to the pattern.
+    readonly property bool correlationsShown: measured && correlationChart.available
+    onCorrelationsShownChanged: {
+        if (!correlationsShown && tabIndex === 2)
+            showMainTab(hasExperiments ? 1 : 0);
+    }
 
     // The tab bar, reached from its first tab (the base names it nowhere).
     readonly property var bar: structureTab.TabBar.tabBar
@@ -82,11 +90,11 @@ EaComponents.MainContent {
             text: qsTr("Pattern")
             enabled: view.hasExperiments
         },
-        // The last fit's parameter correlations for the shown experiment: every fit has them.
+        // The last fit's parameter correlations for the shown experiment.
         IconTabButton {
             objectName: "mainArea.tab.correlations"
             text: qsTr("Correlations")
-            enabled: view.measured
+            enabled: view.correlationsShown
         },
         // A scan's or a joint fit's patterns, stacked and as a map (edi ADR-0041).
         IconTabButton {
@@ -212,6 +220,6 @@ EaComponents.MainContent {
         objectName: "mainArea.emptyState"
         anchors.centerIn: parent
         visible: (view.tabIndex === 0 && !view.hasStructures) || (view.tabIndex === 1 && !view.hasExperiments)
-        text: view.tabIndex === 0 ? qsTr("No structures defined") : qsTr("No pattern")
+        text: view.tabIndex === 0 ? qsTr("No structure") : qsTr("No pattern")
     }
 }

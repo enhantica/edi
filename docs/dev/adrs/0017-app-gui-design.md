@@ -87,7 +87,7 @@ The decisions it rests on, unchanged here:
   | a project is opened or created             | first visits start again                                   |
 
   The view never switches tabs by itself. A shown tab with nothing to draw shows its empty state, with no view and no
-  toolbar: Structure says "No structures defined", Pattern "No pattern". The tabs the user cannot pick are disabled
+  toolbar: Structure says "No structure", Pattern "No pattern". The tabs the user cannot pick are disabled
   (Structure without a structure, Pattern without an experiment, Correlations before a fit, Stacked and Map without a
   scan or a joint fit, Evolution outside a scan). The divider between the main view and the sidebar belongs to the
   main view, so it stays put while the pages slide. The block selector above the views lists the structures on the
@@ -98,7 +98,7 @@ The decisions it rests on, unchanged here:
   <dir> --demo-only minimum-`): every page's sidebar reaches each input by scrolling, a group's fields stay on one row,
   and every chart toolbar keeps whole groups (§15). The desktop window cannot be made smaller (its `minimumWidth` and
   `minimumHeight`). The browser's page can: below either dimension the app shows only the empty view's background, as
-  *No structures defined* does, with *Increase the window size* centred in the empty view's font, over everything,
+  *No structure* does, with *Increase the window size* centred in the empty view's font, over everything,
   dialogs included, and takes no pointer input. Nothing beneath is torn down, so growing the page back shows the same
   page, tab, selection and scroll position. Later work that adds controls keeps this minimum.
 - **Main-area tab names name the view** (owner, 2026-10-05; until then they were the current block's icon and name,
