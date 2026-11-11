@@ -1684,7 +1684,18 @@ bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
             catch (const std::exception& error) { std::fprintf(stderr, "keep project: %s\n", error.what()); }
         }
         if (!current.expectFree.isEmpty()) {
-            QStringList wanted = current.expectFree;
+            // A background freed whole is checked by every one of its points being free: the app and the
+            // command line may label re-estimated points differently.
+            const auto whole = [&current](const QString& name) {
+                return std::any_of(current.expectWholeBackground.cbegin(), current.expectWholeBackground.cend(),
+                                   [&name](const QString& prefix) { return name.startsWith(prefix); });
+            };
+            QStringList wanted;
+            for (const QString& name : current.expectFree) if (!whole(name)) wanted << name;
+            for (int row = 0; row < table->rowCount(); ++row) {
+                const QString name = table->data(table->index(row, 0), path_role).toString();
+                if (whole(name) && name.endsWith(QStringLiteral(".intensity"))) wanted << name;
+            }
             wanted.sort();
             if (std::any_of(wanted.cbegin(), wanted.cend(), [&free](const QString& name) { return !free.contains(name); }) ||
                 std::any_of(free.cbegin(), free.cend(), [&](const QString& name) {
