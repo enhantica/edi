@@ -64,7 +64,7 @@ def test_c09_t13_bare_silicon_fit_reaches_the_reference_quality_band(tmp_path) -
         ' fit stderr contains exactly the declared calculator warning and no other output'
     )
     record = _record(completed.stdout)
-    assert record['schema'] == '8', "the  schema requirement must hold: record['schema'] == '8'"
+    assert record['schema'] == '9', "the  schema requirement must hold: record['schema'] == '9'"
     assert record['record'] == 'fit'
     assert record['status'] == 'done'
     assert record['mode'] == 'single'

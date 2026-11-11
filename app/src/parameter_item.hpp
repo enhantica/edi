@@ -71,6 +71,16 @@ class ParameterItem : public QObject {
     // (edi::file_text): what a field, the slider and the Analysis table show. The s.u. is empty without one.
     Q_PROPERTY(QString fileValue READ fileValue NOTIFY fileValueChanged)
     Q_PROPERTY(QString fileSu READ fileSu NOTIFY fileSuChanged)
+    // The value before the last fit and how far the fit moved it, as the report's fit table writes them (start and
+    // change, owner record 2026-11-10); both empty before a fit.
+    Q_PROPERTY(QString startText READ startText NOTIFY startTextChanged)
+    Q_PROPERTY(QString changeText READ changeText NOTIFY startTextChanged)
+    // The change's direction: 1 up, -1 down, 0 none.
+    Q_PROPERTY(int changeDirection READ changeDirection NOTIFY startTextChanged)
+    // After a fit, a free parameter's s.u. is red when the fit determines it poorly or it is strongly correlated with
+    // another (edi::su_marks, edi ADR-0085); the reason says which, one line each.
+    Q_PROPERTY(bool suFlagged READ suFlagged NOTIFY startTextChanged)
+    Q_PROPERTY(QString suReason READ suReason NOTIFY startTextChanged)
     // One unit of the last digit the item's display format shows: the slider's step (edi::display_step).
     Q_PROPERTY(double sliderStep READ sliderStep NOTIFY sliderStepChanged)
     // The item's label for its variant and its `.edi` name, as a field's and a cell's tooltip names it (edi ADR-0051);
@@ -137,6 +147,11 @@ class ParameterItem : public QObject {
     int phaseIndex() const { return phase_index_; }
     QString fileValue() const { return file_value_; }
     QString fileSu() const { return file_su_; }
+    QString startText() const { return start_text_; }
+    QString changeText() const { return change_text_; }
+    int changeDirection() const { return change_direction_; }
+    bool suFlagged() const { return !su_reason_.isEmpty(); }
+    QString suReason() const { return su_reason_; }
     double sliderStep() const;
     QString toolTip() const;
     // A number of this item, a slider limit, in its display format; empty for a parameter the dictionary does not know.
@@ -180,12 +195,14 @@ class ParameterItem : public QObject {
     void displayUnitsChanged();
     void fileValueChanged();
     void fileSuChanged();
+    void startTextChanged();
     void sliderStepChanged();
     void toolTipChanged();
 
    private:
     void setLastError(const QString& error);
     void refreshFileText();
+    void refreshStart();
 
     ProjectEditor& editor_;
     std::unique_ptr<edi::Parameter> own_;  // a descriptor row's value; parameter_ points at it
@@ -201,12 +218,14 @@ class ParameterItem : public QObject {
     QString domain_warning_;
     QString last_error_;
     QString path_, uid_, block_kind_, block_name_, category_, row_label_, name_, display_name_, display_units_,
-        short_name_, category_icon_, element_symbol_, variant_, file_value_, file_su_;
+        short_name_, category_icon_, element_symbol_, variant_, file_value_, file_su_,
+        start_text_, change_text_, su_reason_;
     std::string su_rule_;
     bool exact_ = false;
     double minimum_, maximum_;
     int block_index_ = -1;
     int phase_index_ = -1;
+    int change_direction_ = 0;
 };
 
 }  // namespace edi_app

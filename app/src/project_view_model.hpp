@@ -287,7 +287,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
    public:
     // `colourScheme` is the palette the blocks first take their positions in: the one selected when the project opens,
     // so an opened project's positions are those of that palette (ADR-0038).
-    ProjectViewModel(edi::Project project, QObject* parent, const QString& colourScheme = QStringLiteral("earth"));
+    ProjectViewModel(edi::Project project, QObject* parent, const QString& colourScheme = QStringLiteral("main"));
     ~ProjectViewModel() override;
 
     QString name() const;
@@ -1069,7 +1069,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void syncPatternColours();
     // Every block's position in the palette, after the blocks or the palette changed.
     void syncColourPositions();
-    QString colour_scheme_ = QStringLiteral("earth");
+    QString colour_scheme_ = QStringLiteral("main");
     QHash<const QObject*, std::size_t> colour_positions_;  // by the block's view-model
     QList<int> experiment_colour_positions_, structure_colour_positions_;
     // The scan views' kept settings: read when the project opens, written when changed and at every save.

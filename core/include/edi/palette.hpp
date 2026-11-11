@@ -8,27 +8,28 @@
 #include <string_view>
 #include <vector>
 
-// The figure palettes (data/palettes, PROVENANCE.md beside them; ADR-0038): the colours of experiments, structures and
+// The figure palettes (data/palettes, PROVENANCE.md beside them; ADR-0038, ADR-0084): the colours of experiments, structures and
 // chart roles, the only source of them in edi. The app's charts, legends, icons and Preferences, the pattern
 // presentation and the report read these functions.
 
 namespace edi {
 
-/// The five figure palettes, in the order Preferences lists them. Each has eleven figure colours and three role
-/// colours, in a light and a dark theme.
+/// The two figure palettes, in the order Preferences lists them. Each has eleven figure colours and three role
+/// colours, in a light and a dark theme: experiments 1 and 2, structures 1 to 3, then six colours further experiments
+/// and structures share.
 enum class ColourScheme {
-    Earth,
-    Classic,
-    Soft,
-    Natural,
+    Main,
     ColourBlindSafe,
 };
 
 /// The palette of a new user, and of a preference naming none.
-inline constexpr ColourScheme kDefaultColourScheme = ColourScheme::Earth;
+inline constexpr ColourScheme kDefaultColourScheme = ColourScheme::Main;
 
 /// How many colours each palette lists; positions past them take shades of the first two.
 inline constexpr std::size_t kPaletteColourCount = 11;
+
+/// The first position past the three structure colours: from here on experiments and structures share the colours.
+inline constexpr std::size_t kSharedColourStart = 5;
 
 /// The colours of a chart that belong to no experiment or structure.
 enum class ChartRole {
@@ -37,21 +38,22 @@ enum class ChartRole {
     Difference,
 };
 
-/// The palettes' preference tokens, in ColourScheme's order: "earth", "classic", "soft", "natural", "colourBlindSafe".
+/// The palettes' preference tokens, in ColourScheme's order: "main", "colourBlindSafe".
 std::span<const std::string_view> colour_scheme_names();
 
 /// The palette a token names; nullopt for any other name, the earlier palettes' included.
 std::optional<ColourScheme> colour_scheme_from_name(std::string_view name);
 
 /// The palette a stored preference names: a current token, an earlier palette's token read as its nearest new palette
-/// ("ediNatural" and "ediCoast" as Natural, "ediGarden" and "ediStudio" as Classic, "ediContrast" as Colour-blind
-/// safe), or the default palette for any other name.
+/// ("ediContrast" as Colour-blind safe, every other earlier palette as Main), or the default palette for any other
+/// name.
 ColourScheme colour_scheme_or_default(std::string_view name);
 
-/// The palette's name as Preferences show it: "Earth", "Classic", "Soft", "Natural", "Colour-blind safe".
+/// The palette's name as Preferences show it: "Main", "Colour-blind safe".
 std::string_view colour_scheme_title(ColourScheme scheme);
 
-/// Whether the palette keeps its first two colours for experiments (Earth only); the others are one pool.
+/// Whether the palette keeps its first two colours for experiments: true for both palettes, which also keep positions
+/// 2 to 4 for structures.
 bool reserves_experiment_colours(ColourScheme scheme);
 
 /// An experiment or a structure, the two kinds of item a palette colours.
@@ -68,7 +70,8 @@ struct FigureItem {
 
 /// Every item's position, from 0, in a palette's colour order. An item keeps the position it holds when its kind may
 /// take it there and no earlier item holds it; every other item, in the order given, takes the lowest free position its
-/// kind may take. In Earth a structure never takes position 0 or 1; in the other palettes any item takes any position.
+/// kind may take. Experiments take positions 0 and 1, structures 2 to 4, and both share the positions from
+/// kSharedColourStart on.
 /// Pass the items in the order they were added, so each new one takes the next free colour.
 std::vector<std::size_t> colour_positions(ColourScheme scheme, std::span<const FigureItem> items);
 
@@ -79,9 +82,10 @@ std::vector<std::size_t> free_positions(ColourScheme scheme, FigureKind kind, st
                                         std::span<const std::size_t> taken);
 
 /// The colour of pattern `place` of `count` a view shows together, a scan's datasets beside the project's structures
-/// at `taken` (the owner, 2026-10-27): up to the palette's eleven colours, the colour at the position free_positions
-/// gives it; more, only the palette's first two colours, from colour 1 at the first pattern to colour 2 at the last,
-/// mixed in Oklab at t = place / (count - 1).
+/// at `taken` (ADR-0084): while every pattern finds a free experiment position inside the palette (eight, fewer when
+/// structures 4 and up hold shared colours), the colour at the position free_positions gives it; more, every pattern
+/// takes a shade from experiment 1's colour at the first pattern to experiment 2's at the last, mixed in Oklab at
+/// t = place / (count - 1).
 std::string pattern_set_colour(ColourScheme scheme, std::size_t place, std::size_t count,
                                std::span<const std::size_t> taken, bool dark);
 

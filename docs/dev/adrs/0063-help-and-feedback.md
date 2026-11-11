@@ -47,7 +47,8 @@ message: `POST /feedback` with `kind` (`feedback`, `question`, `problem` or `ide
   character it stands for (the `F` of `%2F` is a slash, not a letter). The kind is one of the four fixed values and is
   never rewritten.
 - Home opens the feedback form directly inside the app. Only web (http or https) addresses open outside the app.
-- The feedback service's address is the `develop/feedbackAddress` setting, shown in Preferences. By default it is
+- The feedback service's address is the `develop/feedbackAddress` setting, kept in the settings file (Preferences
+  stopped showing it on 2026-11-10). By default it is
   `https://edi-feedback.savanna-animas-0g.workers.dev/feedback`, so Send works out of the box. A user may change it or
   clear it; while it is empty, Send is off and the form says why. Earlier builds kept an empty address under
   `develop/feedbackEndpoint`, which is no longer read. The service answers 201 with the new message's number, 400 for a
@@ -57,6 +58,15 @@ message: `POST /feedback` with `kind` (`feedback`, `question`, `problem` or `ide
 - The website's Get in touch form sends to the same service. The site build copies the default address from
   `Preferences.qml`, so the address has one source. The form's reason becomes the kind, its name, e-mail and affiliation
   the contact, its subject and message the subject and text, and `app` says only that it came from the website and from
-  which page. The page shows the service's answer in the app's words.  ## Consequences
+  which page. The page shows the service's answer in the app's words.
+- The website's Survey page (About → Survey, 2026-11-10) sends to the same service at `/survey` in place of
+  `/feedback`: `event` (a name from `website/surfaces/docs/assets/survey/events.json`, `general` always, any other
+  only between its `start` and `end` dates), `answers` (an object of the answered questions only), optional
+  `contact` (`name` and `affiliation` when filled in, `email` only with the consent box ticked; the fields look like
+  the Get in touch form's, the owner, 2026-11-10) and `app` as the Get in touch form sends it. The service labels the
+  issue `survey` and `event:<name>` and refuses an event the file does not list or whose dates have passed; the page
+  lists only the events open that day.
+
+## Consequences
 - A log leaves the user's computer only when they press Send with the box ticked.
 - Turning sending on is one setting once the feedback service is deployed; the app changes nothing else.

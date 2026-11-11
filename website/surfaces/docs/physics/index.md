@@ -13,10 +13,15 @@ This reference explains the models and numerical conventions used to calculate a
 
 ## Look up a type or parameter
 
-The [model catalogue](models.md) lists supported model tokens and their explanations. The [parameter index](parameters.md) links each scientific parameter to its equation, units and applicable model. [Conventions](conventions.md) fixes the notation used throughout the reference.
+- The [model catalogue](models.md) lists the supported model types and what each one does.
+- [Parameter explanations](parameters.md) link each scientific parameter to its equation, units and model.
+- [Conventions](conventions.md) fix the notation used throughout this reference.
 
-## Use the reference with the assistant
+## Ask an AI assistant about the physics
 
-Use a model's exact name and the parameter or equation link when asking a question. The assistant should identify the experiment type and units before applying an equation, distinguish an active parameter from a stored field, and cite the relevant section. Model availability is scoped to the [reference snapshot](models.md#reference-snapshot).
+The application's [built-in assistant](../user-guide/ai-assistant/index.md) and your own assistant can both read this
+reference. When you ask a question, name the model and link the parameter or equation; a good answer states the
+experiment type and the units before it applies an equation.
 
-The [assistant index](../llms.txt) provides a machine-friendly entry point; the [machine-readable catalogue](catalogue.json) identifies model and parameter pages. These are a retrieval source for the assistant, not a claim that chat integration has already been implemented.
+Your own assistant can start from the [assistant index](../llms.txt) and the
+[machine-readable catalogue](catalogue.json), which list every model and parameter page.

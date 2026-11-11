@@ -30,6 +30,7 @@ SideBarGroup {
     readonly property string categoryId: model.categoryId
     // The key its open or closed state is kept by, across the blocks the page shows.
     readonly property string openKey: `${shownTier}:${categoryId}`
+    pinKey: openKey
 
     // A Basic category with an Extras part has a group in each tab; `contents` is the tab's own.
     readonly property bool extrasPart: shownTier === "Extras" && model.tier !== "Extras" && model.extrasPart

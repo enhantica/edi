@@ -1592,14 +1592,13 @@ Index build_index(Project& model, crysta::Project& cproject) {
                       Slot{&cexperiment.background_terms[i].coef, &experiment.background_terms[i]->coef});
     }
     // Presence-tracked: a model that never declared abscor1 has no such path, so a set() on it is an
-    // unknown path rather than a silent write to a 0 the model never carried. abscor2 is
-    // deliberately never indexed — crysta holds it fixed and freeing it is a hard error there.
+    // unknown path rather than a silent write to a 0 the model never carried.
     if (experiment.absorption.abscor1 && !cexperiment.absorption.empty()) {
         index.emplace("experiment.absorption.abscor1",
                       Slot{&cexperiment.absorption[0], &*experiment.absorption.abscor1});
     }
     // The CW families carry the single mu_r body at absorption[0] (crysta's cwl layout),
-    // refinable exactly as abscor1. The family contract keeps mu_r and the TOF pair mutually
+    // refinable exactly as abscor1. The family contract keeps mu_r and the TOF ABSCOR1 mutually
     // exclusive; a hand-built model carrying both fails closed at the injectivity check
     // below rather than silently double-mapping the slot.
     if (experiment.absorption.mu_r && !cexperiment.absorption.empty()) {
@@ -1736,9 +1735,6 @@ void validate_index(const Project& model, const Index& index, crysta::Project& c
     // the deliberately unmapped slots, asserted by address rather than by count.
     crysta::ExperimentBase& cexperiment = cproject.experiment();
     std::set<const crysta::Parameter*> allowed_unmapped;
-    if (cexperiment.absorption.size() > 1) {
-        allowed_unmapped.insert(&cexperiment.absorption[1]);  // abscor2: engine-fixed, never indexed
-    }
     if (!model.experiment().absorption.abscor1 && !model.experiment().absorption.mu_r &&
         !cexperiment.absorption.empty()) {
         allowed_unmapped.insert(&cexperiment.absorption[0]);  // absent in the model
@@ -2829,10 +2825,10 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
             built.data = crysta::PdDataBase(e.data->axis(), e.data->intensity_meas.get(),
                                             e.data->intensity_meas_su.get());
         }
-        // The persisted pair follows the FAMILY, not key presence — a typed family's
+        // The persisted ABSCOR1 follows the FAMILY, not key presence — a typed family's
         // parameters exist iff the type says so. Under "cylinder" the loader has already
-        // canonicalised both coefficients (a missing key defaulted to 0), so they cross as
-        // ordinary values; under "none" there is nothing to persist.
+        // canonicalised the coefficient (a missing key defaulted to 0), so it crosses as an
+        // ordinary value; under "none" there is nothing to persist.
         if (crysta::absorption_form_of(built.kind, built.absorption_type.get()) ==
             crysta::AbsorptionForm::None) {
             built.absorption.clear();
@@ -2846,7 +2842,7 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
     // The declared descent and chi-square tolerance round-trip the same way.
     cproject.minimizer_descent = model.descent;
     cproject.minimizer_chi_square_tolerance = model.minimizer_chi_square_tolerance;
-    cproject.minimizer_stop_rule = model.minimizer_stop_rule;
+    cproject.minimizer_stop_rules = model.minimizer_stop_rules;
     cproject.minimizer_shift_tolerance = model.minimizer_shift_tolerance;
     cproject.minimizer_moments_near_zero = model.minimizer_moments_near_zero;
     cproject.minimizer_type = model.minimizer_type;
@@ -2876,6 +2872,9 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
         to.profile_function = from.profile_function;
         to.background_function = from.background_function;
         to.descent = from.descent;
+        to.stopping_rule = from.stopping_rule;
+        to.stopping_value = from.stopping_value;
+        to.last_shift_su = from.last_shift_su;
         // A scan's per-file pairs are held with no result, so they cross whether or not one is held.
         std::vector<crysta::FitParameterCorrelation> rows;
         rows.reserve(from.correlations.size());
@@ -3440,7 +3439,7 @@ const Parameter& seed_scale(const ExperimentBase& e) {
 //   peak_type     selects the Jorgensen-von-Dreele Lorentzian free block; crysta defaults to plain
 //                 `tof-jorgensen`, under which a bracketed Lorentzian coefficient is REJECTED, so
 //                 omitting this silently changes the free set (or hard-errors);
-//   absorption    the per-bank ABSCOR1/ABSCOR2 pair; absent/0 means mu*R = 0, i.e. A == 1;
+//   absorption    the per-bank ABSCOR1; absent/0 means mu*R = 0, i.e. A == 1;
 //   dataset_weight, excluded_regions  the per-bank joint weight and mask;
 //   data_file     the plain-data file the measured data came from, which the save writes back.
 void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& built) {
@@ -3543,26 +3542,23 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
     const crysta::AbsorptionForm absorption_form =
         crysta::absorption_form_of(built.kind, built.absorption_type.get());
 
-    // AbsorptionBase: crysta expects [abscor1, abscor2]. A freed ABSCOR2 is passed through
-    // rather than silently cleared; crysta rejects it with its own structured error.
+    // AbsorptionBase: crysta expects [abscor1].
     built.absorption.clear();
     // TOF only, and — review-8 F4 — only for the CYLINDER family: a typed family's
     // parameters exist iff the type says so, for the CALCULATION exactly as for
-    // persistence. crysta's own loader fills the pair for a TOF cylinder block and leaves
+    // persistence. crysta's own loader fills ABSCOR1 for a TOF cylinder block and leaves
     // both a CW block's and a type-none block's absorption EMPTY (F-d-ABS reversed), so the
     // conversion mirrors exactly that — a declared no-absorption project computes with no
     // absorption, before and after its round trip alike. Under "cylinder" the model holds
-    // both coefficients (loader/factory canonical); value_or guards a hand-built partial
+    // ABSCOR1 (loader/factory canonical); value_or guards a hand-built partial
     // model only.
     if (built.kind == crysta::BeamModeEnum::TimeOfFlight &&
         absorption_form == crysta::AbsorptionForm::CylinderHewat) {
         built.absorption.push_back(
             param(e.absorption.abscor1.value_or(Parameter{}), crysta::CORRECTION, "abscor1"));
-        built.absorption.push_back(
-            param(e.absorption.abscor2.value_or(Parameter{}), crysta::CORRECTION, "abscor2"));
     }
     // The CW families carry the single mu_r body — [0]=mu_r, crysta's cwl layout, the same
-    // typed-family rule as the TOF pair (parameters exist iff the type says so).
+    // typed-family rule as the TOF ABSCOR1 (parameters exist iff the type says so).
     if (built.kind == crysta::BeamModeEnum::ConstantWavelength &&
         absorption_form != crysta::AbsorptionForm::None) {
         built.absorption.push_back(
@@ -5655,6 +5651,9 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
     }
     record.message = record.exit_reason;
     record.iterations = outcome.iterations;
+    record.stopping_rule = outcome.stopping_rule;
+    record.stopping_value = finite_factor(outcome.stopping_value);
+    record.last_shift_su = finite_factor(outcome.last_shift_su);
     record.fitting_time = outcome.elapsed_ms / 1000.0;
     record.reduced_chi_square = finite_factor(outcome.reduced_chi_square);
     const std::size_t n_free = outcome.values.size();
@@ -5850,16 +5849,11 @@ crysta::DescentRequest declared_request(const Project& project) {
     if (project.minimizer_chi_square_tolerance > 0.0) {
         request.chi_square_tolerance = project.minimizer_chi_square_tolerance;
     }
-    request.stop = crysta::declared_stop_test(project.minimizer_stop_rule, project.minimizer_shift_tolerance);
+    request.stop = crysta::declared_stop_test(project.minimizer_stop_rules, project.minimizer_shift_tolerance);
     request.moment_zero_trial = crysta::declared_moment_zero_trial(project.minimizer_moments_near_zero);
     return request;
 }
 
-// Whether the project declares none of the conditions: its fit keeps the historical direct call.
-bool declares_no_conditions(const Project& project) {
-    return project.descent.empty() && project.minimizer_chi_square_tolerance <= 0.0 &&
-           project.minimizer_stop_rule.empty() && project.minimizer_moments_near_zero.empty();
-}
 
 }  // namespace
 
@@ -5994,22 +5988,14 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // or not anyone subscribed, and an absent subscriber crosses no host boundary at all.
             // (F-bound) /: the project's declared `_minimizer.*` conditions — the iteration budget
             // (absent: the historical 50 cap), the descent and the chi-square stop. A declared
-            // descent or tolerance goes through crysta's registry entry point (DescentRequest, id
-            // validated above); a project declaring neither keeps the historical direct call
-            // byte-for-byte, so the default path cannot move a number by construction. The request's
-            // seed/polish pair mirrors `separable_linear=true` exactly (crysta descent.hpp: the
-            // ordinary provider overloads set both from it).
+            // descent, tolerance or stop rule goes through crysta's registry entry point
+            // (DescentRequest, id validated above), and so does a project declaring none: the request
+            // then carries crysta's defaults (fast descent, the default stop rules), the same fit the
+            // project-analysis path and the CLI run. The request's seed/polish pair mirrors
+            // `separable_linear=true` exactly (crysta descent.hpp).
             crysta::DescentRequest request =
                 declared_request(*this);
             const crysta::FitResultBase result = [&] {
-                if constexpr (!std::is_same_v<std::decay_t<decltype(provider)>, crysta::SingleCrystalResidual>) {
-                  if (declares_no_conditions(*this)) {
-                    return crysta::fit_problem(
-                        provider, /*separable_linear=*/true, request.max_iterations,
-                        collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
-                        should_cancel);  // The cooperative cancel
-                  }
-                }
                 request.on_iteration =
                     collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
                 request.should_cancel = should_cancel;
@@ -6044,6 +6030,13 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             outcome.reduced_chi_square = result.reduced_chi_square;
             outcome.iterations = result.iterations;
             outcome.converged = result.converged;
+            outcome.stopping_rule = result.stopping_rule;
+            outcome.stopping_value = result.stopping_value;
+            outcome.last_shift_su = result.last_shift_su;
+            outcome.multistart_probes_started = result.multistart_probes_started;
+            outcome.multistart_probes_pruned = result.multistart_probes_pruned;
+            outcome.multistart_probe_iterations = result.multistart_probe_iterations;
+            outcome.multistart_survivor = result.multistart_survivor;
             outcome.n_points_loaded = n_points_loaded;
             outcome.n_points_fitted = provider.n_data();
             outcome.iterations_history = to_edi(collector.history());
@@ -6448,7 +6441,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // tolerance and records them per row in analysis/results-provenance.csv.
         cproject.minimizer_descent = descent;
         cproject.minimizer_chi_square_tolerance = minimizer_chi_square_tolerance;
-        cproject.minimizer_stop_rule = minimizer_stop_rule;
+        cproject.minimizer_stop_rules = minimizer_stop_rules;
         cproject.minimizer_shift_tolerance = minimizer_shift_tolerance;
         cproject.minimizer_moments_near_zero = minimizer_moments_near_zero;
         cproject.minimizer_type = minimizer_type;
@@ -6622,6 +6615,13 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         outcome.iterations = recovered ? result.iterations
                                        : static_cast<int>(outcome.iterations_history.size());
         outcome.converged = result.converged;
+        outcome.stopping_rule = result.stopping_rule;
+        outcome.stopping_value = result.stopping_value;
+        outcome.last_shift_su = result.last_shift_su;
+        outcome.multistart_probes_started = result.multistart_probes_started;
+        outcome.multistart_probes_pruned = result.multistart_probes_pruned;
+        outcome.multistart_probe_iterations = result.multistart_probe_iterations;
+        outcome.multistart_survivor = result.multistart_survivor;
         outcome.elapsed_ms = solved ? elapsed_ms : 0.0;
         outcome.status = to_edi(crysta::classify_fit_status(result));
         outcome.unevaluable_trials = result.unevaluable_trials;
@@ -6808,19 +6808,11 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
                 });
             const auto fit_start = std::chrono::steady_clock::now();
             crysta::IterationHistoryCollector collector(dof, fit_start);
-            // (F-bound) /: the same declared conditions and the same registry-or-historical
-            // split as the single-bank path above.
+            // (F-bound) /: the same declared conditions through the same registry entry point as the
+            // single-bank path above.
             crysta::DescentRequest request =
                 declared_request(*this);
             const crysta::FitResultBase result = [&] {
-                if constexpr (!std::is_same_v<std::decay_t<decltype(provider)>, crysta::SingleCrystalResidual>) {
-                    if (declares_no_conditions(*this)) {
-                        return crysta::fit_problem(
-                            provider, /*separable_linear=*/true, request.max_iterations,
-                            collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths)),
-                            should_cancel);  // The cooperative cancel
-                    }
-                }
                 request.on_iteration =
                     collector.callback(to_engine_callback(on_iteration, dof, fit_start, paths));
                 request.should_cancel = should_cancel;
@@ -6862,6 +6854,13 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             outcome.reduced_chi_square = result.reduced_chi_square;
             outcome.iterations = result.iterations;
             outcome.converged = result.converged;
+            outcome.stopping_rule = result.stopping_rule;
+            outcome.stopping_value = result.stopping_value;
+            outcome.last_shift_su = result.last_shift_su;
+            outcome.multistart_probes_started = result.multistart_probes_started;
+            outcome.multistart_probes_pruned = result.multistart_probes_pruned;
+            outcome.multistart_probe_iterations = result.multistart_probe_iterations;
+            outcome.multistart_survivor = result.multistart_survivor;
             outcome.banks = std::move(bank_metrics);
             outcome.n_points_loaded = n_points_loaded;
             outcome.n_points_fitted = provider.n_data();

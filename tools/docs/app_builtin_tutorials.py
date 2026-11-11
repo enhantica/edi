@@ -40,7 +40,7 @@ BUILT_INS = ('interface',)
 BY_HAND_SIMULATION = ROOT / 'app/tutorials/lbco-simulation-by-hand.json'
 SIMULATION_CASE = 'pd-neut-cwl_lbco_simulation'
 # The stop rules' names as the Minimizer group's selector shows them.
-STOP_RULES = {'shift_su': 'Shift/s.u.'}
+STOP_RULES = {'chi_square_change': 'χ² change', 'shift_su': 'Shift/s.u.'}
 # Each kind's From web… entry in its Load ▾ menu (TutorialPanel.webEntries).
 WEB_ENTRIES = {
     'structure': 'structures.load.web',
@@ -560,7 +560,7 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         ]
     if ident == 'correlations':
         text = 'The **Correlations** view shows which fitted parameters move together.'
-        tab = 'mainArea.analysis.tab.correlations'
+        tab = 'mainArea.tab.correlations'
         return [step('Correlations', text, 'analysis', tab, 'open:' + tab)]
     if ident == 'calculated':
         text = 'On **Analysis**, the main view draws the pattern calculated from the model.'

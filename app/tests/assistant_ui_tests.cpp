@@ -207,7 +207,7 @@ private slots:
         const QJsonObject file{{"path", "project.zip"}, {"format", "zip"},
             {"bytes", bytes.size()}, {"sha256", QString::fromLatin1(
                 QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())}};
-        const QJsonObject entry{{"id", "scan-example"}, {"kind", "project"},
+        const QJsonObject entry{{"id", "pd-neut-cwl_cosio-d20_scan-213f"}, {"kind", "project"},
             {"name", "A scan example"}, {"files", QJsonArray{file}}};
         QFile index(source.filePath("index.json"));
         QVERIFY(index.open(QIODevice::WriteOnly));
@@ -249,7 +249,7 @@ private slots:
         QVERIFY(bar && opening && fitting);
         QSignalSpy finished(session, &edi_app::Session::exampleOpenFinished);
         QSignalSpy transferred(session, &edi_app::Session::exampleDownloadProgressChanged);
-        QVERIFY(session->openExample("scan-example"));
+        QVERIFY(session->openExample("pd-neut-cwl_cosio-d20_scan-213f"));
         QVERIFY(bar->property("opening").toBool());
         QVERIFY(opening->property("indeterminate").toBool());
         QVERIFY(opening->property("text").toString().contains("Loading"));
@@ -268,12 +268,12 @@ private slots:
         QVERIFY(bar->setProperty("pagesBuilt", 5));
         QTRY_VERIFY(!opening->property("visible").toBool());
         QVERIFY(QFile::remove(archive));
-        QVERIFY(session->openExample("scan-example"));
+        QVERIFY(session->openExample("pd-neut-cwl_cosio-d20_scan-213f"));
         QVERIFY(bar->property("opening").toBool());
         QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 2, 10000);
         QVERIFY(!finished.at(1).at(1).toBool());
         QTRY_VERIFY(!opening->property("visible").toBool());
-        QVERIFY(session->openExample("scan-example"));
+        QVERIFY(session->openExample("pd-neut-cwl_cosio-d20_scan-213f"));
         session->closeProject();
         QVERIFY(!session->openingExample());
         QTest::qWait(50);

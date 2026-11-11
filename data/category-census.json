@@ -1436,13 +1436,6 @@
           ]
         },
         {
-          "member": "AbsorptionBase::abscor2",
-          "type": "OptionalParameter",
-          "items": [
-            "abscor2"
-          ]
-        },
-        {
           "member": "AbsorptionBase::mu_r",
           "type": "OptionalParameter",
           "items": [
@@ -1926,10 +1919,10 @@
           ]
         },
         {
-          "member": "Project::minimizer_stop_rule",
+          "member": "Project::minimizer_stop_rules",
           "type": "std::string",
           "items": [
-            "stop_rule"
+            "stop_rules"
           ]
         },
         {
@@ -2105,6 +2098,27 @@
           "type": "std::string",
           "items": [
             "descent"
+          ]
+        },
+        {
+          "member": "FitResultRecord::stopping_rule",
+          "type": "std::string",
+          "items": [
+            "stopping_rule"
+          ]
+        },
+        {
+          "member": "FitResultRecord::stopping_value",
+          "type": "std::optional<double>",
+          "items": [
+            "stopping_value"
+          ]
+        },
+        {
+          "member": "FitResultRecord::last_shift_su",
+          "type": "std::optional<double>",
+          "items": [
+            "last_shift_su"
           ]
         }
       ],
@@ -4460,11 +4474,6 @@
       "category": "_absorption"
     },
     {
-      "member": "AbsorptionBase::abscor2",
-      "type": "OptionalParameter",
-      "category": "_absorption"
-    },
-    {
       "member": "AbsorptionBase::mu_r",
       "type": "OptionalParameter",
       "category": "_absorption"
@@ -5410,6 +5419,41 @@
       "not_storage": "a fit report"
     },
     {
+      "member": "FitResultBase::stopping_rule",
+      "type": "std::string",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::stopping_value",
+      "type": "double",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::last_shift_su",
+      "type": "double",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::multistart_probes_started",
+      "type": "int",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::multistart_probes_pruned",
+      "type": "int",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::multistart_probe_iterations",
+      "type": "int",
+      "not_storage": "a fit report"
+    },
+    {
+      "member": "FitResultBase::multistart_survivor",
+      "type": "std::string",
+      "not_storage": "a fit report"
+    },
+    {
       "member": "FitResultBase::n_points_loaded",
       "type": "std::size_t",
       "not_storage": "a fit report"
@@ -5752,6 +5796,21 @@
       "category": "_fit_result"
     },
     {
+      "member": "FitResultRecord::stopping_rule",
+      "type": "std::string",
+      "category": "_fit_result"
+    },
+    {
+      "member": "FitResultRecord::stopping_value",
+      "type": "std::optional<double>",
+      "category": "_fit_result"
+    },
+    {
+      "member": "FitResultRecord::last_shift_su",
+      "type": "std::optional<double>",
+      "category": "_fit_result"
+    },
+    {
       "member": "FitResultRecord::correlations",
       "type": "ItemVec<FitParameterCorrelation>",
       "holds": [
@@ -5882,7 +5941,7 @@
       "category": "_minimizer"
     },
     {
-      "member": "Project::minimizer_stop_rule",
+      "member": "Project::minimizer_stop_rules",
       "type": "std::string",
       "category": "_minimizer"
     },

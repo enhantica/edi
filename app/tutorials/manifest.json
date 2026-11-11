@@ -1007,8 +1007,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -2082,8 +2082,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -2772,8 +2772,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -3486,8 +3486,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -4384,8 +4384,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -4862,8 +4862,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -5566,8 +5566,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -6160,8 +6160,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -6786,8 +6786,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -7380,8 +7380,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -7982,8 +7982,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -9854,8 +9854,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -10782,8 +10782,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -11430,8 +11430,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -12338,8 +12338,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -13281,8 +13281,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -13764,8 +13764,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -14503,8 +14503,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -14888,8 +14888,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -15216,8 +15216,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -16182,8 +16182,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",
@@ -17824,8 +17824,8 @@
           "title": "Correlations",
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
-          "target": "mainArea.analysis.tab.correlations",
-          "check": "open:mainArea.analysis.tab.correlations"
+          "target": "mainArea.tab.correlations",
+          "check": "open:mainArea.tab.correlations"
         },
         {
           "title": "Open Report",

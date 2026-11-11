@@ -26,3 +26,9 @@ resumed descent with no accepted step. Only `status=done` and `converged=true`
 change to `no_step` and `false`; every iteration, metric and diagnostic counter
 remains byte-identical. The independently captured compact engine record is
 `tests/fixtures/engine_fit_records/cosio-ladder.json`.
+
+
+The captured machine record is projected to schema 9 without rerunning its fit.
+The original numeric/input/producer provenance above is retained; the wire-only
+projection and unavailable stop metadata are documented in
+[the version-projection receipt](../c06_t8/README.md).

@@ -2018,15 +2018,6 @@
      "reason": "C",
      "verdict": "public"
     },
-    "abscor2": {
-     "need": {
-      "by": "deviation",
-      "ref": "D50",
-      "verdict": "keep"
-     },
-     "reason": "C",
-     "verdict": "public"
-    },
     "mu_r": {
      "need": {
       "by": "counterpart",
@@ -7805,7 +7796,6 @@
    "kind": "class",
    "members": [
     "abscor1",
-    "abscor2",
     "mu_r",
     "parameters",
     "type"
@@ -8732,6 +8722,10 @@
   "Cell.free_parameters": {
    "reason": "removed under the 2026-08-30 owner ruling: diffraction-lib carries `free_parameters` on the project only; no script ever read a node's; `Project.free_parameters` stays",
    "removed_in": "necessity review (ADR-0011)"
+  },
+  "CylinderHewatAbsorption.abscor2": {
+   "reason": "removed: FullProf's second absorption coefficient has no effect on the Hewat cylinder; an older file's value is ignored with a warning",
+   "removed_in": "2026-11-10"
   },
   "Experiment": {
    "reason": "renamed `ExperimentBase` under the 2026-08-31 owner verbatim-name ruling (verbatim-names: our name IS diffraction-lib's name, Base/Enum and all); same concept, the upstream spelling",

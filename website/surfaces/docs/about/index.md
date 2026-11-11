@@ -17,6 +17,7 @@ Use it in your browser, on your desktop, from Python or from the command line. A
 ## More about the project
 
 - [Get in touch](community.md) with a question, a problem or an idea.
+- [Survey](survey.md): tell us how you work and what you need.
 - [Licence](licence.md): EasyDiffraction is open source.
-- [Citation](citation.md): how to cite it and keep your analysis repeatable.
+- [How to cite](citation.md) EasyDiffraction and keep your analysis repeatable.
 - [What's new](../changelog.md): the releases.

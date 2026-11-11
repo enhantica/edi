@@ -24,3 +24,7 @@ experiment settings of the joint PbSO4 case (`catalogue_joint.py`).
   shift, the scale and the six Chebyshev terms. The tutorial keeps the coordinates and Biso fixed; here they start
   rounded, so they are free.
 - **Left out:** the tutorial's minimizer settings; edi uses crysta.
+
+**Re-pinned 2026-11-11.** The default descent now runs fast descent and the ladder for three iterations each from the
+start and continues with the one at the lower χ². Measured with `python -m edi fit --report machine --verbosity full`
+linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: iterations 12 → 9. No `reference` value moved.

@@ -4,7 +4,16 @@ icon: fa5/comments
 
 # Get in touch
 
-Send a question, feedback, a problem or an idea with the form below. It reaches the same people as the app's Help and feedback.
+Ask a question, share feedback, report a problem or suggest an idea. Messages reach the same people as the app's Help
+and feedback.
+
+## Send a message
+
+When you report a problem, it helps to say:
+
+- what you did, what happened and what you expected;
+- whether you use the browser app, the desktop app, Python or the command line, and its version;
+- a small project or file that shows the problem, if you can share it. Leave out unpublished or confidential data.
 
 <form class="ed-contact-form" action="#" method="post" aria-label="Get in touch">
 <select name="reason" aria-label="Reason"></select>
@@ -19,16 +28,11 @@ Send a question, feedback, a problem or an idea with the form below. It reaches 
 <p class="ed-contact-note"></p>
 </form>
 
-## Report a problem
+## Take the survey
 
-It helps to tell us:
-
-- what you did, what happened and what you expected;
-- whether you use the browser app, the desktop app, Python or the command line, and its version;
-- a small project or file that shows the problem, if you can share it.
-
-Leave out unpublished or confidential data.
+Have 15 minutes? The [survey](survey.md) asks how you work and what you need, and it shapes what we build next.
 
 ## Other ways
 
-You can also open an issue on [GitHub](https://github.com/enhantica/edi/issues).
+You can also open an issue on [GitHub](https://github.com/enhantica/edi/issues). If you would like to work on the code,
+its source is in the [edi repository](https://github.com/enhantica/edi).

@@ -59,6 +59,7 @@ class ChartLegendModel : public QAbstractListModel {
 
     void setEntries(const QList<Entry>& entries);
     int count() const { return static_cast<int>(entries_.size()); }
+    const QList<Entry>& entries() const { return entries_; }
 
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index, int role) const override;

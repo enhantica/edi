@@ -745,13 +745,13 @@ void ScanLayer::recolour() {
     for (const int position : taken_positions_) {
         taken.push_back(static_cast<std::size_t>(std::max(position, 0)));
     }
-    // A joint fit's experiments keep their own positions while the palette has a colour for each; a scan's datasets,
-    // and any set larger than the palette, take the pattern set's colours (edi::pattern_set_colour).
-    const bool own = positions_.size() == count && size <= edi::kPaletteColourCount;
+    // A joint fit's experiments keep their own positions while each has one of the palette's colours; a scan's
+    // datasets, and a joint fit past the palette, take the pattern set's colours (edi::pattern_set_colour, ADR-0084).
     std::size_t used = 0;
     for (const int position : positions_) {
         used = std::max(used, static_cast<std::size_t>(std::max(position, 0)) + 1);
     }
+    const bool own = positions_.size() == count && used <= edi::kPaletteColourCount;
     for (std::size_t dataset = 0; dataset < size; ++dataset) {
         // Reversed, the last dataset takes the first colour.
         const std::size_t place = stacked_reversed_ ? size - 1 - dataset : dataset;

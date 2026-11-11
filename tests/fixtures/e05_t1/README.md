@@ -148,3 +148,9 @@ become 16, the declared FCJ pair and Hewat mu_r add three slots, and ADR-0108 ad
 three-component moments and the one active dipole C2. Thus 60 - 14 + 16 + 2 + 1 + 6 + 1 = 72.
 The generator authenticates that topology from the input text. No native parameter walk,
 fit result or serializer supplies the count; every earlier CLI/count row remains intact.
+
+
+The captured machine record is projected to schema 9 without rerunning its fit.
+The original numeric/input/producer provenance above is retained; the wire-only
+projection and unavailable stop metadata are documented in
+[the version-projection receipt](../c06_t8/README.md).

@@ -11,1187 +11,1187 @@
  "images": [
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/01-home.png"
+   "path": "assets/gui/y2o3/01-home.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/01-home.png"
+   "path": "assets/gui/y2o3/dark/01-home.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/02-project-start.png"
+   "path": "assets/gui/y2o3/02-project-start.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/02-project-start.png"
+   "path": "assets/gui/y2o3/dark/02-project-start.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/03-project-details.png"
+   "path": "assets/gui/y2o3/03-project-details.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/03-project-details.png"
+   "path": "assets/gui/y2o3/dark/03-project-details.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/04-project-created.png"
+   "path": "assets/gui/y2o3/04-project-created.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/04-project-created.png"
+   "path": "assets/gui/y2o3/dark/04-project-created.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/05-project-basic.png"
+   "path": "assets/gui/y2o3/05-project-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/05-project-basic.png"
+   "path": "assets/gui/y2o3/dark/05-project-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/05-project-extras.png"
+   "path": "assets/gui/y2o3/05-project-extras.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/05-project-extras.png"
+   "path": "assets/gui/y2o3/dark/05-project-extras.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/05-project-text.png"
+   "path": "assets/gui/y2o3/05-project-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/05-project-text.png"
+   "path": "assets/gui/y2o3/dark/05-project-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/06-structure-import.png"
+   "path": "assets/gui/y2o3/06-structure-import.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/06-structure-import.png"
+   "path": "assets/gui/y2o3/dark/06-structure-import.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/07-structure-loaded.png"
+   "path": "assets/gui/y2o3/07-structure-loaded.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/07-structure-loaded.png"
+   "path": "assets/gui/y2o3/dark/07-structure-loaded.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/08-structure-basic.png"
+   "path": "assets/gui/y2o3/08-structure-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/08-structure-basic.png"
+   "path": "assets/gui/y2o3/dark/08-structure-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/08-structure-extras.png"
+   "path": "assets/gui/y2o3/08-structure-extras.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/08-structure-extras.png"
+   "path": "assets/gui/y2o3/dark/08-structure-extras.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/08-structure-text.png"
+   "path": "assets/gui/y2o3/08-structure-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/08-structure-text.png"
+   "path": "assets/gui/y2o3/dark/08-structure-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/09-experiment-import.png"
+   "path": "assets/gui/y2o3/09-experiment-import.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/09-experiment-import.png"
+   "path": "assets/gui/y2o3/dark/09-experiment-import.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/09-experiment-type.png"
+   "path": "assets/gui/y2o3/09-experiment-type.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/09-experiment-type.png"
+   "path": "assets/gui/y2o3/dark/09-experiment-type.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-calculation-range.png"
+   "path": "assets/gui/y2o3/guide-experiment-calculation-range.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-calculation-range.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-calculation-range.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/09-experiment-data.png"
+   "path": "assets/gui/y2o3/09-experiment-data.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/09-experiment-data.png"
+   "path": "assets/gui/y2o3/dark/09-experiment-data.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/09-wavelength.png"
+   "path": "assets/gui/y2o3/09-wavelength.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/09-wavelength.png"
+   "path": "assets/gui/y2o3/dark/09-wavelength.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/09-profile.png"
+   "path": "assets/gui/y2o3/09-profile.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/09-profile.png"
+   "path": "assets/gui/y2o3/dark/09-profile.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/09-profile-broad-gauss-u.png"
+   "path": "assets/gui/y2o3/09-profile-broad-gauss-u.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/09-profile-broad-gauss-u.png"
+   "path": "assets/gui/y2o3/dark/09-profile-broad-gauss-u.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/09-profile-broad-gauss-v.png"
+   "path": "assets/gui/y2o3/09-profile-broad-gauss-v.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/09-profile-broad-gauss-v.png"
+   "path": "assets/gui/y2o3/dark/09-profile-broad-gauss-v.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/09-profile-broad-gauss-w.png"
+   "path": "assets/gui/y2o3/09-profile-broad-gauss-w.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/09-profile-broad-gauss-w.png"
+   "path": "assets/gui/y2o3/dark/09-profile-broad-gauss-w.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/09-exclusion-0.png"
+   "path": "assets/gui/y2o3/09-exclusion-0.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/09-exclusion-0.png"
+   "path": "assets/gui/y2o3/dark/09-exclusion-0.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/09-exclusion-1.png"
+   "path": "assets/gui/y2o3/09-exclusion-1.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/09-exclusion-1.png"
+   "path": "assets/gui/y2o3/dark/09-exclusion-1.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/09-background-settings.png"
+   "path": "assets/gui/y2o3/09-background-settings.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/09-background-settings.png"
+   "path": "assets/gui/y2o3/dark/09-background-settings.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/09-background-estimate.png"
+   "path": "assets/gui/y2o3/09-background-estimate.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/09-background-estimate.png"
+   "path": "assets/gui/y2o3/dark/09-background-estimate.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/10-experiment-loaded.png"
+   "path": "assets/gui/y2o3/10-experiment-loaded.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/10-experiment-loaded.png"
+   "path": "assets/gui/y2o3/dark/10-experiment-loaded.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/11-experiment-basic.png"
+   "path": "assets/gui/y2o3/11-experiment-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/11-experiment-basic.png"
+   "path": "assets/gui/y2o3/dark/11-experiment-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/11-experiment-extras.png"
+   "path": "assets/gui/y2o3/11-experiment-extras.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/11-experiment-extras.png"
+   "path": "assets/gui/y2o3/dark/11-experiment-extras.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/11-experiment-text.png"
+   "path": "assets/gui/y2o3/11-experiment-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/11-experiment-text.png"
+   "path": "assets/gui/y2o3/dark/11-experiment-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/11-experiment-settings.png"
+   "path": "assets/gui/y2o3/11-experiment-settings.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/11-experiment-settings.png"
+   "path": "assets/gui/y2o3/dark/11-experiment-settings.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/12-analysis-choose.png"
+   "path": "assets/gui/y2o3/12-analysis-choose.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/12-analysis-choose.png"
+   "path": "assets/gui/y2o3/dark/12-analysis-choose.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/12-fit-scale-cell.png"
+   "path": "assets/gui/y2o3/12-fit-scale-cell.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/12-fit-scale-cell.png"
+   "path": "assets/gui/y2o3/dark/12-fit-scale-cell.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/12-fit-profile.png"
+   "path": "assets/gui/y2o3/12-fit-profile.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/12-fit-profile.png"
+   "path": "assets/gui/y2o3/dark/12-fit-profile.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/12-correlations.png"
+   "path": "assets/gui/y2o3/12-correlations.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/12-correlations.png"
+   "path": "assets/gui/y2o3/dark/12-correlations.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/13-analysis-basic.png"
+   "path": "assets/gui/y2o3/13-analysis-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/13-analysis-basic.png"
+   "path": "assets/gui/y2o3/dark/13-analysis-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/13-analysis-extras.png"
+   "path": "assets/gui/y2o3/13-analysis-extras.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/13-analysis-extras.png"
+   "path": "assets/gui/y2o3/dark/13-analysis-extras.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/13-analysis-text.png"
+   "path": "assets/gui/y2o3/13-analysis-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/13-analysis-text.png"
+   "path": "assets/gui/y2o3/dark/13-analysis-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/13-analysis-settings.png"
+   "path": "assets/gui/y2o3/13-analysis-settings.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/13-analysis-settings.png"
+   "path": "assets/gui/y2o3/dark/13-analysis-settings.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/14-report-basic.png"
+   "path": "assets/gui/y2o3/14-report-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/14-report-basic.png"
+   "path": "assets/gui/y2o3/dark/14-report-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/14-report-text.png"
+   "path": "assets/gui/y2o3/14-report-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/14-report-text.png"
+   "path": "assets/gui/y2o3/dark/14-report-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/15-project-examples.png"
+   "path": "assets/gui/y2o3/15-project-examples.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/15-project-examples.png"
+   "path": "assets/gui/y2o3/dark/15-project-examples.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-project-actions.png"
+   "path": "assets/gui/y2o3/guide-project-actions.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-project-actions.png"
+   "path": "assets/gui/y2o3/dark/guide-project-actions.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-project-open.png"
+   "path": "assets/gui/y2o3/guide-project-open.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-project-open.png"
+   "path": "assets/gui/y2o3/dark/guide-project-open.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-project-save.png"
+   "path": "assets/gui/y2o3/guide-project-save.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-project-save.png"
+   "path": "assets/gui/y2o3/dark/guide-project-save.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-project-recent.png"
+   "path": "assets/gui/y2o3/guide-project-recent.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-project-recent.png"
+   "path": "assets/gui/y2o3/dark/guide-project-recent.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-structure-symmetry.png"
+   "path": "assets/gui/y2o3/guide-structure-symmetry.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-structure-symmetry.png"
+   "path": "assets/gui/y2o3/dark/guide-structure-symmetry.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-structure-cell.png"
+   "path": "assets/gui/y2o3/guide-structure-cell.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-structure-cell.png"
+   "path": "assets/gui/y2o3/dark/guide-structure-cell.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-structure-atoms.png"
+   "path": "assets/gui/y2o3/guide-structure-atoms.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-structure-atoms.png"
+   "path": "assets/gui/y2o3/dark/guide-structure-atoms.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-structure-displacement.png"
+   "path": "assets/gui/y2o3/guide-structure-displacement.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-structure-displacement.png"
+   "path": "assets/gui/y2o3/dark/guide-structure-displacement.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-structure-create.png"
+   "path": "assets/gui/y2o3/guide-structure-create.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-structure-create.png"
+   "path": "assets/gui/y2o3/dark/guide-structure-create.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-data.png"
+   "path": "assets/gui/y2o3/guide-experiment-data.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-data.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-data.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-data-source.png"
+   "path": "assets/gui/y2o3/guide-experiment-data-source.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-data-source.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-data-source.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-create.png"
+   "path": "assets/gui/y2o3/guide-experiment-create.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-create.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-create.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-instrument.png"
+   "path": "assets/gui/y2o3/guide-experiment-instrument.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-instrument.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-instrument.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-profile.png"
+   "path": "assets/gui/y2o3/guide-experiment-profile.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-profile.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-profile.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-background.png"
+   "path": "assets/gui/y2o3/guide-experiment-background.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-background.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-background.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-exclusions.png"
+   "path": "assets/gui/y2o3/guide-experiment-exclusions.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-exclusions.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-exclusions.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-links.png"
+   "path": "assets/gui/y2o3/guide-experiment-links.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-links.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-links.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-estimation.png"
+   "path": "assets/gui/y2o3/guide-experiment-estimation.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-estimation.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-estimation.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-analysis-modes.png"
+   "path": "assets/gui/y2o3/guide-analysis-modes.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-analysis-modes.png"
+   "path": "assets/gui/y2o3/dark/guide-analysis-modes.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-analysis-minimizer.png"
+   "path": "assets/gui/y2o3/guide-analysis-minimizer.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-analysis-minimizer.png"
+   "path": "assets/gui/y2o3/dark/guide-analysis-minimizer.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-analysis-constraints.png"
+   "path": "assets/gui/y2o3/guide-analysis-constraints.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-analysis-constraints.png"
+   "path": "assets/gui/y2o3/dark/guide-analysis-constraints.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-report-contents.png"
+   "path": "assets/gui/y2o3/guide-report-contents.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-report-contents.png"
+   "path": "assets/gui/y2o3/dark/guide-report-contents.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-report-export.png"
+   "path": "assets/gui/y2o3/guide-report-export.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-report-export.png"
+   "path": "assets/gui/y2o3/dark/guide-report-export.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-report-saved.png"
+   "path": "assets/gui/y2o3/guide-report-saved.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-report-saved.png"
+   "path": "assets/gui/y2o3/dark/guide-report-saved.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-structure-appearance.png"
+   "path": "assets/gui/y2o3/guide-structure-appearance.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-structure-appearance.png"
+   "path": "assets/gui/y2o3/dark/guide-structure-appearance.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-structure-scattering.png"
+   "path": "assets/gui/y2o3/guide-structure-scattering.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-structure-scattering.png"
+   "path": "assets/gui/y2o3/dark/guide-structure-scattering.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-absorption.png"
+   "path": "assets/gui/y2o3/guide-experiment-absorption.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-absorption.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-absorption.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-orientation.png"
+   "path": "assets/gui/y2o3/guide-experiment-orientation.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-orientation.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-orientation.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-scattering.png"
+   "path": "assets/gui/y2o3/guide-experiment-scattering.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-scattering.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-scattering.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-analysis-aliases.png"
+   "path": "assets/gui/y2o3/guide-analysis-aliases.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-analysis-aliases.png"
+   "path": "assets/gui/y2o3/dark/guide-analysis-aliases.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-analysis-correlations.png"
+   "path": "assets/gui/y2o3/guide-analysis-correlations.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-analysis-correlations.png"
+   "path": "assets/gui/y2o3/dark/guide-analysis-correlations.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-project-uncertainties.png"
+   "path": "assets/gui/y2o3/guide-project-uncertainties.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-project-uncertainties.png"
+   "path": "assets/gui/y2o3/dark/guide-project-uncertainties.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-data-settings.png"
+   "path": "assets/gui/y2o3/guide-experiment-data-settings.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-data-settings.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-data-settings.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-experiment-cutoff.png"
+   "path": "assets/gui/y2o3/guide-experiment-cutoff.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-experiment-cutoff.png"
+   "path": "assets/gui/y2o3/dark/guide-experiment-cutoff.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-analysis-start-values.png"
+   "path": "assets/gui/y2o3/guide-analysis-start-values.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-analysis-start-values.png"
+   "path": "assets/gui/y2o3/dark/guide-analysis-start-values.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-analysis-shown-parameters.png"
+   "path": "assets/gui/y2o3/guide-analysis-shown-parameters.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-analysis-shown-parameters.png"
+   "path": "assets/gui/y2o3/dark/guide-analysis-shown-parameters.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/y2o3/guide-analysis-pattern-updates.png"
+   "path": "assets/gui/y2o3/guide-analysis-pattern-updates.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/y2o3/dark/guide-analysis-pattern-updates.png"
+   "path": "assets/gui/y2o3/dark/guide-analysis-pattern-updates.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-experiment-before.png"
+   "path": "assets/gui/scan/scan-experiment-before.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-experiment-before.png"
+   "path": "assets/gui/scan/dark/scan-experiment-before.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-project-basic.png"
+   "path": "assets/gui/scan/scan-project-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-project-basic.png"
+   "path": "assets/gui/scan/dark/scan-project-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-project-extras.png"
+   "path": "assets/gui/scan/scan-project-extras.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-project-extras.png"
+   "path": "assets/gui/scan/dark/scan-project-extras.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-project-text.png"
+   "path": "assets/gui/scan/scan-project-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-project-text.png"
+   "path": "assets/gui/scan/dark/scan-project-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-structure-basic.png"
+   "path": "assets/gui/scan/scan-structure-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-structure-basic.png"
+   "path": "assets/gui/scan/dark/scan-structure-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-structure-extras.png"
+   "path": "assets/gui/scan/scan-structure-extras.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-structure-extras.png"
+   "path": "assets/gui/scan/dark/scan-structure-extras.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-structure-text.png"
+   "path": "assets/gui/scan/scan-structure-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-structure-text.png"
+   "path": "assets/gui/scan/dark/scan-structure-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-experiment-basic.png"
+   "path": "assets/gui/scan/scan-experiment-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-experiment-basic.png"
+   "path": "assets/gui/scan/dark/scan-experiment-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-experiment-extras.png"
+   "path": "assets/gui/scan/scan-experiment-extras.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-experiment-extras.png"
+   "path": "assets/gui/scan/dark/scan-experiment-extras.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-experiment-text.png"
+   "path": "assets/gui/scan/scan-experiment-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-experiment-text.png"
+   "path": "assets/gui/scan/dark/scan-experiment-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-experiment-settings.png"
+   "path": "assets/gui/scan/scan-experiment-settings.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-experiment-settings.png"
+   "path": "assets/gui/scan/dark/scan-experiment-settings.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-analysis-basic.png"
+   "path": "assets/gui/scan/scan-analysis-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-analysis-basic.png"
+   "path": "assets/gui/scan/dark/scan-analysis-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-analysis-extras.png"
+   "path": "assets/gui/scan/scan-analysis-extras.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-analysis-extras.png"
+   "path": "assets/gui/scan/dark/scan-analysis-extras.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-analysis-text.png"
+   "path": "assets/gui/scan/scan-analysis-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-analysis-text.png"
+   "path": "assets/gui/scan/dark/scan-analysis-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-analysis-settings.png"
+   "path": "assets/gui/scan/scan-analysis-settings.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-analysis-settings.png"
+   "path": "assets/gui/scan/dark/scan-analysis-settings.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-report-basic.png"
+   "path": "assets/gui/scan/scan-report-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-report-basic.png"
+   "path": "assets/gui/scan/dark/scan-report-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-report-text.png"
+   "path": "assets/gui/scan/scan-report-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-report-text.png"
+   "path": "assets/gui/scan/dark/scan-report-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-mode.png"
+   "path": "assets/gui/scan/scan-mode.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-mode.png"
+   "path": "assets/gui/scan/dark/scan-mode.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-performance-analysis.png"
+   "path": "assets/gui/scan/scan-performance-analysis.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-performance-analysis.png"
+   "path": "assets/gui/scan/dark/scan-performance-analysis.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-declaration.png"
+   "path": "assets/gui/scan/scan-declaration.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-declaration.png"
+   "path": "assets/gui/scan/dark/scan-declaration.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-extraction.png"
+   "path": "assets/gui/scan/scan-extraction.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-extraction.png"
+   "path": "assets/gui/scan/dark/scan-extraction.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-experiment-stacked.png"
+   "path": "assets/gui/scan/scan-experiment-stacked.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-experiment-stacked.png"
+   "path": "assets/gui/scan/dark/scan-experiment-stacked.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-experiment-map.png"
+   "path": "assets/gui/scan/scan-experiment-map.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-experiment-map.png"
+   "path": "assets/gui/scan/dark/scan-experiment-map.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-analysis-stacked.png"
+   "path": "assets/gui/scan/scan-analysis-stacked.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-analysis-stacked.png"
+   "path": "assets/gui/scan/dark/scan-analysis-stacked.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-analysis-map.png"
+   "path": "assets/gui/scan/scan-analysis-map.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-analysis-map.png"
+   "path": "assets/gui/scan/dark/scan-analysis-map.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-evolution.png"
+   "path": "assets/gui/scan/scan-evolution.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-evolution.png"
+   "path": "assets/gui/scan/dark/scan-evolution.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-progress-controls.png"
+   "path": "assets/gui/scan/scan-progress-controls.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-progress-controls.png"
+   "path": "assets/gui/scan/dark/scan-progress-controls.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/scan/scan-correlations.png"
+   "path": "assets/gui/scan/scan-correlations.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/scan/dark/scan-correlations.png"
+   "path": "assets/gui/scan/dark/scan-correlations.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-experiment-before.png"
+   "path": "assets/gui/joint/joint-experiment-before.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-experiment-before.png"
+   "path": "assets/gui/joint/dark/joint-experiment-before.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-project-basic.png"
+   "path": "assets/gui/joint/joint-project-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-project-basic.png"
+   "path": "assets/gui/joint/dark/joint-project-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-project-extras.png"
+   "path": "assets/gui/joint/joint-project-extras.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-project-extras.png"
+   "path": "assets/gui/joint/dark/joint-project-extras.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-project-text.png"
+   "path": "assets/gui/joint/joint-project-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-project-text.png"
+   "path": "assets/gui/joint/dark/joint-project-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-structure-basic.png"
+   "path": "assets/gui/joint/joint-structure-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-structure-basic.png"
+   "path": "assets/gui/joint/dark/joint-structure-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-structure-extras.png"
+   "path": "assets/gui/joint/joint-structure-extras.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-structure-extras.png"
+   "path": "assets/gui/joint/dark/joint-structure-extras.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-structure-text.png"
+   "path": "assets/gui/joint/joint-structure-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-structure-text.png"
+   "path": "assets/gui/joint/dark/joint-structure-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-experiment-basic.png"
+   "path": "assets/gui/joint/joint-experiment-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-experiment-basic.png"
+   "path": "assets/gui/joint/dark/joint-experiment-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-experiment-extras.png"
+   "path": "assets/gui/joint/joint-experiment-extras.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-experiment-extras.png"
+   "path": "assets/gui/joint/dark/joint-experiment-extras.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-experiment-text.png"
+   "path": "assets/gui/joint/joint-experiment-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-experiment-text.png"
+   "path": "assets/gui/joint/dark/joint-experiment-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-experiment-settings.png"
+   "path": "assets/gui/joint/joint-experiment-settings.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-experiment-settings.png"
+   "path": "assets/gui/joint/dark/joint-experiment-settings.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-analysis-basic.png"
+   "path": "assets/gui/joint/joint-analysis-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-analysis-basic.png"
+   "path": "assets/gui/joint/dark/joint-analysis-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-analysis-extras.png"
+   "path": "assets/gui/joint/joint-analysis-extras.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-analysis-extras.png"
+   "path": "assets/gui/joint/dark/joint-analysis-extras.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-analysis-text.png"
+   "path": "assets/gui/joint/joint-analysis-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-analysis-text.png"
+   "path": "assets/gui/joint/dark/joint-analysis-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-analysis-settings.png"
+   "path": "assets/gui/joint/joint-analysis-settings.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-analysis-settings.png"
+   "path": "assets/gui/joint/dark/joint-analysis-settings.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-report-basic.png"
+   "path": "assets/gui/joint/joint-report-basic.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-report-basic.png"
+   "path": "assets/gui/joint/dark/joint-report-basic.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-report-text.png"
+   "path": "assets/gui/joint/joint-report-text.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-report-text.png"
+   "path": "assets/gui/joint/dark/joint-report-text.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-mode.png"
+   "path": "assets/gui/joint/joint-mode.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-mode.png"
+   "path": "assets/gui/joint/dark/joint-mode.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-weights.png"
+   "path": "assets/gui/joint/joint-weights.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-weights.png"
+   "path": "assets/gui/joint/dark/joint-weights.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-result.png"
+   "path": "assets/gui/joint/joint-result.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-result.png"
+   "path": "assets/gui/joint/dark/joint-result.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-experiment-results.png"
+   "path": "assets/gui/joint/joint-experiment-results.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-experiment-results.png"
+   "path": "assets/gui/joint/dark/joint-experiment-results.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-structure-results.png"
+   "path": "assets/gui/joint/joint-structure-results.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-structure-results.png"
+   "path": "assets/gui/joint/dark/joint-structure-results.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-experiment-stacked.png"
+   "path": "assets/gui/joint/joint-experiment-stacked.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-experiment-stacked.png"
+   "path": "assets/gui/joint/dark/joint-experiment-stacked.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-experiment-map.png"
+   "path": "assets/gui/joint/joint-experiment-map.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-experiment-map.png"
+   "path": "assets/gui/joint/dark/joint-experiment-map.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-analysis-stacked.png"
+   "path": "assets/gui/joint/joint-analysis-stacked.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-analysis-stacked.png"
+   "path": "assets/gui/joint/dark/joint-analysis-stacked.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-analysis-map.png"
+   "path": "assets/gui/joint/joint-analysis-map.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-analysis-map.png"
+   "path": "assets/gui/joint/dark/joint-analysis-map.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/joint/joint-correlations.png"
+   "path": "assets/gui/joint/joint-correlations.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/joint/dark/joint-correlations.png"
+   "path": "assets/gui/joint/dark/joint-correlations.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/sc/group-open.png"
+   "path": "assets/gui/sc/group-open.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/sc/dark/group-open.png"
+   "path": "assets/gui/sc/dark/group-open.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/sc/group-extinction.png"
+   "path": "assets/gui/sc/group-extinction.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/sc/dark/group-extinction.png"
+   "path": "assets/gui/sc/dark/group-extinction.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/sc/group-reflns.png"
+   "path": "assets/gui/sc/group-reflns.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/sc/dark/group-reflns.png"
+   "path": "assets/gui/sc/dark/group-reflns.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/sc/group-refln.png"
+   "path": "assets/gui/sc/group-refln.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/sc/dark/group-refln.png"
+   "path": "assets/gui/sc/dark/group-refln.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/sc/group-refine-ls.png"
+   "path": "assets/gui/sc/group-refine-ls.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/sc/dark/group-refine-ls.png"
+   "path": "assets/gui/sc/dark/group-refine-ls.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/magnetic/group-open.png"
+   "path": "assets/gui/magnetic/group-open.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/magnetic/dark/group-open.png"
+   "path": "assets/gui/magnetic/dark/group-open.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/magnetic/group-space-group-magn.png"
+   "path": "assets/gui/magnetic/group-space-group-magn.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/magnetic/dark/group-space-group-magn.png"
+   "path": "assets/gui/magnetic/dark/group-space-group-magn.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/magnetic/group-propagation.png"
+   "path": "assets/gui/magnetic/group-propagation.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/magnetic/dark/group-propagation.png"
+   "path": "assets/gui/magnetic/dark/group-propagation.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/magnetic/group-moments.png"
+   "path": "assets/gui/magnetic/group-moments.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/magnetic/dark/group-moments.png"
+   "path": "assets/gui/magnetic/dark/group-moments.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/magnetic/group-symop.png"
+   "path": "assets/gui/magnetic/group-symop.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/magnetic/dark/group-symop.png"
+   "path": "assets/gui/magnetic/dark/group-symop.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/magnetic/group-magn-operators.png"
+   "path": "assets/gui/magnetic/group-magn-operators.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/magnetic/dark/group-magn-operators.png"
+   "path": "assets/gui/magnetic/dark/group-magn-operators.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/magnetic/group-expanded-atoms.png"
+   "path": "assets/gui/magnetic/group-expanded-atoms.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/magnetic/dark/group-expanded-atoms.png"
+   "path": "assets/gui/magnetic/dark/group-expanded-atoms.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/magnetic/group-expanded-moments.png"
+   "path": "assets/gui/magnetic/group-expanded-moments.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/magnetic/dark/group-expanded-moments.png"
+   "path": "assets/gui/magnetic/dark/group-expanded-moments.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/magnetic/group-bonds.png"
+   "path": "assets/gui/magnetic/group-bonds.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/magnetic/dark/group-bonds.png"
+   "path": "assets/gui/magnetic/dark/group-bonds.webp"
   },
   {
    "theme": "light",
-   "path": "assets/gui/magnetic/group-form-factors.png"
+   "path": "assets/gui/magnetic/group-form-factors.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/gui/magnetic/dark/group-form-factors.png"
+   "path": "assets/gui/magnetic/dark/group-form-factors.webp"
   },
   {
    "theme": "light",
@@ -1243,19 +1243,19 @@
   },
   {
    "theme": "light",
-   "path": "assets/concepts/data-acquisition_2d-raw-data.jpg"
+   "path": "assets/concepts/data-acquisition_2d-raw-data.webp"
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/data-acquisition_2d-raw-data.jpg"
+   "path": "assets/concepts/dark/data-acquisition_2d-raw-data.webp"
   },
   {
    "theme": "light",
-   "path": "assets/concepts/data-acquisition_instrument.png"
+   "path": "assets/concepts/data-acquisition_instrument.svg"
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/data-acquisition_instrument.png"
+   "path": "assets/concepts/dark/data-acquisition_instrument.svg"
   },
   {
    "theme": "light",
@@ -1263,7 +1263,7 @@
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/data-analysis_model.png"
+   "path": "assets/concepts/dark/data-analysis_model.png"
   },
   {
    "theme": "light",
@@ -1271,7 +1271,7 @@
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/data-analysis_refinement.png"
+   "path": "assets/concepts/dark/data-analysis_refinement.png"
   },
   {
    "theme": "light",
@@ -1279,7 +1279,7 @@
   },
   {
    "theme": "dark",
-   "path": "assets/concepts/data-reduction_1d-pattern.png"
+   "path": "assets/concepts/dark/data-reduction_1d-pattern.png"
   }
  ]
 }

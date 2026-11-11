@@ -177,7 +177,7 @@ def shared_values(
 
 
 def ladder_variant(case: str, machine: dict[str, str]) -> dict:
-    """The default descent's witness for a fast-descent case, from that case's own fit."""
+    """The ladder descent's witness for a case that declares fast descent, from its own fit."""
     quantities = {'rwp': quantity(machine['rwp'], 'regression-pin', None, LADDER_RWP_TOLERANCE)}
     for name in LADDER_WITNESS[case]:
         su = float(machine[f'{name}.uncertainty'])

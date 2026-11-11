@@ -67,6 +67,9 @@ SHARED_COMPACT_KEYS = (
     'iterations',
     'reduced_chi_square',
     'rwp',
+    'stopping_rule',
+    'stopping_value',
+    'last_shift_su',
     'descent',
     'fast_descent',
     'linear_snap',
@@ -88,6 +91,7 @@ SHARED_COMPACT_KEYS = (
     'elapsed_ms',
 )
 EXACT_KEYS = {
+    'stopping_rule',
     'schema',
     'record',
     'status',
@@ -189,9 +193,9 @@ def _parse_record(text: str) -> tuple[list[str], dict[str, str]]:
         keys.append(key)
         values[key] = value
     assert keys[:2] == ['schema', 'record']
-    # ADR-0057's schema-8 key rename is live after 's staged post-merge pin bump.
-    assert values['schema'] == '8', (
-        "the _parse_record requirement must hold: values['schema'] == '8'"
+    # ADR-0057 schema nine adds the three always-emitted stop-report fields.
+    assert values['schema'] == '9', (
+        "the _parse_record requirement must hold: values['schema'] == '9'"
     )
     return keys, values
 
@@ -200,6 +204,13 @@ def _assert_number(value: str) -> None:
     assert NUMBER.fullmatch(value), value
     assert ',' not in value
     float(value)
+
+
+def _assert_stop_metadata(values):
+    assert values['stopping_rule'], 'ADR-0057 stop names cannot be empty'
+    for field in ('stopping_value', 'last_shift_su'):
+        if values[field] != 'nan':
+            _assert_number(values[field])
 
 
 def _assert_fit_record(
@@ -238,6 +249,7 @@ def _assert_fit_record(
         assert values[key] in {'true', 'false'}, (key, values[key])
     _assert_number(values['reduced_chi_square'])
     _assert_number(values['rwp'])
+    _assert_stop_metadata(values)
     assert ELAPSED.fullmatch(values['elapsed_ms'])
     if crysta_surface:
         assert values['cutoff_policy'] in {'off', 'on', 'ramp-fixed'}
@@ -319,6 +331,8 @@ def _field_class(key: str) -> str | None:
         'chi_square',
     }:
         return 'tolerance-provisional'
+    if field in {'stopping_value', 'last_shift_su'}:
+        return 'tolerance-seeded'
     if field in SEEDED_TOLERANCE_FIELDS:
         return 'tolerance-seeded'
     if field in PROVISIONAL_TOLERANCE_FIELDS:
@@ -459,7 +473,7 @@ def conformance_outputs(
 
 def test_c09_t9_conformance_differ_discriminates_field_classes() -> None:
     base = """\
-schema=8
+schema=9
 record=fit
 status=done
 mode=joint
@@ -470,6 +484,9 @@ n_free=193
 iterations=14
 reduced_chi_square=9.497560854
 rwp=0.07694468879
+stopping_rule=chi_square_change
+stopping_value=0.00125
+last_shift_su=0.375
 unevaluable_trials=0
 terminal_unevaluable_trials=0
 elapsed_ms=29.375
@@ -501,7 +518,18 @@ elapsed_ms=29.375
         'bank.wish_1_10.rwp: tolerance mismatch (tolerance-provisional)'
     ]
 
-    calc = 'schema=8\nrecord=calc\nn_points=18973\nchecksum=7.25\nelapsed_ms=1.000\n'
+    for key, value, expected in (
+        ('stopping_rule', 'shift_su', 'exact'),
+        ('stopping_value', '0.0025', 'tolerance'),
+        ('last_shift_su', '0.75', 'tolerance'),
+    ):
+        damage = _replace_line(base, key, value)
+        findings = _conformance_differences(base, damage)
+        assert len(findings) == 1 and findings[0].startswith(f'{key}: {expected} mismatch'), (
+            'Every stop-report field must retain a discriminating conformance comparison'
+        )
+
+    calc = 'schema=9\nrecord=calc\nn_points=18973\nchecksum=7.25\nelapsed_ms=1.000\n'
     calc_exact_bit_change = _replace_line(calc, 'n_points', '18972')
     assert _conformance_differences(calc, calc_exact_bit_change) == ['n_points: exact mismatch']
     checksum_change = _replace_line(calc, 'checksum', '999999.5')

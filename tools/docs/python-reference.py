@@ -50,7 +50,14 @@ def main() -> None:
             if cls.__module__ not in {'edi._edi', 'edi'}:
                 return
             for category in census['categories']:
-                owner_name = category.get('owner', category.get('row', ''))
+                # A category without an owner or row type (scattering lengths, a map on
+                # Structure) is held by the type its members name.
+                columns = category.get('columns') or [{'member': ''}]
+                owner_name = (
+                    category.get('owner')
+                    or category.get('row')
+                    or columns[0]['member'].split('::')[0]
+                )
                 owner = getattr(edi, owner_name, None)
                 if not isinstance(owner, type) or not isinstance(obj, owner):
                     continue

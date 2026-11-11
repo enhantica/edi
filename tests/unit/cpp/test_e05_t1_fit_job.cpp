@@ -451,9 +451,10 @@ TEST_CASE("E05-T1 gates 4 6 a hidden fitted-input edit defeats stale publication
 
 TEST_CASE("E05-T1 gate 5 scan calculation-only and invalid inputs are unchanged refusals") {
 #if E05_T1_FIT_JOB
-    for (const auto& reason : {"sequential", "independent", "calculation-only", "invalid"}) {
+    for (const auto& reason : {"sequential", "independent-calculation-only", "calculation-only", "invalid"}) {
         auto live = e05_t1::small();
-        if (reason == std::string("calculation-only")) {
+        if (reason == std::string("calculation-only") || reason == std::string("independent-calculation-only")) {
+            if (reason == std::string("independent-calculation-only")) live.fitting_mode = "independent";
             live.experiment().data->write_column(&edi::PdDataBase::intensity_meas, {});
             live.experiment().data->write_column(&edi::PdDataBase::intensity_meas_su, {});
         } else if (reason == std::string("invalid"))

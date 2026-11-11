@@ -54,3 +54,9 @@ So `expected.json` compares the full model with FullProf's on R<sub>wp</sub>, wi
 of free parameters only. Every other fitted value is compared on a second fit of both programs with the four
 coefficients fixed at 0: the record's `asymmetry-off` variant against FullProf's fit in
 `knowledge/fitting/fullprof/pd-neut-xray-cwl_pbso4-d1a-lab/asymmetry-off/`.
+
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; the default descent now
+runs fast descent and the ladder for three iterations each from the start and continues with the one at the lower χ².
+Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `edab5435`,
+`OMP_NUM_THREADS=4`: iterations 12 → 9; asymmetry-off iterations 18 → 15. No `reference` value moved.

@@ -60,11 +60,6 @@ EXPERIMENT = {
 GROUPS = json.loads((ROOT / 'application-groups.json').read_text())
 
 
-# Stored-only parameters whose use in the calculation is planned.
-PLANNED_STORED = frozenset({'absorption.abscor2'})
-PLANNED_ICON = '<span role="img" aria-label="Planned" title="Planned">:status-planned:</span>'
-
-
 def anchor(uid: str) -> str:
     if not re.fullmatch(r'[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)?', uid):
         raise ValueError('Invalid dictionary identity: ' + uid)
@@ -416,17 +411,7 @@ def _explanation_entry(item: dict, category: dict, scientific: dict) -> list[str
     if item['uid'] in scientific:
         entry = scientific[item['uid']]
         if entry['role'] == 'stored-only':
-            details += [
-                # The user-level fact in one line; ABSCOR2 is planned, the reciprocal TOF
-                # coefficient is not.
-                (
-                    PLANNED_ICON
-                    + ' Read and saved, but not yet used in the calculation (planned).'
-                    if item['uid'] in PLANNED_STORED
-                    else 'Read and saved, but not used in the calculation.'
-                ),
-                '',
-            ]
+            details += ['Read and saved, but not used in the calculation.', '']
         links.append(
             '[Equation and conventions](' + entry['explanation_url'].replace('/#', '.md#') + ')'
         )

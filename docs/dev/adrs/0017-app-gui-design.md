@@ -43,6 +43,11 @@ The decisions it rests on, unchanged here:
   horizontally as one unit, then the version line `Version <version> (<date>)` centred on its own below it,
   one x-height of the version's font apart (measured, `FontMetrics.xHeight`; the owner, 2026-09-29, was two
   font units). The wordmark carries no caption: the version never hangs under the name.
+- **The version shown** (the owner, 2026-11-11): a release shows its calendar version (`2026.11.1`); any other
+  build the last release it follows and its commit (`2026.11.1+d42e09f`, `.dirty` with uncommitted changes),
+  or `dev+<commit>` before any release tag (`cmake/build_version.cmake`). A desktop installer is given its
+  version; the web app is built again at each stable release's tag (`pages.yml`), so app.easydiffraction.org
+  shows the release, and every later build of `main` shows the release plus its commit.
 - **The wordmark's size** is the same in both: a mark of 5 base font units (`AppSizes.homeMarkDiameter`,
   easydiffractionbeta's Home size; idea 2). In About a click on the mark opens the homepage.
 - **About** has no tabs and stacks, each centred: the wordmark and version, the description, two links, and the
@@ -58,9 +63,35 @@ The decisions it rests on, unchanged here:
 - **Online documentation** opens `https://docs.easydiffraction.org/app/` (`ApplicationInfo.docsUrl`, idea 4),
   from Home and from the app bar. **Amended 2026-11-02 (ADR-0065):** the documentation is `https://enhantica.github.io/edi/`, and Home's links
   are two columns, Learn and Contact and about.
+- **Information windows** (the owner, 2026-11-10) share one style, `InfoDialog`: the text in the app's white panel
+  with a light border, selectable and scrolling when long, and one bottom row of background-less buttons, the
+  window's own actions left of its standard button. How to cite (DOI with the external-link icon, Copy as text, Copy
+  as BibTeX, Close), Diagnostics (Copy as text, OK) and About's licence texts use it; Fit results' Show evolution is a
+  bottom-row button the same way.
 
 ### 2. The main area and the Experiment type group
 
+- **One main view** (the owner, 2026-11-10): the Structure, Experiment
+  and Analysis pages share one main view, `MainView`, with the tabs Structure, Pattern, Correlations, Stacked, Map and
+  Evolution (`mainArea.tab.structure`, `.pattern`, `.correlations`, `.stacked`, `.map`, `.evolution`). It is drawn over
+  those pages' main area in the pages' view, which stays put while the pages slide, so the app bar's pages change only
+  the sidebar. Which tab is shown (the owner, 2026-11-11):
+
+  | When                                       | Shown tab                                                  |
+  | ------------------------------------------ | ---------------------------------------------------------- |
+  | first visit to Structure in this project   | Structure                                                  |
+  | first visit to Experiment in this project  | Pattern                                                    |
+  | first visit to Analysis in this project    | Pattern                                                    |
+  | any later page switch                      | the tab already shown, until the user picks another         |
+  | a project is opened or created             | first visits start again                                   |
+
+  The view never switches tabs by itself. A shown tab with nothing to draw shows its empty state, with no view and no
+  toolbar: Structure says "No structures defined", Pattern "No pattern". The tabs the user cannot pick are disabled
+  (Structure without a structure, Pattern without an experiment, Correlations before a fit, Stacked and Map without a
+  scan or a joint fit, Evolution outside a scan). The divider between the main view and the sidebar belongs to the
+  main view, so it stays put while the pages slide. The block selector above the views lists the structures on the
+  Structure tab and the experiments on the others. Project and Report keep their own main views. Each view exists
+  once, so a structure edited on the Analysis page's slider redraws in the Structure tab beside it.
 - **The supported minimum app size** (the owner, 2026-10-25) is 1024 × 640 logical pixels, `AppSizes.minimumAppWidth`
   and `minimumAppHeight`, one value for both of its uses. It was checked on every page at that size (`edi_app --demo
   <dir> --demo-only minimum-`): every page's sidebar reaches each input by scrolling, a group's fields stay on one row,
@@ -128,7 +159,10 @@ The decisions it rests on, unchanged here:
   the rest), the first group the tab shows is open while nothing is remembered for it, and a group the user has
   opened or folded keeps that state, by one rule (`SideBarGroups.isOpen`) every foldable group asks. Get started on
   Project → Main and the block lists (Structures, Experiments) stay open at the start (owner, 2026-09-29,
-  2026-10-05). The base's auto-collapse is kept: opening a group folds the others on its tab. Groups that cannot
+  2026-10-05). Opening a group folds the others on its tab, except pinned ones: each foldable group has a pin at the
+  right end of its title, grey, the accent colour when on, and a pinned group stays open when another opens (the owner,
+  2026-11-10). Pins are remembered between sessions (`Preferences.pinnedGroups`); with no pin, every group folds as
+  before. The app folds the groups itself (`SideBarGroup`), so the base's auto-collapse stays off. Groups that cannot
   fold — the shared block selector (§7), the untitled Analysis Parameters and Fitting groups, the Text tab's
   groups — are not affected. The demo opens each group its capture shows with a click.
 - **Order:** groups follow the core's page order of categories, except where the app lists a different one
@@ -137,6 +171,11 @@ The decisions it rests on, unchanged here:
   (the owner, 2026-09-29) and **Linked structures last** (the owner, 2026-10-04, when Excluded regions moved to
   Basic), giving block selector · Experiments · Experiment type · Background · Instrument · Peak profile ·
   Excluded regions · Linked structures.
+- **Every page shows all four sidebar tabs**, Main, Extra, Text and Settings (the owner, 2026-11-10). A tab whose
+  content waits for the page's first block says "Nothing to show yet: start in the Main tab"; a tab the page has no
+  groups for yet (Structure and Project → Settings, Report → Extra and Settings) asks what it could hold, with a link
+  that opens the feedback form as an idea. A group that only reports a Preferences value (Performance) shows the value
+  with a light Preferences link at the right end of its row.
 - **Measured data is on Extras** (the owner, 2026-09-29), not Basic: its summary fields and data table are
   the first group of Experiment → Extras, above Peak profile's Extras part (the core's order among the Extras
   groups puts it first). Sidebar only: the core's category order, the files and the Analysis table are
@@ -236,8 +275,8 @@ disabled** rather than left out, so the layout is final:
   (`_minimizer.moments_near_zero`).
 - **Fields share the full row** unless a rule above says otherwise: a row of fields takes the sidebar content
   width, split evenly (the base's `GroupRow` fields, and `ParameterGrid` with `fillRows`, as Instrument).
-  Absorption now does so too: μR alone takes the row, ABSCOR1 and ABSCOR2 half each (the owner, 2026-09-29; it
-  was three columns wide). The sweep found no other half-empty row; the exceptions are deliberate — Peak
+  Absorption now does so too: its one field, μR or ABSCOR1, takes the row (the owner, 2026-09-29; it was
+  three columns wide; the second FullProf coefficient was removed on 2026-11-10). The sweep found no other half-empty row; the exceptions are deliberate — Peak
   profile's five-wide rows above, and Experiment type's grid three wide (§2).
 
 ### 6. Measured data: the increment
@@ -440,14 +479,30 @@ one selected row, and the row's number in the first column, bold in the accent c
 
 ### 12. Preferences, and the sidebar's side
 
+- **Layout (2026-11-10, replaces the label-and-control rows below where they differ):** seven tabs, Appearance,
+  Interface, Projects, Performance, Updates, AI assistance and Advanced, in a dialog 720 px wide. Each tab is one grid
+  of two equal columns; every control has its label above it; a choice is a box, never a checkbox; explanations are
+  tooltips, with no text under a control; groups have a title with an icon and no frame; one spacing scale on every
+  tab; every colour selector has a strip of its colours under it (ADR-0084); tables are framed with their header
+  inside; tabs span the bar evenly; a read-only value is plain text on a box's row height, never drawn like an input
+  (the owner, 2026-11-10); long values end with "…", paths are cut in the middle with the home folder as `~`.
+  Appearance: General (Theme), Structure view (Magnetic moment arrows), then Charts (When a legend click hides a curve,
+  then Palette | Map colours, so the rows with colour strips end the group; the owner, 2026-11-10). Parallel fits in a
+  scan is a plain list of every count up to the machine's cores, opened by a click. Each online source is a row of
+  three lines, as the Examples list's rows: its name, a tag per kind it holds (the Examples list's tags, each with the
+  icon the app uses for structures, experiments, measured data or projects) and its URL, without a header; its
+  switch and remove buttons stay square, centred in the row.
+  Interface: tooltips, the fit's end and the sidebar and Text tab choices. Performance: the thread counts, the scan
+  view drawing and the detected graphics. Advanced: the message level, Diagnostics and the settings file. Removed:
+  Enable user guides, the Experimental tab, the feedback address (kept in the settings file, ADR-0063) and the
+  Stacked colour choice (the Stacked view follows the palette, ADR-0084).
 - **edi shows its own Preferences dialog** (`Components/AppPreferencesDialog.qml`), rebuilt from the base's
-  pieces as the About dialog is, with the base's tabs and layout and two of edi's own: Prompts, Updates,
-  Appearance, Projects, Performance, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
+  pieces as the About dialog is. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
   window always creates it; it stays hidden, as the app bar's Preferences button opens edi's dialog
   (`Preferences.dialogShown`) instead of setting the base's flag.
-- **Appearance**: Theme; **Palette — Earth (the default), Classic, Soft, Natural or Colour-blind safe** (the
+- **Appearance**: Theme; **Palette — Main (the default) or Colour-blind safe** (the
   experiments', structures' and chart roles' colours, §8, §15, in every chart, icon and report the app draws;
-  ADR-0038), listed from the core, with the colour order under it (ADR-0038 §7); a stored earlier palette reads and
+  ADR-0038, ADR-0084), listed from the core, with its colour strip under it; a stored earlier palette reads and
   is kept as its nearest new one;
   **Sidebar — Left or Right** (the owner, 2026-09-29); One sidebar group open at a time (the owner, 2026-10-27; it
   was Auto collapse). **The 1D plotting row is removed** (the owner, 2026-09-29): edi has no choice of chart library.
@@ -611,6 +666,13 @@ choices; only the shown chart writes them). A hidden chart draws nothing and is 
 when the x axis changes, once, on the chart where it changes, so a chart shown again after the change keeps the ranges
 given for its new axis. The structure curves switch in place: a curve not drawn holds no points (Qt Graphs kept an
 area's last drawing when the area was hidden or removed). The Report page's charts stay separate.
+
+**Save image** (every chart's and the structure view's last toolbar button, the owner, 2026-11-08) saves what the view
+shows without its toolbar: a chart's toolbar band is cut off the top, and the structure view's floating toolbar is
+hidden for the grab (the owner, 2026-11-10). The desktop's dialog starts in one folder every Save image shares and
+remembers, `Preferences.imageFolder`, the folder the last image went to; before the first, the open project's
+`reports/` folder (made when missing), or the pictures folder for a project without a place of its own. A saved report
+says so in the window's short notice, with the files and their folder.
 
 **Long structure names fit** (the owner, 2026-10-21): the panes' shared left edge moves right far enough for the
 widest tick-row label (the structure's icon and name), so a name never runs into the plot.

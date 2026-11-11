@@ -1,13 +1,15 @@
 cff-version: 1.2.0
 message: "If you use EasyDiffraction in your work, please cite it as below."
-# The DOI is a placeholder until the first release is archived. The app's How to cite reads this file.
+# Zenodo archives each published release from this file and adds its version and date; the app's How to cite reads it
+# and takes both from its own build.
 title: "EasyDiffraction"
 type: software
 authors:
-  - name: "The EasyDiffraction developers"
-version: "2026.11.0"
-doi: "10.5281/zenodo.0000000"
-date-released: "2026-11-10"
+  - family-names: "Sazonov"
+    given-names: "Andrew"
+    affiliation: "European Spallation Source ERIC"
+    orcid: "https://orcid.org/0000-0002-8916-6319"
+doi: "10.5281/zenodo.22905049"
 url: "https://easydiffraction.org"
 repository-code: "https://github.com/enhantica/edi"
 license: BSD-3-Clause

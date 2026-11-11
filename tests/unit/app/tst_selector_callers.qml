@@ -120,6 +120,19 @@ TestCase {
             verify(group.onlyMode, "The fitting-mode witness reaches the disabled single-mode reason wrapper");
         Preferences.toolTipLevel = data.level;
     }
+    function test_retained_descent_options() {
+        const record = Inventory.callers.find(item => item.component === "MinimizerGroup");
+        caller({
+            record: record,
+            level: "All"
+        });
+        const control = selectors().find(item => item.objectName === "minimizer.descent");
+        verify(control !== undefined, "The gate must inspect the real Minimizer descent selector");
+        const rows = Probe.rows(control.options);
+        compare(JSON.stringify(rows.map(row => row.token).sort()), JSON.stringify(["fast_descent", "ladder", "multistart_prune"]), "The real GUI offers exactly the three retained descents");
+        compare(JSON.stringify(rows.filter(row => row.isDefault).map(row => row.token)), JSON.stringify(["fast_descent"]), "Only fast descent carries the GUI default role");
+        compare(control.token, "fast_descent", "The omitted project declaration selects fast descent in the GUI");
+    }
     function test_caller_policy(data) {
         caller(data);
         const failures = [];

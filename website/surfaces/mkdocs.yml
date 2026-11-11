@@ -35,14 +35,16 @@ theme:
 extra_css:
   - assets/brand-colors.css?v=1
   - assets/wordmark.css?v=header-2
-  - assets/site-components.css?v=cif-5
+  - assets/site-components.css?v=tables-5
   - assets/experiment-tags.css?v=5
   - assets/parameter-reference.css?v=3
 extra_javascript:
-  - assets/example-catalogue.js?v=5
+  - assets/example-catalogue.js?v=7
   # Written by build.py from the app's settings.
   - assets/feedback-form.js
   - assets/contact-form.js?v=1
+  - assets/survey/survey.js?v=7
+  - assets/code-breaks.js?v=2
 extra:
   interface_icons:
     Application: [fa5/desktop]
@@ -72,9 +74,9 @@ extra:
     Multiple datasets: layer-group
     Diffraction model: atom
     Peak profiles: shapes
-    Intensity corrections: sliders-h
+    Corrections: sliders-h
     Experiment model: microscope
-    Fitting and statistics: calculator
+    Fitting: calculator
   workflow_icons:
     Project: archive
     Structure: layer-group
@@ -87,8 +89,9 @@ nav:
   - Foundations:
     - user-guide/index.md
     - Features: user-guide/features.md
-    - Concept: user-guide/concepts.md
+    - Concepts: user-guide/concepts.md
     - Data formats: user-guide/data-formats.md
+    - Online sources: user-guide/online-sources.md
     - Parameters: user-guide/parameters.md
     - Glossary: user-guide/glossary.md
   - Analysis workflow:
@@ -170,7 +173,7 @@ nav:
       - Experiment fit result: application/analysis/experiment-fit-result.md
       - Structure fit result: application/analysis/structure-fit-result.md
       - Parameters shown: application/analysis/parameters-shown.md
-      - Pattern updates during a scan: application/analysis/pattern-updates.md
+      - Pattern updates: application/analysis/pattern-updates.md
       - Performance: application/analysis/performance.md
     - Report:
       - application/report/index.md
@@ -231,32 +234,33 @@ nav:
       - physics/diffraction-model/index.md
       - Rietveld method: physics/rietveld.md
       - Crystallography: physics/crystallography.md
-      - Scattering and structure factors: physics/diffraction.md
+      - Structure factors: physics/diffraction.md
       - Magnetic structures: physics/magnetic.md
       - Atomic displacement: physics/displacement.md
     - Peak profiles:
       - physics/profiles/index.md
       - Constant wavelength: physics/profiles/cw.md
       - Time of flight: physics/profiles/tof.md
-    - Intensity corrections:
+    - Corrections:
       - physics/corrections/index.md
       - Absorption: physics/corrections/absorption.md
       - Extinction: physics/corrections/extinction.md
       - Preferred orientation: physics/corrections/orientation.md
-      - Lorentz and polarization: physics/corrections/intensity.md
+      - Lorentz–polarization: physics/corrections/intensity.md
     - Experiment model:
       - physics/experiment-model/index.md
-      - Calibration and peak positions: physics/calibration.md
+      - Calibration: physics/calibration.md
       - Background: physics/background.md
-    - Fitting and statistics:
+    - Fitting:
       - physics/fitting/index.md
-      - Minimization and uncertainty: physics/minimization.md
+      - Minimization: physics/minimization.md
       - Reliability factors: physics/reliability.md
 - About:
   - about/index.md
   - Get in touch: about/community.md
+  - Survey: about/survey.md
   - Licence: about/licence.md
-  - Citation: about/citation.md
+  - How to cite: about/citation.md
   - What's new: changelog.md
 plugins:
   - search
@@ -289,7 +293,6 @@ markdown_extensions:
           - overrides/.icons
   - pymdownx.arithmatex:
       generic: true
-copyright: 'EasyDiffraction · <a href="https://easydiffraction.org/dev/">Contributor documentation</a>'
 validation:
   invalid_links: true
   invalid_link_anchors: true

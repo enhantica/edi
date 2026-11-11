@@ -51,7 +51,7 @@ AppDialog {
     // From the content alone. The base also takes the title's and the buttons' widths, which follow the dialog's own
     // width, so a content width that changes as results arrive was a binding loop. Both are narrower than the tables.
     implicitWidth: contentWidth + leftPadding + rightPadding
-    contentHeight: agreementArea.y + agreementArea.height + (dialog.scan ? evolutionButton.height + EaStyle.Sizes.fontPixelSize : 0)
+    contentHeight: agreementArea.y + agreementArea.height
 
     // The agreement factors (edi ADR-0045), below the summary: one column per factor, one row per dataset.
     readonly property FitAgreementModel agreement: dialog.results ? dialog.results.agreement : null
@@ -88,16 +88,17 @@ AppDialog {
     readonly property real metricColumnWidth: ApplicationInfo.fitResultsColumnWidth(false)
     readonly property real valueColumnWidth: ApplicationInfo.fitResultsColumnWidth(true)
 
-    EaElements.SideBarButton {
-        id: evolutionButton
-
-        objectName: "fit.results.evolution"
-        visible: dialog.scan
-        y: agreementArea.y + agreementArea.height + EaStyle.Sizes.fontPixelSize
-        width: listArea.width
-        fontIcon: "chart-line"
-        text: qsTr("Show evolution")
-        onClicked: ApplicationInfo.fitResultsShowEvolution()
+    // Show evolution, a background-less button of the bottom row left of OK, as the information windows' buttons are
+    // (InfoDialog; the owner, 2026-11-10).
+    footer: EaElements.DialogButtonBox {
+        EaElements.Button {
+            objectName: "fit.results.evolution"
+            visible: dialog.scan
+            fontIcon: "chart-line"
+            text: qsTr("Show evolution")
+            DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+            onClicked: ApplicationInfo.fitResultsShowEvolution()
+        }
     }
 
     Rectangle {
@@ -257,8 +258,8 @@ AppDialog {
                     horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.ListViewLabel {
-                    elide: Text.ElideRight
                     id: datasetHeader
+                    elide: Text.ElideRight
 
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Dataset")

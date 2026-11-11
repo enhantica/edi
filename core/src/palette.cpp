@@ -72,16 +72,25 @@ Palette parse(const char* text) {
     return palette;
 }
 
-constexpr std::array<std::string_view, 5> kNames{"earth", "classic", "soft", "natural", "colourBlindSafe"};
-constexpr std::array<std::string_view, 5> kTitles{"Earth", "Classic", "Soft", "Natural", "Colour-blind safe"};
-// The palettes before these five, each read as the new one nearest it (ADR-0038).
-constexpr std::array<std::pair<std::string_view, ColourScheme>, 5> kEarlierNames{{
-    {"ediNatural", ColourScheme::Natural},
-    {"ediCoast", ColourScheme::Natural},
-    {"ediGarden", ColourScheme::Classic},
-    {"ediStudio", ColourScheme::Classic},
+constexpr std::array<std::string_view, 2> kNames{"main", "colourBlindSafe"};
+constexpr std::array<std::string_view, 2> kTitles{"Main", "Colour-blind safe"};
+// Earlier palettes, each read as the new one nearest it (ADR-0038, ADR-0084).
+constexpr std::array<std::pair<std::string_view, ColourScheme>, 9> kEarlierNames{{
+    {"earth", ColourScheme::Main},
+    {"classic", ColourScheme::Main},
+    {"soft", ColourScheme::Main},
+    {"natural", ColourScheme::Main},
+    {"ediNatural", ColourScheme::Main},
+    {"ediCoast", ColourScheme::Main},
+    {"ediGarden", ColourScheme::Main},
+    {"ediStudio", ColourScheme::Main},
     {"ediContrast", ColourScheme::ColourBlindSafe},
 }};
+
+// Experiments take positions 0 and 1, structures 2 to 4, and both the shared ones after them.
+bool position_allowed(FigureKind kind, std::size_t position) {
+    return kind == FigureKind::Experiment ? position < 2 || position >= kSharedColourStart : position >= 2;
+}
 
 const Palette& palette_of(ColourScheme scheme) {
     static const std::vector<Palette> kPalettes = [] {
@@ -234,13 +243,10 @@ ColourScheme colour_scheme_or_default(std::string_view name) {
 
 std::string_view colour_scheme_title(ColourScheme scheme) { return kTitles[static_cast<std::size_t>(scheme)]; }
 
-bool reserves_experiment_colours(ColourScheme scheme) { return scheme == ColourScheme::Earth; }
+bool reserves_experiment_colours(ColourScheme /*scheme*/) { return true; }
 
-std::vector<std::size_t> colour_positions(ColourScheme scheme, std::span<const FigureItem> items) {
-    const bool reserved = reserves_experiment_colours(scheme);
-    const auto allowed = [reserved](FigureKind kind, std::size_t position) {
-        return !reserved || kind == FigureKind::Experiment || position >= 2;
-    };
+std::vector<std::size_t> colour_positions(ColourScheme /*scheme*/, std::span<const FigureItem> items) {
+    const auto allowed = position_allowed;
     std::vector<bool> taken;
     const auto vacant = [&taken](std::size_t position) { return position >= taken.size() || !taken[position]; };
     const auto take = [&taken](std::size_t position) {
@@ -273,13 +279,12 @@ std::vector<std::size_t> colour_positions(ColourScheme scheme, std::span<const F
     return positions;
 }
 
-std::vector<std::size_t> free_positions(ColourScheme scheme, FigureKind kind, std::size_t count,
+std::vector<std::size_t> free_positions(ColourScheme /*scheme*/, FigureKind kind, std::size_t count,
                                         std::span<const std::size_t> taken) {
-    const std::size_t lowest = reserves_experiment_colours(scheme) && kind == FigureKind::Structure ? 2 : 0;
     std::vector<std::size_t> out;
     out.reserve(count);
-    for (std::size_t position = lowest; out.size() < count; ++position) {
-        if (std::find(taken.begin(), taken.end(), position) == taken.end()) {
+    for (std::size_t position = 0; out.size() < count; ++position) {
+        if (position_allowed(kind, position) && std::find(taken.begin(), taken.end(), position) == taken.end()) {
             out.push_back(position);
         }
     }
@@ -289,9 +294,9 @@ std::vector<std::size_t> free_positions(ColourScheme scheme, FigureKind kind, st
 std::string pattern_set_colour(ColourScheme scheme, std::size_t place, std::size_t count,
                                std::span<const std::size_t> taken, bool dark) {
     const std::size_t at = std::min(place, count > 0 ? count - 1 : 0);
-    if (count <= kPaletteColourCount) {
-        const std::vector<std::size_t> positions = free_positions(scheme, FigureKind::Experiment, at + 1, taken);
-        return figure_colour(scheme, positions.back(), positions.back() + 1, dark);
+    const std::vector<std::size_t> positions = free_positions(scheme, FigureKind::Experiment, std::max<std::size_t>(count, 1), taken);
+    if (positions.back() < kPaletteColourCount) {
+        return figure_colour(scheme, positions[at], positions[at] + 1, dark);
     }
     const std::string first = figure_colour(scheme, 0, 1, dark), second = figure_colour(scheme, 1, 2, dark);
     return mix_colours(first, second, static_cast<double>(at) / static_cast<double>(count - 1));

@@ -65,3 +65,10 @@ values), so the variant's expected status is `max_iter`.
 against crysta `4643af79`, `OMP_NUM_THREADS=1`: iterations 5 → 7; reduced_chi_square 142232098.8 → 142228766.8;
 asymmetry-off iterations 27 → 24; asymmetry-off reduced_chi_square 152635133.0 → 152451074.4. The `asymmetry-off` fit
 now converges, so its expected status is `done`.
+
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; the default descent now
+runs fast descent and the ladder for three iterations each from the start and continues with the one at the lower χ².
+Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `edab5435`,
+`OMP_NUM_THREADS=4`: iterations 7 → 4; asymmetry-off iterations 24 → 18; asymmetry-off reduced_chi_square 152451074.4 →
+152450774.8. No `reference` value moved.

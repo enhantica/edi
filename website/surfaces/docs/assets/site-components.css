@@ -89,6 +89,8 @@
 .md-typeset .ed-concept-figures figure {display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin:1.2rem auto;text-align:center}
 .md-typeset .ed-concept-figures figcaption {order:2;max-width:none;margin:.5rem 0 0;font-size:.7rem;font-style:normal;text-align:center}
 .ed-concept-figures img {order:1;display:block;width:100%;height:auto;border-radius:var(--ed-screenshot-radius)}
+/* The concept figures carry their own light or dark background, or none: no white frame around them in either theme. */
+.md-typeset .ed-concept-figures img{border:0;padding:0;background:none}
 .ed-concept-figures--single {max-width:360px;margin-inline:auto}
 @media (max-width:600px) {
   .md-typeset .ed-concept-flow a {min-height:0}
@@ -99,7 +101,7 @@
 /* Keep symbols together; a constrained table cell puts the label below them. */
 .md-typeset td .ed-icon-label {display:inline-flex;flex-wrap:wrap;align-items:center;gap:.2em .3em;max-inline-size:100%;white-space:normal;vertical-align:middle}
 .md-typeset td :is(.ed-icon-group,.ed-interface-icons) {display:inline-flex;align-items:center;gap:.18em;flex:none}
-.md-typeset td .ed-icon-text {flex:0 1 auto;min-inline-size:0;max-inline-size:100%;overflow-wrap:anywhere}
+.md-typeset td .ed-icon-text {flex:0 1 auto;min-inline-size:min-content;max-inline-size:100%;overflow-wrap:normal}
 .md-typeset td .ed-icon-group :is(.twemoji,.ed-reference-icon) {margin:0;flex:none}
 @media (min-width:601px) {
   .md-typeset .ed-workflow-stage-table td:first-child .ed-icon-label {flex-wrap:nowrap;inline-size:max-content;max-inline-size:none}
@@ -125,11 +127,11 @@
 .md-typeset .ed-contact-row{display:flex;flex-wrap:wrap;gap:.9rem}
 .md-typeset .ed-contact-row>*{flex:1 1 12rem;min-width:0}
 /* One box for every field, the reason included, as the app's form draws them. */
-.md-typeset .ed-contact-form input,.md-typeset .ed-contact-form select,.md-typeset .ed-contact-form textarea{box-sizing:border-box;width:100%;margin:0;font-family:inherit;font-size:.8rem;font-weight:400;line-height:1.4;padding:.5rem .6rem;border:1px solid color-mix(in srgb,var(--md-default-fg-color) 14%,var(--md-default-bg-color));border-radius:.2rem;background-color:var(--md-default-bg-color);color:var(--md-default-fg-color)}
-.md-typeset .ed-contact-form select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:2rem;background-image:linear-gradient(45deg,transparent 50%,var(--md-default-fg-color--light) 50%),linear-gradient(135deg,var(--md-default-fg-color--light) 50%,transparent 50%);background-position:calc(100% - 1.05rem) 52%,calc(100% - .75rem) 52%;background-size:.3rem .3rem;background-repeat:no-repeat}
-.md-typeset .ed-contact-form ::placeholder{color:var(--md-default-fg-color--light);opacity:1}
-.md-typeset .ed-contact-form textarea{min-height:8rem;resize:vertical}
-.md-typeset .ed-contact-form button{align-self:flex-start;font:inherit;font-weight:700;cursor:pointer;padding:.55rem 1.4rem;border:none;border-radius:.2rem;background:var(--md-primary-fg-color);color:var(--md-primary-bg-color)}
+.md-typeset .ed-contact-form input,.md-typeset .ed-contact-form select,.md-typeset .ed-contact-form textarea,.md-typeset .ed-survey-form input:not([type=checkbox]),.md-typeset .ed-survey-form select,.md-typeset .ed-survey-form textarea{box-sizing:border-box;width:100%;margin:0;font-family:inherit;font-size:.8rem;font-weight:400;line-height:1.4;padding:.5rem .6rem;border:1px solid color-mix(in srgb,var(--md-default-fg-color) 14%,var(--md-default-bg-color));border-radius:.2rem;background-color:var(--md-default-bg-color);color:var(--md-default-fg-color)}
+.md-typeset .ed-contact-form select,.md-typeset .ed-survey-form select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:2rem;background-image:linear-gradient(45deg,transparent 50%,var(--md-default-fg-color--light) 50%),linear-gradient(135deg,var(--md-default-fg-color--light) 50%,transparent 50%);background-position:calc(100% - 1.05rem) 52%,calc(100% - .75rem) 52%;background-size:.3rem .3rem;background-repeat:no-repeat}
+.md-typeset .ed-contact-form ::placeholder,.md-typeset .ed-survey-form ::placeholder{color:var(--md-default-fg-color--light);opacity:1}
+.md-typeset .ed-contact-form textarea,.md-typeset .ed-survey-form textarea{min-height:8rem;resize:vertical}
+.md-typeset .ed-contact-form button,.md-typeset .ed-survey-form button{align-self:flex-start;font:inherit;font-weight:700;cursor:pointer;padding:.55rem 1.4rem;border:none;border-radius:.2rem;background:var(--md-primary-fg-color);color:var(--md-primary-bg-color)}
 .md-typeset .ed-contact-status:empty{display:none}
 .md-typeset .ed-contact-note{font-size:.7rem;color:var(--md-default-fg-color--light);margin-top:-.2rem}
 /* The answer to a sent message, over the page as in the app: a check or a warning colour along its top. */
@@ -169,6 +171,15 @@
 .md-typeset .md-typeset__scrollwrap{display:block;width:auto}
 .md-typeset .md-typeset__table{display:block;width:100%}
 .md-typeset table:not([class]){display:table;width:100%}
+/* The theme gives each header cell a 5rem minimum, so a table of seven columns came out wider than the column (Data
+   formats, Table 1): the columns size from their content instead. */
+.md-typeset table:not([class]) th{min-width:0}
+/* A word in a table cell never breaks between its letters: its column takes the word's width. */
+.md-typeset table:not([class]) :is(th,td){overflow-wrap:normal;word-break:normal}
+/* Inline code never breaks inside a word (owner, 2026-11-10): a short token stays whole and its table column takes
+   the width it needs; a long dotted path breaks only after '.', '_' or '[', where code-breaks.js puts a <wbr>. */
+.md-typeset :not(pre)>code{word-break:normal;overflow-wrap:normal;hyphens:none}
+.md-typeset :not(pre)>code .ed-code-run{white-space:nowrap}
 
 /* CIF and Edi blocks in the app's Text-view colours (AppColors.qml), light and dark (owner record 2026-11-09):
    datablock name, item name, loop column, loop_. */
@@ -180,3 +191,26 @@
 [data-md-color-scheme="slate"] .md-typeset :is(.language-edi,.language-cif) .nt{color:#79AEF2}
 [data-md-color-scheme="slate"] .md-typeset :is(.language-edi,.language-cif) .na{color:#82C886}
 [data-md-color-scheme="slate"] .md-typeset :is(.language-edi,.language-cif) .k{color:#A6A6A6}
+.md-typeset .ed-survey-form{--ed-survey-gap:.9rem;--ed-survey-column:calc(var(--ed-survey-gap) * 1.5);display:flex;flex-direction:column;gap:calc(var(--ed-survey-gap) * 2.5);margin:1.2rem 0 2rem}
+.md-typeset .ed-survey-section h2{margin:0 0 var(--ed-survey-gap)}
+.md-typeset .ed-survey-note{margin:calc(var(--ed-survey-gap) * -.5) 0 var(--ed-survey-gap);color:var(--md-default-fg-color--light)}
+.md-typeset .ed-survey-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ed-survey-gap) var(--ed-survey-column);align-items:start}
+.md-typeset .ed-survey-field{display:flex;flex-direction:column;gap:.35rem;min-width:0}
+.md-typeset .ed-survey-wide{grid-column:1 / -1}
+.md-typeset .ed-survey-consent-cell{align-self:center}
+.md-typeset .ed-survey-form>button,.md-typeset .ed-survey-form>.ed-contact-status{margin-top:calc(var(--ed-survey-gap) * -1.5)}
+.md-typeset .ed-survey-label{font-size:.8rem;font-weight:600}
+.md-typeset .ed-survey-minor{font-weight:400;color:var(--md-default-fg-color--light)}
+.md-typeset .ed-survey-subhead{margin:calc(var(--ed-survey-gap) * .4) 0 calc(var(--ed-survey-gap) * -.6);font-size:.8rem;font-weight:600}
+.md-typeset .ed-survey-coltitle{margin-bottom:calc(var(--ed-survey-gap) * -.7)}
+.md-typeset .ed-survey-wide>input[name$="_other"]{width:calc(50% - var(--ed-survey-column) / 2)}
+.md-typeset .ed-survey-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem var(--ed-survey-column)}
+.md-typeset .ed-survey-texts{display:flex;flex-direction:column;gap:.5rem}
+.md-typeset .ed-survey-checks label,.md-typeset .ed-survey-consent{display:flex;align-items:flex-start;gap:.55rem;font-size:.8rem;line-height:1.4;cursor:pointer}
+.md-typeset .ed-survey-form input[type=checkbox]{appearance:none;-webkit-appearance:none;flex:none;width:1rem;height:1rem;margin:.05rem 0 0;border:1px solid color-mix(in srgb,var(--md-default-fg-color) 28%,var(--md-default-bg-color));border-radius:.2rem;background:var(--md-default-bg-color);cursor:pointer;display:grid;place-content:center}
+.md-typeset .ed-survey-form input[type=checkbox]::before{content:"";width:.55rem;height:.55rem;clip-path:polygon(14% 44%,0 65%,50% 100%,100% 16%,80% 0,43% 62%);background:var(--md-primary-bg-color);transform:scale(0)}
+.md-typeset .ed-survey-form input[type=checkbox]:checked{background:var(--md-primary-fg-color);border-color:var(--md-primary-fg-color)}
+.md-typeset .ed-survey-form input[type=checkbox]:checked::before{transform:scale(1)}
+.md-typeset .ed-survey-form input:focus-visible,.md-typeset .ed-survey-form select:focus-visible,.md-typeset .ed-survey-form textarea:focus-visible{outline:2px solid var(--md-accent-fg-color);outline-offset:1px}
+.md-typeset .ed-survey-form select:disabled,.md-typeset .ed-survey-form input:disabled{opacity:.45;cursor:not-allowed}
+@media (max-width:44rem){.md-typeset .ed-survey-grid,.md-typeset .ed-survey-checks{grid-template-columns:minmax(0,1fr)}.md-typeset .ed-survey-wide>input[name$="_other"]{width:100%}}

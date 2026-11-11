@@ -1,0 +1,9 @@
+{
+  "schema": "edi-survey-events/1",
+  "events": [
+    {
+      "name": "general",
+      "title": "General"
+    }
+  ]
+}

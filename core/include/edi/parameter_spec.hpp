@@ -165,7 +165,6 @@ inline constexpr const char* kBackgroundIntensityCif[] = {"_pd_background.line_s
 inline constexpr const char* kBackgroundCoef[] = {"_background.coef"};
 inline constexpr const char* kBackgroundCoefCif[] = {"_pd_background.Chebyshev_coef"};
 inline constexpr const char* kAbscor1[] = {"_absorption.abscor1"};
-inline constexpr const char* kAbscor2[] = {"_absorption.abscor2"};
 inline constexpr const char* kMuR[] = {"_absorption.mu_r"};
 inline constexpr const char* kExtinctionDomainRadius[] = {"_extinction.domain_radius"};
 inline constexpr const char* kExtinctionDomainRadiusCif[] = {"_easydiffraction_extinction.domain_radius"};
@@ -303,7 +302,6 @@ inline const ParameterSpec background_coef{"background", "coef", "arbitrary", de
 
 // edi-only (no upstream counterpart — diffraction-lib has no TOF absorption category).
 inline const ParameterSpec absorption_abscor1{"absorption", "abscor1", "reciprocal_angstroms", detail::kUnbounded, detail::kAbscor1, {}};
-inline const ParameterSpec absorption_abscor2{"absorption", "abscor2", "undetermined", detail::kUnbounded, detail::kAbscor2, {}};
 // The CW cylinder body — upstream CylinderHewatAbsorption.mu_r (diffraction-lib tags and
 // ge-0 range mirrored; crysta dictionary row absorption.mu_r, family cwl).
 inline const ParameterSpec absorption_mu_r{"absorption", "mu_r", "dimensionless", {0.0, detail::kInf}, detail::kMuR, detail::kMuRCif};

@@ -59,7 +59,7 @@ def _run_edi(*arguments: str, timeout: int = 600) -> subprocess.CompletedProcess
 def _split_records(text: str) -> list[str]:
     assert text.endswith('\n'), 'machine records must be newline-terminated'
     lines = text.splitlines()
-    starts = [index for index, line in enumerate(lines) if line == 'schema=8']
+    starts = [index for index, line in enumerate(lines) if line == 'schema=9']
     assert starts, text
     assert starts[0] == 0, text
     starts.append(len(lines))
@@ -78,8 +78,8 @@ def _parse_record(text: str) -> tuple[list[str], dict[str, str]]:
         keys.append(key)
         values[key] = value
     assert keys[:2] == ['schema', 'record']
-    assert values['schema'] == '8', (
-        "the _parse_record requirement must hold: values['schema'] == '8'"
+    assert values['schema'] == '9', (
+        "the _parse_record requirement must hold: values['schema'] == '9'"
     )
     return keys, values
 
@@ -139,7 +139,7 @@ def test_c09_t10_surviving_core_formats_keep_nontrivial_iteration_change() -> No
 
     progress = edi.progress_report(first)
     assert progress == (
-        'schema=8\nrecord=progress\niter=1\nrwp=0.1811\n'
+        'schema=9\nrecord=progress\niter=1\nrwp=0.1811\n'
         'reduced_chi_square=16.8435\nelapsed_ms=0.000\n'
     ), 'the progress record must preserve its machine-readable schema'
 

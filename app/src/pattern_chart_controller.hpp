@@ -253,6 +253,9 @@ class PatternChartController : public QObject {
     void setHiddenFitsRange(bool on);
     // Hides the curve of a legend entry's key, or shows it again.
     Q_INVOKABLE void toggleSeries(const QString& key);
+    // Every legend entry hidden but the measured data's, as clicks on each would hide them: with the residual and
+    // every Bragg row hidden, their panes go too (the documentation's reduced-pattern figure).
+    Q_INVOKABLE void hideAllButMeasured();
 
     // A style key's colour in the current theme, with the table's opacity.
     Q_INVOKABLE QColor color(const QString& styleKey) const;
@@ -379,7 +382,7 @@ class PatternChartController : public QObject {
     QString report_experiment_;
     bool active_ = true, dark_ = false, dirty_ = true;
     bool fills_cleared_ = false;  // a drag holds the filled areas empty until the release
-    QString colour_scheme_ = QStringLiteral("earth");
+    QString colour_scheme_ = QStringLiteral("main");
     // The style table the chart draws with: the report model's own in a report figure, else the palette's for the
     // project's experiments in the colour scheme.
     std::vector<edi::SeriesStyle> styles() const;

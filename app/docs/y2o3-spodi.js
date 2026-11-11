@@ -93,9 +93,9 @@
     shot("12-save-refined", "analysis", "Keep the result of staged refinement",
         ["save-as:" + capture.checkpointDirectory + "/refined"], [], "", false);
     shot("12-correlations", "analysis", "Inspect correlations after the staged refinement",
-        ["mainArea.analysis.tab.correlations"], ["workflow.analysis.mainContent"]);
+        ["mainArea.tab.correlations"], ["workflow.analysis.mainContent"]);
     shot("12-pattern-return", "analysis", "Return to the fitted pattern",
-        ["mainArea.analysis.tab.fitting"], [], "", false);
+        ["mainArea.tab.pattern"], [], "", false);
     tabs("13-analysis", "analysis", "Completed Rietveld refinement");
     tabs("14-report", "report", "Review the fitted structure and report");
     shot("15-project-examples", "project", "Browse the built-in examples",
@@ -142,7 +142,7 @@
     panel("guide-experiment-scattering", "experiment", "extras", "group.scattering_source", "Inspect scattering data sources", ["group.scattering_source"]);
     panel("guide-analysis-aliases", "analysis", "extras", "group.alias", "Inspect parameter aliases", ["group.alias"]);
     shot("guide-analysis-correlations", "analysis", "Inspect correlations after fitting",
-        ["appBar.tab.analysis", "sideBar.tab.basic", "mainArea.analysis.tab.correlations"], ["workflow.analysis.mainContent"]);
+        ["appBar.tab.analysis", "sideBar.tab.basic", "mainArea.tab.correlations"], ["workflow.analysis.mainContent"]);
     panel("guide-project-uncertainties", "project", "extras", "group.su_format", "Choose how values and standard uncertainties are displayed", ["group.su_format"]);
     panel("guide-experiment-data-settings", "experiment", "extras", "group.data", "Inspect the measured range and point data", ["group.data"]);
     panel("guide-experiment-cutoff", "experiment", "extras", "group.peak", "Choose the peak calculation window", ["peak.cutoff_fwhm"]);

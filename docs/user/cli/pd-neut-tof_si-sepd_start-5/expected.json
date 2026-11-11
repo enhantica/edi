@@ -50,54 +50,10 @@
         }
       }
     },
-    "fast-descent-linear-snap": {
-      "quantities": {
-        "reduced_chi_square": {
-          "value": 3.61094126,
-          "kind": "regression-pin",
-          "tol_abs": 1e-06,
-          "tol_rel": null
-        },
-        "iterations": {
-          "value": 4.0,
-          "kind": "regression-pin",
-          "tol_abs": 0.0,
-          "tol_rel": null
-        },
-        "rwp": {
-          "value": 0.06941004914,
-          "kind": "regression-pin",
-          "tol_abs": 1e-09,
-          "tol_rel": null
-        }
-      }
-    },
-    "fast-descent-guarded-linear-snap": {
-      "quantities": {
-        "reduced_chi_square": {
-          "value": 3.61094126,
-          "kind": "regression-pin",
-          "tol_abs": 1e-06,
-          "tol_rel": null
-        },
-        "iterations": {
-          "value": 4.0,
-          "kind": "regression-pin",
-          "tol_abs": 0.0,
-          "tol_rel": null
-        },
-        "rwp": {
-          "value": 0.06941004914,
-          "kind": "regression-pin",
-          "tol_abs": 1e-09,
-          "tol_rel": null
-        }
-      }
-    },
     "multistart-prune": {
       "quantities": {
         "reduced_chi_square": {
-          "value": 3.610940746,
+          "value": 3.610945792,
           "kind": "regression-pin",
           "tol_abs": 1e-06,
           "tol_rel": null
@@ -109,7 +65,7 @@
           "tol_rel": null
         },
         "rwp": {
-          "value": 0.0694100442,
+          "value": 0.0694100927,
           "kind": "regression-pin",
           "tol_abs": 1e-09,
           "tol_rel": null

@@ -223,9 +223,12 @@ def check_stall(frame_only):
             shutil.copytree(STALL / 'scan', directory / 'analysis', dirs_exist_ok=True)
         with (directory / 'analysis/results.csv').open(newline='') as stream:
             seeded = list(csv.DictReader(stream))
+        # This regression concerns ladder's supplied stalled start, independently of defaults.
+        analysis = directory / 'analysis/analysis.edi'
+        analysis.write_text(analysis.read_text() + '\n_minimizer.descent ladder\n')
         project = edi.Project.load(directory)
-        assert '_minimizer.descent' not in (directory / 'analysis/analysis.edi').read_text(), (
-            'The stalled path exercises the default ladder, not the fast-descent example recipe'
+        assert project.analysis.descent == 'ladder', (
+            'The supplied stalled start must explicitly exercise ladder'
         )
         result = project.analysis.fit()
         with (directory / 'analysis/results.csv').open(newline='') as stream:
@@ -242,12 +245,12 @@ def check_stall(frame_only):
         else:
             source = {p.name for p in (directory / 'experiments/d20_scan').glob('*.dat')}
             assert {Path(row['file_path']).name for row in rows} == source, (
-                'The seeded default-ladder scan covers every measured file exactly once'
+                'The seeded explicit-ladder scan covers every measured file exactly once'
             )
         with (directory / 'analysis/results-provenance.csv').open(newline='') as stream:
             provenance = list(csv.DictReader(stream))
         assert all(row['descent'] == 'ladder' for row in provenance[len(seeded) :]), (
-            'Every newly fitted stalled-path file uses the default ladder'
+            'Every newly fitted stalled-path file uses the explicit ladder'
         )
         check_file_convergence(directory, rows)
         assert result.success, 'The stalled-path replay reaches a successful terminal state'

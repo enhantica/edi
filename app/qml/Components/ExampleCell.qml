@@ -49,35 +49,12 @@ Item {
                 spacing: AppSizes.fieldSpacing / 2
                 Repeater {
                     model: cell.tagLabels
-                    delegate: Rectangle {
-                        id: badge
+                    delegate: TagChip {
                         required property string modelData
                         required property int index
-                        readonly property color ink: EaStyle.Colors.isDarkPalette ? cell.tagDarkColors[index] : cell.tagColors[index]
-                        radius: 3
-                        color: Qt.rgba(ink.r, ink.g, ink.b, 0.13)
-                        width: badgeContent.implicitWidth + 2 * AppSizes.fieldSpacing
-                        height: EaStyle.Sizes.fontPixelSize * 1.65
-                        Row {
-                            id: badgeContent
-                            anchors.centerIn: parent
-                            spacing: AppSizes.fieldSpacing / 2
-                            EaElements.Label {
-                                visible: text !== ""
-                                anchors.verticalCenter: parent.verticalCenter
-                                font.family: EaStyle.Fonts.iconsFamily
-                                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.8
-                                color: badge.ink
-                                text: cell.tagIcons[badge.index] ?? ""
-                            }
-                            EaElements.Label {
-                                anchors.verticalCenter: parent.verticalCenter
-                                horizontalAlignment: Text.AlignHCenter
-                                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
-                                color: badge.ink
-                                text: badge.modelData
-                            }
-                        }
+                        ink: EaStyle.Colors.isDarkPalette ? cell.tagDarkColors[index] : cell.tagColors[index]
+                        icon: cell.tagIcons[index] ?? ""
+                        label: modelData
                     }
                 }
             }

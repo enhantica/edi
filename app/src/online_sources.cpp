@@ -2,10 +2,13 @@
 #include "online_sources.hpp"
 
 #include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSettings>
+#include <QUrl>
 
 #include "engine_setup.hpp"
 
@@ -15,6 +18,17 @@ namespace {
 const QString kStoreKey = QStringLiteral("Online/sources");
 const QStringList kAllKinds{QStringLiteral("structure"), QStringLiteral("experiment"), QStringLiteral("data"), QStringLiteral("project")};
 
+// The copy of the EasyDiffraction collection the desktop app installs beside itself (EDI_BUNDLED_COLLECTION), when
+// there is one: the source's last location, read only after an outage of the online ones, so the app has its examples
+// offline while the online collection stays the source of updates (the owner, 2026-11-10; edi ADR-0068).
+QStringList bundled_collection() {
+#if defined(EDI_APP_BUNDLED_COLLECTION)
+    const QString folder = QDir::cleanPath(QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral(EDI_APP_BUNDLED_COLLECTION)));
+    if (QFileInfo(QDir(folder).filePath(QStringLiteral("index.json"))).isFile()) return {QUrl::fromLocalFile(folder).toString()};
+#endif
+    return {};
+}
+
 QList<OnlineSourcesModel::Source> builtin_sources() {
     return {
         {QStringLiteral("cod"), QStringLiteral("Crystallography Open Database (COD)"), QStringLiteral("https://www.crystallography.net/cod"),
@@ -22,7 +36,7 @@ QList<OnlineSourcesModel::Source> builtin_sources() {
         // The names the owner chose (2026-11-04). One EasyDiffraction source, two locations in order: GitHub, then the mirror (the owner, 2026-11-04).
         {QStringLiteral("easydiffraction"), QStringLiteral("EasyDiffraction Database"),
          QStringLiteral("https://raw.githubusercontent.com/enhantica/edi-data/main"), kAllKinds, true, true, {},
-         {QStringLiteral("https://data.easydiffraction.org")}},
+         QStringList{QStringLiteral("https://data.easydiffraction.org")} + bundled_collection()},
     };
 }
 

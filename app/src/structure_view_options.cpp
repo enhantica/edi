@@ -10,7 +10,8 @@ StructureViewOptions::StructureViewOptions(QObject* parent)
       atom_view_options_(new OptionListModel(this)),
       moment_form_options_(new OptionListModel(this)),
       moment_view_options_(new OptionListModel(this)) {
-    atom_view_options_->setOptions({"covalent", "vdw", "ionic", "adp"});
+    // Named as crysta's dictionary names them (Covalent radius, ...), never by their tokens.
+    atom_view_options_->setItemOptions("structure_view.atom_view", {"covalent", "vdw", "ionic", "adp"});
     // Each shows its name from crysta's dictionary: Crystal axes, Cartesian, Spherical.
     moment_form_options_->setItemOptions("structure_view.moment_form", {"crystal_axes", "cartesian", "spherical"});
     moment_view_options_->setItemOptions("structure_view.moment_view", {"through_atom", "from_centre", "from_surface"});

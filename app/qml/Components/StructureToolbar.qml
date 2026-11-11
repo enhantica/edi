@@ -139,5 +139,6 @@ Row {
         objectName: "structure.toolbar.save"
         target: toolbar.saveTarget
         fileName: "structure"
+        cropToolbar: false
     }
 }

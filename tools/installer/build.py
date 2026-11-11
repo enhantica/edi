@@ -259,6 +259,7 @@ def build(
     patchelf: Path | None,
     version: str | None = None,
     release_plan: Path | None = None,
+    collection: Path | None = None,
 ) -> None:
     identity = release_identity(version, release_plan)
     version, release_plan = identity['version'], identity['plan']
@@ -305,6 +306,8 @@ def build(
         f'-DEDI_RELEASE_VERSION={version or ""}',
         f'-DEDI_INSTALLER_CALENDAR_PREVIEW={"ON" if version and not release_plan else "OFF"}',
         f'-DEDI_RELEASE_HISTORY={history.as_posix()}',
+        # The data collection's offline copy, installed with the app (edi ADR-0068).
+        f'-DEDI_BUNDLED_COLLECTION={collection.resolve().as_posix() if collection else ""}',
     ])
     run(['cmake', '-S', ROOT, '-B', app, *common, *options])
     run(['cmake', '--build', app, '--target', 'edi_app', '--parallel', '4'])
@@ -415,6 +418,11 @@ def main() -> None:
     parser.add_argument(
         '--release-plan', type=Path, default=os.environ.get('EDI_RELEASE_PLAN') or None
     )
+    parser.add_argument(
+        '--collection',
+        type=Path,
+        help='A copy of the edi-data collection installed as the offline copy',
+    )
     args = parser.parse_args()
     if args.check_compiler:
         check_compiler(args.crysta_source, args.work)
@@ -426,6 +434,7 @@ def main() -> None:
         args.patchelf,
         args.version,
         args.release_plan,
+        args.collection,
     )
 
 

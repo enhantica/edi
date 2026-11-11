@@ -25,3 +25,7 @@ Built by `tools/cli_projects/build_catalogue_projects.py` (`catalogue_cw_cases.p
 **Re-pinned 2026-11-04.** The project declares the Shift/s.u. stop rule (`_minimizer.stop_rule shift_su`, 0.1; the χ²
 change still ends a fit when it passes first), as every example does. Pins retaken with `python -m edi fit --report
 machine` linked against crysta `609586d9`, `OMP_NUM_THREADS=1`: iterations 5 → 4.
+
+**Re-pinned 2026-11-11.** The default descent now runs fast descent and the ladder for three iterations each from the
+start and continues with the one at the lower χ². Measured with `python -m edi fit --report machine --verbosity full`
+linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: iterations 4 → 2. No `reference` value moved.

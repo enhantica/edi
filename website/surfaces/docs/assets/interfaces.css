@@ -1,5 +1,9 @@
 .md-typeset figure.ed-interface-preview { display: block; width: 100%; margin: 1.6rem 0; }
 .ed-downloads { display: flex; flex-wrap: wrap; gap: .65rem; margin: 1rem 0; }
+/* The desktop installers: the online row above the offline row, one column per platform, one column on a narrow
+   page. */
+.ed-downloads--kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 44.9375em) { .ed-downloads--kinds { grid-template-columns: 1fr; } }
 .md-typeset .ed-downloads .md-button { gap: .45em; }
 .ed-downloads svg { width: 1.1em; height: 1.1em; fill: currentColor; }
 .md-typeset .ed-downloads a:has(.ed-download-label) {

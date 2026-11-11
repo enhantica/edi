@@ -16,7 +16,7 @@
         "structures/cosio.edi": "7ec9ca0fb52e1c29aa6a5aa68ca0e6a58db75ccc369a613f32d2036221994b48"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -27,6 +27,9 @@
         "iterations": "13",
         "reduced_chi_square": "75.61970582",
         "rwp": "0.1634558338",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -587,7 +590,7 @@
         "structures/cosio.edi": "7ec9ca0fb52e1c29aa6a5aa68ca0e6a58db75ccc369a613f32d2036221994b48"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -598,6 +601,9 @@
         "iterations": "7",
         "reduced_chi_square": "4.387839667",
         "rwp": "0.03937388863",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -1134,7 +1140,7 @@
         "structures/lbco.edi": "1c8421e95c44cad8dce012f78e57ed2bcabd783c76443eddf0d5d16873cba5c3"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -1145,6 +1151,9 @@
         "iterations": "18",
         "reduced_chi_square": "1.299300158",
         "rwp": "0.07233610852",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -1593,7 +1602,7 @@
         "structures/lbco.edi": "1c8421e95c44cad8dce012f78e57ed2bcabd783c76443eddf0d5d16873cba5c3"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -1604,6 +1613,9 @@
         "iterations": "9",
         "reduced_chi_square": "1.297269332",
         "rwp": "0.07229128414",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -2000,7 +2012,7 @@
         "structures/ncaf.edi": "f61f4922cf075908b47b4fd3b14c32f7aefef8e339d6161a5fece184396f865b"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "joint",
@@ -2011,6 +2023,9 @@
         "iterations": "6",
         "reduced_chi_square": "15.69263995",
         "rwp": "0.08189529811",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -2774,7 +2789,7 @@
         "structures/ncaf.edi": "e82cb95b0026e4bd5bbfcade8895353cd7cec44267a26f12aa6d13c2bb5a46c0"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "joint",
@@ -2785,6 +2800,9 @@
         "iterations": "7",
         "reduced_chi_square": "14.12339788",
         "rwp": "0.07254201566",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -3856,7 +3874,7 @@
         "structures/ncaf.edi": "e82cb95b0026e4bd5bbfcade8895353cd7cec44267a26f12aa6d13c2bb5a46c0"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "joint",
@@ -3867,6 +3885,9 @@
         "iterations": "5",
         "reduced_chi_square": "9.497535494",
         "rwp": "0.07694458606",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -5738,7 +5759,7 @@
         "structures/ncaf.edi": "8b1305fdc49077d997d1f5d2a604e7ccfbaf59cc369491a619e273b5cdbfa102"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "joint",
@@ -5749,6 +5770,9 @@
         "iterations": "2",
         "reduced_chi_square": "9.4975227",
         "rwp": "0.07694453423",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -7605,7 +7629,7 @@
         "structures/si.edi": "531d657005b89223d20b18265ace558c8fba96473890fb91a86e77dd80ca8f94"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -7616,6 +7640,9 @@
         "iterations": "12",
         "reduced_chi_square": "3.611120606",
         "rwp": "0.06941177283",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -7972,7 +7999,7 @@
         "structures/si.edi": "531d657005b89223d20b18265ace558c8fba96473890fb91a86e77dd80ca8f94"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -7983,6 +8010,9 @@
         "iterations": "4",
         "reduced_chi_square": "3.611119184",
         "rwp": "0.06941175916",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -8306,7 +8336,7 @@
         "structures/diamond.edi": "57650796c81a5963ee142a26847f89d9dac23cb6bc018406c77c6141a68f2613"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -8317,6 +8347,9 @@
         "iterations": "2",
         "reduced_chi_square": "18.24025953",
         "rwp": "0.169634072",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -8558,7 +8591,7 @@
         "structures/lab6.edi": "ae52d392119f81a94e77ba4128ee2afc447fbcd3bdd9cdc6e2fea56eba54074d"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -8569,6 +8602,9 @@
         "iterations": "2",
         "reduced_chi_square": "261.5811433",
         "rwp": "0.4457889832",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -24810,7 +24846,7 @@
         "structures/pbso4.edi": "d14b19ea6dc7f6f3a129fa5fb3538f7413fc3cb727950c2f70fb9e2e6e3f2520"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -24821,6 +24857,9 @@
         "iterations": "2",
         "reduced_chi_square": "3.537770411",
         "rwp": "0.03669115689",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -25223,7 +25262,7 @@
         "structures/YAlO3.edi": "7a4c6c27b6314bca5d179350c2ee75e1e27565a6c59629c17ed11662e29a2ccb"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -25234,6 +25273,9 @@
         "iterations": "23",
         "reduced_chi_square": "9.731184512",
         "rwp": "0.04051978146",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -25981,7 +26023,7 @@
         "structures/fe.edi": "9ee23e6fff7c5eb544677380a5c3176ee7425e3e790cbe7b50dca77472a16c29"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -25992,6 +26034,9 @@
         "iterations": "2",
         "reduced_chi_square": "1426.708991",
         "rwp": "0.7289898949",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -26348,7 +26393,7 @@
         "structures/cecoal.edi": "f6939b1d7fe11a4b7e8451ec9a4acb468c21522ef4a29af3995b86758e910616"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -26359,6 +26404,9 @@
         "iterations": "4",
         "reduced_chi_square": "2.869451006",
         "rwp": "0.02088086078",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -26862,7 +26910,7 @@
         "structures/ceo2.edi": "aedac6b487103b77e50f106e073b5701214efed16a787a9832391ce2c3b4b79c"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -26873,6 +26921,9 @@
         "iterations": "1",
         "reduced_chi_square": "3.877572872",
         "rwp": "0.05293503604",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -27173,7 +27224,7 @@
         "structures/lab6.edi": "06d8ee9eadd4dd9c5f72aed4f264446172a15f81a0571e4a02adfba6156a53fd"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -27184,6 +27235,9 @@
         "iterations": "2",
         "reduced_chi_square": "8.844222988",
         "rwp": "0.08176730916",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -27534,7 +27588,7 @@
         "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -27545,6 +27599,9 @@
         "iterations": "5",
         "reduced_chi_square": "2.275037958e-05",
         "rwp": "0.0002846980363",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -27851,7 +27908,7 @@
         "structures/ferrite.edi": "0e480192a8a22bbab539176d0d4d4ce2248b7bdcc3c2c6d53b023db0bba6c330"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "joint",
@@ -27862,6 +27919,9 @@
         "iterations": "7",
         "reduced_chi_square": "6.417669803",
         "rwp": "0.06878576521",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -28567,7 +28627,7 @@
         "structures/y2o3.edi": "dcacdbe2ddd6490b390aa7b4b36eeaf7e09d43b62f6b31b25a52121ffa295382"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -28578,6 +28638,9 @@
         "iterations": "3",
         "reduced_chi_square": "6.675026351",
         "rwp": "0.03200225019",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -29065,7 +29128,7 @@
         "structures/pbso4.edi": "177c342c60fd3a0b087cb542e5aa7c31209fda745816cd21fd512fab0a780401"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -29076,6 +29139,9 @@
         "iterations": "7",
         "reduced_chi_square": "3.303859941",
         "rwp": "0.08931857465",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -29529,7 +29595,7 @@
         "structures/lab6.edi": "e4882f46d2cbb6f4bf18d28865d16b09ec23f81db06775bd3f05aa1ef5671718"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -29540,6 +29606,9 @@
         "iterations": "8",
         "reduced_chi_square": "8.844216005",
         "rwp": "0.08176727688",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -29911,7 +29980,7 @@
         "structures/diamond.edi": "82e667fcdfa28dc58d2222fe03df3b9bac6f15bf598ab6ffeb236cc0f7d21c86"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -29922,6 +29991,9 @@
         "iterations": "10",
         "reduced_chi_square": "17.91671077",
         "rwp": "0.1674739669",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -30229,7 +30301,7 @@
         "structures/lbco.edi": "d1c245e00052e5ba22a07a5f26d645d97bc4576e369599467bfc85af224bfb04"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -30240,6 +30312,9 @@
         "iterations": "8",
         "reduced_chi_square": "1.29684855",
         "rwp": "0.07229128411",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -30632,7 +30707,7 @@
         "structures/hs.edi": "3d18bdb07a5053f136abe3e69b51940389e439aea3ba47c2251fe5ce998a0e8b"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -30643,6 +30718,9 @@
         "iterations": "9",
         "reduced_chi_square": "2.151896015",
         "rwp": "0.05300739315",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -31148,7 +31226,7 @@
         "structures/cosio.edi": "ed3e7f5594f4cab7b193440098431f483428082499f191b4d8640dd12a2d6c84"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -31159,6 +31237,9 @@
         "iterations": "13",
         "reduced_chi_square": "4.451916557",
         "rwp": "0.03967476009",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "fast_descent",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -31720,7 +31801,7 @@
         "structures/lmo.edi": "e9d889ae30298b4df82d49720b6ef23c181646c8afd8b8a44a68e455cf93f61d"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -31731,6 +31812,9 @@
         "iterations": "18",
         "reduced_chi_square": "2.394068351",
         "rwp": "0.05003565829",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -32251,7 +32335,7 @@
         "structures/y2o3.edi": "0035a2409b1fa26521d4b59c9520c37d8c4bb8c2ec9e53c50ff227ad87d53ccf"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -32262,6 +32346,9 @@
         "iterations": "5",
         "reduced_chi_square": "1.198564596",
         "rwp": "0.01344675575",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -32844,7 +32931,7 @@
         "structures/YAlO3.edi": "582a5e23201b519fced17407e697e46d11718a9b4d6b260c12df2ccaab5b1580"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -32855,6 +32942,9 @@
         "iterations": "36",
         "reduced_chi_square": "9.731270484",
         "rwp": "0.04051996045",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -33656,7 +33746,7 @@
         "structures/si.edi": "a873319a522398a2c26fbd3b155bb8974a9af54f4fe381277f66f72777f448bc"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -33667,6 +33757,9 @@
         "iterations": "10",
         "reduced_chi_square": "3.610940727",
         "rwp": "0.06941004401",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -34018,7 +34111,7 @@
         "structures/cecoal.edi": "def09ded57c181a601e481deef7bf49b135374646e4b05a7e6939e44a5a6acf4"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -34029,6 +34122,9 @@
         "iterations": "5",
         "reduced_chi_square": "2.852890073",
         "rwp": "0.02082051701",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -34538,7 +34634,7 @@
         "structures/ceo2.edi": "c0736a60e1ee6a225e5d068304ba28caf8f86b0ab1fd104c6b4fa67117f7e60e"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -34549,6 +34645,9 @@
         "iterations": "5",
         "reduced_chi_square": "3.877255463",
         "rwp": "0.05293286942",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -34868,7 +34967,7 @@
         "structures/si.edi": "d266b86077ac8cf3a8e35f802fcae5728244b9189f30dd17b8479f132e406304"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -34879,6 +34978,9 @@
         "iterations": "24",
         "reduced_chi_square": "4.156375384",
         "rwp": "0.05040847809",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -35424,7 +35526,7 @@
         "structures/ncaf.edi": "7eefbd591ab966a95b10bf062be50d0302820a06b62f5207371857c408a0be99"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "joint",
@@ -35435,6 +35537,9 @@
         "iterations": "15",
         "reduced_chi_square": "9.496662872",
         "rwp": "0.07694105119",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -37348,7 +37453,7 @@
         "structures/ferrite.edi": "ec49d823d61e5c7224a554dd51a842edd9465868af93a6b94209ae775e20d5d0"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "joint",
@@ -37359,6 +37464,9 @@
         "iterations": "6",
         "reduced_chi_square": "6.891212546",
         "rwp": "0.07131024942",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -38205,7 +38313,7 @@
         "structures/pbso4.edi": "24770242effa8a4d410836f2cef855fc6454d84e5f3cd2d2bd7ab760f21b3ba5"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -38216,6 +38324,9 @@
         "iterations": "12",
         "reduced_chi_square": "2.975771851",
         "rwp": "0.08401848554",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -38735,7 +38846,7 @@
         "structures/lam7o3.edi": "f3ac01debabaf3539ce5bb66a3cbb5f4974bd89ddec736b82bd94f2c10be4e47"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -38746,6 +38857,9 @@
         "iterations": "18",
         "reduced_chi_square": "0.1867480156",
         "rwp": "0.01643599302",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "fast_descent",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -39472,7 +39586,7 @@
         "structures/pbso4.edi": "24770242effa8a4d410836f2cef855fc6454d84e5f3cd2d2bd7ab760f21b3ba5"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "joint",
@@ -39483,6 +39597,9 @@
         "iterations": "12",
         "reduced_chi_square": "1.957668856",
         "rwp": "0.05801181466",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -40244,7 +40361,7 @@
         "structures/pr2nio4.edi": "9650cabf089c757fda805a194dfd0b8eac113a6e2c8f3c381110f61d705cd3b4"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -40255,6 +40372,9 @@
         "iterations": "2",
         "reduced_chi_square": "10.80514652",
         "rwp": "0.04754441248",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -40750,7 +40870,7 @@
         "structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -40761,6 +40881,9 @@
         "iterations": "2",
         "reduced_chi_square": "85.19254053",
         "rwp": "0.2359489617",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -41056,7 +41179,7 @@
         "structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -41067,6 +41190,9 @@
         "iterations": "3",
         "reduced_chi_square": "76.80145037",
         "rwp": "0.2235157783",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -41368,7 +41494,7 @@
         "structures/tb2ti2o7.edi": "66a2aeed88f6a63df7e56d83bcab248d47189c2f2d31a7e9368614a35ec5b626"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -41379,6 +41505,9 @@
         "iterations": "2",
         "reduced_chi_square": "21.02513113",
         "rwp": "0.1172159313",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -41794,7 +41923,7 @@
         "structures/tb2ti2o7.edi": "b08d754705c5a5ad4f5ed79567fb90152f5be830af86fdd39f2614fc88bb3206"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -41805,6 +41934,9 @@
         "iterations": "13",
         "reduced_chi_square": "3.263487111",
         "rwp": "0.04511379091",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -42284,7 +42416,7 @@
         "structures/pr2nio4.edi": "27b55ca7cad6af444695d7e2881bae2d9ad454c42a92155ea10c4f35384a592f"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -42295,6 +42427,9 @@
         "iterations": "10",
         "reduced_chi_square": "306.764526",
         "rwp": "0.2461558051",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -42694,7 +42829,7 @@
         "structures/taurine.edi": "459d6697830c4fc48e3d2e892d296a98a5fe7e28d66ab60685eb6d727236ff32"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -42705,6 +42840,9 @@
         "iterations": "2",
         "reduced_chi_square": "24.41893799",
         "rwp": "0.1246829828",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -43245,7 +43383,7 @@
         "structures/taurine.edi": "f914da36d8e5553f5475e3e381e7cb6d0bd51b55ce56bf4bf98800b09a75e129"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -43256,6 +43394,9 @@
         "iterations": "6",
         "reduced_chi_square": "24.21629776",
         "rwp": "0.1566595012",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",
@@ -43840,7 +43981,7 @@
         "structures/cosio.edi": "37983b2243d249186d235bc0eb2b3d5acf78edb0872ddbd0f5314ef39c252443"
       },
       "record": {
-        "schema": "8",
+        "schema": "9",
         "record": "fit",
         "status": "done",
         "mode": "single",
@@ -43851,6 +43992,9 @@
         "iterations": "41",
         "reduced_chi_square": "6.245812633",
         "rwp": "0.04695943154",
+        "stopping_rule": "none",
+        "stopping_value": "nan",
+        "last_shift_su": "nan",
         "descent": "ladder",
         "fast_descent": "false",
         "linear_snap": "false",

@@ -136,10 +136,10 @@ def catalogue(probe):
 
 def test_exact_catalogue_order_and_natural_default(palette_probe):
     names, default = catalogue(palette_probe)
-    assert list(map(normalized, names)) == [normalized(p['name']) for p in PALETTES], (
-        'The core catalogue lists exactly the five approved palettes in display order'
+    assert list(map(normalized, names)) == ['main', 'colourblindsafe'], (
+        'The core catalogue lists exactly Main and Colour-blind safe in display order'
     )
-    assert normalized(default) == 'earth', 'A new user and an unknown preference use Earth'
+    assert normalized(default) == 'main', 'A new user and an unknown preference use Main'
 
 
 @pytest.mark.parametrize('palette', PALETTES, ids=itemgetter('name'))

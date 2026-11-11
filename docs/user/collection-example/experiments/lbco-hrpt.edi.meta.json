@@ -1,0 +1,20 @@
+{
+ "id": "lbco-hrpt",
+ "structures": [
+  "lbco"
+ ],
+ "elements": [
+  "Ba",
+  "Co",
+  "La",
+  "O"
+ ],
+ "formula": "Ba Co La O",
+ "name": "La₀.₅Ba₀.₅CoO₃ at HRPT",
+ "description": "Neutron powder pattern with its instrument and peak profile",
+ "radiation": "neutron",
+ "technique": "powder constant wavelength",
+ "instrument": "HRPT",
+ "facility": "PSI",
+ "source": "EasyDiffraction"
+}

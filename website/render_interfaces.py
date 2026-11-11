@@ -154,6 +154,38 @@ def render_interface_links() -> None:
         path.write_text(''.join(parts))
 
 
+def download_buttons(family: str, entries: list[dict]) -> list[str]:
+    """The download buttons of a distribution family, disabled until a release links them.
+
+    The desktop installers come online and offline, a row each, one button per platform; a
+    button's third line names its kind and, once a release is read, its size (render_downloads).
+    The command line has one kind.
+    """
+    kinds = ('online', 'offline') if family == 'desktop' else (None,)
+    buttons = []
+    for kind in kinds:
+        for entry in entries:
+            label = html.escape(entry['platform'], quote=True)
+            requirements = html.escape(entry['requirements'], quote=True)
+            platform = html.escape(entry['artifact_platform'], quote=True)
+            kind_attr = f' data-download-kind="{kind}"' if kind else ''
+            kind_line = (
+                f'<small data-download-size="{platform}-{kind}">{kind.capitalize()}</small>'
+                if kind
+                else ''
+            )
+            named = f', {kind}' if kind else ''
+            buttons.append(
+                f'<a class="md-button" data-download-platform="{platform}"{kind_attr} '
+                'aria-disabled="true" '
+                f'aria-label="Download for {label}, {requirements}{named}">'
+                f'{platform_icon(entry["icon"])}'
+                f'<span class="ed-download-label">{label}<small>{requirements}</small>'
+                f'{kind_line}</span></a>'
+            )
+    return buttons
+
+
 def render() -> None:
     capture = DOCS / 'assets/interfaces/capture.json'
     if capture.exists():
@@ -192,24 +224,13 @@ def render() -> None:
         source = DOCS / filename
         if not source.exists():
             continue
-        buttons = []
-        for entry in releases['desktop']:
-            label = html.escape(entry['platform'], quote=True)
-            requirements = html.escape(entry['requirements'], quote=True)
-            platform = html.escape(entry['artifact_platform'], quote=True)
-            icon = platform_icon(entry['icon'])
-            buttons.append(
-                f'<a class="md-button" data-download-platform="{platform}" '
-                'aria-disabled="true" '
-                f'aria-label="Download for {label}, {requirements}">{icon}'
-                f'<span class="ed-download-label">{label}<small>{requirements}</small>'
-                '</span></a>'
-            )
+        buttons = download_buttons(family, releases['desktop'])
+        rows = ' ed-downloads--kinds' if family == 'desktop' else ''
         replace_marker(
             source,
             'distribution',
             family,
-            '<div class="ed-downloads">' + '\n'.join(buttons) + '</div>',
+            f'<div class="ed-downloads{rows}">' + '\n'.join(buttons) + '</div>',
         )
     render_interface_links()
 

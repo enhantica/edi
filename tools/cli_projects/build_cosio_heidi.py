@@ -205,7 +205,6 @@ _metadata.timestamp        ?
 """
 
 ANALYSIS = """_edi.schema_version 3
-_minimizer.stop_rule shift_su
 
 _fitting_mode.type independent
 """

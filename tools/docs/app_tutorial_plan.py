@@ -524,7 +524,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
                 'calculated',
                 'analysis',
                 'See the calculated pattern',
-                ['appBar.tab.analysis', 'sideBar.tab.basic', 'mainArea.analysis.tab.fitting'],
+                ['appBar.tab.analysis', 'sideBar.tab.basic', 'mainArea.tab.pattern'],
                 ['workflow.analysis.mainContent'],
             )
             shot(
@@ -744,7 +744,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
     # The minimizer settings the case's project declares: descent, tolerance, rule and iterations.
     analysis = PROJECTS / case / 'project/analysis/analysis.edi'
     declared = analysis.read_text(encoding='utf-8') if analysis.exists() else ''
-    rule = re.search(r'(?m)^_minimizer\.stop_rule (\w+)$', declared)
+    rule = re.search(r'(?m)^_minimizer\.stop_rules "?(\w+)"?$', declared)
     bound = re.search(r'(?m)^_minimizer\.max_iterations (\d+)$', declared)
     descent = re.search(r'(?m)^_minimizer\.descent (\w+)$', declared)
     tolerance = re.search(r'(?m)^_minimizer\.chi_square_tolerance (\S+)$', declared)
@@ -965,14 +965,14 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
         'correlations',
         'analysis',
         'Inspect the correlations',
-        ['mainArea.analysis.tab.correlations'],
+        ['mainArea.tab.correlations'],
         ['workflow.analysis.mainContent'],
     )
     shot(
         'report',
         'report',
         'Review the report',
-        ['mainArea.analysis.tab.fitting', 'appBar.tab.report', 'sideBar.tab.basic'],
+        ['mainArea.tab.pattern', 'appBar.tab.report', 'sideBar.tab.basic'],
         ['workflow.report.mainContent'],
         'Main',
     )

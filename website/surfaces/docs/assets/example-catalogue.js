@@ -129,35 +129,44 @@
     });
     update();
   }
-  // Tables with the same header row on one page share one fixed column split, so their columns line up down the page
-  // (owner, 2026-11-09): each column takes the widest share it has in any of them.
+  // Tables of the same shape on one page (as many columns, the same first header) share one fixed column split, so
+  // their columns line up down the page and across its content tabs (owner, 2026-11-09, 2026-11-10): each column
+  // takes the widest share it has in the tables first shown, and a table shown later, on another tab, takes the same.
+  // The splits live with the page's content, so a second set-up of the same page keeps them.
+  const splitsOf = new WeakMap();
   function alignTables() {
     const content = document.querySelector('.md-content .md-typeset');
     if (!content) return;
+    if (!splitsOf.has(content)) splitsOf.set(content, new Map());
+    const splits = splitsOf.get(content);
     const groups = new Map();
     for (const table of content.querySelectorAll('table')) {
       if (table.dataset.aligned || !table.tHead || !table.tHead.rows.length || !table.offsetWidth) continue;
-      const key = [...table.tHead.rows[0].cells].map(cell => cell.textContent.trim()).join('\u0001');
+      const cells = [...table.tHead.rows[0].cells];
+      const key = `${cells.length}\u0001${cells[0].textContent.trim()}`;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(table);
     }
-    for (const tables of groups.values()) {
-      if (tables.length < 2) continue;
-      const shares = [];
-      for (const table of tables) {
-        const cells = [...table.tHead.rows[0].cells];
-        const total = table.getBoundingClientRect().width || 1;
-        cells.forEach((cell, index) => {
-          shares[index] = Math.max(shares[index] || 0, cell.getBoundingClientRect().width / total);
-        });
+    for (const [key, tables] of groups) {
+      if (!splits.has(key)) {
+        const others = [...content.querySelectorAll('table')].filter(t => t.tHead && t.tHead.rows.length && t.tHead.rows[0].cells.length === tables[0].tHead.rows[0].cells.length && t.tHead.rows[0].cells[0].textContent.trim() === tables[0].tHead.rows[0].cells[0].textContent.trim());
+        if (others.length < 2) continue;
+        const shares = [];
+        for (const table of tables) {
+          const total = table.getBoundingClientRect().width || 1;
+          [...table.tHead.rows[0].cells].forEach((cell, index) => {
+            shares[index] = Math.max(shares[index] || 0, cell.getBoundingClientRect().width / total);
+          });
+        }
+        const sum = shares.reduce((x, y) => x + y, 0) || 1;
+        splits.set(key, shares.map(share => share / sum));
       }
-      const sum = shares.reduce((a, b) => a + b, 0) || 1;
       for (const table of tables) {
         table.querySelector(':scope > colgroup')?.remove();
         const columns = document.createElement('colgroup');
-        for (const share of shares) {
+        for (const share of splits.get(key)) {
           const column = document.createElement('col');
-          column.style.width = `${(100 * share / sum).toFixed(3)}%`;
+          column.style.width = `${(100 * share).toFixed(3)}%`;
           columns.append(column);
         }
         table.prepend(columns);
@@ -166,6 +175,10 @@
       }
     }
   }
+  // A content tab shows its tables only when chosen: they line up then.
+  document.addEventListener('change', event => {
+    if (event.target.matches?.('.tabbed-set > input')) requestAnimationFrame(alignTables);
+  });
   function setupAll() {
     setup();
     alignTables();

@@ -112,10 +112,10 @@ def catalogue(binary):
 
 def test_exact_palette_names_order_and_earth_default(colour_probe):
     names, default = catalogue(colour_probe)
-    assert list(names) == [row['name'] for row in OWNER['palettes']], (
-        'Preferences and the core offer exactly Earth, Classic, Soft, Natural, Colour-blind safe'
+    assert list(names) == ['Main', 'Colour-blind safe'], (
+        'Preferences and the core offer exactly Main and Colour-blind safe'
     )
-    assert default == 'Earth', 'A new user defaults to the owner-selected Earth palette'
+    assert default == 'Main', 'A new user defaults to the approved Main palette'
 
 
 @pytest.mark.parametrize('palette', OWNER['palettes'], ids=itemgetter('name'))

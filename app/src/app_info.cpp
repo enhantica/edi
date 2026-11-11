@@ -18,6 +18,7 @@
 #include "user_action_log.hpp"
 #include "web_files.hpp"
 #include "engine_setup.hpp"
+#include "edi/display.hpp"
 #include "edi/model.hpp"
 #include "edi/palette.hpp"
 #include "edi/assistant_files.hpp"
@@ -388,9 +389,15 @@ QList<ChangeDay> ApplicationInfo::changes() const {
 }
 
 Citation ApplicationInfo::citation() const {
-    // The top-level `key: "value"` lines and the authors' names of a CITATION.cff; nothing else is read.
+    // The top-level `key: "value"` lines and the authors of a CITATION.cff, each a `- name:` entity or a person's
+    // `given-names` and `family-names`; nothing else is read. The version and year are this build's own (Zenodo adds
+    // them to each release's record from the release).
     QMap<QString, QString> fields;
-    QStringList authors;
+    struct Author {
+        QString name, given, family;
+    };
+    QList<Author> authors;
+    bool in_authors = false;
     for (const QString& raw : read_resource(QStringLiteral(":/CITATION.cff")).split(QLatin1Char('\n'))) {
         const QString line = raw.trimmed();
         const auto value = [&](qsizetype colon) {
@@ -400,26 +407,56 @@ Citation ApplicationInfo::citation() const {
             }
             return text;
         };
-        if (line.startsWith(QLatin1String("- name:"))) {
-            authors.append(value(line.indexOf(QLatin1Char(':'))));
-        } else if (!raw.startsWith(QLatin1Char(' ')) && !line.startsWith(QLatin1Char('#'))) {
+        if (line.isEmpty() || line.startsWith(QLatin1Char('#'))) continue;
+        if (!raw.startsWith(QLatin1Char(' '))) {
             const qsizetype colon = line.indexOf(QLatin1Char(':'));
             if (colon > 0) {
                 fields.insert(line.left(colon), value(colon));
+                in_authors = line.left(colon) == QLatin1String("authors");
             }
+            continue;
+        }
+        if (!in_authors) continue;
+        QString entry = line;
+        if (entry.startsWith(QLatin1String("- "))) {
+            authors.append({});
+            entry = entry.mid(2).trimmed();
+        }
+        const qsizetype colon = entry.indexOf(QLatin1Char(':'));
+        if (authors.isEmpty() || colon <= 0) continue;
+        const QString key = entry.left(colon);
+        QString text = entry.mid(colon + 1).trimmed();
+        if (text.size() >= 2 && text.startsWith(QLatin1Char('"')) && text.endsWith(QLatin1Char('"'))) text = text.mid(1, text.size() - 2);
+        if (key == QLatin1String("name")) authors.last().name = text;
+        else if (key == QLatin1String("given-names")) authors.last().given = text;
+        else if (key == QLatin1String("family-names")) authors.last().family = text;
+    }
+    // APA: a person as "Sazonov, A.", an entity by its name; BibTeX: "Sazonov, Andrew", an entity in double braces.
+    QStringList shown;
+    QStringList bibtex_names;
+    for (const Author& author : authors) {
+        if (!author.family.isEmpty()) {
+            QStringList initials;
+            for (const QString& part : author.given.split(QLatin1Char(' '), Qt::SkipEmptyParts)) initials.append(part.left(1) + QLatin1Char('.'));
+            shown.append(author.family + (initials.isEmpty() ? QString() : QStringLiteral(", ") + initials.join(QLatin1Char(' '))));
+            bibtex_names.append(author.family + (author.given.isEmpty() ? QString() : QStringLiteral(", ") + author.given));
+        } else if (!author.name.isEmpty()) {
+            shown.append(author.name);
+            bibtex_names.append(QLatin1Char('{') + author.name + QLatin1Char('}'));
         }
     }
-    const QString year = fields.value(QStringLiteral("date-released")).left(4);
+    const QString year = QString::fromUtf8(edi_app::app_date()).right(4);
+    const QString version = QString::fromUtf8(edi_app::app_version());
     const QString doi = fields.value(QStringLiteral("doi"));
     const QString doi_url = doi.isEmpty() ? QString() : QStringLiteral("https://doi.org/") + doi;
     const QString title = fields.value(QStringLiteral("title"));
-    const QString version = fields.value(QStringLiteral("version"));
-    const QString who = authors.join(QStringLiteral(", "));
+    const QString who = shown.size() > 1 ? shown.mid(0, shown.size() - 1).join(QStringLiteral(", ")) + QStringLiteral(", & ") + shown.last()
+                                         : shown.join(QString());
     const QString text = QStringLiteral("%1 (%2). %3 (version %4) [Computer software]. %5")
                              .arg(who, year, title, version, doi_url);
-    const QString bibtex = QStringLiteral("@software{easydiffraction,\n  author = {{%1}},\n  title = {%2},\n"
+    const QString bibtex = QStringLiteral("@software{easydiffraction,\n  author = {%1},\n  title = {%2},\n"
                                           "  year = {%3},\n  version = {%4},\n  doi = {%5},\n  url = {%6}\n}")
-                               .arg(who, title, year, version, doi, doi_url);
+                               .arg(bibtex_names.join(QStringLiteral(" and ")), title, year, version, doi, doi_url);
     return {text, bibtex, doi, doi_url};
 }
 
@@ -527,6 +564,14 @@ QColor ApplicationInfo::figureColour(const QString& scheme, int position, int co
     return QColor(QString::fromStdString(edi::figure_colour(colour_scheme(scheme),
                                                             static_cast<std::size_t>(std::max(position, 0)),
                                                             static_cast<std::size_t>(std::max(count, 1)), dark)));
+}
+
+QList<QColor> ApplicationInfo::paletteColours(const QString& scheme, bool dark) const {
+    QList<QColor> out;
+    for (std::size_t position = 0; position < edi::kPaletteColourCount; ++position) {
+        out.append(QColor(QString::fromStdString(edi::figure_colour(colour_scheme(scheme), position, edi::kPaletteColourCount, dark))));
+    }
+    return out;
 }
 
 QColor ApplicationInfo::calculationColour(const QString& scheme, bool dark) const {
@@ -665,6 +710,23 @@ QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fa
     return found.known ? QColor(found.color.r, found.color.g, found.color.b) : fallback;
 }
 
+QList<QColor> ApplicationInfo::momentColourSamples(const QString& colours, bool dark) const {
+    // The single grey and the greying are structure_scene.cpp's and structure_view_controller.cpp's.
+    const QColor single(dark ? QStringLiteral("#BDBDBD") : QStringLiteral("#616161"));
+    QList<QColor> out;
+    for (const char* symbol : {"Mn", "Fe", "Co", "Ni", "Cu", "Cr", "Gd", "Ho"}) {
+        const QColor own = elementColor(QString::fromLatin1(symbol), single);
+        if (colours == QLatin1String("single")) {
+            out.append(single);
+        } else if (colours == QLatin1String("atom")) {
+            out.append(own);
+        } else {
+            out.append(QColor((own.red() + 128) / 2, (own.green() + 128) / 2, (own.blue() + 128) / 2));
+        }
+    }
+    return out;
+}
+
 QColor ApplicationInfo::readableColour(const QColor& colour, const QList<QColor>& backgrounds) const {
     // A translucent background is taken as opaque: what shows through it is the same theme's background.
     std::vector<std::string> hexes;
@@ -699,17 +761,68 @@ void ApplicationInfo::setMessageLevel(const QString& level) const {
     }
 }
 
-bool ApplicationInfo::saveImage(const QVariant& image, const QUrl& file) const {
+namespace {
+
+QImage croppedImage(const QVariant& image, double cut) {
     const QImage picture = image.value<QImage>();
+    if (picture.isNull() || cut <= 0 || cut >= 1) return picture;
+    const int top = static_cast<int>(std::lround(cut * picture.height()));
+    return picture.copy(0, top, picture.width(), picture.height() - top);
+}
+
+}  // namespace
+
+bool ApplicationInfo::saveImage(const QVariant& image, const QUrl& file, double cut) const {
+    const QImage picture = croppedImage(image, cut);
     return !picture.isNull() && picture.save(file.toLocalFile(), "PNG");
 }
 
-bool ApplicationInfo::downloadImage(const QVariant& image, const QString& name) const {
-    const QImage picture = image.value<QImage>();
+bool ApplicationInfo::downloadImage(const QVariant& image, const QString& name, double cut) const {
+    const QImage picture = croppedImage(image, cut);
     QByteArray data;
     QBuffer buffer(&data);
     if (picture.isNull() || !buffer.open(QIODevice::WriteOnly) || !picture.save(&buffer, "PNG")) return false;
     return edi_app::WebFiles::download(data, name);
+}
+
+QVariantList ApplicationInfo::sourceKindTags(const QStringList& kinds) const {
+    // The tones of the Examples list's tags.
+    static const QJsonObject tones = [] {
+        QFile file(QStringLiteral(":/edi/examples/tags.json"));
+        return file.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(file.readAll()).object().value("tones").toObject() : QJsonObject();
+    }();
+    struct Kind {
+        const char* token;
+        QString label;
+        QString icon;
+        const char* tone;
+    };
+    // The icons of the app bar's Project, Structure and Experiment pages and of the Measured data group.
+    const Kind known[] = {{"structure", tr("Structures"), QStringLiteral("layer-group"), "structure"},
+                          {"experiment", tr("Experiments"), QStringLiteral("microscope"), "technique"},
+                          {"data", tr("Measured data"), QString::fromStdString(edi::category_icon("data")), "neutral"},
+                          {"project", tr("Projects"), QStringLiteral("archive"), "mode"}};
+    QVariantList tags;
+    for (const QString& kind : kinds) {
+        for (const Kind& k : known) {
+            if (kind != QLatin1String(k.token)) continue;
+            const QJsonObject tone = tones.value(QLatin1String(k.tone)).toObject();
+            tags.append(QVariantMap{{"label", k.label}, {"icon", k.icon}, {"light", tone.value("light").toString()},
+                                    {"dark", tone.value("dark").toString()}});
+        }
+    }
+    return tags;
+}
+
+QUrl ApplicationInfo::imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const {
+    const QUrl remembered(stored);
+    if (!stored.isEmpty() && remembered.isLocalFile() && QFileInfo(remembered.toLocalFile()).isDir()) return remembered;
+    if (ownPlace && !projectPath.isEmpty()) {
+        const QString reports = QDir(projectPath).filePath(QStringLiteral("reports"));
+        if (QDir().mkpath(reports)) return QUrl::fromLocalFile(reports);
+    }
+    const QString pictures = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+    return QUrl::fromLocalFile(pictures.isEmpty() ? QDir::homePath() : pictures);
 }
 
 QString ApplicationInfo::diagnostics() const {
@@ -4446,10 +4559,10 @@ void ApplicationInfo::resetPreferences() const {
         {"engineThreads", QJSValue(0)}, {"scanWorkers", QJSValue(1)}, {"loggingLevel", QJSValue(QStringLiteral("Warning"))}, {"scanPatternUpdates", QJSValue(2)}, {"analysisShowNotMeasured", QJSValue(true)},
         {"analysisShowBySymmetry", QJSValue(false)}, {"analysisShowByConstraint", QJSValue(false)}, {"analysisShowFixedSettings", QJSValue(false)},
         {"showFitResults", QJSValue(true)}, {"scanRenderer", QJSValue(QStringLiteral("auto"))}, {"newProjectSuRule", QJSValue(QStringLiteral("iucr_99"))},
-        {"newReportLibraries", QJSValue(QStringLiteral("online"))}, {"colourScheme", QJSValue(QStringLiteral("earth"))}, {"patternYScale", QJSValue(QStringLiteral("linear"))},
+        {"newReportLibraries", QJSValue(QStringLiteral("online"))}, {"colourScheme", QJSValue(QStringLiteral("main"))}, {"patternYScale", QJSValue(QStringLiteral("linear"))},
         {"structureCurves", QJSValue(true)}, {"patternLegendShown", QJSValue(false)}, {"patternHoverShown", QJSValue(true)},
         {"patternMeasuredStyle", QJSValue(QStringLiteral("band"))}, {"patternPointerMode", QJSValue(QStringLiteral("zoom"))},
-        {"scanStackedPalette", QJSValue(QString{})}, {"scanMapColours", QJSValue(QStringLiteral("blue-red"))}, {"scanMapSmooth", QJSValue(true)},
+        {"scanMapColours", QJSValue(QStringLiteral("blue-red"))}, {"scanMapSmooth", QJSValue(true)},
         {"scanStackedReversed", QJSValue(false)}, {"scanStackedLegendShown", QJSValue(false)}, {"chartIncludedOnly", QJSValue(false)},
         {"chartSubtractBackground", QJSValue(false)}, {"singleCrystalQuantity", QJSValue(QStringLiteral("f_squared"))},
         {"chartHighlightSelected", QJSValue(true)}, {"chartHiddenRange", QJSValue(QStringLiteral("keep"))}, {"textShow", QJSValue(QStringLiteral("editable"))}
@@ -4459,7 +4572,8 @@ void ApplicationInfo::resetPreferences() const {
 void ApplicationInfo::applyPreferences() const {
     const auto f = panelUsageEngine(this);
     auto globals = assistantContextField(f, "EaGlobals", "Vars");
-    assistantMemberWrite(f, globals, "autoCollapseSideBarGroups", assistantContextField(f, "preferences", "autoCollapse"));
+    // The app folds its sidebar groups itself, leaving pinned ones open (SideBarGroup).
+    assistantMemberWrite(f, globals, "autoCollapseSideBarGroups", QJSValue(false));
     projectInvoke(f, "ApplicationInfo", "setEngineThreads", {assistantContextField(f, "preferences", "engineThreads")});
     projectInvoke(f, "ApplicationInfo", "setScanWorkers", {assistantContextField(f, "preferences", "scanWorkersApplied")});
     globals = assistantContextField(f, "EaGlobals", "Vars");
@@ -4472,21 +4586,6 @@ void ApplicationInfo::preferencesColourChanged() const {
     const auto value = panelUsageContextRead(f, "colourScheme");
     const auto offered = projectInvoke(f, "ApplicationInfo", "colourSchemeOrDefault", {value});
     if (!assistantSameName(f, offered, "colourScheme")) panelUsageContextWrite(f, "colourScheme", offered);
-}
-void ApplicationInfo::preferencesStackedPaletteChanged() const {
-    const auto f = panelUsageEngine(this);
-    auto array = panelUsageContextRead(f, "Array");
-    auto values = assistantContextField(f, "ApplicationInfo", "colourSchemes");
-    const auto first = panelUsageMemberCall(f, array, "from", {values});
-    array = panelUsageContextRead(f, "Array");
-    values = assistantContextField(f, "ApplicationInfo", "scanColourMaps");
-    const auto second = panelUsageMemberCall(f, array, "from", {values});
-    const auto offered = panelUsageMemberCall(f, first, "concat", {second});
-    if (!panelUsageContextRead(f, "scanStackedPalette").strictlyEquals(QJSValue(QString{}))) {
-        const auto chosen = panelUsageContextRead(f, "scanStackedPalette");
-        const auto index = panelUsageMemberCall(f, offered, "indexOf", {chosen});
-        if (assistantRelation(f, index, QJSValue(0), 0)) panelUsageContextWrite(f, "scanStackedPalette", QJSValue(QString{}));
-    }
 }
 void ApplicationInfo::preferencesLegacyPaletteChanged() const {
     const auto f = panelUsageEngine(this);
@@ -7693,13 +7792,6 @@ QJSValue ApplicationInfo::preferenceColourTitles() const {
     const auto f = panelUsageEngine(this);
     return panelUsageMemberCall(f, panelUsageContextRead(f, "choices"), "map", {projectGuardedClosure(f, 177, 1)});
 }
-QJSValue ApplicationInfo::preferenceStackedChoices() const {
-    const auto f = panelUsageEngine(this); const auto array = panelUsageContextRead(f, "Array");
-    const auto schemes = panelUsageMemberCall(f, array, "from", {assistantContextField(f, "ApplicationInfo", "colourSchemes")});
-    const auto second = panelUsageContextRead(f, "Array");
-    const auto maps = panelUsageMemberCall(f, second, "from", {assistantContextField(f, "ApplicationInfo", "scanColourMaps")});
-    return panelUsageMemberCall(f, schemes, "concat", {maps});
-}
 QJSValue ApplicationInfo::preferenceEngineThreads() const {
     const auto f = panelUsageEngine(this);
     if (!panelUsageTruth(assistantContextField(f, "ApplicationInfo", "engineThreadsSelectable")))
@@ -7729,7 +7821,7 @@ void ApplicationInfo::preferenceActivated(const QJSValue& index, int setting) co
         const char* text = setting == 6 ? (alternate ? "Left" : "Right") : setting == 7 ? (alternate ? "iucr_99" : "iucr_19") : (alternate ? "embedded" : "online");
         assistantMemberWrite(f, preferences, property, QJSValue(QString::fromLatin1(text))); return;
     }
-    const char* property = setting == 1 ? "colourScheme" : setting == 2 ? "scanStackedPalette" : setting == 3 ? "scanMapColours"
+    const char* property = setting == 1 ? "colourScheme" : setting == 3 ? "scanMapColours"
         : setting == 4 ? "chartHiddenRange" : setting == 5 ? "textShow" : "scanRenderer";
     const char* source = setting == 1 ? "schemes" : setting == 10 ? "values" : "choices";
     assistantMemberWrite(f, preferences, property, textIndex(f, panelUsageContextRead(f, source), index));
@@ -9439,12 +9531,6 @@ void scanWant(const PanelUsageFrame& f) {
 }
 } // namespace
 
-QJSValue ApplicationInfo::scanStackedPalette() const {
-    const auto f = panelUsageEngine(this); const auto stored = !assistantContextField(f, "Preferences", "scanStackedPalette").strictlyEquals(QJSValue(QStringLiteral("")))
-        ? assistantContextField(f, "Preferences", "scanStackedPalette") : assistantContextField(f, "Preferences", "colourScheme");
-    if (assistantRelation(f, panelUsageMemberCall(f, panelUsageContextRead(f, "stackedChoices"), "indexOf", {stored}), QJSValue(0), 2)) return stored;
-    const auto actor = panelUsageContextRead(f, "ApplicationInfo"); return panelUsageMemberCall(f, actor, "colourSchemeOrDefault", {assistantContextField(f, "Preferences", "colourScheme")});
-}
 QJSValue ApplicationInfo::chartCapitalised(const QJSValue& text) const { const auto f = panelUsageEngine(this); return chartCapitalisedValue(f, text); }
 void ApplicationInfo::scanSetZoom(const QJSValue& x, const QJSValue& y) const {
     const auto f = panelUsageEngine(this); panelUsageContextWrite(f, "settingZoom", QJSValue(true)); panelUsageContextWrite(f, "zoomX", x); panelUsageContextWrite(f, "zoomY", y);
@@ -9673,14 +9759,6 @@ QJSValue ApplicationInfo::digitTextRuns() const {
 QJSValue ApplicationInfo::digitRunIsDigit(const QJSValue& text) const {
     const auto f = panelUsageEngine(this); return panelUsageDeferredMemberCall(f, panelRegex(f, QStringLiteral("^[0-9]$")), "test", [&] { return QJSValueList({text}); });
 }
-QJSValue ApplicationInfo::palettePositions() const {
-    const auto f = panelUsageEngine(this); const auto kinds = controlEmptyArray(f), project = assistantContextField(f, "Session", "project");
-    if (panelUsageTruth(project)) {
-        panelUsageEach(f, panelUsageRead(f, project, "experimentColourPositions"), [&](const QJSValue& position) { textIndexWrite(f, kinds, position, QJSValue(QStringLiteral("experiment"))); return panelUsageReady(f); });
-        panelUsageEach(f, panelUsageRead(f, project, "structureColourPositions"), [&](const QJSValue& position) { textIndexWrite(f, kinds, position, QJSValue(QStringLiteral("structure"))); return panelUsageReady(f); });
-    }
-    return kinds;
-}
 QJSValue ApplicationInfo::nameBlockIcon(const QJSValue& kind) const {
     return QJSValue(kind.strictlyEquals(QJSValue(QStringLiteral("structure"))) ? QStringLiteral("layer-group") : kind.strictlyEquals(QJSValue(QStringLiteral("experiment"))) ? QStringLiteral("microscope") : kind.strictlyEquals(QJSValue(QStringLiteral("parameter"))) ? QStringLiteral("chart-line") : QString());
 }
@@ -9797,6 +9875,11 @@ void ApplicationInfo::workingAnimation(bool started) const {
 }
 
 namespace {
+// A local path as a field shows it: the home folder as "~".
+QString homeShortened(const QString& path) {
+    const QString home = QDir::homePath();
+    return path.startsWith(home + QLatin1Char('/')) ? QStringLiteral("~") + path.mid(home.size()) : path;
+}
 QJSValue recentLabel(const PanelUsageFrame& f, const char* source, const QJSValue& name) {
     const auto format = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(source))});
     return panelUsageDeferredMemberCall(f, format, "arg", [&] { return QJSValueList({name}); });
@@ -9816,7 +9899,7 @@ QJSValue recentRowCallback(const PanelUsageFrame& f, uint operation,
     const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& arg) {
     if (operation == 320) return QJSValue(assistantRelation(f, panelUsageRead(f, arg(0), "length"), QJSValue(0), 1));
     if (operation == 321) {
-        const auto path = arg(0); auto row = panelUsageLiteral(f); panelUsageWrite(f, row.value, "path", path); panelUsageWrite(f, row.value, "label", path); panelUsageWrite(f, row.value, "inBrowser", QJSValue(false));
+        const auto path = arg(0); auto row = panelUsageLiteral(f); panelUsageWrite(f, row.value, "path", path); panelUsageWrite(f, row.value, "label", QJSValue(homeShortened(path.toString()))); panelUsageWrite(f, row.value, "inBrowser", QJSValue(false));
         panelUsageWrite(f, row.value, "available", panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "Session"), "projectDirectoryExists", [&] { return QJSValueList({path}); })); return panelUsageComplete(f, row);
     }
     if (operation == 322) return QJSValue(!arg(0).strictlyEquals(saved(0)));

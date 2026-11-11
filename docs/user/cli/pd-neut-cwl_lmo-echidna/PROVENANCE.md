@@ -62,3 +62,8 @@ uncertainties apart (a 2.87488 against 2.87516 Å). As for the Bérar-Baldinozzi
 R<sub>wp</sub> and the number of free parameters, and every shared value on the `asymmetry-off` variant, against FullProf's
 fit with S/L and D/L at 0 (`knowledge/fitting/fullprof/pd-neut-cwl_lmo-echidna/asymmetry-off/`). That variant's edi fit
 agrees with it (a 2.872489 Å, c 14.170136 Å in FullProf's).
+
+**Re-pinned 2026-11-11.** The default descent now runs fast descent and the ladder for three iterations each from the
+start and continues with the one at the lower χ². Measured with `python -m edi fit --report machine --verbosity full`
+linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: iterations 5 → 3; asymmetry-off iterations 15 → 9. No `reference`
+value moved.

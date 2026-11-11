@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <ctime>
 #include <filesystem>
+#include <iomanip>
 #include <limits>
 #include <map>
 #include <numeric>
@@ -34,6 +35,7 @@
 #include "edi/report.hpp"
 #include "edi/parameter_spec.hpp"
 #include "edi/parameter_walk.hpp"
+#include "crysta/dictionary_items.hpp"
 #include "edi/presentation.hpp"
 #include "edi/scan.hpp"
 #include "edi/structure_scene.hpp"
@@ -800,6 +802,27 @@ ReportExperiment experiment_of(const BraggPdExperiment& experiment, const std::s
     return out;
 }
 
+// The stop a fit result names, in words, with its value where it has one.
+std::string stopping_text(const FitResultRecord& record) {
+    const std::string& rule = record.stopping_rule;
+    std::string text = rule == "chi_square_change"  ? "χ² change"
+                       : rule == "shift_su"         ? "Shift/s.u."
+                       : rule == "max_iterations"   ? "iteration limit (not converged)"
+                       : rule == "no_accepted_step" ? "no step lowered χ² (not converged)"
+                       : rule == "cancelled"        ? "cancelled"
+                       : rule == "polish_resumes"   ? "the final polish kept lowering χ² (not converged)"
+                       : rule == "rounding_floor"   ? "χ² at rounding level"
+                       : rule == "stationary"       ? "stationary point"
+                       : rule == "parameter_tolerance" ? "parameter step below tolerance"
+                                                       : rule;
+    if (record.stopping_value && rule != "max_iterations" && rule != "polish_resumes") {
+        std::ostringstream value;
+        value << std::setprecision(3) << *record.stopping_value;
+        text += " (" + value.str() + ")";
+    }
+    return text;
+}
+
 // The analysis categories: the software, the minimizer, the fitting mode and the fit result (the reference report's
 // subsections). A scan's fit result is its dataset's, with the scan's counts.
 std::vector<ReportCategory> analysis_of(const Project& project, const std::optional<ScanTemplate>& scan, bool fitted) {
@@ -810,24 +833,25 @@ std::vector<ReportCategory> analysis_of(const Project& project, const std::optio
     minimizer.rows = {{label("minimizer.type"), descent.empty() ? "crysta" : "crysta (" + descent + ")", ""},
                       {label("minimizer.max_iterations"),
                        std::to_string(project.minimizer_max_iterations > 0 ? project.minimizer_max_iterations : 50), ""}};
-    // The stop rule, declared or the default, and the one tolerance it reads: the χ² change's or the Shift/s.u. value.
-    const bool shift = project.minimizer_stop_rule == "shift_su";
-    minimizer.rows.push_back({label("minimizer.stop_rule"),
-                              option_label("minimizer.stop_rule",
-                                           project.minimizer_stop_rule.empty() ? "chi_square_change"
-                                                                               : project.minimizer_stop_rule),
-                              ""});
-    if (shift) {
-        minimizer.rows.push_back({label("minimizer.shift_tolerance"),
-                                  project.minimizer_shift_tolerance > 0.0
-                                      ? formatted("minimizer.shift_tolerance", project.minimizer_shift_tolerance)
-                                      : "crysta's default",
-                                  ""});
-    } else {
+    // The stop rules, declared or crysta's default set (both), and the tolerance each selected rule reads.
+    const std::string rules =
+        project.minimizer_stop_rules.empty() ? "chi_square_change shift_su" : project.minimizer_stop_rules;
+    const bool chi = rules.find("chi_square_change") != std::string::npos;
+    const bool shift = rules.find("shift_su") != std::string::npos;
+    minimizer.rows.push_back({label("minimizer.stop_rules"),
+                              chi && shift ? "χ² change or Shift/s.u." : chi ? "χ² change" : "Shift/s.u.", ""});
+    if (chi) {
         minimizer.rows.push_back({label("minimizer.chi_square_tolerance"),
                                   project.minimizer_chi_square_tolerance > 0.0
                                       ? formatted("minimizer.chi_square_tolerance",
                                                   project.minimizer_chi_square_tolerance)
+                                      : "crysta's default",
+                                  ""});
+    }
+    if (shift) {
+        minimizer.rows.push_back({label("minimizer.shift_tolerance"),
+                                  project.minimizer_shift_tolerance > 0.0
+                                      ? formatted("minimizer.shift_tolerance", project.minimizer_shift_tolerance)
                                       : "crysta's default",
                                   ""});
     }
@@ -855,6 +879,14 @@ std::vector<ReportCategory> analysis_of(const Project& project, const std::optio
                        {label("fit_result.fitting_time"), duration_text(record.fitting_time),
                         units_label("fit_result.fitting_time")},
                        {label("fit_result.iterations"), std::to_string(record.iterations), ""}};
+        // What stopped the fit, with its value, and the last step's largest shift/s.u..
+        if (!record.stopping_rule.empty()) {
+            result.rows.push_back({label("fit_result.stopping_rule"), stopping_text(record), ""});
+        }
+        if (record.last_shift_su) {
+            result.rows.push_back({label("fit_result.last_shift_su"),
+                                   formatted("fit_result.last_shift_su", *record.last_shift_su), ""});
+        }
         // The starting values the fit moved off zero, in one line instead of console notices (owner record
         // 2026-11-08).
         if (!record.start_adjustments.empty()) {
@@ -1179,6 +1211,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
             return shortest(bound);
         }
     };
+    const std::unordered_map<const Parameter*, SuMarks> marks = su_marks(project);
     for (const NamedParameter& named : named_parameters(project)) {
         const Parameter& parameter = *named.parameter;
         const std::optional<double>& su = parameter.uncertainty.get();
@@ -1190,6 +1223,11 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
                                     parameter.start_value.get(), parameter.free.get(),
                                     !fittable.contains(named.unique_name) || fittable.at(named.unique_name)});
         ReportParameter& row = model.parameters.back();
+        if (const auto mark = marks.find(&parameter); mark != marks.end()) {
+            row.su_poor = mark->second.poorly_determined;
+            row.su_partner = mark->second.partner;
+            row.su_correlation = mark->second.correlation;
+        }
         if (const auto place = places.find(&parameter); place != places.end()) {
             row.datablock = place->second.block_name;
             row.category = place->second.category;
@@ -1209,7 +1247,8 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
                 row.value_cell = table_number(row.value, text.value, true);
                 row.su_cell = text.su;
             }
-            if (row.start) row.start_cell = table_number(*row.start, bound_text(row.uid, *row.start), true);
+            // The start in the item's display format, as the CLI table writes it (one rule for every form).
+            if (row.start) row.start_cell = table_number(*row.start, display_text(row.uid, *row.start, type), true);
             row.min_cell = bound_text(row.uid, parameter.spec->range.min);
             row.max_cell = bound_text(row.uid, parameter.spec->range.max);
         } else {
@@ -1279,6 +1318,65 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
                                                structures, positions, scan && scan->place);
     model.structure_styles = structure_style_table();
     return model;
+}
+
+std::unordered_map<const Parameter*, SuMarks> su_marks(const Project& project) {
+    std::unordered_map<const Parameter*, SuMarks> marks;
+    const std::unordered_map<const Parameter*, std::string> variants = parameter_variants(project);
+    std::unordered_map<std::string, const Parameter*> by_name;
+    for (const NamedParameter& named : named_parameters(project)) {
+        by_name.emplace(named.unique_name, named.parameter);
+        const Parameter& parameter = *named.parameter;
+        const std::optional<double> su = parameter.uncertainty.get();
+        if (!parameter.free.get() || !su.has_value() || !std::isfinite(*su) || *su == 0.0 || parameter.spec == nullptr) {
+            continue;
+        }
+        const std::string uid = std::string(parameter.spec->category) + "." + parameter.spec->name;
+        const crysta::DictionaryItem* item = crysta::find_dictionary_item(uid);
+        if (item != nullptr && !item->near_zero && std::fabs(*su) > std::fabs(parameter.value.get())) {
+            marks[&parameter].poorly_determined = true;
+        }
+    }
+    // A reader's name for a partner: its row (an atom id) and label, then its datablock.
+    std::unordered_map<const Parameter*, std::string> names;
+    for (const ParameterEntry& entry : parameter_entries(const_cast<Project&>(project))) {
+        std::string shown;
+        if (entry.parameter->spec != nullptr) {
+            const auto variant = variants.find(entry.parameter);
+            shown = label(std::string(entry.parameter->spec->category) + "." + entry.parameter->spec->name,
+                          variant != variants.end() ? variant->second : std::string());
+        } else {
+            shown = entry.name;
+        }
+        names[entry.parameter] = (entry.row_label.empty() ? "" : entry.row_label + " ") + shown + " (" + entry.block_name + ")";
+    }
+    // The single or joint fit's correlations (a scan's files keep their own).
+    for (const auto& row : project.fit_result.correlations) {
+        if (!row->file_path.empty()) continue;
+        const double r = row->correlation.get();
+        if (!(std::fabs(r) >= kStrongCorrelation)) continue;
+        const auto i = by_name.find(row->parameter_unique_name_i.value());
+        const auto j = by_name.find(row->parameter_unique_name_j.value());
+        if (i == by_name.end() || j == by_name.end()) continue;
+        for (const auto& [self, other] : {std::pair{i->second, j->second}, std::pair{j->second, i->second}}) {
+            if (!self->free.get() || !other->free.get()) continue;
+            SuMarks& mark = marks[self];
+            if (std::fabs(r) > std::fabs(mark.correlation)) {
+                mark.correlation = r;
+                const auto name = names.find(other);
+                mark.partner = name != names.end() ? name->second : row->parameter_unique_name_j.value();
+            }
+        }
+    }
+    return marks;
+}
+
+std::string su_poor_text() { return "s.u. larger than the value"; }
+
+std::string su_correlated_text(const SuMarks& marks) {
+    char r[16];
+    std::snprintf(r, sizeof r, "%.2f", marks.correlation);
+    return "strongly correlated with " + marks.partner + " (r = " + std::string(r) + ")";
 }
 
 }  // namespace edi

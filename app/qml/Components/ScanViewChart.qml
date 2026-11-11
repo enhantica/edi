@@ -13,8 +13,7 @@ import edi.app
 // A scan's two pattern views (edi ADR-0041), each a tab of the Analysis page, and a joint fit's: "stacked" draws every
 // dataset's measured pattern above its row, "map" colours the plot by intensity, smoothly from one dataset's row to the
 // next, with a colour bar at the right. x is the pattern's axis across; up is the scan value (the first extract
-// rule's) or, without one, the file index; a joint fit's experiments are rows in the project's order, each named. A toolbar line above, as the Pattern tab's, chooses the y scale and the colours: the stacked
-// patterns' palette or the map's colour map (the owner, 2026-10-22). The datasets are read in the background the first
+// rule's) or, without one, the file index; a joint fit's experiments are rows in the project's order, each named. A toolbar line above, as the Pattern tab's, chooses the y scale and the map's colour map. The datasets are read in the background the first
 // time either view shows; a dataset that cannot be read is named above the plot. The shown dataset is highlighted (on
 // top, the others faded) or, with highlighting off, marked by its bold label, and follows a running scan as it moves
 // on; the pointer names the dataset it is over, and a click shows that dataset, here and on the Pattern tab.
@@ -44,12 +43,11 @@ Item {
     // and for the colour bar's top label, centred on the bar's end.
     readonly property real toolbarTop: em
     readonly property real plotTop: toolbarTop + scanToolbar.height + AppSizes.mainAreaMargin
-    // The colours (the owner, 2026-10-26): the Stacked lines take a palette's colours (by default the app's) or a
-    // colour map's, and the Map a colour map, Blue-Red by default, both app settings. The Map's direction is the
-    // project's (Auto by default), resolved in the theme the view is drawn in.
-    readonly property var stackedChoices: ApplicationInfo.preferenceStackedChoices()
+    // The colours: the Stacked lines take the app's palette (edi ADR-0084), and the Map a colour map, Blue-Red by
+    // default, an app setting. The Map's direction is the project's (Auto by default), resolved in the theme the view
+    // is drawn in.
     readonly property var mapChoices: ApplicationInfo.scanColourMaps
-    readonly property string stackedPalette: ApplicationInfo.scanStackedPalette()
+    readonly property string stackedPalette: ApplicationInfo.colourSchemeOrDefault(Preferences.colourScheme)
     readonly property string mapColours: mapChoices.indexOf(Preferences.scanMapColours) >= 0 ? Preferences.scanMapColours : "blue-red"
     readonly property string mapDirection: chart.project ? chart.project.mapDirection : "auto"
     // A chart selector's value as its box shows it: a capital first, after the lower-case prefix ("y: Datablock"); the

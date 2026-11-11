@@ -139,7 +139,6 @@ void put_experiment(Output& out, const ExperimentBase& experiment, Scope scope) 
     put_parameter(out, experiment.instrument.setup_twotheta_bank, scope);
     put_double(out, experiment.peak.cutoff_fwhm);
     put_optional_parameter(out, experiment.absorption.abscor1, scope);
-    put_optional_parameter(out, experiment.absorption.abscor2, scope);
     put_optional_parameter(out, experiment.absorption.mu_r, scope);  // The CW body
     // A single crystal's extinction and the Miller indices (and wavelengths) it is calculated for.
     put_optional_parameter(out, experiment.extinction.domain_radius, scope);

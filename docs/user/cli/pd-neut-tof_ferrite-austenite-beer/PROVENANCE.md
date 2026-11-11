@@ -43,3 +43,9 @@ edi computes with crysta.
 reduced χ² 6.891, Rwp 7.131 % (S2 7.20 %, N2 7.06 %), under a second. The edi joint project, with each bank's scales
 apart and FullProf's background, pins reduced χ² 6.925 and Rwp 7.147 %; FullProf prints Rwp 7.20 % (S2) and 7.06 %
 (N2). The fitted zeros are −10.29 µs (S2) and −2.09 µs (N2), as in FullProf's fit.
+
+**Re-pinned 2026-11-11.** The default stop rules are now the χ² change and Shift/s.u. together (Shift/s.u. counting only
+after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone; the default descent now
+runs fast descent and the ladder for three iterations each from the start and continues with the one at the lower χ².
+Measured with `python -m edi fit --report machine --verbosity full` linked against crysta `edab5435`,
+`OMP_NUM_THREADS=4`: iterations 6 → 3. No `reference` value moved.

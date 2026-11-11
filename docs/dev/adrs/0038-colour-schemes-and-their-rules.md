@@ -6,6 +6,10 @@
 - **Implementation:** ✅ Implemented: the five palettes, their tables and the position assignment in the core
 - **Priority:** Medium
 
+**Amended:** ADR-0084 (2026-11-10) replaces the five palettes with Main and Colour-blind safe, gives each colour a
+role (experiments, structures, shared), turns many datasets into one gradient from experiment 1 to experiment 2, and
+replaces the colour order in Preferences (§7) with a strip under each colour selector.
+
 ## Context
 
 The first version of this decision (2026-10-14) offered eighteen schemes: five of edi's own, nine published data

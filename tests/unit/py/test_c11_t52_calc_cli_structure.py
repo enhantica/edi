@@ -70,7 +70,7 @@ def test_calc_runs_the_facade_writes_the_crysta_block_and_reports_its_values(
 
     def calc_report(total_points, checksum, elapsed_ms, verbosity):
         seen_report.append((total_points, checksum, elapsed_ms, verbosity))
-        return 'schema=8\nrecord=calc\n'
+        return 'schema=9\nrecord=calc\n'
 
     ticks = iter((10.0, 10.25))
     monkeypatch.setattr(cli.edi, 'Project', SimpleNamespace(load=load))
@@ -100,7 +100,7 @@ def test_calc_runs_the_facade_writes_the_crysta_block_and_reports_its_values(
         ' write mode must replace the stale calculated block with crysta-compatible '
         '_data_calc rows while preserving the project content before the shared marker'
     )
-    assert capsys.readouterr() == ('schema=8\nrecord=calc\n', ''), (
+    assert capsys.readouterr() == ('schema=9\nrecord=calc\n', ''), (
         ' machine calc must emit only the engine record on stdout'
     )
 

@@ -148,20 +148,24 @@ TEST_CASE("E04-T9 gate 1 every CLI presentation equals crysta's independently lo
             const auto& live = *project.experiments[b];
             if (live.experiment_type.effective_sample_form() == edi::SampleFormEnum::SINGLE_CRYSTAL) {
                 REQUIRE_MESSAGE((!live.data && live.reflections),
-                                "A declared single crystal has measured reflections and no powder pattern");
+                                "A declared single crystal has a reflection category and no powder pattern");
                 REQUIRE_MESSAGE((experiment.reflections.get()),
                                 "The independent single-crystal load retains its measured reflections");
                 const auto& rows = *live.reflections;
                 const auto& input = *experiment.reflections.get();
                 const auto& expected = computed.refln().intensity_calc;
-                REQUIRE_MESSAGE((rows.size() > 0 && rows.size() == input.size()),
+                REQUIRE_MESSAGE((rows.size() == input.size() && !expected.empty()),
                                 "Single-crystal presentation covers every independently loaded reflection");
-                REQUIRE_MESSAGE((source.refln_calc && source.refln_calc->size() == rows.size() &&
-                                 expected.size() == rows.size()),
-                                "Single-crystal capture retains every calculated reflection in input order");
+                REQUIRE_MESSAGE((source.refln_calc && source.refln_calc->size() == expected.size() &&
+                                 (rows.size() == 0 || expected.size() == rows.size())),
+                                "Single-crystal capture retains measured-order or resolution-generated calculated reflections");
                 CHECK_MESSAGE((!source.x && !source.meas && !source.su && !source.calc &&
                                !source.bkg && !source.resid && p.series.empty()),
                               "Single-crystal capture does not invent powder curves");
+                for (std::size_t r = 0; r < expected.size(); ++r)
+                    CHECK_MESSAGE((identical((*source.refln_calc)[r], expected[r]) &&
+                                   identical(rows.intensity_calc[r], expected[r])),
+                                  "Every calculated reflection equals the independent engine, including data-free crystals");
                 for (std::size_t r = 0; r < rows.size(); ++r) {
                     CHECK_MESSAGE((rows.index_h[r] == input.index_h[r] &&
                                    rows.index_k[r] == input.index_k[r] && rows.index_l[r] == input.index_l[r]),
@@ -239,9 +243,10 @@ TEST_CASE("E04-T9 gate 2 independent pixel extrema over corpus and stress measur
                 REQUIRE_MESSAGE((!experiment.data && experiment.reflections),
                                 "A declared single crystal exposes reflections instead of a powder pattern");
                 const auto& rows = *experiment.reflections;
-                REQUIRE_MESSAGE((s.current && s.refln_calc && rows.size() > 0 &&
-                                 s.refln_calc->size() == rows.size()),
-                                "Single-crystal capture retains a current value for every measured reflection");
+                REQUIRE_MESSAGE((s.current && s.refln_calc && !s.refln_calc->empty() &&
+                                 s.refln_calc->size() == rows.intensity_calc.size() &&
+                                 (rows.size() == 0 || s.refln_calc->size() == rows.size())),
+                                "Single-crystal capture retains every current calculated value for measured or data-free inputs");
                 for (int width : {1, 7, 400, 1200, 2400}) {
                     edi::PatternView view;
                     view.columns = width;
@@ -249,7 +254,7 @@ TEST_CASE("E04-T9 gate 2 independent pixel extrema over corpus and stress measur
                     CHECK_MESSAGE((shown.current && shown.series.empty()),
                                   "Every pixel width retains single-crystal currency without creating powder curves");
                 }
-                for (std::size_t r = 0; r < rows.size(); ++r)
+                for (std::size_t r = 0; r < rows.intensity_calc.size(); ++r)
                     CHECK_MESSAGE((std::isfinite((*s.refln_calc)[r]) &&
                                    identical((*s.refln_calc)[r], rows.intensity_calc[r])),
                                   "Every single-crystal calculated reflection survives capture without decimation");

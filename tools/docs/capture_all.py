@@ -98,11 +98,23 @@ def import_bundles(bundles: dict[str, Path]) -> None:
     subprocess.run(command, cwd=ROOT, check=True)
 
 
-def png_size(path: Path) -> tuple[int, int] | None:
-    data = path.read_bytes()[:24] if path.is_file() else b''
-    if data[:8] != b'\x89PNG\r\n\x1a\n':
+def image_size(path: Path) -> tuple[int, int] | None:
+    """A PNG's or a WebP's pixel size, read from its header; None for anything else."""
+    data = path.read_bytes()[:30] if path.is_file() else b''
+    if data[:8] == b'\x89PNG\r\n\x1a\n':
+        return struct.unpack('!II', data[16:24])
+    if data[:4] != b'RIFF' or data[8:12] != b'WEBP':
         return None
-    return struct.unpack('!II', data[16:24])
+    chunk = data[12:16]
+    if chunk == b'VP8X':
+        return 1 + int.from_bytes(data[24:27], 'little'), 1 + int.from_bytes(data[27:30], 'little')
+    if chunk == b'VP8 ':
+        width, height = struct.unpack('<HH', data[26:30])
+        return width & 0x3FFF, height & 0x3FFF
+    if chunk == b'VP8L':
+        bits = int.from_bytes(data[21:25], 'little')
+        return (bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1
+    return None
 
 
 def expected() -> list[dict]:
@@ -128,7 +140,7 @@ def static_images() -> list[dict]:
     for folder in STATIC:
         for image in sorted((DOCS / 'assets' / folder).rglob('*')):
             if (
-                image.suffix not in {'.png', '.jpg', '.svg'}
+                image.suffix not in {'.png', '.jpg', '.svg', '.webp'}
                 or 'dark' in image.relative_to(DOCS).parts
             ):
                 continue
@@ -152,7 +164,7 @@ def check() -> int:
     """Report images missing or stale by pixel size, and a manifest out of step with the sets."""
     problems = []
     for row in expected():
-        size = png_size(DOCS / row['path'])
+        size = image_size(DOCS / row['path'])
         if size is None:
             problems.append(f'missing: {row["path"]}')
         elif list(size) != row['size']:

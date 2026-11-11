@@ -301,7 +301,6 @@ def experiment_text(case: str, pcr: Pcr, name: str, structure: str, data) -> str
         lines += [
             '_absorption.type cylinder',
             f'_absorption.abscor1 {param(abscor[0], abscor[1])}',
-            f'_absorption.abscor2 {param(abscor[2], abscor[3])}',
             '',
         ]
     else:
@@ -511,7 +510,7 @@ def write_project(case: str) -> Path:
     )
     (project / 'analysis' / 'analysis.edi').write_text(
         '_edi.schema_version 3\n\n_fitting_mode.type single\n\n'
-        '_minimizer.type crysta\n_minimizer.max_iterations 1000\n_minimizer.stop_rule shift_su\n'
+        '_minimizer.type crysta\n_minimizer.max_iterations 1000\n'
         '_minimizer.chi_square_tolerance 1e-4\n',
         encoding='utf-8',
     )

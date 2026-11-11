@@ -27,8 +27,9 @@ env:
 
 jobs:
   # The crysta SDK, built once per crysta commit (edi ADR-0083).
+  # A stable release builds the web app again at its tag, so it shows the release's version (edi ADR-0017 §1).
   crysta-sdk:
-    if: github.event_name != 'release'
+    if: github.event_name != 'release' || !github.event.release.prerelease
     uses: ./.github/workflows/crysta-sdk.yml
     secrets: inherit
 
@@ -90,11 +91,15 @@ jobs:
   wasm:
     needs: crysta-sdk
     name: build WebAssembly
-    if: github.event.pull_request.head.repo.fork == false && github.repository == 'enhantica/edi' && github.event_name != 'release' && (github.event_name != 'workflow_dispatch' || inputs.component != 'docs')
+    if: github.event.pull_request.head.repo.fork == false && github.repository == 'enhantica/edi' && (github.event_name != 'release' || !github.event.release.prerelease) && (github.event_name != 'workflow_dispatch' || inputs.component != 'docs')
     environment: crysta-sdk
     runs-on: *linux
     steps:
+      # With the tags, so the app names the release it is or follows (cmake/build_version.cmake).
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - uses: ./.github/actions/setup-pixi
       - uses: ./.github/actions/crysta-sdk
         with:

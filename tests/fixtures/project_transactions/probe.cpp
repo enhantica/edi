@@ -1915,28 +1915,16 @@ extern "C" void transaction_native_write(const crysta::Project& p, const std::st
     if (!lateFault.isEmpty() && nativeWrites == 1)
         firstPublished = image(QString::fromStdString(path));
 }
-extern "C" bool boundary_available() __asm__("__wrap__ZN7edi_app8WebFiles9availableEv");
-extern "C" bool boundary_available() { return browser; }
-extern "C" void
-boundary_open(WebStorage*, const QString&, const QString& root, WebStorage::Answer answer) __asm__(
-    "__wrap__ZN7edi_app10WebStorage8pickOpenERK7QStringS3_St8functionIFvRKNS_"
-    "16WebStorageAnswerEEE");
-extern "C" void boundary_open(WebStorage*, const QString&, const QString& root,
+bool boundary_available() { return browser; }
+void boundary_open(WebStorage*, const QString&, const QString& root,
                               WebStorage::Answer answer) {
     jobs.push_back({"Open", "picked", "folder", root, false, std::move(answer)});
 }
-extern "C" void
-boundary_load(WebStorage*, const QString& key, bool recovery, const QString& root, WebStorage::Answer answer) __asm__(
-    "__wrap__ZN7edi_app10WebStorage4loadERK7QStringbS3_St8functionIFvRKNS_16WebStorageAnswerEEE");
-extern "C" void boundary_load(WebStorage*, const QString& key, bool recovery, const QString& root,
+void boundary_load(WebStorage*, const QString& key, bool recovery, const QString& root,
                               WebStorage::Answer answer) {
     jobs.push_back({"load", key, "folder", root, recovery, std::move(answer)});
 }
-extern "C" void
-boundary_pick(WebStorage*, const QString& kind, const QString&, const QString&, WebStorage::Answer answer) __asm__(
-    "__wrap__ZN7edi_app10WebStorage8pickSaveERK7QStringS3_S3_St8functionIFvRKNS_"
-    "16WebStorageAnswerEEE");
-extern "C" void boundary_pick(WebStorage*, const QString& kind, const QString&, const QString&,
+void boundary_pick(WebStorage*, const QString& kind, const QString&, const QString&,
                               WebStorage::Answer answer) {
     static int picked = 0;
     jobs.push_back({"pickSave",
@@ -1946,11 +1934,7 @@ extern "C" void boundary_pick(WebStorage*, const QString& kind, const QString&, 
                     false,
                     std::move(answer)});
 }
-extern "C" void
-boundary_write(WebStorage*, const QString& key, const QString& kind, const QString&, const QString& folder, bool recovery, WebStorage::Answer answer) __asm__(
-    "__wrap__ZN7edi_app10WebStorage5writeERK7QStringS3_S3_S3_bSt8functionIFvRKNS_"
-    "16WebStorageAnswerEEE");
-extern "C" void boundary_write(WebStorage*, const QString& key, const QString& kind,
+void boundary_write(WebStorage*, const QString& key, const QString& kind,
                                const QString&, const QString& folder, bool recovery,
                                WebStorage::Answer answer) {
     if (!recovery) ownerCoreAttempt();
@@ -1964,12 +1948,8 @@ extern "C" void boundary_write(WebStorage*, const QString& key, const QString& k
     }
     jobs.push_back({"write", key, kind, folder, recovery, std::move(answer), payload});
 }
-extern "C" void boundary_drop(WebStorage*, const QString& key) __asm__(
-    "__wrap__ZN7edi_app10WebStorage12dropRecoveryERK7QString");
-extern "C" void boundary_drop(WebStorage*, const QString& key) { drops.append(key); }
-extern "C" bool boundary_download(const QByteArray&, const QString&) __asm__(
-    "__wrap__ZN7edi_app8WebFiles8downloadERK10QByteArrayRK7QString");
-extern "C" bool boundary_download(const QByteArray& bytes, const QString&) {
+void boundary_drop(WebStorage*, const QString& key) { drops.append(key); }
+bool boundary_download(const QByteArray& bytes, const QString&) {
     if (!browser || !boundaryDownload) return false;
     ownerCoreAttempt();
     sealBrowserDownload(bytes);

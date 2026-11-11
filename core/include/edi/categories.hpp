@@ -181,7 +181,6 @@ inline Category instrument_category(ExperimentBase& experiment) {
 inline Category absorption_category(ExperimentBase& experiment) {
     Category category{"absorption"};
     detail::add_optional(category.fields, "abscor1", experiment.absorption.abscor1);
-    detail::add_optional(category.fields, "abscor2", experiment.absorption.abscor2);
     detail::add_optional(category.fields, "mu_r", experiment.absorption.mu_r);
     return category;
 }

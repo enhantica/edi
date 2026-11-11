@@ -328,10 +328,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     report.add_argument(
         '--colour-scheme',
-        choices=('earth', 'classic', 'soft', 'natural', 'colourBlindSafe'),
+        choices=('main', 'colourBlindSafe'),
         default=None,
         metavar='NAME',
-        help="the figure palette whose light colours the report's charts take (default: earth)",
+        help="the figure palette whose light colours the report's charts take (default: main)",
     )
     report.add_argument(
         '--correlation-experiment',
