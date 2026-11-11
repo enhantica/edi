@@ -54,6 +54,11 @@ WEB_ENTRIES = {
 TAGS = ROOT / 'app/examples/tags.json'
 
 
+# The longest step title, in characters, that fits the popup's line beside "Step 107 of 109"
+# (the replay also refuses a title the popup elides).
+TITLE_LIMIT = 32
+
+
 def step(title: str, text: str, page: str, target: str, check: str, **extra: object) -> dict:
     """One tutorial step as the manifest holds it."""
     out = {'title': title, 'text': text, 'page': page, 'target': target}
@@ -336,6 +341,9 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
                 context['category'] = chosen
             elif action == 'parameters.datablock':
                 context['datablock'] = chosen
+            elif action.startswith('atomSiteAdp.type.'):
+                # Every site switched together (a tutorial's adp_type loop): their names follow.
+                context['adp'] = chosen
             add(
                 f'Choose **{chosen}** as {control_words(action)}.',
                 action,
@@ -353,7 +361,7 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
         elif action.startswith(('tick:', 'untick:')):
             kind, path = action.split(':', 1)
             dotted = re.sub(r'\[([^\]]*)\]', r'.\1', path)
-            words = parameter_words(path)
+            words = parameter_words(path, site_variant(case, path, context))
             add(
                 f'Tick **Free** for **{words}**.'
                 if kind == 'tick'
@@ -457,7 +465,12 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         else:
             title, text = item['description'], ''
         del text
+        full = title
+        if len(title) > TITLE_LIMIT and re.fullmatch(r'stage-\d+-free', ident):
+            title = f'Stage {ident.split("-")[1]}'
         steps = action_steps(case, item, title, context)
+        if title != full and steps:
+            steps[0]['text'] = f'**{full}.** ' + steps[0]['text']
         if ident == 'structure-adp' and steps:
             # The sites as the case's own project has them, checked when the displacements start.
             steps[0]['expectSites'] = case_sites(case)
@@ -602,10 +615,15 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
     if re.fullmatch(r'stage-\d+-fit', ident) or ident == 'scan-fit':
         need(f'{case}: plan step {ident!r}', actions, 'statusBar.fit.button')
         number = re.fullmatch(r'stage-(\d+)-fit', ident)
+        title, text = item['description'], 'Press **Fit** in the status bar.'
+        if len(title) > TITLE_LIMIT:
+            stage = title.removeprefix('Fit: ')
+            title = f'Fit stage {number.group(1)}' if number else 'Fit the scan'
+            text = f'Press **Fit** in the status bar to fit **{stage}**.'
         return [
             step(
-                item['description'],
-                'Press **Fit** in the status bar.',
+                title,
+                text,
                 'analysis',
                 'statusBar.fit.button',
                 'fit-done',
@@ -648,6 +666,10 @@ def tutorial_steps(case: str) -> list[dict]:
         # An example opens the case's project, which marks what its finished fit frees.
         if any(s.get('check', '').startswith('example:') for s in steps):
             context['marked'] = True
+    for item in steps:
+        if len(item['title']) > TITLE_LIMIT:
+            # A title is a few words on one line of the popup (owner record, 2026-11-11, item 10).
+            raise SystemExit(f'{case}: step title {item["title"]!r} is longer than {TITLE_LIMIT}')
     return with_reasons(case, steps)
 
 
@@ -727,25 +749,42 @@ def with_reasons(case: str, steps: list[dict]) -> list[dict]:
     return steps
 
 
-def parameter_words(path: str) -> str:
-    """A parameter as its table row names it: its row label, if any, and its display name."""
+def parameter_words(path: str, variant: str = '') -> str:
+    """A parameter as its table row names it: its row label, if any, and its short name.
+
+    The short name is the variant's where the dictionary has one (an atom site's `adp_iso` is
+    "B iso" on a Biso site, "U iso" on a Uiso one), as the app's ParameterItem shows it.
+    """
     match = re.fullmatch(r'(?:\w+(?:\[[^\]]*\])?\.)*?(\w+)(?:\[([^\]]*)\])?\.(\w+)', path)
     if not match:
         return path
     owner, row, name = match.groups()
     wanted = owner.rstrip('s')
-    display = next(
-        (
-            item['display_name']
-            for item in DICTIONARY['parameters']
-            if item['name'] == name and item['category'].rstrip('s') == wanted
-        ),
-        next(
-            (item['display_name'] for item in DICTIONARY['parameters'] if item['name'] == name),
-            name,
-        ),
-    )
+    items = [item for item in DICTIONARY['parameters'] if item['name'] == name]
+    owned = [i for i in items if i['category'].rstrip('s') == wanted]
+    item = (owned or items or [None])[0]
+    if item is None:
+        return f'{row} {name}' if row else name
+    variants = item.get('variants') or {}
+    display = (variants.get(variant) or {}).get('display_name') or item['display_name']
     return f'{row} {display}' if row else display
+
+
+def site_variant(case: str, path: str, context: dict) -> str:
+    """The displacement type of the atom site a path names, as the tutorial has left it."""
+    site = re.search(r'atom_site(?:s|_aniso)\[([^\]]+)\]', path)
+    if site is None:
+        return ''
+    if context.get('adp'):
+        return context['adp']
+    block = re.match(r'structures\[([^\]]+)\]', path)
+    for structure in load_case(case).structures:
+        if block and structure.name != block[1]:
+            continue
+        for item in structure.atom_sites:
+            if str(getattr(item.id, 'value', item.id)) == site[1]:
+                return str(getattr(item.adp_type, 'value', item.adp_type))
+    return ''
 
 
 def stage_expectation(case: str, number: int) -> dict:

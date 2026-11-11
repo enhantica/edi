@@ -326,7 +326,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
         step(
             'structure-cell',
             'structure',
-            'Set the space group and the cell',
+            'Space group and cell',
             actions,
             ['group.space_group', 'group.cell'],
         )
@@ -374,7 +374,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
         step(
             'experiment-created',
             'experiment',
-            'Create the experiment and choose its type',
+            'Create the experiment',
             actions,
             ['experimentType'],
         )
@@ -385,7 +385,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
         step(
             'data-web',
             'experiment',
-            'Find the measured data in the EasyDiffraction collection',
+            'Find the measured data',
             actions,
             ['onlineLoad.field.id', 'onlineLoad.results'],
         ),
@@ -409,7 +409,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
         step(
             'experiment-instrument',
             'experiment',
-            'Set the wavelength, 2θ zero and peak widths',
+            'Instrument and peak widths',
             actions,
             ['group.instrument', 'group.peak'],
         )
@@ -435,7 +435,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
         step(
             'experiment-background',
             'experiment',
-            'Add the background points and excluded regions',
+            'Background and excluded regions',
             actions,
             ['excludedRegions.list'],
         )
@@ -451,7 +451,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
         step(
             'experiment-linked',
             'experiment',
-            'Link the structure to the experiment',
+            'Link the structure',
             actions,
             ['linkedStructure.list', 'workflow.experiment.mainContent'],
         )
@@ -573,7 +573,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
                 shot(
                     f'structure-web-{index}',
                     'structure',
-                    f'Find the structure {name} in the EasyDiffraction collection',
+                    'Find the structure',
                     [
                         'appBar.tab.structure',
                         'sideBar.tab.basic',
@@ -600,7 +600,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
                 shot(
                     f'experiment-web-{index}',
                     'experiment',
-                    f'Find the experiment {name} in the EasyDiffraction collection',
+                    'Find the experiment',
                     [
                         'appBar.tab.experiment',
                         'sideBar.tab.basic',
@@ -691,7 +691,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
         shot(
             'relations-start',
             'analysis',
-            'Add the relations the project starts with',
+            'Add the relations',
             add_relations(aliases, constraints),
             ['group.constraint'] if constraints else ['group.alias'],
             'Extra',
@@ -762,7 +762,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
         shot(
             'joint-weights',
             'analysis',
-            'Weigh the experiments as the project does',
+            'Weigh the experiments',
             [
                 'appBar.tab.analysis',
                 'sideBar.tab.extras',
@@ -780,7 +780,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
         shot(
             'reflection-cutoff',
             'analysis',
-            'Fit the reflections the project fits',
+            'Reflection cutoff',
             [
                 'appBar.tab.analysis',
                 'sideBar.tab.extras',
@@ -958,7 +958,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             shot(
                 'group-free-all',
                 'analysis',
-                'Free all from the Free column header',
+                'Free all from the header',
                 ['parameters.freeHeader'],
                 ['parameters.freeHeader'],
                 'Main',

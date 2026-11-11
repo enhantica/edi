@@ -1661,6 +1661,50 @@ bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
     QQmlEngine* engine = qmlEngine(window_.contentItem());
     auto* session = engine != nullptr ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
     ProjectViewModel* project = session != nullptr ? session->project() : nullptr;
+    if (step_checked_ != step) {
+        step_checked_ = step;
+        QStringList problems;
+        // The title fits the popup's line (owner record 2026-11-11, item 10).
+        if (QQuickItem* title = find(QStringLiteral("tutorial.title"), false); title != nullptr && title->property("truncated").toBool())
+            problems << QStringLiteral("the title \"%1\" is cut short").arg(current.title);
+        // No menu a step opened is left open when the next step starts, unless that step chooses in it.
+        static const QStringList choosing{QStringLiteral("free-choice"), QStringLiteral("web-dialog"), QStringLiteral("menu-closed")};
+        const bool chooses = std::any_of(choosing.cbegin(), choosing.cend(), [&current](const QString& kind) { return current.check.startsWith(kind); });
+        for (QQuickItem* layer : window_.contentItem()->childItems()) {
+            if (qstrcmp(layer->metaObject()->className(), "QQuickOverlay") != 0) continue;
+            for (QQuickItem* item : layer->childItems()) {
+                QObject* popup = item->parent();
+                if (!chooses && popup != nullptr && popup->inherits("QQuickMenu") && popup->property("opened").toBool())
+                    problems << QStringLiteral("a menu (%1) is still open").arg(popup->objectName().isEmpty() ? QString::fromLatin1(popup->metaObject()->className()) : popup->objectName());
+            }
+        }
+        // A Free tick asks for a click that changes the box, and names the row as the table does.
+        if (const auto tick = QRegularExpression(QStringLiteral("^(un)?tick:(.+)$")).match(current.check); tick.hasMatch() && project != nullptr) {
+            if (panel->property("heldAtStart").toBool())
+                problems << QStringLiteral("its Free box is already as the step asks");
+            ParameterTableModel* table = project->parameters();
+            const int parameter_role = table->roleNames().key("parameter"), path_role = table->roleNames().key("path");
+            static const QRegularExpression bracket(QStringLiteral("\\[([^\\]]*)\\]"));
+            for (int row = 0; row < table->rowCount(); ++row) {
+                QString dotted = table->data(table->index(row, 0), path_role).toString();
+                dotted.replace(bracket, QStringLiteral(".\\1"));
+                if (dotted != tick.captured(2)) continue;
+                const QObject* item = table->data(table->index(row, 0), parameter_role).value<QObject*>();
+                const QString label = item->property("rowLabel").toString(), name = item->property("shortName").toString();
+                const QString shown = label.isEmpty() ? name : label + u' ' + name;
+                if (!current.text.contains(QStringLiteral("**%1**").arg(shown)))
+                    problems << QStringLiteral("it names the row otherwise than the table's \"%1\"").arg(shown);
+            }
+        }
+        for (const QString& problem : problems) {
+            const QString text = QStringLiteral("step %1 (%2): %3").arg(step + 1).arg(current.title, problem);
+            if (!qEnvironmentVariableIsSet("EDI_DEMO_REPORT_ONLY")) {
+                fail(text);
+                return false;
+            }
+            std::fprintf(stderr, "edi_app --demo: MISMATCH %s\n", qPrintable(text));
+        }
+    }
     if (!current.expectSites.isEmpty() && sites_reported_ != step && project != nullptr) {
         // A structure the tutorial built ends with the case's own sites: label, element and position.
         sites_reported_ = step;
@@ -1784,12 +1828,6 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
     const QVariant chosen = panel->property("tutorial");
     QString id = chosen.value<Tutorial>().id;
     if (id.isEmpty()) id = chosen.toMap().value(QStringLiteral("id")).toString();
-    if (panel->property("atEnd").toBool()) {
-        qInfo().noquote() << QStringLiteral("edi_app --demo: tutorial %1: reached step %2 of %3 by Next alone")
-                                 .arg(id).arg(now + 1).arg(count);
-        next();
-        return;
-    }
     if (step >= 0 && now < step) {
         // Next alone must only go forward; a tutorial that steps back loops.
         fail(QStringLiteral("tutorial %1 went back from step %2 to %3 with only Next").arg(id).arg(step + 1).arg(now + 1));
@@ -1811,6 +1849,30 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
             };
             walk(window_.contentItem());
         }
+    }
+    // EDI_DEMO_STEP_SHOTS=<folder>: every step as it shows, once its callout has settled, into <folder>/<tutorial>/
+    // as NNN.png, with steps.txt listing each step's number, title and text (the owner's capture-and-review loop,
+    // 2026-11-11). Taken before Next is pressed; the step waits for it.
+    if (const QString shots = qEnvironmentVariable("EDI_DEMO_STEP_SHOTS"); !shots.isEmpty() && shot_step_ != now) {
+        const bool moving = panel->property("settling").toBool() || panel->property("revealing").toBool();
+        if (waited_ms < 1500 || (moving && waited_ms < 10000)) {
+            QTimer::singleShot(kPollMs, this, [this, next, step, waited_ms, clicked_ms] { tutorial_next_then(next, step, waited_ms + kPollMs, clicked_ms); });
+            return;
+        }
+        const TutorialStep shown = panel->property("current").value<TutorialStep>();
+        QDir folder(shots);
+        folder.mkpath(id);
+        folder.cd(id);
+        window_.grabWindow().save(folder.filePath(QStringLiteral("%1.png").arg(now + 1, 3, 10, QLatin1Char('0'))));
+        if (QFile list(folder.filePath(QStringLiteral("steps.txt"))); list.open(QIODevice::Append | QIODevice::Text))
+            list.write(QStringLiteral("%1\t%2\t%3\n").arg(now + 1, 3, 10, QLatin1Char('0')).arg(shown.title, shown.text).toUtf8());
+        shot_step_ = now;
+    }
+    if (panel->property("atEnd").toBool()) {
+        qInfo().noquote() << QStringLiteral("edi_app --demo: tutorial %1: reached step %2 of %3 by Next alone")
+                                 .arg(id).arg(now + 1).arg(count);
+        next();
+        return;
     }
     if (!tutorial_fit_check(panel, now)) return;
     QQuickItem* button = find(QStringLiteral("statusBar.tutorial.next"), false);
