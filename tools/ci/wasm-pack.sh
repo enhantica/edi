@@ -3,7 +3,7 @@
 # Pack the web app's site (edi ADR-0023): both wasm builds (tools/ci/wasm-build.sh), the start page, the
 # service-worker shim, the README naming the hosting requirement and the licence texts, into build/wasm/site
 # and one archive, build/wasm/edi-webapp.zip, laid out to be unpacked as the site's folder
-# (`enhantica.github.io/edi/webapp/`). Prints each build's size.
+# (`app.easydiffraction.org/`). Prints each build's size.
 #
 # Each build goes into a folder named by a hash of its files (`multithread-<hash>/`), and build.json names the two
 # folders; the start page reads build.json past every cache. So a redeploy never pairs one build's script with

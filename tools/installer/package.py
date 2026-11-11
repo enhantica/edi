@@ -166,7 +166,7 @@ def write_metadata(
             'Version': version,
             'Title': 'EasyDiffraction installer',
             'Publisher': 'EasyScience',
-            'ProductUrl': 'https://enhantica.github.io/edi/',
+            'ProductUrl': 'https://easydiffraction.org/',
             'TargetDir': '/Applications/EasyDiffraction'
             if SYSTEM == 'macos'
             else '@HomeDir@/EasyDiffraction',

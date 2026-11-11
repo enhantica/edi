@@ -2467,7 +2467,7 @@ QUrl Session::documentationUrl(const QString& uid) const {
     QString anchor = uid;
     anchor.replace('_', '-');
     anchor.replace('.', '-');
-    return QUrl(QStringLiteral("https://enhantica.github.io/edi/physics/parameters/#") + anchor);
+    return QUrl(QStringLiteral("https://easydiffraction.org/physics/parameters/#") + anchor);
 }
 
 QString Session::categoryTitle(const QString& id) const {
