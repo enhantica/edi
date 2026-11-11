@@ -171,6 +171,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/DiagnosticsDialog.qml
         qml/Components/InfoDialog.qml
         qml/Components/TagChip.qml
+        qml/Components/TagRowsWidth.qml
         qml/Components/FeedbackDialog.qml
         qml/Components/EmptyStateLabel.qml
         qml/Components/DataTable.qml
