@@ -4,6 +4,12 @@
     {
       "name": "general",
       "title": "General"
+    },
+    {
+      "name": "uppsala-2026",
+      "title": "Advanced Powder Diffraction Workshop, Uppsala, 11-13 Nov 2026",
+      "start": "2026-11-11",
+      "end": "2026-11-13"
     }
   ]
 }
