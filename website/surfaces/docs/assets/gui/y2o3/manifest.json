@@ -105,7 +105,7 @@
             "scene": "06-structure-import"
         },
         {
-            "action": "import-structure:/home/andrewsazonov/runs/E04-T49/capture3/out/y2o3-light/inputs/structures/y2o3.cif",
+            "action": "import-structure:inputs/structures/y2o3.cif",
             "scene": "07-structure-loaded"
         },
         {
@@ -213,7 +213,7 @@
             "scene": "09-experiment-data"
         },
         {
-            "action": "import-data:/home/andrewsazonov/runs/E04-T49/capture3/out/y2o3-light/inputs/spodi.xye",
+            "action": "import-data:inputs/spodi.xye",
             "scene": "09-experiment-data"
         },
         {
@@ -513,7 +513,7 @@
             "scene": "12-analysis-choose"
         },
         {
-            "action": "save-as:/home/andrewsazonov/runs/E04-T49/capture3/out/y2o3-light/checkpoints/starting",
+            "action": "save-as:checkpoints/starting",
             "scene": "12-save-start"
         },
         {
@@ -633,7 +633,7 @@
             "scene": "12-run-refinement"
         },
         {
-            "action": "save-as:/home/andrewsazonov/runs/E04-T49/capture3/out/y2o3-light/checkpoints/refined",
+            "action": "save-as:checkpoints/refined",
             "scene": "12-save-refined"
         },
         {

@@ -596,7 +596,7 @@
                 39
             ],
             "enabled": true,
-            "label": "~/runs/E04-T49/capture3/out/y2o3-light/checkpoints/refined",
+            "label": "checkpoints/refined",
             "visible_bounds": [
                 815,
                 330,
@@ -612,7 +612,7 @@
                 39
             ],
             "enabled": true,
-            "label": "~/runs/E04-T49/capture3/out/y2o3-light/checkpoints/starting",
+            "label": "checkpoints/starting",
             "visible_bounds": [
                 815,
                 369,

@@ -518,7 +518,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/home/andrewsazonov/runs/E04-T49/capture3/out/y2o3-light/checkpoints/refined",
+            "label": "checkpoints/refined",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,

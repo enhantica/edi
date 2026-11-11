@@ -63,12 +63,12 @@
   "gui_capture": {
     "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "binary_sha256": "930017e29ba7c0ffac4bfbdbf09a5bea4beb135a2c33f624ca74e8fc4fe8d6bf",
-    "manifest_sha256": "7b9bd4264bafbaa6b2715785f0f96a8e08abf47968579e21764b3c57b039bd43"
+    "manifest_sha256": "2cd604513f39b208ca2cd78e84479cfbc960cf1bb9fa1f935479454c81310c01"
   },
   "assets_sha256": {
-    "dark/initial.svg": "b88f42e530f39b72912cbc31e4a5cb770dfe07e273e8c0b5e30e6df014012a92",
-    "dark/refined.svg": "dc7d75915e258331bd9f7783fb24ccbb9cdcf18572d89a3e7cc8e88d0980fc1a",
-    "initial.svg": "1d80857906440cffd371f05a5c229d7204e828b1eae6a5ecf9bc65d16374c067",
-    "refined.svg": "262bb0d17ad02731246dc995316451aa0fab8806fa73cf410d406231accd9718"
+    "dark/initial.svg": "72e88264219e8c099a4b53c44a7105cef8ebee02671e2f649764812ae783a2fb",
+    "dark/refined.svg": "202b2e4b85aba713cbe9eae8d8cafac2f704ec2ac1f62444e4ca6b2c3456b23a",
+    "initial.svg": "f3f0526e701cbd71bc01c44d9dfffb48332d70acc285f2e33e2b455ca1eac9ba",
+    "refined.svg": "10af47535a15816b56f5aee5e8026d54a539bb8f0fbb083e02b0a5e7dff08184"
   }
 }

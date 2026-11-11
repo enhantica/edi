@@ -1,8 +1,8 @@
 edi fit: project starting, 2509 pts fitted / 3060 loaded, 2 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        94.75      5853.37
-      1      0.061      3.26         6.92   99.9% ↓
-      2      0.067      3.26         6.92
-      3      0.073      3.26         6.92
+      1      0.060      3.26         6.92   99.9% ↓
+      2      0.066      3.26         6.92
+      3      0.072      3.26         6.92
       4      0.084      3.26         6.92
   done · converged · 4 iters · reduced χ² 6.92 · Rwp 3.26 % · 0.09 s
