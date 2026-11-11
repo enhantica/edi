@@ -49,6 +49,9 @@
     };
   }
 
+  // The same notice and words for the website's other form, the survey (assets/survey/survey.js).
+  window.edNotice = { answer, noticeFor };
+
   // The app's reasons, field prompts and privacy line; the subject and message prompts follow the reason, as in the app.
   function fill(form) {
     if (!app) return;

@@ -42,8 +42,8 @@ extra_javascript:
   - assets/example-catalogue.js?v=7
   # Written by build.py from the app's settings.
   - assets/feedback-form.js
-  - assets/contact-form.js?v=1
-  - assets/survey/survey.js?v=7
+  - assets/contact-form.js?v=2
+  - assets/survey/survey.js?v=8
   - assets/code-breaks.js?v=2
 extra:
   interface_icons:

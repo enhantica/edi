@@ -139,6 +139,8 @@
 .ed-contact-notice[data-outcome="sent"]{border-top-color:#2e9e5b}
 .ed-contact-notice[data-outcome="failed"]{border-top-color:#d9534f}
 .ed-contact-notice::backdrop{background:rgba(0,0,0,.45)}
+/* Centred on screen wherever it sits: the theme zeroes the bottom margin of a page's last block, as the survey's is. */
+.md-typeset .ed-contact-notice:modal{margin:auto!important}
 .ed-contact-notice p{margin:0 0 1.1rem;line-height:1.5}
 .ed-contact-notice button{display:block;margin-left:auto;font:inherit;font-size:.8rem;font-weight:700;cursor:pointer;padding:.45rem 1.2rem;border:none;border-radius:.2rem;background:var(--md-primary-fg-color);color:var(--md-primary-bg-color)}
 
@@ -214,7 +216,3 @@
 .md-typeset .ed-survey-form input:focus-visible,.md-typeset .ed-survey-form select:focus-visible,.md-typeset .ed-survey-form textarea:focus-visible{outline:2px solid var(--md-accent-fg-color);outline-offset:1px}
 .md-typeset .ed-survey-form select:disabled,.md-typeset .ed-survey-form input:disabled{opacity:.45;cursor:not-allowed}
 @media (max-width:44rem){.md-typeset .ed-survey-grid,.md-typeset .ed-survey-checks{grid-template-columns:minmax(0,1fr)}.md-typeset .ed-survey-wide>input[name$="_other"]{width:100%}}
-/* The survey's outcome, in view after Send: sent in place of the form, a failure above Send. */
-.md-typeset .ed-survey-outcome{margin:var(--ed-survey-gap) 0;padding:1rem 1.2rem;border-radius:.4rem;font-size:.9rem;line-height:1.5}
-.md-typeset .ed-survey-outcome--sent{background:color-mix(in srgb,#2e8f4a 14%,transparent);border:1px solid color-mix(in srgb,#2e8f4a 45%,transparent)}
-.md-typeset .ed-survey-outcome--failed{background:color-mix(in srgb,#c8323c 12%,transparent);border:1px solid color-mix(in srgb,#c8323c 45%,transparent)}
