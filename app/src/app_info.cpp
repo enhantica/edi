@@ -419,7 +419,7 @@ Citation ApplicationInfo::citation() const {
         if (!in_authors) continue;
         QString entry = line;
         if (entry.startsWith(QLatin1String("- "))) {
-            authors.append({});
+            authors.append(Author{});
             entry = entry.mid(2).trimmed();
         }
         const qsizetype colon = entry.indexOf(QLatin1Char(':'));
