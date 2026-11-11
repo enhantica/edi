@@ -72,6 +72,8 @@ Item {
         id: hover
     }
     EaElements.ToolTip {
+        // The cut-short text in full: data, shown whatever the tooltip level.
+        data: true
         requested: hover.hovered
         text: [identityLabel.truncated ? identityLabel.text : "", detailLabel.truncated ? cell.detail : ""].filter(line => line !== "").join("\n")
     }

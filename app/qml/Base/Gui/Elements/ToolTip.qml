@@ -34,8 +34,11 @@ T.ToolTip {
     // A tooltip created already requested (in a Loader, say) shows only once it is complete, so that its delay is set
     // when it asks to be shown and the wait starts.
     property bool created: false
-    visible: created && requested && text !== "" && EaGlobals.Vars.toolTipAllowed(selfExplanatory, parent !== null && !parent.enabled)
-    delay: EaGlobals.Vars.toolTipDelay
+    // A tooltip that shows data (a value being dragged, a correlation, a cut-short cell) rather than help: shown
+    // whatever the tooltip level, at once (owner record 2026-11-11, item 5).
+    property bool data: false
+    visible: created && requested && text !== "" && (data || EaGlobals.Vars.toolTipAllowed(selfExplanatory, parent !== null && !parent.enabled))
+    delay: data ? 0 : EaGlobals.Vars.toolTipDelay
     Component.onCompleted: created = true
 
     property int enterAnimationDuration: 1000

@@ -122,6 +122,9 @@ EaComponents.ListViewParameter {
             EaElements.ToolTip {
                 text: cell.helpToolTip && cell.ToolTip.text !== "" ? cell.ToolTip.text : cell.shownValue !== cell.valueText ? (cell.written ? cell.valueText : NumberText.plainFull(cell.item.value)) : cell.contentWidth > cell.width ? cell.text : cell.item !== null ? cell.item.toolTip : ""
                 requested: cell.hovered && !cell.activeFocus && !cell.warned
+                // The value in full, where the cell shows it shortened or cut short, is data; the help text follows the
+                // tooltip level.
+                data: !(cell.helpToolTip && cell.ToolTip.text !== "") && (cell.shownValue !== cell.valueText || cell.contentWidth > cell.width)
             }
         }
     }
