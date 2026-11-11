@@ -13,14 +13,14 @@
   ],
   "rendered": {
     "source": "docs/user/cli/pd-neut-cwl_cosio-d20_2k (Co2SiO4, D20), fitted in the app",
-    "command": "edi_app --demo OUTPUT --demo-only concepts- (each image saved by Save image at twice the size; the reduced pattern with every curve but the measured data hidden), then trimmed of empty margins; the structure's legend moved beside it",
+    "command": "edi_app --demo OUTPUT --demo-only concepts- (each chart saved by Save image at twice its 690 px width, the content column of a desktop page, the measured data drawn as a line; the reduced pattern with every curve but the measured data hidden, in a window shorter by the tick and residual panes so its plot is the fitted one's size), then trimmed of empty margins and saved as WebP at quality 85, the two charts to one width; the structure's legend moved beside it",
     "files": [
-      "data-reduction_1d-pattern.png",
-      "dark/data-reduction_1d-pattern.png",
-      "data-analysis_refinement.png",
-      "dark/data-analysis_refinement.png",
-      "data-analysis_model.png",
-      "dark/data-analysis_model.png"
+      "data-reduction_pattern.webp",
+      "dark/data-reduction_pattern.webp",
+      "data-analysis_fit.webp",
+      "dark/data-analysis_fit.webp",
+      "data-analysis_structure.webp",
+      "dark/data-analysis_structure.webp"
     ]
   },
   "drawn": {
