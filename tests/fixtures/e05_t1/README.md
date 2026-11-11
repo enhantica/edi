@@ -150,7 +150,7 @@ The generator authenticates that topology from the input text. No native paramet
 fit result or serializer supplies the count; every earlier CLI/count row remains intact.
 
 
-C06-T8 projects the captured machine record to schema 9 without rerunning its fit.
+The captured machine record is projected to schema 9 without rerunning its fit.
 The original numeric/input/producer provenance above is retained; the wire-only
 projection and unavailable stop metadata are documented in
 [the version-projection receipt](../c06_t8/README.md).

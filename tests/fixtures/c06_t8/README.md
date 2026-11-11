@@ -1,6 +1,6 @@
-# C06-T8 report version projection
+# Report version projection
 
-Record 01fd45799 and crysta ADR-0057 introduce machine schema 9. This directory's
+Machine schema 9 adds stopping-rule metadata. This directory's
 `migrate_report_schema.py` projects the existing CLI/native report fixtures into
 that wire version. It does not run a fit. `schema9-projection.json` names the
 exact committed source and before/after hashes of every projected artifact.
@@ -13,7 +13,7 @@ than an invented stopping rule or numeric observation. The new rows immediately
 follow Rwp. All captured values, histories, timings, tolerances, reference labels,
 input custody and producing-engine provenance remain from their original era.
 This projection is not a new capture, and does not claim a current fit has unknown
-stop metadata. Current stop values are covered by the C06-T8 numerical gates.
+stop metadata. Current stop values are covered by the numerical contract tests.
 
 The CLI JSON and C++ views use the same projection; the existing artifact writer
 is reused without importing or executing the engine. Re-running the visible
