@@ -270,6 +270,19 @@ def tutorial_cases(metadata: dict) -> dict:
     }
 
 
+# A value's free mark: `()`, or the s.u. in brackets that marks it free with its uncertainty.
+FREE_MARK = re.compile(r'(?<=[0-9.])\(\d*\)')
+
+
+def starting_model(source: Path, target: Path) -> None:
+    """A structure or experiment as a starting model: its values with nothing marked free.
+
+    Loading one from the collection adds a starting point to a project; which parameters to fit
+    is the user's choice (the owner, 2026-11-11). The project archives keep their marks.
+    """
+    target.write_text(FREE_MARK.sub('', source.read_text(encoding='utf-8')), encoding='utf-8')
+
+
 def populate(output: Path) -> int:
     metadata = json.loads(METADATA.read_text())['examples']
     metadata = {**metadata, **tutorial_cases(metadata)}
@@ -310,7 +323,7 @@ def populate(output: Path) -> int:
         count += 1
         for structure in sorted((project / 'structures').glob('*.edi')):
             target = output / 'structures' / f'{example}-{structure.stem}.edi'
-            shutil.copyfile(structure, target)
+            starting_model(structure, target)
             write_sidecar(
                 target,
                 {
@@ -323,7 +336,7 @@ def populate(output: Path) -> int:
             count += 1
         for experiment in sorted((project / 'experiments').glob('*.edi')):
             target = output / 'experiments' / f'{example}-{experiment.stem}.edi'
-            shutil.copyfile(experiment, target)
+            starting_model(experiment, target)
             # The structures it links, by their entry ids: Load from the web brings them with it.
             linked = [
                 f'{example}-{name}'
