@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # The package index the notebooks install from, and the release they install. The exact version
 # keeps pip from taking the unrelated easydiffraction releases on pypi.org.
 PACKAGE_INDEX = 'https://download.easydiffraction.org/pypi/simple/'
-PACKAGE_VERSION = '2026.11.10'
+PACKAGE_VERSION = '2026.11.11'
 
 
 def setup_source(
