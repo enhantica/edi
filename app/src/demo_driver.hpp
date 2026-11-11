@@ -96,6 +96,8 @@ class DemoDriver : public QObject {
     void settle_then(std::function<void()> next);
     // Waits until the fit has ended or, with `files`, until a running scan has fitted that many files.
     void wait_fit_then(std::function<void()> next, int waited_ms = 0, int files = -1);
+    // Presses only the status bar's Next until the running tutorial's last step; fails on a step Next cannot leave.
+    void tutorial_next_then(std::function<void()> next, int step = -1, int waited_ms = 0, int clicked_ms = -1);
     void fail(const QString& message);
     void timed_fit_then(std::function<void()> next, int files, int stop_after);
     bool timed_reset();

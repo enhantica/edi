@@ -675,6 +675,7 @@ EaComponents.ApplicationWindow {
     // A running tutorial's steps (edi ADR-0064).
     TutorialPanel {
         id: tutorialPanel
+        objectName: "tutorialPanel"
     }
 
     // Below the supported minimum, which only the browser's page can reach (the owner, 2026-10-25): the empty view's

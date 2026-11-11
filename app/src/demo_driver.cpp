@@ -10,6 +10,10 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QGuiApplication>
+#include <QJSValue>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QMouseEvent>
@@ -686,6 +690,24 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             }
         }
     }
+    // Every built-in tutorial from its first step to its last by the status bar's Next alone, no other input (the
+    // owner, 2026-11-11). Each ends with Discard, which gives the set-aside project back. Run only when asked
+    // (`--demo-only tutorials-`, or `tutorials-<n>-` for one).
+    if (only.startsWith(QLatin1String("tutorials-"))) {
+        QStringList ids;
+        if (QFile manifest(QStringLiteral(":/edi/tutorials/manifest.json")); manifest.open(QIODevice::ReadOnly)) {
+            const QJsonDocument document = QJsonDocument::fromJson(manifest.readAll());
+            const QJsonArray list = document.isObject() ? document.object().value(QStringLiteral("tutorials")).toArray() : document.array();
+            for (const QJsonValue& tutorial : list) ids.append(tutorial.toObject().value(QStringLiteral("id")).toString());
+        }
+        steps_.push_back({"tutorials-00-start", QStringList{"resize:1280x768", "theme:light"}});
+        for (qsizetype i = 0; i < ids.size(); ++i) {
+            const QString name = QStringLiteral("tutorials-%1-%2").arg(i + 1, 2, 10, QLatin1Char('0')).arg(ids[i]);
+            steps_.push_back({name, {"appBar.tab.home", "home.tutorials", QStringLiteral("show:tutorials.list:%1").arg(i),
+                                     "tutorials.open." + ids[i], "tutorial-next-all"}});
+            steps_.push_back({name + "-closed", {"tutorial-close"}});
+        }
+    }
     // The documentation's concept figures, from the Co2SiO4 magnetic case, in both themes, each saved by Save image
     // (the owner, 2026-11-10). Run only when asked (`--demo-only concepts-`).
     if (only.startsWith(QLatin1String("concepts-"))) {
@@ -694,7 +716,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("concepts-") + theme + QStringLiteral("-");
             const QStringList open = theme == QLatin1String("light")
-                                         ? QStringList{"resize:1760x1000"} + start + open_cli_project("pd-neut-cwl_cosio-d20_2k") +
+                                         ? QStringList{"resize:1470x900"} + start + open_cli_project("pd-neut-cwl_cosio-d20_2k") +
                                                QStringList{"preference:chartIncludedOnly=true", "theme:light", analysis, basic,
                                                            "statusBar.fit.button", "wait-fit", "choose:OK"}
                                          : QStringList{"theme:dark", analysis};
@@ -1497,6 +1519,17 @@ void DemoDriver::next_action() {
             settle_then([this] { next_action(); });
             return;
         }
+        if (action == QLatin1String("tutorial-close")) {
+            QQuickItem* discard = find(QStringLiteral("tutorial.discard"), true);
+            const bool offered = discard != nullptr && discard->isVisible() && on_screen(discard);
+            if (!click(offered ? QStringLiteral("tutorial.discard") : QStringLiteral("statusBar.tutorial.stop"))) return;
+            settle_then([this] { next_action(); });
+            return;
+        }
+        if (action == QLatin1String("tutorial-next-all")) {
+            tutorial_next_then([this] { settle_then([this] { next_action(); }); });
+            return;
+        }
         if (action == QLatin1String("wait-fit")) {
             wait_fit_then([this] { settle_then([this] { next_action(); }); });
             return;
@@ -1591,6 +1624,49 @@ void DemoDriver::next_action() {
         return;
     }
     settle_then(save);
+}
+
+void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int waited_ms, int clicked_ms) {
+    // A step that waits for a fit, a download or a save keeps Next off meanwhile; one that stays off this long cannot
+    // be left by Next alone.
+    constexpr int kPollMs = 250;
+    constexpr int kStuckMs = 240000;
+    QObject* panel = window_.findChild<QObject*>(QStringLiteral("tutorialPanel"));
+    if (panel == nullptr || panel->property("tutorial").isNull()) {
+        fail(QStringLiteral("step %1: no tutorial is running").arg(steps_[current_].image));
+        return;
+    }
+    const int now = panel->property("step").toInt();
+    const int count = panel->property("steps").toList().size();
+    const QString id = panel->property("tutorial").value<QJSValue>().property(QStringLiteral("id")).toString();
+    if (panel->property("atEnd").toBool()) {
+        qInfo().noquote() << QStringLiteral("edi_app --demo: tutorial %1: reached step %2 of %3 by Next alone")
+                                 .arg(id).arg(now + 1).arg(count);
+        next();
+        return;
+    }
+    if (now != step) {
+        step = now;
+        waited_ms = 0;
+        clicked_ms = -1;
+    }
+    QQuickItem* button = find(QStringLiteral("statusBar.tutorial.next"), false);
+    const bool clickable = button != nullptr && button->isVisible() && button->isEnabled() &&
+                           button->property("clickable").toBool() && on_screen(button);
+    // One press per step, again only if the step has not moved a while after it.
+    if (clickable && (clicked_ms < 0 || waited_ms - clicked_ms > 3000)) {
+        click_item(button);
+        clicked_ms = waited_ms;
+    }
+    if (waited_ms > kStuckMs) {
+        fail(QStringLiteral("step %1: tutorial %2 stays at step %3 of %4: Next %5")
+                 .arg(steps_[current_].image, id).arg(now + 1).arg(count)
+                 .arg(clickable ? QStringLiteral("does not advance it") : QStringLiteral("is off")));
+        return;
+    }
+    QTimer::singleShot(kPollMs, this, [this, next, step, waited_ms, clicked_ms] {
+        tutorial_next_then(next, step, waited_ms + kPollMs, clicked_ms);
+    });
 }
 
 void DemoDriver::wait_fit_then(std::function<void()> next, int waited_ms, int files) {
