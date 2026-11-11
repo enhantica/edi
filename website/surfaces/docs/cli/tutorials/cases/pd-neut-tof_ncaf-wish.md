@@ -173,16 +173,13 @@ ncaf 40() 1.0
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 15 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        29.77       140.86
-      1      0.079     21.46        73.17   48.1% ↓
-      2      0.140     20.13        64.37   12.0% ↓
-      3      0.203     19.94        63.15   1.9% ↓
-      4      0.279     19.91        62.98   0.3% ↓
-      5      0.342     19.90        62.95   
-      6      0.417     19.90        62.95   
-      7      0.490     19.90        62.95   
-      8      0.558     19.90        62.95   
-      9      0.669     19.90        62.95   
-  done · converged · 9 iters · reduced χ² 62.95 · Rwp 19.90 % · 0.75 s
+      1      0.364     19.91        62.98   55.3% ↓
+      2      0.407     19.90        62.95   
+      3      0.462     19.90        62.95   
+      4      0.518     19.90        62.95   
+      5      0.575     19.90        62.95   
+      6      0.657     19.90        62.95   
+  done · converged · 6 iters · reduced χ² 62.95 · Rwp 19.90 % · 0.71 s
 
   per-bank Rwp (%):   wish_1_10 8.20   wish_2_9 19.90   wish_3_8 20.38   wish_4_7 20.84   wish_5_6 20.34
 
@@ -205,8 +202,8 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   scale            experiments[wish_5_6].linked_structures[ncaf].scale                40        33.13      0.14   17.2% ↓
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -275,10 +272,8 @@ The same for every other row (26 more).
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 149 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        19.90        63.39
-      1      0.313     13.97        31.22   50.8% ↓
-      2      0.534     13.97        31.21   
-      3      0.824     13.97        31.21   
-  done · converged · 3 iters · reduced χ² 31.21 · Rwp 13.97 % · 1.06 s
+      1      1.023     13.97        31.21   50.8% ↓
+  done · converged · 1 iters · reduced χ² 31.21 · Rwp 13.97 % · 1.21 s
 
   per-bank Rwp (%):   wish_1_10 6.08   wish_2_9 13.72   wish_3_8 14.60   wish_4_7 14.47   wish_5_6 14.27
 
@@ -304,7 +299,7 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_1_10].background[27].intensity                   210        212.4       7.1   1.1% ↑
   intensity        experiments[wish_1_10].background[28].intensity                   210        212.6       8.2   1.2% ↑
   intensity        experiments[wish_1_10].background[29].intensity                   210        211.3       9.9   0.6% ↑
-  intensity        experiments[wish_1_10].background[2].intensity                    210          110       130   48.7% ↓
+  intensity        experiments[wish_1_10].background[2].intensity                    210          110       130 ! 48.7% ↓
   intensity        experiments[wish_1_10].background[30].intensity                   210          211        13   0.5% ↑
   intensity        experiments[wish_1_10].background[31].intensity                   210          223        16   6.2% ↑
   intensity        experiments[wish_1_10].background[32].intensity                   210          210        21   0.2% ↑
@@ -336,15 +331,15 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_2_9].background[21].intensity                    220          219        23   0.6% ↓
   intensity        experiments[wish_2_9].background[22].intensity                    220          164        55   25.3% ↓
   intensity        experiments[wish_2_9].background[2].intensity                     220          222        63   0.7% ↑
-  intensity        experiments[wish_2_9].background[3].intensity                     220          348        44   58.3% ↑
+  intensity        experiments[wish_2_9].background[3].intensity                     220          348        44   58.2% ↑
   intensity        experiments[wish_2_9].background[4].intensity                     220          391        27   77.5% ↑
   intensity        experiments[wish_2_9].background[5].intensity                     220          355        20   61.5% ↑
   intensity        experiments[wish_2_9].background[6].intensity                     220          345        17   56.9% ↑
   intensity        experiments[wish_2_9].background[7].intensity                     220          393        14   78.5% ↑
   intensity        experiments[wish_2_9].background[8].intensity                     220          417        11   89.6% ↑
   intensity        experiments[wish_2_9].background[9].intensity                     220        404.8       7.6   84.0% ↑
-  TOF linear, µs/Å experiments[wish_2_9].instrument.calib_d_to_tof_linear         1.04e4   1.038972e40.000036e4   
-  TOF offset, µs   experiments[wish_2_9].instrument.calib_d_to_tof_offset           13.8        13.29      0.84   3.7% ↓
+  TOF linear, µs/Å experiments[wish_2_9].instrument.calib_d_to_tof_linear         1.04e4   1.038973e40.000036e4   
+  TOF offset, µs   experiments[wish_2_9].instrument.calib_d_to_tof_offset           13.8        13.26      0.84   3.9% ↓
   scale            experiments[wish_2_9].linked_structures[ncaf].scale             32.64        30.86      0.15   5.4% ↓
   intensity        experiments[wish_3_8].background[10].intensity                    240        376.4       5.1   56.8% ↑
   intensity        experiments[wish_3_8].background[11].intensity                    240        343.2       4.7   43.0% ↑
@@ -369,9 +364,9 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_3_8].background[8].intensity                     240        341.4       6.7   42.2% ↑
   intensity        experiments[wish_3_8].background[9].intensity                     240        354.1       5.8   47.5% ↑
   TOF linear, µs/Å experiments[wish_3_8].instrument.calib_d_to_tof_linear         1.51e4   1.510341e40.000028e4   
-  TOF offset, µs   experiments[wish_3_8].instrument.calib_d_to_tof_offset         -10.36       -10.68      0.52   3.1% ↓
+  TOF offset, µs   experiments[wish_3_8].instrument.calib_d_to_tof_offset         -10.36       -10.70      0.52   3.3% ↓
   scale            experiments[wish_3_8].linked_structures[ncaf].scale              33.3        31.56      0.11   5.2% ↓
-  intensity        experiments[wish_4_7].background[10].intensity                    250        367.9       9.5   47.1% ↑
+  intensity        experiments[wish_4_7].background[10].intensity                    250        367.9       9.5   47.2% ↑
   intensity        experiments[wish_4_7].background[11].intensity                    250        417.3       8.3   66.9% ↑
   intensity        experiments[wish_4_7].background[12].intensity                    250        381.3       6.9   52.5% ↑
   intensity        experiments[wish_4_7].background[13].intensity                    250        367.8       6.2   47.1% ↑
@@ -399,8 +394,8 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_4_7].background[7].intensity                     250          445        17   78.0% ↑
   intensity        experiments[wish_4_7].background[8].intensity                     250          399        15   59.4% ↑
   intensity        experiments[wish_4_7].background[9].intensity                     250          492        15   97.0% ↑
-  TOF linear, µs/Å experiments[wish_4_7].instrument.calib_d_to_tof_linear         1.87e4   1.865805e40.000025e4   
-  TOF offset, µs   experiments[wish_4_7].instrument.calib_d_to_tof_offset         -13.05       -13.16      0.40   0.9% ↓
+  TOF linear, µs/Å experiments[wish_4_7].instrument.calib_d_to_tof_linear         1.87e4   1.865806e40.000025e4   
+  TOF offset, µs   experiments[wish_4_7].instrument.calib_d_to_tof_offset         -13.05       -13.17      0.40   0.9% ↓
   scale            experiments[wish_4_7].linked_structures[ncaf].scale             32.94       30.877     0.099   6.3% ↓
   intensity        experiments[wish_5_6].background[10].intensity                    260          474        17   82.4% ↑
   intensity        experiments[wish_5_6].background[11].intensity                    260          465        12   78.8% ↑
@@ -430,14 +425,16 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_5_6].background[7].intensity                     260          405        15   55.7% ↑
   intensity        experiments[wish_5_6].background[8].intensity                     260          454        14   74.5% ↑
   intensity        experiments[wish_5_6].background[9].intensity                     260          384        13   47.5% ↑
-  TOF linear, µs/Å experiments[wish_5_6].instrument.calib_d_to_tof_linear         2.08e4   2.077094e40.000023e4   
-  TOF offset, µs   experiments[wish_5_6].instrument.calib_d_to_tof_offset         -11.29       -11.44      0.33   1.3% ↓
+  TOF linear, µs/Å experiments[wish_5_6].instrument.calib_d_to_tof_linear         2.08e4   2.077095e40.000023e4   
+  TOF offset, µs   experiments[wish_5_6].instrument.calib_d_to_tof_offset         -11.29       -11.45      0.33   1.4% ↓
   scale            experiments[wish_5_6].linked_structures[ncaf].scale             33.13       30.983     0.098   6.5% ↓
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiments[wish_1_10].background[2].intensity: s.u. larger than the value
 ```
 
 ## Peak asymmetry
@@ -497,24 +494,19 @@ _peak.decay_beta_1 0.012()
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 165 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        13.97        31.24
-      1      0.306     11.96        22.90   26.7% ↓
-      2      0.545     11.20        20.09   12.3% ↓
-      3      0.795     10.85        18.85   6.1% ↓
-      4      1.038     10.62        18.05   4.2% ↓
-      5      1.271     10.44        17.45   3.3% ↓
-      6      1.492     10.34        17.11   1.9% ↓
-      7      1.719     10.29        16.95   0.9% ↓
-      8      1.991     10.26        16.86   0.6% ↓
-      9      2.208     10.24        16.80   0.3% ↓
-     10      2.442     10.24        16.78   0.1% ↓
-     11      2.655     10.23        16.77   0.1% ↓
-     12      2.866     10.23        16.77   
-     13      3.112     10.23        16.77   
-     14      3.377     10.23        16.77   
-     15      3.645     10.23        16.77   
-     16      3.911     10.23        16.77   
-     17      4.216     10.23        16.77   
-  done · converged · 17 iters · reduced χ² 16.77 · Rwp 10.23 % · 4.45 s
+      1      1.106     10.41        17.36   44.4% ↓
+      2      1.220     10.30        17.00   2.1% ↓
+      3      1.337     10.26        16.85   0.9% ↓
+      4      1.457     10.24        16.80   0.3% ↓
+      5      1.592     10.23        16.78   0.1% ↓
+      6      1.729     10.23        16.77   
+      7      1.854     10.23        16.77   
+      8      1.989     10.23        16.77   
+      9      2.149     10.23        16.77   
+     10      2.265     10.23        16.77   
+     11      2.393     10.23        16.77   
+     12      2.601     10.23        16.77   
+  done · converged · 12 iters · reduced χ² 16.77 · Rwp 10.23 % · 2.82 s
 
   per-bank Rwp (%):   wish_1_10 6.08   wish_2_9 9.21   wish_3_8 10.49   wish_4_7 10.60   wish_5_6 10.89
 
@@ -579,13 +571,13 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_2_9].background[7].intensity                     393          335        10   14.8% ↓
   intensity        experiments[wish_2_9].background[8].intensity                     417        387.7       7.9   7.0% ↓
   intensity        experiments[wish_2_9].background[9].intensity                   404.8        357.2       5.7   11.8% ↓
-  TOF linear, µs/Å experiments[wish_2_9].instrument.calib_d_to_tof_linear         1.04e4   1.040108e40.000050e4   0.1% ↑
-  TOF offset, µs   experiments[wish_2_9].instrument.calib_d_to_tof_offset          13.29        -2.61      0.95   119.7% ↓
+  TOF linear, µs/Å experiments[wish_2_9].instrument.calib_d_to_tof_linear         1.04e4   1.040109e40.000050e4   0.1% ↑
+  TOF offset, µs   experiments[wish_2_9].instrument.calib_d_to_tof_offset          13.26        -2.63      0.95   119.8% ↓
   scale            experiments[wish_2_9].linked_structures[ncaf].scale             30.86        33.75      0.13   9.4% ↑
   β₀               experiments[wish_2_9].peak.decay_beta_0                        0.0061     0.005005  0.000046   17.9% ↓
   β₁               experiments[wish_2_9].peak.decay_beta_1                         0.096       0.0798    0.0017   16.8% ↓
   α₀               experiments[wish_2_9].peak.rise_alpha_0                         0.053     -0.00418   0.00054   107.9% ↓
-  α₁               experiments[wish_2_9].peak.rise_alpha_1                         0.031       0.0815    0.0022   162.9% ↑
+  α₁               experiments[wish_2_9].peak.rise_alpha_1                         0.031       0.0815    0.0021   162.9% ↑
   intensity        experiments[wish_3_8].background[10].intensity                  376.4        347.5       3.8   7.7% ↓
   intensity        experiments[wish_3_8].background[11].intensity                  343.2        313.3       3.5   8.7% ↓
   intensity        experiments[wish_3_8].background[12].intensity                  298.4        272.0       3.0   8.8% ↓
@@ -609,7 +601,7 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_3_8].background[8].intensity                   341.4        316.8       5.0   7.2% ↓
   intensity        experiments[wish_3_8].background[9].intensity                   354.1        302.2       4.4   14.7% ↓
   TOF linear, µs/Å experiments[wish_3_8].instrument.calib_d_to_tof_linear         1.51e4   1.510844e40.000037e4   
-  TOF offset, µs   experiments[wish_3_8].instrument.calib_d_to_tof_offset         -10.68       -15.94      0.63   49.3% ↓
+  TOF offset, µs   experiments[wish_3_8].instrument.calib_d_to_tof_offset          -10.7       -15.94      0.63   49.0% ↓
   scale            experiments[wish_3_8].linked_structures[ncaf].scale             31.56       34.145     0.089   8.2% ↑
   β₀               experiments[wish_3_8].peak.decay_beta_0                        0.0069     0.006021  0.000038   12.7% ↓
   β₁               experiments[wish_3_8].peak.decay_beta_1                         0.032      0.02170   0.00049   32.2% ↓
@@ -644,7 +636,7 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_4_7].background[8].intensity                     399          364        11   8.9% ↓
   intensity        experiments[wish_4_7].background[9].intensity                     492          395        11   19.7% ↓
   TOF linear, µs/Å experiments[wish_4_7].instrument.calib_d_to_tof_linear         1.87e4   1.866337e40.000033e4   
-  TOF offset, µs   experiments[wish_4_7].instrument.calib_d_to_tof_offset         -13.16       -19.14      0.52   45.5% ↓
+  TOF offset, µs   experiments[wish_4_7].instrument.calib_d_to_tof_offset         -13.17       -19.14      0.52   45.3% ↓
   scale            experiments[wish_4_7].linked_structures[ncaf].scale            30.877       33.523     0.084   8.6% ↑
   β₀               experiments[wish_4_7].peak.decay_beta_0                        0.0074     0.006578  0.000033   11.1% ↓
   β₁               experiments[wish_4_7].peak.decay_beta_1                         0.017      0.00936   0.00024   45.0% ↓
@@ -679,7 +671,7 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_5_6].background[8].intensity                     454          394        10   13.2% ↓
   intensity        experiments[wish_5_6].background[9].intensity                     384        377.7       9.4   1.6% ↓
   TOF linear, µs/Å experiments[wish_5_6].instrument.calib_d_to_tof_linear         2.08e4   2.077510e40.000031e4   
-  TOF offset, µs   experiments[wish_5_6].instrument.calib_d_to_tof_offset         -11.44       -16.64      0.46   45.5% ↓
+  TOF offset, µs   experiments[wish_5_6].instrument.calib_d_to_tof_offset         -11.45       -16.64      0.46   45.4% ↓
   scale            experiments[wish_5_6].linked_structures[ncaf].scale            30.983       33.583     0.083   8.4% ↑
   β₀               experiments[wish_5_6].peak.decay_beta_0                        0.0077     0.006825  0.000031   11.4% ↓
   β₁               experiments[wish_5_6].peak.decay_beta_1                         0.012      0.00599   0.00017   50.1% ↓
@@ -687,8 +679,8 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   α₁               experiments[wish_5_6].peak.rise_alpha_1                          0.14       0.0991    0.0018   29.2% ↓
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -739,23 +731,20 @@ _peak.broad_gauss_sigma_2 7.7()
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 172 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        10.23        16.78
-      1      0.343     10.02        16.09   4.1% ↓
-      2      0.601     10.00        16.03   0.4% ↓
-      3      0.855     10.00        16.02   
-      4      1.120     10.00        16.02   
-      5      1.417     10.00        16.02   
-      6      1.710     10.00        16.02   
-      7      1.985     10.00        16.02   
-      8      2.261     10.00        16.02   
-      9      2.567     10.00        16.02   
-     10      2.847     10.00        16.01   
-     11      3.094      9.99        16.00   0.1% ↓
-     12      3.354      9.99        15.98   0.2% ↓
-     13      3.628      9.98        15.96   0.1% ↓
-     14      3.851      9.97        15.93   0.2% ↓
-     15      4.089      9.97        15.93   
-     16      4.435      9.97        15.93   
-  done · converged · 16 iters · reduced χ² 15.93 · Rwp 9.97 % · 4.71 s
+      1      1.003     10.00        16.02   4.5% ↓
+      2      1.134     10.00        16.02   
+      3      1.265     10.00        16.02   
+      4      1.399     10.00        16.02   
+      5      1.549     10.00        16.02   
+      6      1.707     10.00        16.02   
+      7      1.843     10.00        16.01   
+      8      1.977      9.99        16.00   0.1% ↓
+      9      2.108      9.99        15.98   0.2% ↓
+     10      2.247      9.98        15.96   0.1% ↓
+     11      2.385      9.97        15.93   0.2% ↓
+     12      2.553      9.97        15.93   
+     13      2.753      9.97        15.93   
+  done · converged · 13 iters · reduced χ² 15.93 · Rwp 9.97 % · 2.98 s
 
   per-bank Rwp (%):   wish_1_10 6.08   wish_2_9 8.65   wish_3_8 10.15   wish_4_7 10.36   wish_5_6 10.77
 
@@ -821,7 +810,7 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_2_9].background[8].intensity                   387.7        391.8       7.7   1.1% ↑
   intensity        experiments[wish_2_9].background[9].intensity                   357.2        367.3       5.6   2.8% ↑
   TOF linear, µs/Å experiments[wish_2_9].instrument.calib_d_to_tof_linear         1.04e4   1.038768e40.000066e4   0.1% ↓
-  TOF offset, µs   experiments[wish_2_9].instrument.calib_d_to_tof_offset          -2.61         19.5       1.5   847.6% ↑
+  TOF offset, µs   experiments[wish_2_9].instrument.calib_d_to_tof_offset          -2.63         19.5       1.5   842.0% ↑
   scale            experiments[wish_2_9].linked_structures[ncaf].scale             33.75        33.52      0.12   0.7% ↓
   σ₁², µs²/Å²      experiments[wish_2_9].peak.broad_gauss_sigma_1                     34           52        14   51.5% ↑
   σ₂², µs²/Å⁴      experiments[wish_2_9].peak.broad_gauss_sigma_2                     11        25.73      0.99   133.9% ↑
@@ -935,8 +924,8 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   α₁               experiments[wish_5_6].peak.rise_alpha_1                        0.0991       0.1037    0.0023   4.6% ↑
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -966,8 +955,8 @@ _peak.broad_lorentz_gamma_1 1()
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 173 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         9.97        15.93
-      1      0.505      9.97        15.93   
-  done · converged · 1 iters · reduced χ² 15.93 · Rwp 9.97 % · 0.81 s
+      1      0.732      9.97        15.93   
+  done · converged · 1 iters · reduced χ² 15.93 · Rwp 9.97 % · 1.01 s
 
   per-bank Rwp (%):   wish_1_10 6.08   wish_2_9 8.65   wish_3_8 10.15   wish_4_7 10.36   wish_5_6 10.77
 
@@ -1032,16 +1021,16 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_2_9].background[7].intensity                   339.4          339        10   0.1% ↓
   intensity        experiments[wish_2_9].background[8].intensity                   391.8        391.6       7.9   0.1% ↓
   intensity        experiments[wish_2_9].background[9].intensity                   367.3        367.0       6.0   0.1% ↓
-  TOF linear, µs/Å experiments[wish_2_9].instrument.calib_d_to_tof_linear         1.04e4   1.038768e40.000067e4   
+  TOF linear, µs/Å experiments[wish_2_9].instrument.calib_d_to_tof_linear         1.04e4   1.038767e40.000067e4   
   TOF offset, µs   experiments[wish_2_9].instrument.calib_d_to_tof_offset           19.5         19.5       1.5   0.1% ↓
   scale            experiments[wish_2_9].linked_structures[ncaf].scale             33.52        33.53      0.16   
-  σ₁², µs²/Å²      experiments[wish_2_9].peak.broad_gauss_sigma_1                     52           51        14   1.1% ↓
-  σ₂², µs²/Å⁴      experiments[wish_2_9].peak.broad_gauss_sigma_2                  25.73         25.7       1.1   0.3% ↓
-  γ₁, µs/Å         experiments[wish_2_9].peak.broad_lorentz_gamma_1                    1         1.08      0.68   8.2% ↑
-  β₀               experiments[wish_2_9].peak.decay_beta_0                       0.00537     0.005372  0.000063   
-  β₁               experiments[wish_2_9].peak.decay_beta_1                        0.0797       0.0798    0.0022   0.1% ↑
-  α₀               experiments[wish_2_9].peak.rise_alpha_0                        0.0573       0.0575    0.0055   0.4% ↑
-  α₁               experiments[wish_2_9].peak.rise_alpha_1                       -0.0185      -0.0186    0.0066   0.7% ↓
+  σ₁², µs²/Å²      experiments[wish_2_9].peak.broad_gauss_sigma_1                     52           52        14   0.7% ↓
+  σ₂², µs²/Å⁴      experiments[wish_2_9].peak.broad_gauss_sigma_2                  25.73         25.6       1.1   0.4% ↓
+  γ₁, µs/Å         experiments[wish_2_9].peak.broad_lorentz_gamma_1                    1         1.09      0.68   9.0% ↑
+  β₀               experiments[wish_2_9].peak.decay_beta_0                       0.00537     0.005371  0.000063   
+  β₁               experiments[wish_2_9].peak.decay_beta_1                        0.0797       0.0798    0.0022   0.2% ↑
+  α₀               experiments[wish_2_9].peak.rise_alpha_0                        0.0573       0.0576    0.0055   0.5% ↑
+  α₁               experiments[wish_2_9].peak.rise_alpha_1                       -0.0185      -0.0186    0.0066   0.6% ↓
   intensity        experiments[wish_3_8].background[10].intensity                  351.5        351.5       3.7   
   intensity        experiments[wish_3_8].background[11].intensity                  318.4        318.4       3.4   
   intensity        experiments[wish_3_8].background[12].intensity                  275.8        275.8       3.0   
@@ -1079,7 +1068,7 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_4_7].background[13].intensity                  329.8        329.8       4.5   
   intensity        experiments[wish_4_7].background[14].intensity                  327.4        327.4       4.0   
   intensity        experiments[wish_4_7].background[15].intensity                  281.4        281.4       3.9   
-  intensity        experiments[wish_4_7].background[16].intensity                  349.7        349.6       4.7   
+  intensity        experiments[wish_4_7].background[16].intensity                  349.7        349.7       4.7   
   intensity        experiments[wish_4_7].background[17].intensity                  317.4        317.4       3.7   
   intensity        experiments[wish_4_7].background[18].intensity                  306.7        306.7       3.1   
   intensity        experiments[wish_4_7].background[19].intensity                  252.5        252.5       3.0   
@@ -1101,15 +1090,15 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_4_7].background[7].intensity                     395          395        12   0.1% ↓
   intensity        experiments[wish_4_7].background[8].intensity                     364          364        11   0.1% ↑
   intensity        experiments[wish_4_7].background[9].intensity                     397          397        11   0.1% ↓
-  TOF linear, µs/Å experiments[wish_4_7].instrument.calib_d_to_tof_linear         1.87e4   1.866214e40.000039e4   
+  TOF linear, µs/Å experiments[wish_4_7].instrument.calib_d_to_tof_linear         1.87e4   1.866213e40.000039e4   
   TOF offset, µs   experiments[wish_4_7].instrument.calib_d_to_tof_offset            -19       -19.00      0.56   
   scale            experiments[wish_4_7].linked_structures[ncaf].scale            33.405       33.405     0.082   
-  σ₁², µs²/Å²      experiments[wish_4_7].peak.broad_gauss_sigma_1                   21.7         21.6       5.6   0.4% ↓
-  σ₂², µs²/Å⁴      experiments[wish_4_7].peak.broad_gauss_sigma_2                   19.7         19.7       1.2   0.1% ↓
+  σ₁², µs²/Å²      experiments[wish_4_7].peak.broad_gauss_sigma_1                   21.7         21.7       5.6   0.1% ↑
+  σ₂², µs²/Å⁴      experiments[wish_4_7].peak.broad_gauss_sigma_2                   19.7         19.7       1.2   0.2% ↓
   β₀               experiments[wish_4_7].peak.decay_beta_0                       0.00678     0.006780  0.000036   
   β₁               experiments[wish_4_7].peak.decay_beta_1                       0.00888      0.00888   0.00025   
-  α₀               experiments[wish_4_7].peak.rise_alpha_0                       -0.0095      -0.0095    0.0011   0.1% ↓
-  α₁               experiments[wish_4_7].peak.rise_alpha_1                        0.1155       0.1154    0.0034   0.1% ↓
+  α₀               experiments[wish_4_7].peak.rise_alpha_0                       -0.0095      -0.0095    0.0011   0.2% ↓
+  α₁               experiments[wish_4_7].peak.rise_alpha_1                        0.1155       0.1155    0.0034   
   intensity        experiments[wish_5_6].background[10].intensity                    371          371        12   
   intensity        experiments[wish_5_6].background[11].intensity                  392.4        392.4       8.7   
   intensity        experiments[wish_5_6].background[12].intensity                  337.7        337.7       5.7   
@@ -1141,15 +1130,15 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   TOF linear, µs/Å experiments[wish_5_6].instrument.calib_d_to_tof_linear         2.08e4   2.077460e40.000035e4   
   TOF offset, µs   experiments[wish_5_6].instrument.calib_d_to_tof_offset         -16.72       -16.72      0.50   
   scale            experiments[wish_5_6].linked_structures[ncaf].scale            33.506       33.506     0.081   
-  σ₂², µs²/Å⁴      experiments[wish_5_6].peak.broad_gauss_sigma_2                  15.41        15.42      0.79   0.1% ↑
+  σ₂², µs²/Å⁴      experiments[wish_5_6].peak.broad_gauss_sigma_2                  15.41        15.41      0.79   
   β₀               experiments[wish_5_6].peak.decay_beta_0                      0.006956     0.006956  0.000033   
   β₁               experiments[wish_5_6].peak.decay_beta_1                       0.00573      0.00573   0.00016   
   α₀               experiments[wish_5_6].peak.rise_alpha_0                       -0.0075      -0.0075    0.0011   0.5% ↑
   α₁               experiments[wish_5_6].peak.rise_alpha_1                        0.1037       0.1037    0.0023   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -1197,13 +1186,10 @@ _absorption.abscor1 0()
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 177 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         9.97        15.94
-      1      0.443      9.91        15.75   1.2% ↓
-      2      0.728      9.91        15.74   
-      3      1.039      9.91        15.74   
-      4      1.311      9.91        15.74   
-      5      1.584      9.91        15.74   
-      6      1.945      9.91        15.74   
-  done · converged · 6 iters · reduced χ² 15.74 · Rwp 9.91 % · 2.24 s
+      1      1.285      9.91        15.74   1.2% ↓
+      2      1.443      9.91        15.74   
+      3      1.685      9.91        15.74   
+  done · converged · 3 iters · reduced χ² 15.74 · Rwp 9.91 % · 1.95 s
 
   per-bank Rwp (%):   wish_1_10 6.08   wish_2_9 8.53   wish_3_8 10.15   wish_4_7 10.32   wish_5_6 10.66
 
@@ -1272,12 +1258,12 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   TOF linear, µs/Å experiments[wish_2_9].instrument.calib_d_to_tof_linear         1.04e4   1.038837e40.000067e4   
   TOF offset, µs   experiments[wish_2_9].instrument.calib_d_to_tof_offset           19.5         18.5       1.5   5.3% ↓
   scale            experiments[wish_2_9].linked_structures[ncaf].scale             33.53        36.28      0.40   8.2% ↑
-  σ₁², µs²/Å²      experiments[wish_2_9].peak.broad_gauss_sigma_1                     51           40        14   20.8% ↓
-  σ₂², µs²/Å⁴      experiments[wish_2_9].peak.broad_gauss_sigma_2                   25.7         25.7       1.1   0.1% ↓
-  γ₁, µs/Å         experiments[wish_2_9].peak.broad_lorentz_gamma_1                 1.08         1.35      0.69   25.3% ↑
-  β₀               experiments[wish_2_9].peak.decay_beta_0                      0.005372     0.005445  0.000064   1.4% ↑
+  σ₁², µs²/Å²      experiments[wish_2_9].peak.broad_gauss_sigma_1                     52           40        14   22.4% ↓
+  σ₂², µs²/Å⁴      experiments[wish_2_9].peak.broad_gauss_sigma_2                   25.6         25.7       1.1   0.3% ↑
+  γ₁, µs/Å         experiments[wish_2_9].peak.broad_lorentz_gamma_1                 1.09         1.35      0.69   24.2% ↑
+  β₀               experiments[wish_2_9].peak.decay_beta_0                      0.005371     0.005445  0.000064   1.4% ↑
   β₁               experiments[wish_2_9].peak.decay_beta_1                        0.0798       0.0745    0.0021   6.6% ↓
-  α₀               experiments[wish_2_9].peak.rise_alpha_0                        0.0575       0.0537    0.0047   6.5% ↓
+  α₀               experiments[wish_2_9].peak.rise_alpha_0                        0.0576       0.0537    0.0047   6.7% ↓
   α₁               experiments[wish_2_9].peak.rise_alpha_1                       -0.0186      -0.0166    0.0059   10.7% ↑
   ABSCOR1, Å⁻¹     experiments[wish_3_8].absorption.abscor1                       0.0000        -7e-4     13e-4   
   intensity        experiments[wish_3_8].background[10].intensity                  351.5        351.7       3.7   
@@ -1318,7 +1304,7 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_4_7].background[13].intensity                  329.8        334.3       4.5   1.4% ↑
   intensity        experiments[wish_4_7].background[14].intensity                  327.4        329.5       4.0   0.6% ↑
   intensity        experiments[wish_4_7].background[15].intensity                  281.4        283.4       3.9   0.7% ↑
-  intensity        experiments[wish_4_7].background[16].intensity                  349.6        352.0       4.6   0.7% ↑
+  intensity        experiments[wish_4_7].background[16].intensity                  349.7        352.0       4.6   0.7% ↑
   intensity        experiments[wish_4_7].background[17].intensity                  317.4        317.6       3.7   0.1% ↑
   intensity        experiments[wish_4_7].background[18].intensity                  306.7        306.7       3.1   
   intensity        experiments[wish_4_7].background[19].intensity                  252.5        251.9       2.9   0.2% ↓
@@ -1343,13 +1329,13 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   TOF linear, µs/Å experiments[wish_4_7].instrument.calib_d_to_tof_linear         1.87e4   1.866176e40.000038e4   
   TOF offset, µs   experiments[wish_4_7].instrument.calib_d_to_tof_offset            -19       -18.33      0.55   3.5% ↑
   scale            experiments[wish_4_7].linked_structures[ncaf].scale            33.405        31.87      0.25   4.6% ↓
-  σ₁², µs²/Å²      experiments[wish_4_7].peak.broad_gauss_sigma_1                   21.6         22.8       5.6   5.6% ↑
+  σ₁², µs²/Å²      experiments[wish_4_7].peak.broad_gauss_sigma_1                   21.7         22.8       5.6   5.1% ↑
   σ₂², µs²/Å⁴      experiments[wish_4_7].peak.broad_gauss_sigma_2                   19.7         19.7       1.2   0.1% ↓
   β₀               experiments[wish_4_7].peak.decay_beta_0                       0.00678     0.006736  0.000036   0.7% ↓
   β₁               experiments[wish_4_7].peak.decay_beta_1                       0.00888      0.00968   0.00027   9.0% ↑
   α₀               experiments[wish_4_7].peak.rise_alpha_0                       -0.0095      -0.0098    0.0011   3.0% ↓
-  α₁               experiments[wish_4_7].peak.rise_alpha_1                        0.1154       0.1167    0.0034   1.1% ↑
-  ABSCOR1, Å⁻¹     experiments[wish_5_6].absorption.abscor1                       0.0000      -0.0135    0.0012   
+  α₁               experiments[wish_4_7].peak.rise_alpha_1                        0.1155       0.1167    0.0034   1.0% ↑
+  ABSCOR1, Å⁻¹     experiments[wish_5_6].absorption.abscor1                       0.0000      -0.0135    0.0012 ! 
   intensity        experiments[wish_5_6].background[10].intensity                    371          401        12   8.2% ↑
   intensity        experiments[wish_5_6].background[11].intensity                  392.4        415.4       8.8   5.9% ↑
   intensity        experiments[wish_5_6].background[12].intensity                  337.7        346.4       5.7   2.6% ↑
@@ -1380,17 +1366,20 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_5_6].background[9].intensity                   378.5        382.7       9.1   1.1% ↑
   TOF linear, µs/Å experiments[wish_5_6].instrument.calib_d_to_tof_linear         2.08e4   2.077404e40.000033e4   
   TOF offset, µs   experiments[wish_5_6].instrument.calib_d_to_tof_offset         -16.72       -15.66      0.47   6.3% ↑
-  scale            experiments[wish_5_6].linked_structures[ncaf].scale            33.506        30.55      0.26   8.8% ↓
-  σ₂², µs²/Å⁴      experiments[wish_5_6].peak.broad_gauss_sigma_2                  15.42        15.43      0.77   0.1% ↑
+  scale            experiments[wish_5_6].linked_structures[ncaf].scale            33.506        30.55      0.26 ! 8.8% ↓
+  σ₂², µs²/Å⁴      experiments[wish_5_6].peak.broad_gauss_sigma_2                  15.41        15.43      0.77   0.1% ↑
   β₀               experiments[wish_5_6].peak.decay_beta_0                      0.006956     0.006880  0.000034   1.1% ↓
   β₁               experiments[wish_5_6].peak.decay_beta_1                       0.00573      0.00688   0.00019   20.1% ↑
   α₀               experiments[wish_5_6].peak.rise_alpha_0                       -0.0075     -0.00795   0.00094   6.1% ↓
   α₁               experiments[wish_5_6].peak.rise_alpha_1                        0.1037       0.1051    0.0022   1.3% ↑
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiments[wish_5_6].absorption.abscor1: strongly correlated with ncaf scale (wish_5_6) (r = 0.96)
+      experiments[wish_5_6].linked_structures[ncaf].scale: strongly correlated with ABSCOR1 (wish_5_6) (r = 0.96)
 ```
 
 ## Atom positions
@@ -1422,13 +1411,10 @@ The same for every other row (4 more).
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 187 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         9.91        15.75
-      1      0.433      8.11        10.56   32.9% ↓
-      2      0.755      8.07        10.43   1.2% ↓
-      3      1.042      8.07        10.43   
-      4      1.364      8.07        10.43   
-      5      1.717      8.07        10.43   
-      6      2.162      8.07        10.43   
-  done · converged · 6 iters · reduced χ² 10.43 · Rwp 8.07 % · 2.69 s
+      1      1.484      8.07        10.43   33.8% ↓
+      2      1.708      8.07        10.43   
+      3      1.989      8.07        10.43   
+  done · converged · 3 iters · reduced χ² 10.43 · Rwp 8.07 % · 2.37 s
 
   per-bank Rwp (%):   wish_1_10 4.95   wish_2_9 6.68   wish_3_8 8.27   wish_4_7 8.54   wish_5_6 8.66
 
@@ -1454,7 +1440,7 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_1_10].background[27].intensity                 212.4        212.4       4.1   
   intensity        experiments[wish_1_10].background[28].intensity                 212.6        212.6       4.7   
   intensity        experiments[wish_1_10].background[29].intensity                 211.3        211.3       5.7   
-  intensity        experiments[wish_1_10].background[2].intensity                    108           65        70   40.2% ↓
+  intensity        experiments[wish_1_10].background[2].intensity                    108           65        70 ! 40.2% ↓
   intensity        experiments[wish_1_10].background[30].intensity                   211        211.0       7.1   
   intensity        experiments[wish_1_10].background[31].intensity                   223        222.9       9.0   
   intensity        experiments[wish_1_10].background[32].intensity                   210          210        13   0.2% ↑
@@ -1536,7 +1522,7 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   β₁               experiments[wish_3_8].peak.decay_beta_1                       0.02061      0.02531   0.00050   22.8% ↑
   α₀               experiments[wish_3_8].peak.rise_alpha_0                      -0.01097     -0.01165   0.00076   6.2% ↓
   α₁               experiments[wish_3_8].peak.rise_alpha_1                        0.1187       0.1216    0.0033   2.4% ↑
-  ABSCOR1, Å⁻¹     experiments[wish_4_7].absorption.abscor1                      -0.0072     -0.01936   0.00092   168.9% ↓
+  ABSCOR1, Å⁻¹     experiments[wish_4_7].absorption.abscor1                      -0.0072     -0.01936   0.00092 ! 168.9% ↓
   intensity        experiments[wish_4_7].background[10].intensity                  348.2        386.1       5.5   10.9% ↑
   intensity        experiments[wish_4_7].background[11].intensity                  389.5        368.7       4.9   5.3% ↓
   intensity        experiments[wish_4_7].background[12].intensity                  350.7        382.9       4.1   9.2% ↑
@@ -1567,14 +1553,14 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_4_7].background[9].intensity                     413        444.7       8.5   7.7% ↑
   TOF linear, µs/Å experiments[wish_4_7].instrument.calib_d_to_tof_linear         1.87e4   1.866085e40.000031e4   
   TOF offset, µs   experiments[wish_4_7].instrument.calib_d_to_tof_offset         -18.33       -16.62      0.44   9.3% ↑
-  scale            experiments[wish_4_7].linked_structures[ncaf].scale             31.87        29.42      0.19   7.7% ↓
+  scale            experiments[wish_4_7].linked_structures[ncaf].scale             31.87        29.42      0.19 ! 7.7% ↓
   σ₁², µs²/Å²      experiments[wish_4_7].peak.broad_gauss_sigma_1                   22.8         28.0       4.7   23.0% ↑
   σ₂², µs²/Å⁴      experiments[wish_4_7].peak.broad_gauss_sigma_2                   19.7        18.79      0.97   4.6% ↓
   β₀               experiments[wish_4_7].peak.decay_beta_0                      0.006736     0.006636  0.000030   1.5% ↓
   β₁               experiments[wish_4_7].peak.decay_beta_1                       0.00968      0.01178   0.00024   21.7% ↑
   α₀               experiments[wish_4_7].peak.rise_alpha_0                       -0.0098     -0.01055   0.00091   7.6% ↓
   α₁               experiments[wish_4_7].peak.rise_alpha_1                        0.1167       0.1197    0.0029   2.6% ↑
-  ABSCOR1, Å⁻¹     experiments[wish_5_6].absorption.abscor1                      -0.0135     -0.01693   0.00093   25.4% ↓
+  ABSCOR1, Å⁻¹     experiments[wish_5_6].absorption.abscor1                      -0.0135     -0.01693   0.00093 ! 25.4% ↓
   intensity        experiments[wish_5_6].background[10].intensity                    401        430.2       9.7   7.3% ↑
   intensity        experiments[wish_5_6].background[11].intensity                  415.4        429.5       7.2   3.4% ↑
   intensity        experiments[wish_5_6].background[12].intensity                  346.4        376.1       4.7   8.6% ↑
@@ -1605,7 +1591,7 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_5_6].background[9].intensity                   382.7        377.8       7.5   1.3% ↓
   TOF linear, µs/Å experiments[wish_5_6].instrument.calib_d_to_tof_linear         2.08e4   2.077363e40.000027e4   
   TOF offset, µs   experiments[wish_5_6].instrument.calib_d_to_tof_offset         -15.66       -14.93      0.38   4.7% ↑
-  scale            experiments[wish_5_6].linked_structures[ncaf].scale             30.55        29.69      0.21   2.8% ↓
+  scale            experiments[wish_5_6].linked_structures[ncaf].scale             30.55        29.69      0.21 ! 2.8% ↓
   σ₂², µs²/Å⁴      experiments[wish_5_6].peak.broad_gauss_sigma_2                  15.43        15.84      0.63   2.7% ↑
   β₀               experiments[wish_5_6].peak.decay_beta_0                       0.00688     0.006868  0.000028   0.2% ↓
   β₁               experiments[wish_5_6].peak.decay_beta_1                       0.00688      0.00776   0.00016   12.8% ↑
@@ -1623,9 +1609,15 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   x                structure.atom_sites[Na1].fract_x                             0.09000      0.08396   0.00014   6.7% ↓
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiments[wish_1_10].background[2].intensity: s.u. larger than the value
+      experiments[wish_4_7].absorption.abscor1: strongly correlated with ncaf scale (wish_4_7) (r = 0.95)
+      experiments[wish_4_7].linked_structures[ncaf].scale: strongly correlated with ABSCOR1 (wish_4_7) (r = 0.95)
+      experiments[wish_5_6].absorption.abscor1: strongly correlated with ncaf scale (wish_5_6) (r = 0.96)
+      experiments[wish_5_6].linked_structures[ncaf].scale: strongly correlated with ABSCOR1 (wish_5_6) (r = 0.96)
 ```
 
 ## Displacements
@@ -1655,12 +1647,9 @@ The same for every other row (2 more).
 edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish_3_8, wish_4_7, wish_5_6), 18973 pts fitted / 20475 loaded, 193 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         8.07        10.43
-      1      2.173      7.77         9.68   7.3% ↓
-      2      3.885      7.70         9.50   1.8% ↓
-      3      5.176      7.69         9.50   
-      4      6.763      7.69         9.50   
-      5      8.298      7.69         9.50   
-  done · converged · 5 iters · reduced χ² 9.50 · Rwp 7.69 % · 9.61 s
+      1      9.361      7.69         9.50   9.0% ↓
+      2     10.462      7.69         9.50   
+  done · converged · 2 iters · reduced χ² 9.50 · Rwp 7.69 % · 11.45 s
 
   per-bank Rwp (%):   wish_1_10 4.65   wish_2_9 6.44   wish_3_8 7.89   wish_4_7 8.10   wish_5_6 8.28
 
@@ -1736,7 +1725,7 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   β₁               experiments[wish_2_9].peak.decay_beta_1                        0.0823       0.0823    0.0018   
   α₀               experiments[wish_2_9].peak.rise_alpha_0                        0.0544       0.0407    0.0068   25.3% ↓
   α₁               experiments[wish_2_9].peak.rise_alpha_1                       -0.0053        0.024     0.011   553.9% ↑
-  ABSCOR1, Å⁻¹     experiments[wish_3_8].absorption.abscor1                      -0.0223       0.0011    0.0013   105.0% ↑
+  ABSCOR1, Å⁻¹     experiments[wish_3_8].absorption.abscor1                      -0.0223       0.0011    0.0013 ! 105.0% ↑
   intensity        experiments[wish_3_8].background[10].intensity                  353.8        353.4       2.9   0.1% ↓
   intensity        experiments[wish_3_8].background[11].intensity                  300.1        298.4       2.7   0.6% ↓
   intensity        experiments[wish_3_8].background[12].intensity                  284.7        283.4       2.3   0.4% ↓
@@ -1761,14 +1750,14 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_3_8].background[9].intensity                   335.2        335.9       3.4   0.2% ↑
   TOF linear, µs/Å experiments[wish_3_8].instrument.calib_d_to_tof_linear         1.51e4   1.510528e40.000037e4   
   TOF offset, µs   experiments[wish_3_8].instrument.calib_d_to_tof_offset         -13.46       -12.72      0.62   5.5% ↑
-  scale            experiments[wish_3_8].linked_structures[ncaf].scale             29.99        37.35      0.34   24.6% ↑
+  scale            experiments[wish_3_8].linked_structures[ncaf].scale             29.99        37.35      0.34 ! 24.6% ↑
   σ₁², µs²/Å²      experiments[wish_3_8].peak.broad_gauss_sigma_1                   64.3         62.4       5.7   3.0% ↓
   σ₂², µs²/Å⁴      experiments[wish_3_8].peak.broad_gauss_sigma_2                  17.01        16.85      0.90   0.9% ↓
   β₀               experiments[wish_3_8].peak.decay_beta_0                      0.006116     0.005990  0.000036   2.1% ↓
   β₁               experiments[wish_3_8].peak.decay_beta_1                       0.02531      0.02767   0.00053   9.3% ↑
   α₀               experiments[wish_3_8].peak.rise_alpha_0                      -0.01165     -0.01216   0.00074   4.4% ↓
   α₁               experiments[wish_3_8].peak.rise_alpha_1                        0.1216       0.1230    0.0032   1.1% ↑
-  ABSCOR1, Å⁻¹     experiments[wish_4_7].absorption.abscor1                      -0.0194       0.0044    0.0013   122.9% ↑
+  ABSCOR1, Å⁻¹     experiments[wish_4_7].absorption.abscor1                      -0.0194       0.0044    0.0013 ! 122.9% ↑
   intensity        experiments[wish_4_7].background[10].intensity                  386.1        396.0       5.3   2.6% ↑
   intensity        experiments[wish_4_7].background[11].intensity                  368.7        391.3       4.7   6.1% ↑
   intensity        experiments[wish_4_7].background[12].intensity                  382.9        384.8       4.0   0.5% ↑
@@ -1799,14 +1788,14 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_4_7].background[9].intensity                   444.7        510.9       8.2   14.9% ↑
   TOF linear, µs/Å experiments[wish_4_7].instrument.calib_d_to_tof_linear         1.87e4   1.865999e40.000032e4   
   TOF offset, µs   experiments[wish_4_7].instrument.calib_d_to_tof_offset         -16.62       -15.06      0.49   9.4% ↑
-  scale            experiments[wish_4_7].linked_structures[ncaf].scale             29.42        37.93      0.38   28.9% ↑
+  scale            experiments[wish_4_7].linked_structures[ncaf].scale             29.42        37.93      0.38 ! 28.9% ↑
   σ₁², µs²/Å²      experiments[wish_4_7].peak.broad_gauss_sigma_1                     28         29.3       4.6   4.8% ↑
   σ₂², µs²/Å⁴      experiments[wish_4_7].peak.broad_gauss_sigma_2                  18.79        18.20      0.98   3.1% ↓
   β₀               experiments[wish_4_7].peak.decay_beta_0                      0.006636     0.006428  0.000030   3.1% ↓
   β₁               experiments[wish_4_7].peak.decay_beta_1                       0.01178      0.01467   0.00029   24.6% ↑
   α₀               experiments[wish_4_7].peak.rise_alpha_0                      -0.01055     -0.01160   0.00089   10.0% ↓
   α₁               experiments[wish_4_7].peak.rise_alpha_1                        0.1197       0.1228    0.0029   2.6% ↑
-  ABSCOR1, Å⁻¹     experiments[wish_5_6].absorption.abscor1                      -0.0169       0.0100    0.0014   159.0% ↑
+  ABSCOR1, Å⁻¹     experiments[wish_5_6].absorption.abscor1                      -0.0169       0.0100    0.0014 ! 159.0% ↑
   intensity        experiments[wish_5_6].background[10].intensity                  430.2        477.7       9.3   11.0% ↑
   intensity        experiments[wish_5_6].background[11].intensity                  429.5        484.2       7.0   12.7% ↑
   intensity        experiments[wish_5_6].background[12].intensity                  376.1        381.6       4.5   1.5% ↑
@@ -1837,7 +1826,7 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   intensity        experiments[wish_5_6].background[9].intensity                   377.8        400.5       7.2   6.0% ↑
   TOF linear, µs/Å experiments[wish_5_6].instrument.calib_d_to_tof_linear         2.08e4   2.077292e40.000028e4   
   TOF offset, µs   experiments[wish_5_6].instrument.calib_d_to_tof_offset         -14.93       -13.71      0.42   8.2% ↑
-  scale            experiments[wish_5_6].linked_structures[ncaf].scale             29.69        39.76      0.45   33.9% ↑
+  scale            experiments[wish_5_6].linked_structures[ncaf].scale             29.69        39.76      0.45 ! 33.9% ↑
   σ₂², µs²/Å⁴      experiments[wish_5_6].peak.broad_gauss_sigma_2                  15.84        15.71      0.61   0.8% ↓
   β₀               experiments[wish_5_6].peak.decay_beta_0                      0.006868     0.006673  0.000027   2.8% ↓
   β₁               experiments[wish_5_6].peak.decay_beta_1                       0.00776      0.01007   0.00020   29.7% ↑
@@ -1861,9 +1850,16 @@ edi fit: joint project pd-neut-tof_ncaf-wish, 5 banks (wish_1_10, wish_2_9, wish
   x                structure.atom_sites[Na1].fract_x                             0.08396      0.08517   0.00016   1.4% ↑
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiments[wish_3_8].absorption.abscor1: strongly correlated with ncaf scale (wish_3_8) (r = 0.95)
+      experiments[wish_3_8].linked_structures[ncaf].scale: strongly correlated with ABSCOR1 (wish_3_8) (r = 0.95)
+      experiments[wish_4_7].absorption.abscor1: strongly correlated with ncaf scale (wish_4_7) (r = 0.95)
+      experiments[wish_4_7].linked_structures[ncaf].scale: strongly correlated with ABSCOR1 (wish_4_7) (r = 0.95)
+      experiments[wish_5_6].absorption.abscor1: strongly correlated with ncaf scale (wish_5_6) (r = 0.96)
+      experiments[wish_5_6].linked_structures[ncaf].scale: strongly correlated with ABSCOR1 (wish_5_6) (r = 0.96)
 ```
 
 ## Report

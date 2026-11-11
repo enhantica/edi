@@ -82,12 +82,9 @@ _cell.length_a 5.431()
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 3 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        52.36       204.71
-      1      0.018     19.80        29.28   85.7% ↓
-      2      0.026     10.94         8.93   69.5% ↓
-      3      0.033     10.45         8.16   8.7% ↓
-      4      0.040     10.45         8.16   
-      5      0.053     10.45         8.16   
-  done · converged · 5 iters · reduced χ² 8.16 · Rwp 10.45 % · 0.06 s
+      1      0.076     10.45         8.16   96.0% ↓
+      2      0.088     10.45         8.16   
+  done · converged · 2 iters · reduced χ² 8.16 · Rwp 10.45 % · 0.10 s
 
   refined parameters (3 free):
   name            parameter                                               start        value      s.u.   change
@@ -96,8 +93,8 @@ edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 3 free
   a, Å            structure.cell.length_a                                5.4310     5.430922  0.000062   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -136,9 +133,8 @@ The same for every other row (12 more).
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 17 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        10.45         8.18
-      1      0.036      7.45         4.16   49.1% ↓
-      2      0.061      7.45         4.16   
-  done · converged · 2 iters · reduced χ² 4.16 · Rwp 7.45 % · 0.07 s
+      1      0.124      7.45         4.16   49.1% ↓
+  done · converged · 1 iters · reduced χ² 4.16 · Rwp 7.45 % · 0.13 s
 
   refined parameters (17 free):
   name            parameter                                               start        value      s.u.   change
@@ -161,16 +157,16 @@ edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 17 free
   a, Å            structure.cell.length_a                                5.4309     5.430953  0.000043   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
 ## Gaussian widths
 
-The background stays free while the widths join. diffraction-lib fixes it for this step and leaves
-it fixed; here the fit reaches the same result with it free, as every other case does. The
-Gaussian terms come first.
+The background stays free while the widths join. diffraction-lib fixes it for this step and
+leaves it fixed; here the fit reaches the same result with it free, as every other case does.
+The Gaussian terms come first.
 
 In `experiments/sepd.edi`, add `()` after the values the stage frees:
 
@@ -195,11 +191,8 @@ _peak.broad_gauss_sigma_1 30()
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 19 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         7.45         4.16
-      1      0.040      7.42         4.13   0.8% ↓
-      2      0.050      7.42         4.13   
-      3      0.059      7.42         4.13   
-      4      0.091      7.42         4.13   
-  done · converged · 4 iters · reduced χ² 4.13 · Rwp 7.42 % · 0.10 s
+      1      0.109      7.42         4.13   0.8% ↓
+  done · converged · 1 iters · reduced χ² 4.13 · Rwp 7.42 % · 0.12 s
 
   refined parameters (19 free):
   name            parameter                                               start        value      s.u.   change
@@ -224,8 +217,8 @@ edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 19 free
   a, Å            structure.cell.length_a                                5.4310     5.430915  0.000044   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -255,10 +248,8 @@ _peak.broad_lorentz_gamma_1 3()
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 20 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         7.42         4.13
-      1      0.041      7.28         3.98   3.7% ↓
-      2      0.052      7.28         3.97   
-      3      0.076      7.28         3.97   
-  done · converged · 3 iters · reduced χ² 3.97 · Rwp 7.28 % · 0.09 s
+      1      0.116      7.28         3.97   3.7% ↓
+  done · converged · 1 iters · reduced χ² 3.97 · Rwp 7.28 % · 0.13 s
 
   refined parameters (20 free):
   name            parameter                                               start        value      s.u.   change
@@ -284,8 +275,8 @@ edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 20 free
   a, Å            structure.cell.length_a                                5.4309     5.430939  0.000043   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -313,10 +304,8 @@ Si Si 0.125 0.125 0.125 a 8 1 0.5() Biso
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 21 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         7.28         3.98
-      1      0.049      7.28         3.97   0.2% ↓
-      2      0.059      7.28         3.97   
-      3      0.084      7.28         3.97   
-  done · converged · 3 iters · reduced χ² 3.97 · Rwp 7.28 % · 0.10 s
+      1      0.122      7.28         3.97   0.2% ↓
+  done · converged · 1 iters · reduced χ² 3.97 · Rwp 7.28 % · 0.13 s
 
   refined parameters (21 free):
   name            parameter                                               start        value      s.u.   change
@@ -333,18 +322,18 @@ edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 21 free
   intensity       experiment.background[6].intensity                      129.1        129.2       1.4   
   intensity       experiment.background[7].intensity                      142.5        142.5       2.2   
   intensity       experiment.background[8].intensity                      155.1        155.6       8.9   0.3% ↑
-  intensity       experiment.background[9].intensity                        248          244        20   1.4% ↓
+  intensity       experiment.background[9].intensity                        248          244        20   1.5% ↓
   TOF offset, µs  experiment.instrument.calib_d_to_tof_offset            -8.841       -8.869     0.060   0.3% ↓
   scale           experiment.linked_structures[si].scale                 378.69        381.6       1.2   0.8% ↑
-  σ₀², µs²        experiment.peak.broad_gauss_sigma_0                         5         4.33      0.41   13.4% ↓
-  σ₁², µs²/Å²     experiment.peak.broad_gauss_sigma_1                     34.17        34.72      0.76   1.6% ↑
+  σ₀², µs²        experiment.peak.broad_gauss_sigma_0                         5         4.33      0.41   13.5% ↓
+  σ₁², µs²/Å²     experiment.peak.broad_gauss_sigma_1                     34.17        34.73      0.76   1.6% ↑
   γ₁, µs/Å        experiment.peak.broad_lorentz_gamma_1                   1.694        1.671     0.090   1.3% ↓
   B iso, Å²       structure.atom_sites[Si].adp_iso                        0.500       0.5164    0.0044   3.3% ↑
   a, Å            structure.cell.length_a                                5.4309     5.430957  0.000044   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -375,12 +364,9 @@ _peak.decay_beta_1 0.01()
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 23 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         7.28         3.97
-      1      0.038      7.18         3.87   2.5% ↓
-      2      0.049      7.18         3.86   0.2% ↓
-      3      0.059      7.18         3.86   
-      4      0.068      7.18         3.86   
-      5      0.098      7.18         3.86   
-  done · converged · 5 iters · reduced χ² 3.86 · Rwp 7.18 % · 0.11 s
+      1      0.103      7.18         3.86   2.7% ↓
+      2      0.125      7.18         3.86   
+  done · converged · 2 iters · reduced χ² 3.86 · Rwp 7.18 % · 0.14 s
 
   refined parameters (23 free):
   name            parameter                                               start        value      s.u.   change
@@ -401,7 +387,7 @@ edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 23 free
   TOF offset, µs  experiment.instrument.calib_d_to_tof_offset            -8.869       -8.346     0.085   5.9% ↑
   scale           experiment.linked_structures[si].scale                  381.6        382.7       1.2   0.3% ↑
   σ₀², µs²        experiment.peak.broad_gauss_sigma_0                      4.33         5.51      0.46   27.3% ↑
-  σ₁², µs²/Å²     experiment.peak.broad_gauss_sigma_1                     34.72        34.19      0.77   1.5% ↓
+  σ₁², µs²/Å²     experiment.peak.broad_gauss_sigma_1                     34.73        34.19      0.77   1.5% ↓
   γ₁, µs/Å        experiment.peak.broad_lorentz_gamma_1                   1.671        1.955     0.096   17.0% ↑
   β₀              experiment.peak.decay_beta_0                             0.04      0.04017   0.00024   0.4% ↑
   β₁              experiment.peak.decay_beta_1                             0.01      0.01247   0.00023   24.7% ↑
@@ -409,8 +395,8 @@ edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 23 free
   a, Å            structure.cell.length_a                                5.4310     5.430824  0.000062   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 

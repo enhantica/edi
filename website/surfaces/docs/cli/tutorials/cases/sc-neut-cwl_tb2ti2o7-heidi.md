@@ -63,17 +63,16 @@ tb2ti2o7 4()
 edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 1 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         22.22        75.58
-      1      0.010      19.62        58.90   22.1% ↓
-      2      0.021      19.62        58.90   
-  done · converged · 2 iters · reduced χ² 58.90 · wR(F²) 19.62 % · 0.03 s
+      1      0.062      19.62        58.90   22.1% ↓
+  done · converged · 1 iters · reduced χ² 58.90 · wR(F²) 19.62 % · 0.07 s
 
   refined parameters (1 free):
   name            parameter                                               start        value      s.u.   change
   scale           experiment.linked_structures[tb2ti2o7].scale                4        4.477     0.061   11.9% ↑
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -103,9 +102,8 @@ O1 O 0.33() 0.125 0.125 f 48 1 0.0026 Uani
 edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 2 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         19.62        59.17
-      1      0.013      14.74        33.42   43.5% ↓
-      2      0.076      14.74        33.42   
-  done · converged · 2 iters · reduced χ² 33.42 · wR(F²) 14.74 % · 0.10 s
+      1      0.084      14.74        33.42   43.5% ↓
+  done · converged · 1 iters · reduced χ² 33.42 · wR(F²) 14.74 % · 0.10 s
 
   refined parameters (2 free):
   name            parameter                                               start        value      s.u.   change
@@ -113,8 +111,8 @@ edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 2 free
   x               structure.atom_sites[O1].fract_x                      0.33000      0.32803   0.00015   0.6% ↓
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -145,10 +143,8 @@ The same for every other row (2 more).
 edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 10 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         14.74        34.69
-      1      0.016       6.20         6.13   82.3% ↓
-      2      0.028       6.09         5.93   3.3% ↓
-      3      0.047       6.09         5.93   
-  done · converged · 3 iters · reduced χ² 5.93 · wR(F²) 6.09 % · 0.06 s
+      1      0.098       6.09         5.93   82.9% ↓
+  done · converged · 1 iters · reduced χ² 5.93 · wR(F²) 6.09 % · 0.11 s
 
   refined parameters (10 free):
   name            parameter                                               start        value      s.u.   change
@@ -164,8 +160,8 @@ edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 10 fre
   x               structure.atom_sites[O1].fract_x                      0.32803     0.327960  0.000067   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -196,26 +192,24 @@ _extinction.mosaic_spread 0()
 edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 12 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.09         5.98
-      1      0.014       3.86         2.40   59.9% ↓
-      2      0.026       3.18         1.63   32.1% ↓
-      3      0.037       2.97         1.42   13.1% ↓
-      4      0.048       2.92         1.38   2.9% ↓
-      5      0.069       2.91         1.37   0.7% ↓
-      6      0.081       2.88         1.34   2.0% ↓
-      7      0.092       2.88         1.33   0.4% ↓
-      8      0.103       2.88         1.33   
-      9      0.113       2.88         1.33   
-     10      0.126       2.88         1.33   
-  done · converged · 10 iters · reduced χ² 1.33 · wR(F²) 2.88 % · 0.14 s
+      1      0.095       2.90         1.35   77.4% ↓
+      2      0.106       2.88         1.33   1.6% ↓
+      3      0.117       2.88         1.33   
+      4      0.128       2.88         1.33   
+      5      0.145       2.88         1.33   
+      6      0.155       2.88         1.33   
+      7      0.169       2.88         1.33   
+      8      0.182       2.88         1.33   
+  done · converged · 8 iters · reduced χ² 1.33 · wR(F²) 2.88 % · 0.20 s
 
   refined parameters (12 free):
   name                 parameter                                               start        value      s.u.   change
-  Domain radius, μm    experiment.extinction.domain_radius                        25          3.0       1.8   88.1% ↓
-  Mosaic spread, rad⁻¹ experiment.extinction.mosaic_spread                         0      2.733e3   0.093e3   
+  Domain radius, μm    experiment.extinction.domain_radius                        25          3.0       1.9   87.9% ↓
+  Mosaic spread, rad⁻¹ experiment.extinction.mosaic_spread                         0      2.730e3   0.095e3   
   scale                experiment.linked_structures[tb2ti2o7].scale            5.269        5.900     0.036   12.0% ↑
   U₁₁, Å²              structure.atom_site_aniso[O1].adp_11                  0.00632      0.00742   0.00012   17.4% ↑
   U₂₂, Å²              structure.atom_site_aniso[O1].adp_22                  0.00434     0.005533  0.000084   27.5% ↑
-  U₂₃, Å²              structure.atom_site_aniso[O1].adp_23                  0.00192     0.001926  0.000087   0.3% ↑
+  U₂₃, Å²              structure.atom_site_aniso[O1].adp_23                  0.00192     0.001927  0.000087   0.3% ↑
   U₁₁, Å²              structure.atom_site_aniso[O2].adp_11                  0.00332      0.00442   0.00012   33.2% ↑
   U₁₁, Å²              structure.atom_site_aniso[Tb].adp_11                  0.00578     0.006965  0.000084   20.5% ↑
   U₁₂, Å²              structure.atom_site_aniso[Tb].adp_12                 -0.00234    -0.002266  0.000075   3.1% ↑
@@ -224,8 +218,8 @@ edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 12 fre
   x                    structure.atom_sites[O1].fract_x                      0.32796     0.327981  0.000032   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 

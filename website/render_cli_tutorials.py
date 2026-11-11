@@ -18,6 +18,7 @@ import argparse
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -223,11 +224,64 @@ def edited(edits: list[tuple[str, str, list[str]]], words: dict[str, str] = WORD
     return '\n'.join(out)
 
 
+def render_calculation(case: str, title: str) -> Path:
+    """A case with nothing to fit: get the project, calculate it and write its report.
+
+    The standalone executable fits measured data only, so the calculation runs in the Python
+    package. Its output is shown as it prints, without the time the calculation took.
+    """
+    with tempfile.TemporaryDirectory(prefix=f'cli-tutorial-{case}-') as scratch:
+        shutil.copytree(ROOT / f'docs/user/cli/{case}/project', Path(scratch) / case)
+        run = subprocess.run(
+            [sys.executable, '-m', 'edi', 'calc', case, '--dry'],
+            cwd=scratch,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    output = [line for line in run.stdout.rstrip().splitlines() if not line.startswith('elapsed_')]
+    python_only = (
+        '=== "Standalone executable"\n\n    {why}; use the Python package.\n\n'
+        '=== "Python package"\n\n    ```console\n    python -m edi {command}\n    ```\n'
+    )
+    parts = [
+        f'# {title}\n',
+        (
+            'Nothing to fit: edi calculates from the model as the project holds it, as the Python '
+            'tutorial does.\n'
+        ),
+        '## Get the project\n',
+        tabs(f'download-data {case}'),
+        '## Calculate\n',
+        (
+            'Calculate the project without writing the result back (drop `--dry` to save it into '
+            'the project). The output names what was calculated and a checksum of it; the time it '
+            'took is left out here.\n'
+        ),
+        python_only.format(
+            why='The standalone executable fits measured data only', command=f'calc {case} --dry'
+        ),
+        '```text\n' + '\n'.join(output) + '\n```\n',
+        '## Report\n',
+        'Write the HTML report of the project and open it in a browser.\n',
+        python_only.format(
+            why='The standalone executable has no `report`',
+            command=f'report {case} --output {case}.html',
+        ),
+    ]
+    PAGES.mkdir(parents=True, exist_ok=True)
+    page = PAGES / f'{case}.md'
+    page.write_text('\n'.join(parts), encoding='utf-8')
+    return page
+
+
 def render(case: str, binary: Path) -> Path:  # noqa: PLR0914, PLR0915 - one page, step by step
     import edi  # noqa: PLC0415 - only rendering needs the package; the stage parsing does not
 
     source = (ROOT / f'docs/user/tutorials/{case}.py').read_text(encoding='utf-8')
     title = re.search(r'^# # (.+)$', source, flags=re.MULTILINE).group(1)
+    if 'project.calculate()' in source and '.free = True' not in source:
+        return render_calculation(case, title)
     with tempfile.TemporaryDirectory(prefix=f'cli-tutorial-{case}-') as scratch:
         work = Path(scratch) / case
         shutil.copytree(ROOT / f'docs/user/cli/{case}/project', work)

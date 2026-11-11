@@ -84,25 +84,26 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 5 free
                        40.51       452.05
       1      0.014     32.67       294.01   35.0% ↓
       2      0.019     28.53       224.11   23.8% ↓
-      3      0.026     24.08       159.67   28.8% ↓
-      4      0.037     20.62       117.12   26.6% ↓
-      5      0.042     20.11       111.36   4.9% ↓
-      6      0.047     20.10       111.23   0.1% ↓
-      7      0.053     20.10       111.22   
-      8      0.061     20.10       111.22   
-  done · converged · 8 iters · reduced χ² 111.22 · Rwp 20.10 % · 0.07 s
+      3      0.024     24.08       159.67   28.8% ↓
+      4      0.028     20.62       117.12   26.6% ↓
+      5      0.033     20.11       111.36   4.9% ↓
+      6      0.037     20.10       111.23   0.1% ↓
+      7      0.041     20.10       111.22   
+      8      0.046     20.10       111.22   
+      9      0.054     20.10       111.22   
+  done · converged · 9 iters · reduced χ² 111.22 · Rwp 20.10 % · 0.06 s
 
   refined parameters (5 free):
   name            parameter                                               start        value      s.u.   change
   2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.0000       0.2871    0.0086   
   scale           experiment.linked_structures[cosio].scale                   1        1.185     0.019   18.5% ↑
-  a, Å            structure.cell.length_a                               10.3000     10.30862   0.00098   0.1% ↑
+  a, Å            structure.cell.length_a                               10.3000     10.30861   0.00098   0.1% ↑
   b, Å            structure.cell.length_b                                6.0000      6.00413   0.00061   0.1% ↑
   c, Å            structure.cell.length_c                                4.8000      4.78646   0.00048   0.3% ↓
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -135,10 +136,11 @@ The same for every other row (12 more).
 edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 19 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        20.10       112.33
-      1      0.020      5.51         8.45   92.5% ↓
-      2      0.027      5.51         8.45   
-      3      0.038      5.51         8.45   
-  done · converged · 3 iters · reduced χ² 8.45 · Rwp 5.51 % · 0.05 s
+      1      0.019      5.51         8.45   92.5% ↓
+      2      0.024      5.51         8.45   
+      3      0.028      5.51         8.45   
+      4      0.039      5.51         8.45   
+  done · converged · 4 iters · reduced χ² 8.45 · Rwp 5.51 % · 0.04 s
 
   refined parameters (19 free):
   name            parameter                                               start        value      s.u.   change
@@ -156,15 +158,15 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 19 free
   intensity       experiment.background[7].intensity                        340        462.8       4.3   36.1% ↑
   intensity       experiment.background[8].intensity                        340        436.0       3.3   28.2% ↑
   intensity       experiment.background[9].intensity                        340        454.9       2.8   33.8% ↑
-  2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.2871       0.2868    0.0026   0.1% ↓
+  2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.2871       0.2869    0.0026   0.1% ↓
   scale           experiment.linked_structures[cosio].scale               1.185       1.1135    0.0059   6.0% ↓
   a, Å            structure.cell.length_a                               10.3086     10.30903   0.00029   
   b, Å            structure.cell.length_b                                6.0041      6.00368   0.00018   
   c, Å            structure.cell.length_c                                4.7865      4.78661   0.00014   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -198,12 +200,13 @@ _peak.broad_lorentz_y 0.01()
 edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 23 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         5.51         8.47
-      1      0.019      4.84         6.54   22.8% ↓
-      2      0.024      4.80         6.43   1.7% ↓
-      3      0.028      4.80         6.43   0.1% ↓
-      4      0.033      4.80         6.43   
-      5      0.043      4.80         6.43   
-  done · converged · 5 iters · reduced χ² 6.43 · Rwp 4.80 % · 0.05 s
+      1      0.020      4.84         6.54   22.8% ↓
+      2      0.025      4.80         6.43   1.7% ↓
+      3      0.030      4.80         6.43   0.1% ↓
+      4      0.035      4.80         6.43   
+      5      0.042      4.80         6.43   
+      6      0.053      4.80         6.43   
+  done · converged · 6 iters · reduced χ² 6.43 · Rwp 4.80 % · 0.06 s
 
   refined parameters (23 free):
   name            parameter                                               start        value      s.u.   change
@@ -221,20 +224,23 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 23 free
   intensity       experiment.background[7].intensity                      462.8        461.4       3.8   0.3% ↓
   intensity       experiment.background[8].intensity                        436        435.1       2.8   0.2% ↓
   intensity       experiment.background[9].intensity                      454.9        451.6       2.6   0.7% ↓
-  2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.2868       0.2882    0.0024   0.5% ↑
+  2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.2869       0.2882    0.0024   0.5% ↑
   scale           experiment.linked_structures[cosio].scale              1.1135       1.1604    0.0084   4.2% ↑
-  U, deg²         experiment.peak.broad_gauss_u                             0.2       0.2478    0.0081   23.9% ↑
-  V, deg²         experiment.peak.broad_gauss_v                            -0.5       -0.529     0.017   5.8% ↓
+  U, deg²         experiment.peak.broad_gauss_u                             0.2       0.2479    0.0081 ! 23.9% ↑
+  V, deg²         experiment.peak.broad_gauss_v                            -0.5       -0.529     0.018 ! 5.8% ↓
   W, deg²         experiment.peak.broad_gauss_w                             0.4        0.372     0.011   6.9% ↓
-  Y, deg          experiment.peak.broad_lorentz_y                          0.01       0.0263    0.0049   163.4% ↑
+  Y, deg          experiment.peak.broad_lorentz_y                          0.01       0.0263    0.0049   163.2% ↑
   a, Å            structure.cell.length_a                               10.3090     10.30863   0.00030   
   b, Å            structure.cell.length_b                                6.0037      6.00398   0.00019   
   c, Å            structure.cell.length_c                                4.7866      4.78673   0.00014   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiment.peak.broad_gauss_u: strongly correlated with V (d20) (r = -0.95)
+      experiment.peak.broad_gauss_v: strongly correlated with U (d20) (r = -0.95)
 ```
 
 ## Atom positions
@@ -267,11 +273,12 @@ The same for every other row (3 more).
 edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 34 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.80         6.48
-      1      0.033      4.15         4.84   25.2% ↓
-      2      0.046      4.14         4.82   0.5% ↓
-      3      0.054      4.14         4.82   
-      4      0.070      4.14         4.82   
-  done · converged · 4 iters · reduced χ² 4.82 · Rwp 4.14 % · 0.08 s
+      1      0.021      4.15         4.84   25.2% ↓
+      2      0.026      4.14         4.82   0.5% ↓
+      3      0.032      4.14         4.82   
+      4      0.037      4.14         4.82   
+      5      0.049      4.14         4.82   
+  done · converged · 5 iters · reduced χ² 4.82 · Rwp 4.14 % · 0.06 s
 
   refined parameters (34 free):
   name            parameter                                               start        value      s.u.   change
@@ -291,8 +298,8 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 34 free
   intensity       experiment.background[9].intensity                      451.6        452.3       2.3   0.2% ↑
   2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.2882       0.2857    0.0021   0.9% ↓
   scale           experiment.linked_structures[cosio].scale              1.1604       1.1534    0.0076   0.6% ↓
-  U, deg²         experiment.peak.broad_gauss_u                          0.2478       0.2383    0.0069   3.8% ↓
-  V, deg²         experiment.peak.broad_gauss_v                          -0.529       -0.514     0.015   2.9% ↑
+  U, deg²         experiment.peak.broad_gauss_u                          0.2479       0.2382    0.0069 ! 3.9% ↓
+  V, deg²         experiment.peak.broad_gauss_v                          -0.529       -0.514     0.015 ! 2.9% ↑
   W, deg²         experiment.peak.broad_gauss_w                           0.372       0.3721    0.0089   
   Y, deg          experiment.peak.broad_lorentz_y                        0.0263       0.0184    0.0043   29.9% ↓
   x               structure.atom_sites[Co2].fract_x                     0.28000      0.27799   0.00073   0.7% ↓
@@ -311,9 +318,12 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 34 free
   c, Å            structure.cell.length_c                                4.7867      4.78665   0.00012   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiment.peak.broad_gauss_u: strongly correlated with V (d20) (r = -0.95)
+      experiment.peak.broad_gauss_v: strongly correlated with U (d20) (r = -0.95)
 ```
 
 ## Displacements
@@ -345,10 +355,11 @@ The same for every other row (4 more).
 edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 40 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.14         4.84
-      1      0.030      3.99         4.50   7.1% ↓
-      2      0.041      3.99         4.49   0.1% ↓
-      3      0.069      3.99         4.49   
-  done · converged · 3 iters · reduced χ² 4.49 · Rwp 3.99 % · 0.09 s
+      1      0.020      3.99         4.50   7.1% ↓
+      2      0.026      3.99         4.49   0.1% ↓
+      3      0.033      3.99         4.49   
+      4      0.045      3.99         4.49   
+  done · converged · 4 iters · reduced χ² 4.49 · Rwp 3.99 % · 0.05 s
 
   refined parameters (40 free):
   name            parameter                                               start        value      s.u.   change
@@ -368,24 +379,24 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 40 free
   intensity       experiment.background[9].intensity                      452.3        451.2       2.3   0.2% ↓
   2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.2857       0.2858    0.0020   
   scale           experiment.linked_structures[cosio].scale              1.1534        1.190     0.011   3.2% ↑
-  U, deg²         experiment.peak.broad_gauss_u                          0.2383       0.2425    0.0068   1.8% ↑
+  U, deg²         experiment.peak.broad_gauss_u                          0.2382       0.2426    0.0068   1.8% ↑
   V, deg²         experiment.peak.broad_gauss_v                          -0.514       -0.528     0.015   2.7% ↓
-  W, deg²         experiment.peak.broad_gauss_w                          0.3721       0.3834    0.0090   3.0% ↑
-  Y, deg          experiment.peak.broad_lorentz_y                        0.0184       0.0154    0.0044   16.3% ↓
-  B iso, Å²       structure.atom_sites[Co1].adp_iso                       0.500        -0.31      0.14   162.9% ↓
-  B iso, Å²       structure.atom_sites[Co2].adp_iso                       0.500         0.75      0.14   49.1% ↑
-  x               structure.atom_sites[Co2].fract_x                     0.27799      0.28042   0.00076   0.9% ↑
+  W, deg²         experiment.peak.broad_gauss_w                          0.3721       0.3835    0.0090   3.1% ↑
+  Y, deg          experiment.peak.broad_lorentz_y                        0.0184       0.0154    0.0044   16.4% ↓
+  B iso, Å²       structure.atom_sites[Co1].adp_iso                       0.500        -0.32      0.14   163.1% ↓
+  B iso, Å²       structure.atom_sites[Co2].adp_iso                       0.500         0.75      0.14   49.2% ↑
+  x               structure.atom_sites[Co2].fract_x                     0.27799      0.28043   0.00076   0.9% ↑
   z               structure.atom_sites[Co2].fract_z                     0.98510       0.9842    0.0016   0.1% ↓
-  B iso, Å²       structure.atom_sites[O1].adp_iso                        0.500        0.598     0.059   19.5% ↑
-  x               structure.atom_sites[O1].fract_x                      0.09104      0.09131   0.00030   0.3% ↑
+  B iso, Å²       structure.atom_sites[O1].adp_iso                        0.500        0.597     0.059   19.5% ↑
+  x               structure.atom_sites[O1].fract_x                      0.09104      0.09132   0.00030   0.3% ↑
   z               structure.atom_sites[O1].fract_z                      0.77155      0.77144   0.00064   
   B iso, Å²       structure.atom_sites[O2].adp_iso                        0.500        0.558     0.058   11.5% ↑
   x               structure.atom_sites[O2].fract_x                      0.44818      0.44824   0.00026   
   z               structure.atom_sites[O2].fract_z                      0.21622      0.21634   0.00068   0.1% ↑
   B iso, Å²       structure.atom_sites[O3].adp_iso                        0.500        0.819     0.049   63.9% ↑
-  x               structure.atom_sites[O3].fract_x                      0.16346      0.16374   0.00023   0.2% ↑
+  x               structure.atom_sites[O3].fract_x                      0.16346      0.16375   0.00023   0.2% ↑
   y               structure.atom_sites[O3].fract_y                      0.03157      0.03188   0.00034   1.0% ↑
-  z               structure.atom_sites[O3].fract_z                      0.28071      0.28004   0.00049   0.2% ↓
+  z               structure.atom_sites[O3].fract_z                      0.28071      0.28003   0.00049   0.2% ↓
   B iso, Å²       structure.atom_sites[Si].adp_iso                        0.500        0.389     0.063   22.2% ↓
   x               structure.atom_sites[Si].fract_x                      0.09391      0.09389   0.00039   
   z               structure.atom_sites[Si].fract_z                      0.43089      0.42933   0.00084   0.4% ↓
@@ -394,8 +405,8 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 40 free
   c, Å            structure.cell.length_c                                4.7866      4.78665   0.00012   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -438,17 +449,18 @@ Co1 Co 0 0 0 a 4 1 0.50() Biso
 edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 39 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.05         4.64
-      1      0.023      4.02         4.57   1.6% ↓
-      2      0.031      4.02         4.57   
-      3      0.049      4.02         4.57   
-  done · converged · 3 iters · reduced χ² 4.57 · Rwp 4.02 % · 0.06 s
+      1      0.020      4.02         4.57   1.6% ↓
+      2      0.025      4.02         4.57   
+      3      0.030      4.02         4.57   
+      4      0.040      4.02         4.57   
+  done · converged · 4 iters · reduced χ² 4.57 · Rwp 4.02 % · 0.05 s
 
   refined parameters (39 free):
   name            parameter                                               start        value      s.u.   change
   intensity       experiment.background[10].intensity                     430.7        430.7       2.1   
   intensity       experiment.background[11].intensity                     414.5        414.5       2.2   
   intensity       experiment.background[12].intensity                     360.4        361.7       2.1   0.4% ↑
-  intensity       experiment.background[13].intensity                     291.1        291.2       2.0   0.1% ↑
+  intensity       experiment.background[13].intensity                     291.1        291.2       2.0   
   intensity       experiment.background[14].intensity                     240.9        239.1       3.0   0.7% ↓
   intensity       experiment.background[1].intensity                        609          609        15   0.1% ↑
   intensity       experiment.background[2].intensity                      581.2        581.2       9.8   
@@ -461,23 +473,23 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 39 free
   intensity       experiment.background[9].intensity                      451.2        451.3       2.3   
   2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.2858       0.2861    0.0020   0.1% ↑
   scale           experiment.linked_structures[cosio].scale                1.19        1.195     0.011   0.4% ↑
-  U, deg²         experiment.peak.broad_gauss_u                          0.2425       0.2425    0.0068   
+  U, deg²         experiment.peak.broad_gauss_u                          0.2426       0.2425    0.0068   
   V, deg²         experiment.peak.broad_gauss_v                          -0.528       -0.529     0.015   0.2% ↓
-  W, deg²         experiment.peak.broad_gauss_w                          0.3834       0.3842    0.0090   0.2% ↑
+  W, deg²         experiment.peak.broad_gauss_w                          0.3835       0.3842    0.0090   0.2% ↑
   Y, deg          experiment.peak.broad_lorentz_y                        0.0154       0.0156    0.0044   1.3% ↑
   B iso, Å²       structure.atom_sites[Co1].adp_iso                       0.500        0.277     0.081   44.7% ↓
-  x               structure.atom_sites[Co2].fract_x                     0.28042      0.27931   0.00070   0.4% ↓
+  x               structure.atom_sites[Co2].fract_x                     0.28043      0.27931   0.00070   0.4% ↓
   z               structure.atom_sites[Co2].fract_z                     0.98420       0.9848    0.0015   0.1% ↑
-  B iso, Å²       structure.atom_sites[O1].adp_iso                        0.598        0.648     0.059   8.3% ↑
-  x               structure.atom_sites[O1].fract_x                      0.09131      0.09107   0.00030   0.3% ↓
-  z               structure.atom_sites[O1].fract_z                      0.77144      0.77137   0.00065   
+  B iso, Å²       structure.atom_sites[O1].adp_iso                        0.597        0.648     0.059   8.5% ↑
+  x               structure.atom_sites[O1].fract_x                      0.09132      0.09107   0.00030   0.3% ↓
+  z               structure.atom_sites[O1].fract_z                      0.77144      0.77136   0.00065   
   B iso, Å²       structure.atom_sites[O2].adp_iso                        0.558        0.581     0.059   4.1% ↑
   x               structure.atom_sites[O2].fract_x                      0.44824      0.44824   0.00026   
   z               structure.atom_sites[O2].fract_z                      0.21634      0.21660   0.00069   0.1% ↑
   B iso, Å²       structure.atom_sites[O3].adp_iso                        0.819        0.836     0.049   2.1% ↑
-  x               structure.atom_sites[O3].fract_x                      0.16374      0.16355   0.00024   0.1% ↓
+  x               structure.atom_sites[O3].fract_x                      0.16375      0.16355   0.00024   0.1% ↓
   y               structure.atom_sites[O3].fract_y                      0.03188      0.03166   0.00033   0.7% ↓
-  z               structure.atom_sites[O3].fract_z                      0.28004      0.28003   0.00050   
+  z               structure.atom_sites[O3].fract_z                      0.28003      0.28003   0.00050   
   B iso, Å²       structure.atom_sites[Si].adp_iso                        0.389        0.347     0.063   10.8% ↓
   x               structure.atom_sites[Si].fract_x                      0.09389      0.09379   0.00039   0.1% ↓
   z               structure.atom_sites[Si].fract_z                      0.42933      0.42905   0.00084   0.1% ↓
@@ -486,8 +498,8 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 39 free
   c, Å            structure.cell.length_c                                4.7866      4.78667   0.00012   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -498,7 +510,7 @@ Last, the oxygen occupancies, which change the intensities as the displacements 
 In `structures/cosio.edi`, add `()` after the values the stage frees:
 
 ```edi
-O1 O 0.09107() 0.25 0.77137() c 4 1() 0.648() Biso
+O1 O 0.09107() 0.25 0.77136() c 4 1() 0.648() Biso
 O2 O 0.44824() 0.25 0.21660() c 4 1() 0.581() Biso
 ```
 
@@ -521,9 +533,10 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 42 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.02         4.58
       1      0.020      3.98         4.48   2.2% ↓
-      2      0.028      3.97         4.45   0.5% ↓
-      3      0.040      3.97         4.45   
-  done · converged · 3 iters · reduced χ² 4.45 · Rwp 3.97 % · 0.05 s
+      2      0.025      3.97         4.45   0.5% ↓
+      3      0.030      3.97         4.45   
+      4      0.041      3.97         4.45   
+  done · converged · 4 iters · reduced χ² 4.45 · Rwp 3.97 % · 0.05 s
 
   refined parameters (42 free):
   name            parameter                                               start        value      s.u.   change
@@ -539,7 +552,7 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 42 free
   intensity       experiment.background[5].intensity                      520.2        520.1       6.0   
   intensity       experiment.background[6].intensity                      507.7        507.8       3.5   
   intensity       experiment.background[7].intensity                      463.3        462.8       3.2   0.1% ↓
-  intensity       experiment.background[8].intensity                      434.4        431.0       2.5   0.8% ↓
+  intensity       experiment.background[8].intensity                      434.4        431.1       2.5   0.8% ↓
   intensity       experiment.background[9].intensity                      451.3        451.8       2.2   0.1% ↑
   2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.2861       0.2857    0.0020   0.1% ↓
   scale           experiment.linked_structures[cosio].scale               1.195        1.328     0.030   11.1% ↑
@@ -547,12 +560,12 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 42 free
   V, deg²         experiment.peak.broad_gauss_v                          -0.529       -0.528     0.015   0.2% ↑
   W, deg²         experiment.peak.broad_gauss_w                          0.3842       0.3859    0.0089   0.4% ↑
   Y, deg          experiment.peak.broad_lorentz_y                        0.0156       0.0143    0.0044   8.6% ↓
-  B iso, Å²       structure.atom_sites[Co1].adp_iso                       0.277         0.67      0.11   140.1% ↑
+  B iso, Å²       structure.atom_sites[Co1].adp_iso                       0.277         0.66      0.11   140.0% ↑
   x               structure.atom_sites[Co2].fract_x                     0.27931      0.27919   0.00072   
   z               structure.atom_sites[Co2].fract_z                     0.98480       0.9847    0.0015   
-  B iso, Å²       structure.atom_sites[O1].adp_iso                        0.648        0.460     0.079   28.9% ↓
+  B iso, Å²       structure.atom_sites[O1].adp_iso                        0.648        0.461     0.079   28.8% ↓
   x               structure.atom_sites[O1].fract_x                      0.09107      0.09106   0.00030   
-  z               structure.atom_sites[O1].fract_z                      0.77137      0.77149   0.00065   
+  z               structure.atom_sites[O1].fract_z                      0.77136      0.77149   0.00065   
   occ             structure.atom_sites[O1].occupancy                     1.0000        0.916     0.014   8.4% ↓
   B iso, Å²       structure.atom_sites[O2].adp_iso                        0.581        0.663     0.081   14.1% ↑
   x               structure.atom_sites[O2].fract_x                      0.44824      0.44815   0.00026   
@@ -561,9 +574,9 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 42 free
   B iso, Å²       structure.atom_sites[O3].adp_iso                        0.836        0.846     0.062   1.2% ↑
   x               structure.atom_sites[O3].fract_x                      0.16355      0.16357   0.00023   
   y               structure.atom_sites[O3].fract_y                      0.03166      0.03154   0.00033   0.4% ↓
-  z               structure.atom_sites[O3].fract_z                      0.28003      0.28012   0.00049   
+  z               structure.atom_sites[O3].fract_z                      0.28003      0.28011   0.00049   
   occ             structure.atom_sites[O3].occupancy                     1.0000        0.954     0.012   4.6% ↓
-  B iso, Å²       structure.atom_sites[Si].adp_iso                        0.347        0.667     0.089   92.2% ↑
+  B iso, Å²       structure.atom_sites[Si].adp_iso                        0.347        0.667     0.089   92.1% ↑
   x               structure.atom_sites[Si].fract_x                      0.09379      0.09395   0.00039   0.2% ↑
   z               structure.atom_sites[Si].fract_z                      0.42905      0.42943   0.00082   0.1% ↑
   a, Å            structure.cell.length_a                               10.3088     10.30873   0.00026   
@@ -571,8 +584,8 @@ edi fit: project pd-neut-cwl_cosio-d20, 1418 pts fitted / 1418 loaded, 42 free
   c, Å            structure.cell.length_c                                4.7867      4.78665   0.00012   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
