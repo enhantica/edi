@@ -1,0 +1,18 @@
+{
+  "upload_type": "software",
+  "title": "EasyDiffraction",
+  "description": "<p>EasyDiffraction is software for analysing powder and single-crystal diffraction data from neutron and X-ray instruments: calculating patterns from a structural model and fitting the model to the data, including magnetic structures. It comes as a desktop and web application, a Python package and a command line, all built on the same calculation engine.</p><p>Release notes: <a href=\"https://github.com/enhantica/edi/releases\">github.com/enhantica/edi/releases</a>. Documentation: <a href=\"https://easydiffraction.org\">easydiffraction.org</a>.</p>",
+  "creators": [
+    {
+      "name": "Sazonov, Andrew",
+      "affiliation": "European Spallation Source ERIC",
+      "orcid": "0000-0002-8916-6319"
+    }
+  ],
+  "license": "BSD-3-Clause",
+  "keywords": ["diffraction", "crystallography", "Rietveld", "neutron", "X-ray", "magnetic structures"],
+  "related_identifiers": [
+    {"identifier": "https://github.com/enhantica/edi", "relation": "isSupplementTo", "scheme": "url"},
+    {"identifier": "https://easydiffraction.org", "relation": "isDocumentedBy", "scheme": "url"}
+  ]
+}
