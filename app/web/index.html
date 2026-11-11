@@ -226,9 +226,14 @@
         await loadScript(`${folder}/qtloader.js`);
         await loadScript(`${folder}/edi_app.js`);
         const screen = document.getElementById("screen");
+        // A released web app's build.json names the release it was archived as; the app shows that version when the
+        // commit is its own (ApplicationInfo::version).
+        const release = folders.release && typeof folders.release.version === "string" ? folders.release : null;
+        const environment = release ? { EDI_RELEASE_VERSION: release.version, EDI_RELEASE_COMMIT: String(release.commit || "") } : {};
         await qtLoad({
           locateFile: (file) => `${folder}/${file}`,
           qt: {
+            environment,
             module: loadModule(`${folder}/edi_app.wasm`),
             onLoaded: () => {
               loaded = true;

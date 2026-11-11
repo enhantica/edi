@@ -216,10 +216,9 @@ jobs:
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
           owner: enhantica
           repositories: edi-sites
-      # The web app alone for app.easydiffraction.org, and the whole site for easydiffraction.org.
-      - name: Update the deploy-app and deploy-docs branches
+      # The whole site for easydiffraction.org, its web app a preview of main; app.easydiffraction.org takes only a
+      # release's own web app, from release-publish.yml.
+      - name: Update the deploy-docs branch
         env:
           SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
-        run: |
-          bash tools/ci/push_deploy_branch.sh site/webapp deploy-app
-          bash tools/ci/push_deploy_branch.sh site deploy-docs
+        run: bash tools/ci/push_deploy_branch.sh site deploy-docs

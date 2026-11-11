@@ -9,7 +9,7 @@ docs="${2:?the rendered docs folder (site)}"
 for file in index.html coi-serviceworker.js build.json; do
   [ -f "$app/$file" ] || { echo "docs-webapp: $app/$file is missing — not a web app folder" >&2; exit 1; }
 done
-for folder in $(python3 -c 'import json, sys; print(" ".join(json.load(open(sys.argv[1])).values()))' "$app/build.json"); do
+for folder in $(python3 -c 'import json, sys; print(" ".join(v for v in json.load(open(sys.argv[1])).values() if isinstance(v, str)))' "$app/build.json"); do
   [ -f "$app/$folder/edi_app.wasm" ] || { echo "docs-webapp: build.json names $folder, which $app lacks" >&2; exit 1; }
 done
 [ -f "$docs/index.html" ] || { echo "docs-webapp: $docs has no index.html — not a rendered docs folder" >&2; exit 1; }

@@ -46,8 +46,9 @@ The decisions it rests on, unchanged here:
 - **The version shown** (the owner, 2026-11-11): a release shows its calendar version (`2026.11.1`); any other
   build the last release it follows and its commit (`2026.11.1+d42e09f`, `.dirty` with uncommitted changes),
   or `dev+<commit>` before any release tag (`cmake/build_version.cmake`). A desktop installer is given its
-  version; the web app is built again at each stable release's tag (`pages.yml`), so app.easydiffraction.org
-  shows the release, and every later build of `main` shows the release plus its commit.
+  version. app.easydiffraction.org carries only released web apps: `release-publish.yml` pushes the release's own
+  archived web app, whose `build.json` names the release, and the page passes that to the app, which shows it
+  when the commit is the build's own. Builds of `main` stay on the docs site's preview copy with their commit.
 - **The wordmark's size** is the same in both: a mark of 5 base font units (`AppSizes.homeMarkDiameter`,
   easydiffractionbeta's Home size; idea 2). In About a click on the mark opens the homepage.
 - **About** has no tabs and stacks, each centred: the wordmark and version, the description, two links, and the
