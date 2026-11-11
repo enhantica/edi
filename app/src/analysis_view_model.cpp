@@ -2,6 +2,9 @@
 #include "analysis_view_model.hpp"
 
 #include <set>
+#include <charconv>
+#include <array>
+#include <map>
 #include "run_log.hpp"
 
 #include <QMetaObject>
@@ -198,7 +201,9 @@ void ConstraintListModel::append() {
         unused_name("constraint_", [&project](const std::string& id) { return holds_id(project.constraints, id); });
     // A starting expression for the user to edit, from the first two aliases whose dependent no constraint
     // sets yet: one already set would be refused, and Append would then add nothing. With none free it starts
-    // empty, as it does with fewer than two aliases.
+    // empty, as it does with fewer than two aliases. Appending applies it at once, so it must change no value:
+    // the dependent equal to the first alias when they already agree, else equal to its own value, which the
+    // user then edits.
     std::set<std::string> dependents;
     for (const auto& existing : project.constraints) {
         const std::string& text = existing->expression.value();
@@ -209,10 +214,19 @@ void ConstraintListModel::append() {
         left.erase(left.find_last_not_of(" \t") + 1);
         dependents.insert(left);
     }
+    std::map<std::string, double> values;
+    for (const edi::NamedParameter& named : edi::named_parameters(project)) values[named.unique_name] = named.parameter->value.get();
     for (std::size_t dependent = 1; dependent < project.aliases.size() && constraint.expression.value().empty(); ++dependent) {
         const std::string& name = project.aliases[dependent]->id.value();
-        if (!dependents.contains(name)) {
+        if (dependents.contains(name)) continue;
+        const auto own = values.find(project.aliases[dependent]->parameter_unique_name.value());
+        const auto first = values.find(project.aliases[0]->parameter_unique_name.value());
+        if (own == values.end() || first == values.end() || own->second == first->second) {
             constraint.expression = name + " = " + project.aliases[0]->id.value();
+        } else {
+            std::array<char, 32> text{};
+            const auto written = std::to_chars(text.data(), text.data() + text.size(), own->second);
+            constraint.expression = name + " = " + std::string(text.data(), written.ptr);
         }
     }
     (void)appendComplete(QString::fromStdString(constraint.id.value()),
