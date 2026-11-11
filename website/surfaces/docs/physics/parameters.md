@@ -2135,7 +2135,7 @@ TOF sample absorption coefficient ABSCOR1 (muR = ABSCOR1 * lambda; refinable).
 
 TOF sample absorption lambda-power ABSCOR2 (round-tripped, held fixed; freeing it is a hard error).
 
-<span role="img" aria-label="Planned" title="Planned">:status-planned:</span> Read and saved, but not yet used in the calculation (planned).
+Read and saved, but not used in the calculation.
 
 [Equation and conventions](corrections/absorption.md#eq-hewat) · [Names across interfaces](../user-guide/parameters.md#names-absorption)
 
