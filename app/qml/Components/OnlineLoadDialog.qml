@@ -53,7 +53,10 @@ AppDialog {
     readonly property real fieldColumnWidth: Math.ceil(widestPlaceholder.advanceWidth) + 2 * EaStyle.Sizes.fontPixelSize
     // A structure's table needs more: its ID and cell in full and a reference about half as wide again (the owner,
     // 2026-11-04).
-    contentWidth: (kind === "structure" ? 1.3 : 1) * (3 * fieldColumnWidth + 2 * EaStyle.Sizes.fontPixelSize)
+    // At least that; then as much of the window as the results need, up to 100 em, so the table shows its columns in
+    // full at the default window size (owner record 2026-11-11, item 11).
+    readonly property real fieldsWidth: (kind === "structure" ? 1.3 : 1) * (3 * fieldColumnWidth + 2 * EaStyle.Sizes.fontPixelSize)
+    contentWidth: Math.max(fieldsWidth, Math.min(EaStyle.Sizes.fontPixelSize * 100, (parent ? parent.width * 0.9 : 0) - leftPadding - rightPadding))
     width: Math.min(implicitWidth, parent ? Math.floor(parent.width * 0.95) : implicitWidth)
     contentHeight: column.implicitHeight
 
