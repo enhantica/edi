@@ -634,6 +634,9 @@ class ApplicationInfo : public QObject {
     /// NumberText presentation; project uncertainty formatting remains ProjectViewModel/core-owned.
     Q_INVOKABLE QJSValue numberPresentation(NumberOperation operation, const QJSValue& value, const QJSValue& second,
                                           const QJSValue& third, const QJSValue& fourth) const;
+    // numberPresentation's own work; numberPresentation then writes any exponent the display way.
+    QJSValue numberPresentationRaw(NumberOperation operation, const QJSValue& value, const QJSValue& second,
+                                          const QJSValue& third, const QJSValue& fourth) const;
     /// Report preview/export procedures retain ReportViewModel as data and publication authority.
     Q_INVOKABLE void saveReportPreview() const;
     Q_INVOKABLE QJSValue savedReportRow(const QJSValue& format) const;

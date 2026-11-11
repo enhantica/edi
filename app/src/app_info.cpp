@@ -7903,7 +7903,37 @@ QJSValue numberProcedureCallback(const PanelUsageFrame& f, uint operation,
 }
 } // namespace
 
+namespace {
+// A number written "8.40e-5" as a display shows it (owner records 2026-11-09 and 2026-11-11, item 6): a decimal when
+// 0.001 <= |x| < 1000 ("9.3e1" is 93), else the mantissa times a superscript power of ten ("8.40×10⁻⁵"). Anything
+// else is returned as it is.
+QString displayExponent(const QString& text) {
+    static const QRegularExpression written(QStringLiteral("^([-\u2212]?)(\\d+)(?:\\.(\\d+))?e([-+\u2212]?\\d+)$"));
+    const auto match = written.match(text);
+    if (!match.hasMatch()) return text;
+    QString power_text = match.captured(4);
+    power_text.replace(QChar(0x2212), u'-');
+    const int power = power_text.toInt();
+    const QString sign = match.captured(1), whole = match.captured(2), decimals = match.captured(3);
+    const double size = (whole + u'.' + (decimals.isEmpty() ? QStringLiteral("0") : decimals)).toDouble() * std::pow(10.0, power);
+    if (size >= 0.001 && size < 1000.0)
+        return sign + QString::number(size, 'f', std::max(0, static_cast<int>(decimals.size()) - power));
+    static const QString digits = QStringLiteral("\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079");
+    QString exponent = power < 0 ? QStringLiteral("\u207B") : QString();
+    for (const QChar digit : QString::number(std::abs(power))) exponent += digits.at(digit.digitValue());
+    return sign + whole + (decimals.isEmpty() ? QString() : u'.' + decimals) + QStringLiteral("\u00D710") + exponent;
+}
+}  // namespace
+
 QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJSValue& value, const QJSValue& second,
+    const QJSValue& third, const QJSValue& fourth) const {
+    const QJSValue out = numberPresentationRaw(operation, value, second, third, fourth);
+    const bool display = operation == NumberFull || operation == NumberParameter || operation == NumberRounded ||
+                         operation == NumberError || operation == NumberNarrowParameter;
+    return display && out.isString() ? QJSValue(displayExponent(out.toString())) : out;
+}
+
+QJSValue ApplicationInfo::numberPresentationRaw(NumberOperation operation, const QJSValue& value, const QJSValue& second,
     const QJSValue& third, const QJSValue& fourth) const {
     const auto f = panelUsageEngine(this);
     const auto read = [&](const QJSValue& object, const char* name) { return panelUsageRead(f, object, name); };
