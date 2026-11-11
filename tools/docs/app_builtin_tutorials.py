@@ -187,7 +187,7 @@ TRANSLATED = {
 }
 # The plan steps whose actions set up a stage: walked action by action (setup_steps).
 WALKED = re.compile(
-    r'nothing-free|relations-start|joint-weights|background-estimate-.+|stage-\d+-free|group-filter'
+    r'nothing-free|relations-start|joint-weights|reflection-cutoff|background-estimate-.+|stage-\d+-free|group-filter'
     r'|group-free-all'
     r'|structure-(created|cell|sites|adp)|experiment-(created|instrument|background|linked)'
 )
@@ -250,6 +250,7 @@ WORDS = {
     'spaceGroup.nameHM': 'the space group',
     'cell.length_a': 'the cell length a',
     'background_estimate.n_points': 'the number of points of **Background estimation**',
+    'refine_ls.thresholdSigma': 'the s.u. cutoff of **Fitted reflections**',
     'background_estimate.use_model': 'the model of **Background estimation**',
 }
 APPEND_WORDS = {
@@ -683,6 +684,7 @@ def with_reasons(case: str, steps: list[dict]) -> list[dict]:
             ('chi-tolerance:', 'chi-tolerance'),
             ('field:background_estimate.', 'background-estimate'),
             ('field:jointFit.weight.', 'joint-weights'),
+            ('field:refine_ls.thresholdSigma', 'reflection-cutoff'),
             ('token:background_estimate.', 'background-estimate'),
         ):
             if check.startswith(prefix):
@@ -746,7 +748,9 @@ def stage_expectation(case: str, number: int) -> dict:
         'expectFree': sorted(paths),
         'expectWholeBackground': whole,
         'expectChi2': float(done[-1]),
-        'expectChi2Tolerance': 0.01,
+        # Two decimals, or one part in a million for a fit that ends far from 1: the LATP scan ends
+        # at 1.4e8 in both, a few units apart.
+        'expectChi2Tolerance': max(0.01, 1e-6 * float(done[-1])),
     }
 
 

@@ -771,6 +771,24 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             'Extra',
             phase='setup',
         )
+    # A single-crystal fit's reflection cutoff: the reduced chi2 counts only the kept reflections.
+    cutoff = re.search(r'(?m)^_refine_ls\.threshold_sigma (\S+)$', declared)
+    if cutoff:
+        shot(
+            'reflection-cutoff',
+            'analysis',
+            'Fit the reflections the project fits',
+            [
+                'appBar.tab.analysis',
+                'sideBar.tab.extras',
+                'reveal:group.refine_ls',
+                'expand:group.refine_ls',
+                f'fill:refine_ls.thresholdSigma={cutoff[1]}',
+            ],
+            ['group.refine_ls'],
+            'Extra',
+            phase='setup',
+        )
     rule = re.search(r'(?m)^_minimizer\.stop_rules "?(\w+)"?$', declared)
     bound = re.search(r'(?m)^_minimizer\.max_iterations (\d+)$', declared)
     descent = re.search(r'(?m)^_minimizer\.descent (\w+)$', declared)
@@ -831,6 +849,11 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             exp_root[named[var]]
             for var in re.findall(r'^for \w+ in (\w+)\.background:$', edits, flags=re.MULTILINE)
         ]
+        # An estimate replaces the background's points: the new ones start fixed and the old ones
+        # are gone, so neither counts as already free.
+        for var in re.findall(r'^(\w+)\.background\.auto_estimate\(', edits, flags=re.MULTILINE):
+            points = re.escape(exp_root[named[var]]) + r'background\['
+            previous = {path for path in previous if not re.match(points, path)}
         filters, rest = grouped(paths - previous, loops)
         fix_filters, fix_rest = grouped(previous - paths, list(exp_root.values()))
         # One experiment: its background is the whole Background category. A loop over every

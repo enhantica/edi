@@ -1,7 +1,7 @@
 # Why each step on an Extra tab is taken, one short sentence per action, by case (the owner, 2026-11-11). The
 # generator (app_builtin_tutorials.py) adds the sentence to the step and refuses an Extra-tab step without one.
 # Keys: constraint:<id> (also given to the aliases the constraint uses), descent, stop-rule, chi-tolerance,
-# background-estimate, fitting-mode:<mode>.
+# background-estimate, fitting-mode:<mode>, joint-weights, reflection-cutoff.
 pd-neut-cwl_lbco-hrpt:
   constraint:biso_Ba: La and Ba share one site and scatter neutrons similarly, so the pattern cannot tell their displacements apart.
 pd-neut-cwl_cosio-d20:
@@ -32,6 +32,7 @@ pd-xray-cwl_lam7o3-p021:
   descent: With the default descent the fit stops in a shallower minimum, with O1 x stuck near 0.5.
   background-estimate: With the peaks fitted, an estimate with the calculated peaks subtracted follows the low-angle background better.
 sc-neut-tof_taurine-senju:
+  reflection-cutoff: The project fits only the reflections stronger than three times their s.u., as FullProf does for this case.
   constraints: Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.
 pd-neut-cwl_yalo3-al2o3-spodi:
   stop-rule: Under Shift/s.u. this fit ends on a knife edge that depends on the machine; the χ² change stops it the same everywhere.

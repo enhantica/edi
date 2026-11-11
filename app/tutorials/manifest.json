@@ -625,6 +625,7 @@
             "experiment.linked_structures[lbco].scale",
             "structure.cell.length_a"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 3.87,
           "expectChi2Tolerance": 0.01
         },
@@ -674,6 +675,9 @@
             "experiment.instrument.calib_twotheta_offset",
             "experiment.linked_structures[lbco].scale",
             "structure.cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 2.95,
           "expectChi2Tolerance": 0.01
@@ -744,6 +748,9 @@
             "experiment.peak.broad_gauss_w",
             "experiment.peak.broad_lorentz_y",
             "structure.cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 2.86,
           "expectChi2Tolerance": 0.01
@@ -818,6 +825,9 @@
             "structure.atom_sites[La].adp_iso",
             "structure.atom_sites[O].adp_iso",
             "structure.cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 1.3,
           "expectChi2Tolerance": 0.01
@@ -948,6 +958,9 @@
             "structure.atom_sites[La].adp_iso",
             "structure.atom_sites[O].adp_iso",
             "structure.cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 1.3,
           "expectChi2Tolerance": 0.01
@@ -1684,6 +1697,7 @@
             "structure.cell.length_a",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 44.68,
           "expectChi2Tolerance": 0.01
         },
@@ -1739,6 +1753,9 @@
             "experiment.linked_structures[hs].scale",
             "structure.cell.length_a",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 36.02,
           "expectChi2Tolerance": 0.01
@@ -1816,6 +1833,9 @@
             "structure.cell.length_a",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 13.77,
           "expectChi2Tolerance": 0.01
         },
@@ -1880,6 +1900,9 @@
             "structure.atom_sites[O].fract_z",
             "structure.cell.length_a",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 5.15,
           "expectChi2Tolerance": 0.01
@@ -1950,6 +1973,9 @@
             "structure.atom_sites[Zn].adp_iso",
             "structure.cell.length_a",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 2.27,
           "expectChi2Tolerance": 0.01
@@ -2024,6 +2050,9 @@
             "structure.atom_sites[Zn].adp_iso",
             "structure.cell.length_a",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 2.15,
           "expectChi2Tolerance": 0.01
@@ -2234,6 +2263,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 111.22,
           "expectChi2Tolerance": 0.01
         },
@@ -2294,6 +2324,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 8.45,
           "expectChi2Tolerance": 0.01
@@ -2376,6 +2409,9 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 6.43,
           "expectChi2Tolerance": 0.01
         },
@@ -2452,6 +2488,9 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 4.82,
           "expectChi2Tolerance": 0.01
         },
@@ -2472,18 +2511,50 @@
         },
         {
           "title": "Displacements",
-          "text": "Click the **Free** column header of the **Parameters** table.",
+          "text": "Tick **Free** for **Co1 iso/eq**.",
           "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
+          "target": "parameters.free@structure.atom_sites.Co1.adp_iso",
+          "check": "tick:structure.atom_sites.Co1.adp_iso",
           "tab": "basic"
         },
         {
           "title": "Displacements",
-          "text": "Choose **Free · all**.",
+          "text": "Tick **Free** for **Co2 iso/eq**.",
           "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Atomic displacement",
+          "target": "parameters.free@structure.atom_sites.Co2.adp_iso",
+          "check": "tick:structure.atom_sites.Co2.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Displacements",
+          "text": "Tick **Free** for **O1 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.O1.adp_iso",
+          "check": "tick:structure.atom_sites.O1.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Displacements",
+          "text": "Tick **Free** for **O2 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.O2.adp_iso",
+          "check": "tick:structure.atom_sites.O2.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Displacements",
+          "text": "Tick **Free** for **O3 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.O3.adp_iso",
+          "check": "tick:structure.atom_sites.O3.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Displacements",
+          "text": "Tick **Free** for **Si iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.Si.adp_iso",
+          "check": "tick:structure.atom_sites.Si.adp_iso",
           "tab": "basic"
         },
         {
@@ -2533,6 +2604,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 4.49,
           "expectChi2Tolerance": 0.01
@@ -2712,6 +2786,9 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 4.57,
           "expectChi2Tolerance": 0.01
         },
@@ -2803,6 +2880,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 4.45,
           "expectChi2Tolerance": 0.01
@@ -3212,6 +3292,7 @@
             "structure.cell.length_c",
             "structure.magnetic_form_factor[Co].j2_coefficient"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 9.88,
           "expectChi2Tolerance": 0.01
         },
@@ -3279,6 +3360,9 @@
             "structure.cell.length_b",
             "structure.cell.length_c",
             "structure.magnetic_form_factor[Co].j2_coefficient"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 8.93,
           "expectChi2Tolerance": 0.01
@@ -3388,6 +3472,9 @@
             "structure.cell.length_c",
             "structure.magnetic_form_factor[Co].j2_coefficient"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 8.86,
           "expectChi2Tolerance": 0.01
         },
@@ -3492,6 +3579,9 @@
             "structure.cell.length_c",
             "structure.magnetic_form_factor[Co].j2_coefficient"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 8.86,
           "expectChi2Tolerance": 0.01
         },
@@ -3572,6 +3662,9 @@
             "structure.cell.length_b",
             "structure.cell.length_c",
             "structure.magnetic_form_factor[Co].j2_coefficient"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 6.25,
           "expectChi2Tolerance": 0.01
@@ -4123,6 +4216,7 @@
             "structure.cell.length_a",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 6.16,
           "expectChi2Tolerance": 0.01
         },
@@ -4171,6 +4265,7 @@
             "structure.cell.length_a",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 6.14,
           "expectChi2Tolerance": 0.01
         },
@@ -4227,6 +4322,9 @@
             "experiment.linked_structures[lmo].scale",
             "structure.cell.length_a",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 3.98,
           "expectChi2Tolerance": 0.01
@@ -4305,6 +4403,9 @@
             "structure.cell.length_a",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 3.9,
           "expectChi2Tolerance": 0.01
         },
@@ -4358,6 +4459,9 @@
             "structure.atom_sites[O].fract_z",
             "structure.cell.length_a",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 3.67,
           "expectChi2Tolerance": 0.01
@@ -4424,6 +4528,9 @@
             "structure.cell.length_a",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 2.7,
           "expectChi2Tolerance": 0.01
         },
@@ -4481,6 +4588,9 @@
             "structure.atom_sites[O].fract_z",
             "structure.cell.length_a",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 2.39,
           "expectChi2Tolerance": 0.01
@@ -4689,6 +4799,7 @@
             "experiment.linked_structures[y2o3].scale",
             "structure.cell.length_a"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 4.61,
           "expectChi2Tolerance": 0.01
         },
@@ -4754,6 +4865,9 @@
             "experiment.instrument.calib_twotheta_offset",
             "experiment.linked_structures[y2o3].scale",
             "structure.cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 3.7,
           "expectChi2Tolerance": 0.01
@@ -4832,6 +4946,9 @@
             "experiment.peak.broad_gauss_w",
             "structure.cell.length_a"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 2.1,
           "expectChi2Tolerance": 0.01
         },
@@ -4904,6 +5021,9 @@
             "structure.atom_sites[O1].fract_z",
             "structure.atom_sites[Y1].fract_x",
             "structure.cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 1.39,
           "expectChi2Tolerance": 0.01
@@ -4989,6 +5109,9 @@
             "structure.atom_sites[O1].fract_z",
             "structure.atom_sites[Y1].fract_x",
             "structure.cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 1.24,
           "expectChi2Tolerance": 0.01
@@ -5326,6 +5449,7 @@
             "structures[YAlO3].cell.length_b",
             "structures[YAlO3].cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 104.42,
           "expectChi2Tolerance": 0.01
         },
@@ -5400,6 +5524,9 @@
             "structures[YAlO3].cell.length_a",
             "structures[YAlO3].cell.length_b",
             "structures[YAlO3].cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 84.06,
           "expectChi2Tolerance": 0.01
@@ -5528,6 +5655,9 @@
             "structures[YAlO3].cell.length_b",
             "structures[YAlO3].cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 77.32,
           "expectChi2Tolerance": 0.01
         },
@@ -5626,6 +5756,9 @@
             "structures[YAlO3].cell.length_a",
             "structures[YAlO3].cell.length_b",
             "structures[YAlO3].cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 74.99,
           "expectChi2Tolerance": 0.01
@@ -5775,6 +5908,9 @@
             "structures[YAlO3].cell.length_b",
             "structures[YAlO3].cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 24.69,
           "expectChi2Tolerance": 0.01
         },
@@ -5872,6 +6008,9 @@
             "structures[YAlO3].cell.length_a",
             "structures[YAlO3].cell.length_b",
             "structures[YAlO3].cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 9.73,
           "expectChi2Tolerance": 0.01
@@ -6094,6 +6233,7 @@
             "experiment.linked_structures[si].scale",
             "structure.cell.length_a"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 8.16,
           "expectChi2Tolerance": 0.01
         },
@@ -6152,6 +6292,9 @@
             "experiment.instrument.calib_d_to_tof_offset",
             "experiment.linked_structures[si].scale",
             "structure.cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 4.16,
           "expectChi2Tolerance": 0.01
@@ -6214,6 +6357,9 @@
             "experiment.peak.broad_gauss_sigma_1",
             "structure.cell.length_a"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 4.13,
           "expectChi2Tolerance": 0.01
         },
@@ -6267,6 +6413,9 @@
             "experiment.peak.broad_gauss_sigma_1",
             "experiment.peak.broad_lorentz_gamma_1",
             "structure.cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 3.97,
           "expectChi2Tolerance": 0.01
@@ -6322,6 +6471,9 @@
             "experiment.peak.broad_lorentz_gamma_1",
             "structure.atom_sites[Si].adp_iso",
             "structure.cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 3.97,
           "expectChi2Tolerance": 0.01
@@ -6387,6 +6539,9 @@
             "experiment.peak.decay_beta_1",
             "structure.atom_sites[Si].adp_iso",
             "structure.cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 3.86,
           "expectChi2Tolerance": 0.01
@@ -6606,6 +6761,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 11.13,
           "expectChi2Tolerance": 0.01
         },
@@ -6746,6 +6902,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 3.51,
           "expectChi2Tolerance": 0.01
         },
@@ -6808,6 +6965,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 3.51,
           "expectChi2Tolerance": 0.01
         },
@@ -6875,6 +7033,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 3.0,
           "expectChi2Tolerance": 0.01
         },
@@ -6947,6 +7106,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 2.89,
           "expectChi2Tolerance": 0.01
         },
@@ -7012,6 +7172,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 2.86,
           "expectChi2Tolerance": 0.01
         },
@@ -7078,6 +7239,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 2.85,
           "expectChi2Tolerance": 0.01
         },
@@ -7270,6 +7432,7 @@
             "experiment.instrument.calib_d_to_tof_quadratic",
             "experiment.linked_structures[ceo2].scale"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 23.34,
           "expectChi2Tolerance": 0.01
         },
@@ -7322,6 +7485,7 @@
             "experiment.instrument.calib_d_to_tof_quadratic",
             "experiment.linked_structures[ceo2].scale"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 6.24,
           "expectChi2Tolerance": 0.01
         },
@@ -7376,6 +7540,7 @@
             "experiment.peak.broad_gauss_sigma_1",
             "experiment.peak.broad_gauss_sigma_2"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 5.43,
           "expectChi2Tolerance": 0.01
         },
@@ -7423,6 +7588,7 @@
             "experiment.peak.broad_gauss_sigma_2",
             "experiment.peak.broad_lorentz_gamma_1"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 5.3,
           "expectChi2Tolerance": 0.01
         },
@@ -7489,6 +7655,7 @@
             "experiment.peak.decay_beta_1",
             "experiment.peak.rise_alpha_1"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 4.44,
           "expectChi2Tolerance": 0.01
         },
@@ -7549,6 +7716,7 @@
             "structure.atom_sites[Ce].adp_iso",
             "structure.atom_sites[O].adp_iso"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 3.88,
           "expectChi2Tolerance": 0.01
         },
@@ -7602,6 +7770,7 @@
             "structure.atom_sites[Ce].adp_iso",
             "structure.atom_sites[O].adp_iso"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 3.88,
           "expectChi2Tolerance": 0.01
         },
@@ -7877,6 +8046,7 @@
             "structures[lbco].cell.length_a",
             "structures[si].cell.length_a"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 84.52,
           "expectChi2Tolerance": 0.01
         },
@@ -7935,6 +8105,9 @@
             "experiment.linked_structures[si].scale",
             "structures[lbco].cell.length_a",
             "structures[si].cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 71.82,
           "expectChi2Tolerance": 0.01
@@ -8021,6 +8194,9 @@
             "experiment.peak.broad_gauss_sigma_2",
             "structures[lbco].cell.length_a",
             "structures[si].cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 70.73,
           "expectChi2Tolerance": 0.01
@@ -8111,6 +8287,9 @@
             "structures[lbco].cell.length_a",
             "structures[si].cell.length_a"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 70.91,
           "expectChi2Tolerance": 0.01
         },
@@ -8193,6 +8372,9 @@
             "structures[lbco].atom_sites[O].adp_iso",
             "structures[lbco].cell.length_a",
             "structures[si].cell.length_a"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 4.16,
           "expectChi2Tolerance": 0.01
@@ -8829,6 +9011,7 @@
             "experiments[wish_5_6].instrument.calib_d_to_tof_offset",
             "experiments[wish_5_6].linked_structures[ncaf].scale"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 62.95,
           "expectChi2Tolerance": 0.01
         },
@@ -9196,6 +9379,13 @@
             "experiments[wish_5_6].instrument.calib_d_to_tof_offset",
             "experiments[wish_5_6].linked_structures[ncaf].scale"
           ],
+          "expectWholeBackground": [
+            "experiments[wish_1_10].background[",
+            "experiments[wish_2_9].background[",
+            "experiments[wish_3_8].background[",
+            "experiments[wish_4_7].background[",
+            "experiments[wish_5_6].background["
+          ],
           "expectChi2": 31.21,
           "expectChi2Tolerance": 0.01
         },
@@ -9539,6 +9729,13 @@
             "experiments[wish_5_6].peak.rise_alpha_0",
             "experiments[wish_5_6].peak.rise_alpha_1"
           ],
+          "expectWholeBackground": [
+            "experiments[wish_1_10].background[",
+            "experiments[wish_2_9].background[",
+            "experiments[wish_3_8].background[",
+            "experiments[wish_4_7].background[",
+            "experiments[wish_5_6].background["
+          ],
           "expectChi2": 16.77,
           "expectChi2Tolerance": 0.01
         },
@@ -9881,6 +10078,13 @@
             "experiments[wish_5_6].peak.rise_alpha_0",
             "experiments[wish_5_6].peak.rise_alpha_1"
           ],
+          "expectWholeBackground": [
+            "experiments[wish_1_10].background[",
+            "experiments[wish_2_9].background[",
+            "experiments[wish_3_8].background[",
+            "experiments[wish_4_7].background[",
+            "experiments[wish_5_6].background["
+          ],
           "expectChi2": 15.93,
           "expectChi2Tolerance": 0.01
         },
@@ -10103,6 +10307,13 @@
             "experiments[wish_5_6].peak.decay_beta_1",
             "experiments[wish_5_6].peak.rise_alpha_0",
             "experiments[wish_5_6].peak.rise_alpha_1"
+          ],
+          "expectWholeBackground": [
+            "experiments[wish_1_10].background[",
+            "experiments[wish_2_9].background[",
+            "experiments[wish_3_8].background[",
+            "experiments[wish_4_7].background[",
+            "experiments[wish_5_6].background["
           ],
           "expectChi2": 15.93,
           "expectChi2Tolerance": 0.01
@@ -10427,6 +10638,13 @@
             "experiments[wish_5_6].peak.rise_alpha_0",
             "experiments[wish_5_6].peak.rise_alpha_1"
           ],
+          "expectWholeBackground": [
+            "experiments[wish_1_10].background[",
+            "experiments[wish_2_9].background[",
+            "experiments[wish_3_8].background[",
+            "experiments[wish_4_7].background[",
+            "experiments[wish_5_6].background["
+          ],
           "expectChi2": 15.74,
           "expectChi2Tolerance": 0.01
         },
@@ -10655,6 +10873,13 @@
             "structure.atom_sites[F2].fract_z",
             "structure.atom_sites[F3].fract_x",
             "structure.atom_sites[Na1].fract_x"
+          ],
+          "expectWholeBackground": [
+            "experiments[wish_1_10].background[",
+            "experiments[wish_2_9].background[",
+            "experiments[wish_3_8].background[",
+            "experiments[wish_4_7].background[",
+            "experiments[wish_5_6].background["
           ],
           "expectChi2": 10.43,
           "expectChi2Tolerance": 0.01
@@ -10890,6 +11115,13 @@
             "structure.atom_sites[F3].fract_x",
             "structure.atom_sites[Na1].adp_iso",
             "structure.atom_sites[Na1].fract_x"
+          ],
+          "expectWholeBackground": [
+            "experiments[wish_1_10].background[",
+            "experiments[wish_2_9].background[",
+            "experiments[wish_3_8].background[",
+            "experiments[wish_4_7].background[",
+            "experiments[wish_5_6].background["
           ],
           "expectChi2": 9.5,
           "expectChi2Tolerance": 0.01
@@ -11322,6 +11554,24 @@
           "why": "Both banks see the same sample, so austenite has one phase fraction."
         },
         {
+          "title": "Weigh the experiments as the project does",
+          "text": "Enter **0.5** as `weight.0`. The project weighs the two banks equally at a half each, so the joint χ² is their average.",
+          "page": "analysis",
+          "target": "jointFit.weight.0",
+          "check": "field:jointFit.weight.0=0.5",
+          "tab": "extras",
+          "why": "The project weighs the two banks equally at a half each, so the joint χ² is their average."
+        },
+        {
+          "title": "Weigh the experiments as the project does",
+          "text": "Enter **0.5** as `weight.1`. The project weighs the two banks equally at a half each, so the joint χ² is their average.",
+          "page": "analysis",
+          "target": "jointFit.weight.1",
+          "check": "field:jointFit.weight.1=0.5",
+          "tab": "extras",
+          "why": "The project weighs the two banks equally at a half each, so the joint χ² is their average."
+        },
+        {
           "title": "Scales and time-of-flight calibration",
           "text": "Choose **expt_n2** as the datablock filter above the **Parameters** table.",
           "page": "analysis",
@@ -11437,6 +11687,7 @@
             "experiments[expt_s2].linked_structures[austenite].scale",
             "experiments[expt_s2].linked_structures[ferrite].scale"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 76.04,
           "expectChi2Tolerance": 0.01
         },
@@ -11598,6 +11849,10 @@
             "experiments[expt_s2].instrument.calib_d_to_tof_offset",
             "experiments[expt_s2].linked_structures[austenite].scale",
             "experiments[expt_s2].linked_structures[ferrite].scale"
+          ],
+          "expectWholeBackground": [
+            "experiments[expt_n2].background[",
+            "experiments[expt_s2].background["
           ],
           "expectChi2": 44.1,
           "expectChi2Tolerance": 0.01
@@ -11801,6 +12056,10 @@
             "experiments[expt_s2].peak.broad_gauss_sigma_2",
             "experiments[expt_s2].peak.broad_lorentz_gamma_0"
           ],
+          "expectWholeBackground": [
+            "experiments[expt_n2].background[",
+            "experiments[expt_s2].background["
+          ],
           "expectChi2": 36.36,
           "expectChi2Tolerance": 0.01
         },
@@ -11923,6 +12182,10 @@
             "experiments[expt_s2].peak.broad_gauss_sigma_2",
             "experiments[expt_s2].peak.broad_lorentz_gamma_0",
             "structures[ferrite].atom_sites[Fe].adp_iso"
+          ],
+          "expectWholeBackground": [
+            "experiments[expt_n2].background[",
+            "experiments[expt_s2].background["
           ],
           "expectChi2": 6.89,
           "expectChi2Tolerance": 0.01
@@ -12097,6 +12360,7 @@
             "experiment.instrument.calib_twotheta_offset",
             "experiment.linked_structures[pbso4].scale"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 72.22,
           "expectChi2Tolerance": 0.01
         },
@@ -12144,6 +12408,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 37.95,
           "expectChi2Tolerance": 0.01
         },
@@ -12197,6 +12462,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 35.68,
           "expectChi2Tolerance": 0.01
         },
@@ -12270,6 +12536,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 7.62,
           "expectChi2Tolerance": 0.01
         },
@@ -12329,6 +12596,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 6.84,
           "expectChi2Tolerance": 0.01
         },
@@ -12349,18 +12617,34 @@
         },
         {
           "title": "Lead and sulphur positions",
-          "text": "Click the **Free** column header of the **Parameters** table.",
+          "text": "Tick **Free** for **Pb x**.",
           "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
+          "target": "parameters.free@structure.atom_sites.Pb.fract_x",
+          "check": "tick:structure.atom_sites.Pb.fract_x",
           "tab": "basic"
         },
         {
           "title": "Lead and sulphur positions",
-          "text": "Choose **Free · all**.",
+          "text": "Tick **Free** for **Pb z**.",
           "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Atomic coordinates",
+          "target": "parameters.free@structure.atom_sites.Pb.fract_z",
+          "check": "tick:structure.atom_sites.Pb.fract_z",
+          "tab": "basic"
+        },
+        {
+          "title": "Lead and sulphur positions",
+          "text": "Tick **Free** for **S x**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.S.fract_x",
+          "check": "tick:structure.atom_sites.S.fract_x",
+          "tab": "basic"
+        },
+        {
+          "title": "Lead and sulphur positions",
+          "text": "Tick **Free** for **S z**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.S.fract_z",
+          "check": "tick:structure.atom_sites.S.fract_z",
           "tab": "basic"
         },
         {
@@ -12392,6 +12676,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 5.99,
           "expectChi2Tolerance": 0.01
         },
@@ -12462,6 +12747,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 5.9,
           "expectChi2Tolerance": 0.01
         },
@@ -12537,6 +12823,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 2.98,
           "expectChi2Tolerance": 0.01
         },
@@ -13178,6 +13465,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 76.24,
           "expectChi2Tolerance": 0.01
         },
@@ -13244,6 +13532,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 7.57,
           "expectChi2Tolerance": 0.01
@@ -13332,6 +13623,9 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 0.53,
           "expectChi2Tolerance": 0.01
         },
@@ -13366,6 +13660,30 @@
           "page": "experiment",
           "target": "background.estimate",
           "check": "background-estimated:",
+          "tab": "basic"
+        },
+        {
+          "title": "Background from the fitted model",
+          "text": "Choose **Background** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Background",
+          "tab": "basic"
+        },
+        {
+          "title": "Background from the fitted model",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Background from the fitted model",
+          "text": "Choose **Free · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Background",
           "tab": "basic"
         },
         {
@@ -13404,6 +13722,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 0.53,
           "expectChi2Tolerance": 0.01
@@ -13482,6 +13803,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 0.22,
           "expectChi2Tolerance": 0.01
@@ -13563,6 +13887,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 0.19,
           "expectChi2Tolerance": 0.01
@@ -13723,6 +14050,24 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:pd-neut-xray-cwl_pbso4-d1a-lab-lab=lab"
+        },
+        {
+          "title": "Weigh the experiments as the project does",
+          "text": "Enter **0.5** as `weight.0`. The project weighs the two patterns equally at a half each, so the joint χ² is their average.",
+          "page": "analysis",
+          "target": "jointFit.weight.0",
+          "check": "field:jointFit.weight.0=0.5",
+          "tab": "extras",
+          "why": "The project weighs the two patterns equally at a half each, so the joint χ² is their average."
+        },
+        {
+          "title": "Weigh the experiments as the project does",
+          "text": "Enter **0.5** as `weight.1`. The project weighs the two patterns equally at a half each, so the joint χ² is their average.",
+          "page": "analysis",
+          "target": "jointFit.weight.1",
+          "check": "field:jointFit.weight.1=0.5",
+          "tab": "extras",
+          "why": "The project weighs the two patterns equally at a half each, so the joint χ² is their average."
         },
         {
           "title": "Scales, 2θ zeros and cell",
@@ -13907,6 +14252,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 23.21,
           "expectChi2Tolerance": 0.01
         },
@@ -14025,6 +14371,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiments[d1a].background["
           ],
           "expectChi2": 21.17,
           "expectChi2Tolerance": 0.01
@@ -14217,6 +14566,9 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiments[d1a].background["
+          ],
           "expectChi2": 7.53,
           "expectChi2Tolerance": 0.01
         },
@@ -14307,6 +14659,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiments[d1a].background["
           ],
           "expectChi2": 5.39,
           "expectChi2Tolerance": 0.01
@@ -14401,6 +14756,9 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiments[d1a].background["
+          ],
           "expectChi2": 5.19,
           "expectChi2Tolerance": 0.01
         },
@@ -14488,6 +14846,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiments[d1a].background["
           ],
           "expectChi2": 4.17,
           "expectChi2Tolerance": 0.01
@@ -14582,6 +14943,9 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiments[d1a].background["
+          ],
           "expectChi2": 1.96,
           "expectChi2Tolerance": 0.01
         },
@@ -14670,6 +15034,22 @@
           "why": "With the default descent the scan can stop in a shallower minimum of the peak widths."
         },
         {
+          "title": "Start with nothing free",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Start with nothing free",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Scale, 2θ zero and cell",
           "text": "Choose **Instrument** as the category filter above the **Parameters** table.",
           "page": "analysis",
@@ -14738,6 +15118,7 @@
             "structure.cell.length_b",
             "structure.cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 55.83,
           "expectChi2Tolerance": 0.01
         },
@@ -14800,6 +15181,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 50.59,
           "expectChi2Tolerance": 0.01
@@ -14874,6 +15258,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 49.35,
           "expectChi2Tolerance": 0.01
@@ -14951,6 +15338,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 49.27,
           "expectChi2Tolerance": 0.01
@@ -15033,6 +15423,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 47.83,
           "expectChi2Tolerance": 0.01
@@ -15119,6 +15512,9 @@
             "structure.cell.length_a",
             "structure.cell.length_b",
             "structure.cell.length_c"
+          ],
+          "expectWholeBackground": [
+            "experiment.background["
           ],
           "expectChi2": 6.24,
           "expectChi2Tolerance": 0.01
@@ -15219,6 +15615,22 @@
           "check": "fitting-mode:single",
           "tab": "extras",
           "why": "The template pattern is fitted alone first, so the scan starts from a good model."
+        },
+        {
+          "title": "Start with nothing free",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Start with nothing free",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
         },
         {
           "title": "Scales, 2θ zero and cells",
@@ -15431,8 +15843,9 @@
             "structures[latp].cell.length_a",
             "structures[latp].cell.length_c"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 140107929.77,
-          "expectChi2Tolerance": 0.01
+          "expectChi2Tolerance": 140.10792977
         },
         {
           "title": "Fit results",
@@ -15514,8 +15927,11 @@
             "structures[latp].cell.length_a",
             "structures[latp].cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 141465283.67,
-          "expectChi2Tolerance": 0.01
+          "expectChi2Tolerance": 141.46528367
         },
         {
           "title": "Fit results",
@@ -15649,8 +16065,11 @@
             "structures[latp].cell.length_a",
             "structures[latp].cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 141612395.32,
-          "expectChi2Tolerance": 0.01
+          "expectChi2Tolerance": 141.61239532
         },
         {
           "title": "Fit results",
@@ -15754,8 +16173,11 @@
             "structures[latp].cell.length_a",
             "structures[latp].cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 141696205.35,
-          "expectChi2Tolerance": 0.01
+          "expectChi2Tolerance": 141.69620534999999
         },
         {
           "title": "Fit results",
@@ -15915,8 +16337,11 @@
             "structures[latp].cell.length_a",
             "structures[latp].cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 142050818.62,
-          "expectChi2Tolerance": 0.01
+          "expectChi2Tolerance": 142.05081862
         },
         {
           "title": "Fit results",
@@ -16048,8 +16473,11 @@
             "structures[latp].cell.length_a",
             "structures[latp].cell.length_c"
           ],
+          "expectWholeBackground": [
+            "experiment.background["
+          ],
           "expectChi2": 142228666.81,
-          "expectChi2Tolerance": 0.01
+          "expectChi2Tolerance": 142.22866681
         },
         {
           "title": "Fit results",
@@ -16285,6 +16713,7 @@
           "expectFree": [
             "experiment.linked_structures[tb2ti2o7].scale"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 58.9,
           "expectChi2Tolerance": 0.01
         },
@@ -16321,6 +16750,7 @@
             "experiment.linked_structures[tb2ti2o7].scale",
             "structure.atom_sites[O1].fract_x"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 33.42,
           "expectChi2Tolerance": 0.01
         },
@@ -16373,6 +16803,7 @@
             "structure.atom_site_aniso[Ti].adp_12",
             "structure.atom_sites[O1].fract_x"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 5.93,
           "expectChi2Tolerance": 0.01
         },
@@ -16427,6 +16858,7 @@
             "structure.atom_site_aniso[Ti].adp_12",
             "structure.atom_sites[O1].fract_x"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 1.33,
           "expectChi2Tolerance": 0.01
         },
@@ -16583,6 +17015,7 @@
           "expectFree": [
             "experiment.linked_structures[pr2nio4].scale"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 1161.93,
           "expectChi2Tolerance": 0.01
         },
@@ -16631,6 +17064,7 @@
             "structure.atom_sites[Od].fract_z",
             "structure.atom_sites[Pr].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 1063.93,
           "expectChi2Tolerance": 0.01
         },
@@ -16672,6 +17106,7 @@
             "structure.atom_sites[Od].fract_z",
             "structure.atom_sites[Pr].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 1066.7,
           "expectChi2Tolerance": 0.01
         },
@@ -16737,6 +17172,7 @@
             "structure.atom_sites[Od].fract_z",
             "structure.atom_sites[Pr].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 9.75,
           "expectChi2Tolerance": 0.01
         },
@@ -17031,6 +17467,7 @@
           "expectFree": [
             "experiments[heidi_300k].linked_structures[cosio_300k].scale"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 3.07,
           "expectChi2Tolerance": 0.01
         },
@@ -17101,6 +17538,7 @@
             "structures[cosio_300k].atom_sites[Si].fract_x",
             "structures[cosio_300k].atom_sites[Si].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 3.03,
           "expectChi2Tolerance": 0.01
         },
@@ -17199,6 +17637,7 @@
             "structures[cosio_300k].atom_sites[Si].fract_x",
             "structures[cosio_300k].atom_sites[Si].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 0.77,
           "expectChi2Tolerance": 0.01
         },
@@ -17303,6 +17742,7 @@
             "structures[cosio_300k].atom_sites[Si].fract_x",
             "structures[cosio_300k].atom_sites[Si].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 0.5,
           "expectChi2Tolerance": 0.01
         },
@@ -17400,6 +17840,7 @@
             "structures[cosio_300k].atom_sites[Si].fract_x",
             "structures[cosio_300k].atom_sites[Si].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 2.22,
           "expectChi2Tolerance": 0.01
         },
@@ -17516,6 +17957,7 @@
             "structures[cosio_55k].atom_sites[Si].fract_x",
             "structures[cosio_55k].atom_sites[Si].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 2.17,
           "expectChi2Tolerance": 0.01
         },
@@ -17638,6 +18080,7 @@
             "structures[cosio_55k].atom_sites[Si].fract_x",
             "structures[cosio_55k].atom_sites[Si].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 1.34,
           "expectChi2Tolerance": 0.01
         },
@@ -17788,6 +18231,7 @@
             "structures[cosio_55k].atom_sites[Si].fract_x",
             "structures[cosio_55k].atom_sites[Si].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 0.62,
           "expectChi2Tolerance": 0.01
         },
@@ -17931,6 +18375,7 @@
             "structures[cosio_55k].atom_sites[Si].fract_x",
             "structures[cosio_55k].atom_sites[Si].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 2.72,
           "expectChi2Tolerance": 0.01
         },
@@ -18093,6 +18538,7 @@
             "structures[cosio_55k].atom_sites[Si].fract_x",
             "structures[cosio_55k].atom_sites[Si].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 2.69,
           "expectChi2Tolerance": 0.01
         },
@@ -18261,6 +18707,7 @@
             "structures[cosio_55k].atom_sites[Si].fract_x",
             "structures[cosio_55k].atom_sites[Si].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 2.32,
           "expectChi2Tolerance": 0.01
         },
@@ -18457,6 +18904,7 @@
             "structures[cosio_55k].atom_sites[Si].fract_x",
             "structures[cosio_55k].atom_sites[Si].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 1.92,
           "expectChi2Tolerance": 0.01
         },
@@ -18657,6 +19105,7 @@
             "structures[cosio_55k].atom_sites[Si].fract_x",
             "structures[cosio_55k].atom_sites[Si].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 0.62,
           "expectChi2Tolerance": 0.01
         },
@@ -19820,6 +20269,15 @@
           "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
         },
         {
+          "title": "Fit the reflections the project fits",
+          "text": "Enter **3** as the s.u. cutoff of **Fitted reflections**. The project fits only the reflections stronger than three times their s.u., as FullProf does for this case.",
+          "page": "analysis",
+          "target": "refine_ls.thresholdSigma",
+          "check": "field:refine_ls.thresholdSigma=3",
+          "tab": "extras",
+          "why": "The project fits only the reflections stronger than three times their s.u., as FullProf does for this case."
+        },
+        {
           "title": "Scales, every site isotropic",
           "text": "Choose **Biso** as the ADP type of site 1.",
           "page": "structure",
@@ -19933,6 +20391,14 @@
         },
         {
           "title": "Scales, every site isotropic",
+          "text": "Choose **senju_1** as the datablock filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.datablock",
+          "check": "pick:parameters.datablock=senju_1",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
           "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -19941,18 +20407,178 @@
         },
         {
           "title": "Scales, every site isotropic",
-          "text": "Click the **Free** column header of the **Parameters** table.",
+          "text": "Tick **Free** for **taurine scale**.",
           "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
+          "target": "parameters.free@experiments.senju_1.linked_structures.taurine.scale",
+          "check": "tick:experiments.senju_1.linked_structures.taurine.scale",
           "tab": "basic"
         },
         {
           "title": "Scales, every site isotropic",
-          "text": "Choose **Free · all**.",
+          "text": "Click the filters' **Clear** button.",
           "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Linked structures",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **senju_2** as the datablock filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.datablock",
+          "check": "pick:parameters.datablock=senju_2",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Linked structures",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Tick **Free** for **taurine scale**.",
+          "page": "analysis",
+          "target": "parameters.free@experiments.senju_2.linked_structures.taurine.scale",
+          "check": "tick:experiments.senju_2.linked_structures.taurine.scale",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **senju_3** as the datablock filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.datablock",
+          "check": "pick:parameters.datablock=senju_3",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Linked structures",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Tick **Free** for **taurine scale**.",
+          "page": "analysis",
+          "target": "parameters.free@experiments.senju_3.linked_structures.taurine.scale",
+          "check": "tick:experiments.senju_3.linked_structures.taurine.scale",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **senju_4** as the datablock filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.datablock",
+          "check": "pick:parameters.datablock=senju_4",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Linked structures",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Tick **Free** for **taurine scale**.",
+          "page": "analysis",
+          "target": "parameters.free@experiments.senju_4.linked_structures.taurine.scale",
+          "check": "tick:experiments.senju_4.linked_structures.taurine.scale",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **senju_5** as the datablock filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.datablock",
+          "check": "pick:parameters.datablock=senju_5",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Linked structures",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Tick **Free** for **taurine scale**.",
+          "page": "analysis",
+          "target": "parameters.free@experiments.senju_5.linked_structures.taurine.scale",
+          "check": "tick:experiments.senju_5.linked_structures.taurine.scale",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **senju_6** as the datablock filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.datablock",
+          "check": "pick:parameters.datablock=senju_6",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Linked structures",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Tick **Free** for **taurine scale**.",
+          "page": "analysis",
+          "target": "parameters.free@experiments.senju_6.linked_structures.taurine.scale",
+          "check": "tick:experiments.senju_6.linked_structures.taurine.scale",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
           "tab": "basic"
         },
         {
@@ -19969,6 +20595,7 @@
             "experiments[senju_5].linked_structures[taurine].scale",
             "experiments[senju_6].linked_structures[taurine].scale"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 470.73,
           "expectChi2Tolerance": 0.01
         },
@@ -19981,6 +20608,14 @@
         },
         {
           "title": "Isotropic displacements",
+          "text": "Choose **taurine** as the datablock filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.datablock",
+          "check": "pick:parameters.datablock=taurine",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
           "text": "Choose **Atomic displacement** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -19989,18 +20624,122 @@
         },
         {
           "title": "Isotropic displacements",
-          "text": "Click the **Free** column header of the **Parameters** table.",
+          "text": "Tick **Free** for **C1 iso/eq**.",
           "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
+          "target": "parameters.free@structure.atom_sites.C1.adp_iso",
+          "check": "tick:structure.atom_sites.C1.adp_iso",
           "tab": "basic"
         },
         {
           "title": "Isotropic displacements",
-          "text": "Choose **Free · all**.",
+          "text": "Tick **Free** for **C2 iso/eq**.",
           "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Atomic displacement",
+          "target": "parameters.free@structure.atom_sites.C2.adp_iso",
+          "check": "tick:structure.atom_sites.C2.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Tick **Free** for **H1 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.H1.adp_iso",
+          "check": "tick:structure.atom_sites.H1.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Tick **Free** for **H11 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.H11.adp_iso",
+          "check": "tick:structure.atom_sites.H11.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Tick **Free** for **H12 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.H12.adp_iso",
+          "check": "tick:structure.atom_sites.H12.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Tick **Free** for **H2 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.H2.adp_iso",
+          "check": "tick:structure.atom_sites.H2.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Tick **Free** for **H21 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.H21.adp_iso",
+          "check": "tick:structure.atom_sites.H21.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Tick **Free** for **H22 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.H22.adp_iso",
+          "check": "tick:structure.atom_sites.H22.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Tick **Free** for **H3 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.H3.adp_iso",
+          "check": "tick:structure.atom_sites.H3.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Tick **Free** for **N1 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.N1.adp_iso",
+          "check": "tick:structure.atom_sites.N1.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Tick **Free** for **O1 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.O1.adp_iso",
+          "check": "tick:structure.atom_sites.O1.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Tick **Free** for **O2 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.O2.adp_iso",
+          "check": "tick:structure.atom_sites.O2.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Tick **Free** for **O3 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.O3.adp_iso",
+          "check": "tick:structure.atom_sites.O3.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Tick **Free** for **S1 iso/eq**.",
+          "page": "analysis",
+          "target": "parameters.free@structure.atom_sites.S1.adp_iso",
+          "check": "tick:structure.atom_sites.S1.adp_iso",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
           "tab": "basic"
         },
         {
@@ -20031,6 +20770,7 @@
             "structure.atom_sites[O3].adp_iso",
             "structure.atom_sites[S1].adp_iso"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 129.56,
           "expectChi2Tolerance": 0.01
         },
@@ -20120,6 +20860,7 @@
             "structure.atom_sites[O3].adp_iso",
             "structure.atom_sites[S1].adp_iso"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 73.55,
           "expectChi2Tolerance": 0.01
         },
@@ -20243,6 +20984,7 @@
             "structure.atom_sites[S1].fract_y",
             "structure.atom_sites[S1].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 54.49,
           "expectChi2Tolerance": 0.01
         },
@@ -20668,6 +21410,7 @@
             "structure.atom_sites[S1].fract_y",
             "structure.atom_sites[S1].fract_z"
           ],
+          "expectWholeBackground": [],
           "expectChi2": 30.27,
           "expectChi2Tolerance": 0.01
         },
