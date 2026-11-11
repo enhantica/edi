@@ -251,6 +251,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t16-02-fit-running", {"statusBar.fit.button", "capture-now"}});
     steps_.push_back({"t16-03-fit-done", {"wait-fit"}});
     steps_.push_back({"t16-04-fit-results", {"statusBar.fit.outcome"}});
+    // The parameters table after a fit at a desktop width, its results closed: Start, Value, s.u. and Change filled
+    // (`--demo-only parameters-fitted`).
+    steps_.push_back({"parameters-fitted", QStringList{"resize:1760x1000"} + start + open_example("pd-neut-cwl_cosio-d20") +
+                                               QStringList{analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK"}});
     steps_.push_back({"t16-05-experiments", {"choose:OK", experiment, basic, "expand:group.experiments"}});
     steps_.push_back({"t16-06-structure", {"appBar.tab.structure", basic}});
     steps_.push_back({"t16-07-narrow", {"resize:900x768", experiment}});
