@@ -5,7 +5,7 @@ GitHub's ``releases/tags/{tag}`` route answers only for published releases; a dr
 in the release list and by its ID, and its tag exists only once it is published
 (docs.github.com/en/rest/releases/releases, "Get a release by tag name" and "List releases").
 ``gh release upload`` finds a draft by tag the same way, by listing. An edit of a draft that
-leaves ``tag_name`` out drops its tag to ``untagged-...``, as the claim of v2026.11.90 did on
+leaves ``tag_name`` out drops its tag to ``untagged-...``, as the claim of v2026.11.10 did on
 run 42415725958 (release 437853611), after which the upload by tag answers "release not found".
 """
 
@@ -277,7 +277,7 @@ def test_a_simultaneous_allocator_keeps_the_number_and_the_later_one_moves_on(gi
         'A simultaneous allocator keeps the number and the later one moves on.'
     )
     owners = {r['target_commitish']: r['tag_name'] for r in github.releases.values()}
-    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.9'}, (
+    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}, (
         'A simultaneous allocator keeps the number and the later one moves on.'
     )
 
@@ -292,7 +292,7 @@ def test_a_lost_creation_response_is_settled_on_the_retry(github):
         'A lost creation response is settled on the retry.'
     )
     owners = {r['target_commitish']: r['tag_name'] for r in github.releases.values()}
-    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.9'}, (
+    assert owners == {'d' * 40: 'v2026.11.0', 'a' * 40: 'v2026.11.1'}, (
         'A lost creation response is settled on the retry.'
     )
 
@@ -364,7 +364,7 @@ def test_a_lost_response_with_a_same_source_rival_keeps_the_first_reservation(gi
 
 
 def test_two_claimed_drafts_for_one_source_stay_refused(github):
-    for tag in ('v2026.11.0', 'v2026.11.9'):
+    for tag in ('v2026.11.0', 'v2026.11.1'):
         github.add({
             'tag_name': tag,
             'target_commitish': 'a' * 40,
@@ -444,7 +444,7 @@ def test_a_draft_that_lost_its_tag_is_retagged_and_takes_its_installers(github, 
         REPO, preview, 'Notes\n', [(archive, hashlib.sha256(b'preview installer').hexdigest())]
     )
     (release,) = github.releases.values()
-    assert release['tag_name'] == 'v2026.11.90' and len(release['assets']) == 1, (
+    assert release['tag_name'] == 'v2026.11.10' and len(release['assets']) == 1, (
         'A draft that lost its tag is re-tagged and takes its installers.'
     )
 
