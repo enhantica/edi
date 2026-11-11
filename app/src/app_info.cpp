@@ -7944,6 +7944,12 @@ QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJ
         return add(sign, rest);
     }
     if (operation == NumberParameter) {
+        // A value without an uncertainty, as the parameter tables write it everywhere (owner record 2026-11-09): a
+        // decimal when 0.001 <= |x| < 1000, else scientific notation with three significant digits (1.00e3).
+        const bool uncertain = numberType(f, second) && numberFinite(f, second) && relation(second, QJSValue(0), 1);
+        if (!uncertain && numberType(f, value) && numberFinite(f, value) && !value.strictlyEquals(QJSValue(0)) &&
+            (relation(numberAbs(f, value), QJSValue(1000), 2) || relation(numberAbs(f, value), QJSValue(0.001), 0)))
+            return numberReplaceExponent(f, call(value, "toExponential", {QJSValue(2)}));
         if (panelUsageTruth(named("scientific", {value}))) return numberReplaceExponent(f, call(value, "toExponential", {QJSValue(3)}));
         const auto text = named("ruled", {value, second});
         return panelUsageTruth(text) ? read(text, "value") : named("rounded", {value, second, panelUsageContextRead(f, "Infinity"), third});

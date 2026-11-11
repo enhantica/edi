@@ -13,9 +13,11 @@ import edi.app
 //
 // A parameter with an uncertainty is rounded as the project writes it, by its rule for standard uncertainties: the
 // uncertainty rounded up to one or two digits and the value to the same digit. A parameter is written whatever the
-// width of its cell, which clips a long one at its edge, and edited in full (`full`). One at or above a million, or
-// below 1e-4 and not zero, is written in scientific notation with four significant digits and its uncertainty in the
-// same exponent (`2.290e7`, `0.010e7`), so a column of large intensities reads at a glance (the owner, 2026-10-10).
+// width of its cell, which clips a long one at its edge, and edited in full (`full`). One without an uncertainty is a
+// decimal when 0.001 <= |x| < 1000, else in scientific notation with three significant digits (`1.00e3`, `9.99e-4`,
+// `2.29e7`), as every parameter table writes it (the owner, 2026-11-09). One with an uncertainty at or above a
+// million, or below 1e-4 and not zero, is written with four significant digits and its uncertainty in the same
+// exponent (`2.290e7`, `0.010e7`), so a column of large intensities reads at a glance (the owner, 2026-10-10).
 QtObject {
     // Whether `value` is written in scientific notation.
     function scientific(value) {
