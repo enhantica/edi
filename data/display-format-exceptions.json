@@ -1,6 +1,21 @@
 {
  "exceptions": [
   {
+   "file": "app/src/demo_driver.cpp",
+   "match": "trace step %d: %s text=%s y=%.0f",
+   "reason": "the demo's step trace on stderr for whoever runs it, not a displayed value"
+  },
+  {
+   "file": "core/src/report_model.cpp",
+   "match": "value << std::setprecision(3) << *record.stopping_value;",
+   "reason": "the quantity the fit measured when its stop rule fired, a property of the run with no item"
+  },
+  {
+   "file": "core/src/report_model.cpp",
+   "match": "std::snprintf(r, sizeof r, \"%.2f\", marks.correlation);",
+   "reason": "a correlation coefficient in the s.u. note, which no item holds"
+  },
+  {
    "file": "app/qml/Components/CorrelationChart.qml",
    "match": "text: modelData.toFixed(1)",
    "reason": "the colour bar tick labels (1, 0.5, 0, -0.5, -1), not a value of an item"
@@ -198,11 +213,6 @@
    "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
   },
   {
-   "file": "app/qml/Components/PaletteStrip.qml",
-   "literal": "calculator",
-   "reason": "the Font Awesome icon's name, not the calculator category's title"
-  },
-  {
    "file": "app/qml/Components/ParameterCell.qml",
    "literal": "s.u.",
    "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
@@ -238,7 +248,7 @@
    "reason": "a page name (edi ADR-0017), not the _report category"
   },
   {
-   "file": "app/qml/Pages/Analysis/AnalysisPage.qml",
+   "file": "app/qml/Components/MainView.qml",
    "literal": "Correlations",
    "reason": "a main-area tab name beside Pattern and Evolution (edi ADR-0017), not the correlation loop"
   },
@@ -344,8 +354,18 @@
   },
   {
    "file": "app/qml/Components/AppPreferencesDialog.qml",
-   "literal": "All",
-   "reason": "the tooltip level that shows every tooltip (ADR-0076), not a dictionary name"
+   "literal": "None",
+   "reason": "the tooltip level that shows no tooltip (ADR-0076), not a dictionary name"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "literal": "Measured data",
+   "reason": "the online sources' name for the measured patterns they hold, the app's group title, not the data category"
+  },
+  {
+   "file": "app/src/codex_agent.cpp",
+   "literal": "start error",
+   "reason": "the kind of process failure the assistant's error message names, not a dictionary name"
   },
   {
    "file": "app/qml/Components/AppPreferencesDialog.qml",
