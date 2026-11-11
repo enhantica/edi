@@ -47,7 +47,7 @@ WEB_ENTRIES = {
     'experiment': 'experiments.load.experimentWeb',
     'data': 'experiments.load.dataWeb',
 }
-TAG_FACETS = ('purpose', 'fittingMode', 'sampleForm', 'probe', 'beamMode', 'scatteringType')
+TAGS = ROOT / 'app/examples/tags.json'
 
 
 def step(title: str, text: str, page: str, target: str, check: str, **extra: object) -> dict:
@@ -588,9 +588,10 @@ def tutorial_steps(case: str) -> list[dict]:
 
 
 def tags(case: str, metadata: dict) -> list[str]:
-    """The case's curated tags, as the Examples list shows them."""
+    """The case's tags, every facet of tags.json in its order, as the case record and the Examples list show them."""
     values = metadata['examples'][case]['values']
-    return [f'{facet}:{value}' for facet in TAG_FACETS for value in values.get(facet, []) if value]
+    facets = json.loads(TAGS.read_text(encoding='utf-8'))['tags']
+    return [f'{facet}:{value}' for facet in facets for value in values.get(facet, []) if value]
 
 
 def build() -> dict:

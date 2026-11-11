@@ -34,7 +34,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -1028,7 +1029,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -1563,7 +1565,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -2095,7 +2098,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -2777,7 +2781,9 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal",
+        "structure:magnetic"
       ],
       "steps": [
         {
@@ -3483,7 +3489,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -4373,7 +4380,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -4843,7 +4851,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -5547,7 +5556,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -6133,7 +6143,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -6751,7 +6762,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -7337,7 +7349,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -7931,7 +7944,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -9795,7 +9809,8 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -10715,7 +10730,8 @@
         "sampleForm:powder",
         "probe:xray",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -11355,7 +11371,8 @@
         "sampleForm:powder",
         "probe:xray",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -12256,7 +12273,8 @@
         "probe:neutron",
         "probe:xray",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -13190,7 +13208,9 @@
         "sampleForm:powder",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal",
+        "structure:magnetic"
       ],
       "steps": [
         {
@@ -13665,7 +13685,8 @@
         "sampleForm:powder",
         "probe:xray",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -14396,7 +14417,8 @@
         "sampleForm:single crystal",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -14453,7 +14475,8 @@
         "sampleForm:single crystal",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -14773,7 +14796,8 @@
         "sampleForm:single crystal",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
@@ -15093,7 +15117,9 @@
         "sampleForm:single crystal",
         "probe:neutron",
         "beamMode:constant wavelength",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal",
+        "structure:magnetic"
       ],
       "steps": [
         {
@@ -16051,7 +16077,8 @@
         "sampleForm:single crystal",
         "probe:neutron",
         "beamMode:time-of-flight",
-        "scatteringType:bragg"
+        "scatteringType:bragg",
+        "structure:crystal"
       ],
       "steps": [
         {
