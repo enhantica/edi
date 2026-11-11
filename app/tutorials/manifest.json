@@ -3039,7 +3039,7 @@
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
           "text": "Choose **Instrument** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -3047,7 +3047,7 @@
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
           "text": "Enter **calib** as the name filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.nameFilter",
@@ -3055,7 +3055,7 @@
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
           "text": "Click the **Free** column header of the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.freeHeader",
@@ -3063,7 +3063,7 @@
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
@@ -3071,7 +3071,7 @@
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
           "text": "Click the filters' **Clear** button.",
           "page": "analysis",
           "target": "parameters.clearFilters",
@@ -3079,7 +3079,7 @@
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
           "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -3087,7 +3087,7 @@
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
           "text": "Click the **Free** column header of the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.freeHeader",
@@ -3095,7 +3095,7 @@
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
@@ -3103,7 +3103,7 @@
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
           "text": "Click the filters' **Clear** button.",
           "page": "analysis",
           "target": "parameters.clearFilters",
@@ -3111,15 +3111,15 @@
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
-          "text": "Choose **Cell** as the category filter above the **Parameters** table.",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
+          "text": "Choose **Magnetic moments** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
-          "check": "pick:parameters.category=Cell",
+          "check": "pick:parameters.category=Magnetic moments",
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
           "text": "Click the **Free** column header of the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.freeHeader",
@@ -3127,15 +3127,15 @@
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Cell",
+          "check": "free-choice:free:Magnetic moments",
           "tab": "basic"
         },
         {
-          "title": "Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
           "text": "Click the filters' **Clear** button.",
           "page": "analysis",
           "target": "parameters.clearFilters",
@@ -3143,7 +3143,71 @@
           "tab": "basic"
         },
         {
-          "title": "Fit: Scale, 2θ zero and cell",
+          "title": "Scale, 2θ zero, cell and magnetic moments",
+          "text": "Choose **Cell** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Cell",
+          "tab": "basic"
+        },
+        {
+          "title": "Scale, 2θ zero, cell and magnetic moments",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Scale, 2θ zero, cell and magnetic moments",
+          "text": "Choose **Free · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Cell",
+          "tab": "basic"
+        },
+        {
+          "title": "Scale, 2θ zero, cell and magnetic moments",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Scale, 2θ zero, cell and magnetic moments",
+          "text": "Choose **Magnetic form factors** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Magnetic form factors",
+          "tab": "basic"
+        },
+        {
+          "title": "Scale, 2θ zero, cell and magnetic moments",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Scale, 2θ zero, cell and magnetic moments",
+          "text": "Choose **Free · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Magnetic form factors",
+          "tab": "basic"
+        },
+        {
+          "title": "Scale, 2θ zero, cell and magnetic moments",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Fit: Scale, 2θ zero, cell and magnetic moments",
           "text": "Press **Fit** in the status bar.",
           "page": "analysis",
           "target": "statusBar.fit.button",
@@ -3190,6 +3254,84 @@
         },
         {
           "title": "Fit: Background",
+          "text": "Press **Fit** in the status bar.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
+          "check": "fit-done"
+        },
+        {
+          "title": "Fit results",
+          "text": "Read the fit results, then press **OK**.",
+          "page": "analysis",
+          "target": "fit.results.ok",
+          "check": "results-closed"
+        },
+        {
+          "title": "Atomic displacements and positions",
+          "text": "Choose **Atomic displacement** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Atomic displacement",
+          "tab": "basic"
+        },
+        {
+          "title": "Atomic displacements and positions",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Atomic displacements and positions",
+          "text": "Choose **Free · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Atomic displacement",
+          "tab": "basic"
+        },
+        {
+          "title": "Atomic displacements and positions",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Atomic displacements and positions",
+          "text": "Choose **Atomic coordinates** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Atomic coordinates",
+          "tab": "basic"
+        },
+        {
+          "title": "Atomic displacements and positions",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Atomic displacements and positions",
+          "text": "Choose **Free · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Atomic coordinates",
+          "tab": "basic"
+        },
+        {
+          "title": "Atomic displacements and positions",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Fit: Atomic displacements and positions",
           "text": "Press **Fit** in the status bar.",
           "page": "analysis",
           "target": "statusBar.fit.button",
@@ -3306,144 +3448,6 @@
         },
         {
           "title": "Fit: Peak asymmetry",
-          "text": "Press **Fit** in the status bar.",
-          "page": "analysis",
-          "target": "statusBar.fit.button",
-          "check": "fit-done"
-        },
-        {
-          "title": "Fit results",
-          "text": "Read the fit results, then press **OK**.",
-          "page": "analysis",
-          "target": "fit.results.ok",
-          "check": "results-closed"
-        },
-        {
-          "title": "Atom positions",
-          "text": "Choose **Atomic coordinates** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Atomic coordinates",
-          "tab": "basic"
-        },
-        {
-          "title": "Atom positions",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Atom positions",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Atomic coordinates",
-          "tab": "basic"
-        },
-        {
-          "title": "Atom positions",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Fit: Atom positions",
-          "text": "Press **Fit** in the status bar.",
-          "page": "analysis",
-          "target": "statusBar.fit.button",
-          "check": "fit-done"
-        },
-        {
-          "title": "Fit results",
-          "text": "Read the fit results, then press **OK**.",
-          "page": "analysis",
-          "target": "fit.results.ok",
-          "check": "results-closed"
-        },
-        {
-          "title": "Magnetic moments",
-          "text": "Choose **Magnetic moments** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Magnetic moments",
-          "tab": "basic"
-        },
-        {
-          "title": "Magnetic moments",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Magnetic moments",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Magnetic moments",
-          "tab": "basic"
-        },
-        {
-          "title": "Magnetic moments",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Fit: Magnetic moments",
-          "text": "Press **Fit** in the status bar.",
-          "page": "analysis",
-          "target": "statusBar.fit.button",
-          "check": "fit-done"
-        },
-        {
-          "title": "Fit results",
-          "text": "Read the fit results, then press **OK**.",
-          "page": "analysis",
-          "target": "fit.results.ok",
-          "check": "results-closed"
-        },
-        {
-          "title": "Magnetic form factor",
-          "text": "Choose **Magnetic form factors** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Magnetic form factors",
-          "tab": "basic"
-        },
-        {
-          "title": "Magnetic form factor",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Magnetic form factor",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Magnetic form factors",
-          "tab": "basic"
-        },
-        {
-          "title": "Magnetic form factor",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Fit: Magnetic form factor",
           "text": "Press **Fit** in the status bar.",
           "page": "analysis",
           "target": "statusBar.fit.button",
