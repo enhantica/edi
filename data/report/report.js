@@ -14,6 +14,24 @@ const model = JSON.parse(document.getElementById('edi-report-model').textContent
 const pageStyle = name =>
   typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement).getPropertyValue(name).trim() : '';
 
+// A page that sets --chart-size (a docs page's view) draws every chart text at that size and in the chart ink, as its
+// paragraphs read; elsewhere the charts keep Plotly's own sizes.
+const sizedChart = layout => {
+  const size = parseFloat(pageStyle('--chart-size'));
+  if (!(size > 0)) return layout;
+  const ink = pageStyle('--chart-ink') || undefined;
+  const font = extra => ({ family: layout.font?.family, color: ink, ...extra, size });
+  layout.font = font(layout.font);
+  if (layout.legend) layout.legend.font = font(layout.legend.font);
+  for (const key of Object.keys(layout).filter(key => /^[xy]axis\d*$/.test(key))) {
+    const axis = layout[key];
+    axis.tickfont = font(axis.tickfont);
+    if (axis.title) axis.title = { ...(typeof axis.title === 'string' ? { text: axis.title } : axis.title), font: font(axis.title.font) };
+  }
+  for (const annotation of layout.annotations ?? []) annotation.font = { color: ink, ...annotation.font, size };
+  return layout;
+};
+
 
 // The Structure page's and the pattern chart's toolbar icons: Font Awesome Free 5 solid glyphs as SVG paths, [width, height, path] (icons CC
 // BY 4.0, https://fontawesome.com/license/free).
@@ -400,7 +418,7 @@ function drawPattern(figure, pattern) {
   // The tick rows' labels are drawn by the page (patternLabels), with the structure's icon.
   const labels = layout.annotations.filter(annotation => annotation.yref === 'y2');
   layout.annotations = layout.annotations.filter(annotation => annotation.yref !== 'y2');
-  window.Plotly.newPlot(figure, traces, layout, { responsive: true, displaylogo: false, displayModeBar: false });
+  window.Plotly.newPlot(figure, traces, sizedChart(layout), { responsive: true, displaylogo: false, displayModeBar: false });
   const toolbar = patternToolbar(figure, pattern, traces, layout);
   const place = patternLabels(figure, labels);
   figure.on?.('plotly_afterplot', () => { place(); alignPattern(figure, toolbar); });
@@ -619,7 +637,7 @@ function drawSingleCrystal(figure, crystal) {
     xaxis: { ...axis, title: { text: crystal.x_title } },
     yaxis: { ...axis, title: { text: crystal.y_title } },
   };
-  window.Plotly.newPlot(figure, [diagonal, points], layout, { responsive: true, displaylogo: false, modeBarButtons: MODEBAR });
+  window.Plotly.newPlot(figure, [diagonal, points], sizedChart(layout), { responsive: true, displaylogo: false, modeBarButtons: MODEBAR });
 }
 
 // One of a scan's evolution charts (edi ADR-0036): a parameter at each fitted dataset with its s.u. as an error bar,
@@ -661,7 +679,7 @@ function drawEvolution(figure, series) {
     xaxis: { ...axis, title: { text: series.x_title } },
     yaxis: { ...axis },
   };
-  window.Plotly.newPlot(figure, [trace], layout, { responsive: true, displaylogo: false, modeBarButtons: MODEBAR });
+  window.Plotly.newPlot(figure, [trace], sizedChart(layout), { responsive: true, displaylogo: false, modeBarButtons: MODEBAR });
 }
 
 // --- The structure views (edi ADR-0022) ---
