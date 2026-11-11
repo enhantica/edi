@@ -87,6 +87,9 @@ private:
     QPointer<QProcess> retired_process_;
     quint64 active_frames_=0;
     bool reading_=false, eof_pending_=false;
+    // How the guard said the runtime ended (see app/tools/assistant_guard.cpp), and the number for the message.
+    int exit_code_=-1;
+    QString exit_detail_;
     QByteArray incoming_;
     // One original-byte required-write holding slot, only for an already-issued
     // optional record occupying the physical QProcess queue. No partial retry.
