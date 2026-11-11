@@ -96,8 +96,11 @@ def test_one_note_can_affect_every_interface():
 
 def test_desktop_downloads_link_only_published_platform_assets():
     downloads = load('website/render_downloads.py')
+    # The desktop page has an online and an offline button per platform, each with a size line.
     source = '<p>Desktop installers will appear here when published.</p>' + ''.join(
-        f'<a data-download-platform="{platform}" aria-disabled="true"></a>'
+        f'<a data-download-platform="{platform}" data-download-kind="{kind}" aria-disabled="true">'
+        f'<small data-download-size="{platform}-{kind}">{kind.capitalize()}</small></a>'
+        for kind in ('online', 'offline')
         for platform in downloads.PLATFORMS
     )
 
@@ -111,6 +114,7 @@ def test_desktop_downloads_link_only_published_platform_assets():
             'assets': [
                 {
                     'state': 'uploaded',
+                    'size': 23_400_000,
                     'browser_download_url': (
                         f'{base}/EasyDiffraction-{version}-{platform}-online.zip'
                     ),
@@ -131,9 +135,11 @@ def test_desktop_downloads_link_only_published_platform_assets():
     assert 'macos-arm64-online.zip' in page and 'linux-x86_64-online.zip' in page, (
         'Desktop downloads link only published platform assets.'
     )
-    assert 'data-download-platform="windows-x86_64" aria-disabled="true"' in page, (
-        'Desktop downloads link only published platform assets.'
-    )
+    assert 'Online · 23 MB' in page, 'Desktop downloads link only published platform assets.'
+    assert (
+        'data-download-platform="windows-x86_64" data-download-kind="online" aria-disabled="true"'
+        in page
+    ), 'Desktop downloads link only published platform assets.'
     stable = release('2026.10.2')
     page = downloads.render(source, [[preview, draft, stable]])
     assert 'Latest version 2026.10.2 (5 Nov 2026)' in page, (
