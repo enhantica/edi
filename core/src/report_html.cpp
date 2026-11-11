@@ -132,7 +132,7 @@ th, td {
 .wide-table th, .wide-table td { padding: 0 var(--wide-colsep); }
 td.wrap { white-space: normal; }
 /* The change column: right-aligned on the percentage's last digit, the direction an arrow icon after a fixed gap. */
-td.change { text-align: right; white-space: nowrap; }
+td.change, th.change { text-align: right; white-space: nowrap; }
 /* A poorly determined or strongly correlated parameter's s.u., its reasons in the title (edi ADR-0085). */
 td.su-flag, td.su-flag span, .su-flag-term { color: #c8323c; }
 .change-arrow { display: inline-block; width: 0.75em; height: 0.85em; margin-left: 0.25em; vertical-align: -0.1em; fill: currentColor; }
@@ -1051,7 +1051,7 @@ private:
         out_ += "<div class=\"table-scroll\">";
         out_ += "<table class=\"wide-table\">\n<thead>\n<tr>";
         for (std::size_t i = 0; i < data.columns.size(); ++i) {
-            out_ += columns[i].numeric ? "<th class=\"numeric-header\">" : "<th>";
+            out_ += i == change_column_ ? "<th class=\"change\">" : columns[i].numeric ? "<th class=\"numeric-header\">" : "<th>";
             out_ += escaped(data.columns[i]) + "</th>";
         }
         out_ += "</tr>\n</thead>\n<tbody>\n";
@@ -1231,7 +1231,7 @@ html, body { background: var(--paper); padding: 0; font-family: var(--body-font)
 /* The correlations sized to their content: the names beside the matrix, not the matrix at the far right. */
 .report-view table.correlations { width: auto; }
 .report-view td.wrap { white-space: normal; }
-.report-view td.change { text-align: right; white-space: nowrap; }
+.report-view td.change, .report-view th.change { text-align: right; white-space: nowrap; }
 .report-view td.su-flag, .report-view td.su-flag span, .report-view .su-flag-term { color: #c8323c; }
 .report-view .change-arrow { display: inline-block; width: 0.75em; height: 0.85em; margin-left: 0.25em; vertical-align: -0.1em; fill: currentColor; }
 )css";

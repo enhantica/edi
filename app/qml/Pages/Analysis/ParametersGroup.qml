@@ -353,9 +353,12 @@ SideBarGroup {
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("s.u.")
                 }
+                // Right-aligned on the arrows' right edge, as the change cells end there without the table's padding.
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    readonly property bool keepsAlignment: true
                     horizontalAlignment: Text.AlignRight
+                    rightPadding: 0
                     text: qsTr("Change")
                 }
                 EaComponents.ListViewLabel {
