@@ -25,15 +25,15 @@
   },
   "drawn": {
     "files": [
-      "data-acquisition_instrument.svg",
-      "dark/data-acquisition_instrument.svg"
+      "data-acquisition_instrument-v2.svg",
+      "dark/data-acquisition_instrument-v2.svg"
     ],
     "method": "drawn by hand from the D20 geometry of that example: the (100) and (001) magnetic and the (221) nuclear reflections at lambda = 1.87 Angstrom; Noto Sans subset embedded; tick colours of the Main palette"
   },
   "computed": {
     "files": [
-      "data-acquisition_2d-raw-data.webp",
-      "dark/data-acquisition_2d-raw-data.webp"
+      "data-acquisition_raw-detector.webp",
+      "dark/data-acquisition_raw-detector.webp"
     ],
     "script": "website/concepts-figures/final.py (with edicmap.py, the Blue-Red map in Oklab)",
     "data": "website/concepts-figures/lo.npy: 2theta, intensity and s.u. of the measured D20 2.3 K pattern of that example"

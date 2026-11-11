@@ -60,9 +60,9 @@ PHASE = {
     'dark': {'nuc': '#F5961A', 'mag': '#55B1B3'},
 }
 for theme, (cm, txt, bg) in maps.items():
-    fig = plt.figure(figsize=(10, 5.6), dpi=120)
+    fig = plt.figure(figsize=(8.6, 4.6), dpi=200)
     fig.patch.set_alpha(0)
-    ax = fig.add_axes([0.02, 0.04, 0.66, 0.92])
+    ax = fig.add_axes([0.005, 0.02, 0.70, 0.96])
     im = ax.imshow(v, cmap=cm, extent=(0, W, H, 0), vmin=0, vmax=1)
     ax.set_axis_off()
     clip = FancyBboxPatch(
@@ -82,18 +82,18 @@ for theme, (cm, txt, bg) in maps.items():
     for rr, name, ang, ph in labels:
         px = cx + rr * np.cos(ang)
         py = cy + rr * np.sin(ang)
-        ax.plot([px, W], [py, py], color=txt, lw=0.8, alpha=0.9, clip_on=False)
-        ax.plot([W, W + 60], [py, py], color=txt, lw=0.8, clip_on=False)
+        ax.plot([px, W], [py, py], color=txt, lw=1.6, alpha=0.9, clip_on=False)
+        ax.plot([W, W + 40], [py, py], color=txt, lw=1.6, clip_on=False)
         ax.plot(
             [px],
             [py],
             'o',
-            ms=5,
+            ms=9,
             mfc=PHASE[theme][ph],
             mec='white' if theme == 'light' else '#181818',
-            mew=0.8,
+            mew=1.2,
         )
-        ax.text(W + 72, py, name, fontsize=12, color=txt, va='center')
+        ax.text(W + 50, py, name, fontsize=15, color=txt, va='center')
     fig.savefig(f'raw-2d-{theme}.svg', transparent=True)
     fig.savefig(f'raw-2d-{theme}.png', transparent=True, dpi=200)
     fig.patch.set_alpha(1)
