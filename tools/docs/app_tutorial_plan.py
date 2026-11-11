@@ -335,7 +335,10 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
     sites = _calls(source, 'create')
     sites = [site for site in sites if 'type_symbol' in site]
     for row, site in enumerate(sites):
-        actions += ['atomSites.append', f'fill:atomSite.label.{row}={site["id"]}', 'key:Return']
+        # A created structure starts with one site (ProjectViewModel::createStructure): the first
+        # site is that one edited, each later one appended with +.
+        actions += ['atomSites.append'] if row else []
+        actions += [f'fill:atomSite.label.{row}={site["id"]}', 'key:Return']
         actions += [f'atomSite.typeSymbol.{row}', 'type:' + site['type_symbol'], 'key:Return']
         if site.get('wyckoff_letter'):
             # A special position's coordinates follow from its letter; `b:` finds `1b: ½, ½, ½`.

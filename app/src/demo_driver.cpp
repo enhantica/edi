@@ -1658,10 +1658,31 @@ void DemoDriver::next_action() {
 
 bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
     const TutorialStep current = panel->property("current").value<TutorialStep>();
-    if (current.check != QLatin1String("fit-done")) return true;
     QQmlEngine* engine = qmlEngine(window_.contentItem());
     auto* session = engine != nullptr ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
     ProjectViewModel* project = session != nullptr ? session->project() : nullptr;
+    if (!current.expectSites.isEmpty() && sites_reported_ != step && project != nullptr) {
+        // A structure the tutorial built ends with the case's own sites: label, element and position.
+        sites_reported_ = step;
+        QStringList built;
+        for (const auto& structure : project->project().structures)
+            for (const auto& site : structure->atom_sites)
+                built << QStringLiteral("%1 %2 %3 %4 %5")
+                             .arg(QString::fromStdString(site->id.value()), QString::fromStdString(site->type_symbol.value()))
+                             .arg(site->fract_x.value.get(), 0, 'f', 4)
+                             .arg(site->fract_y.value.get(), 0, 'f', 4)
+                             .arg(site->fract_z.value.get(), 0, 'f', 4);
+        if (built != current.expectSites) {
+            const QString problem = QStringLiteral("%1: the structure's sites are %2, not the case's %3")
+                                        .arg(current.title, built.join(u", "), current.expectSites.join(u", "));
+            if (!qEnvironmentVariableIsSet("EDI_DEMO_REPORT_ONLY")) {
+                fail(problem);
+                return false;
+            }
+            std::fprintf(stderr, "edi_app --demo: MISMATCH %s\n", qPrintable(problem));
+        }
+    }
+    if (current.check != QLatin1String("fit-done")) return true;
     FitViewModel* fit = project != nullptr ? project->fit() : nullptr;
     if (project == nullptr || fit == nullptr) return true;
     const QString title = current.title;

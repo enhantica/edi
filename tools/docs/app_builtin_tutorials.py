@@ -423,6 +423,22 @@ def stage_texts(case: str, source: str) -> dict[int, tuple[str, str]]:
     }
 
 
+def case_sites(case: str) -> list[str]:
+    """The case project's atom sites, "label type x y z" each, as a built structure must end."""
+    project = load_case(case)
+    if len(project.structures) != 1:
+        count = len(project.structures)
+        raise SystemExit(f'{case}: a built structure needs one structure, not {count}')
+    return [
+        ' '.join([
+            str(getattr(site.id, 'value', site.id)),
+            str(getattr(site.type_symbol, 'value', site.type_symbol)),
+            *(f'{getattr(site, axis).value:.4f}' for axis in ('fract_x', 'fract_y', 'fract_z')),
+        ])
+        for site in project.structures[0].atom_sites
+    ]
+
+
 def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs-plan step id
     case: str, item: dict, texts: dict, pending: list, context: dict
 ) -> list[dict]:
@@ -441,7 +457,11 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         else:
             title, text = item['description'], ''
         del text
-        return action_steps(case, item, title, context)
+        steps = action_steps(case, item, title, context)
+        if ident == 'structure-adp' and steps:
+            # The sites as the case's own project has them, checked when the displacements start.
+            steps[0]['expectSites'] = case_sites(case)
+        return steps
     untranslated(case, item)
     if ident == 'home':
         return [
@@ -748,9 +768,9 @@ def stage_expectation(case: str, number: int) -> dict:
         'expectFree': sorted(paths),
         'expectWholeBackground': whole,
         'expectChi2': float(done[-1]),
-        # Two decimals, or one part in a million for a fit that ends far from 1: the LATP scan ends
-        # at 1.4e8 in both, a few units apart.
-        'expectChi2Tolerance': max(0.01, 1e-6 * float(done[-1])),
+        # Two decimals, or ten parts in a million for a fit that ends far from 1: the LATP scan
+        # ends at 1.4e8 in both, up to 2.3 parts in a million apart.
+        'expectChi2Tolerance': max(0.01, 1e-5 * float(done[-1])),
     }
 
 

@@ -679,7 +679,10 @@ Popup {
                 const equals = argument.indexOf("=");
                 const name = argument.slice(0, equals);
                 const button = panel.locate(name) as T.AbstractButton;
-                if (button !== null && button.enabled && panel.rowCount(name) < Number(argument.slice(equals + 1)))
+                // Pressed only while its list is seen to hold fewer rows: a list not found counts -1, and pressing
+                // then would append a row on every Next.
+                const count = panel.rowCount(name);
+                if (button !== null && button.enabled && count >= 0 && count < Number(argument.slice(equals + 1)))
                     button.click();
                 return;
             }

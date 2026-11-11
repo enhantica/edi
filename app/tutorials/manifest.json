@@ -100,14 +100,6 @@
         },
         {
           "title": "Add the atom sites",
-          "text": "Click **+** under **Atom sites** to add a site.",
-          "page": "structure",
-          "target": "atomSites.append",
-          "check": "rows:atomSites.append=1",
-          "tab": "basic"
-        },
-        {
-          "title": "Add the atom sites",
           "text": "Enter **La** as the label of site 1.",
           "page": "structure",
           "target": "atomSite.label.0",
@@ -248,7 +240,13 @@
           "page": "structure",
           "target": "atomSiteAdp.iso.0",
           "check": "field:atomSiteAdp.iso.0=0.5",
-          "tab": "basic"
+          "tab": "basic",
+          "expectSites": [
+            "La La 0.0000 0.0000 0.0000",
+            "Ba Ba 0.0000 0.0000 0.0000",
+            "Co Co 0.5000 0.5000 0.5000",
+            "O O 0.0000 0.5000 0.5000"
+          ]
         },
         {
           "title": "Set the displacements",
@@ -15365,7 +15363,7 @@
           ],
           "expectWholeBackground": [],
           "expectChi2": 140107929.77,
-          "expectChi2Tolerance": 140.10792977
+          "expectChi2Tolerance": 1401.0792977000003
         },
         {
           "title": "Fit results",
@@ -15451,7 +15449,7 @@
             "experiment.background["
           ],
           "expectChi2": 141465283.67,
-          "expectChi2Tolerance": 141.46528367
+          "expectChi2Tolerance": 1414.6528367
         },
         {
           "title": "Fit results",
@@ -15589,7 +15587,7 @@
             "experiment.background["
           ],
           "expectChi2": 141612395.32,
-          "expectChi2Tolerance": 141.61239532
+          "expectChi2Tolerance": 1416.1239532
         },
         {
           "title": "Fit results",
@@ -15697,7 +15695,7 @@
             "experiment.background["
           ],
           "expectChi2": 141696205.35,
-          "expectChi2Tolerance": 141.69620534999999
+          "expectChi2Tolerance": 1416.9620535000001
         },
         {
           "title": "Fit results",
@@ -15861,7 +15859,7 @@
             "experiment.background["
           ],
           "expectChi2": 142050818.62,
-          "expectChi2Tolerance": 142.05081862
+          "expectChi2Tolerance": 1420.5081862000002
         },
         {
           "title": "Fit results",
@@ -15997,7 +15995,7 @@
             "experiment.background["
           ],
           "expectChi2": 142228666.81,
-          "expectChi2Tolerance": 142.22866681
+          "expectChi2Tolerance": 1422.2866681
         },
         {
           "title": "Fit results",
@@ -16537,7 +16535,7 @@
           ],
           "expectWholeBackground": [],
           "expectChi2": 1161.93,
-          "expectChi2Tolerance": 0.01
+          "expectChi2Tolerance": 0.0116193
         },
         {
           "title": "Fit results",
@@ -16586,7 +16584,7 @@
           ],
           "expectWholeBackground": [],
           "expectChi2": 1063.93,
-          "expectChi2Tolerance": 0.01
+          "expectChi2Tolerance": 0.0106393
         },
         {
           "title": "Fit results",
@@ -16628,7 +16626,7 @@
           ],
           "expectWholeBackground": [],
           "expectChi2": 1066.7,
-          "expectChi2Tolerance": 0.01
+          "expectChi2Tolerance": 0.010667000000000001
         },
         {
           "title": "Fit results",

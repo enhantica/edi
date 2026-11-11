@@ -79,6 +79,7 @@ struct TutorialStep {
     Q_PROPERTY(QStringList expectFree MEMBER expectFree CONSTANT)
     // Backgrounds the stage frees whole: their points outside the measured range, which no fit lists, may be free too.
     Q_PROPERTY(QStringList expectWholeBackground MEMBER expectWholeBackground CONSTANT)
+    Q_PROPERTY(QStringList expectSites MEMBER expectSites CONSTANT)
     Q_PROPERTY(double expectChi2 MEMBER expectChi2 CONSTANT)
     Q_PROPERTY(double expectChi2Tolerance MEMBER expectChi2Tolerance CONSTANT)
 
@@ -96,6 +97,8 @@ struct TutorialStep {
     bool coversTarget = false;
     QStringList expectFree;
     QStringList expectWholeBackground;
+    // A built structure's sites when this step starts, "label type x y z" each (the replay's check).
+    QStringList expectSites;
     double expectChi2 = -1;
     double expectChi2Tolerance = 0.01;
 };

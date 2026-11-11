@@ -101,7 +101,7 @@ class DemoDriver : public QObject {
     // A fit step of a tutorial replay: the free set before the fit and the fit's outcome after it, each checked
     // against the step's expectFree and expectChi2 when the manifest gives them. False after a mismatch (failed).
     bool tutorial_fit_check(QObject* panel, int step);
-    int fit_free_reported_ = -1, fit_result_reported_ = -1;
+    int fit_free_reported_ = -1, fit_result_reported_ = -1, sites_reported_ = -1;
     bool fit_seen_running_ = false;
     void fail(const QString& message);
     void timed_fit_then(std::function<void()> next, int files, int stop_after);
