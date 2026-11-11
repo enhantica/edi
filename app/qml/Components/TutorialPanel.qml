@@ -1382,10 +1382,9 @@ Popup {
         if (name.includes("@")) {
             const parameter = panel.parameterNamed(panel.dotted(name.split("@")[1]));
             const table = ItemLocator.findAnywhere(window, "parameters.list");
-            const source = Session.project ? Session.project.parameters : null;
-            if (table === null || parameter === null || source === null || !table.model || table.model.mapFromSource === undefined)
+            if (table === null || parameter === null || !table.model || table.model.rowOf === undefined)
                 return false;
-            const row = table.model.mapFromSource(source.index(source.rowOf(parameter), 0)).row;
+            const row = table.model.rowOf(parameter);
             return row >= 0 && table.revealRow !== undefined && table.revealRow(row);
         }
         const match = /^(\w+)\.\w+\.(\d+)$/.exec(name);
