@@ -1,7 +1,7 @@
 {
     "description": "Review the fitted structure and report — Text",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "appBar",
         "workflow.report.mainContent",
@@ -9,8 +9,8 @@
         "statusBar"
     ],
     "id": "14-report-text",
-    "image": "14-report-text.png",
-    "image_sha256": "4e54831d8e5fb7f9cc10b51d64e271cd2bdf34fe59f00be08b5cfade0cbdc074",
+    "image": "14-report-text.webp",
+    "image_sha256": "78009eecd736b2fde535d5befadd1e4f3422523fbede8ff69ec32bf6b814a630",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -76,43 +76,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -121,7 +87,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -173,6 +139,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -315,7 +298,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -324,7 +307,7 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -381,6 +364,22 @@
                 32
             ]
         },
+        "sideBar.note.invite": {
+            "bounds": [
+                74,
+                119,
+                710,
+                639
+            ],
+            "enabled": true,
+            "label": "Nothing here yet. What would you like this tab to hold? <a href=\"idea\">Share your idea</a>",
+            "visible_bounds": [
+                770,
+                119,
+                14,
+                639
+            ]
+        },
         "sideBar.tab.basic": {
             "bounds": [
                 770,
@@ -404,7 +403,7 @@
                 45.125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Extra",
             "visible_bounds": [
                 813.40625,
@@ -420,7 +419,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.703125,
@@ -572,7 +571,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.026s 3.58→2.28",
+            "label": "1 0.097s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -792,8 +791,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -816,7 +815,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.extras",
                 "label": "Extra"
             },
@@ -828,7 +827,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

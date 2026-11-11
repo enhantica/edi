@@ -1013,11 +1013,11 @@
             "scene": "stage-4-fit"
         },
         {
-            "action": "mainArea.analysis.tab.correlations",
+            "action": "mainArea.tab.correlations",
             "scene": "correlations"
         },
         {
-            "action": "mainArea.analysis.tab.fitting",
+            "action": "mainArea.tab.pattern",
             "scene": "report"
         },
         {

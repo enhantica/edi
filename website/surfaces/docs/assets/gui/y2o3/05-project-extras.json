@@ -1,7 +1,7 @@
 {
     "description": "Project details and controls — Extra",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "appBar",
         "workflow.project.mainContent",
@@ -9,8 +9,8 @@
         "statusBar"
     ],
     "id": "05-project-extras",
-    "image": "05-project-extras.png",
-    "image_sha256": "a683c306cd792fee08da38ce727d60993b8335f3148b229ec1833e281f53563a",
+    "image": "05-project-extras.webp",
+    "image_sha256": "6ef279ca9b0a0b3af38d48edb22adea6eaddeb22489fcb6707060d660ae480e3",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -92,43 +92,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -137,7 +103,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -189,6 +155,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -331,7 +314,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -340,10 +323,43 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
+            ]
+        },
+        "group.save_data": {
+            "bounds": [
+                770,
+                217,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "database",
+            "label": "Data on save",
+            "visible_bounds": [
+                770,
+                217,
+                710,
+                42
+            ]
+        },
+        "group.save_data.pin": {
+            "bounds": [
+                1433.2261363926236,
+                215.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                217,
+                44.54772721475251,
+                42
             ]
         },
         "group.su_format": {
@@ -361,6 +377,22 @@
                 119,
                 710,
                 98
+            ]
+        },
+        "group.su_format.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
             ]
         },
         "label": {
@@ -422,7 +454,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-otQAdg/pd-neut-cwl_y2o3-spodi",
+            "label": "/tmp/EasyDiffraction-OxYLYn/pd-neut-cwl_y2o3-spodi",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -517,7 +549,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.453125,
@@ -755,8 +787,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 0,
         "fit_outcome": "",
@@ -791,7 +823,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

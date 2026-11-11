@@ -46,18 +46,18 @@
         ["experiment", "analysis"].forEach(function (page) {
             ["stacked", "map"].forEach(function (view) {
                 shot(prefix + "-" + page + "-" + view, page, "Inspect the scan in the " + view + " view",
-                    ["appBar.tab." + page, "sideBar.tab.basic", "mainArea." + page + ".tab." + view, "wait-scan:" + view],
+                    ["appBar.tab." + page, "sideBar.tab.basic", "mainArea.tab." + view, "wait-scan:" + view],
                     ["workflow." + page + ".mainContent"]);
             });
         });
         if (scan) {
         shot("scan-evolution", "analysis", "Inspect a fitted parameter across the scan",
-            ["appBar.tab.analysis", "mainArea.analysis.tab.evolution"], ["workflow.analysis.mainContent"]);
+            ["appBar.tab.analysis", "mainArea.tab.evolution"], ["workflow.analysis.mainContent"]);
         shot("scan-progress-controls", "analysis", "Review completed datasets, Follow and reset controls",
-            ["mainArea.analysis.tab.fitting", "sideBar.tab.basic"], ["statusBar"]);
+            ["mainArea.tab.pattern", "sideBar.tab.basic"], ["statusBar"]);
         }
         shot(prefix + "-correlations", "analysis", "Inspect correlations for the selected measurement",
-            ["appBar.tab.analysis", "mainArea.analysis.tab.correlations"], ["workflow.analysis.mainContent"]);
+            ["appBar.tab.analysis", "mainArea.tab.correlations"], ["workflow.analysis.mainContent"]);
         return steps;
     }};
 })();

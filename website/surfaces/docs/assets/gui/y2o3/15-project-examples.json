@@ -1,13 +1,13 @@
 {
     "description": "Browse the built-in examples",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "group.examples"
     ],
     "id": "15-project-examples",
-    "image": "15-project-examples.png",
-    "image_sha256": "9c2aba432e5483dd74d03c64ac8194e4c4b4c3ce83b1c475d4615061b745477d",
+    "image": "15-project-examples.webp",
+    "image_sha256": "be3a117010184d31d8a78bbdb3607b373293b9a7d5c5bc483f9b2dc969336a2f",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -62,7 +62,7 @@
                 784,
                 210,
                 682,
-                549.5
+                626.5
             ],
             "enabled": true,
             "label": "",
@@ -89,43 +89,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -134,7 +100,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -186,6 +152,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -328,7 +311,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -337,7 +320,7 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -346,7 +329,7 @@
         "examples.clearFilters": {
             "bounds": [
                 1431,
-                210,
+                287,
                 35,
                 35
             ],
@@ -355,15 +338,95 @@
             "label": "",
             "visible_bounds": [
                 1431,
-                210,
+                287,
                 35,
+                35
+            ]
+        },
+        "examples.filter.beamMode": {
+            "bounds": [
+                784,
+                287,
+                339.25,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                287,
+                339.25,
+                35
+            ]
+        },
+        "examples.filter.fittingMode": {
+            "bounds": [
+                1126.75,
+                210,
+                339.25,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1126.75,
+                210,
+                339.25,
+                35
+            ]
+        },
+        "examples.filter.probe": {
+            "bounds": [
+                1126.75,
+                248.5,
+                339.25,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1126.75,
+                248.5,
+                339.25,
+                35
+            ]
+        },
+        "examples.filter.purpose": {
+            "bounds": [
+                784,
+                210,
+                339.25,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                210,
+                339.25,
+                35
+            ]
+        },
+        "examples.filter.sampleForm": {
+            "bounds": [
+                784,
+                248.5,
+                339.25,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                248.5,
+                339.25,
                 35
             ]
         },
         "examples.list": {
             "bounds": [
                 784,
-                259,
+                336,
                 682,
                 500.5
             ],
@@ -371,12 +434,28 @@
             "label": "",
             "visible_bounds": [
                 784,
-                259,
+                336,
                 682,
-                485
+                408
             ]
         },
         "examples.open.pd-neut-cwl_cosio-d20": {
+            "bounds": [
+                784,
+                567,
+                682,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                567,
+                682,
+                77
+            ]
+        },
+        "examples.open.pd-neut-cwl_cosio-d20_2k": {
             "bounds": [
                 784,
                 644,
@@ -392,7 +471,55 @@
                 77
             ]
         },
-        "examples.open.pd-neut-cwl_cosio-d20_2k": {
+        "examples.open.pd-neut-cwl_hs-hrpt": {
+            "bounds": [
+                784,
+                490,
+                682,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                490,
+                682,
+                77
+            ]
+        },
+        "examples.open.pd-neut-cwl_lbco-hrpt": {
+            "bounds": [
+                784,
+                413,
+                682,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                413,
+                682,
+                77
+            ]
+        },
+        "examples.open.pd-neut-cwl_lbco_simulation": {
+            "bounds": [
+                784,
+                336,
+                682,
+                77
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                336,
+                682,
+                77
+            ]
+        },
+        "examples.open.pd-neut-cwl_lmo-echidna": {
             "bounds": [
                 784,
                 721,
@@ -408,131 +535,19 @@
                 23
             ]
         },
-        "examples.open.pd-neut-cwl_hs-hrpt": {
-            "bounds": [
-                784,
-                567,
-                682,
-                77
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                567,
-                682,
-                77
-            ]
-        },
-        "examples.open.pd-neut-cwl_lbco-hrpt": {
-            "bounds": [
-                784,
-                490,
-                682,
-                77
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                490,
-                682,
-                77
-            ]
-        },
-        "examples.open.pd-neut-cwl_lbco_simulation": {
-            "bounds": [
-                784,
-                259,
-                682,
-                77
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                259,
-                682,
-                77
-            ]
-        },
-        "examples.open.pd-neut-tof_si_simulation": {
-            "bounds": [
-                784,
-                336,
-                682,
-                77
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                336,
-                682,
-                77
-            ]
-        },
-        "examples.open.pd-xray-cwl_nacl_simulation": {
-            "bounds": [
-                784,
-                413,
-                682,
-                77
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                413,
-                682,
-                77
-            ]
-        },
-        "examples.property": {
-            "bounds": [
-                784,
-                210,
-                212.16666666666666,
-                35
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                784,
-                210,
-                212.16666666666663,
-                35
-            ]
-        },
         "examples.search": {
             "bounds": [
-                1215.3333333333333,
-                210,
-                212.16666666666666,
+                1126.75,
+                287,
+                300.75,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1215.3333333333333,
-                210,
-                212.16666666666674,
-                35
-            ]
-        },
-        "examples.value": {
-            "bounds": [
-                999.6666666666666,
-                210,
-                212.16666666666666,
-                35
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                999.6666666666666,
-                210,
-                212.16666666666663,
+                1126.75,
+                287,
+                300.75,
                 35
             ]
         },
@@ -541,7 +556,7 @@
                 770,
                 161,
                 710,
-                612.5
+                689.5
             ],
             "enabled": true,
             "icon": "database",
@@ -551,6 +566,22 @@
                 161,
                 710,
                 583
+            ]
+        },
+        "group.examples.pin": {
+            "bounds": [
+                1433.2261363926236,
+                159.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                161,
+                44.54772721475251,
+                43.273863607376256
             ]
         },
         "group.getStarted": {
@@ -567,6 +598,22 @@
                 770,
                 119,
                 710,
+                42
+            ]
+        },
+        "group.getStarted.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
                 42
             ]
         },
@@ -740,7 +787,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -892,7 +939,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.026s 3.58→2.28",
+            "label": "1 0.097s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1063,8 +1110,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -1099,7 +1146,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

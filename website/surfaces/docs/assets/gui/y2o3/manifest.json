@@ -33,7 +33,7 @@
             "scene": "03-project-details"
         },
         {
-            "action": "fill:createProject.location=/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-otQAdg/pd-neut-cwl_y2o3-spodi",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-OxYLYn/pd-neut-cwl_y2o3-spodi",
             "scene": "03-project-details"
         },
         {
@@ -86,6 +86,10 @@
         },
         {
             "action": "if-enabled:sideBar.tab.settings",
+            "scene": "05-project-settings"
+        },
+        {
+            "action": "sideBar.tab.settings",
             "scene": "05-project-settings"
         },
         {
@@ -146,6 +150,10 @@
         },
         {
             "action": "if-enabled:sideBar.tab.settings",
+            "scene": "08-structure-settings"
+        },
+        {
+            "action": "sideBar.tab.settings",
             "scene": "08-structure-settings"
         },
         {
@@ -629,11 +637,11 @@
             "scene": "12-save-refined"
         },
         {
-            "action": "mainArea.analysis.tab.correlations",
+            "action": "mainArea.tab.correlations",
             "scene": "12-correlations"
         },
         {
-            "action": "mainArea.analysis.tab.fitting",
+            "action": "mainArea.tab.pattern",
             "scene": "12-pattern-return"
         },
         {
@@ -705,6 +713,10 @@
             "scene": "14-report-extras"
         },
         {
+            "action": "sideBar.tab.extras",
+            "scene": "14-report-extras"
+        },
+        {
             "action": "appBar.tab.report",
             "scene": "14-report-text"
         },
@@ -722,6 +734,10 @@
         },
         {
             "action": "if-enabled:sideBar.tab.settings",
+            "scene": "14-report-settings"
+        },
+        {
+            "action": "sideBar.tab.settings",
             "scene": "14-report-settings"
         },
         {
@@ -1297,7 +1313,7 @@
             "scene": "guide-analysis-correlations"
         },
         {
-            "action": "mainArea.analysis.tab.correlations",
+            "action": "mainArea.tab.correlations",
             "scene": "guide-analysis-correlations"
         },
         {
@@ -1421,11 +1437,11 @@
             "scene": "guide-analysis-pattern-updates"
         }
     ],
-    "binary_sha256": "28e3d9673280410e17dec8acb2916048b0ae606f1dd9b2fa42f1609b162c72fb",
+    "binary_sha256": "930017e29ba7c0ffac4bfbdbf09a5bea4beb135a2c33f624ca74e8fc4fe8d6bf",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "17fe1208c16ef917e0754bd3d524cde0a1af7ea27f78e7e2660e3425459282e1"
+            "sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e"
         },
         {
             "file": "inputs/structures/y2o3.edi",
@@ -1488,7 +1504,7 @@
             ]
         }
     },
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "inputs": {
         "data": {
             "file": "inputs/spodi.xye",
@@ -1511,7 +1527,7 @@
         {
             "description": "Start a new diffraction analysis",
             "id": "01-home",
-            "image": "01-home.png",
+            "image": "01-home.webp",
             "metadata": "01-home.json",
             "page": "home",
             "sidebar": "",
@@ -1520,7 +1536,7 @@
         {
             "description": "Choose Create a new project",
             "id": "02-project-start",
-            "image": "02-project-start.png",
+            "image": "02-project-start.webp",
             "metadata": "02-project-start.json",
             "page": "project",
             "sidebar": "",
@@ -1529,7 +1545,7 @@
         {
             "description": "Enter the project details and choose its location",
             "id": "03-project-details",
-            "image": "03-project-details.png",
+            "image": "03-project-details.webp",
             "metadata": "03-project-details.json",
             "page": "project",
             "sidebar": "",
@@ -1538,7 +1554,7 @@
         {
             "description": "Create the project",
             "id": "04-project-created",
-            "image": "04-project-created.png",
+            "image": "04-project-created.webp",
             "metadata": "04-project-created.json",
             "page": "project",
             "sidebar": "",
@@ -1547,7 +1563,7 @@
         {
             "description": "Project details and controls — Main",
             "id": "05-project-basic",
-            "image": "05-project-basic.png",
+            "image": "05-project-basic.webp",
             "metadata": "05-project-basic.json",
             "page": "project",
             "sidebar": "Main",
@@ -1556,7 +1572,7 @@
         {
             "description": "Project details and controls — Extra",
             "id": "05-project-extras",
-            "image": "05-project-extras.png",
+            "image": "05-project-extras.webp",
             "metadata": "05-project-extras.json",
             "page": "project",
             "sidebar": "Extra",
@@ -1565,23 +1581,25 @@
         {
             "description": "Project details and controls — Text",
             "id": "05-project-text",
-            "image": "05-project-text.png",
+            "image": "05-project-text.webp",
             "metadata": "05-project-text.json",
             "page": "project",
             "sidebar": "Text",
             "status": "captured"
         },
         {
+            "description": "Project details and controls — Settings",
             "id": "05-project-settings",
+            "image": "05-project-settings.webp",
+            "metadata": "05-project-settings.json",
             "page": "project",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Settings",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Load the structure into the empty project",
             "id": "06-structure-import",
-            "image": "06-structure-import.png",
+            "image": "06-structure-import.webp",
             "metadata": "06-structure-import.json",
             "page": "structure",
             "sidebar": "",
@@ -1590,7 +1608,7 @@
         {
             "description": "Inspect the imported crystal structure",
             "id": "07-structure-loaded",
-            "image": "07-structure-loaded.png",
+            "image": "07-structure-loaded.webp",
             "metadata": "07-structure-loaded.json",
             "page": "structure",
             "sidebar": "",
@@ -1599,7 +1617,7 @@
         {
             "description": "Crystal structure — Main",
             "id": "08-structure-basic",
-            "image": "08-structure-basic.png",
+            "image": "08-structure-basic.webp",
             "metadata": "08-structure-basic.json",
             "page": "structure",
             "sidebar": "Main",
@@ -1608,7 +1626,7 @@
         {
             "description": "Crystal structure — Extra",
             "id": "08-structure-extras",
-            "image": "08-structure-extras.png",
+            "image": "08-structure-extras.webp",
             "metadata": "08-structure-extras.json",
             "page": "structure",
             "sidebar": "Extra",
@@ -1617,23 +1635,25 @@
         {
             "description": "Crystal structure — Text",
             "id": "08-structure-text",
-            "image": "08-structure-text.png",
+            "image": "08-structure-text.webp",
             "metadata": "08-structure-text.json",
             "page": "structure",
             "sidebar": "Text",
             "status": "captured"
         },
         {
+            "description": "Crystal structure — Settings",
             "id": "08-structure-settings",
+            "image": "08-structure-settings.webp",
+            "metadata": "08-structure-settings.json",
             "page": "structure",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Settings",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Create an experiment for the measurement",
             "id": "09-experiment-import",
-            "image": "09-experiment-import.png",
+            "image": "09-experiment-import.webp",
             "metadata": "09-experiment-import.json",
             "page": "experiment",
             "sidebar": "",
@@ -1642,7 +1662,7 @@
         {
             "description": "Choose the sample form, beam mode and probe before loading data",
             "id": "09-experiment-type",
-            "image": "09-experiment-type.png",
+            "image": "09-experiment-type.webp",
             "metadata": "09-experiment-type.json",
             "page": "experiment",
             "sidebar": "",
@@ -1651,7 +1671,7 @@
         {
             "description": "Set the calculation range before any data are loaded",
             "id": "guide-experiment-calculation-range",
-            "image": "guide-experiment-calculation-range.png",
+            "image": "guide-experiment-calculation-range.webp",
             "metadata": "guide-experiment-calculation-range.json",
             "page": "experiment",
             "sidebar": "",
@@ -1660,7 +1680,7 @@
         {
             "description": "Load the measured angle, intensity and uncertainty columns",
             "id": "09-experiment-data",
-            "image": "09-experiment-data.png",
+            "image": "09-experiment-data.webp",
             "metadata": "09-experiment-data.json",
             "page": "experiment",
             "sidebar": "",
@@ -1669,7 +1689,7 @@
         {
             "description": "Set the wavelength used for this measurement",
             "id": "09-wavelength",
-            "image": "09-wavelength.png",
+            "image": "09-wavelength.webp",
             "metadata": "09-wavelength.json",
             "page": "experiment",
             "sidebar": "",
@@ -1678,7 +1698,7 @@
         {
             "description": "Choose the peak profile and starting coefficients",
             "id": "09-profile",
-            "image": "09-profile.png",
+            "image": "09-profile.webp",
             "metadata": "09-profile.json",
             "page": "experiment",
             "sidebar": "",
@@ -1687,7 +1707,7 @@
         {
             "description": "Set a starting profile coefficient",
             "id": "09-profile-broad-gauss-u",
-            "image": "09-profile-broad-gauss-u.png",
+            "image": "09-profile-broad-gauss-u.webp",
             "metadata": "09-profile-broad-gauss-u.json",
             "page": "experiment",
             "sidebar": "",
@@ -1696,7 +1716,7 @@
         {
             "description": "Set a starting profile coefficient",
             "id": "09-profile-broad-gauss-v",
-            "image": "09-profile-broad-gauss-v.png",
+            "image": "09-profile-broad-gauss-v.webp",
             "metadata": "09-profile-broad-gauss-v.json",
             "page": "experiment",
             "sidebar": "",
@@ -1705,7 +1725,7 @@
         {
             "description": "Set a starting profile coefficient",
             "id": "09-profile-broad-gauss-w",
-            "image": "09-profile-broad-gauss-w.png",
+            "image": "09-profile-broad-gauss-w.webp",
             "metadata": "09-profile-broad-gauss-w.json",
             "page": "experiment",
             "sidebar": "",
@@ -1714,7 +1734,7 @@
         {
             "description": "Exclude the measured regions outside the fitting range",
             "id": "09-exclusion-0",
-            "image": "09-exclusion-0.png",
+            "image": "09-exclusion-0.webp",
             "metadata": "09-exclusion-0.json",
             "page": "experiment",
             "sidebar": "",
@@ -1723,7 +1743,7 @@
         {
             "description": "Exclude the measured regions outside the fitting range",
             "id": "09-exclusion-1",
-            "image": "09-exclusion-1.png",
+            "image": "09-exclusion-1.webp",
             "metadata": "09-exclusion-1.json",
             "page": "experiment",
             "sidebar": "",
@@ -1732,7 +1752,7 @@
         {
             "description": "Choose enough background anchors for this measurement",
             "id": "09-background-settings",
-            "image": "09-background-settings.png",
+            "image": "09-background-settings.webp",
             "metadata": "09-background-settings.json",
             "page": "experiment",
             "sidebar": "",
@@ -1741,7 +1761,7 @@
         {
             "description": "Estimate a starting background from the measured pattern",
             "id": "09-background-estimate",
-            "image": "09-background-estimate.png",
+            "image": "09-background-estimate.webp",
             "metadata": "09-background-estimate.json",
             "page": "experiment",
             "sidebar": "",
@@ -1750,7 +1770,7 @@
         {
             "description": "Inspect the starting pattern before choosing free parameters",
             "id": "10-experiment-loaded",
-            "image": "10-experiment-loaded.png",
+            "image": "10-experiment-loaded.webp",
             "metadata": "10-experiment-loaded.json",
             "page": "experiment",
             "sidebar": "",
@@ -1759,7 +1779,7 @@
         {
             "description": "Experiment and measured data — Main",
             "id": "11-experiment-basic",
-            "image": "11-experiment-basic.png",
+            "image": "11-experiment-basic.webp",
             "metadata": "11-experiment-basic.json",
             "page": "experiment",
             "sidebar": "Main",
@@ -1768,7 +1788,7 @@
         {
             "description": "Experiment and measured data — Extra",
             "id": "11-experiment-extras",
-            "image": "11-experiment-extras.png",
+            "image": "11-experiment-extras.webp",
             "metadata": "11-experiment-extras.json",
             "page": "experiment",
             "sidebar": "Extra",
@@ -1777,7 +1797,7 @@
         {
             "description": "Experiment and measured data — Text",
             "id": "11-experiment-text",
-            "image": "11-experiment-text.png",
+            "image": "11-experiment-text.webp",
             "metadata": "11-experiment-text.json",
             "page": "experiment",
             "sidebar": "Text",
@@ -1786,7 +1806,7 @@
         {
             "description": "Experiment and measured data — Settings",
             "id": "11-experiment-settings",
-            "image": "11-experiment-settings.png",
+            "image": "11-experiment-settings.webp",
             "metadata": "11-experiment-settings.json",
             "page": "experiment",
             "sidebar": "Settings",
@@ -1795,7 +1815,7 @@
         {
             "description": "Begin with the scale and cell length; keep the other parameters fixed",
             "id": "12-analysis-choose",
-            "image": "12-analysis-choose.png",
+            "image": "12-analysis-choose.webp",
             "metadata": "12-analysis-choose.json",
             "page": "analysis",
             "sidebar": "",
@@ -1804,7 +1824,7 @@
         {
             "description": "Fit the scale and cell length first",
             "id": "12-fit-scale-cell",
-            "image": "12-fit-scale-cell.png",
+            "image": "12-fit-scale-cell.webp",
             "metadata": "12-fit-scale-cell.json",
             "page": "analysis",
             "sidebar": "",
@@ -1813,7 +1833,7 @@
         {
             "description": "Add the peak widths and zero offset to the free set",
             "id": "12-fit-profile",
-            "image": "12-fit-profile.png",
+            "image": "12-fit-profile.webp",
             "metadata": "12-fit-profile.json",
             "page": "analysis",
             "sidebar": "",
@@ -1822,7 +1842,7 @@
         {
             "description": "Inspect correlations after the staged refinement",
             "id": "12-correlations",
-            "image": "12-correlations.png",
+            "image": "12-correlations.webp",
             "metadata": "12-correlations.json",
             "page": "analysis",
             "sidebar": "",
@@ -1831,7 +1851,7 @@
         {
             "description": "Completed Rietveld refinement — Main",
             "id": "13-analysis-basic",
-            "image": "13-analysis-basic.png",
+            "image": "13-analysis-basic.webp",
             "metadata": "13-analysis-basic.json",
             "page": "analysis",
             "sidebar": "Main",
@@ -1840,7 +1860,7 @@
         {
             "description": "Completed Rietveld refinement — Extra",
             "id": "13-analysis-extras",
-            "image": "13-analysis-extras.png",
+            "image": "13-analysis-extras.webp",
             "metadata": "13-analysis-extras.json",
             "page": "analysis",
             "sidebar": "Extra",
@@ -1849,7 +1869,7 @@
         {
             "description": "Completed Rietveld refinement — Text",
             "id": "13-analysis-text",
-            "image": "13-analysis-text.png",
+            "image": "13-analysis-text.webp",
             "metadata": "13-analysis-text.json",
             "page": "analysis",
             "sidebar": "Text",
@@ -1858,7 +1878,7 @@
         {
             "description": "Completed Rietveld refinement — Settings",
             "id": "13-analysis-settings",
-            "image": "13-analysis-settings.png",
+            "image": "13-analysis-settings.webp",
             "metadata": "13-analysis-settings.json",
             "page": "analysis",
             "sidebar": "Settings",
@@ -1867,39 +1887,43 @@
         {
             "description": "Review the fitted structure and report — Main",
             "id": "14-report-basic",
-            "image": "14-report-basic.png",
+            "image": "14-report-basic.webp",
             "metadata": "14-report-basic.json",
             "page": "report",
             "sidebar": "Main",
             "status": "captured"
         },
         {
+            "description": "Review the fitted structure and report — Extra",
             "id": "14-report-extras",
+            "image": "14-report-extras.webp",
+            "metadata": "14-report-extras.json",
             "page": "report",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Extra",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Review the fitted structure and report — Text",
             "id": "14-report-text",
-            "image": "14-report-text.png",
+            "image": "14-report-text.webp",
             "metadata": "14-report-text.json",
             "page": "report",
             "sidebar": "Text",
             "status": "captured"
         },
         {
+            "description": "Review the fitted structure and report — Settings",
             "id": "14-report-settings",
+            "image": "14-report-settings.webp",
+            "metadata": "14-report-settings.json",
             "page": "report",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Settings",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Browse the built-in examples",
             "id": "15-project-examples",
-            "image": "15-project-examples.png",
+            "image": "15-project-examples.webp",
             "metadata": "15-project-examples.json",
             "page": "project",
             "sidebar": "",
@@ -1908,7 +1932,7 @@
         {
             "description": "Open or save the current project",
             "id": "guide-project-actions",
-            "image": "guide-project-actions.png",
+            "image": "guide-project-actions.webp",
             "metadata": "guide-project-actions.json",
             "page": "project",
             "sidebar": "",
@@ -1917,7 +1941,7 @@
         {
             "description": "Choose a project folder or archive",
             "id": "guide-project-open",
-            "image": "guide-project-open.png",
+            "image": "guide-project-open.webp",
             "metadata": "guide-project-open.json",
             "page": "project",
             "sidebar": "",
@@ -1926,7 +1950,7 @@
         {
             "description": "Choose a save format or save a copy",
             "id": "guide-project-save",
-            "image": "guide-project-save.png",
+            "image": "guide-project-save.webp",
             "metadata": "guide-project-save.json",
             "page": "project",
             "sidebar": "",
@@ -1935,7 +1959,7 @@
         {
             "description": "Find recent projects",
             "id": "guide-project-recent",
-            "image": "guide-project-recent.png",
+            "image": "guide-project-recent.webp",
             "metadata": "guide-project-recent.json",
             "page": "project",
             "sidebar": "",
@@ -1944,7 +1968,7 @@
         {
             "description": "Choose the crystal symmetry and setting",
             "id": "guide-structure-symmetry",
-            "image": "guide-structure-symmetry.png",
+            "image": "guide-structure-symmetry.webp",
             "metadata": "guide-structure-symmetry.json",
             "page": "structure",
             "sidebar": "",
@@ -1953,7 +1977,7 @@
         {
             "description": "Inspect the unit-cell parameters",
             "id": "guide-structure-cell",
-            "image": "guide-structure-cell.png",
+            "image": "guide-structure-cell.webp",
             "metadata": "guide-structure-cell.json",
             "page": "structure",
             "sidebar": "",
@@ -1962,7 +1986,7 @@
         {
             "description": "Inspect atom sites, coordinates and occupancies",
             "id": "guide-structure-atoms",
-            "image": "guide-structure-atoms.png",
+            "image": "guide-structure-atoms.webp",
             "metadata": "guide-structure-atoms.json",
             "page": "structure",
             "sidebar": "",
@@ -1971,7 +1995,7 @@
         {
             "description": "Inspect anisotropic atomic displacement",
             "id": "guide-structure-displacement",
-            "image": "guide-structure-displacement.png",
+            "image": "guide-structure-displacement.webp",
             "metadata": "guide-structure-displacement.json",
             "page": "structure",
             "sidebar": "",
@@ -1980,7 +2004,7 @@
         {
             "description": "Load, create or duplicate a structure",
             "id": "guide-structure-create",
-            "image": "guide-structure-create.png",
+            "image": "guide-structure-create.webp",
             "metadata": "guide-structure-create.json",
             "page": "structure",
             "sidebar": "",
@@ -1989,7 +2013,7 @@
         {
             "description": "Select an experiment or load measured data",
             "id": "guide-experiment-data",
-            "image": "guide-experiment-data.png",
+            "image": "guide-experiment-data.webp",
             "metadata": "guide-experiment-data.json",
             "page": "experiment",
             "sidebar": "",
@@ -1998,7 +2022,7 @@
         {
             "description": "See which file the measured data were read from",
             "id": "guide-experiment-data-source",
-            "image": "guide-experiment-data-source.png",
+            "image": "guide-experiment-data-source.webp",
             "metadata": "guide-experiment-data-source.json",
             "page": "experiment",
             "sidebar": "",
@@ -2007,7 +2031,7 @@
         {
             "description": "Load or create an experiment",
             "id": "guide-experiment-create",
-            "image": "guide-experiment-create.png",
+            "image": "guide-experiment-create.webp",
             "metadata": "guide-experiment-create.json",
             "page": "experiment",
             "sidebar": "",
@@ -2016,7 +2040,7 @@
         {
             "description": "Inspect instrument parameters",
             "id": "guide-experiment-instrument",
-            "image": "guide-experiment-instrument.png",
+            "image": "guide-experiment-instrument.webp",
             "metadata": "guide-experiment-instrument.json",
             "page": "experiment",
             "sidebar": "",
@@ -2025,7 +2049,7 @@
         {
             "description": "Choose and inspect a peak profile",
             "id": "guide-experiment-profile",
-            "image": "guide-experiment-profile.png",
+            "image": "guide-experiment-profile.webp",
             "metadata": "guide-experiment-profile.json",
             "page": "experiment",
             "sidebar": "",
@@ -2034,7 +2058,7 @@
         {
             "description": "Inspect the background representation and values",
             "id": "guide-experiment-background",
-            "image": "guide-experiment-background.png",
+            "image": "guide-experiment-background.webp",
             "metadata": "guide-experiment-background.json",
             "page": "experiment",
             "sidebar": "",
@@ -2043,7 +2067,7 @@
         {
             "description": "Inspect excluded fitting intervals",
             "id": "guide-experiment-exclusions",
-            "image": "guide-experiment-exclusions.png",
+            "image": "guide-experiment-exclusions.webp",
             "metadata": "guide-experiment-exclusions.json",
             "page": "experiment",
             "sidebar": "",
@@ -2052,7 +2076,7 @@
         {
             "description": "Link structures and inspect phase scales",
             "id": "guide-experiment-links",
-            "image": "guide-experiment-links.png",
+            "image": "guide-experiment-links.webp",
             "metadata": "guide-experiment-links.json",
             "page": "experiment",
             "sidebar": "",
@@ -2061,7 +2085,7 @@
         {
             "description": "Inspect background estimation settings",
             "id": "guide-experiment-estimation",
-            "image": "guide-experiment-estimation.png",
+            "image": "guide-experiment-estimation.webp",
             "metadata": "guide-experiment-estimation.json",
             "page": "experiment",
             "sidebar": "",
@@ -2070,7 +2094,7 @@
         {
             "description": "Choose a fitting mode supported by the project",
             "id": "guide-analysis-modes",
-            "image": "guide-analysis-modes.png",
+            "image": "guide-analysis-modes.webp",
             "metadata": "guide-analysis-modes.json",
             "page": "analysis",
             "sidebar": "",
@@ -2079,7 +2103,7 @@
         {
             "description": "Inspect minimizer settings",
             "id": "guide-analysis-minimizer",
-            "image": "guide-analysis-minimizer.png",
+            "image": "guide-analysis-minimizer.webp",
             "metadata": "guide-analysis-minimizer.json",
             "page": "analysis",
             "sidebar": "",
@@ -2088,7 +2112,7 @@
         {
             "description": "Inspect parameter constraints",
             "id": "guide-analysis-constraints",
-            "image": "guide-analysis-constraints.png",
+            "image": "guide-analysis-constraints.webp",
             "metadata": "guide-analysis-constraints.json",
             "page": "analysis",
             "sidebar": "",
@@ -2097,7 +2121,7 @@
         {
             "description": "Choose which sections appear in the report",
             "id": "guide-report-contents",
-            "image": "guide-report-contents.png",
+            "image": "guide-report-contents.webp",
             "metadata": "guide-report-contents.json",
             "page": "report",
             "sidebar": "",
@@ -2106,7 +2130,7 @@
         {
             "description": "Choose report formats and export",
             "id": "guide-report-export",
-            "image": "guide-report-export.png",
+            "image": "guide-report-export.webp",
             "metadata": "guide-report-export.json",
             "page": "report",
             "sidebar": "",
@@ -2115,7 +2139,7 @@
         {
             "description": "Review the saved report status",
             "id": "guide-report-saved",
-            "image": "guide-report-saved.png",
+            "image": "guide-report-saved.webp",
             "metadata": "guide-report-saved.json",
             "page": "report",
             "sidebar": "",
@@ -2124,7 +2148,7 @@
         {
             "description": "Choose the structure display",
             "id": "guide-structure-appearance",
-            "image": "guide-structure-appearance.png",
+            "image": "guide-structure-appearance.webp",
             "metadata": "guide-structure-appearance.json",
             "page": "structure",
             "sidebar": "",
@@ -2133,7 +2157,7 @@
         {
             "description": "Inspect scattering-length settings",
             "id": "guide-structure-scattering",
-            "image": "guide-structure-scattering.png",
+            "image": "guide-structure-scattering.webp",
             "metadata": "guide-structure-scattering.json",
             "page": "structure",
             "sidebar": "",
@@ -2142,7 +2166,7 @@
         {
             "description": "Inspect absorption settings",
             "id": "guide-experiment-absorption",
-            "image": "guide-experiment-absorption.png",
+            "image": "guide-experiment-absorption.webp",
             "metadata": "guide-experiment-absorption.json",
             "page": "experiment",
             "sidebar": "",
@@ -2151,7 +2175,7 @@
         {
             "description": "Inspect preferred-orientation settings",
             "id": "guide-experiment-orientation",
-            "image": "guide-experiment-orientation.png",
+            "image": "guide-experiment-orientation.webp",
             "metadata": "guide-experiment-orientation.json",
             "page": "experiment",
             "sidebar": "",
@@ -2160,7 +2184,7 @@
         {
             "description": "Inspect scattering data sources",
             "id": "guide-experiment-scattering",
-            "image": "guide-experiment-scattering.png",
+            "image": "guide-experiment-scattering.webp",
             "metadata": "guide-experiment-scattering.json",
             "page": "experiment",
             "sidebar": "",
@@ -2169,7 +2193,7 @@
         {
             "description": "Inspect parameter aliases",
             "id": "guide-analysis-aliases",
-            "image": "guide-analysis-aliases.png",
+            "image": "guide-analysis-aliases.webp",
             "metadata": "guide-analysis-aliases.json",
             "page": "analysis",
             "sidebar": "",
@@ -2178,7 +2202,7 @@
         {
             "description": "Inspect correlations after fitting",
             "id": "guide-analysis-correlations",
-            "image": "guide-analysis-correlations.png",
+            "image": "guide-analysis-correlations.webp",
             "metadata": "guide-analysis-correlations.json",
             "page": "analysis",
             "sidebar": "",
@@ -2187,7 +2211,7 @@
         {
             "description": "Choose how values and standard uncertainties are displayed",
             "id": "guide-project-uncertainties",
-            "image": "guide-project-uncertainties.png",
+            "image": "guide-project-uncertainties.webp",
             "metadata": "guide-project-uncertainties.json",
             "page": "project",
             "sidebar": "",
@@ -2196,7 +2220,7 @@
         {
             "description": "Inspect the measured range and point data",
             "id": "guide-experiment-data-settings",
-            "image": "guide-experiment-data-settings.png",
+            "image": "guide-experiment-data-settings.webp",
             "metadata": "guide-experiment-data-settings.json",
             "page": "experiment",
             "sidebar": "",
@@ -2205,7 +2229,7 @@
         {
             "description": "Choose the peak calculation window",
             "id": "guide-experiment-cutoff",
-            "image": "guide-experiment-cutoff.png",
+            "image": "guide-experiment-cutoff.webp",
             "metadata": "guide-experiment-cutoff.json",
             "page": "experiment",
             "sidebar": "",
@@ -2214,7 +2238,7 @@
         {
             "description": "Inspect the values before the last fit",
             "id": "guide-analysis-start-values",
-            "image": "guide-analysis-start-values.png",
+            "image": "guide-analysis-start-values.webp",
             "metadata": "guide-analysis-start-values.json",
             "page": "analysis",
             "sidebar": "",
@@ -2223,7 +2247,7 @@
         {
             "description": "Choose which parameter groups appear in the table",
             "id": "guide-analysis-shown-parameters",
-            "image": "guide-analysis-shown-parameters.png",
+            "image": "guide-analysis-shown-parameters.webp",
             "metadata": "guide-analysis-shown-parameters.json",
             "page": "analysis",
             "sidebar": "",
@@ -2232,7 +2256,7 @@
         {
             "description": "Choose how the displayed pattern updates during a scan",
             "id": "guide-analysis-pattern-updates",
-            "image": "guide-analysis-pattern-updates.png",
+            "image": "guide-analysis-pattern-updates.webp",
             "metadata": "guide-analysis-pattern-updates.json",
             "page": "analysis",
             "sidebar": "",
@@ -2240,8 +2264,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "status": "complete",
     "workflow": "creation"
 }

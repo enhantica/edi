@@ -264,13 +264,18 @@ Popup {
     function setField(field, value) {
         if (field === null)
             return;
+        // Focused first, as a click on it would be: a table row's editors write to the row their focus makes current.
+        if (typeof field.forceActiveFocus === "function")
+            field.forceActiveFocus();
         if (field.item !== undefined && field.item !== null && field.item.value !== undefined) {
             field.item.value = Number(value);
+        } else if (field.committed !== undefined) {
+            // A table cell's finished edit: its commit() needs a draft only typing makes, so Next writes the value as
+            // the edit's end does.
+            field.committed(value);
         } else if (typeof field.commit === "function") {
             field.text = value;
             field.commit();
-        } else if (field.committed !== undefined) {
-            field.committed(value);
         } else if (typeof field.insert === "function") {
             // Typed as a user types, so a field bound to a filter keeps its binding (an assignment would cut it loose).
             if (field.text !== value) {
@@ -599,10 +604,23 @@ Popup {
             }
         case "web-dialog":
             {
-                // "structure", "experiment" or "data": the menu's From web… entry chosen.
-                const entry = panel.locate(panel.webEntries[argument]) as T.AbstractButton;
-                if (entry !== null && entry.visible)
+                // "structure", "experiment" or "data": the menu's From web… entry chosen. The status bar's Next is a
+                // press outside the menu, which closes it, so the menu is opened again first when it has closed.
+                const name = panel.webEntries[argument];
+                const entry = panel.locate(name) as T.AbstractButton;
+                if (entry !== null && entry.visible) {
                     entry.click();
+                    return;
+                }
+                const button = panel.locate(name.split(".").slice(0, 2).join(".")) as T.AbstractButton;
+                if (button !== null && button.enabled) {
+                    button.click();
+                    Qt.callLater(() => {
+                        const opened = panel.locate(name) as T.AbstractButton;
+                        if (opened !== null && opened.visible)
+                            opened.click();
+                    });
+                }
                 return;
             }
         case "menu-closed":
@@ -627,6 +645,8 @@ Popup {
                 const equals = argument.indexOf("=");
                 const box = panel.locate(argument.slice(0, equals)) as T.ComboBox;
                 const index = box !== null ? panel.optionIndex(box, argument.slice(equals + 1)) : -1;
+                if (box !== null)
+                    box.forceActiveFocus();
                 if (index >= 0 && box.currentIndex !== index) {
                     box.currentIndex = index;
                     box.activated(index);

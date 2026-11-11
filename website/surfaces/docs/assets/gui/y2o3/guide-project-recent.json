@@ -1,13 +1,13 @@
 {
     "description": "Find recent projects",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "group.recentProjects"
     ],
     "id": "guide-project-recent",
-    "image": "guide-project-recent.png",
-    "image_sha256": "39423ae8f63b303296e1d29f16e9ffdcdb252fa8d59d009d6e3e596db827bd9d",
+    "image": "guide-project-recent.webp",
+    "image_sha256": "1864e122aafde21ca666d869d174f64d9ab2fb6c62c5b90d4eef8db6a06bf278",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,7 +60,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                252.0000000000036,
+                252,
                 682,
                 195
             ],
@@ -68,9 +68,9 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252.0000000000036,
+                252,
                 682,
-                195.00000000000003
+                195
             ]
         },
         "appBar": {
@@ -89,43 +89,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -134,7 +100,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -186,6 +152,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -328,7 +311,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -337,7 +320,7 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -346,7 +329,7 @@
         "group.examples": {
             "bounds": [
                 770,
-                161.0000000000036,
+                161,
                 710,
                 42
             ],
@@ -355,8 +338,24 @@
             "label": "Examples",
             "visible_bounds": [
                 770,
-                161.0000000000036,
+                161,
                 710,
+                42
+            ]
+        },
+        "group.examples.pin": {
+            "bounds": [
+                1433.2261363926236,
+                159.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                161,
+                44.54772721475251,
                 42
             ]
         },
@@ -377,10 +376,26 @@
                 42
             ]
         },
+        "group.getStarted.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.recentProjects": {
             "bounds": [
                 770,
-                203.0000000000036,
+                203,
                 710,
                 258
             ],
@@ -389,9 +404,25 @@
             "label": "Recent projects",
             "visible_bounds": [
                 770,
-                203.0000000000036,
+                203,
                 710,
                 258
+            ]
+        },
+        "group.recentProjects.pin": {
+            "bounds": [
+                1433.2261363926236,
+                201.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                203,
+                44.54772721475251,
+                43.273863607376256
             ]
         },
         "label": {
@@ -469,7 +500,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-otQAdg/docs-saved-project",
+            "label": "/tmp/EasyDiffraction-OxYLYn/docs-saved-project",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -528,7 +559,7 @@
         "recentProjects.list": {
             "bounds": [
                 784,
-                252.0000000000036,
+                252,
                 682,
                 195
             ],
@@ -536,23 +567,23 @@
             "label": "",
             "visible_bounds": [
                 784,
-                252.0000000000036,
+                252,
                 682,
-                195.00000000000003
+                195
             ]
         },
         "recentProjects.path.0": {
             "bounds": [
                 815,
-                291.00000000000364,
+                291,
                 570,
                 39
             ],
             "enabled": true,
-            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-otQAdg/docs-saved-project",
+            "label": "/tmp/EasyDiffraction-OxYLYn/docs-saved-project",
             "visible_bounds": [
                 815,
-                291.00000000000364,
+                291,
                 570,
                 39
             ]
@@ -560,7 +591,7 @@
         "recentProjects.path.1": {
             "bounds": [
                 815,
-                330.00000000000364,
+                330,
                 570,
                 39
             ],
@@ -568,7 +599,7 @@
             "label": "checkpoints/refined",
             "visible_bounds": [
                 815,
-                330.00000000000364,
+                330,
                 570,
                 39
             ]
@@ -576,7 +607,7 @@
         "recentProjects.path.2": {
             "bounds": [
                 815,
-                369.00000000000364,
+                369,
                 570,
                 39
             ],
@@ -584,7 +615,7 @@
             "label": "checkpoints/starting",
             "visible_bounds": [
                 815,
-                369.00000000000364,
+                369,
                 570,
                 39
             ]
@@ -592,15 +623,15 @@
         "recentProjects.path.3": {
             "bounds": [
                 815,
-                408.00000000000364,
+                408,
                 570,
                 39
             ],
             "enabled": true,
-            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-otQAdg/pd-neut-cwl_y2o3-spodi",
+            "label": "/tmp/EasyDiffraction-OxYLYn/pd-neut-cwl_y2o3-spodi",
             "visible_bounds": [
                 815,
-                408.00000000000364,
+                408,
                 570,
                 39
             ]
@@ -608,7 +639,7 @@
         "recentProjects.remove.0": {
             "bounds": [
                 1421,
-                291.00000000000364,
+                291,
                 39,
                 39
             ],
@@ -617,7 +648,7 @@
             "label": "",
             "visible_bounds": [
                 1421,
-                291.00000000000364,
+                291,
                 39,
                 39
             ]
@@ -625,7 +656,7 @@
         "recentProjects.remove.1": {
             "bounds": [
                 1421,
-                330.00000000000364,
+                330,
                 39,
                 39
             ],
@@ -634,7 +665,7 @@
             "label": "",
             "visible_bounds": [
                 1421,
-                330.00000000000364,
+                330,
                 39,
                 39
             ]
@@ -642,7 +673,7 @@
         "recentProjects.remove.2": {
             "bounds": [
                 1421,
-                369.00000000000364,
+                369,
                 39,
                 39
             ],
@@ -651,7 +682,7 @@
             "label": "",
             "visible_bounds": [
                 1421,
-                369.00000000000364,
+                369,
                 39,
                 39
             ]
@@ -659,7 +690,7 @@
         "recentProjects.remove.3": {
             "bounds": [
                 1421,
-                408.00000000000364,
+                408,
                 39,
                 39
             ],
@@ -668,7 +699,7 @@
             "label": "",
             "visible_bounds": [
                 1421,
-                408.00000000000364,
+                408,
                 39,
                 39
             ]
@@ -676,7 +707,7 @@
         "recentProjects.status.0": {
             "bounds": [
                 1389,
-                291.00000000000364,
+                291,
                 28,
                 39
             ],
@@ -685,7 +716,7 @@
             "label": "",
             "visible_bounds": [
                 1389,
-                291.00000000000364,
+                291,
                 28,
                 39
             ]
@@ -693,7 +724,7 @@
         "recentProjects.status.1": {
             "bounds": [
                 1389,
-                330.00000000000364,
+                330,
                 28,
                 39
             ],
@@ -702,7 +733,7 @@
             "label": "",
             "visible_bounds": [
                 1389,
-                330.00000000000364,
+                330,
                 28,
                 39
             ]
@@ -710,7 +741,7 @@
         "recentProjects.status.2": {
             "bounds": [
                 1389,
-                369.00000000000364,
+                369,
                 28,
                 39
             ],
@@ -719,7 +750,7 @@
             "label": "",
             "visible_bounds": [
                 1389,
-                369.00000000000364,
+                369,
                 28,
                 39
             ]
@@ -727,7 +758,7 @@
         "recentProjects.status.3": {
             "bounds": [
                 1389,
-                408.00000000000364,
+                408,
                 28,
                 39
             ],
@@ -736,7 +767,7 @@
             "label": "",
             "visible_bounds": [
                 1389,
-                408.00000000000364,
+                408,
                 28,
                 39
             ]
@@ -780,7 +811,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -932,7 +963,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.026s 3.58→2.28",
+            "label": "1 0.097s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1103,8 +1134,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -1139,7 +1170,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

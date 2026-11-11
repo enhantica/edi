@@ -230,7 +230,7 @@ def test_preview_index_serves_the_current_wheels_and_links_older_releases(tmp_pa
     assert text.count('data-requires-python="&gt;=3.12"') == 2, (
         'Every entry states the Python it needs.'
     )
-    assert fetched == [('v2026.11.80', name)], 'Only the current release is fetched.'
+    assert fetched == [('v2026.11.10', name)], 'Only the current release is fetched.'
     assert [p.name for p in project.glob('*.whl')] == [name], (
         'The site serves only the current release.'
     )

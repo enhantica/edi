@@ -9,15 +9,15 @@ If you use EasyDiffraction in your work, please cite it. The app shows the same 
 ## Citation
 
 Sazonov, A. (2026). EasyDiffraction [Computer software].
-DOI: [10.5281/zenodo.22905049](https://doi.org/10.5281/zenodo.22905049)
+DOI: [10.5281/zenodo.24127939](https://doi.org/10.5281/zenodo.24127939)
 
 ```bibtex
 @software{easydiffraction,
   author = {Sazonov, Andrew},
   title = {EasyDiffraction},
   year = {2026},
-  doi = {10.5281/zenodo.22905049},
-  url = {https://doi.org/10.5281/zenodo.22905049}
+  doi = {10.5281/zenodo.24127939},
+  url = {https://doi.org/10.5281/zenodo.24127939}
 }
 ```
 

@@ -55,3 +55,8 @@ predicts; the default descent now runs fast descent and the ladder for three ite
 continues with the one at the lower χ². Measured with `python -m edi fit --report machine --verbosity full` linked
 against crysta `edab5435`, `OMP_NUM_THREADS=4`: reduced_chi_square 6.245812633 → 6.245620875; iterations 41 → 23;
 param.Co.j2_coefficient.value 0.5896782533 → 0.5867252778. No `reference` value moved.
+
+**Re-measured 2026-11-11** with the new starting moments and the default descent's three-iteration probes, on the
+merged tree (crysta `f4620764`), with `python -m edi fit --report machine` and the Python API for the j2 weight:
+reduced_chi_square 6.245620875 → 6.245620606; iterations 23 → 14; param.Co.j2_coefficient.value 0.5867252778 →
+0.5867186461. No `reference` value moved.

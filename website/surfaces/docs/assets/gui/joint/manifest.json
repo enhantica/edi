@@ -97,6 +97,10 @@
             "scene": "joint-project-settings"
         },
         {
+            "action": "sideBar.tab.settings",
+            "scene": "joint-project-settings"
+        },
+        {
             "action": "appBar.tab.structure",
             "scene": "joint-structure-basic"
         },
@@ -138,6 +142,10 @@
         },
         {
             "action": "if-enabled:sideBar.tab.settings",
+            "scene": "joint-structure-settings"
+        },
+        {
+            "action": "sideBar.tab.settings",
             "scene": "joint-structure-settings"
         },
         {
@@ -254,6 +262,10 @@
         },
         {
             "action": "if-enabled:sideBar.tab.extras",
+            "scene": "joint-report-extras"
+        },
+        {
+            "action": "sideBar.tab.extras",
             "scene": "joint-report-extras"
         },
         {
@@ -274,6 +286,10 @@
         },
         {
             "action": "if-enabled:sideBar.tab.settings",
+            "scene": "joint-report-settings"
+        },
+        {
+            "action": "sideBar.tab.settings",
             "scene": "joint-report-settings"
         },
         {
@@ -365,7 +381,7 @@
             "scene": "joint-experiment-stacked"
         },
         {
-            "action": "mainArea.experiment.tab.stacked",
+            "action": "mainArea.tab.stacked",
             "scene": "joint-experiment-stacked"
         },
         {
@@ -381,7 +397,7 @@
             "scene": "joint-experiment-map"
         },
         {
-            "action": "mainArea.experiment.tab.map",
+            "action": "mainArea.tab.map",
             "scene": "joint-experiment-map"
         },
         {
@@ -397,7 +413,7 @@
             "scene": "joint-analysis-stacked"
         },
         {
-            "action": "mainArea.analysis.tab.stacked",
+            "action": "mainArea.tab.stacked",
             "scene": "joint-analysis-stacked"
         },
         {
@@ -413,7 +429,7 @@
             "scene": "joint-analysis-map"
         },
         {
-            "action": "mainArea.analysis.tab.map",
+            "action": "mainArea.tab.map",
             "scene": "joint-analysis-map"
         },
         {
@@ -425,15 +441,15 @@
             "scene": "joint-correlations"
         },
         {
-            "action": "mainArea.analysis.tab.correlations",
+            "action": "mainArea.tab.correlations",
             "scene": "joint-correlations"
         }
     ],
-    "binary_sha256": "28e3d9673280410e17dec8acb2916048b0ae606f1dd9b2fa42f1609b162c72fb",
+    "binary_sha256": "930017e29ba7c0ffac4bfbdbf09a5bea4beb135a2c33f624ca74e8fc4fe8d6bf",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "b1e2d25a5f3152ed7f500ed3c0348fe0b9294e72839c8e9352b74ff9f5ef6063"
+            "sha256": "17f359c213950f1f635d83d1a22a465491101031b51a0e79e72297d5d7e58d4e"
         },
         {
             "file": "inputs/experiments/lab.edi",
@@ -501,7 +517,7 @@
             ]
         }
     },
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "inputs": {
         "experiment": {
             "file": "inputs/experiments/d1a.edi",
@@ -520,7 +536,7 @@
         {
             "description": "Select an experiment or dataset",
             "id": "joint-experiment-before",
-            "image": "joint-experiment-before.png",
+            "image": "joint-experiment-before.webp",
             "metadata": "joint-experiment-before.json",
             "page": "experiment",
             "sidebar": "",
@@ -529,7 +545,7 @@
         {
             "description": "Inspect the project's project controls",
             "id": "joint-project-basic",
-            "image": "joint-project-basic.png",
+            "image": "joint-project-basic.webp",
             "metadata": "joint-project-basic.json",
             "page": "project",
             "sidebar": "Main",
@@ -538,7 +554,7 @@
         {
             "description": "Inspect the project's project controls",
             "id": "joint-project-extras",
-            "image": "joint-project-extras.png",
+            "image": "joint-project-extras.webp",
             "metadata": "joint-project-extras.json",
             "page": "project",
             "sidebar": "Extra",
@@ -547,23 +563,25 @@
         {
             "description": "Inspect the project's project controls",
             "id": "joint-project-text",
-            "image": "joint-project-text.png",
+            "image": "joint-project-text.webp",
             "metadata": "joint-project-text.json",
             "page": "project",
             "sidebar": "Text",
             "status": "captured"
         },
         {
+            "description": "Inspect the project's project controls",
             "id": "joint-project-settings",
+            "image": "joint-project-settings.webp",
+            "metadata": "joint-project-settings.json",
             "page": "project",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Settings",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Inspect the project's structure controls",
             "id": "joint-structure-basic",
-            "image": "joint-structure-basic.png",
+            "image": "joint-structure-basic.webp",
             "metadata": "joint-structure-basic.json",
             "page": "structure",
             "sidebar": "Main",
@@ -572,7 +590,7 @@
         {
             "description": "Inspect the project's structure controls",
             "id": "joint-structure-extras",
-            "image": "joint-structure-extras.png",
+            "image": "joint-structure-extras.webp",
             "metadata": "joint-structure-extras.json",
             "page": "structure",
             "sidebar": "Extra",
@@ -581,23 +599,25 @@
         {
             "description": "Inspect the project's structure controls",
             "id": "joint-structure-text",
-            "image": "joint-structure-text.png",
+            "image": "joint-structure-text.webp",
             "metadata": "joint-structure-text.json",
             "page": "structure",
             "sidebar": "Text",
             "status": "captured"
         },
         {
+            "description": "Inspect the project's structure controls",
             "id": "joint-structure-settings",
+            "image": "joint-structure-settings.webp",
+            "metadata": "joint-structure-settings.json",
             "page": "structure",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Settings",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Inspect the project's experiment controls",
             "id": "joint-experiment-basic",
-            "image": "joint-experiment-basic.png",
+            "image": "joint-experiment-basic.webp",
             "metadata": "joint-experiment-basic.json",
             "page": "experiment",
             "sidebar": "Main",
@@ -606,7 +626,7 @@
         {
             "description": "Inspect the project's experiment controls",
             "id": "joint-experiment-extras",
-            "image": "joint-experiment-extras.png",
+            "image": "joint-experiment-extras.webp",
             "metadata": "joint-experiment-extras.json",
             "page": "experiment",
             "sidebar": "Extra",
@@ -615,7 +635,7 @@
         {
             "description": "Inspect the project's experiment controls",
             "id": "joint-experiment-text",
-            "image": "joint-experiment-text.png",
+            "image": "joint-experiment-text.webp",
             "metadata": "joint-experiment-text.json",
             "page": "experiment",
             "sidebar": "Text",
@@ -624,7 +644,7 @@
         {
             "description": "Inspect the project's experiment controls",
             "id": "joint-experiment-settings",
-            "image": "joint-experiment-settings.png",
+            "image": "joint-experiment-settings.webp",
             "metadata": "joint-experiment-settings.json",
             "page": "experiment",
             "sidebar": "Settings",
@@ -633,7 +653,7 @@
         {
             "description": "Inspect the project's analysis controls",
             "id": "joint-analysis-basic",
-            "image": "joint-analysis-basic.png",
+            "image": "joint-analysis-basic.webp",
             "metadata": "joint-analysis-basic.json",
             "page": "analysis",
             "sidebar": "Main",
@@ -642,7 +662,7 @@
         {
             "description": "Inspect the project's analysis controls",
             "id": "joint-analysis-extras",
-            "image": "joint-analysis-extras.png",
+            "image": "joint-analysis-extras.webp",
             "metadata": "joint-analysis-extras.json",
             "page": "analysis",
             "sidebar": "Extra",
@@ -651,7 +671,7 @@
         {
             "description": "Inspect the project's analysis controls",
             "id": "joint-analysis-text",
-            "image": "joint-analysis-text.png",
+            "image": "joint-analysis-text.webp",
             "metadata": "joint-analysis-text.json",
             "page": "analysis",
             "sidebar": "Text",
@@ -660,7 +680,7 @@
         {
             "description": "Inspect the project's analysis controls",
             "id": "joint-analysis-settings",
-            "image": "joint-analysis-settings.png",
+            "image": "joint-analysis-settings.webp",
             "metadata": "joint-analysis-settings.json",
             "page": "analysis",
             "sidebar": "Settings",
@@ -669,39 +689,43 @@
         {
             "description": "Inspect the project's report controls",
             "id": "joint-report-basic",
-            "image": "joint-report-basic.png",
+            "image": "joint-report-basic.webp",
             "metadata": "joint-report-basic.json",
             "page": "report",
             "sidebar": "Main",
             "status": "captured"
         },
         {
+            "description": "Inspect the project's report controls",
             "id": "joint-report-extras",
+            "image": "joint-report-extras.webp",
+            "metadata": "joint-report-extras.json",
             "page": "report",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Extra",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Inspect the project's report controls",
             "id": "joint-report-text",
-            "image": "joint-report-text.png",
+            "image": "joint-report-text.webp",
             "metadata": "joint-report-text.json",
             "page": "report",
             "sidebar": "Text",
             "status": "captured"
         },
         {
+            "description": "Inspect the project's report controls",
             "id": "joint-report-settings",
+            "image": "joint-report-settings.webp",
+            "metadata": "joint-report-settings.json",
             "page": "report",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Settings",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Inspect joint fitting for the project's experiments",
             "id": "joint-mode",
-            "image": "joint-mode.png",
+            "image": "joint-mode.webp",
             "metadata": "joint-mode.json",
             "page": "analysis",
             "sidebar": "",
@@ -710,7 +734,7 @@
         {
             "description": "Set the relative weights of the experiments in the joint fit",
             "id": "joint-weights",
-            "image": "joint-weights.png",
+            "image": "joint-weights.webp",
             "metadata": "joint-weights.json",
             "page": "analysis",
             "sidebar": "",
@@ -719,7 +743,7 @@
         {
             "description": "Inspect the overall outcome and statistics of the completed fit",
             "id": "joint-result",
-            "image": "joint-result.png",
+            "image": "joint-result.webp",
             "metadata": "joint-result.json",
             "page": "analysis",
             "sidebar": "",
@@ -728,7 +752,7 @@
         {
             "description": "Compare fit statistics for the individual experiments",
             "id": "joint-experiment-results",
-            "image": "joint-experiment-results.png",
+            "image": "joint-experiment-results.webp",
             "metadata": "joint-experiment-results.json",
             "page": "analysis",
             "sidebar": "",
@@ -737,7 +761,7 @@
         {
             "description": "Inspect the structure contributions recorded for each experiment",
             "id": "joint-structure-results",
-            "image": "joint-structure-results.png",
+            "image": "joint-structure-results.webp",
             "metadata": "joint-structure-results.json",
             "page": "analysis",
             "sidebar": "",
@@ -746,7 +770,7 @@
         {
             "description": "Inspect the scan in the stacked view",
             "id": "joint-experiment-stacked",
-            "image": "joint-experiment-stacked.png",
+            "image": "joint-experiment-stacked.webp",
             "metadata": "joint-experiment-stacked.json",
             "page": "experiment",
             "sidebar": "",
@@ -755,7 +779,7 @@
         {
             "description": "Inspect the scan in the map view",
             "id": "joint-experiment-map",
-            "image": "joint-experiment-map.png",
+            "image": "joint-experiment-map.webp",
             "metadata": "joint-experiment-map.json",
             "page": "experiment",
             "sidebar": "",
@@ -764,7 +788,7 @@
         {
             "description": "Inspect the scan in the stacked view",
             "id": "joint-analysis-stacked",
-            "image": "joint-analysis-stacked.png",
+            "image": "joint-analysis-stacked.webp",
             "metadata": "joint-analysis-stacked.json",
             "page": "analysis",
             "sidebar": "",
@@ -773,7 +797,7 @@
         {
             "description": "Inspect the scan in the map view",
             "id": "joint-analysis-map",
-            "image": "joint-analysis-map.png",
+            "image": "joint-analysis-map.webp",
             "metadata": "joint-analysis-map.json",
             "page": "analysis",
             "sidebar": "",
@@ -782,7 +806,7 @@
         {
             "description": "Inspect correlations for the selected measurement",
             "id": "joint-correlations",
-            "image": "joint-correlations.png",
+            "image": "joint-correlations.webp",
             "metadata": "joint-correlations.json",
             "page": "analysis",
             "sidebar": "",
@@ -790,8 +814,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "4507e1db0b5ab3c28a5c62a4da2f63b27e5fb9e6a583b0ba99d40520a3c70c4e",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "status": "complete",
     "workflow": "reference"
 }

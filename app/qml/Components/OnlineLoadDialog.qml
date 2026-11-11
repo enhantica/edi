@@ -37,6 +37,9 @@ AppDialog {
     onClosed: dialog.search.cancelLoads()
 
     objectName: "onlineLoad"
+    // During a tutorial a press outside, such as the status bar's Next, keeps the dialog open: the tutorial's next step
+    // is inside it. Escape still closes it.
+    closePolicy: AppState.tutorialRunning ? Popup.CloseOnEscape : Popup.CloseOnEscape | Popup.CloseOnPressOutside
     title: kind === "structure" ? qsTr("Load structure from web") : kind === "experiment" ? qsTr("Load experiment from web") : qsTr("Load measured data from web")
     // Three field columns, each as wide as its longest placeholder needs (the owner, 2026-11-04), the same for every kind;
     // the results table fills that width. Never wider than the window: the clamp is on the dialog's width, since one on

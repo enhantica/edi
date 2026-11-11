@@ -353,7 +353,7 @@
   "page": "analysis",
   "description": "Inspect the correlations",
   "actions": [
-   "mainArea.analysis.tab.correlations"
+   "mainArea.tab.correlations"
   ],
   "highlights": [
    "workflow.analysis.mainContent"
@@ -366,7 +366,7 @@
   "page": "report",
   "description": "Review the report",
   "actions": [
-   "mainArea.analysis.tab.fitting",
+   "mainArea.tab.pattern",
    "appBar.tab.report",
    "sideBar.tab.basic"
   ],

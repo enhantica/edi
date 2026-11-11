@@ -716,11 +716,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("concepts-") + theme + QStringLiteral("-");
             const QStringList open = theme == QLatin1String("light")
-                                         ? QStringList{"resize:1470x900"} + start + open_cli_project("pd-neut-cwl_cosio-d20_2k") +
-                                               QStringList{"preference:chartIncludedOnly=true", "theme:light", analysis, basic,
+                                         ? QStringList{"resize:1314x900"} + start + open_cli_project("pd-neut-cwl_cosio-d20_2k") +
+                                               QStringList{"preference:chartIncludedOnly=true", "preference:patternMeasuredStyle=line", "theme:light", analysis, basic,
                                                            "statusBar.fit.button", "wait-fit", "choose:OK"}
                                          : QStringList{"theme:dark", analysis};
-            steps_.push_back({name + "1-fit", open + QStringList{"save-image:chart.toolbar.save|" + name + "refinement.png|2"}});
+            steps_.push_back({name + "1-fit", open + QStringList{"mainArea.tab.pattern", "save-image:chart.toolbar.save|" + name + "refinement.png|2"}});
             steps_.push_back({name + "2-model", {structure, "mainArea.tab.structure",
                                                  "save-image:structure.toolbar.save|" + name + "model.png|2"}});
         }
@@ -728,8 +728,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         // hide them, and so its residual and tick panes. Last, so the fitted figures come first.
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             const QString name = QStringLiteral("concepts-") + theme + QStringLiteral("-");
-            QStringList actions{"theme:" + theme, analysis};
+            // The window shorter by the tick and residual panes, so the measured pattern's plot is the fitted one's
+            // size: the two read as one chart growing.
+            QStringList actions{"theme:" + theme, analysis, "mainArea.tab.pattern"};
             if (theme == QLatin1String("light")) {
+                actions.append(QStringLiteral("resize:1314x709"));
                 actions.append(QStringLiteral("preference:structureCurves=false"));
                 actions.append(QStringLiteral("measured-only"));
             }
@@ -1638,7 +1641,9 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
     }
     const int now = panel->property("step").toInt();
     const int count = panel->property("steps").toList().size();
-    const QString id = panel->property("tutorial").value<QJSValue>().property(QStringLiteral("id")).toString();
+    const QVariant chosen = panel->property("tutorial");
+    QString id = chosen.toMap().value(QStringLiteral("id")).toString();
+    if (id.isEmpty()) id = chosen.value<QJSValue>().property(QStringLiteral("id")).toString();
     if (panel->property("atEnd").toBool()) {
         qInfo().noquote() << QStringLiteral("edi_app --demo: tutorial %1: reached step %2 of %3 by Next alone")
                                  .arg(id).arg(now + 1).arg(count);
@@ -1649,6 +1654,18 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
         step = now;
         waited_ms = 0;
         clicked_ms = -1;
+        std::fprintf(stderr, "edi_app --demo: tutorial %s at step %d of %d\n", qPrintable(id), now + 1, count);
+        if (qEnvironmentVariableIsSet("EDI_DEMO_TRACE_LABELS")) {
+            std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
+                for (QQuickItem* child : parent->childItems()) {
+                    if (child->objectName().startsWith(QLatin1String("atomSite.label.")) && child->isVisible())
+                        std::fprintf(stderr, "trace step %d: %s text=%s y=%.0f\n", now + 1, qPrintable(child->objectName()),
+                                     qPrintable(child->property("text").toString()), child->mapToScene(QPointF()).y());
+                    walk(child);
+                }
+            };
+            walk(window_.contentItem());
+        }
     }
     QQuickItem* button = find(QStringLiteral("statusBar.tutorial.next"), false);
     const bool clickable = button != nullptr && button->isVisible() && button->isEnabled() &&
@@ -1659,6 +1676,8 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
         clicked_ms = waited_ms;
     }
     if (waited_ms > kStuckMs) {
+        // The window as it stands, beside the run's captures, to show where the tutorial stopped.
+        window_.grabWindow().save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-stuck.png")));
         fail(QStringLiteral("step %1: tutorial %2 stays at step %3 of %4: Next %5")
                  .arg(steps_[current_].image, id).arg(now + 1).arg(count)
                  .arg(clickable ? QStringLiteral("does not advance it") : QStringLiteral("is off")));
