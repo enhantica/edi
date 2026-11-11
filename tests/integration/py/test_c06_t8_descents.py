@@ -163,16 +163,16 @@ def test_python_registry_and_default_match_the_owner_decision():
     assert set(engine._descent_ids()) == VALID, (
         'The live Python registry must contain exactly the three retained descents'
     )
-    assert engine._default_descent() == 'fast_descent', (
-        'The engine-advertised default must be fast descent'
+    assert engine._default_descent() == 'multistart_prune', (
+        'The engine-advertised default must be the two-probe flow'
     )
     project = engine.Project()
-    assert project.descent == project.analysis.descent == 'fast_descent', (
-        'Both public Python selectors must resolve an absent declaration to fast descent'
+    assert project.descent == project.analysis.descent == 'multistart_prune', (
+        'Both public Python selectors must resolve an absent declaration to the two-probe flow'
     )
     project.analysis.descent = 'ladder'
     project.analysis.descent = None
-    assert project.analysis.descent == 'fast_descent', (
+    assert project.analysis.descent == 'multistart_prune', (
         'Clearing an explicit choice must restore the new effective default'
     )
 

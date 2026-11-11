@@ -12,7 +12,10 @@ PROJECT = ROOT / 'docs/user/cli/pd-xray-cwl_lam7o3-p021/project'
 
 def fitted():
     project = edi.Project.load(PROJECT)
-    project.analysis.descent = 'ladder'
+    project.analysis.descent = None
+    assert project.analysis.descent == 'multistart_prune', (
+        'Clearing the selector must exercise the declared two-probe default'
+    )
     outcome = project.analysis.fit()
     record = edi.machine_report(project, outcome, edi.VerbosityEnum.FULL)
     fields = dict(line.split('=', 1) for line in record.splitlines() if '=' in line)
