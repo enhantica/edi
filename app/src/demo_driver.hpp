@@ -98,6 +98,11 @@ class DemoDriver : public QObject {
     void wait_fit_then(std::function<void()> next, int waited_ms = 0, int files = -1);
     // Presses only the status bar's Next until the running tutorial's last step; fails on a step Next cannot leave.
     void tutorial_next_then(std::function<void()> next, int step = -1, int waited_ms = 0, int clicked_ms = -1);
+    // A fit step of a tutorial replay: the free set before the fit and the fit's outcome after it, each checked
+    // against the step's expectFree and expectChi2 when the manifest gives them. False after a mismatch (failed).
+    bool tutorial_fit_check(QObject* panel, int step);
+    int fit_free_reported_ = -1, fit_result_reported_ = -1;
+    bool fit_seen_running_ = false;
     void fail(const QString& message);
     void timed_fit_then(std::function<void()> next, int files, int stop_after);
     bool timed_reset();

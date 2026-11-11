@@ -74,6 +74,11 @@ struct TutorialStep {
     Q_PROPERTY(QString tab MEMBER tab CONSTANT)
     // A step about a whole area that names nothing in it (the files step): its callout may sit over the area.
     Q_PROPERTY(bool coversTarget MEMBER coversTarget CONSTANT)
+    // A fit step's expectations, for a replay to check: the parameters free before the fit (their table paths) and
+    // the reduced chi2 the fit reaches, within its tolerance; empty and negative when the manifest gives none.
+    Q_PROPERTY(QStringList expectFree MEMBER expectFree CONSTANT)
+    Q_PROPERTY(double expectChi2 MEMBER expectChi2 CONSTANT)
+    Q_PROPERTY(double expectChi2Tolerance MEMBER expectChi2Tolerance CONSTANT)
 
    public:
     QString text;
@@ -87,6 +92,9 @@ struct TutorialStep {
     QString tab;
     QString title;
     bool coversTarget = false;
+    QStringList expectFree;
+    double expectChi2 = -1;
+    double expectChi2Tolerance = 0.01;
 };
 
 // A built-in tutorial, as app/tutorials/manifest.json gives it (ADR-0064).

@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT / 'tools/docs'))
 sys.path.insert(0, str(ROOT / 'website'))
 
 from app_groups import Tracker, load_case  # noqa: E402
-from app_tutorial_plan import plan  # noqa: E402
+from app_tutorial_plan import CLI_PAGES, free_lists, plan  # noqa: E402
 from render_app_tutorials import stage_sentence  # noqa: E402
 from render_cli_tutorials import stages  # noqa: E402
 
@@ -542,6 +542,7 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         ]
     if re.fullmatch(r'stage-\d+-fit', ident) or ident == 'scan-fit':
         need(f'{case}: plan step {ident!r}', actions, 'statusBar.fit.button')
+        number = re.fullmatch(r'stage-(\d+)-fit', ident)
         return [
             step(
                 item['description'],
@@ -549,6 +550,7 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
                 'analysis',
                 'statusBar.fit.button',
                 'fit-done',
+                **(stage_expectation(case, int(number.group(1))) if number else {}),
             ),
             step(
                 'Fit results',
@@ -585,6 +587,25 @@ def tutorial_steps(case: str) -> list[dict]:
     for item in plan(case)['steps']:
         steps += plan_step(case, item, texts, pending, context)
     return steps
+
+
+def stage_expectation(case: str, number: int) -> dict:
+    """What a replay checks at a stage's fit: its free paths and the CLI fit's reduced chi2.
+
+    The page prints chi2 to two decimals, so the replay allows 0.01.
+    """
+    title, paths = free_lists(case)[number - 1]
+    text = (CLI_PAGES / f'{case}.md').read_text(encoding='utf-8')
+    section = re.split(r'^## ', text, flags=re.MULTILINE)[1:]
+    body = next(part for part in section if part.split('\n', 1)[0].strip() == title)
+    done = re.findall(r'done · \w+ · \d+ iters · reduced χ² ([\d.]+)', body)
+    if not done:
+        raise SystemExit(f'{case}: stage {number} ({title}) has no fit result on its page')
+    return {
+        'expectFree': sorted(paths),
+        'expectChi2': float(done[-1]),
+        'expectChi2Tolerance': 0.01,
+    }
 
 
 def tags(case: str, metadata: dict) -> list[str]:

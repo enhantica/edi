@@ -258,7 +258,7 @@ QList<Tutorial> ApplicationInfo::tutorials() const {
     };
     const auto step = [&text](const QJsonObject& object, const QString& page) {
         // A step's own page, else its tour page's: a step opening a page shows on the page before it.
-        return TutorialStep{text(object, "text"),
+        TutorialStep made{text(object, "text"),
                             object.contains(QStringLiteral("page")) ? text(object, "page") : page,
                             text(object, "target"),
                             text(object, "expected"),
@@ -269,6 +269,10 @@ QList<Tutorial> ApplicationInfo::tutorials() const {
                             text(object, "tab"),
                             text(object, "title"),
                             object.value(QStringLiteral("coversTarget")).toBool()};
+        for (const QJsonValue& path : object.value(QStringLiteral("expectFree")).toArray()) made.expectFree.append(path.toString());
+        made.expectChi2 = object.value(QStringLiteral("expectChi2")).toDouble(-1);
+        made.expectChi2Tolerance = object.value(QStringLiteral("expectChi2Tolerance")).toDouble(0.01);
+        return made;
     };
     // A step without its own tab is on the tab the last sidebar-tab step on its page opened, so it sets up the same
     // context on Next, Back or a jump.

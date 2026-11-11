@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QGuiApplication>
 #include <QJSValue>
+#include <QRegularExpression>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -33,7 +34,10 @@
 #include "crysta/project_output.hpp"
 #include "edi/categories.hpp"
 #include "edi/palette.hpp"
+#include "app_info.hpp"
+#include "edi/io.hpp"
 #include "fit_view_model.hpp"
+#include "parameter_table_model.hpp"
 #include "project_view_model.hpp"
 #include "scan_session.hpp"
 #include "scan_view_model.hpp"
@@ -1633,6 +1637,68 @@ void DemoDriver::next_action() {
     settle_then(save);
 }
 
+bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
+    const TutorialStep current = panel->property("current").value<TutorialStep>();
+    if (current.check != QLatin1String("fit-done")) return true;
+    QQmlEngine* engine = qmlEngine(window_.contentItem());
+    auto* session = engine != nullptr ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+    ProjectViewModel* project = session != nullptr ? session->project() : nullptr;
+    FitViewModel* fit = project != nullptr ? project->fit() : nullptr;
+    if (project == nullptr || fit == nullptr) return true;
+    const QString title = current.title;
+    if (fit_free_reported_ != step && !fit->running()) {
+        // Before Next presses Fit: the parameters the stage's steps left free.
+        ParameterTableModel* table = project->parameters();
+        const auto roles = table->roleNames();
+        const int path_role = roles.key("path"), free_role = roles.key("free");
+        QStringList free;
+        for (int row = 0; row < table->rowCount(); ++row)
+            if (table->data(table->index(row, 0), free_role).toBool()) free << table->data(table->index(row, 0), path_role).toString();
+        free.sort();
+        std::fprintf(stderr, "edi_app --demo: %s: %d free before the fit: %s\n", qPrintable(title), static_cast<int>(free.size()),
+                     qPrintable(free.join(u' ')));
+        fit_free_reported_ = step;
+        fit_seen_running_ = false;
+        if (const QString keep = qEnvironmentVariable("EDI_DEMO_KEEP_FIT_PROJECTS"); !keep.isEmpty()) {
+            try { edi::save_project(project->project(), (keep + QStringLiteral("/step-%1").arg(step + 1)).toStdString()); }
+            catch (const std::exception& error) { std::fprintf(stderr, "keep project: %s\n", error.what()); }
+        }
+        if (!current.expectFree.isEmpty()) {
+            QStringList wanted = current.expectFree;
+            wanted.sort();
+            if (wanted != free) {
+                QStringList missing, extra;
+                for (const QString& name : wanted) if (!free.contains(name)) missing << name;
+                for (const QString& name : free) if (!wanted.contains(name)) extra << name;
+                fail(QStringLiteral("%1: the free set differs from the stage's: missing %2; extra %3")
+                         .arg(title, missing.join(u' '), extra.join(u' ')));
+                return false;
+            }
+        }
+    }
+    if (fit->running()) fit_seen_running_ = true;
+    if (fit_seen_running_ && !fit->running() && fit_result_reported_ != step && !fit->outcome().isEmpty()) {
+        std::fprintf(stderr, "edi_app --demo: %s: %s after %s iterations, reduced chi2 %s, %s\n", qPrintable(title),
+                     qPrintable(fit->outcome()), qPrintable(fit->iterations()), qPrintable(fit->goodnessOfFit()),
+                     qPrintable(fit->elapsed()));
+        fit_result_reported_ = step;
+        if (current.expectChi2 >= 0) {
+            const double pin = current.expectChi2;
+            bool ok = false;
+            // "35.86 → 9.88": the value the fit ended at is the last.
+            static const QRegularExpression last(QStringLiteral("([0-9]+(?:\\.[0-9]+)?(?:[eE][-+]?[0-9]+)?)\\D*$"));
+            const auto match = last.match(fit->goodnessOfFit());
+            const double chi2 = match.hasMatch() ? match.captured(1).toDouble(&ok) : 0.0;
+            const double tolerance = current.expectChi2Tolerance;
+            if (!ok || std::abs(chi2 - pin) > tolerance) {
+                fail(QStringLiteral("%1: reduced chi2 %2, not the pinned %3").arg(title, fit->goodnessOfFit()).arg(pin));
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int waited_ms, int clicked_ms) {
     // A step that waits for a fit, a download or a save keeps Next off meanwhile; one that stays off this long cannot
     // be left by Next alone.
@@ -1671,6 +1737,7 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
             walk(window_.contentItem());
         }
     }
+    if (!tutorial_fit_check(panel, now)) return;
     QQuickItem* button = find(QStringLiteral("statusBar.tutorial.next"), false);
     const bool clickable = button != nullptr && button->isVisible() && button->isEnabled() &&
                            button->property("clickable").toBool() && on_screen(button);
