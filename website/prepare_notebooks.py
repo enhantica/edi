@@ -71,44 +71,94 @@ REPORT_CELLS = (
 ICONS = ROOT / 'website/surfaces/overrides/.icons/fa5'
 
 
-def tag_icon(name: str, color: str) -> str:
-    """A tag's symbol as a small inline SVG image: the app's glyph in the tag's colour."""
-    if not name:
-        return ''
-    svg = (ICONS / f'{name}.svg').read_text(encoding='utf-8')
-    svg = svg.replace('<svg ', f'<svg fill="{color}" ', 1)
-    data = base64.b64encode(svg.encode('utf-8')).decode('ascii')
-    # Its size as attributes too: Colab drops the style, and an unsized image fills the cell.
-    box = re.search(r'viewBox="0 0 ([\d.]+) ([\d.]+)"', svg)
-    width = round(14 * float(box.group(1)) / float(box.group(2))) if box else 14
+# Character widths of the chips' 12 px sans-serif text, in px, so each chip is sized without a font
+# library: narrow, wide and other characters, and capitals.
+NARROW = set("iljtfrI.,:;|!' ")
+WIDE = set('mwMW')
+
+
+def text_width(text: str, size: float = 12.0) -> float:
+    """An upper estimate of a short label's width in a common sans-serif at `size` px."""
+    total = 0.0
+    for char in text:
+        if char in NARROW:
+            total += 0.32
+        elif char in WIDE:
+            total += 0.86
+        elif char.isupper() or char.isdigit():
+            total += 0.66
+        else:
+            total += 0.56
+    return total * size
+
+
+def chip_icon(icon: str, color: str, x: float, height: int, size: int) -> tuple[str, int]:
+    """A tag's icon as a nested SVG at `x`, vertically centred, and its width; none for no icon."""
+    if not icon:
+        return '', 0
+    svg = (ICONS / f'{icon}.svg').read_text(encoding='utf-8')
+    box = re.search(r'viewBox="([\d. ]+)"', svg)
+    view = box.group(1) if box else '0 0 512 512'
+    _, _, view_width, view_height = (float(value) for value in view.split())
+    width = round(size * view_width / view_height)
+    paths = ''.join(re.findall(r'<path[^>]*/>', svg))
+    nested = (
+        f'<svg x="{x}" y="{(height - size) / 2}" width="{width}" height="{size}" '
+        f'viewBox="{view}" fill="{color}">{paths}</svg>'
+    )
+    return nested, width
+
+
+def tag_chip(label: str, icon: str, color: str) -> str:
+    """One tag as a self-contained image, the docs' chip: a tinted rounded box, icon and label.
+
+    It is drawn in an SVG with its own width and height, since Colab drops every style attribute.
+    The label stays the image's alt text, readable and searchable.
+    """
+    height, pad, size = 22, 7, 12
+    glyph, icon_width = chip_icon(icon, color, pad, height, size)
+    text_x = pad + (icon_width + 4 if icon_width else 0)
+    width = round(text_x + text_width(label, size) + pad)
+    baseline = f'{height / 2 + size * 0.36:.1f}'
+    escaped = label.replace('&', '&amp;').replace('<', '&lt;')
+    chip = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}"><rect width="{width}" height="{height}" rx="4" '
+        f'fill="{color}" fill-opacity="0.13"/>{glyph}<text x="{text_x}" y="{baseline}" '
+        f'font-family="Noto Sans, Segoe UI, Helvetica, Arial, sans-serif" font-size="{size}" '
+        f'fill="{color}">{escaped}</text></svg>'
+    )
+    data = base64.b64encode(chip.encode('utf-8')).decode('ascii')
+    alt = label.replace('"', '&quot;')
     return (
-        f'<img src="data:image/svg+xml;base64,{data}" alt="" width="{width}" height="14" '
-        'style="height:0.85em;width:auto;vertical-align:-0.1em;margin-right:0.3em">'
+        f'<img src="data:image/svg+xml;base64,{data}" alt="{alt}" '
+        f'width="{width}" height="{height}">'
     )
 
 
-def tags_cell(case: str) -> dict | None:
-    """The tutorial's tags as small coloured labels with the app's symbols; None for no case.
-
-    One cell under the title, shown alike in Jupyter, Colab and the docs page.
-    """
+def case_record(case: str) -> dict | None:
+    """The case's record (tools/checks/case_records.py), or None."""
     sys.path.insert(0, str(ROOT / 'tools/checks'))
     from case_records import records  # noqa: PLC0415 - the repository's own check
 
-    record = next((item for item in records(ROOT) if item['id'] == case), None)
+    return next((item for item in records(ROOT) if item['id'] == case), None)
+
+
+def tags_cell(case: str) -> dict | None:
+    """The tutorial's tags as the docs' chips, one image each, a gap between; None for no case.
+
+    One cell under the title, shown alike in Jupyter, Colab and the docs page.
+    """
+    record = case_record(case)
     if record is None or not record['tags']:
         return None
     registry = json.loads((ROOT / 'app/examples/tags.json').read_text(encoding='utf-8'))
-    labels = []
+    chips = []
     for tag in record['tags']:
         entry = registry['tags'][tag['facet']][tag['value']]
         color = registry['tones'][entry['tone']]['light']
-        labels.append(
-            f'<span style="color:{color};background:{color}21;border-radius:3px;'
-            f'padding:0.1em 0.4em;font-size:0.85em">{tag_icon(entry.get("icon", ""), color)}'
-            f'{tag["label"]}</span>'
-        )
-    return {'cell_type': 'markdown', 'metadata': {}, 'source': ' '.join(labels)}
+        chips.append(tag_chip(tag['label'], entry.get('icon', ''), color))
+    return {'cell_type': 'markdown', 'metadata': {}, 'source': '&nbsp; '.join(chips)}
 
 
 def notebook_from_source(source: Path) -> dict:
@@ -144,8 +194,18 @@ def notebook_from_source(source: Path) -> dict:
         ),
         None,
     )
-    if tags and title is not None:
-        notebook['cells'].insert(title + 1, tags)
+    if title is not None:
+        # The title alone, as the case record names it, then the tags, then the introduction (the
+        # tags record: directly under the title, before the text).
+        lines = ''.join(notebook['cells'][title]['source']).split('\n')
+        record = case_record(source.stem)
+        heading = f'# {record["title"]}' if record and record.get('title') else lines[0]
+        rest = '\n'.join(lines[1:]).strip()
+        notebook['cells'][title] = {**notebook['cells'][title], 'source': heading}
+        after = [tags] if tags else []
+        if rest:
+            after.append({'cell_type': 'markdown', 'metadata': {}, 'source': rest})
+        notebook['cells'][title + 1 : title + 1] = after
     # Colab opens this notebook and the ZIP carries the same cells, so both end with the report,
     # unless the tutorial shows its charts and tables step by step with project.display.
     if not any('project.display' in ''.join(cell['source']) for cell in notebook['cells']):
