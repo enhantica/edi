@@ -77,6 +77,8 @@ struct TutorialStep {
     // A fit step's expectations, for a replay to check: the parameters free before the fit (their table paths) and
     // the reduced chi2 the fit reaches, within its tolerance; empty and negative when the manifest gives none.
     Q_PROPERTY(QStringList expectFree MEMBER expectFree CONSTANT)
+    // Backgrounds the stage frees whole: their points outside the measured range, which no fit lists, may be free too.
+    Q_PROPERTY(QStringList expectWholeBackground MEMBER expectWholeBackground CONSTANT)
     Q_PROPERTY(double expectChi2 MEMBER expectChi2 CONSTANT)
     Q_PROPERTY(double expectChi2Tolerance MEMBER expectChi2Tolerance CONSTANT)
 
@@ -93,6 +95,7 @@ struct TutorialStep {
     QString title;
     bool coversTarget = false;
     QStringList expectFree;
+    QStringList expectWholeBackground;
     double expectChi2 = -1;
     double expectChi2Tolerance = 0.01;
 };

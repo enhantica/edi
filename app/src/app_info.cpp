@@ -270,6 +270,8 @@ QList<Tutorial> ApplicationInfo::tutorials() const {
                             text(object, "title"),
                             object.value(QStringLiteral("coversTarget")).toBool()};
         for (const QJsonValue& path : object.value(QStringLiteral("expectFree")).toArray()) made.expectFree.append(path.toString());
+        for (const QJsonValue& path : object.value(QStringLiteral("expectWholeBackground")).toArray())
+            made.expectWholeBackground.append(path.toString());
         made.expectChi2 = object.value(QStringLiteral("expectChi2")).toDouble(-1);
         made.expectChi2Tolerance = object.value(QStringLiteral("expectChi2Tolerance")).toDouble(0.01);
         return made;

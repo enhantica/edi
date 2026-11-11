@@ -716,6 +716,25 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             steps_.push_back({name + "-closed", {"tutorial-close"}});
         }
     }
+    // The Tutorials dialog and the Examples list with the longest tag row in the catalogue, the Co2SiO4 2.3 K case,
+    // at a desktop width and a narrow one, where its tags wrap instead of being cut short (`--demo-only tags-`).
+    if (only.startsWith(QLatin1String("tags-"))) {
+        const QString longest = QStringLiteral("pd-neut-cwl_cosio-d20_2k");
+        const qsizetype row = ExampleListModel::bundledIds().indexOf(longest);
+        // The Tutorials list is in the manifest's order, the Interface tour first.
+        qsizetype tutorial = -1;
+        if (QFile manifest(QStringLiteral(":/edi/tutorials/manifest.json")); manifest.open(QIODevice::ReadOnly)) {
+            const QJsonArray list = QJsonDocument::fromJson(manifest.readAll()).object().value(QStringLiteral("tutorials")).toArray();
+            for (qsizetype i = 0; i < list.size() && tutorial < 0; ++i)
+                if (list[i].toObject().value(QStringLiteral("id")).toString() == longest) tutorial = i;
+        }
+        steps_.push_back({"tags-01-tutorials-wide", {"resize:1480x900", "theme:light", "appBar.tab.home", "home.tutorials",
+                                                     QStringLiteral("show:tutorials.list:%1").arg(tutorial)}});
+        steps_.push_back({"tags-02-tutorials-narrow", {"key:Escape", "resize:1000x760", "home.tutorials",
+                                                       QStringLiteral("show:tutorials.list:%1").arg(tutorial)}});
+        steps_.push_back({"tags-03-examples", QStringList{"key:Escape", "resize:1480x900", "appBar.tab.project", "sideBar.tab.basic",
+                                                          "group.examples", QStringLiteral("show:examples.list:%1").arg(row)}});
+    }
     // The documentation's concept figures, from the Co2SiO4 magnetic case, in both themes, each saved by Save image
     // (the owner, 2026-11-10). Run only when asked (`--demo-only concepts-`).
     if (only.startsWith(QLatin1String("concepts-"))) {
@@ -1660,19 +1679,34 @@ bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
         fit_free_reported_ = step;
         fit_seen_running_ = false;
         if (const QString keep = qEnvironmentVariable("EDI_DEMO_KEEP_FIT_PROJECTS"); !keep.isEmpty()) {
-            try { edi::save_project(project->project(), (keep + QStringLiteral("/step-%1").arg(step + 1)).toStdString()); }
+            const QString id = panel->property("tutorial").value<Tutorial>().id;
+            try { edi::save_project(project->project(), (keep + QStringLiteral("/%1-step-%2").arg(id).arg(step + 1)).toStdString()); }
             catch (const std::exception& error) { std::fprintf(stderr, "keep project: %s\n", error.what()); }
         }
         if (!current.expectFree.isEmpty()) {
             QStringList wanted = current.expectFree;
             wanted.sort();
-            if (wanted != free) {
+            if (std::any_of(wanted.cbegin(), wanted.cend(), [&free](const QString& name) { return !free.contains(name); }) ||
+                std::any_of(free.cbegin(), free.cend(), [&](const QString& name) {
+                    return !wanted.contains(name) &&
+                           std::none_of(current.expectWholeBackground.cbegin(), current.expectWholeBackground.cend(),
+                                        [&name](const QString& prefix) { return name.startsWith(prefix); });
+                })) {
                 QStringList missing, extra;
                 for (const QString& name : wanted) if (!free.contains(name)) missing << name;
-                for (const QString& name : free) if (!wanted.contains(name)) extra << name;
-                fail(QStringLiteral("%1: the free set differs from the stage's: missing %2; extra %3")
-                         .arg(title, missing.join(u' '), extra.join(u' ')));
-                return false;
+                for (const QString& name : free) {
+                    const bool outside = std::any_of(current.expectWholeBackground.cbegin(), current.expectWholeBackground.cend(),
+                                                     [&name](const QString& prefix) { return name.startsWith(prefix); });
+                    if (!wanted.contains(name) && !outside) extra << name;
+                }
+                const QString problem = QStringLiteral("%1: the free set differs from the stage's: missing %2; extra %3")
+                                            .arg(title, missing.join(u' '), extra.join(u' '));
+                // EDI_DEMO_REPORT_ONLY: list every mismatch of a replay instead of stopping at the first.
+                if (!qEnvironmentVariableIsSet("EDI_DEMO_REPORT_ONLY")) {
+                    fail(problem);
+                    return false;
+                }
+                std::fprintf(stderr, "edi_app --demo: MISMATCH %s\n", qPrintable(problem));
             }
         }
     }
@@ -1691,8 +1725,12 @@ bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
             const double chi2 = match.hasMatch() ? match.captured(1).toDouble(&ok) : 0.0;
             const double tolerance = current.expectChi2Tolerance;
             if (!ok || std::abs(chi2 - pin) > tolerance) {
-                fail(QStringLiteral("%1: reduced chi2 %2, not the pinned %3").arg(title, fit->goodnessOfFit()).arg(pin));
-                return false;
+                const QString problem = QStringLiteral("%1: reduced chi2 %2, not the pinned %3").arg(title, fit->goodnessOfFit()).arg(pin);
+                if (!qEnvironmentVariableIsSet("EDI_DEMO_REPORT_ONLY")) {
+                    fail(problem);
+                    return false;
+                }
+                std::fprintf(stderr, "edi_app --demo: MISMATCH %s\n", qPrintable(problem));
             }
         }
     }
@@ -1712,12 +1750,17 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
     const int now = panel->property("step").toInt();
     const int count = panel->property("steps").toList().size();
     const QVariant chosen = panel->property("tutorial");
-    QString id = chosen.toMap().value(QStringLiteral("id")).toString();
-    if (id.isEmpty()) id = chosen.value<QJSValue>().property(QStringLiteral("id")).toString();
+    QString id = chosen.value<Tutorial>().id;
+    if (id.isEmpty()) id = chosen.toMap().value(QStringLiteral("id")).toString();
     if (panel->property("atEnd").toBool()) {
         qInfo().noquote() << QStringLiteral("edi_app --demo: tutorial %1: reached step %2 of %3 by Next alone")
                                  .arg(id).arg(now + 1).arg(count);
         next();
+        return;
+    }
+    if (step >= 0 && now < step) {
+        // Next alone must only go forward; a tutorial that steps back loops.
+        fail(QStringLiteral("tutorial %1 went back from step %2 to %3 with only Next").arg(id).arg(step + 1).arg(now + 1));
         return;
     }
     if (now != step) {
