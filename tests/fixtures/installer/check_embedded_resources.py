@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
-PALETTES = ['earth', 'classic', 'soft', 'natural', 'colour-blind-safe']
+PALETTES = ['main', 'colour-blind-safe']
 MAPS = ['viridis', 'batlow', 'inferno', 'lapaz', 'greys']
 PAYLOAD = ('Å測定; quotes " and backslash \\; newline\npaired\r\nbare\r' * 1800).encode()
 

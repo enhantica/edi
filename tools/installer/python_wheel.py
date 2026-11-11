@@ -68,7 +68,11 @@ def qualify_wheel(asset: Path, version: str, commit: str) -> None:
             'DYLD_FALLBACK_LIBRARY_PATH',
         }
     }
-    project = ROOT / 'docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project'
+    case = ROOT / 'docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic'
+    project = case / 'project'
+    # The example's own pin, so a re-pinned example cannot leave this check behind.
+    pin = json.loads((case / 'expected.json').read_text(encoding='utf-8'))['quantities']
+    chi2 = pin['reduced_chi_square']
     with tempfile.TemporaryDirectory(prefix='edi-wheel-') as folder:
         root = Path(folder)
         run([sys.executable, '-m', 'venv', root / 'env'], env=env, cwd=root)
@@ -85,12 +89,15 @@ def qualify_wheel(asset: Path, version: str, commit: str) -> None:
                     'assert version("easydiffraction") == sys.argv[1]; '
                     'assert edi.__build_commit__ == sys.argv[2]; '
                     'p = edi.Project.load(sys.argv[3]); result = p.analysis.fit(); '
-                    'assert abs(result.reduced_chi_square - 8.821296155) < 1e-6; '
+                    'chi2 = result.reduced_chi_square; '
+                    'assert abs(chi2 - float(sys.argv[4])) <= float(sys.argv[5]); '
                     'assert "Plotly" in p.report.as_html(offline=True)'
                 ),
                 version,
                 commit,
                 project,
+                str(chi2['value']),
+                str(chi2['tol_abs']),
             ],
             env=env,
             cwd=root,
