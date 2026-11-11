@@ -213,8 +213,8 @@ class ApplicationInfo : public QObject {
     QString version() const;
     QString releaseDate() const;
     QString homepageUrl() const { return QStringLiteral("https://easydiffraction.org"); }
-    QString docsUrl() const { return QStringLiteral("https://enhantica.github.io/edi/"); }
-    QString changesUrl() const { return QStringLiteral("https://enhantica.github.io/edi/changelog/"); }
+    QString docsUrl() const { return QStringLiteral("https://easydiffraction.org/"); }
+    QString changesUrl() const { return QStringLiteral("https://easydiffraction.org/changelog/"); }
     QString issuesUrl() const { return QStringLiteral("https://github.com/enhantica/edi/issues"); }
     QString contactUrl() const { return QStringLiteral("https://easydiffraction.org/#contact"); }
     // The licence texts are bundled in the app's resources, so the About window shows them without a network:

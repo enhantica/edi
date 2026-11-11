@@ -9,7 +9,7 @@ INSTALL_CELL = (
     '\n'
     "if importlib.util.find_spec('easydiffraction') is None:\n"
     '    %pip install easydiffraction==2026.11.0 --extra-index-url '
-    'https://enhantica.github.io/edi-download/pypi/simple/\n'
+    'https://download.easydiffraction.org/pypi/simple/\n'
 )
 
 

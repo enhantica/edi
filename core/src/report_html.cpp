@@ -652,7 +652,7 @@ private:
         std::string anchor = uid;
         std::replace(anchor.begin(), anchor.end(), '_', '-');
         std::replace(anchor.begin(), anchor.end(), '.', '-');
-        return "https://enhantica.github.io/edi/physics/parameters/#" + anchor;
+        return "https://easydiffraction.org/physics/parameters/#" + anchor;
     }
 
     // The parameter list as diffraction-lib's tables show it: free, fittable or every parameter, each row numbered,

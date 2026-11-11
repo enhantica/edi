@@ -536,7 +536,7 @@ cpp-coverage-unit = { cmd = ["bash", "tools/ci/cpp-coverage-unit.sh"] }
 # --- docs ----------------------------------------------------------------------------
 docs-build = "mkdocs build --strict"
 # The public site (website/, Zensical) into website/_build, its generated pages and links checked; Pages passes
-# `--base-url https://enhantica.github.io/edi/`.
+# `--base-url https://easydiffraction.org/`.
 # Run every tutorial notebook from a fresh kernel with this branch's edi and write the outputs into
 # the notebooks; a failing cell fails the task. site-build converts the run notebooks to pages and
 # refuses one without outputs, so CI runs this first (owner, 2026-11-08).

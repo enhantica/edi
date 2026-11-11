@@ -97,7 +97,7 @@ def environment(primary, **extra):
 def run_setup(python, index, env, cwd):
     source = PREPARE.setup_source('case', index=index.as_uri())
     expected = INSTALL_CELL.replace(
-        'https://enhantica.github.io/edi-download/pypi/simple/', index.as_uri()
+        'https://download.easydiffraction.org/pypi/simple/', index.as_uri()
     )
     assert source == expected, 'Notebook setup retains the exact guarded install contract'
     transformed = TransformerManager().transform_cell(source)
