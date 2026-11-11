@@ -65,6 +65,7 @@ private:
         QString sha256;
     };
     void updateNotice();
+    void fetchPaired(const QString& id, const QStringList& bases, int at, bool retried, BytesDone done, FetchProgress progress);
     void settle();
 
     QPointer<OnlineSourcesModel> sources_;
