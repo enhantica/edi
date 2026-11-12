@@ -68,6 +68,10 @@ Item {
     readonly property bool squared: reportMode || Preferences.singleCrystalQuantity !== "f"
     readonly property string calculatedItem: squared ? "refln.intensity_calc" : "refln.f_calc"
     readonly property string measuredItem: squared ? "refln.intensity_meas" : "refln.f_meas"
+    // Reflections calculated without measured ones: the calculated value against sin(θ)/λ, without the y = x line.
+    readonly property bool simulated: !stacked && !reportMode && reflections !== null && reflections.simulated
+    readonly property string xItem: simulated ? "refln.sin_theta_over_lambda" : calculatedItem
+    readonly property string yItem: simulated ? calculatedItem : measuredItem
     // The shown ranges, [xMin, xMax, yMin, yMax]; empty: every reflection, on one range for both axes.
     property list<real> zoom: []
     readonly property real fullLow: ApplicationInfo.singleFullRange(false)
@@ -85,16 +89,14 @@ Item {
     ListedLegendModel {
         id: legendRows
     }
-    readonly property real xLow: zoom.length === 4 ? zoom[0] : fullLow
-    readonly property real xHigh: zoom.length === 4 ? zoom[1] : fullHigh
+    readonly property real xLow: zoom.length === 4 ? zoom[0] : simulated ? 0 : fullLow
+    readonly property real xHigh: zoom.length === 4 ? zoom[1] : simulated ? reflections.positionHigh : fullHigh
     readonly property real yLow: zoom.length === 4 ? zoom[2] : fullLow
     readonly property real yHigh: zoom.length === 4 ? zoom[3] : fullHigh
 
-    function niceStep(span, count) {
-        return ApplicationInfo.chartNiceStep(span, count);
-    }
-    // An axis' ticks, every whole step from 0 within its range, and how its labels write them: the pattern chart's
-    // rule, one power of ten for the axis when its largest tick is outside 0.001 to 1000 (NumberText.axisFormat).
+    // An axis' ticks, every whole step from 0 within its range, and how its labels write them: each tick on its own by
+    // the rule for numbers (NumberText.axisFormat). The step leaves room for the widest label as written in the labels'
+    // font (NumberText.axisStep), nearest xTicks or yTicks ticks.
     function ticks(low, high, step) {
         const out = [];
         if (!(step > 0) || !(high > low))
@@ -103,8 +105,12 @@ Item {
             out.push(i * step);
         return out;
     }
-    readonly property var xFormat: NumberText.axisFormat(ticks(axisX.min, axisX.max, axisX.tickInterval), true)
-    readonly property var yFormat: NumberText.axisFormat(ticks(axisY.min, axisY.max, axisY.tickInterval), true)
+    readonly property var xFormat: NumberText.axisFormat(ticks(axisX.min, axisX.max, axisX.tickInterval), false)
+    readonly property var yFormat: NumberText.axisFormat(ticks(axisY.min, axisY.max, axisY.tickInterval), false)
+    EaElements.Label {
+        id: labelProbe
+        visible: false
+    }
     // A tick label in the app's label font, written by that format from the tick Qt Graphs printed with all its
     // decimals.
     component TickLabel: Item {
@@ -279,7 +285,7 @@ Item {
             labelDelegate: xTickLabel
             min: chart.xLow
             max: chart.xHigh
-            tickInterval: chart.niceStep(max - min, chart.xTicks)
+            tickInterval: NumberText.axisStep(min, max, chart.xTicks, view.plotArea.width, labelProbe.font, true)
             tickAnchor: 0
             lineVisible: false
             gridVisible: false
@@ -291,7 +297,7 @@ Item {
             labelDelegate: yTickLabel
             min: chart.yLow
             max: chart.yHigh
-            tickInterval: chart.niceStep(max - min, chart.yTicks)
+            tickInterval: NumberText.axisStep(min, max, chart.yTicks, view.plotArea.height, labelProbe.font, false)
             tickAnchor: 0
             lineVisible: false
             gridVisible: false
@@ -300,6 +306,7 @@ Item {
         // The y = x line, on the chart's own axes, refilled whenever their range changes.
         LineSeries {
             id: diagonal
+            visible: !chart.simulated
             color: chart.colors.chartAxis
             width: 1
         }
@@ -360,7 +367,7 @@ Item {
         x: view.x + view.plotArea.x + (view.plotArea.width - width) / 2
         y: view.y + view.height + chart.em * 0.6
         color: chart.colors.chartLabels
-        text: Session.label(chart.calculatedItem)
+        text: Session.label(chart.xItem)
     }
     EaElements.Label {
         objectName: "singleCrystal.title.y"
@@ -369,7 +376,7 @@ Item {
         rotation: -90
         transformOrigin: Item.TopLeft
         color: chart.colors.chartLabels
-        text: Session.label(chart.measuredItem)
+        text: Session.label(chart.yItem)
     }
 
     Item {
