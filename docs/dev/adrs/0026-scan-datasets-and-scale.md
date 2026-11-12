@@ -90,3 +90,26 @@ table reuses its matrix; a different table or a change from row data still rebui
 
 This repairs the selector and pattern-style work added after the original streaming fit. The existing table
 delegate sampling is retained; replacing that sizing machinery throughout the app is separate work.
+
+
+## Folder loading and template-first workflow
+
+The measured-data Load menu accepts a whole local folder. It lists supported data filenames on a worker,
+then uses the existing linked `loadDatasets` route: one scan declaration and only the first file loaded as the
+template. It copies and hashes no data files. Several selected files continue to use the same route.
+
+A loaded scan stays in Single mode for the template fit until the user chooses Sequential or Independent.
+Option-list replacement publishes a revision, and every type selector observes it when locating its stored token;
+changing an option list cannot leave the selector showing its first entry in place of the actual mode.
+Evolution is visible whenever the project has a scan, including while the template is fitted in Single mode.
+The dataset-choice explanation wraps inside the dialog. Empty collections use “No … yet”; a failed search keeps
+its search-specific wording.
+
+
+## Fit conditions in the result row
+
+The scan index accepts the four `fit_result` condition columns written by crysta, validates their numbers and
+termination, and reads each dataset's reason from the same row as its result. Live file-completion events carry
+that reason directly; they no longer open a provenance file for every fitted dataset. The old separate ledger
+is read only for a legacy CSV without the condition columns. The driver's backward-compatible migration owns
+combining and removing that legacy file. Reset and Undo still preserve a legacy sidecar when an old project has one.

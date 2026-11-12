@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "combo_box_metrics.hpp"
+#include "row_table_model.hpp"
 
 #include <QFontMetricsF>
 #include <QtQml/qqmlinfo.h>
@@ -32,7 +33,8 @@ void ComboBoxMetrics::observeModel() {
         disconnect(connection);
     }
     model_connections_.clear();
-    if (auto* model = qobject_cast<QAbstractItemModel*>(model_.value<QObject*>())) {
+    model_object_ = qobject_cast<QAbstractItemModel*>(model_.value<QObject*>());
+    if (auto* model = model_object_.data()) {
         model_connections_.append(connect(model, &QAbstractItemModel::dataChanged, this,
             [this, model](const QModelIndex& first, const QModelIndex& last, const QList<int>& roles) {
                 if (first.row() >= sampledCount() || last.row() < 0) {
@@ -72,10 +74,14 @@ void ComboBoxMetrics::refresh() {
     if (dirty_) {
         dirty_ = false;
         qreal widest = 0.0;
+        auto* rows = qobject_cast<RowTableModel*>(model_object_.data());
         for (int row = 0; control_ && row < sampledCount(); ++row) {
             QString text;
-            if (!QMetaObject::invokeMethod(control_, "textAt", Qt::DirectConnection,
-                                          Q_RETURN_ARG(QString, text), Q_ARG(int, row))) {
+            if (rows && !text_role_.isEmpty()) {
+                // Measuring a label must not ask a scan view to read that dataset's file.
+                text = rows->get(row, text_role_).toString();
+            } else if (!QMetaObject::invokeMethod(control_, "textAt", Qt::DirectConnection,
+                                                 Q_RETURN_ARG(QString, text), Q_ARG(int, row))) {
                 qmlWarning(this) << "Cannot read the combo box's option text";
                 break;
             }

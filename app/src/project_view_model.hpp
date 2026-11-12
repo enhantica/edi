@@ -508,6 +508,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
                                   bool copy = true, const QList<edi_app::CollectionOrigin>& origins = {});
     /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
     Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
+    /// List a local folder off the GUI thread, then link its datasets through the normal scan loader.
+    Q_INVOKABLE void loadDatasetFolder(edi_app::ExperimentViewModel* experiment, const QUrl& folder);
+    Q_PROPERTY(bool listingDatasetFolder READ listingDatasetFolder NOTIFY listingDatasetFolderChanged)
+    bool listingDatasetFolder() const { return listing_dataset_folder_; }
     QString includeDataOnSave() const;
     struct LinkedInventory {
         bool linked = false;
@@ -737,6 +741,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void calculationStarted();
     void templateIndexChanged();
     void scanChanged();
+    void listingDatasetFolderChanged();
     void missingDataFolderChanged();
     void missingDataFileChanged();
     void pendingCollectionDataChanged();
@@ -1091,6 +1096,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::uint64_t view_request_ = 0, view_applied_ = 0;
     int view_wanted_ = -1;       // the dataset of the newest request
     int projected_dataset_ = -1;  // the dataset the model holds now (a failed read leaves the one before)
+    bool listing_dataset_folder_ = false;
     bool view_reading_ = false;  // a read is in flight
     // A followed file's pattern from the scan's fit (its dataset and the frame), until its dataset is shown.
     std::optional<std::pair<int, edi::FitFrame>> follow_frame_;

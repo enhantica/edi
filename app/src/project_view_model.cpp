@@ -2249,6 +2249,40 @@ void ProjectViewModel::downloadCollectionData() {
     });
 }
 
+void ProjectViewModel::loadDatasetFolder(ExperimentViewModel* experiment, const QUrl& folder) {
+    if (retired_ || listing_dataset_folder_ || !experiment_models_.contains(experiment)) return;
+    const QPointer<ProjectViewModel> self(this);
+    const QPointer<ExperimentViewModel> target(experiment);
+    if (!folder.isLocalFile()) {
+        setLastError(tr("Choose a local folder of datasets"));
+        if (self && !retired_) emit refused(last_error_);
+        return;
+    }
+    listing_dataset_folder_ = true;
+    emit listingDatasetFolderChanged();
+    if (!self || retired_ || !target) return;
+    run_in_background([self, target, folder] {
+        const QDir directory(folder.toLocalFile());
+        const QStringList names = directory.entryList(
+            {"*.xye", "*.xy", "*.dat", "*.txt", "*.csv"}, QDir::Files, QDir::Name);
+        QList<QUrl> files;
+        files.reserve(names.size());
+        for (const QString& name : names) files.append(QUrl::fromLocalFile(directory.filePath(name)));
+        QMetaObject::invokeMethod(QCoreApplication::instance(), [self, target, files = std::move(files)] {
+            if (!self || self->retired_) return;
+            self->listing_dataset_folder_ = false;
+            emit self->listingDatasetFolderChanged();
+            if (!self || self->retired_ || !target) return;
+            if (files.size() < 2) {
+                self->setLastError(tr("The folder must contain at least two dataset files (.xye, .xy, .dat, .txt or .csv)"));
+                if (self && !self->retired_) emit self->refused(self->last_error_);
+                return;
+            }
+            self->loadDatasets(target, files, true, false);
+        }, Qt::QueuedConnection);
+    });
+}
+
 bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan, bool copy,
                                     const QList<CollectionOrigin>& origins) {
     const PublicationScope publication(*this);

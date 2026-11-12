@@ -439,6 +439,8 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE bool chooseStructureFile() const;
     Q_INVOKABLE QJSValue takeStructureWebIntent(const QJSValue& request) const;
     Q_INVOKABLE void chooseExperimentData(const QJSValue& experiment) const;
+    Q_INVOKABLE void chooseDatasetFolder(QObject* picker, QObject* project, QObject* experiment) const;
+    Q_INVOKABLE void acceptDatasetFolder(QObject* picker, QObject* currentProject, const QUrl& folder) const;
     Q_INVOKABLE void formFilesOpened(const QJSValue& request, const QJSValue& files, bool experiments) const;
     Q_INVOKABLE void formFilesCancelled(const QJSValue& request, bool experiments) const;
     Q_INVOKABLE void acceptExperimentDataFile() const;
@@ -1048,6 +1050,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QColor readableColour(const QColor& colour, const QList<QColor>& backgrounds) const;
    private:
     mutable QPointer<QObject> pending_project_picker_;
+    mutable QPointer<QObject> dataset_folder_picker_, dataset_folder_project_, dataset_folder_experiment_;
 
 };
 

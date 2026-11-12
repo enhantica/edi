@@ -50,6 +50,7 @@ class ComboBoxMetrics : public QObject {
 
     QPointer<QObject> control_;
     QVariant model_;
+    QPointer<QAbstractItemModel> model_object_;
     int count_ = 0;
     QString text_role_, display_text_;
     QFont font_;

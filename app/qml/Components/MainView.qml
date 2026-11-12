@@ -124,7 +124,7 @@ EaComponents.MainContent {
         IconTabButton {
             objectName: "mainArea.tab.evolution"
             text: qsTr("Evolution")
-            visible: view.scanMode
+            visible: view.project !== null && view.project.scan
             // The base tab's own width, and none while hidden, so the tab bar keeps no gap for it.
             width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
             enabled: view.project !== null && view.project.scan
@@ -232,6 +232,6 @@ EaComponents.MainContent {
         objectName: "mainArea.emptyState"
         anchors.centerIn: parent
         visible: (view.tabIndex === 0 && !view.hasStructures) || (view.tabIndex === 1 && !view.hasExperiments)
-        text: view.tabIndex === 0 ? qsTr("No structure") : qsTr("No pattern")
+        text: view.tabIndex === 0 ? qsTr("No structure yet") : qsTr("No pattern yet")
     }
 }

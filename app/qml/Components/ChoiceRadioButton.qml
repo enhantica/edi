@@ -16,6 +16,19 @@ EaElements.RadioButton {
 
     verticalPadding: AppSizes.choiceRowPadding
 
+    contentItem: Text {
+        leftPadding: control.indicator && !control.mirrored ? control.indicator.width + control.spacing - EaStyle.Sizes.fontPixelSize * 0.2 : 0
+        rightPadding: control.indicator && control.mirrored ? control.indicator.width + control.spacing : 0
+        text: control.text
+        font: control.font
+        wrapMode: Text.Wrap
+        verticalAlignment: Text.AlignVCenter
+        color: control.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+        Behavior on color {
+            EaAnimations.ThemeChange {}
+        }
+    }
+
     indicator: Rectangle {
         x: control.mirrored ? control.width - width - control.rightPadding : control.leftPadding
         y: control.topPadding + (control.availableHeight - height) / 2

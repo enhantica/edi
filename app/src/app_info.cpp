@@ -20,6 +20,7 @@
 #include "web_files.hpp"
 #include "engine_setup.hpp"
 #include "pattern_chart_controller.hpp"
+#include "project_view_model.hpp"
 #include "edi/display.hpp"
 #include "edi/report.hpp"
 #include "edi/model.hpp"
@@ -4394,6 +4395,25 @@ QJSValue ApplicationInfo::takeStructureWebIntent(const QJSValue& request) const 
     if (!consentFieldEquals(f, original, "project", project)
         || !pickerSessionProject(f, original)) return consentNull();
     return original;
+}
+void ApplicationInfo::chooseDatasetFolder(QObject* picker, QObject* project, QObject* experiment) const {
+    auto* owner = qobject_cast<edi_app::ProjectViewModel*>(project);
+    auto* target = qobject_cast<edi_app::ExperimentViewModel*>(experiment);
+    if (!picker || !owner || !target || owner->listingDatasetFolder()) return;
+    dataset_folder_picker_ = picker;
+    dataset_folder_project_ = owner;
+    dataset_folder_experiment_ = target;
+    QMetaObject::invokeMethod(picker, "open", Qt::QueuedConnection);
+}
+void ApplicationInfo::acceptDatasetFolder(QObject* picker, QObject* currentProject, const QUrl& folder) const {
+    if (picker != dataset_folder_picker_) return;
+    const QPointer<QObject> owner = std::exchange(dataset_folder_project_, {});
+    const QPointer<QObject> target = std::exchange(dataset_folder_experiment_, {});
+    dataset_folder_picker_.clear();
+    if (owner && owner == currentProject && target) {
+        auto* project = qobject_cast<edi_app::ProjectViewModel*>(owner.data());
+        if (project) project->loadDatasetFolder(qobject_cast<edi_app::ExperimentViewModel*>(target.data()), folder);
+    }
 }
 void ApplicationInfo::chooseExperimentData(const QJSValue& experiment) const {
     const auto f = panelUsageEngine(this);
