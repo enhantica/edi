@@ -205,6 +205,12 @@ Popup {
                 RunLog.note(`tutorial ${panel.tutorial.id}: step ${panel.step + 1} waits for ${panel.current.check} (fits ${panel.fitsDone - panel.fitsAtStep}, results shown ${AppState.fitResultsShown - panel.resultsAtStep}, results open ${AppState.fitResultsOpen}${panel.groupState()})`);
                 return;
             }
+        } else if (panel.current && (panel.current.check ?? "").startsWith("free-choice")) {
+            // A Free · all (Fixed · all) already in effect: the menu closes as the choice would have closed it.
+            const header = panel.locate("parameters.freeHeader");
+            const menu = header !== null ? header.menu as FreeHeaderMenu : null;
+            if (menu !== null && menu.visible)
+                menu.close();
         }
         if (panel.step + 1 < panel.steps.length) {
             ++panel.step;
@@ -1074,7 +1080,8 @@ Popup {
             {
                 const header = panel.locate("parameters.freeHeader");
                 const menu = header !== null ? header.menu as FreeHeaderMenu : null;
-                return menu !== null && menu.visible;
+                // Open, not still fading out after a close.
+                return menu !== null && menu.opened;
             }
         case "free-choice":
             return panel.holds("group:" + argument);
