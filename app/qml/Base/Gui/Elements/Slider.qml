@@ -19,10 +19,8 @@ T.Slider {
     property string toolTipText: EaLogic.Utils.toDefaultPrecision(control.value)
     property bool toolTipSelfExplanatory: false
 
-    implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
-                            implicitHandleWidth + leftPadding + rightPadding)
-    implicitHeight: Math.max(implicitBackgroundHeight + topInset + bottomInset,
-                             implicitHandleHeight + topPadding + bottomPadding)
+    implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitHandleWidth + leftPadding + rightPadding)
+    implicitHeight: Math.max(implicitBackgroundHeight + topInset + bottomInset, implicitHandleHeight + topPadding + bottomPadding)
 
     padding: 6
 
@@ -64,7 +62,9 @@ T.Slider {
         radius: 2
         scale: control.horizontal && control.mirrored ? -1 : 1
         color: EaStyle.Colors.appBorder
-        Behavior on color { EaAnimations.ThemeChange {} }
+        Behavior on color {
+            EaAnimations.ThemeChange {}
+        }
 
         Rectangle {
             y: control.horizontal ? 0 : control.visualPosition * parent.height
@@ -73,8 +73,9 @@ T.Slider {
 
             radius: 2
             color: EaStyle.Colors.themeForegroundHovered
-            Behavior on color { EaAnimations.ThemeChange {} }
-
+            Behavior on color {
+                EaAnimations.ThemeChange {}
+            }
         }
     }
 }

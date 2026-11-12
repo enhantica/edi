@@ -27,8 +27,8 @@ DataTable {
     // sorted column with its direction. A column of a `.edi` item is titled by the item's dictionary label and units
     // (edi ADR-0051), with the label and the `.edi` name as its tooltip, as HeaderLabel titles one.
     component SortTitle: EaComponents.ListViewLabel {
-        elide: Text.ElideRight
         id: title
+        elide: Text.ElideRight
 
         required property string role
         property string uid: ""

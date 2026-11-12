@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // Pinned gui-components copy; upstream's cut-short cell text follows the tooltip level. Here a cell's full text,
 // with no help text beside it, is a data tooltip, always shown (owner record 2026-11-11, items 5 and 11).
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 
@@ -20,13 +22,14 @@ EaElements.Label {
     property bool marksCurrentRow: false
 
     // The ListViewDelegate this cell is in; null in a header.
-    readonly property Item row: {
-        let item = parent
-        while (item && !(item.rowIndex !== undefined && item.listView !== undefined))
-            item = item.parent
-        return item
+    // Found by the delegate's properties, so any item type can hold the cell.
+    readonly property var row: {
+        let item = parent;
+        while (item && !("rowIndex" in item && "listView" in item))
+            item = item.parent;
+        return item;
     }
-    readonly property bool currentRow: marksCurrentRow && row !== null && row.current
+    readonly property bool currentRow: marksCurrentRow && row !== null && row.current === true
 
     readonly property alias hovered: mouseHoverHandler.hovered
 
@@ -47,15 +50,7 @@ EaElements.Label {
     elide: Text.ElideMiddle
 
     font.bold: currentRow
-    color: currentRow ?
-               EaStyle.Colors.themeAccent :
-               !enabled ?
-                   EaStyle.Colors.themeForegroundDisabled :
-                   marksCurrentRow ?
-                       EaStyle.Colors.themeForegroundMinor :
-                       selected ?
-                           EaStyle.Colors.themeForegroundHovered :
-                           EaStyle.Colors.themeForeground
+    color: currentRow ? EaStyle.Colors.themeAccent : !enabled ? EaStyle.Colors.themeForegroundDisabled : marksCurrentRow ? EaStyle.Colors.themeForegroundMinor : selected ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
 
     // The tool tip exists only while it can show. A table has a cell for every
     // row in view, and making a tool tip for each of them took a large share
