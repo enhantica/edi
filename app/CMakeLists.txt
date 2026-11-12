@@ -24,7 +24,8 @@ if(EDI_APP_ASSISTANT)
         src/assistant_work_report.hpp src/assistant_work_report.cpp
         src/assistant_history.hpp src/assistant_history.cpp
         src/assistant_markdown.hpp src/assistant_markdown.cpp
-        src/assistant_skill_import.hpp src/assistant_skill_import.cpp)
+        src/assistant_skill_import.hpp src/assistant_skill_import.cpp
+        src/assistant_thread_settings.hpp src/assistant_thread_settings.cpp)
     set(EDI_APP_ASSISTANT_QML
         qml/Components/AssistantPanel.qml
         qml/Components/AssistantWorking.qml
@@ -546,6 +547,15 @@ if(EDI_DEPLOY_APP AND APPLE)
 endif()
 if(EDI_DEPLOY_APP AND UNIX AND NOT APPLE)
     set_target_properties(edi_app PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
+endif()
+# The installed Windows and Linux program is EasyDiffraction, as the macOS bundle is; builds for development keep edi_app.
+if(EDI_DEPLOY_APP AND NOT APPLE AND NOT EMSCRIPTEN)
+    set_target_properties(edi_app PROPERTIES OUTPUT_NAME EasyDiffraction)
+endif()
+# The icon of the Linux menu and desktop entries the installer writes.
+if(EDI_DEPLOY_APP AND UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
+    install(FILES resources/logo/App.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons RENAME EasyDiffraction.png
+            COMPONENT desktop)
 endif()
 install(TARGETS edi_app BUNDLE DESTINATION . COMPONENT desktop RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         COMPONENT desktop)
