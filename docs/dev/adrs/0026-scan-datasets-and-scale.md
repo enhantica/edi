@@ -72,3 +72,21 @@ and a single fit after it is recorded as the last run. `results.csv`, `results-p
 `scan-notes.csv` may be absent, but a path that exists must be a regular file (`edi::scan_state_present`, asked by
 every reader before it opens one): a directory there is refused, never read as no results or as an empty file,
 and a fresh run or Reset that sets the result files aside refuses it too.
+
+
+## Amendment, 2026-11: bounded GUI sizing and pattern styles
+
+The dataset selector's widths are measured in C++ with QFontMetricsF. Its option measurement is kept until its
+font, model, text role or sampled text changes; fit-outcome changes do not invalidate a name measurement.
+Small lists are measured in full; above 1,000 entries the sample is the first 200, as for long tables. The current
+display text is measured separately, so a later, longer selected name fits too. QML binds the resulting widths;
+it does not traverse the model or create delegates to measure selector text. Measurements queued in one event
+turn are combined, and changing the selected dataset does not remeasure the sample.
+
+The Pattern chart requests just the displayed dataset's measured style, with the same palette rule as Stacked.
+The palette lookup tests only enough free positions to decide whether the palette is exhausted; it never
+allocates a position per dataset to compute one colour. Repeated publication of the same immutable correlation
+table reuses its matrix; a different table or a change from row data still rebuilds it.
+
+This repairs the selector and pattern-style work added after the original streaming fit. The existing table
+delegate sampling is retained; replacing that sizing machinery throughout the app is separate work.

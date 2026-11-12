@@ -614,7 +614,9 @@ std::vector<edi::SeriesStyle> PatternChartController::styles() const {
     const std::size_t experiments = experiment_ ? experiment_->colourCount() : 1;
     return edi::pattern_style_table(scheme(), experiments, experiment_ ? experiment_->structureCount() : 0,
                                     experiment_ ? experiment_->colourPositions() : std::vector<std::size_t>{},
-                                    experiment_ != nullptr && experiment_->showsDataset());
+                                    experiment_ != nullptr && experiment_->showsDataset(),
+                                    experiment_ && experiment_->showsDataset()
+                                        ? std::optional<std::size_t>(experiment_->colourPlace()) : std::nullopt);
 }
 
 void PatternChartController::setPlotWidth(qreal width) {

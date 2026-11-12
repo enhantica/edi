@@ -93,6 +93,7 @@ qt_add_qml_module(edi_app_module
     DEPENDENCIES QtGraphs QtQuick3D
     SOURCES
         src/app_info.hpp src/app_info.cpp
+        src/combo_box_metrics.hpp src/combo_box_metrics.cpp
         src/assistant_message_presentation.hpp
         src/assistant_values.hpp
         src/assistant_panel_presentation.hpp

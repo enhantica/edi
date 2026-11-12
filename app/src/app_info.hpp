@@ -781,7 +781,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void tableRowDestroyed() const;
     /// Searchable popup filtering, geometry and existing opening/request lifecycle.
     Q_INVOKABLE void searchPositionPopup(const QJSValue& opening) const;
-    Q_INVOKABLE QJSValue searchMeasuredWidth(bool optionsOnly) const;
     Q_INVOKABLE QJSValue searchAnyMatch() const;
     Q_INVOKABLE QJSValue searchFolded(const QJSValue& text) const;
     Q_INVOKABLE void searchPlacePopup(const QJSValue& opening) const;

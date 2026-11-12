@@ -10241,31 +10241,6 @@ void ApplicationInfo::searchPositionPopup(const QJSValue& opening) const {
         return QJSValueList{numberMath(f, "max", [&] { return QJSValueList{QJSValue(0), panelUsageRead(f, component, "currentIndex")}; }), assistantContextField(f, "ListView", "Contain")};
     });
 }
-QJSValue ApplicationInfo::searchMeasuredWidth(bool optionsOnly) const {
-    const auto f = panelUsageEngine(this); QJSValue widest(0);
-    if (!optionsOnly) widest = panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "optionMetrics"), "advanceWidth", [&] { return QJSValueList{panelUsageContextRead(f, "displayText")}; });
-    for (double index = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(index), panelUsageContextRead(f, "count"), 0); ++index)
-        widest = numberMath(f, "max", [&] {
-            return QJSValueList{widest, panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "optionMetrics"), "advanceWidth", [&] { return QJSValueList{panelUsageGlobalCall(f, "textAt", {QJSValue(index)})}; })};
-        });
-    if (optionsOnly) {
-        const auto measured = numberMath(f, "ceil", [&] { return QJSValueList{widest}; }); const auto pixels = panelUsageRead(f, panelUsageContextRead(f, "font"), "pixelSize");
-        return panelUsageAdd(f, measured, viewArithmetic(f, pixels, QJSValue(3), 1));
-    }
-    QJSValue label(0);
-    if (panelUsageTruth(panelUsageContextRead(f, "contentItemLabel"))) {
-        const auto left = assistantContextField(f, "contentItemLabel", "leftPadding"), right = assistantContextField(f, "contentItemLabel", "rightPadding"); label = panelUsageAdd(f, left, right);
-    }
-    QJSValue besides = label;
-    if (panelUsageTruth(panelUsageContextRead(f, "contentItem"))) {
-        const auto implicit = assistantContextField(f, "contentItem", "implicitWidth");
-        const auto measured = panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "optionMetrics"), "advanceWidth", [&] { return QJSValueList{panelUsageContextRead(f, "displayText")}; }); besides = viewArithmetic(f, implicit, measured, 0);
-    }
-    const auto fit = numberMath(f, "ceil", [&] {
-        const auto spacing = numberMath(f, "max", [&] { return QJSValueList{label, besides}; }); const auto first = panelUsageAdd(f, widest, spacing);
-        const auto pixels = panelUsageRead(f, panelUsageContextRead(f, "font"), "pixelSize"); return QJSValueList{panelUsageAdd(f, first, viewArithmetic(f, pixels, QJSValue(0.5), 1))};
-    }); const auto left = panelUsageAdd(f, fit, panelUsageContextRead(f, "leftPadding")); return panelUsageAdd(f, left, panelUsageContextRead(f, "rightPadding"));
-}
 QJSValue ApplicationInfo::searchAnyMatch() const {
     const auto f = panelUsageEngine(this); if (panelUsageContextRead(f, "filter").strictlyEquals(QJSValue(QStringLiteral("")))) return QJSValue(true);
     for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageContextRead(f, "count"), 0); ++i)

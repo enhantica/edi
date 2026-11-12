@@ -104,6 +104,7 @@ class CorrelationViewModel : public QObject {
 
     // The shown experiment's correlations: the parameters in the fit's order and the full matrix over them
     // (row-major, 1 on the diagonal).
+    std::optional<edi::CorrelationTable> table_;
     std::vector<std::string> names_;
     std::vector<double> matrix_;
     // Each parameter's strongest correlation with another, in the fit's order.
