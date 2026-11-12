@@ -7048,8 +7048,12 @@ void ApplicationInfo::tableMeasureRows(int run, int from) const {
     }
     const auto measuring = panelUsageContextRead(f, "measuringRows");
     assistantMemberWrite(f, measuring, "model", panelUsageContextRead(f, "model")); if (!editorLife(f, life) || !panelUsageReady(f)) return;
-    const int total = panelUsageRead(f, measuring, "count").toInt();
     const int atOnce = panelUsageContextRead(f, "measuredAtOnce").toInt();
+    // A table of a scan's datasets can hold a million rows (edi ADR-0026: views make only what is on screen). Above
+    // 1000 rows the columns fit the first measuredAtOnce rows, so a refit, which every changed row asks for, costs the
+    // same however long the table is.
+    const int modelRows = panelUsageRead(f, measuring, "count").toInt();
+    const int total = modelRows > 1000 ? std::min(modelRows, atOnce) : modelRows;
     QElapsedTimer started; started.start();
     const auto rows = f->newArray(); const auto host = panelUsageContextRead(f, "measuringHost");
     int next = from;
