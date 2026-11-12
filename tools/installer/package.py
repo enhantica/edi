@@ -227,8 +227,10 @@ def write_metadata(
             'Default': 'true',
             'ForcedInstallation': 'true',
             'RequiresAdminRights': 'false',
+            'Script': 'installscript.qs',
         },
     )
+    shutil.copy2(ROOT / 'tools/installer/installscript.qs', meta / 'installscript.qs')
     licenses = ET.SubElement(root.getroot(), 'Licenses')
     ET.SubElement(
         licenses,
@@ -560,7 +562,7 @@ def package_app(
         / (
             'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
             if SYSTEM == 'macos'
-            else 'bin/edi_app' + SUFFIX
+            else 'bin/EasyDiffraction' + SUFFIX
         )
     ).is_file():
         raise RuntimeError('Stage does not contain the native application')
@@ -791,14 +793,14 @@ def exercise_installer(
     app = target / (
         'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
         if SYSTEM == 'macos'
-        else 'bin/edi_app' + SUFFIX
+        else 'bin/EasyDiffraction' + SUFFIX
     )
     try:
         verify_installed_payload(target, with_assistant=with_assistant)
         app = target / (
             'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
             if SYSTEM == 'macos'
-            else 'bin/edi_app' + SUFFIX
+            else 'bin/EasyDiffraction' + SUFFIX
         )
         with (output / 'app.log').open('w') as log:
             run(

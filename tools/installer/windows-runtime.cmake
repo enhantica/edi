@@ -31,7 +31,7 @@ endif()
 file(GLOB_RECURSE modules "${STAGE}/*.dll")
 list(FILTER modules EXCLUDE REGEX "/libexec/edi/codex/")
 file(GET_RUNTIME_DEPENDENCIES
-    EXECUTABLES "${STAGE}/bin/edi_app.exe" "${STAGE}/bin/edi_assistant_guard.exe"
+    EXECUTABLES "${STAGE}/bin/EasyDiffraction.exe" "${STAGE}/bin/edi_assistant_guard.exe"
     LIBRARIES ${modules}
     DIRECTORIES "${STAGE}/bin" "${PREFIX}/Library/bin"
     PRE_EXCLUDE_REGEXES "^[Aa][Pp][Ii]-[Mm][Ss]-" "^[Ee][Xx][Tt]-[Mm][Ss]-"

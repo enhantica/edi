@@ -32,7 +32,7 @@ def check(tools: Path, output: Path) -> None:
     marker = stage / (
         'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
         if SYSTEM == 'macos'
-        else 'bin/edi_app' + SUFFIX
+        else 'bin/EasyDiffraction' + SUFFIX
     )
     marker.parent.mkdir(parents=True)
     marker.write_text('first marker\n')
