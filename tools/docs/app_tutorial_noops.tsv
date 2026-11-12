@@ -27,3 +27,4 @@ pd-xray-cwl_lam7o3-p021	field:constraint.expression.2=biso_Fe = biso_Ti
 pd-xray-cwl_lam7o3-p021	field:constraint.expression.3=biso_Co = biso_Ti
 pd-xray-cwl_lam7o3-p021	field:constraint.expression.4=biso_Ni = biso_Ti
 pd-xray-cwl_lam7o3-p021	field:constraint.expression.5=biso_Cu = biso_Ti
+pd-neut-cwl_lbco_simulation	page:analysis

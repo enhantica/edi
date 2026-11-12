@@ -1795,11 +1795,25 @@ bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
         if (current.expectChi2 >= 0) {
             const double pin = current.expectChi2;
             bool ok = false;
-            // "35.86 → 9.88": the value the fit ended at is the last.
-            static const QRegularExpression last(QStringLiteral("([0-9]+(?:\\.[0-9]+)?(?:[eE][-+]?[0-9]+)?)\\D*$"));
+            // "35.86 → 9.88" or "1.19×10³ → 1.06×10³": the value the fit ended at is the last. A value shown with
+            // a power of ten carries three significant digits, so it matches within half its last digit.
+            static const QRegularExpression last(QStringLiteral(
+                "([0-9]+)(?:\\.([0-9]+))?(?:\u00D710([\u207B]?)([\u2070\u00B9\u00B2\u00B3\u2074-\u2079]+))?\\D*$"));
             const auto match = last.match(fit->goodnessOfFit());
-            const double chi2 = match.hasMatch() ? match.captured(1).toDouble(&ok) : 0.0;
-            const double tolerance = current.expectChi2Tolerance;
+            double chi2 = 0.0;
+            double tolerance = current.expectChi2Tolerance;
+            if (match.hasMatch()) {
+                const QString decimals = match.captured(2);
+                chi2 = (match.captured(1) + u'.' + (decimals.isEmpty() ? QStringLiteral("0") : decimals)).toDouble(&ok);
+                if (!match.captured(4).isEmpty()) {
+                    static const QString digits = QStringLiteral("\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079");
+                    int power = 0;
+                    for (const QChar digit : match.captured(4)) power = power * 10 + static_cast<int>(digits.indexOf(digit));
+                    if (!match.captured(3).isEmpty()) power = -power;
+                    chi2 *= std::pow(10.0, power);
+                    tolerance = std::max(tolerance, 0.5 * std::pow(10.0, power - static_cast<int>(decimals.size())));
+                }
+            }
             if (!ok || std::abs(chi2 - pin) > tolerance) {
                 const QString problem = QStringLiteral("%1: reduced chi2 %2, not the pinned %3").arg(title, fit->goodnessOfFit()).arg(pin);
                 if (!qEnvironmentVariableIsSet("EDI_DEMO_REPORT_ONLY")) {

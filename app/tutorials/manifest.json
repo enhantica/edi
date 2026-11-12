@@ -1196,14 +1196,6 @@
           "expected": "The main area shows the calculated pattern."
         },
         {
-          "title": "Open Analysis",
-          "text": "Parameters can be changed on the Structure and Experiment pages, in their groups, and also here on the Analysis page, in one table that holds all of them. Open the Analysis page with its tab, or press Next.",
-          "page": "experiment",
-          "target": "appBar.tab.analysis",
-          "expected": "The Analysis page is open.",
-          "check": "page:analysis"
-        },
-        {
           "title": "Show the cell",
           "text": "The table holds every parameter; its filters find the one to change. Choose Cell in the category filter.",
           "page": "analysis",
@@ -1306,13 +1298,6 @@
           "target": "parameters.clearFilters",
           "expected": "Every parameter is listed.",
           "check": "filters-clear"
-        },
-        {
-          "title": "The calculated pattern",
-          "text": "On **Analysis**, the main view draws the pattern calculated from the model.",
-          "page": "analysis",
-          "target": "appBar.tab.analysis",
-          "check": "page:analysis"
         },
         {
           "title": "Open Report",
