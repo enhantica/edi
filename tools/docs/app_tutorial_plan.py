@@ -838,6 +838,10 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
         'Main',
         phase='setup',
     )
+    # The first Analysis step (owner, 2026-11-12): what a loaded entry marks free is cleared
+    # before any relation, weight or minimizer setting.
+    first = next(i for i, step in enumerate(steps) if step['page'] == 'analysis')
+    steps.insert(first, steps.pop())
 
     fits = free_lists(case)
     project = load_case(case)

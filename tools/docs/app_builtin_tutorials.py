@@ -502,12 +502,9 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         if re.fullmatch(r'stage-\d+-free', ident):
             title, text = texts.get(int(ident.split('-')[1]), (item['description'], ''))
         elif ident == 'nothing-free':
-            # The collection's structures and experiments carry nothing marked free (a starting
-            # model), so a project built from them starts with every parameter fixed: no step
-            # needed. An opened example keeps its marks, and its tutorial fixes them first.
-            if not context.get('marked'):
-                return []
-            title, text = 'Start with nothing free', ''
+            # Every fitting tutorial fixes everything on its first Analysis step: entries loaded
+            # from the database can carry free marks, and each stage below frees its own group.
+            title, text = 'Fix every parameter first', ''
         else:
             title, text = item['description'], ''
         del text
@@ -517,6 +514,11 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         steps = action_steps(case, item, title, context)
         if title != full and steps:
             steps[0]['text'] = f'**{full}.** ' + steps[0]['text']
+        if ident == 'nothing-free' and steps:
+            steps[0]['text'] = (
+                'Entries loaded from the database can come with parameters already free, and the '
+                'stages below free each group themselves. ' + steps[0]['text']
+            )
         if ident == 'structure-adp' and steps:
             # The sites as the case's own project has them, checked when the displacements start.
             steps[0]['expectSites'] = case_sites(case)
@@ -740,9 +742,6 @@ def tutorial_steps(case: str) -> list[dict]:
     steps: list[dict] = []
     for item in plan(case)['steps']:
         steps += plan_step(case, item, texts, pending, context)
-        # An example opens the case's project, which marks what its finished fit frees.
-        if any(s.get('check', '').startswith('example:') for s in steps):
-            context['marked'] = True
     for item in steps:
         if len(item['title']) > TITLE_LIMIT:
             # A title is a few words on one line of the popup (owner record, 2026-11-11, item 10).
@@ -752,7 +751,15 @@ def tutorial_steps(case: str) -> list[dict]:
 
 WHY = yaml.safe_load((ROOT / 'tools/docs/app_tutorial_why.yml').read_text(encoding='utf-8'))
 # Checks of Extra-tab steps that only choose where (a row's parameter, the table's filters).
-WHERE = ('pick:parameters.', 'free', 'tick:', 'untick:', 'filters-clear', 'max-iterations:', 'open:')
+WHERE = (
+    'pick:parameters.',
+    'free',
+    'tick:',
+    'untick:',
+    'filters-clear',
+    'max-iterations:',
+    'open:',
+)
 
 
 def with_reasons(case: str, steps: list[dict]) -> list[dict]:

@@ -1326,7 +1326,8 @@ Popup {
         // A step already done when the tutorial reaches it asks for nothing; the replay reports these.
         if (panel.step === 0)
             panel.doneOnArrival = [];
-        if (holdsNow && panel.arrivedForward && panel.current.check)
+        // Fixing the whole table first is a precaution: a project loaded without free marks already holds it.
+        if (holdsNow && panel.arrivedForward && panel.current.check && panel.current.check !== "free-choice:fixed:All categories")
             panel.doneOnArrival = panel.doneOnArrival.concat([`${panel.step + 1}\t${panel.current.check}`]);
         panel.doneAhead = holdsNow && panel.arrivedForward && !panel.followingHeld;
         panel.heldAtStart = holdsNow && !panel.doneAhead;

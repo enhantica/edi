@@ -477,6 +477,22 @@
           "tab": "basic"
         },
         {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Scale, 2θ zero and cell",
           "text": "Choose **Instrument** as the category filter above the **Parameters** table.",
           "page": "analysis",
@@ -1414,6 +1430,22 @@
           "check": "web-row:experiment:pd-neut-cwl_hs-hrpt-hrpt=hrpt"
         },
         {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Cell, scale and 2θ zero",
           "text": "Choose **Instrument** as the category filter above the **Parameters** table.",
           "page": "analysis",
@@ -1968,6 +2000,22 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:pd-neut-cwl_cosio-d20-d20=d20"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
         },
         {
           "title": "Descent",
@@ -2801,6 +2849,22 @@
           "check": "web-row:experiment:pd-neut-cwl_cosio-d20_2k-d20=d20"
         },
         {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Add the relations",
           "text": "Click **+** under **Aliases** to add an alias. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
           "page": "analysis",
@@ -3571,6 +3635,22 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:pd-neut-cwl_lmo-echidna-echidna=echidna"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
         },
         {
           "title": "Add the relations",
@@ -4516,6 +4596,22 @@
           "tab": "basic"
         },
         {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Scale, 2θ zero and cell",
           "text": "Choose **Instrument** as the category filter above the **Parameters** table.",
           "page": "analysis",
@@ -5046,6 +5142,22 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:pd-neut-cwl_yalo3-al2o3-spodi-spodi=spodi"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
         },
         {
           "title": "Stop rule",
@@ -5758,6 +5870,22 @@
           "tab": "basic"
         },
         {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Stage 1",
           "text": "**Cell, scale and time-of-flight calibration.** Choose **Instrument** as the category filter above the **Parameters** table.",
           "page": "analysis",
@@ -6248,6 +6376,22 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:pd-neut-tof_cecoal-polaris-polaris=polaris"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
         },
         {
           "title": "Tolerance",
@@ -6947,6 +7091,22 @@
           "check": "web-row:experiment:pd-neut-tof_ceo2-pearl-pearl=pearl"
         },
         {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Tolerance",
           "text": "Set the **χ² change** tolerance to **1e-4** in **Minimizer**. The tutorial stops each fit as the case's project does, once χ² improves by less than 0.01 %.",
           "page": "analysis",
@@ -7496,6 +7656,22 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:pd-neut-tof_lbco-si-mcstas-mcstas=mcstas"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
         },
         {
           "title": "Scales and cells",
@@ -8097,6 +8273,22 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:pd-neut-tof_ncaf-wish-wish_5_6=wish_5_6"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
         },
         {
           "title": "Tolerance",
@@ -10654,6 +10846,22 @@
           "check": "web-row:experiment:pd-neut-tof_ferrite-austenite-beer-expt_n2=expt_n2"
         },
         {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Add the relations",
           "text": "Click **+** under **Aliases** to add an alias. Both phases are iron, so the data cannot tell their displacements apart.",
           "page": "analysis",
@@ -11653,6 +11861,22 @@
           "check": "web-row:experiment:pd-xray-cwl_pbso4-lab-lab=lab"
         },
         {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Scale and 2θ zero",
           "text": "Choose **Instrument** as the category filter above the **Parameters** table.",
           "page": "analysis",
@@ -12280,6 +12504,22 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:pd-xray-cwl_lam7o3-p021-p021=p021"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
         },
         {
           "title": "Add the relations",
@@ -13324,6 +13564,22 @@
           "check": "web-row:experiment:pd-neut-xray-cwl_pbso4-d1a-lab-lab=lab"
         },
         {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Weigh the experiments",
           "text": "Enter **0.5** as the weight of **d1a**. The project weighs the two patterns equally at a half each, so the joint χ² is their average.",
           "page": "analysis",
@@ -14176,6 +14432,22 @@
           "check": "example:pd-neut-cwl_cosio-d20_scan-213f"
         },
         {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Fitting mode",
           "text": "On **Analysis → Extra**, choose the **single** fitting mode. The template pattern is fitted alone first, so the scan starts from a good model.",
           "page": "analysis",
@@ -14183,22 +14455,6 @@
           "check": "fitting-mode:single",
           "tab": "extras",
           "why": "The template pattern is fitted alone first, so the scan starts from a good model."
-        },
-        {
-          "title": "Start with nothing free",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Start with nothing free",
-          "text": "Choose **Fixed · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.fixed",
-          "check": "free-choice:fixed:All categories",
-          "tab": "basic"
         },
         {
           "title": "Scale, 2θ zero and cell",
@@ -14759,6 +15015,22 @@
           "check": "example:pd-xray-cwl_latp-bm01_scan"
         },
         {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Fitting mode",
           "text": "On **Analysis → Extra**, choose the **single** fitting mode. The template pattern is fitted alone first, so the scan starts from a good model.",
           "page": "analysis",
@@ -14766,22 +15038,6 @@
           "check": "fitting-mode:single",
           "tab": "extras",
           "why": "The template pattern is fitted alone first, so the scan starts from a good model."
-        },
-        {
-          "title": "Start with nothing free",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Start with nothing free",
-          "text": "Choose **Fixed · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.fixed",
-          "check": "free-choice:fixed:All categories",
-          "tab": "basic"
         },
         {
           "title": "Scales, 2θ zero and cells",
@@ -15665,6 +15921,22 @@
           "check": "web-row:experiment:sc-neut-cwl_tb2ti2o7-heidi-heidi=heidi"
         },
         {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
           "title": "Scale",
           "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
           "page": "analysis",
@@ -15965,6 +16237,22 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:sc-neut-cwl_pr2nio4-5c2-llb_5c2=llb_5c2"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
         },
         {
           "title": "Scale",
@@ -16384,6 +16672,22 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:sc-neut-cwl_cosio-heidi-heidi_2k5=heidi_2k5"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
         },
         {
           "title": "Fitting mode",
@@ -18344,6 +18648,22 @@
           "page": "experiment",
           "target": "onlineLoad.row.0",
           "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_6=senju_6"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
         },
         {
           "title": "Add the relations",
