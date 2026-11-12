@@ -71,16 +71,18 @@ class ParameterItem : public QObject {
     // (edi::file_text): what a field, the slider and the Analysis table show. The s.u. is empty without one.
     Q_PROPERTY(QString fileValue READ fileValue NOTIFY fileValueChanged)
     Q_PROPERTY(QString fileSu READ fileSu NOTIFY fileSuChanged)
+    // The file's value as typed into a field to edit it: plain digits, never a power of ten written as ×10.
+    Q_PROPERTY(QString fileEditValue READ fileEditValue NOTIFY fileEditValueChanged)
     // The value before the last fit and how far the fit moved it, as the report's fit table writes them (start and
     // change, owner record 2026-11-10); both empty before a fit.
     Q_PROPERTY(QString startText READ startText NOTIFY startTextChanged)
-    Q_PROPERTY(QString changeText READ changeText NOTIFY startTextChanged)
+    Q_PROPERTY(QString changeText READ changeText NOTIFY changeTextChanged)
     // The change's direction: 1 up, -1 down, 0 none.
-    Q_PROPERTY(int changeDirection READ changeDirection NOTIFY startTextChanged)
+    Q_PROPERTY(int changeDirection READ changeDirection NOTIFY changeDirectionChanged)
     // After a fit, a free parameter's s.u. is red when the fit determines it poorly or it is strongly correlated with
     // another (edi::su_marks, edi ADR-0085); the reason says which, one line each.
-    Q_PROPERTY(bool suFlagged READ suFlagged NOTIFY startTextChanged)
-    Q_PROPERTY(QString suReason READ suReason NOTIFY startTextChanged)
+    Q_PROPERTY(bool suFlagged READ suFlagged NOTIFY suFlaggedChanged)
+    Q_PROPERTY(QString suReason READ suReason NOTIFY suReasonChanged)
     // One unit of the last digit the item's display format shows: the slider's step (edi::display_step).
     Q_PROPERTY(double sliderStep READ sliderStep NOTIFY sliderStepChanged)
     // The item's label for its variant and its `.edi` name, as a field's and a cell's tooltip names it (edi ADR-0051);
@@ -147,6 +149,7 @@ class ParameterItem : public QObject {
     int phaseIndex() const { return phase_index_; }
     QString fileValue() const { return file_value_; }
     QString fileSu() const { return file_su_; }
+    QString fileEditValue() const { return file_edit_value_; }
     QString startText() const { return start_text_; }
     QString changeText() const { return change_text_; }
     int changeDirection() const { return change_direction_; }
@@ -194,8 +197,13 @@ class ParameterItem : public QObject {
     void shortNameChanged();
     void displayUnitsChanged();
     void fileValueChanged();
+    void fileEditValueChanged();
     void fileSuChanged();
     void startTextChanged();
+    void changeTextChanged();
+    void changeDirectionChanged();
+    void suFlaggedChanged();
+    void suReasonChanged();
     void sliderStepChanged();
     void toolTipChanged();
 
@@ -218,7 +226,7 @@ class ParameterItem : public QObject {
     QString domain_warning_;
     QString last_error_;
     QString path_, uid_, block_kind_, block_name_, category_, row_label_, name_, display_name_, display_units_,
-        short_name_, category_icon_, element_symbol_, variant_, file_value_, file_su_,
+        short_name_, category_icon_, element_symbol_, variant_, file_value_, file_su_, file_edit_value_,
         start_text_, change_text_, su_reason_;
     std::string su_rule_;
     bool exact_ = false;

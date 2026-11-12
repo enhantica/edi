@@ -112,6 +112,9 @@ std::string display_text(const Parameter& parameter, const std::string& su_rule,
                          std::string_view variant = {});
 /// A value of a numeric item without an s.u., by the item's dictionary format.
 std::string display_text(std::string_view uid, double value, std::string_view variant = {});
+/// The same value as a display shows it, by the app's one rule for numbers: a decimal when 0.001 <= |x| < 1000, else
+/// three significant digits with a power of ten ("8.40×10⁻⁵"; "8.40e-5" without `display`).
+std::string shown_text(std::string_view uid, double value, std::string_view variant = {}, bool display = true);
 /// A single crystal's reflection as its chart's hover reads it (edi ADR-0049): its Miller indices, the measured value
 /// with its s.u. by `su_rule` (alone, by its format, without one) and the calculated value by its format, each named by
 /// its dictionary label, in F² (`squared`) or F. A value that is not finite is left out.

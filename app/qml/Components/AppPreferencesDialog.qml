@@ -85,12 +85,14 @@ AppDialog {
         readonly property real iconSize: EaStyle.Sizes.fontPixelSize * 0.8
 
         width: dialog.columnWidth
+        // The text stops short of the minus and plus, so a press on them reaches the spin box, which steps the
+        // value and repeats while held, instead of the text field selecting its text.
+        rightPadding: EaStyle.Sizes.fontPixelSize * 3.5
         // Plain whole numbers, without a thousands separator.
         textFromValue: value => String(value)
         valueFromText: text => parseInt(text, 10)
         contentItem: TextInput {
             leftPadding: EaStyle.Sizes.fontPixelSize * 0.75
-            rightPadding: EaStyle.Sizes.fontPixelSize * 3.5
             readOnly: !spin.editable
             validator: spin.validator
             inputMethodHints: Qt.ImhDigitsOnly
@@ -109,12 +111,6 @@ AppDialog {
             font.family: EaStyle.Fonts.iconsFamily
             font.pixelSize: spin.iconSize
             text: "plus"
-            TapHandler {
-                onTapped: {
-                    spin.increase();
-                    spin.valueModified();
-                }
-            }
         }
         down.indicator: EaElements.Label {
             x: spin.iconRight - width - EaStyle.Sizes.fontPixelSize * 1.5
@@ -123,12 +119,6 @@ AppDialog {
             font.family: EaStyle.Fonts.iconsFamily
             font.pixelSize: spin.iconSize
             text: "minus"
-            TapHandler {
-                onTapped: {
-                    spin.decrease();
-                    spin.valueModified();
-                }
-            }
         }
     }
     // A value to read: plain text on a box's row height, without a frame, so it never looks like an input. A long

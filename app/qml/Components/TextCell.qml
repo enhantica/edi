@@ -24,9 +24,9 @@ EaComponents.ListViewTextInput {
     property var value: ""
     // The item a numeric cell shows, `category.name`.
     property string uid: ""
-    // A number as the file spells it (by the app's rule for numbers without an item), in scientific notation when
-    // that would not fit the cell (NumberText.fitted; the owner, 2026-10-22), with the file's spelling, or the number
-    // in full without an item, on hover.
+    // A number as the file spells it (by the app's rule for numbers without an item), shown by the rule for numbers
+    // while it is not edited (a power of ten outside 0.001 to 1000, NumberText.compact), with the file's spelling, or
+    // the number in full without an item, on hover.
     readonly property bool numeric: accepts === "number" && typeof value === "number" && isFinite(value)
     // A read-only value the program computed (an output category's) is shown by its item's display format instead, as
     // every read-only surface is (edi ADR-0051): rounded, so a value within rounding of zero reads as zero.
@@ -41,6 +41,8 @@ EaComponents.ListViewTextInput {
     }
     onRoomChanged: refit()
     onWrittenChanged: refit()
+    // A number shows by the rule for numbers, and as written while it is edited.
+    onActiveFocusChanged: refit()
     onNumericChanged: refit()
     Component.onCompleted: refit()
     // Existing row declarations supply their actual delegate/model/index. The

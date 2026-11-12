@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQuick.Controls
 import QtQml.Models
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -47,10 +49,19 @@ EaComponents.ListView {
     // filler cell after the last data column takes the rest of the row, so nothing moves towards the row buttons,
     // which keep their widths at the right. `equalColumns` keeps the flex columns equal instead (atom sites, atomic
     // displacements, the Analysis parameters), and `spreadColumns` shares the rest among those columns after their
-    // fitted widths (Measured data). A row too narrow for its texts loses the margins first, then narrows the
-    // texts, where a number shows its short form. Widths follow the content: a change of the content fits them again,
+    // fitted widths (Measured data). A row too narrow for its texts loses the margins first, then narrows its text
+    // columns; a number column keeps its widest text, and a row still too wide scrolls sideways. Widths follow the content: a change of the content fits them again,
     // and scrolling changes none.
     property var columns: []
+    // The width the columns need. A number column is never narrower than its widest text, so a row wider than the
+    // table scrolls sideways, its header with it.
+    readonly property real rowsWidth: columnWidths.reduce((sum, width) => sum + Math.max(0, width), 0) + EaStyle.Sizes.tableColumnSpacing * Math.max(0, columnWidths.length - 1) + rowPadding * 2 + EaStyle.Sizes.borderThickness * 2
+    readonly property bool scrollsSideways: rowsWidth > width + 0.5
+    contentWidth: scrollsSideways ? rowsWidth : width
+    flickableDirection: scrollsSideways ? Flickable.AutoFlickDirection : Flickable.VerticalFlick
+    ScrollBar.horizontal: EaElements.ScrollBar {
+        policy: table.scrollsSideways ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+    }
     property bool equalColumns: false
     property var spreadColumns: []
     // The column margin is separate from the cell's own measured insets (ADR-0029).
@@ -199,7 +210,17 @@ EaComponents.ListView {
         ApplicationInfo.tableApplyRuledWidths(true);
         refit();
     }
-    onHeightChanged: Qt.callLater(repairRows)
+    onHeightChanged: {
+        Qt.callLater(repairRows);
+        Qt.callLater(keepHeaderOnTop);
+    }
+    // The header stays at the top of the view, over the rows scrolled under it. A scroll set while the view was laying
+    // out could leave it where the previous scroll put it, with a slice of an earlier row above it.
+    onContentYChanged: Qt.callLater(keepHeaderOnTop)
+    function keepHeaderOnTop() {
+        if (headerItem && headerPositioning === ListView.OverlayHeader && Math.abs(headerItem.y - contentY) >= 0.5)
+            headerItem.y = contentY;
+    }
     // A view whose rows were all replaced before it laid out again could stop filling and show one stale row of what
     // its count promised (the owner, 2026-11-03): once it has laid out, such a view is rebuilt (ViewRows).
     function repairRows() {

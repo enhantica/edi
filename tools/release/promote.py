@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import json
+import operator
 import re
 import shutil
 import stat
@@ -26,7 +27,14 @@ def api(repo: str, suffix: str) -> dict:
 
 
 def qualified_artifacts(run: dict, artifacts: list[dict], jobs: list[dict]) -> dict[str, int]:
-    """Require all native platforms and the retained plan from one successful main attempt."""
+    """Each platform's installer and the plan from their latest successful attempt of one run.
+
+    A re-run of only a failed job leaves the other jobs' artifacts in their earlier attempt, so a
+    platform is taken from the attempt that ran its latest successful job. Every attempt of a run
+    builds the same commit, so the run fixes the source and the plan. A platform or the plan with
+    no successful attempt, or with two candidates in one attempt, is refused. A full re-run runs
+    every job again (and deletes the earlier attempts' artifacts), so its own attempt is taken.
+    """
     if (
         run.get('path') != '.github/workflows/installers.yml'
         or run.get('head_branch') != 'main'
@@ -35,26 +43,44 @@ def qualified_artifacts(run: dict, artifacts: list[dict], jobs: list[dict]) -> d
         or run.get('event') != 'workflow_dispatch'
     ):
         raise ValueError('Promote only a successful manual installer qualification on main')
-    attempt = run['run_attempt']
-    for name in [
-        *[f'installer · {platform}' for platform in PLATFORMS],
-        'record qualified release inputs',
-    ]:
-        matches = [job for job in jobs if job['name'] == name and job['run_attempt'] == attempt]
-        if len(matches) != 1 or matches[0]['conclusion'] != 'success':
-            raise ValueError('Every platform and prepared input must qualify in the same attempt')
-    names = [f'qualified-release-plan-{attempt}']
+    wanted = {
+        'qualified-release-plan': ('record qualified release inputs', ['qualified-release-plan'])
+    }
     for platform in PLATFORMS:
-        names += [f'installer-{platform}-{attempt}', f'installer-components-{platform}-{attempt}']
+        wanted[f'installer-{platform}'] = (
+            f'installer · {platform}',
+            [f'installer-{platform}', f'installer-components-{platform}'],
+        )
     selected = {}
-    for name in names:
-        # Runs made before artifacts were named by runner.os called the Windows ones x64:
-        # the MSVC setup step exported Platform=x64 over the workflow's PLATFORM.
-        aliases = {name, name.replace('-Windows-', '-x64-')}
-        matches = [item for item in artifacts if item['name'] in aliases and not item['expired']]
-        if len(matches) != 1:
-            raise ValueError('Qualified artifacts are missing, expired or ambiguous')
-        selected[name] = matches[0]['id']
+    for job_name, prefixes in wanted.values():
+        named = [job for job in jobs if job['name'] == job_name]
+        attempts = [job['run_attempt'] for job in named]
+        if len(attempts) != len(set(attempts)):
+            raise ValueError(f'{job_name} has two jobs in one attempt')
+        passed = [job for job in named if job['conclusion'] == 'success']
+        if not passed:
+            raise ValueError(f'{job_name} has no successful attempt')
+        latest = max(passed, key=operator.itemgetter('run_attempt'))
+
+        # A re-run of the failed jobs copies each passed job into the new attempt with its
+        # original times; its artifacts keep the name of the attempt that ran it. A job without
+        # times is its own run.
+        def ran(job: dict) -> tuple:
+            times = (job.get('started_at'), job.get('completed_at'))
+            return times if all(times) else ('job', job.get('id'), job['run_attempt'])
+
+        attempt = min(job['run_attempt'] for job in passed if ran(job) == ran(latest))
+        for prefix in prefixes:
+            name = f'{prefix}-{attempt}'
+            # Runs made before artifacts were named by runner.os called the Windows ones x64:
+            # the MSVC setup step exported Platform=x64 over the workflow's PLATFORM.
+            aliases = {name, name.replace('-Windows-', '-x64-')}
+            matches = [
+                item for item in artifacts if item['name'] in aliases and not item['expired']
+            ]
+            if len(matches) != 1:
+                raise ValueError(f'The artifact {name} is missing, expired or ambiguous')
+            selected[prefix] = matches[0]['id']
     return selected
 
 
@@ -264,7 +290,7 @@ def components_validator(channel: str) -> Callable[[Path, str, str, str], Path |
     return validate_components
 
 
-def stage_optional_assets(output: Path, assets: Path, attempt: int, release: dict) -> None:
+def stage_optional_assets(output: Path, assets: Path, release: dict) -> None:
     """Add complete sets of standalone ZIPs and wheels when the build provides them."""
     for validator in (
         validate_cli,
@@ -274,7 +300,7 @@ def stage_optional_assets(output: Path, assets: Path, attempt: int, release: dic
     ):
         archives = [
             validator(
-                output / f'installer-{platform}-{attempt}',
+                output / f'installer-{platform}',
                 release['version'],
                 release['commit'],
                 target,
@@ -333,7 +359,8 @@ def stage(repo: str, identity: int, output: Path) -> None:
         raise ValueError('Expected a repository and positive qualified run ID')
     run = api(repo, f'actions/runs/{identity}')
     artifacts = api(repo, f'actions/runs/{identity}/artifacts?per_page=100')
-    jobs = api(repo, f'actions/runs/{identity}/attempts/{run["run_attempt"]}/jobs?per_page=100')
+    # Every attempt's jobs: a platform may pass in an earlier attempt than the run's last.
+    jobs = api(repo, f'actions/runs/{identity}/jobs?filter=all&per_page=100')
     if artifacts['total_count'] > len(artifacts['artifacts']) or jobs['total_count'] > len(
         jobs['jobs']
     ):
@@ -355,8 +382,7 @@ def stage(repo: str, identity: int, output: Path) -> None:
             )
         extract(archive, output / name)
         archive.unlink()
-    attempt = run['run_attempt']
-    plan = output / f'qualified-release-plan-{attempt}'
+    plan = output / 'qualified-release-plan'
     release = json.loads((plan / 'release.json').read_text())
     history = json.loads((plan / 'release-history.json').read_text())
     prepared = json.loads((plan / 'plan.json').read_text())
@@ -376,24 +402,22 @@ def stage(repo: str, identity: int, output: Path) -> None:
     engine_sources = set()
     for platform, target in PLATFORMS.items():
         archive = validate_delivery(
-            output / f'installer-{platform}-{attempt}',
+            output / f'installer-{platform}',
             release,
             digest(plan / 'release-history.json'),
             target,
         )
         shutil.copy2(archive, assets / archive.name)
-        build = json.loads(
-            (output / f'installer-{platform}-{attempt}' / 'build-inputs.json').read_text()
-        )
+        build = json.loads((output / f'installer-{platform}' / 'build-inputs.json').read_text())
         engine_sources.add(build['crysta_commit'])
-        components = output / f'installer-components-{platform}-{attempt}'
+        components = output / f'installer-components-{platform}'
         if {item.name for item in components.iterdir()} != {'stable'} or {
             item.name for item in (components / 'stable').iterdir()
         } != {target}:
             raise ValueError('Qualified components must contain exactly their stable platform')
         validate_repository(components / 'stable' / target, release['version'])
         shutil.copytree(components / 'stable' / target, incoming / 'repository/stable' / target)
-    stage_optional_assets(output, assets, attempt, release)
+    stage_optional_assets(output, assets, release)
     if len(engine_sources) != 1 or not re.fullmatch(r'[0-9a-f]{40}', next(iter(engine_sources))):
         raise ValueError('All qualified platforms must build the same exact engine source')
     for name in ['release.json', 'release-history.json']:

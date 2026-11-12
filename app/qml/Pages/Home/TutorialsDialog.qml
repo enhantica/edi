@@ -25,12 +25,15 @@ AppDialog {
         return dialog.tutorials.find(tutorial => tutorial.id === id);
     }
 
-    // Wide enough for the longest description on one line (number column and cell margins included), up to about
-    // 80 % of the window; below that a description wraps (the owner, 2026-11-10).
+    // Wide enough for the longest description and the widest tag row on one line (number column and cell margins
+    // included), up to about 80 % of the window; below that a description wraps (the owner, 2026-11-10) and so do
+    // the tags, a line lower, rather than being cut short (the owner, 2026-11-11).
     readonly property real longestDetail: Math.max(0, ...dialog.tutorials.map(tutorial => detailMetrics.advanceWidth(tutorial.description ?? "")))
-    readonly property real neededWidth: dialog.longestDetail + EaStyle.Sizes.fontPixelSize * 5
+    readonly property real cellMargins: EaStyle.Sizes.fontPixelSize * 5
+    readonly property real neededWidth: Math.max(dialog.longestDetail, tagWidths.widest) + dialog.cellMargins
     property real widthCap: AppSizes.messagesDialogContentWidth
     readonly property bool wraps: dialog.neededWidth > dialog.widthCap
+    readonly property bool tagsWrap: tagWidths.widest + dialog.cellMargins > dialog.contentWidth
 
     objectName: "tutorials"
     title: qsTr("Tutorials")
@@ -40,6 +43,11 @@ AppDialog {
     // overlay, so a binding would loop.
     onAboutToShow: dialog.widthCap = Math.max(AppSizes.messagesDialogContentWidth, (Overlay.overlay ? Overlay.overlay.width : 0) * 0.8)
     contentHeight: content.implicitHeight
+
+    TagRowsWidth {
+        id: tagWidths
+        model: dialog.catalogue
+    }
 
     // The descriptions' font, as a label draws it.
     FontMetrics {
@@ -68,7 +76,7 @@ AppDialog {
 
             objectName: "tutorials.list"
             width: dialog.contentWidth
-            tableRowHeight: Math.ceil(EaStyle.Sizes.fontPixelSize * (dialog.wraps ? 7 : 5.5))
+            tableRowHeight: Math.ceil(EaStyle.Sizes.fontPixelSize * ((dialog.wraps ? 7 : 5.5) + (dialog.tagsWrap ? 1.9 : 0)))
             maxRowCountShow: 6
             height: table.tableRowHeight * 6.5
             // Every row built, those below the fold too, so each tutorial's row can be found and scrolled to.

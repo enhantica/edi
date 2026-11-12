@@ -26,7 +26,7 @@ void CorrelationViewModel::setRecord(const edi::Project& project, int experiment
     }
     const int experiments = static_cast<int>(project.experiments.size());
     if (!project.fit_result.held() || rows.empty()) {
-        show({}, {}, {}, tr("No correlations yet"));
+        show({}, {}, {}, tr("No correlations"));
     } else if (experiment < 0 || experiment >= experiments || !fitted) {
         show({}, {}, {}, tr("Not in the last fit"));
     } else {
@@ -43,7 +43,7 @@ void CorrelationViewModel::setRecord(const edi::Project& project, int experiment
 void CorrelationViewModel::setRows(const std::string& file,
                                    const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows,
                                    const QString& absent) {
-    const QString none = absent.isEmpty() ? tr("No correlations yet") : absent;
+    const QString none = absent.isEmpty() ? tr("No correlations") : absent;
     show(file, rows, {}, rows.empty() ? none : tr("No correlations for this experiment"));
 }
 

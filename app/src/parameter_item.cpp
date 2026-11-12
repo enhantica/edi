@@ -146,14 +146,18 @@ void ParameterItem::refreshFileText() {
     // Empty for a parameter the dictionary does not know; a page then shows the value itself.
     QString value;
     QString su;
+    QString edit;
     // Very large or small numbers in scientific notation, as every parameter table writes them (owner record
     // 2026-11-09): a value with an s.u. keeps its rounding in the value's power, one without has three digits.
     if (own_ != nullptr) {
-        value = QString::fromStdString(edi::table_number(value_, edi::display_text(uid_.toStdString(), value_), true));
+        const std::string text = edi::display_text(uid_.toStdString(), value_);
+        value = QString::fromStdString(edi::table_number(value_, text, true));
+        edit = QString::fromStdString(text);
     } else if (parameter_->spec != nullptr && !su_rule_.empty()) {
         const edi::FileText text = edi::file_text(*parameter_, su_rule_, exact_);
         const double number = parameter_->value.get();
         const std::optional<double> uncertainty = parameter_->uncertainty.get();
+        edit = QString::fromStdString(text.value);
         if (uncertainty.has_value() && *uncertainty != 0.0 && std::isfinite(*uncertainty)) {
             const auto [shown, shown_su] = edi::table_value_su(number, text.value, text.su, true);
             value = QString::fromStdString(shown);
@@ -163,9 +167,11 @@ void ParameterItem::refreshFileText() {
             su = QString::fromStdString(text.su);
         }
     }
-    if (value != file_value_) {
+    if (value != file_value_ || edit != file_edit_value_) {
         file_value_ = value;
+        file_edit_value_ = edit;
         emit fileValueChanged();
+        emit fileEditValueChanged();
     }
     if (su != file_su_) {
         file_su_ = su;
@@ -235,6 +241,10 @@ void ParameterItem::refreshStart() {
         change_direction_ = direction;
         su_reason_ = reason;
         emit startTextChanged();
+        emit changeTextChanged();
+        emit changeDirectionChanged();
+        emit suFlaggedChanged();
+        emit suReasonChanged();
     }
 }
 
@@ -249,7 +259,7 @@ QString ParameterItem::displayText(double value) const {
     if (parameter_->spec == nullptr) {
         return {};
     }
-    return QString::fromStdString(edi::display_text(uid_.toStdString(), value, variant_.toStdString()));
+    return QString::fromStdString(edi::shown_text(uid_.toStdString(), value, variant_.toStdString()));
 }
 
 void ParameterItem::setPhaseIndex(int index) {

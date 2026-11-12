@@ -74,6 +74,14 @@ struct TutorialStep {
     Q_PROPERTY(QString tab MEMBER tab CONSTANT)
     // A step about a whole area that names nothing in it (the files step): its callout may sit over the area.
     Q_PROPERTY(bool coversTarget MEMBER coversTarget CONSTANT)
+    // A fit step's expectations, for a replay to check: the parameters free before the fit (their table paths) and
+    // the reduced chi2 the fit reaches, within its tolerance; empty and negative when the manifest gives none.
+    Q_PROPERTY(QStringList expectFree MEMBER expectFree CONSTANT)
+    // Backgrounds the stage frees whole: their points outside the measured range, which no fit lists, may be free too.
+    Q_PROPERTY(QStringList expectWholeBackground MEMBER expectWholeBackground CONSTANT)
+    Q_PROPERTY(QStringList expectSites MEMBER expectSites CONSTANT)
+    Q_PROPERTY(double expectChi2 MEMBER expectChi2 CONSTANT)
+    Q_PROPERTY(double expectChi2Tolerance MEMBER expectChi2Tolerance CONSTANT)
 
    public:
     QString text;
@@ -87,6 +95,12 @@ struct TutorialStep {
     QString tab;
     QString title;
     bool coversTarget = false;
+    QStringList expectFree;
+    QStringList expectWholeBackground;
+    // A built structure's sites when this step starts, "label type x y z" each (the replay's check).
+    QStringList expectSites;
+    double expectChi2 = -1;
+    double expectChi2Tolerance = 0.01;
 };
 
 // A built-in tutorial, as app/tutorials/manifest.json gives it (ADR-0064).
@@ -193,7 +207,8 @@ class ApplicationInfo : public QObject {
         NumberFitted,
         NumberOwnUncertainty,
         NumberExponent,
-        NumberWrittenNarrow
+        NumberWrittenNarrow,
+        NumberAxisStep
     };
     Q_ENUM(NumberOperation)
     enum FitOutcomeOperation { FitIcon, FitRing, FitWord, FitMeaning, FitColor, FitTextColor };
@@ -619,6 +634,10 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void preferenceActivated(const QJSValue& index, int setting) const;
     /// NumberText presentation; project uncertainty formatting remains ProjectViewModel/core-owned.
     Q_INVOKABLE QJSValue numberPresentation(NumberOperation operation, const QJSValue& value, const QJSValue& second,
+                                          const QJSValue& third, const QJSValue& fourth) const;
+    // The plain-syntax helpers numberPresentation builds on; the displayed texts go through edi::table_number and
+    // edi::table_value_su, the one rule for numbers.
+    QJSValue numberPresentationRaw(NumberOperation operation, const QJSValue& value, const QJSValue& second,
                                           const QJSValue& third, const QJSValue& fourth) const;
     /// Report preview/export procedures retain ReportViewModel as data and publication authority.
     Q_INVOKABLE void saveReportPreview() const;

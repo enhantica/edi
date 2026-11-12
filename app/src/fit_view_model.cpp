@@ -27,7 +27,7 @@ namespace edi_app {
 namespace {
 
 // The goodness-of-fit and the fit-results table show χ² in its dictionary format.
-QString chi(double value) { return QString::fromStdString(edi::display_text("fit_result.reduced_chi_square", value)); }
+QString chi(double value) { return QString::fromStdString(edi::shown_text("fit_result.reduced_chi_square", value)); }
 // A recorded χ² that was not a number is none, and shows as nothing.
 QString chi(const std::optional<double>& value) { return value.has_value() ? chi(*value) : QString(); }
 // The goodness-of-fit's dictionary label (`reduced χ²`).
@@ -124,7 +124,7 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     }
     // crysta's R factors are fractions; each shows in its dictionary format, in per cent as FullProf prints them.
     const auto percent = [](const char* uid, const std::optional<double>& value, std::string_view variant = {}) {
-        return value.has_value() ? QString::fromStdString(edi::display_text(uid, *value, variant)) : QString();
+        return value.has_value() ? QString::fromStdString(edi::shown_text(uid, *value, variant)) : QString();
     };
     // The profile factors in the order FullProf prints them, then each linked structure's two (the owner,
     // 2026-10-21).

@@ -49,6 +49,9 @@ Column {
     function derivedText(value, su, crystal) {
         if (typeof value !== "number" || !isFinite(value))
             return "";
+        // Outside 0.001 to 1000 the rule for numbers writes it with a power of ten, its s.u. on hover.
+        if (value !== 0 && (Math.abs(value) < 0.001 || Math.abs(value) >= 1000))
+            return NumberText.parameter(value, su);
         const text = NumberText.ruled(value, su);
         if (text)
             return `${text.value}(${text.bracket})`;
@@ -101,7 +104,7 @@ Column {
         id: table
         objectName: "atomSiteMoments.list"
         visible: group.crystalAxes
-        defaultInfoText: qsTr("No atom sites defined")
+        defaultInfoText: qsTr("No atom sites")
         sourceModel: group.moments
 
         equalColumns: true
@@ -267,7 +270,7 @@ Column {
         id: converted
         objectName: "atomSiteMoments.converted"
         visible: !group.crystalAxes
-        defaultInfoText: qsTr("No atom sites defined")
+        defaultInfoText: qsTr("No atom sites")
         sourceModel: group.moments
 
         readonly property bool spherical: group.form === "spherical"

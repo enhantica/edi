@@ -485,6 +485,15 @@ def render(case: str) -> Path:  # noqa: PLR0912, PLR0914, PLR0915 - one page, se
             ),
             shown(by_id['data-from-file']),
         ]
+    body += [
+        '## Start with nothing free\n',
+        (
+            'Entries loaded from the database can come with parameters already free. On '
+            '**Analysis**, open the **Free** column header of the **Parameters** table and fix '
+            'every parameter, so the stages below free one group at a time.\n'
+        ),
+        shown(by_id['nothing-free']),
+    ]
     if 'relations-start' in by_id:
         body += [
             '## Add the relations\n',
@@ -530,14 +539,6 @@ def render(case: str) -> Path:  # noqa: PLR0912, PLR0914, PLR0915 - one page, se
             ),
             shown(by_id['minimizer']),
         ]
-    body += [
-        '## Start with nothing free\n',
-        (
-            'On **Analysis**, open the **Free** column header of the **Parameters** table and fix '
-            'every parameter, so the stages below free one group at a time.\n'
-        ),
-        shown(by_id['nothing-free']),
-    ]
     for number, stage in enumerate(stages(source), start=1):
         fit = by_id.get(f'stage-{number}-fit')
         if not fit:

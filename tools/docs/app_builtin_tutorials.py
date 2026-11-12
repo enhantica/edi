@@ -20,12 +20,16 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/docs'))
 sys.path.insert(0, str(ROOT / 'website'))
 
-from app_groups import Tracker, load_case  # noqa: E402
-from app_tutorial_plan import plan  # noqa: E402
+from app_groups import Tracker, dictionary, load_case  # noqa: E402
+
+DICTIONARY = dictionary()
+from app_tutorial_plan import CLI_PAGES, free_lists, plan  # noqa: E402
 from render_app_tutorials import stage_sentence  # noqa: E402
 from render_cli_tutorials import stages  # noqa: E402
 
@@ -50,6 +54,22 @@ WEB_ENTRIES = {
 TAGS = ROOT / 'app/examples/tags.json'
 
 
+# The longest step title, in characters, that fits the popup's line beside "Step 107 of 109"
+# (the replay also refuses a title the popup elides).
+TITLE_LIMIT = 32
+# What a stage's out-of-bounds result means (app_tutorial_notes.yml).
+NOTES = yaml.safe_load(
+    (Path(__file__).parent / 'app_tutorial_notes.yml').read_text(encoding='utf-8')
+)
+NOOPS = {
+    tuple(line.split('\t', 1))
+    for line in (Path(__file__).parent / 'app_tutorial_noops.tsv')
+    .read_text(encoding='utf-8')
+    .splitlines()
+    if line and not line.startswith('#')
+}
+
+
 def step(title: str, text: str, page: str, target: str, check: str, **extra: object) -> dict:
     """One tutorial step as the manifest holds it."""
     out = {'title': title, 'text': text, 'page': page, 'target': target}
@@ -72,13 +92,23 @@ def fills(actions: list[str]) -> dict[str, str]:
     return dict(a.removeprefix('fill:').split('=', 1) for a in actions if a.startswith('fill:'))
 
 
-def minimizer_steps(actions: list[str]) -> list[dict]:
+DEFAULT_MAX_ITERATIONS = 50
+
+
+def stage_iterations(case: str) -> int:
+    """The most iterations any fit on the case's Command line page took."""
+    text = (CLI_PAGES / f'{case}.md').read_text(encoding='utf-8')
+    return max((int(n) for n in re.findall(r'done · \w+ · (\d+) iters', text)), default=0)
+
+
+def minimizer_steps(case: str, actions: list[str]) -> list[dict]:
     """The stop rule and the iteration limit the case's project declares."""
     out = []
     for action in actions:
         if action.startswith('choose-token:minimizer.descent='):
             descent = action.split('=', 1)[1]
-            text = f'On **Analysis → Extra**, choose **{descent}** as the **Descent**.'
+            shown = option_words('minimizer.descent', descent)
+            text = f'On **Analysis → Extra**, choose **{shown}** as the **Descent**.'
             out.append(
                 step(
                     'Descent',
@@ -117,8 +147,13 @@ def minimizer_steps(actions: list[str]) -> list[dict]:
                 )
             )
     bound = fills(actions).get('minimizer.maxIterations')
-    if bound:
-        text = f'Set **Max iterations** to **{bound}** in **Minimizer**.'
+    needed = stage_iterations(case)
+    # The limit only when a stage needs more than the app's default (the owner, 2026-11-11).
+    if bound and needed > DEFAULT_MAX_ITERATIONS:
+        text = (
+            f'Set **Max iterations** to **{bound}** in **Minimizer**, because a stage needs '
+            f'{needed} iterations, more than the default {DEFAULT_MAX_ITERATIONS}.'
+        )
         out.append(
             step(
                 'Iteration limit',
@@ -169,7 +204,8 @@ TRANSLATED = {
 }
 # The plan steps whose actions set up a stage: walked action by action (setup_steps).
 WALKED = re.compile(
-    r'nothing-free|relations-start|background-estimate-.+|stage-\d+-free|group-filter|group-free-all'
+    r'nothing-free|relations-start|joint-weights|reflection-cutoff|background-estimate-.+|stage-\d+-free|group-filter'
+    r'|group-free-all'
     r'|structure-(created|cell|sites|adp)|experiment-(created|instrument|background|linked)'
 )
 
@@ -230,13 +266,17 @@ WORDS = {
     'parameters.datablock': 'the datablock filter above the **Parameters** table',
     'spaceGroup.nameHM': 'the space group',
     'cell.length_a': 'the cell length a',
-    'background_estimate.n_points': 'the number of points of **Background estimation**',
-    'background_estimate.use_model': 'the model of **Background estimation**',
+    'background_estimate.n_points': '**Anchor points** in **Background estimation**',
+    'refine_ls.thresholdSigma': 'the s.u. cutoff of **Fitted reflections**',
+    'background_estimate.use_model': '**Calculated peaks** in **Background estimation**',
 }
 APPEND_WORDS = {
     'aliases.append': 'Click **+** under **Aliases** to add an alias.',
     'constraints.append': 'Click **+** under **Constraints** to add a constraint.',
-    'atomSites.append': 'Click **+** under **Atom sites** to add a site.',
+    'atomSites.append': (
+        'Click **+** under **Atom sites** to add a site. It starts as a random element at a '
+        'random position; the next steps make it the site this structure needs.'
+    ),
     'background.append': 'Click **+** under **Background** to add a point.',
     'excludedRegions.append': 'Click **+** under **Excluded regions** to add a region.',
     'structures.create': 'Click **Create** to add a structure.',
@@ -245,16 +285,40 @@ APPEND_WORDS = {
 PAGES = {'structure', 'experiment', 'analysis', 'project', 'report', 'home'}
 
 
-def control_words(control: str) -> str:
-    """How a callout names a control: its row's number and what it holds."""
+def dictionary_item(control: str) -> dict | None:
+    """The dictionary entry a control edits (experimentType.beamMode is beam_mode)."""
+    uid = re.sub(r'(?<=[a-z0-9])([A-Z])', r'_\1', control).lower()
+    return next(
+        (i for i in [*DICTIONARY['items'], *DICTIONARY['parameters']] if i.get('uid') == uid), None
+    )
+
+
+def control_words(control: str, case: str = '') -> str:
+    """How a callout names a control: as its label reads, with its row's number or owner."""
     match = re.fullmatch(r'(.+)\.(\d+)', control)
     base, row = (match[1], int(match[2])) if match else (control, 0)
     if base in WORDS:
         return WORDS[base].format(n=row + 1)
+    if base == 'jointFit.weight' and case:
+        # The joint-fit table lists the experiments in the project's order.
+        names = [item.name for item in load_case(case).experiments]
+        return f'the weight of **{names[row]}**' if row < len(names) else f'weight {row + 1}'
+    item = dictionary_item(base)
+    if item is not None:
+        return f'**{item["display_name"][:1].upper()}{item["display_name"][1:]}**'
     return f'`{control.split(".", 1)[-1]}`'
 
 
-def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]:  # noqa: PLR0912, PLR0915 - one branch per action family
+def option_words(control: str, token: str) -> str:
+    """A choice as its selector lists it ("fast_descent" is "Fast descent")."""
+    item = dictionary_item(control)
+    for option in (item or {}).get('options') or []:
+        if option.get('token') == token:
+            return option.get('display_name') or token
+    return token
+
+
+def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]:  # noqa: PLR0912, PLR0914, PLR0915 - one branch per action family
     """A plan step's actions, each control action its own tutorial step; anything else refused."""
     actions = item['actions']
     out: list[dict] = []
@@ -293,7 +357,7 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
             if control == 'parameters.nameFilter':
                 context['word'] = value
             add(
-                f'Enter **{value}** as {control_words(control)}.',
+                f'Enter **{value}** as {control_words(control, case)}.',
                 control,
                 f'field:{control}={value}',
             )
@@ -301,7 +365,7 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
         elif following.startswith('type:') and not action.startswith(('fill:', 'type:', 'choose')):
             text = following.removeprefix('type:')
             add(
-                f'Choose **{text.rstrip(":")}** as {control_words(action)}.',
+                f'Choose **{text.rstrip(":")}** as {control_words(action, case)}.',
                 action,
                 f'pick:{action}={text}',
             )
@@ -312,12 +376,22 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
             'choose',
         )):
             chosen = following.removeprefix('choose:')
+            # A filter already showing that choice needs no step (the earlier stage chose it).
+            if (
+                action in {'parameters.category', 'parameters.datablock'}
+                and context.get(action.split('.')[1]) == chosen
+            ):
+                index += 2
+                continue
             if action == 'parameters.category':
                 context['category'] = chosen
             elif action == 'parameters.datablock':
                 context['datablock'] = chosen
+            elif action.startswith('atomSiteAdp.type.'):
+                # Every site switched together (a tutorial's adp_type loop): their names follow.
+                context['adp'] = chosen
             add(
-                f'Choose **{chosen}** as {control_words(action)}.',
+                f'Choose **{chosen}** as {control_words(action, case)}.',
                 action,
                 f'pick:{action}={chosen}',
             )
@@ -325,9 +399,21 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
         elif action.startswith('choose-token:'):
             control, token = action.removeprefix('choose-token:').split('=', 1)
             add(
-                f'Choose **{token}** as {control_words(control)}.',
+                f'Choose **{option_words(control, token)}** as {control_words(control, case)}.',
                 control,
                 f'token:{control}={token}',
+            )
+            index += 1
+        elif action.startswith(('tick:', 'untick:')):
+            kind, path = action.split(':', 1)
+            dotted = re.sub(r'\[([^\]]*)\]', r'.\1', path)
+            words = parameter_words(path, site_variant(case, path, context))
+            add(
+                f'Tick **Free** for **{words}**.'
+                if kind == 'tick'
+                else f'Clear **Free** for **{words}**.',
+                f'parameters.free@{dotted}',
+                f'{kind}:{dotted}',
             )
             index += 1
         elif action == 'parameters.freeHeader':
@@ -339,6 +425,10 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
             index += 1
         elif action in {'parameters.freeHeader.free', 'parameters.freeHeader.fixed'}:
             state = action.rsplit('.', 1)[1]
+            # A stage sets a whole category in one action, never a part a typed word picks out
+            # (the owner, 2026-11-11): a part is its rows, ticked one by one.
+            if context.get('word') and item['id'].startswith('stage-'):
+                raise SystemExit(f'{where}: {state} · all on a typed name filter; tick the rows')
             spec = ':'.join([
                 state,
                 context.get('category') or 'All categories',
@@ -348,9 +438,11 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
             add(f'Choose **{state.capitalize()} · all**.', action, 'free-choice:' + spec)
             index += 1
         elif action == 'parameters.clearFilters':
-            if context.get('category') or context.get('datablock') or context.get('word'):
+            # Only a name or datablock filter needs clearing: the next pick replaces a category, so
+            # a step clearing one would only navigate (the owner, 2026-11-11).
+            if context.get('datablock') or context.get('word'):
                 add("Click the filters' **Clear** button.", action, 'filters-clear')
-            context.update(category='', datablock='', word='')
+                context.update(category='', datablock='', word='')
             index += 1
         elif action == 'background.estimate':
             add('Press **Estimate** in the **Background** group.', action, 'background-estimated:')
@@ -385,6 +477,22 @@ def stage_texts(case: str, source: str) -> dict[int, tuple[str, str]]:
     }
 
 
+def case_sites(case: str) -> list[str]:
+    """The case project's atom sites, "label type x y z" each, as a built structure must end."""
+    project = load_case(case)
+    if len(project.structures) != 1:
+        count = len(project.structures)
+        raise SystemExit(f'{case}: a built structure needs one structure, not {count}')
+    return [
+        ' '.join([
+            str(getattr(site.id, 'value', site.id)),
+            str(getattr(site.type_symbol, 'value', site.type_symbol)),
+            *(f'{getattr(site, axis).value:.4f}' for axis in ('fract_x', 'fract_y', 'fract_z')),
+        ])
+        for site in project.structures[0].atom_sites
+    ]
+
+
 def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs-plan step id
     case: str, item: dict, texts: dict, pending: list, context: dict
 ) -> list[dict]:
@@ -394,15 +502,27 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         if re.fullmatch(r'stage-\d+-free', ident):
             title, text = texts.get(int(ident.split('-')[1]), (item['description'], ''))
         elif ident == 'nothing-free':
-            title = 'Start with nothing free'
-            text = (
-                'Open the **Free** column header of the **Parameters** table and fix every '
-                'parameter.'
-            )
+            # Every fitting tutorial fixes everything on its first Analysis step: entries loaded
+            # from the database can carry free marks, and each stage below frees its own group.
+            title, text = 'Fix every parameter first', ''
         else:
             title, text = item['description'], ''
         del text
-        return action_steps(case, item, title, context)
+        full = title
+        if len(title) > TITLE_LIMIT and re.fullmatch(r'stage-\d+-free', ident):
+            title = f'Stage {ident.split("-")[1]}'
+        steps = action_steps(case, item, title, context)
+        if title != full and steps:
+            steps[0]['text'] = f'**{full}.** ' + steps[0]['text']
+        if ident == 'nothing-free' and steps:
+            steps[0]['text'] = (
+                'Entries loaded from the database can come with parameters already free, and the '
+                'stages below free each group themselves. ' + steps[0]['text']
+            )
+        if ident == 'structure-adp' and steps:
+            # The sites as the case's own project has them, checked when the displacements start.
+            steps[0]['expectSites'] = case_sites(case)
+        return steps
     untranslated(case, item)
     if ident == 'home':
         return [
@@ -518,7 +638,7 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
             )
         ]
     if ident == 'minimizer':
-        return minimizer_steps(actions)
+        return minimizer_steps(case, actions)
     if ident == 'data-from-file':
         need(f'{case}: plan step {ident!r}', actions, 'experiments.load')
         return [
@@ -542,17 +662,31 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         ]
     if re.fullmatch(r'stage-\d+-fit', ident) or ident == 'scan-fit':
         need(f'{case}: plan step {ident!r}', actions, 'statusBar.fit.button')
+        number = re.fullmatch(r'stage-(\d+)-fit', ident)
+        title, text = item['description'], 'Press **Fit** in the status bar.'
+        if len(title) > TITLE_LIMIT:
+            stage = title.removeprefix('Fit: ')
+            title = f'Fit stage {number.group(1)}' if number else 'Fit the scan'
+            text = f'Press **Fit** in the status bar to fit **{stage}**.'
         return [
             step(
-                item['description'],
-                'Press **Fit** in the status bar.',
+                title,
+                text,
                 'analysis',
                 'statusBar.fit.button',
                 'fit-done',
+                **(stage_expectation(case, int(number.group(1))) if number else {}),
             ),
             step(
                 'Fit results',
-                'Read the fit results, then press **OK**.',
+                ' '.join(
+                    part
+                    for part in (
+                        'Read the fit results, then press **OK**.',
+                        NOTES.get(case, {}).get(int(number.group(1)) if number else 0, ''),
+                    )
+                    if part
+                ),
                 'analysis',
                 'fit.results.ok',
                 'results-closed',
@@ -561,8 +695,26 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
     if ident == 'correlations':
         text = 'The **Correlations** view shows which fitted parameters move together.'
         tab = 'mainArea.tab.correlations'
-        return [step('Correlations', text, 'analysis', tab, 'open:' + tab)]
+        # Opened as the step shows, as the tour opens its tabs: it shows the matrix it explains.
+        return [step('Correlations', text, 'analysis', tab, '', open=True)]
     if ident == 'calculated':
+        if case.startswith('sc-'):
+            # A single crystal's chart sets measured against calculated F²: with nothing measured
+            # it has nothing to draw, so the calculated reflections are shown in their table.
+            text = (
+                'On **Experiment → Extra**, **Reflections** lists every reflection with the F² '
+                'calculated from the model.'
+            )
+            return [
+                step(
+                    'The calculated reflections',
+                    text,
+                    'experiment',
+                    'group.refln',
+                    'open:group.refln',
+                    tab='extras',
+                )
+            ]
         text = 'On **Analysis**, the main view draws the pattern calculated from the model.'
         return [
             step(
@@ -570,7 +722,13 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
             )
         ]
     if ident == 'report':
-        text = 'The **Report** page collects the structure, the experiment and the fit.'
+        # A simulation has no fit to report.
+        fitted = 'simulation' not in case
+        text = (
+            'The **Report** page collects the structure, the experiment and the fit.'
+            if fitted
+            else 'The **Report** page collects the structure and the experiment.'
+        )
         return [step('Open Report', text, 'report', 'appBar.tab.report', 'page:report')]
     raise SystemExit(f'{case}: plan step {ident!r} has no translation into tutorial steps')
 
@@ -584,7 +742,169 @@ def tutorial_steps(case: str) -> list[dict]:
     steps: list[dict] = []
     for item in plan(case)['steps']:
         steps += plan_step(case, item, texts, pending, context)
+    for item in steps:
+        if len(item['title']) > TITLE_LIMIT:
+            # A title is a few words on one line of the popup (owner record, 2026-11-11, item 10).
+            raise SystemExit(f'{case}: step title {item["title"]!r} is longer than {TITLE_LIMIT}')
+    return with_reasons(case, steps)
+
+
+WHY = yaml.safe_load((ROOT / 'tools/docs/app_tutorial_why.yml').read_text(encoding='utf-8'))
+# Checks of Extra-tab steps that only choose where (a row's parameter, the table's filters).
+WHERE = (
+    'pick:parameters.',
+    'free',
+    'tick:',
+    'untick:',
+    'filters-clear',
+    'max-iterations:',
+    'open:',
+)
+
+
+def with_reasons(case: str, steps: list[dict]) -> list[dict]:
+    """Each Extra-tab step with the short sentence saying why it is taken; one without is refused.
+
+    The owner's rule (2026-11-11): an alias, a constraint, a minimizer setting, a fitting mode or
+    an exclusion is never taken without its reason (tools/docs/app_tutorial_why.yml).
+    """
+    reasons = WHY.get(case, {})
+    # Each constraint's id and expression, by its row, and the aliases it names.
+    ids = {
+        m[1]: m[2]
+        for s in steps
+        if (m := re.fullmatch(r'field:constraint\.id\.(\d+)=(.+)', s.get('check', '')))
+    }
+    expressions = {
+        ids.get(m[1], m[1]): m[2]
+        for s in steps
+        if (m := re.fullmatch(r'field:constraint\.expression\.(\d+)=(.+)', s.get('check', '')))
+    }
+    aliases = {
+        m[1]: m[2]
+        for s in steps
+        if (m := re.fullmatch(r'field:alias\.id\.(\d+)=(.+)', s.get('check', '')))
+    }
+
+    def constraint_reason(constraint: str) -> str | None:
+        return reasons.get(f'constraint:{constraint}') or reasons.get('constraints')
+
+    def reason(check: str) -> str | None:
+        if m := re.fullmatch(
+            r'(?:rows:constraints\.append=|field:constraint\.(?:id|expression)\.)(\d+).*', check
+        ):
+            row = str(int(m[1]) - 1) if check.startswith('rows:') else m[1]
+            return constraint_reason(ids.get(row, row))
+        if m := re.fullmatch(
+            r'(?:rows:aliases\.append=|field:alias\.id\.|pick:alias\.parameter\.)(\d+).*', check
+        ):
+            row = str(int(m[1]) - 1) if check.startswith('rows:') else m[1]
+            alias = aliases.get(row, '')
+            for constraint, expression in expressions.items():
+                if re.search(rf'\b{re.escape(alias)}\b', expression):
+                    return constraint_reason(constraint)
+            return None
+        for prefix, key in (
+            ('descent:', 'descent'),
+            ('stop-rule:', 'stop-rule'),
+            ('chi-tolerance:', 'chi-tolerance'),
+            ('field:background_estimate.', 'background-estimate'),
+            ('field:jointFit.weight.', 'joint-weights'),
+            ('field:refine_ls.thresholdSigma', 'reflection-cutoff'),
+            ('token:background_estimate.', 'background-estimate'),
+        ):
+            if check.startswith(prefix):
+                return reasons.get(key)
+        if check.startswith('fitting-mode:'):
+            return reasons.get('fitting-mode:' + check.split(':', 1)[1])
+        return None
+
+    for s in steps:
+        check = s.get('check', '')
+        if s.get('tab') != 'extras' or check.startswith(WHERE):
+            continue
+        why = reason(check)
+        if not why:
+            raise SystemExit(
+                f'{case}: the Extra-tab step {check!r} gives no reason (app_tutorial_why.yml)'
+            )
+        s['why'] = why
+    # A step the app did before the tutorial reached it asks for nothing (app_tutorial_noops.tsv);
+    # dropped once every reason is known: a dropped expression can explain the steps around it.
+    steps = [s for s in steps if (case, s.get('check', '')) not in NOOPS]
+    said = set()
+    for s in steps:
+        why = s.get('why', '')
+        # Each relationship explained once in the tutorial, on the first step it explains; later
+        # steps for it (its alias, its constraint) keep only their action.
+        if why and why not in said:
+            s['text'] = f'{s["text"]} {why}'
+            said.add(why)
     return steps
+
+
+def parameter_words(path: str, variant: str = '') -> str:
+    """A parameter as its table row names it: its row label, if any, and its short name.
+
+    The short name is the variant's where the dictionary has one (an atom site's `adp_iso` is
+    "B iso" on a Biso site, "U iso" on a Uiso one), as the app's ParameterItem shows it.
+    """
+    match = re.fullmatch(r'(?:\w+(?:\[[^\]]*\])?\.)*?(\w+)(?:\[([^\]]*)\])?\.(\w+)', path)
+    if not match:
+        return path
+    owner, row, name = match.groups()
+    wanted = owner.rstrip('s')
+    items = [item for item in DICTIONARY['parameters'] if item['name'] == name]
+    owned = [i for i in items if i['category'].rstrip('s') == wanted]
+    item = (owned or items or [None])[0]
+    if item is None:
+        return f'{row} {name}' if row else name
+    variants = item.get('variants') or {}
+    display = (variants.get(variant) or {}).get('display_name') or item['display_name']
+    return f'{row} {display}' if row else display
+
+
+def site_variant(case: str, path: str, context: dict) -> str:
+    """The displacement type of the atom site a path names, as the tutorial has left it."""
+    site = re.search(r'atom_site(?:s|_aniso)\[([^\]]+)\]', path)
+    if site is None:
+        return ''
+    if context.get('adp'):
+        return context['adp']
+    block = re.match(r'structures\[([^\]]+)\]', path)
+    for structure in load_case(case).structures:
+        if block and structure.name != block[1]:
+            continue
+        for item in structure.atom_sites:
+            if str(getattr(item.id, 'value', item.id)) == site[1]:
+                return str(getattr(item.adp_type, 'value', item.adp_type))
+    return ''
+
+
+def stage_expectation(case: str, number: int) -> dict:
+    """What a replay checks at a stage's fit: its free paths and the CLI fit's reduced chi2.
+
+    The page prints chi2 to two decimals, so the replay allows 0.01.
+    """
+    title, paths = free_lists(case)[number - 1]
+    text = (CLI_PAGES / f'{case}.md').read_text(encoding='utf-8')
+    section = re.split(r'^## ', text, flags=re.MULTILINE)[1:]
+    body = next(part for part in section if part.split('\n', 1)[0].strip() == title)
+    done = re.findall(r'done · \w+ · \d+ iters · reduced χ² ([\d.]+)', body)
+    if not done:
+        raise SystemExit(f'{case}: stage {number} ({title}) has no fit result on its page')
+    # A stage freeing a background's points frees them all, as the Python tutorial's loop does; the
+    # page lists only the points the fit uses, inside the measured range.
+    pattern = r'(.*\.background\[)[^\]]+\]\.intensity$'
+    whole = sorted({m[1] for path in paths if (m := re.match(pattern, path))})
+    return {
+        'expectFree': sorted(paths),
+        'expectWholeBackground': whole,
+        'expectChi2': float(done[-1]),
+        # Two decimals, or ten parts in a million for a fit that ends far from 1: the LATP scan
+        # ends at 1.4e8 in both, up to 2.3 parts in a million apart.
+        'expectChi2Tolerance': max(0.01, 1e-5 * float(done[-1])),
+    }
 
 
 def tags(case: str, metadata: dict) -> list[str]:

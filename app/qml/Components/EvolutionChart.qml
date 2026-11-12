@@ -74,7 +74,7 @@ Item {
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 color: chart.colors.chartLabels
-                text: xTick.text
+                text: NumberText.compact(xTick.text)
             }
         }
     }
@@ -96,7 +96,7 @@ Item {
                 horizontalAlignment: Text.AlignRight
                 verticalAlignment: Text.AlignVCenter
                 color: chart.colors.chartLabels
-                text: yTick.text
+                text: NumberText.compact(yTick.text)
             }
         }
     }

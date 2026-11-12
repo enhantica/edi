@@ -19,7 +19,9 @@
 #include "user_action_log.hpp"
 #include "web_files.hpp"
 #include "engine_setup.hpp"
+#include "pattern_chart_controller.hpp"
 #include "edi/display.hpp"
+#include "edi/report.hpp"
 #include "edi/model.hpp"
 #include "edi/palette.hpp"
 #include "edi/assistant_files.hpp"
@@ -258,7 +260,7 @@ QList<Tutorial> ApplicationInfo::tutorials() const {
     };
     const auto step = [&text](const QJsonObject& object, const QString& page) {
         // A step's own page, else its tour page's: a step opening a page shows on the page before it.
-        return TutorialStep{text(object, "text"),
+        TutorialStep made{text(object, "text"),
                             object.contains(QStringLiteral("page")) ? text(object, "page") : page,
                             text(object, "target"),
                             text(object, "expected"),
@@ -269,6 +271,14 @@ QList<Tutorial> ApplicationInfo::tutorials() const {
                             text(object, "tab"),
                             text(object, "title"),
                             object.value(QStringLiteral("coversTarget")).toBool()};
+        for (const QJsonValue& path : object.value(QStringLiteral("expectFree")).toArray()) made.expectFree.append(path.toString());
+        for (const QJsonValue& path : object.value(QStringLiteral("expectWholeBackground")).toArray())
+            made.expectWholeBackground.append(path.toString());
+        for (const QJsonValue& site : object.value(QStringLiteral("expectSites")).toArray())
+            made.expectSites.append(site.toString());
+        made.expectChi2 = object.value(QStringLiteral("expectChi2")).toDouble(-1);
+        made.expectChi2Tolerance = object.value(QStringLiteral("expectChi2Tolerance")).toDouble(0.01);
+        return made;
     };
     // A step without its own tab is on the tab the last sidebar-tab step on its page opened, so it sets up the same
     // context on Next, Back or a jump.
@@ -4115,10 +4125,33 @@ void ApplicationInfo::parameterSliderPressed(bool destroying) const {
     }
     if (!panelUsageTruth(panelUsageContextRead(f, "pressed"))) projectInvoke(f, "sliderRow", "updateLimits");
 }
+namespace {
+// A power of ten as a display writes it, "×10⁻⁵".
+QString powerOfTen(int power) {
+    static const QString digits = QStringLiteral("\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079");
+    QString exponent = power < 0 ? QStringLiteral("\u207B") : QString();
+    for (const QChar digit : QString::number(std::abs(power))) exponent += digits.at(digit.digitValue());
+    return QStringLiteral("\u00D710") + exponent;
+}
+
+bool finiteNumber(const QJSValue& value) { return value.isNumber() && std::isfinite(value.toNumber()); }
+
+// A number's text by the rule for numbers (owner records 2026-11-09 and 2026-11-11, item 6): a decimal when
+// 0.001 <= |x| < 1000 ("9.3e1" is 93), else three significant digits times a power of ten ("8.40×10⁻⁵"). A text that
+// is not a number, or is already written that way, is returned as it is.
+QString shownNumberText(const QString& text) {
+    bool ok = false;
+    const double number = text.trimmed().toDouble(&ok);
+    if (!ok || !std::isfinite(number)) return text;
+    return QString::fromStdString(edi::table_number(number, text.trimmed().toStdString(), true));
+}
+}  // namespace
+
 QJSValue ApplicationInfo::parameterBound(const QJSValue& value) const {
     const auto f = panelUsageEngine(this);
     if (value.strictlyEquals(QJSValue(qInf()))) return QJSValue(QStringLiteral("inf"));
     if (value.strictlyEquals(QJSValue(-qInf()))) return QJSValue(QStringLiteral("-inf"));
+    if (finiteNumber(value)) return QJSValue(shownNumberText(QString::number(value.toNumber(), 'g', 6)));
     return panelUsageGlobalCall(f, "String", {value});
 }
 QJSValue ApplicationInfo::formShownValue(const QJSValue& uid, const QJSValue& value, bool omitNaN) const {
@@ -4242,27 +4275,13 @@ void parameterTextRefit(const PanelUsageFrame& f, bool scalable, bool textCell =
         return data && !data->isQueuedForDeletion;
     };
     if (!current()) return;
-    const auto math = panelUsageContextRead(f, "Math");
-    const auto width = panelUsageNumber(f, panelUsageContextRead(f, "width"));
-    const auto implicit = panelUsageNumber(f, panelUsageContextRead(f, "implicitWidth"));
-    if (!width || !implicit) return;
-    const auto absolute = panelUsageMemberCall(f, math, "abs", {QJSValue(*width - *implicit)});
-    const auto sized = assistantRelation(f, absolute, QJSValue(0.5), 2);
-    bool full = (scalable && panelUsageTruth(panelUsageContextRead(f, "fitDigits"))) || !sized;
-    if (!full) full = textCell ? !panelUsageTruth(panelUsageContextRead(f, "numeric"))
-                              : panelUsageContextRead(f, "item").isNull();
-    QJSValue shown;
-    if (full) shown = panelUsageContextRead(f, textCell ? "written" : "valueText");
-    else {
-        const auto formatter = panelUsageContextRead(f, "NumberText");
-        QJSValueList args;
-        if (textCell) {
-            for (const char* name : {"written", "room", "metrics"}) args.append(panelUsageContextRead(f, name));
-        } else {
-            for (const char* name : {"valueText", "room", "shownMetrics", "narrowText"}) args.append(panelUsageContextRead(f, name));
-        }
-        shown = panelUsageMemberCall(f, formatter, "fitted", args);
-    }
+    (void)scalable;
+    // The text never depends on the cell's width (owner record 2026-11-11, item 6). A number in a text cell shows by
+    // the rule for numbers while it is not being edited, and as written while it is.
+    QJSValue shown = panelUsageContextRead(f, textCell ? "written" : "valueText");
+    if (textCell && panelUsageTruth(panelUsageContextRead(f, "numeric")) &&
+        !panelUsageTruth(panelUsageContextRead(f, "activeFocus")))
+        shown = panelUsageMemberCall(f, panelUsageContextRead(f, "NumberText"), "compact", {shown});
     if (current()) panelUsageContextWrite(f, "shownValue", shown);
 }
 } // namespace
@@ -6301,7 +6320,8 @@ bool tableFreshPad(QQuickItem* cell, int column, const QString& kind, const Tabl
     if (rightAligned && column >= 0 && static_cast<std::size_t>(column) < in.wideEdges.size() && in.wideEdges[static_cast<std::size_t>(column)])
         right += in.fontPixelSize;
     naturalRight = right;
-    if (column == in.fillerIndex) right += in.fillerWidth;
+    // A text cell takes the spare width as room for its text; a number keeps it as padding, by its neighbours.
+    if (column == in.fillerIndex && kind != QLatin1String("text")) right += in.fillerWidth;
     cell->setProperty("rightPadding", right);
     auto* indicator = kind == QLatin1String("check") ? cell->property("indicator").value<QQuickItem*>() : nullptr;
     if (indicator != nullptr) {
@@ -6501,7 +6521,8 @@ QJSValue ApplicationInfo::tablePadForFiller(const QJSValue& cell, const QJSValue
     if (rightAligned && panelUsageTruth(textIndex(f, panelUsageContextRead(f, "wideEdges"), column)))
         right = panelUsageAdd(f, right, panelUsageRead(f, assistantContextField(f, "EaStyle", "Sizes"), "fontPixelSize"));
     const auto naturalRight = right;
-    right = panelUsageAdd(f, right, assistantSameName(f, column, "fillerIndex") ? panelUsageContextRead(f, "fillerWidth") : QJSValue(0));
+    const bool text = kind.strictlyEquals(QJSValue(QStringLiteral("text")));
+    right = panelUsageAdd(f, right, !text && assistantSameName(f, column, "fillerIndex") ? panelUsageContextRead(f, "fillerWidth") : QJSValue(0));
     if (!panelUsageTruth(projectCall(f, owns))) return {};
     // A view's cell already padded so is left as it is: its rows are styled again whenever rows come and go.
     if (!fresh) {
@@ -6626,7 +6647,7 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
     // The reads keep the script order: the fitted widths and their length first, then the columns, each read once,
     // so a value a getter replaces on the way is the one returned.
     const auto fittedValue = panelUsageContextRead(f, "fittedWidths");
-    if (panelUsageTruth(panelUsageContextRead(f, "equalColumns"))) return panelUsageContextRead(f, "columns");
+    const bool equal = panelUsageTruth(panelUsageContextRead(f, "equalColumns"));
     const auto length = panelUsageRead(f, fittedValue, "length");
     if (!consentFieldEquals(f, panelUsageContextRead(f, "columns"), "length", length)) return panelUsageContextRead(f, "columns");
     const auto columnsValue = panelUsageContextRead(f, "columns");
@@ -6635,6 +6656,9 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
     for (std::size_t index = 0; index < fitted.size(); ++index) fitted[index] = fittedValue.property(static_cast<quint32>(index)).toNumber();
     const auto columns = tableNumbers(columnsValue);
     if (!panelUsageReady(f) || fitted.size() != columns.size()) return columnsValue;
+    // Fixed widths only (a table that sets its own): nothing to work out, and no read of the rows, which come and go as
+    // the widths change.
+    if (std::find(columns.cbegin(), columns.cend(), -1.0) == columns.cend()) return columnsValue;
     const double width = panelUsageContextRead(f, "width").toNumber();
     const double share = panelUsageContextRead(f, "maximumTextColumnShare").toNumber();
     const double padding = panelUsageContextRead(f, "autoColumnPadding").toNumber();
@@ -6654,26 +6678,46 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
     const std::size_t count = columns.size();
     std::vector<bool> fits(count);
     int fitting = 0;
-    double fixed = 0, texts = 0;
+    double fixed = 0, texts = 0, shrinkable = 0;
     const double cap = std::max(0.0, width * share);
     const double textLimit = std::max(0.0, cap - padding);
     for (std::size_t index = 0; index < count; ++index) {
         fits[index] = columns[index] == -1;
-        if (fits[index]) { ++fitting; texts += capped(fitted[index], index, textLimit); }
-        else if (columns[index] > 0) fixed += columns[index];
+        if (fits[index]) {
+            ++fitting;
+            const double text = capped(fitted[index], index, textLimit);
+            texts += text;
+            if (index < caps.size() && caps[index]) shrinkable += text;
+        } else if (columns[index] > 0) fixed += columns[index];
     }
     const double gaps = static_cast<double>(count) - 1;
     const double room = width - fixed - spacing * gaps - border * 2 - rowPadding * 2;
-    const double margin = fitting > 0 ? std::max(0.0, std::min(padding, (room - texts) / fitting)) : 0;
-    const double scale = texts > room && texts > 0 ? std::max(0.0, room) / texts : 1;
-    const double spread = !spreadColumns.empty() ? std::max(0.0, room - texts - margin * fitting) / static_cast<double>(spreadColumns.size()) : 0;
     std::vector<double> widths(count);
+    if (equal) {
+        // Equal flex columns, each at least as wide as the widest of their texts: a wider row scrolls sideways.
+        double widest = 0;
+        for (std::size_t index = 0; index < count; ++index)
+            if (fits[index]) widest = std::max(widest, fitted[index]);
+        const double each = fitting > 0 ? std::floor(std::max(std::max(0.0, room) / fitting, widest)) : 0;
+        for (std::size_t index = 0; index < count; ++index) widths[index] = fits[index] ? each : columns[index];
+        auto result = f->newArray(static_cast<uint>(count));
+        for (std::size_t index = 0; index < count; ++index) result.setProperty(static_cast<quint32>(index), widths[index]);
+        return result;
+    }
+    const double margin = fitting > 0 ? std::max(0.0, std::min(padding, (room - texts) / fitting)) : 0;
+    // A row too narrow narrows only its text columns, down to a few characters and an ellipsis each; a number, a selector or an icon
+    // keeps its whole width, and a row still too wide scrolls sideways.
+    // A name keeps its start and an ellipsis.
+    const double textFloor = 5 * panelUsageRead(f, sizes, "fontPixelSize").toNumber();
+    const double textScale = texts > room && shrinkable > 0 ? std::clamp((room - (texts - shrinkable)) / shrinkable, 0.0, 1.0) : 1;
+    const double spread = !spreadColumns.empty() ? std::max(0.0, room - texts - margin * fitting) / static_cast<double>(spreadColumns.size()) : 0;
     for (std::size_t index = 0; index < count; ++index) {
         if (!fits[index]) { widths[index] = columns[index]; continue; }
         const bool spreads = std::find(spreadColumns.cbegin(), spreadColumns.cend(), static_cast<double>(index)) != spreadColumns.cend();
-        const double text = capped(fitted[index], index, textLimit);
+        double text = capped(fitted[index], index, textLimit);
+        if (index < caps.size() && caps[index]) text = std::max(std::min(text, textFloor), text * textScale);
         // The cap bounds a column's own text; the spare width a spread column is given comes on top of it, as on main.
-        widths[index] = capped(std::floor(text * scale + margin), index, cap) + (spreads ? std::floor(spread) : 0);
+        widths[index] = capped(std::floor(text + margin), index, cap) + (spreads ? std::floor(spread) : 0);
     }
     if (fillerIndex >= 0 && static_cast<std::size_t>(fillerIndex) < count) {
         double used = 0;
@@ -6848,7 +6892,7 @@ QJSValue ApplicationInfo::tableFitColumns(const QJSValue& rows, const QJSValue& 
                 if (rightAligned && static_cast<std::size_t>(index) < freshInputs.wideEdges.size() && freshInputs.wideEdges[static_cast<std::size_t>(index)])
                     right += freshInputs.fontPixelSize;
                 const double naturalRight = right;
-                if (index == freshInputs.fillerIndex) right += freshInputs.fillerWidth;
+                if (index == freshInputs.fillerIndex && kind != QLatin1String("text")) right += freshInputs.fillerWidth;
                 const QString styled = kind + QLatin1Char(':') + QJSValue(right).toString();
                 if (kind != QLatin1String("check") && base.property(QStringLiteral("styled")).toString() == styled) continue;
                 base.setProperty(QStringLiteral("styled"), styled);
@@ -7897,6 +7941,74 @@ QJSValue numberProcedureCallback(const PanelUsageFrame& f, uint operation,
 
 QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJSValue& value, const QJSValue& second,
     const QJSValue& third, const QJSValue& fourth) const {
+    // A value and its s.u. as every display shows them, whatever the cell's width or whether the value is free: the
+    // project's s.u. rule rounds them, and the rule for numbers writes them (edi::table_value_su).
+    const auto shownPair = [&](const QJSValue& number, const QJSValue& su, const QJSValue& digits) -> std::pair<QString, QString> {
+        if (!finiteNumber(number)) return {number.toString(), QString()};
+        const double x = number.toNumber();
+        if (finiteNumber(su) && su.toNumber() > 0.0) {
+            QString valueText, suText;
+            const QJSValue ruled = numberPresentationRaw(NumberRuled, number, su, QJSValue(), QJSValue());
+            if (panelUsageTruth(ruled)) {
+                const auto f = panelUsageEngine(this);
+                valueText = panelUsageRead(f, ruled, "value").toString();
+                suText = panelUsageRead(f, ruled, "su").toString();
+            } else {
+                valueText = numberPresentationRaw(NumberRounded, number, su, QJSValue(qInf()), digits).toString();
+                suText = QString::number(su.toNumber(), 'e', 0);
+            }
+            const auto [v, e] = edi::table_value_su(x, valueText.toStdString(), suText.toStdString(), true);
+            return {QString::fromStdString(v), QString::fromStdString(e)};
+        }
+        const QString plain = numberPresentationRaw(NumberRounded, number, QJSValue(), QJSValue(qInf()), digits).toString();
+        return {QString::fromStdString(edi::table_number(x, plain.toStdString(), true)), QString()};
+    };
+    // An s.u. beside its value, or alone without a usable value.
+    const auto shownSu = [&](const QJSValue& su, const QJSValue& number) -> QJSValue {
+        if (!finiteNumber(su) || su.toNumber() <= 0.0) return QJSValue(QString());
+        if (finiteNumber(number)) return QJSValue(shownPair(number, su, QJSValue()).second);
+        return QJSValue(shownNumberText(QString::number(su.toNumber(), 'g', 1)));
+    };
+    // Axis labels, each tick written on its own by the rule (pattern_chart_controller.hpp: axis_labels).
+    if (operation == NumberAxisFormat) {
+        std::vector<double> ticks;
+        const int count = value.property(QStringLiteral("length")).toInt();
+        for (int i = 0; i < count; ++i) {
+            const QJSValue tick = value.property(static_cast<quint32>(i));
+            if (finiteNumber(tick)) ticks.push_back(tick.toNumber());
+        }
+        return QJSValue(edi_app::axis_labels_text(edi_app::axis_labels(ticks)));
+    }
+    if (operation == NumberAxisTick) {
+        if (!finiteNumber(value)) return QJSValue(value.toString());
+        return QJSValue(edi_app::axis_label(value.toNumber(), edi_app::axis_labels_from_text(second.toString())));
+    }
+    if (operation == NumberAxisStep) {
+        // value: [low, high, ticks wanted]; second: the axis' length in pixels; third: the labels' font; fourth:
+        // whether the axis is horizontal.
+        const double low = value.property(0).toNumber(), high = value.property(1).toNumber();
+        const QFont font = third.toVariant().value<QFont>();
+        const int target = value.property(2).isNumber() ? std::max(2, value.property(2).toInt()) : 5;
+        return QJSValue(edi_app::labelled_step(low, high, second.toNumber(), font, fourth.toBool(), target));
+    }
+    switch (operation) {
+    case NumberParameter:
+    case NumberNarrowParameter: return QJSValue(shownPair(value, second, third).first);
+    case NumberRounded: return QJSValue(shownPair(value, second, fourth).first);
+    case NumberError: return shownSu(value, third);
+    case NumberOwnUncertainty: return shownSu(value, second);
+    case NumberCompact:
+    case NumberWrittenNarrow: return value.isString() ? QJSValue(shownNumberText(value.toString())) : value;
+    case NumberFitted: return value;
+    case NumberAxisFormat:
+    case NumberAxisTick:
+    case NumberAxisStep: return QJSValue();  // answered above
+    default: return numberPresentationRaw(operation, value, second, third, fourth);
+    }
+}
+
+QJSValue ApplicationInfo::numberPresentationRaw(NumberOperation operation, const QJSValue& value, const QJSValue& second,
+    const QJSValue& third, const QJSValue& fourth) const {
     const auto f = panelUsageEngine(this);
     const auto read = [&](const QJSValue& object, const char* name) { return panelUsageRead(f, object, name); };
     const auto call = [&](const QJSValue& object, const char* name, const QJSValueList& args = QJSValueList()) { return panelUsageMemberCall(f, object, name, args); };
@@ -7940,6 +8052,12 @@ QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJ
         return add(sign, rest);
     }
     if (operation == NumberParameter) {
+        // A value without an uncertainty, as the parameter tables write it everywhere (owner record 2026-11-09): a
+        // decimal when 0.001 <= |x| < 1000, else scientific notation with three significant digits (1.00e3).
+        const bool uncertain = numberType(f, second) && numberFinite(f, second) && relation(second, QJSValue(0), 1);
+        if (!uncertain && numberType(f, value) && numberFinite(f, value) && !value.strictlyEquals(QJSValue(0)) &&
+            (relation(numberAbs(f, value), QJSValue(1000), 2) || relation(numberAbs(f, value), QJSValue(0.001), 0)))
+            return numberReplaceExponent(f, call(value, "toExponential", {QJSValue(2)}));
         if (panelUsageTruth(named("scientific", {value}))) return numberReplaceExponent(f, call(value, "toExponential", {QJSValue(3)}));
         const auto text = named("ruled", {value, second});
         return panelUsageTruth(text) ? read(text, "value") : named("rounded", {value, second, panelUsageContextRead(f, "Infinity"), third});
@@ -8026,8 +8144,11 @@ QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJ
             if (numberFinite(f, tick)) largest = numberMath(f, "max", [&] { return QJSValueList{largest, numberAbs(f, tick)}; });
             return panelUsageReady(f);
         });
+        // Outside 0.001 to 1000 every tick of a linear axis shares the largest tick's power of ten.
         QJSValue power(0);
-        if (panelUsageTruth(second) && panelUsageTruth(named("scientific", {largest}))) power = named("scientificExponent", {largest});
+        const double top = largest.toNumber();
+        if (panelUsageTruth(second) && std::isfinite(top) && top != 0.0 && (top >= 1000.0 || top < 0.001))
+            power = QJSValue(static_cast<int>(std::floor(std::log10(top))));
         auto literal = panelUsageLiteral(f); panelUsageWrite(f, literal.value, "shared", second); panelUsageWrite(f, literal.value, "power", power);
         panelUsageWrite(f, literal.value, "decimals", QJSValue(0)); const auto format = panelUsageComplete(f, literal);
         if (!panelUsageTruth(second)) return format;
@@ -8055,14 +8176,22 @@ QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJ
     if (operation == NumberAxisTick) {
         if (!numberType(f, value) || !numberFinite(f, value)) return numberString(f, value);
         if (!panelUsageTruth(read(second, "shared"))) {
-            if (panelUsageTruth(named("scientific", {value}))) return numberReplaceExponent(f, named("exponent", {value, QJSValue(4)}));
+            const double tick = std::fabs(value.toNumber());
+            if (tick != 0.0 && (tick >= 1000.0 || tick < 0.001)) {
+                // A decade of a logarithmic axis: its mantissa without trailing zeros, "10⁵" written "1×10⁵".
+                const int power = static_cast<int>(std::floor(std::log10(tick)));
+                QString mantissa = QString::number(value.toNumber() / std::pow(10.0, power), 'f', 3);
+                while (mantissa.endsWith(u'0')) mantissa.chop(1);
+                if (mantissa.endsWith(u'.')) mantissa.chop(1);
+                return QJSValue(mantissa + powerOfTen(power));
+            }
             return numberString(f, named("Number", {call(value, "toPrecision", {QJSValue(6)})}));
         }
         const auto scaled = div(value, numberPower(f, [&] { return read(second, "power"); }));
         const auto text = call(scaled, "toFixed", {read(second, "decimals")});
         if (named("Number", {text}).strictlyEquals(QJSValue(0)))
             return !read(second, "power").strictlyEquals(QJSValue(0)) ? zeroText : call(QJSValue(0), "toFixed", {read(second, "decimals")});
-        if (!read(second, "power").strictlyEquals(QJSValue(0))) { const auto prefix = add(text, e); return add(prefix, read(second, "power")); }
+        if (!read(second, "power").strictlyEquals(QJSValue(0))) return QJSValue(text.toString() + powerOfTen(read(second, "power").toInt()));
         return text;
     }
     if (operation == NumberDecimal) {
@@ -9392,8 +9521,11 @@ QJSValue ApplicationInfo::singlePart(const QJSValue& x, const QJSValue& y, const
 void ApplicationInfo::singleDrawModel(const QJSValue& model, const QJSValue& usedLayer, const QJSValue& leftOutLayer) const {
     const auto f = panelUsageEngine(this);
     if (!panelUsageTruth(model) || !panelUsageTruth(assistantContextField(f, "chart", "shown")) || !panelUsageTruth(panelUsageRead(f, model, "calculatedShown"))) { singleEmptyPoints(f, usedLayer); singleEmptyPoints(f, leftOutLayer); return; }
-    const auto x = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "calculated" : "calculatedF");
-    const auto y = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measured" : "measuredF");
+    // Reflections calculated without measured ones: the calculated value against sin(θ)/λ.
+    const bool simulated = panelUsageTruth(panelUsageRead(f, model, "simulated"));
+    const char* calculated = panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "calculated" : "calculatedF";
+    const auto x = panelUsageRead(f, model, simulated ? "positions" : calculated);
+    const auto y = panelUsageRead(f, model, simulated ? calculated : panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measured" : "measuredF");
     const auto su = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measuredSu" : "measuredFSu");
     const auto used = panelUsageGlobalCall(f, "part", {x, y, su, panelUsageRead(f, model, "used"), QJSValue(true)});
     const auto left = panelUsageGlobalCall(f, "part", {x, y, su, panelUsageRead(f, model, "used"), QJSValue(false)});
@@ -9442,8 +9574,10 @@ QJSValue ApplicationInfo::singleNearest(const QJSValue& px, const QJSValue& py) 
     for (double m = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(m), panelUsageRead(f, assistantContextField(f, "chart", "models"), "length"), 0); ++m) {
         const auto model = textIndex(f, assistantContextField(f, "chart", "models"), QJSValue(m));
         if (!panelUsageTruth(panelUsageRead(f, model, "calculatedShown")) || panelUsageTruth(panelUsageMemberCall(f, assistantContextField(f, "chart", "hiddenModels"), "includes", {model}))) continue;
-        const auto mx = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "calculated" : "calculatedF");
-        const auto my = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measured" : "measuredF");
+        const bool simulated = panelUsageTruth(panelUsageRead(f, model, "simulated"));
+        const char* calculated = panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "calculated" : "calculatedF";
+        const auto mx = panelUsageRead(f, model, simulated ? "positions" : calculated);
+        const auto my = panelUsageRead(f, model, simulated ? calculated : panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measured" : "measuredF");
         for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, mx, "length"), 0); ++i) {
             const auto x = textIndex(f, mx, QJSValue(i)), xLow = assistantContextField(f, "axisX", "min");
             const auto xShare = viewArithmetic(f, viewArithmetic(f, x, xLow, 0), span, 2);
@@ -10341,6 +10475,8 @@ void ApplicationInfo::spaceGroupNumberCommit(const QJSValue& text) const {
 }
 QJSValue ApplicationInfo::reflectionShown(const QJSValue& uid, const QJSValue& value, bool residual) const {
     const auto f = panelUsageEngine(this); if (value.isUndefined() || panelUsageTruth(panelUsageGlobalCall(f, "isNaN", {value}))) return QJSValue(QStringLiteral(""));
+    if (residual && finiteNumber(value))
+        return QJSValue(QString::fromStdString(edi::table_number(value.toNumber(), QString::number(value.toNumber(), 'f', 2).toStdString(), true)));
     return residual ? panelUsageMemberCall(f, value, "toFixed", {QJSValue(2)}) : projectInvoke(f, "Session", "display", {uid, value});
 }
 void ApplicationInfo::placeReflectionTable() const {

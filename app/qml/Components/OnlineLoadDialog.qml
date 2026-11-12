@@ -53,7 +53,12 @@ AppDialog {
     readonly property real fieldColumnWidth: Math.ceil(widestPlaceholder.advanceWidth) + 2 * EaStyle.Sizes.fontPixelSize
     // A structure's table needs more: its ID and cell in full and a reference about half as wide again (the owner,
     // 2026-11-04).
-    contentWidth: (kind === "structure" ? 1.3 : 1) * (3 * fieldColumnWidth + 2 * EaStyle.Sizes.fontPixelSize)
+    // At least that; then as much of the window as the results need, up to 100 em, so the table shows its columns in
+    // full at the default window size (owner record 2026-11-11, item 11).
+    readonly property real fieldsWidth: (kind === "structure" ? 1.3 : 1) * (3 * fieldColumnWidth + 2 * EaStyle.Sizes.fontPixelSize)
+    contentWidth: Math.max(fieldsWidth, Math.min(EaStyle.Sizes.fontPixelSize * 100, (parent ? parent.width * 0.9 : 0) - leftPadding - rightPadding))
+    // From the content alone: the base also takes the title's and the buttons' widths, which follow the dialog's own.
+    implicitWidth: contentWidth + leftPadding + rightPadding
     width: Math.min(implicitWidth, parent ? Math.floor(parent.width * 0.95) : implicitWidth)
     contentHeight: column.implicitHeight
 
@@ -76,7 +81,15 @@ AppDialog {
         const remembered = dialog.lastSource[kind];
         if (search.sources.count > 0)
             search.sourceId = search.sources.indexOfKey(remembered) >= 0 ? remembered : search.sources.keyAt(0);
-        dialog.recall();
+        // A tutorial starts each search clean, without the last one (another tutorial's, or the user's, which stays
+        // remembered for later).
+        if (AppState.tutorialRunning) {
+            results.clearSelection();
+            search.reset();
+            dialog.values = {};
+        } else {
+            dialog.recall();
+        }
         search.prepare();
         dialog.visible = true;
     }

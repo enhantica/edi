@@ -23,19 +23,16 @@ Fd::~Fd() { if (n >= 0) ::close(n); }
 Fd::Fd(Fd&& other) noexcept : n(std::exchange(other.n, -1)) {}
 Fd& Fd::operator=(Fd&& other) noexcept { if (n >= 0) ::close(n); n = std::exchange(other.n, -1); return *this; }
 Identity::Identity(int fd) { if (::fstat(fd, &value)) refuse(); }
-bool Identity::object(int fd) const { struct stat now{}; return !::fstat(fd, &now) && value.st_dev == now.st_dev && value.st_ino == now.st_ino && value.st_mode == now.st_mode; }
-bool Identity::unchanged(int fd) const {
-        struct stat now{};
-        if (::fstat(fd, &now)) return false;
+bool same_file_bytes(const struct stat& a, const struct stat& b) noexcept {
 #if defined(__APPLE__)
-        const bool times = value.st_mtimespec.tv_sec == now.st_mtimespec.tv_sec && value.st_mtimespec.tv_nsec == now.st_mtimespec.tv_nsec &&
-            value.st_ctimespec.tv_sec == now.st_ctimespec.tv_sec && value.st_ctimespec.tv_nsec == now.st_ctimespec.tv_nsec;
+    const bool times = a.st_mtimespec.tv_sec == b.st_mtimespec.tv_sec && a.st_mtimespec.tv_nsec == b.st_mtimespec.tv_nsec;
 #else
-        const bool times = value.st_mtim.tv_sec == now.st_mtim.tv_sec && value.st_mtim.tv_nsec == now.st_mtim.tv_nsec &&
-            value.st_ctim.tv_sec == now.st_ctim.tv_sec && value.st_ctim.tv_nsec == now.st_ctim.tv_nsec;
+    const bool times = a.st_mtim.tv_sec == b.st_mtim.tv_sec && a.st_mtim.tv_nsec == b.st_mtim.tv_nsec;
 #endif
-        return object(fd) && value.st_size == now.st_size && times;
-    }
+    return a.st_dev == b.st_dev && a.st_ino == b.st_ino && (a.st_mode & S_IFMT) == (b.st_mode & S_IFMT) && a.st_size == b.st_size && times;
+}
+bool Identity::object(int fd) const { struct stat now{}; return !::fstat(fd, &now) && value.st_dev == now.st_dev && value.st_ino == now.st_ino && (value.st_mode & S_IFMT) == (now.st_mode & S_IFMT); }
+bool Identity::unchanged(int fd) const { struct stat now{}; return !::fstat(fd, &now) && same_file_bytes(value, now); }
 Fd physical_directory(const QString& path) {
     // Only already-captured physical paths enter here. Reject later ancestor
     // links instead of resolving unknown replacement path text.

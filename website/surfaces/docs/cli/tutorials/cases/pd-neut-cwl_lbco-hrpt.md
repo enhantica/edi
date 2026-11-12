@@ -78,12 +78,9 @@ _cell.length_a 3.88()
 edi fit: project pd-neut-cwl_lbco-hrpt, 3098 pts fitted / 3098 loaded, 3 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        53.67        71.20
-      1      0.015     26.76        17.70   75.1% ↓
-      2      0.021     14.06         4.89   72.4% ↓
-      3      0.025     12.52         3.87   20.7% ↓
-      4      0.030     12.52         3.87   
-      5      0.040     12.52         3.87   
-  done · converged · 5 iters · reduced χ² 3.87 · Rwp 12.52 % · 0.05 s
+      1      0.037     12.52         3.87   94.6% ↓
+      2      0.044     12.52         3.87   
+  done · converged · 2 iters · reduced χ² 3.87 · Rwp 12.52 % · 0.05 s
 
   refined parameters (3 free):
   name            parameter                                               start        value      s.u.   change
@@ -92,8 +89,8 @@ edi fit: project pd-neut-cwl_lbco-hrpt, 3098 pts fitted / 3098 loaded, 3 free
   a, Å            structure.cell.length_a                                3.8800     3.890816  0.000061   0.3% ↑
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -126,9 +123,8 @@ The same for every other row (3 more).
 edi fit: project pd-neut-cwl_lbco-hrpt, 3098 pts fitted / 3098 loaded, 8 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        12.52         3.88
-      1      0.015     10.91         2.95   24.0% ↓
-      2      0.024     10.91         2.95   
-  done · converged · 2 iters · reduced χ² 2.95 · Rwp 10.91 % · 0.03 s
+      1      0.052     10.91         2.95   24.0% ↓
+  done · converged · 1 iters · reduced χ² 2.95 · Rwp 10.91 % · 0.06 s
 
   refined parameters (8 free):
   name            parameter                                               start        value      s.u.   change
@@ -142,8 +138,8 @@ edi fit: project pd-neut-cwl_lbco-hrpt, 3098 pts fitted / 3098 loaded, 8 free
   a, Å            structure.cell.length_a                                3.8908     3.890834  0.000055   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -176,10 +172,8 @@ _peak.broad_lorentz_y 0.08()
 edi fit: project pd-neut-cwl_lbco-hrpt, 3098 pts fitted / 3098 loaded, 12 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        10.91         2.95
-      1      0.016     10.74         2.86   3.2% ↓
-      2      0.020     10.73         2.86   
-      3      0.028     10.73         2.86   
-  done · converged · 3 iters · reduced χ² 2.86 · Rwp 10.73 % · 0.03 s
+      1      0.046     10.73         2.86   3.2% ↓
+  done · converged · 1 iters · reduced χ² 2.86 · Rwp 10.73 % · 0.05 s
 
   refined parameters (12 free):
   name            parameter                                               start        value      s.u.   change
@@ -191,14 +185,14 @@ edi fit: project pd-neut-cwl_lbco-hrpt, 3098 pts fitted / 3098 loaded, 12 free
   2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.6213       0.6211    0.0017   
   scale           experiment.linked_structures[lbco].scale                7.083        7.207     0.041   1.7% ↑
   U, deg²         experiment.peak.broad_gauss_u                            0.08       0.0818    0.0048   2.3% ↑
-  V, deg²         experiment.peak.broad_gauss_v                            -0.1       -0.105     0.011   5.5% ↓
+  V, deg²         experiment.peak.broad_gauss_v                            -0.1       -0.105     0.011   5.4% ↓
   W, deg²         experiment.peak.broad_gauss_w                             0.1       0.1090    0.0052   9.0% ↑
-  Y, deg          experiment.peak.broad_lorentz_y                          0.08       0.0884    0.0033   10.5% ↑
+  Y, deg          experiment.peak.broad_lorentz_y                          0.08       0.0885    0.0033   10.6% ↑
   a, Å            structure.cell.length_a                                3.8908     3.890841  0.000056   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -232,12 +226,9 @@ The same for every other row (2 more).
 edi fit: project pd-neut-cwl_lbco-hrpt, 3098 pts fitted / 3098 loaded, 16 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        10.73         2.86
-      1      0.017      7.76         1.49   47.8% ↓
-      2      0.021      7.24         1.30   13.0% ↓
-      3      0.030      7.23         1.30   0.2% ↓
-      4      0.034      7.23         1.30   
-      5      0.047      7.23         1.30   
-  done · converged · 5 iters · reduced χ² 1.30 · Rwp 7.23 % · 0.05 s
+      1      0.049      7.23         1.30   54.7% ↓
+      2      0.059      7.23         1.30   
+  done · converged · 2 iters · reduced χ² 1.30 · Rwp 7.23 % · 0.06 s
 
   refined parameters (16 free):
   name            parameter                                               start        value      s.u.   change
@@ -251,17 +242,20 @@ edi fit: project pd-neut-cwl_lbco-hrpt, 3098 pts fitted / 3098 loaded, 16 free
   U, deg²         experiment.peak.broad_gauss_u                          0.0818       0.0826    0.0032   1.0% ↑
   V, deg²         experiment.peak.broad_gauss_v                          -0.105      -0.1176    0.0068   12.0% ↓
   W, deg²         experiment.peak.broad_gauss_w                           0.109       0.1213    0.0033   11.3% ↑
-  Y, deg          experiment.peak.broad_lorentz_y                        0.0884       0.0839    0.0022   5.1% ↓
-  B iso, Å²       structure.atom_sites[Ba].adp_iso                        0.500            1        43   4.6% ↑
+  Y, deg          experiment.peak.broad_lorentz_y                        0.0885       0.0839    0.0022   5.2% ↓
+  B iso, Å²       structure.atom_sites[Ba].adp_iso                        0.500            1        43 ! 4.6% ↑
   B iso, Å²       structure.atom_sites[Co].adp_iso                        0.500        0.211     0.061   57.8% ↓
-  B iso, Å²       structure.atom_sites[La].adp_iso                        0.500            1        27   2.0% ↑
+  B iso, Å²       structure.atom_sites[La].adp_iso                        0.500            1        26 ! 2.0% ↑
   B iso, Å²       structure.atom_sites[O].adp_iso                         0.500        1.392     0.017   178.3% ↑
   a, Å            structure.cell.length_a                                3.8908     3.890791  0.000039   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      structure.atom_sites[Ba].adp_iso: s.u. larger than the value; strongly correlated with La B iso (lbco) (r = -1.00)
+      structure.atom_sites[La].adp_iso: s.u. larger than the value; strongly correlated with Ba B iso (lbco) (r = -1.00)
 ```
 
 ## Constrain La and Ba
@@ -296,11 +290,8 @@ The same for every other row (1 more).
 edi fit: project pd-neut-cwl_lbco-hrpt, 3098 pts fitted / 3098 loaded, 15 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         8.28         1.70
-      1      0.019      7.28         1.31   22.7% ↓
-      2      0.023      7.23         1.30   1.3% ↓
-      3      0.027      7.23         1.30   
-      4      0.035      7.23         1.30   
-  done · converged · 4 iters · reduced χ² 1.30 · Rwp 7.23 % · 0.04 s
+      1      0.047      7.23         1.30   23.7% ↓
+  done · converged · 1 iters · reduced χ² 1.30 · Rwp 7.23 % · 0.05 s
 
   refined parameters (15 free):
   name            parameter                                               start        value      s.u.   change
@@ -321,8 +312,8 @@ edi fit: project pd-neut-cwl_lbco-hrpt, 3098 pts fitted / 3098 loaded, 15 free
   a, Å            structure.cell.length_a                                3.8908     3.890791  0.000039   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 

@@ -21,6 +21,9 @@ qt6-main = "6.11.2.*"
 qt6-graphs = "6.11.2.*"
 qt6-quick3d = "6.11.2.*"
 libvulkan-headers = "1.4.*"
+# The compiler cache installers.yml turns on through CMake's compiler launcher; it never changes
+# what the compilers produce, only whether they run again.
+ccache = "*"
 edi-assistant-runtime = { path = "../deps/assistant-runtime" }
 
 [pypi-dependencies]

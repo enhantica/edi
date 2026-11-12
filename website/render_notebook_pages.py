@@ -35,9 +35,9 @@ SITE_FONT_CSS = (
     'https://fonts.googleapis.com/css?family=Inter:300,400,400i,500,700&display=fallback'
 )
 BRAND_CSS = DOCS / 'assets/brand-colors.css'
-# The site's table text as a built page computes it (Zensical's .md-typeset table: 12.8 px, the
-# typeset colour), so a view's tables and charts read as the page's own tables.
-SITE_TABLE_SIZE = '12.8px'
+# The site's paragraph text as a built page computes it (15 px, the typeset colour), so a view's
+# tables and charts read at the size of the text around them.
+SITE_TEXT_SIZE = '15px'
 SITE_TEXT_COLOUR = 'rgba(0, 0, 0, 0.87)'
 # A report view of ``project.display``: a frame whose document carries the drawn data.
 FRAME = re.compile(r'<iframe ([^>]*?)srcdoc=(?:"([^"]*)"|\'([^\']*)\')></iframe>')
@@ -47,8 +47,8 @@ def _view_fonts() -> str:
     """What a view on a docs page sets so it reads as the site.
 
     The report's font and link variables (core/src/report_html.cpp) get the site's text font and
-    link colour, and that font is loaded as the site loads it. Tables, captions and charts keep
-    their own rules.
+    link colour, and that font is loaded as the site loads it; tables and charts take the
+    paragraph size and colour.
     """
     accent = re.search(
         r'--ed-brand-accent:\s*(#[0-9a-fA-F]{6})', BRAND_CSS.read_text(encoding='utf-8')
@@ -59,8 +59,8 @@ def _view_fonts() -> str:
     return (
         f'<link rel="stylesheet" href="{html.escape(SITE_FONT_CSS)}">\n'
         f'<style>:root {{ --body-font: {font}; --head-font: {font}; '
-        f'--body-size: {SITE_TABLE_SIZE}; --ink: {SITE_TEXT_COLOUR}; '
-        f'--chart-ink: {SITE_TEXT_COLOUR}; '
+        f'--body-size: {SITE_TEXT_SIZE}; --ink: {SITE_TEXT_COLOUR}; '
+        f'--chart-ink: {SITE_TEXT_COLOUR}; --chart-size: {SITE_TEXT_SIZE}; '
         f'--link: {accent.group(1)}; --link-hover: {accent.group(1)}; }}</style>\n'
     )
 

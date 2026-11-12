@@ -120,12 +120,9 @@ _cell.length_c 20.8268()
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 11 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 140198364.17
-      1      0.057      4.51 140142449.16   
-      2      0.181      4.51 140112444.85   
-      3      0.225      4.51 140108484.48   
-      4      0.281      4.51 140107944.41   
-      5      0.348      4.51 140107929.77   
-  done · converged · 5 iters · reduced χ² 140107929.77 · Rwp 4.51 % · 0.39 s
+      1      0.575      4.51 140107944.41   0.1% ↓
+      2      0.657      4.51 140107929.77   
+  done · converged · 2 iters · reduced χ² 140107929.77 · Rwp 4.51 % · 0.71 s
 
   refined parameters (11 free):
   name            parameter                                               start        value      s.u.   change
@@ -142,8 +139,8 @@ edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 11 f
   c, Å            structures[latp].cell.length_c                        20.8268      20.8270    0.0008   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -174,14 +171,12 @@ The same for every other row (28 more).
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 41 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 141478227.17
-      1      0.343      4.51 141467519.66   
-      2      0.425      4.51 141465698.55   
-      3      0.664      4.51 141465384.74   
-  done · converged · 3 iters · reduced χ² 141465384.74 · Rwp 4.51 % · 0.72 s
+      1      0.884      4.51 141465283.67   
+  done · converged · 1 iters · reduced χ² 141465283.67 · Rwp 4.51 % · 0.93 s
 
   refined parameters (41 free):
   name            parameter                                               start        value      s.u.   change
-  intensity       experiment.background[10].intensity                    7.98e7  7.9800000e70.1000000e7   0.1% ↑
+  intensity       experiment.background[10].intensity                    7.98e7  7.9900000e70.1000000e7   0.1% ↑
   intensity       experiment.background[12].intensity                    4.82e7  4.8200000e70.0700000e7   
   intensity       experiment.background[14].intensity                    3.71e7  3.7200000e70.0700000e7   0.2% ↑
   intensity       experiment.background[16].intensity                    3.07e7  3.0700000e70.0600000e7   
@@ -224,8 +219,8 @@ edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 41 f
   c, Å            structures[latp].cell.length_c                        20.8270      20.8270    0.0008   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -255,19 +250,16 @@ _peak.mixing_eta_0 0.374()
 ```text
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 45 free
    iter   time (s)   Rwp (%)  reduced χ²   change
-                        4.51 141658190.76
-      1      0.255      4.51 141637095.84   
-      2      0.402      4.51 141619104.13   
-      3      0.460      4.51 141616473.36   
-      4      0.530      4.51 141616161.48   
-      5      0.601      4.51 141612687.24   
-      6      0.673      4.51 141612409.67   
-      7      1.016      4.51 141612395.32   
-  done · converged · 7 iters · reduced χ² 141612395.32 · Rwp 4.51 % · 1.07 s
+                        4.51 141658096.73
+      1      0.722      4.51 141616161.48   
+      2      0.784      4.51 141612687.24   
+      3      0.849      4.51 141612409.67   
+      4      1.080      4.51 141612395.32   
+  done · converged · 4 iters · reduced χ² 141612395.32 · Rwp 4.51 % · 1.13 s
 
   refined parameters (45 free):
   name            parameter                                               start        value      s.u.   change
-  intensity       experiment.background[10].intensity                    7.98e7  7.9800000e70.1100000e7   
+  intensity       experiment.background[10].intensity                    7.99e7  7.9800000e70.1100000e7   0.1% ↓
   intensity       experiment.background[12].intensity                    4.82e7  4.8200000e70.0700000e7   
   intensity       experiment.background[14].intensity                    3.72e7  3.7100000e70.0700000e7   0.2% ↓
   intensity       experiment.background[16].intensity                    3.07e7  3.0700000e70.0600000e7   0.1% ↓
@@ -301,8 +293,8 @@ edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 45 f
   scale           experiment.linked_structures[alpo4_c2221].scale          0.53         0.53      0.12   0.8% ↑
   scale           experiment.linked_structures[alpo4_p63mc].scale           1.6          1.6       0.5   1.6% ↓
   scale           experiment.linked_structures[latp].scale                4.138         4.15      0.03   0.2% ↑
-  U, deg²         experiment.peak.broad_gauss_u                           0.019        0.019     0.008   0.6% ↓
-  V, deg²         experiment.peak.broad_gauss_v                           0.019        0.020     0.005   3.8% ↑
+  U, deg²         experiment.peak.broad_gauss_u                           0.019        0.019     0.008 ! 0.6% ↓
+  V, deg²         experiment.peak.broad_gauss_v                           0.019        0.020     0.005 ! 3.8% ↑
   W, deg²         experiment.peak.broad_gauss_w                          0.0156       0.0156    0.0006   
   Eta0            experiment.peak.mixing_eta_0                            0.374        0.374     0.016   0.1% ↓
   a, Å            structures[alpo4_c2221].cell.length_a                  6.9700         6.97      0.03   
@@ -314,9 +306,12 @@ edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 45 f
   c, Å            structures[latp].cell.length_c                        20.8270      20.8268    0.0008   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiment.peak.broad_gauss_u: strongly correlated with V (bm01) (r = -0.96)
+      experiment.peak.broad_gauss_v: strongly correlated with U (bm01) (r = -0.96)
 ```
 
 ## Peak asymmetry
@@ -344,13 +339,10 @@ _peak.asym_beba_b0 0.0043()
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 47 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 141730697.09
-      1      0.274      4.51 141720844.52   
-      2      0.401      4.51 141702808.68   
-      3      0.449      4.51 141699980.35   
-      4      0.514      4.51 141699783.02   
-      5      0.582      4.51 141696298.52   
-      6      0.855      4.51 141696205.35   
-  done · converged · 6 iters · reduced χ² 141696205.35 · Rwp 4.51 % · 0.91 s
+      1      0.747      4.51 141699783.02   
+      2      0.813      4.51 141696298.52   
+      3      1.077      4.51 141696205.35   
+  done · converged · 3 iters · reduced χ² 141696205.35 · Rwp 4.51 % · 1.14 s
 
   refined parameters (47 free):
   name            parameter                                               start        value      s.u.   change
@@ -390,8 +382,8 @@ edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 47 f
   scale           experiment.linked_structures[latp].scale                 4.15         4.14      0.03   0.1% ↓
   A₀              experiment.peak.asym_beba_a0                            0.088        0.090     0.005   1.9% ↑
   B₀              experiment.peak.asym_beba_b0                           0.0043       0.0044    0.0011   2.4% ↑
-  U, deg²         experiment.peak.broad_gauss_u                           0.019        0.020     0.009   3.6% ↑
-  V, deg²         experiment.peak.broad_gauss_v                            0.02        0.019     0.006   5.0% ↓
+  U, deg²         experiment.peak.broad_gauss_u                           0.019        0.020     0.009 ! 3.6% ↑
+  V, deg²         experiment.peak.broad_gauss_v                            0.02        0.019     0.006 ! 5.0% ↓
   W, deg²         experiment.peak.broad_gauss_w                          0.0156       0.0158    0.0009   1.1% ↑
   Eta0            experiment.peak.mixing_eta_0                            0.374        0.372     0.016   0.4% ↓
   a, Å            structures[alpo4_c2221].cell.length_a                  6.9700         6.97      0.03   
@@ -403,9 +395,12 @@ edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 47 f
   c, Å            structures[latp].cell.length_c                        20.8268      20.8267    0.0009   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiment.peak.broad_gauss_u: strongly correlated with V (bm01) (r = -0.96)
+      experiment.peak.broad_gauss_v: strongly correlated with U (bm01) (r = -0.96)
 ```
 
 ## LATP positions
@@ -437,12 +432,9 @@ The same for every other row (2 more).
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 55 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 142093212.27
-      1      0.278      4.51 142074604.71   
-      2      0.448      4.51 142055355.79   
-      3      0.498      4.51 142052475.41   
-      4      0.559      4.51 142052227.84   
-      5      0.793      4.51 142050818.62   
-  done · converged · 5 iters · reduced χ² 142050818.62 · Rwp 4.51 % · 0.84 s
+      1      0.820      4.51 142052227.84   
+      2      1.067      4.51 142050818.62   
+  done · converged · 2 iters · reduced χ² 142050818.62 · Rwp 4.51 % · 1.12 s
 
   refined parameters (55 free):
   name            parameter                                               start        value      s.u.   change
@@ -482,8 +474,8 @@ edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 55 f
   scale           experiment.linked_structures[latp].scale                 4.14         4.15      0.03   0.1% ↑
   A₀              experiment.peak.asym_beba_a0                             0.09        0.090     0.005   0.1% ↓
   B₀              experiment.peak.asym_beba_b0                           0.0044       0.0044    0.0011   0.3% ↑
-  U, deg²         experiment.peak.broad_gauss_u                            0.02        0.020     0.009   2.3% ↓
-  V, deg²         experiment.peak.broad_gauss_v                           0.019        0.019     0.006   0.2% ↑
+  U, deg²         experiment.peak.broad_gauss_u                            0.02        0.020     0.009 ! 2.3% ↓
+  V, deg²         experiment.peak.broad_gauss_v                           0.019        0.019     0.006 ! 0.2% ↑
   W, deg²         experiment.peak.broad_gauss_w                          0.0158       0.0158    0.0009   0.1% ↓
   Eta0            experiment.peak.mixing_eta_0                            0.372        0.373     0.016   0.1% ↑
   a, Å            structures[alpo4_c2221].cell.length_a                  6.9700         6.97      0.03   
@@ -503,9 +495,12 @@ edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 55 f
   c, Å            structures[latp].cell.length_c                        20.8267      20.8267    0.0009   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiment.peak.broad_gauss_u: strongly correlated with V (bm01) (r = -0.96)
+      experiment.peak.broad_gauss_v: strongly correlated with U (bm01) (r = -0.96)
 ```
 
 ## LATP displacements
@@ -535,14 +530,11 @@ The same for every other row (2 more).
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 59 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 142256063.67
-      1      0.367      4.51 142244763.19   
-      2      0.468      4.51 142236000.97   
-      3      0.528      4.51 142234994.34   
-      4      0.611      4.51 142234677.52   
-      5      0.694      4.51 142229324.85   
-      6      0.777      4.51 142228737.76   
-      7      1.026      4.51 142228666.81   
-  done · converged · 7 iters · reduced χ² 142228666.81 · Rwp 4.51 % · 1.09 s
+      1      0.805      4.51 142234677.52   
+      2      0.874      4.51 142229324.85   
+      3      0.938      4.51 142228737.76   
+      4      1.166      4.51 142228666.81   
+  done · converged · 4 iters · reduced χ² 142228666.81 · Rwp 4.51 % · 1.22 s
 
   refined parameters (59 free):
   name            parameter                                               start        value      s.u.   change
@@ -607,8 +599,8 @@ edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 59 f
   c, Å            structures[latp].cell.length_c                        20.8267      20.8267    0.0009   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -635,19 +627,19 @@ _fitting_mode.type sequential
     ```
 
 ```text
-[░░░░░░░░░░░░░░] · 1/73 · 1% · elapsed 2s · eta 2m20s · 1 ok · 0 fail · latp_312 · reduced χ² 142229626.70
-[░░░░░░░░░░░░░░] · 2/73 · 3% · elapsed 3s · eta 1m39s · 2 ok · 0 fail · latp_311 · reduced χ² 145127699.82
-[█░░░░░░░░░░░░░] · 3/73 · 4% · elapsed 4s · eta 1m37s · 3 ok · 0 fail · latp_310 · reduced χ² 143755384.27
-[█░░░░░░░░░░░░░] · 4/73 · 5% · elapsed 5s · eta 1m34s · 4 ok · 0 fail · latp_309 · reduced χ² 147076823.95
-[█░░░░░░░░░░░░░] · 5/73 · 7% · elapsed 7s · eta 1m29s · 5 ok · 0 fail · latp_308 · reduced χ² 146985656.48
-[█░░░░░░░░░░░░░] · 6/73 · 8% · elapsed 8s · eta 1m25s · 6 ok · 0 fail · latp_307 · reduced χ² 147115497.93
+[░░░░░░░░░░░░░░] · 1/73 · 1% · elapsed 2s · eta 2m32s · 1 ok · 0 fail · latp_312 · reduced χ² 142229626.70
+[░░░░░░░░░░░░░░] · 2/73 · 3% · elapsed 3s · eta 1m55s · 2 ok · 0 fail · latp_311 · reduced χ² 145127699.82
+[█░░░░░░░░░░░░░] · 3/73 · 4% · elapsed 5s · eta 1m50s · 3 ok · 0 fail · latp_310 · reduced χ² 143755384.27
+[█░░░░░░░░░░░░░] · 4/73 · 5% · elapsed 6s · eta 1m49s · 4 ok · 0 fail · latp_309 · reduced χ² 147076823.95
+[█░░░░░░░░░░░░░] · 5/73 · 7% · elapsed 8s · eta 1m45s · 5 ok · 0 fail · latp_308 · reduced χ² 146985656.48
+[█░░░░░░░░░░░░░] · 6/73 · 8% · elapsed 9s · eta 1m41s · 6 ok · 0 fail · latp_307 · reduced χ² 147115481.27
 …
-[█████████████░] · 69/73 · 95% · elapsed 1m59s · eta 7s · 69 ok · 0 fail · latp_244 · reduced χ² 45839459.86
-[█████████████░] · 70/73 · 96% · elapsed 2m01s · eta 5s · 70 ok · 0 fail · latp_243 · reduced χ² 38966614.43
-[██████████████] · 71/73 · 97% · elapsed 2m03s · eta 3s · 71 ok · 0 fail · latp_242 · reduced χ² 37983718.80
-[██████████████] · 72/73 · 99% · elapsed 2m06s · eta 2s · 72 ok · 0 fail · latp_241 · reduced χ² 36251289.18
-[██████████████] · 73/73 · 100% · elapsed 2m07s · 73 ok · 0 fail
-scan · 73 files · 73 converged · 0 failed · reduced χ² 36251289.18-152294302.97 · 2m07s
+[█████████████░] · 69/73 · 95% · elapsed 2m08s · eta 7s · 69 ok · 0 fail · latp_244 · reduced χ² 45839457.15
+[█████████████░] · 70/73 · 96% · elapsed 2m09s · eta 6s · 70 ok · 0 fail · latp_243 · reduced χ² 38966574.31
+[██████████████] · 71/73 · 97% · elapsed 2m11s · eta 4s · 71 ok · 0 fail · latp_242 · reduced χ² 37983723.70
+[██████████████] · 72/73 · 99% · elapsed 2m14s · eta 2s · 72 ok · 0 fail · latp_241 · reduced χ² 36267052.67
+[██████████████] · 73/73 · 100% · elapsed 2m16s · 73 ok · 0 fail
+scan · 73 files · 73 converged · 0 failed · reduced χ² 36267052.67-152294380.50 · 2m16s
 ```
 
 ## Report

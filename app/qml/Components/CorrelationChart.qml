@@ -363,6 +363,7 @@ Item {
 
                     EaElements.ToolTip {
                         objectName: "correlations.toolTip"
+                        data: true
                         requested: pointer.containsMouse && !isNaN(pointer.value)
                         text: requested ? qsTr("%1\n%2\ncorrelation: %3").arg(chart.labels[pointer.column]).arg(chart.labels[pointer.row]).arg(Session.display("fit_parameter_correlation.correlation", pointer.value)) : ""
                     }

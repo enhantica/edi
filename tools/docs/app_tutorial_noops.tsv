@@ -1,0 +1,30 @@
+# Steps the app has already done when a tutorial reaches them: a default the new item starts with, or an
+# expression the app suggests. The generator drops them; the replay (EDI_DEMO_NOOPS) lists any it finds, so this
+# file is refreshed from the replay, never guessed. Columns: tutorial, step check.
+pd-neut-cwl_lbco-hrpt	pick:atomSite.wyckoffLetter.0=a:
+pd-neut-cwl_lbco-hrpt	token:experimentType.sampleForm=powder
+pd-neut-cwl_lbco-hrpt	token:experimentType.beamMode=constant wavelength
+pd-neut-cwl_lbco-hrpt	token:experimentType.radiationProbe=neutron
+pd-neut-cwl_lbco-hrpt	field:peak.broad_gauss_v=-0.1
+pd-neut-cwl_lbco-hrpt	field:peak.broad_gauss_w=0.1
+pd-neut-cwl_lbco-hrpt	field:background.intensity.1=160
+pd-neut-cwl_lbco-hrpt	field:background.intensity.2=160
+pd-neut-cwl_lbco-hrpt	field:background.intensity.3=160
+pd-neut-cwl_lbco-hrpt	field:background.intensity.4=160
+pd-neut-cwl_lbco-hrpt	field:excludedRegion.start.0=0
+pd-neut-cwl_lbco_simulation	field:atomSite.fractX.0=0
+pd-neut-cwl_lbco_simulation	field:atomSite.fractY.0=0
+pd-neut-cwl_lbco_simulation	field:atomSite.fractZ.0=0
+pd-neut-cwl_lbco_simulation	selected:cell.length_a
+pd-neut-cwl_lbco_simulation	selected:instrument.setup_wavelength
+pd-neut-cwl_lbco_simulation	selected:La.adp_iso
+pd-neut-cwl_cosio-d20_scan-213f	descent:fast_descent
+pd-neut-cwl_cosio-d20_2k	field:constraint.expression.0=biso_Co2 = biso_Co1
+pd-neut-tof_ferrite-austenite-beer	field:constraint.expression.0=biso_austenite = biso_ferrite
+pd-xray-cwl_lam7o3-p021	field:constraint.expression.0=biso_Cr = biso_Ti
+pd-xray-cwl_lam7o3-p021	field:constraint.expression.1=biso_Mn = biso_Ti
+pd-xray-cwl_lam7o3-p021	field:constraint.expression.2=biso_Fe = biso_Ti
+pd-xray-cwl_lam7o3-p021	field:constraint.expression.3=biso_Co = biso_Ti
+pd-xray-cwl_lam7o3-p021	field:constraint.expression.4=biso_Ni = biso_Ti
+pd-xray-cwl_lam7o3-p021	field:constraint.expression.5=biso_Cu = biso_Ti
+pd-neut-cwl_lbco_simulation	page:analysis

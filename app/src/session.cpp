@@ -31,6 +31,7 @@
 #include "web_files.hpp"
 #include "web_storage.hpp"
 #include "edi/display.hpp"
+#include "edi/report.hpp"
 #include "edi/io.hpp"
 #include "edi/project_archive.hpp"
 #include "edi/parameter_walk.hpp"
@@ -2490,7 +2491,7 @@ QString Session::display(const QString& uid, double value, const QString& varian
     if (!std::isfinite(value)) {
         return {};
     }
-    return from_bridge([&] { return edi::display_text(uid.toStdString(), value, variant.toStdString()); });
+    return from_bridge([&] { return edi::shown_text(uid.toStdString(), value, variant.toStdString()); });
 }
 
 namespace {
@@ -2515,7 +2516,8 @@ QString Session::valueText(const QString& uid, double value, double su) const {
         return display(uid, value);
     }
     const std::string rule = project_ != nullptr ? project_->suRule().toStdString() : std::string(edi::kDefaultSuRule);
-    return QString::fromStdString(fitted(uid, value, su, rule).value);
+    const edi::FileText text = fitted(uid, value, su, rule);
+    return QString::fromStdString(edi::table_value_su(value, text.value, text.su, true).first);
 }
 
 QString Session::suText(const QString& uid, double value, double su) const {
@@ -2523,7 +2525,8 @@ QString Session::suText(const QString& uid, double value, double su) const {
         return {};
     }
     const std::string rule = project_ != nullptr ? project_->suRule().toStdString() : std::string(edi::kDefaultSuRule);
-    return QString::fromStdString(fitted(uid, value, su, rule).su);
+    const edi::FileText text = fitted(uid, value, su, rule);
+    return QString::fromStdString(edi::table_value_su(value, text.value, text.su, true).second);
 }
 
 }  // namespace edi_app

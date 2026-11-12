@@ -9,6 +9,36 @@
           "target": "appBar.workflow"
         },
         {
+          "title": "Save",
+          "text": "Save writes the project to its folder.",
+          "target": "appBar.button.save"
+        },
+        {
+          "title": "Undo and Redo",
+          "text": "Undo takes back the last change, and Redo makes it again.",
+          "target": "appBar.button.undo"
+        },
+        {
+          "title": "Clear",
+          "text": "Clear closes the project and starts again with nothing loaded.",
+          "target": "appBar.button.reset"
+        },
+        {
+          "title": "AI assistant",
+          "text": "The AI assistant answers questions and can work in the app for you.",
+          "target": "assistant.toggle"
+        },
+        {
+          "title": "Tooltips",
+          "text": "This switch turns help tooltips on or off; right-click it for their level and delay.",
+          "target": "appBar.button.toolTips"
+        },
+        {
+          "title": "Preferences",
+          "text": "Preferences hold the choices for the whole app, such as tooltips, colours and the logging level.",
+          "target": "appBar.button.preferences"
+        },
+        {
           "title": "Home",
           "text": "Home: the start page, with the tutorials, the documentation and how to get in touch.",
           "target": "appBar.tab.home"
@@ -78,12 +108,6 @@
           "title": "Apply the text",
           "text": "After editing the text, click the check mark to apply it to the project. The box beside it chooses what the tab shows: Editable, the parts you can edit, or Everything, with the measured data and results read-only.",
           "target": "text.apply"
-        },
-        {
-          "title": "Settings tab",
-          "text": "Settings: not used on this page yet.",
-          "target": "sideBar.tab.settings",
-          "open": true
         }
       ]
     },
@@ -101,12 +125,6 @@
           "title": "Structure view",
           "text": "The structure view draws the cell and its atoms. Drag to turn it.",
           "target": "mainArea.tab.structure",
-          "open": true
-        },
-        {
-          "title": "Pattern",
-          "text": "Pattern shows the pattern this structure gives.",
-          "target": "mainArea.tab.pattern",
           "open": true
         },
         {
@@ -136,8 +154,8 @@
           "target": "group.atom_site"
         },
         {
-          "title": "Anisotropic ADPs",
-          "text": "Anisotropic displacements, for the sites given an anisotropic type.",
+          "title": "Atomic displacements",
+          "text": "Each site’s displacement: isotropic (B iso) for most sites, or the six anisotropic components for a site given an anisotropic type.",
           "target": "group.atom_site_aniso"
         },
         {
@@ -170,18 +188,6 @@
           "title": "Appearance",
           "text": "How the structure view draws atoms, bonds and the cell.",
           "target": "group.appearance"
-        },
-        {
-          "title": "Text tab",
-          "text": "Text: This page's part of the project as it is saved, ready to edit as text.",
-          "target": "sideBar.tab.text",
-          "open": true
-        },
-        {
-          "title": "Settings tab",
-          "text": "Settings: not used on this page yet.",
-          "target": "sideBar.tab.settings",
-          "open": true
         }
       ]
     },
@@ -199,18 +205,6 @@
           "title": "Pattern",
           "text": "Pattern shows the measured pattern and the one the model calculates.",
           "target": "mainArea.tab.pattern",
-          "open": true
-        },
-        {
-          "title": "Stacked",
-          "text": "Stacked draws the patterns of a scan one above another. It becomes available when the experiment is a scan: several patterns measured one after another, for example at different temperatures.",
-          "target": "mainArea.tab.stacked",
-          "open": true
-        },
-        {
-          "title": "Map",
-          "text": "Map draws the patterns of a scan as a colour map. It becomes available when the experiment is a scan: several patterns measured one after another, for example at different temperatures.",
-          "target": "mainArea.tab.map",
           "open": true
         },
         {
@@ -261,7 +255,7 @@
           "target": "group.background_estimate"
         },
         {
-          "title": "Peak profile",
+          "title": "Peak cutoff",
           "text": "The peak cutoff: how far from its centre each peak is calculated, in peak widths.",
           "target": "group.peak",
           "tab": "extras"
@@ -277,8 +271,8 @@
           "target": "group.preferred_orientation"
         },
         {
-          "title": "Radiation",
-          "text": "The radiation's own properties, such as its polarisation.",
+          "title": "Scattering source",
+          "text": "The radiation’s own settings: for neutrons, the table of scattering lengths the calculation uses.",
           "target": "group.scattering_source"
         },
         {
@@ -290,18 +284,6 @@
           "title": "Reflections",
           "text": "The reflections the structure gives in this pattern.",
           "target": "group.refln"
-        },
-        {
-          "title": "Text tab",
-          "text": "Text: This page's part of the project as it is saved, ready to edit as text.",
-          "target": "sideBar.tab.text",
-          "open": true
-        },
-        {
-          "title": "Settings tab",
-          "text": "Settings: not used on this page yet.",
-          "target": "sideBar.tab.settings",
-          "open": true
         }
       ]
     },
@@ -314,12 +296,6 @@
           "target": "appBar.tab.analysis",
           "page": "experiment",
           "check": "page:analysis"
-        },
-        {
-          "title": "Pattern",
-          "text": "Pattern compares the calculated pattern with the measurement, with the difference below.",
-          "target": "mainArea.tab.pattern",
-          "open": true
         },
         {
           "title": "Main tab",
@@ -370,28 +346,15 @@
           "check": "results-closed"
         },
         {
-          "title": "Pattern",
-          "text": "After the fit, Pattern shows the calculated pattern on the measured one, with the difference below.",
-          "target": "mainArea.tab.pattern",
-          "open": true
-        },
-        {
           "title": "Correlations",
           "text": "Correlations, filled by the fit: how strongly the fitted parameters depend on each other.",
           "target": "mainArea.tab.correlations",
           "open": true
         },
         {
-          "title": "Stacked",
-          "text": "Stacked draws the fits of a scan one above another. It becomes available when the experiment is a scan: several patterns measured one after another, for example at different temperatures.",
-          "target": "mainArea.tab.stacked",
-          "open": true
-        },
-        {
-          "title": "Map",
-          "text": "Map draws the fits of a scan as a colour map. It becomes available when the experiment is a scan: several patterns measured one after another, for example at different temperatures.",
-          "target": "mainArea.tab.map",
-          "open": true
+          "title": "Stacked and Map",
+          "text": "Stacked and Map draw the fits of several patterns together, one above another and as a colour map. They become available with a scan or a joint fit of several experiments.",
+          "target": "mainArea.tab.stacked"
         },
         {
           "title": "Extra tab",
@@ -418,12 +381,6 @@
           "title": "Constraints",
           "text": "Constraints that tie a parameter to others.",
           "target": "group.constraint"
-        },
-        {
-          "title": "Text tab",
-          "text": "Text: This page's part of the project as it is saved, ready to edit as text.",
-          "target": "sideBar.tab.text",
-          "open": true
         },
         {
           "title": "Settings tab",
@@ -476,27 +433,10 @@
           "target": "group.reportContents"
         },
         {
-          "title": "Extra tab",
-          "text": "Extra: not used on this page yet.",
-          "target": "sideBar.tab.extras",
-          "open": true
-        },
-        {
           "title": "Text tab",
           "text": "Text: the report's saved settings, as text.",
           "target": "sideBar.tab.text",
           "open": true
-        },
-        {
-          "title": "Settings tab",
-          "text": "Settings: not used on this page yet.",
-          "target": "sideBar.tab.settings",
-          "open": true
-        },
-        {
-          "title": "Preferences",
-          "text": "Preferences hold the choices for the whole app, such as tooltips, colours and the logging level.",
-          "target": "appBar.button.preferences"
         }
       ]
     }

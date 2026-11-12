@@ -112,8 +112,8 @@ EaComponents.ApplicationWindow {
             highlighted: true
             fontIcon: "save"
             // A disabled control's tooltip says why and how to enable it (the owner, 2026-11-02).
-            ToolTip.text: enabled ? qsTr("Save current state of the project") : Session.project === null ? qsTr("No project to save: open or create one first") : Session.project.saving ? qsTr("Saving the project: Save is available again when it finishes") : qsTr("Nothing to save: the project has no unsaved changes")
-            Accessible.name: qsTr("Save current state of the project")
+            ToolTip.text: enabled ? qsTr("Save the project") : Session.project === null ? qsTr("No project to save: open or create one first") : Session.project.saving ? qsTr("Saving the project: Save is available again when it finishes") : qsTr("Nothing to save: the project has no unsaved changes")
+            Accessible.name: qsTr("Save the project")
             onClicked: window.saveProject()
         },
         // Undo: the newest recorded change, an edit of the aliases or constraints or a fit, in the order they
@@ -136,7 +136,7 @@ EaComponents.ApplicationWindow {
         EaElements.ToolButton {
             objectName: "appBar.button.reset"
             fontIcon: "backspace"
-            ToolTip.text: qsTr("Reset to initial state without project, model and data")
+            ToolTip.text: qsTr("Clear: close the project and start again")
             Accessible.name: ToolTip.text
             onClicked: ApplicationInfo.resetProjectAfterChanges()
         }

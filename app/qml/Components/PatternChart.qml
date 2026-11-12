@@ -103,8 +103,13 @@ Item {
     function yValues(axis: ValueAxis, scale: int): list<real> {
         return ApplicationInfo.patternYValues(axis, scale);
     }
-    readonly property var mainYFormat: NumberText.axisFormat(yValues(mainY, controller.yScale), controller.yScale !== PatternChartController.Log10)
-    readonly property var residualYFormat: NumberText.axisFormat(yValues(residualY, PatternChartController.Linear), true)
+    // Each tick on its own by the rule for numbers (NumberText.axisFormat): 500, 1×10³, 1.5×10³. The controller picks
+    // each step so the widest label, written in `labelFont`, leaves room between neighbours.
+    readonly property var mainYFormat: NumberText.axisFormat(yValues(mainY, controller.yScale), false)
+    readonly property var residualYFormat: NumberText.axisFormat(yValues(residualY, PatternChartController.Linear), false)
+    // The x labels by the same rule, every pane's from the main pane's ticks (they share the x range). Qt Graphs prints
+    // each tick with enough decimals for `yLabelText` to find it, so 2.5 is never read as 3.
+    readonly property var xFormat: NumberText.axisFormat(tickValues(mainX), false)
     // A y label's text: Qt Graphs gives the label its own text of the tick's display value, which names the
     // nearest tick.
     function yLabelText(text: string, axis: ValueAxis, scale: int, format: var): string {
@@ -144,7 +149,7 @@ Item {
         property string text: ""
         property int horizontalAlignment: Text.AlignHCenter
         property int verticalAlignment: Text.AlignVCenter
-        // A y axis' label is written by NumberText (`yLabelText`); an x label is Qt Graphs' text.
+        // A label is written by NumberText (`yLabelText`) from the tick Qt Graphs printed.
         property ValueAxis axis: null
         property var format: null
         // The scale the axis' values are read on: the label is printed again when it changes.
@@ -279,6 +284,7 @@ Item {
         dark: chart.colors.isDarkPalette
         plotWidth: mainView.plotArea.width
         plotHeight: mainView.plotArea.height
+        labelFont: titleProbe.font
         residualPlotHeight: residualView.visible ? residualView.plotArea.height : 0
         devicePixelRatio: Screen.devicePixelRatio
         // A box zoom, a wheel zoom and a reset move the ranges as easydiffractionbeta's charts did.
@@ -298,6 +304,8 @@ Item {
 
         AxisLabel {
             moveY: -chart.labelLift
+            axis: mainX
+            format: chart.xFormat
         }
     }
     Component {
@@ -455,6 +463,7 @@ Item {
         onPlotAreaChanged: Qt.callLater(chart.alignPanes)
         axisX: ValueAxis {
             id: mainX
+            labelDecimals: 6
             objectName: "chart.axis.x"
             min: controller.xMin
             max: controller.xMax
@@ -643,6 +652,7 @@ Item {
         // edges. With no residual pane under them the rows are the lowest pane, and the x labels are under them.
         axisX: ValueAxis {
             id: braggX
+            labelDecimals: 6
             min: controller.xMin
             max: controller.xMax
             tickInterval: controller.xTickInterval
@@ -696,6 +706,7 @@ Item {
         onVisibleChanged: Qt.callLater(chart.alignPanes)
         axisX: ValueAxis {
             id: residualX
+            labelDecimals: 6
             objectName: "chart.axis.x.bottom"
             min: controller.xMin
             max: controller.xMax

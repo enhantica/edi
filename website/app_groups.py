@@ -50,6 +50,10 @@ class Parameter:
     name: str
 
 
+# The part of a category its rows, ticked one by one, are: what the app page says in words.
+ROWS = 'rows the stage names'
+
+
 @dataclass(frozen=True)
 class Group:
     """One action on a category of one block.
@@ -76,7 +80,7 @@ def load_case(case: str) -> object:
 
 
 @functools.cache
-def _dictionary() -> dict:
+def dictionary() -> dict:
     """The parameter dictionary, from crysta's source checkout (rendering needs it)."""
     crysta = Path(os.environ.get('CRYSTA_CONSUMER_SRC', ROOT.parent / 'crysta'))
     return yaml.safe_load((crysta / 'data/dictionary/parameters.yaml').read_text(encoding='utf-8'))
@@ -85,7 +89,7 @@ def _dictionary() -> dict:
 @functools.cache
 def _titles() -> dict[str, str]:
     """The selector's category titles, from crysta's dictionary."""
-    data = _dictionary()
+    data = dictionary()
     categories = data.get('categories', data) if isinstance(data, dict) else data
     return {
         entry['id']: (entry.get('loop_title') if entry.get('loop') else None) or entry['title']
@@ -153,6 +157,11 @@ def _fittable_rows(project: object) -> tuple[set, set]:
     return cached[1], cached[2]
 
 
+def forget(project: object) -> None:
+    """Read the fittable parameters again after the project changed."""
+    _FITTABLE.pop(id(project), None)
+
+
 def _fittable(project: object, parameter: Parameter) -> bool:
     exact, loose = _fittable_rows(project)
     category = OWNERS.get(parameter.owner, parameter.owner)
@@ -176,6 +185,10 @@ def rows(project: object, block: str, owner: str) -> list[tuple[Parameter, bool]
     """
     blocks = {item.name: item for item in [*project.structures, *project.experiments]}
     holder = getattr(blocks[block], owner, None)
+    # A Chebyshev background's terms are its rows, though the table names them under `background`.
+    terms = getattr(blocks[block], 'background_terms', None) if owner == 'background' else None
+    if terms:
+        holder = terms
     if holder is None:
         return []
     items = (
@@ -218,70 +231,11 @@ def offered(project: object, parameter: Parameter) -> str:
     return 'Atom sites' if owner == 'atom_site' else _titles().get(owner, owner)
 
 
-# Parts of a category that no name-filter word selects, named in words (record 7101f0fd9: a few
-# named parameters only). Keyed by the parameters' names.
-PARTS = {
-    frozenset({'coefficient_11', 'coefficient_22', 'coefficient_33'}): 'diagonal terms',
-}
-
-
-def _path(parameter: Parameter) -> str:
-    """What the name filter searches for a parameter: its row in brackets, then its name."""
-    return (f'[{parameter.row}].' if parameter.row else '') + parameter.name
-
-
-def _words(parameter: Parameter) -> set[str]:
-    """The name-filter words a parameter holds: runs of its name's parts, its row's starts."""
-    parts = parameter.name.split('_')
-    words = {
-        '_'.join(parts[start:end])
-        for start in range(len(parts))
-        for end in range(start + 1, len(parts) + 1)
-    }
-    if parameter.row:
-        words |= {'[' + parameter.row[:end] for end in range(1, len(parameter.row) + 1)}
-        words.add(f'[{parameter.row}]')
-    return words
-
-
-def _readability(word: str) -> tuple[int, int, str]:
-    """Whole rows (`[Ba]`) first, then runs of name parts, then a row's start; shorter first."""
-    kind = 0 if word.startswith('[') and word.endswith(']') else 2 if word.startswith('[') else 1
-    return (kind, len(word), word)
-
-
-def _selecting(inside: list[Parameter] | set[Parameter], outside: set[Parameter]) -> str:
-    """The shortest word every parameter of `inside` holds and none of `outside` does, or ''.
-
-    The app's name filter keeps a row whose path holds the word, in any case.
-    """
-    common = set.intersection(*(_words(parameter) for parameter in inside)) if inside else set()
-    valid = [
-        word
-        for word in common
-        if len(word) > 1 and not any(word.lower() in _path(other).lower() for other in outside)
-    ]
-    return min(valid, key=_readability) if valid else ''
-
-
-def _two_words(chosen: list[Parameter], left: set[Parameter]) -> tuple[str, str] | None:
-    """Two name-filter words that together reach every chosen parameter and no parameter left."""
-    reach = {}
-    for word in set().union(*(_words(parameter) for parameter in chosen)):
-        if len(word) < 2 or any(word.lower() in _path(other).lower() for other in left):
-            continue
-        reach[word] = frozenset(p for p in chosen if word.lower() in _path(p).lower())
-    everyone = frozenset(chosen)
-    pairs = [
-        (first, second)
-        for first in reach
-        for second in reach
-        if first < second and reach[first] | reach[second] == everyone
-    ]
-    return (
-        min(pairs, key=lambda pair: (_readability(pair[0]), _readability(pair[1])))
-        if pairs
-        else None
+def _table_order(parameter: Parameter) -> tuple:
+    """Rows in the order a table lists them: coefficient 2 before 10."""
+    return tuple(
+        (0, int(part), '') if part.isdigit() else (1, 0, part)
+        for part in re.split(r'(\d+)', str(parameter))
     )
 
 
@@ -290,10 +244,8 @@ def groups(
 ) -> list[Group]:
     """The actions that free `freed` (or fix it, `fixing`), given the parameters free now.
 
-    A category whose every fittable parameter is freed now or free already is the whole category.
-    Otherwise the part is one name-filter word that the freed parameters hold and the ones left
-    fixed do not; failing that, the whole category is freed and one word fixes the rest again. No
-    such word refuses: the tutorial frees a part the app cannot select in one or two actions.
+    A category whose every row (two or more) is freed now or free already is one Free · all;
+    any other part of a category is its rows, ticked one by one.
     """
     by_category: dict[tuple[str, str], list[Parameter]] = {}
     for parameter in freed:
@@ -310,34 +262,50 @@ def groups(
         }
         # The category's parameters that must keep their state through the action.
         left = (everything & free if fixing else everything - free) - set(chosen)
-        if not left:
+        # The fewest actions a person takes (the owner, 2026-11-11): Free · all (Fixed · all) only
+        # when the stage sets every row the category shows and there are at least two; otherwise
+        # the category shown and each row ticked in turn. Never set all and then set some back,
+        # never a typed name filter.
+        if everything and set(chosen) <= everything and not left and len(chosen) >= 2:
             out.append(Group(title, block, ''))
+        else:
+            rows = tuple(sorted(chosen, key=_table_order))
+            out.append(Group(title, block, part=ROWS, rows=rows))
+    return _across_blocks(project, out, by_category, free, fixing=fixing)
+
+
+def _across_blocks(
+    project: object,
+    found: list[Group],
+    by_category: dict[tuple[str, str], list[Parameter]],
+    free: set[Parameter],
+    *,
+    fixing: bool,
+) -> list[Group]:
+    """One Free · all over the datablocks where a stage sets a category's every row in all.
+
+    The table without a datablock filter lists a category's rows from every block: six banks'
+    scales are one category of six rows, not six of one.
+    """
+    names = [item.name for item in [*project.structures, *project.experiments]]
+    out = list(found)
+    for title in {title for _block, title in by_category}:
+        blocks = [block for block, t in by_category if t == title]
+        if len(blocks) < 2:
             continue
-        word = _selecting(chosen, left)
-        if word:
-            out.append(Group(title, block, word))
-            continue
-        # Free the whole category, then fix again the part to stay fixed.
-        unword = _selecting(sorted(left, key=str), everything - left)
-        rest_pair = None if unword else _two_words(sorted(left, key=str), everything - left)
-        if unword or rest_pair:
-            out.append(Group(title, block, '', unword or ' '.join(rest_pair)))
-            continue
-        # Two parts, each one word.
-        pair = _two_words(chosen, left)
-        if pair:
-            out.extend(Group(title, block, word) for word in pair)
-            continue
-        part = PARTS.get(frozenset(p.name for p in chosen))
-        if part:
-            out.append(Group(title, block, part=part, rows=tuple(sorted(chosen, key=str))))
-            continue
-        chosen_names = sorted(f'{p.row} {p.name}'.strip() for p in chosen)
-        left_names = sorted(f'{p.row} {p.name}'.strip() for p in left)
-        raise SystemExit(
-            f'{block}: the stage frees {chosen_names} of {title}, leaving {left_names}; '
-            'no one word selects that part or the rest'
-        )
+        chosen = {p for block in blocks for p in by_category[block, title]}
+        owners = {p.owner for p in chosen}
+        everything = {
+            p
+            for block in names
+            for owner in owners
+            for p in members(project, block, owner)
+            if offered(project, p) == title
+        }
+        left = (everything & free if fixing else everything - free) - chosen
+        if chosen <= everything and not left and len(chosen) >= 2:
+            out = [g for g in out if not (g.title == title and g.block in blocks)]
+            out.append(Group(title, ''))
     return out
 
 

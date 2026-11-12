@@ -26,7 +26,7 @@ Column {
     function landeText(value) {
         if (typeof value !== "number" || !isFinite(value) || value === -1)
             return "—";
-        return Number((2 / (1 + value)).toPrecision(4)).toString();
+        return NumberText.compact(Number((2 / (1 + value)).toPrecision(4)).toString());
     }
 
     spacing: AppSizes.groupContentSpacing

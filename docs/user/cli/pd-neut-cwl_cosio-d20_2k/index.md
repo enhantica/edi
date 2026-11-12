@@ -27,8 +27,8 @@ All three read the same files, in `docs/user/cli/pd-neut-cwl_cosio-d20_2k/projec
 ## The model
 
 The moments start at Co1 (2, 2, 2) μB and Co2 (0, 2, 0) μB along a, b and c, so the magnetic structure shows clearly
-before the fit, and the fit finds their size and direction. Every displacement parameter is fixed at a fit of the paramagnetic pattern at
-56.8 K, with Co1 and Co2 sharing one value. One dead detector cell at 64.6953° is excluded.
+before the fit, and the fit finds their size and direction. The displacements start from a fit of the paramagnetic pattern at
+56.8 K and are fitted too, Co1 and Co2 sharing one value. One dead detector cell at 64.6953° is excluded.
 
 ## Sources
 

@@ -11,6 +11,7 @@
 #include <QFile>
 #include <QGuiApplication>
 #include <QJSValue>
+#include <QRegularExpression>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -33,7 +34,11 @@
 #include "crysta/project_output.hpp"
 #include "edi/categories.hpp"
 #include "edi/palette.hpp"
+#include "app_info.hpp"
+#include "edi/io.hpp"
 #include "fit_view_model.hpp"
+#include "parameter_item.hpp"
+#include "parameter_table_model.hpp"
 #include "project_view_model.hpp"
 #include "scan_session.hpp"
 #include "scan_view_model.hpp"
@@ -251,6 +256,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t16-02-fit-running", {"statusBar.fit.button", "capture-now"}});
     steps_.push_back({"t16-03-fit-done", {"wait-fit"}});
     steps_.push_back({"t16-04-fit-results", {"statusBar.fit.outcome"}});
+    // The parameters table after a fit at a desktop width, its results closed: Start, Value, s.u. and Change filled
+    // (`--demo-only parameters-fitted`).
+    steps_.push_back({"parameters-fitted", QStringList{"resize:1760x1000"} + start + open_example("pd-neut-cwl_cosio-d20") +
+                                               QStringList{analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK"}});
     steps_.push_back({"t16-05-experiments", {"choose:OK", experiment, basic, "expand:group.experiments"}});
     steps_.push_back({"t16-06-structure", {"appBar.tab.structure", basic}});
     steps_.push_back({"t16-07-narrow", {"resize:900x768", experiment}});
@@ -707,6 +716,25 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                      "tutorials.open." + ids[i], "tutorial-next-all"}});
             steps_.push_back({name + "-closed", {"tutorial-close"}});
         }
+    }
+    // The Tutorials dialog and the Examples list with the longest tag row in the catalogue, the Co2SiO4 2.3 K case,
+    // at a desktop width and a narrow one, where its tags wrap instead of being cut short (`--demo-only tags-`).
+    if (only.startsWith(QLatin1String("tags-"))) {
+        const QString longest = QStringLiteral("pd-neut-cwl_cosio-d20_2k");
+        const qsizetype row = ExampleListModel::bundledIds().indexOf(longest);
+        // The Tutorials list is in the manifest's order, the Interface tour first.
+        qsizetype tutorial = -1;
+        if (QFile manifest(QStringLiteral(":/edi/tutorials/manifest.json")); manifest.open(QIODevice::ReadOnly)) {
+            const QJsonArray list = QJsonDocument::fromJson(manifest.readAll()).object().value(QStringLiteral("tutorials")).toArray();
+            for (qsizetype i = 0; i < list.size() && tutorial < 0; ++i)
+                if (list[i].toObject().value(QStringLiteral("id")).toString() == longest) tutorial = i;
+        }
+        steps_.push_back({"tags-01-tutorials-wide", {"resize:1480x900", "theme:light", "appBar.tab.home", "home.tutorials",
+                                                     QStringLiteral("show:tutorials.list:%1").arg(tutorial)}});
+        steps_.push_back({"tags-02-tutorials-narrow", {"key:Escape", "resize:1000x760", "home.tutorials",
+                                                       QStringLiteral("show:tutorials.list:%1").arg(tutorial)}});
+        steps_.push_back({"tags-03-examples", QStringList{"key:Escape", "resize:1480x900", "appBar.tab.project", "sideBar.tab.basic",
+                                                          "group.examples", QStringLiteral("show:examples.list:%1").arg(row)}});
     }
     // The documentation's concept figures, from the Co2SiO4 magnetic case, in both themes, each saved by Save image
     // (the owner, 2026-11-10). Run only when asked (`--demo-only concepts-`).
@@ -1629,6 +1657,177 @@ void DemoDriver::next_action() {
     settle_then(save);
 }
 
+bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
+    const TutorialStep current = panel->property("current").value<TutorialStep>();
+    QQmlEngine* engine = qmlEngine(window_.contentItem());
+    auto* session = engine != nullptr ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+    ProjectViewModel* project = session != nullptr ? session->project() : nullptr;
+    if (step_checked_ != step) {
+        step_checked_ = step;
+        QStringList problems;
+        // The title fits the popup's line (owner record 2026-11-11, item 10).
+        if (QQuickItem* title = find(QStringLiteral("tutorial.title"), false); title != nullptr && title->property("truncated").toBool())
+            problems << QStringLiteral("the title \"%1\" is cut short").arg(current.title);
+        // No menu a step opened is left open when the next step starts, unless that step chooses in it.
+        static const QStringList choosing{QStringLiteral("free-choice"), QStringLiteral("web-dialog"), QStringLiteral("menu-closed")};
+        const bool chooses = std::any_of(choosing.cbegin(), choosing.cend(), [&current](const QString& kind) { return current.check.startsWith(kind); });
+        for (QQuickItem* layer : window_.contentItem()->childItems()) {
+            if (qstrcmp(layer->metaObject()->className(), "QQuickOverlay") != 0) continue;
+            for (QQuickItem* item : layer->childItems()) {
+                QObject* popup = item->parent();
+                if (!chooses && popup != nullptr && popup->inherits("QQuickMenu") && popup->property("opened").toBool())
+                    problems << QStringLiteral("a menu (%1) is still open").arg(popup->objectName().isEmpty() ? QString::fromLatin1(popup->metaObject()->className()) : popup->objectName());
+            }
+        }
+        // A Free tick asks for a click that changes the box, and names the row as the table does.
+        if (const auto tick = QRegularExpression(QStringLiteral("^(un)?tick:(.+)$")).match(current.check); tick.hasMatch() && project != nullptr) {
+            if (panel->property("heldAtStart").toBool())
+                problems << QStringLiteral("its Free box is already as the step asks");
+            ParameterTableModel* table = project->parameters();
+            const int parameter_role = table->roleNames().key("parameter"), path_role = table->roleNames().key("path");
+            static const QRegularExpression bracket(QStringLiteral("\\[([^\\]]*)\\]"));
+            for (int row = 0; row < table->rowCount(); ++row) {
+                QString dotted = table->data(table->index(row, 0), path_role).toString();
+                dotted.replace(bracket, QStringLiteral(".\\1"));
+                if (dotted != tick.captured(2)) continue;
+                const QObject* item = table->data(table->index(row, 0), parameter_role).value<QObject*>();
+                const QString label = item->property("rowLabel").toString(), name = item->property("shortName").toString();
+                const QString shown = label.isEmpty() ? name : label + u' ' + name;
+                if (!current.text.contains(QStringLiteral("**%1**").arg(shown)))
+                    problems << QStringLiteral("it names the row otherwise than the table's \"%1\"").arg(shown);
+            }
+        }
+        for (const QString& problem : problems) {
+            const QString text = QStringLiteral("step %1 (%2): %3").arg(step + 1).arg(current.title, problem);
+            if (!qEnvironmentVariableIsSet("EDI_DEMO_REPORT_ONLY")) {
+                fail(text);
+                return false;
+            }
+            std::fprintf(stderr, "edi_app --demo: MISMATCH %s\n", qPrintable(text));
+        }
+    }
+    if (!current.expectSites.isEmpty() && sites_reported_ != step && project != nullptr) {
+        // A structure the tutorial built ends with the case's own sites: label, element and position.
+        sites_reported_ = step;
+        QStringList built;
+        for (const auto& structure : project->project().structures)
+            for (const auto& site : structure->atom_sites)
+                built << QStringLiteral("%1 %2 %3 %4 %5")
+                             .arg(QString::fromStdString(site->id.value()), QString::fromStdString(site->type_symbol.value()))
+                             .arg(site->fract_x.value.get(), 0, 'f', 4)
+                             .arg(site->fract_y.value.get(), 0, 'f', 4)
+                             .arg(site->fract_z.value.get(), 0, 'f', 4);
+        if (built != current.expectSites) {
+            const QString problem = QStringLiteral("%1: the structure's sites are %2, not the case's %3")
+                                        .arg(current.title, built.join(u", "), current.expectSites.join(u", "));
+            if (!qEnvironmentVariableIsSet("EDI_DEMO_REPORT_ONLY")) {
+                fail(problem);
+                return false;
+            }
+            std::fprintf(stderr, "edi_app --demo: MISMATCH %s\n", qPrintable(problem));
+        }
+    }
+    if (current.check != QLatin1String("fit-done")) return true;
+    FitViewModel* fit = project != nullptr ? project->fit() : nullptr;
+    if (project == nullptr || fit == nullptr) return true;
+    const QString title = current.title;
+    if (fit_free_reported_ != step && !fit->running()) {
+        // Before Next presses Fit: the parameters the stage's steps left free.
+        ParameterTableModel* table = project->parameters();
+        const auto roles = table->roleNames();
+        const int path_role = roles.key("path"), free_role = roles.key("free");
+        QStringList free;
+        for (int row = 0; row < table->rowCount(); ++row)
+            if (table->data(table->index(row, 0), free_role).toBool()) free << table->data(table->index(row, 0), path_role).toString();
+        free.sort();
+        std::fprintf(stderr, "edi_app --demo: %s: %d free before the fit: %s\n", qPrintable(title), static_cast<int>(free.size()),
+                     qPrintable(free.join(u' ')));
+        fit_free_reported_ = step;
+        fit_seen_running_ = false;
+        if (const QString keep = qEnvironmentVariable("EDI_DEMO_KEEP_FIT_PROJECTS"); !keep.isEmpty()) {
+            const QString id = panel->property("tutorial").value<Tutorial>().id;
+            try { edi::save_project(project->project(), (keep + QStringLiteral("/%1-step-%2").arg(id).arg(step + 1)).toStdString()); }
+            catch (const std::exception& error) { std::fprintf(stderr, "keep project: %s\n", error.what()); }
+        }
+        if (!current.expectFree.isEmpty()) {
+            // A background freed whole is checked by every one of its points being free: the app and the
+            // command line may label re-estimated points differently.
+            const auto whole = [&current](const QString& name) {
+                return std::any_of(current.expectWholeBackground.cbegin(), current.expectWholeBackground.cend(),
+                                   [&name](const QString& prefix) { return name.startsWith(prefix); });
+            };
+            QStringList wanted;
+            for (const QString& name : current.expectFree) if (!whole(name)) wanted << name;
+            for (int row = 0; row < table->rowCount(); ++row) {
+                const QString name = table->data(table->index(row, 0), path_role).toString();
+                if (whole(name) && name.endsWith(QStringLiteral(".intensity"))) wanted << name;
+            }
+            wanted.sort();
+            if (std::any_of(wanted.cbegin(), wanted.cend(), [&free](const QString& name) { return !free.contains(name); }) ||
+                std::any_of(free.cbegin(), free.cend(), [&](const QString& name) {
+                    return !wanted.contains(name) &&
+                           std::none_of(current.expectWholeBackground.cbegin(), current.expectWholeBackground.cend(),
+                                        [&name](const QString& prefix) { return name.startsWith(prefix); });
+                })) {
+                QStringList missing, extra;
+                for (const QString& name : wanted) if (!free.contains(name)) missing << name;
+                for (const QString& name : free) {
+                    const bool outside = std::any_of(current.expectWholeBackground.cbegin(), current.expectWholeBackground.cend(),
+                                                     [&name](const QString& prefix) { return name.startsWith(prefix); });
+                    if (!wanted.contains(name) && !outside) extra << name;
+                }
+                const QString problem = QStringLiteral("%1: the free set differs from the stage's: missing %2; extra %3")
+                                            .arg(title, missing.join(u' '), extra.join(u' '));
+                // EDI_DEMO_REPORT_ONLY: list every mismatch of a replay instead of stopping at the first.
+                if (!qEnvironmentVariableIsSet("EDI_DEMO_REPORT_ONLY")) {
+                    fail(problem);
+                    return false;
+                }
+                std::fprintf(stderr, "edi_app --demo: MISMATCH %s\n", qPrintable(problem));
+            }
+        }
+    }
+    if (fit->running()) fit_seen_running_ = true;
+    if (fit_seen_running_ && !fit->running() && fit_result_reported_ != step && !fit->outcome().isEmpty()) {
+        std::fprintf(stderr, "edi_app --demo: %s: %s after %s iterations, reduced chi2 %s, %s\n", qPrintable(title),
+                     qPrintable(fit->outcome()), qPrintable(fit->iterations()), qPrintable(fit->goodnessOfFit()),
+                     qPrintable(fit->elapsed()));
+        fit_result_reported_ = step;
+        if (current.expectChi2 >= 0) {
+            const double pin = current.expectChi2;
+            bool ok = false;
+            // "35.86 → 9.88" or "1.19×10³ → 1.06×10³": the value the fit ended at is the last. A value shown with
+            // a power of ten carries three significant digits, so it matches within half its last digit.
+            static const QRegularExpression last(QStringLiteral(
+                "([0-9]+)(?:\\.([0-9]+))?(?:\u00D710([\u207B]?)([\u2070\u00B9\u00B2\u00B3\u2074-\u2079]+))?\\D*$"));
+            const auto match = last.match(fit->goodnessOfFit());
+            double chi2 = 0.0;
+            double tolerance = current.expectChi2Tolerance;
+            if (match.hasMatch()) {
+                const QString decimals = match.captured(2);
+                chi2 = (match.captured(1) + u'.' + (decimals.isEmpty() ? QStringLiteral("0") : decimals)).toDouble(&ok);
+                if (!match.captured(4).isEmpty()) {
+                    static const QString digits = QStringLiteral("\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079");
+                    int power = 0;
+                    for (const QChar digit : match.captured(4)) power = power * 10 + static_cast<int>(digits.indexOf(digit));
+                    if (!match.captured(3).isEmpty()) power = -power;
+                    chi2 *= std::pow(10.0, power);
+                    tolerance = std::max(tolerance, 0.5 * std::pow(10.0, power - static_cast<int>(decimals.size())));
+                }
+            }
+            if (!ok || std::abs(chi2 - pin) > tolerance) {
+                const QString problem = QStringLiteral("%1: reduced chi2 %2, not the pinned %3").arg(title, fit->goodnessOfFit()).arg(pin);
+                if (!qEnvironmentVariableIsSet("EDI_DEMO_REPORT_ONLY")) {
+                    fail(problem);
+                    return false;
+                }
+                std::fprintf(stderr, "edi_app --demo: MISMATCH %s\n", qPrintable(problem));
+            }
+        }
+    }
+    return true;
+}
+
 void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int waited_ms, int clicked_ms) {
     // A step that waits for a fit, a download or a save keeps Next off meanwhile; one that stays off this long cannot
     // be left by Next alone.
@@ -1642,12 +1841,11 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
     const int now = panel->property("step").toInt();
     const int count = panel->property("steps").toList().size();
     const QVariant chosen = panel->property("tutorial");
-    QString id = chosen.toMap().value(QStringLiteral("id")).toString();
-    if (id.isEmpty()) id = chosen.value<QJSValue>().property(QStringLiteral("id")).toString();
-    if (panel->property("atEnd").toBool()) {
-        qInfo().noquote() << QStringLiteral("edi_app --demo: tutorial %1: reached step %2 of %3 by Next alone")
-                                 .arg(id).arg(now + 1).arg(count);
-        next();
+    QString id = chosen.value<Tutorial>().id;
+    if (id.isEmpty()) id = chosen.toMap().value(QStringLiteral("id")).toString();
+    if (step >= 0 && now < step) {
+        // Next alone must only go forward; a tutorial that steps back loops.
+        fail(QStringLiteral("tutorial %1 went back from step %2 to %3 with only Next").arg(id).arg(step + 1).arg(now + 1));
         return;
     }
     if (now != step) {
@@ -1667,6 +1865,50 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
             walk(window_.contentItem());
         }
     }
+    // EDI_DEMO_STEP_SHOTS=<folder>: every step as it shows, once its callout has settled, into <folder>/<tutorial>/
+    // as NNN.png, with steps.txt listing each step's number, title and text (the owner's capture-and-review loop,
+    // 2026-11-11). Taken before Next is pressed; the step waits for it.
+    if (const QString shots = qEnvironmentVariable("EDI_DEMO_STEP_SHOTS"); !shots.isEmpty() && shot_step_ != now) {
+        // Still fading in or out (its opacity animates), or still finding its control.
+        bool moving = panel->property("settling").toBool() || panel->property("revealing").toBool() ||
+                      panel->property("opacity").toDouble() < 0.99;
+        // A page still being built (the app bar's "Preparing this page…") is not the step's view yet.
+        for (const char* tab : {"appBar.tab.project", "appBar.tab.structure", "appBar.tab.experiment", "appBar.tab.analysis", "appBar.tab.report"})
+            if (QQuickItem* item = find(QString::fromLatin1(tab), false); item != nullptr && item->property("preparing").toBool()) moving = true;
+        if (waited_ms < 1500 || (moving && waited_ms < 30000)) {
+            QTimer::singleShot(kPollMs, this, [this, next, step, waited_ms, clicked_ms] { tutorial_next_then(next, step, waited_ms + kPollMs, clicked_ms); });
+            return;
+        }
+        const TutorialStep shown = panel->property("current").value<TutorialStep>();
+        QDir folder(shots);
+        folder.mkpath(id);
+        folder.cd(id);
+        window_.grabWindow().save(folder.filePath(QStringLiteral("%1.png").arg(now + 1, 3, 10, QLatin1Char('0'))));
+        if (QFile list(folder.filePath(QStringLiteral("steps.txt"))); list.open(QIODevice::Append | QIODevice::Text))
+            list.write(QStringLiteral("%1\t%2\t%3\n").arg(now + 1, 3, 10, QLatin1Char('0')).arg(shown.title, shown.text).toUtf8());
+        shot_step_ = now;
+    }
+    if (panel->property("atEnd").toBool()) {
+        // Steps that were already done when the tutorial came to them: each asks for a click that changes nothing.
+        // EDI_DEMO_NOOPS=<file> collects them as "<tutorial><tab><check>" for the generator to drop.
+        const QStringList done = panel->property("doneOnArrival").toStringList();
+        for (const QString& entry : done) {
+            const QString check = entry.section(u'\t', 1);
+            if (const QString file = qEnvironmentVariable("EDI_DEMO_NOOPS"); !file.isEmpty())
+                if (QFile out(file); out.open(QIODevice::Append | QIODevice::Text)) out.write((id + u'\t' + check + u'\n').toUtf8());
+            const QString text = QStringLiteral("tutorial %1 step %2 (%3) was already done when it came").arg(id, entry.section(u'\t', 0, 0), check);
+            if (!qEnvironmentVariableIsSet("EDI_DEMO_REPORT_ONLY")) {
+                fail(text);
+                return;
+            }
+            std::fprintf(stderr, "edi_app --demo: MISMATCH %s\n", qPrintable(text));
+        }
+        qInfo().noquote() << QStringLiteral("edi_app --demo: tutorial %1: reached step %2 of %3 by Next alone")
+                                 .arg(id).arg(now + 1).arg(count);
+        next();
+        return;
+    }
+    if (!tutorial_fit_check(panel, now)) return;
     QQuickItem* button = find(QStringLiteral("statusBar.tutorial.next"), false);
     const bool clickable = button != nullptr && button->isVisible() && button->isEnabled() &&
                            button->property("clickable").toBool() && on_screen(button);
@@ -2038,6 +2280,32 @@ bool DemoDriver::perform(const QString& action) {
         if (session == nullptr || session->project() == nullptr || !session->project()->loadExperiments(files)) {
             fail(QStringLiteral("step %1: the load was refused: %2")
                      .arg(steps_[current_].image, session ? session->lastError() : QStringLiteral("no session")));
+            return false;
+        }
+        return true;
+    }
+    if (const auto tick = QRegularExpression(QStringLiteral("^(un)?tick:(.+)$")).match(action); tick.hasMatch()) {
+        // One parameter's Free box set in its own row, as the built-in tutorial's step does.
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        auto* session = engine != nullptr ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+        ProjectViewModel* project = session != nullptr ? session->project() : nullptr;
+        ParameterItem* found = nullptr;
+        // The plan names a row as the table's path does (`linked_structures[hs]`); compared with dots on both sides.
+        QString wanted = tick.captured(2);
+        wanted.replace(QRegularExpression(QStringLiteral("\\[([^\\]]*)\\]")), QStringLiteral(".\\1"));
+        if (project != nullptr) {
+            ParameterTableModel* table = project->parameters();
+            const int parameter_role = table->roleNames().key("parameter"), path_role = table->roleNames().key("path");
+            static const QRegularExpression bracket(QStringLiteral("\\[([^\\]]*)\\]"));
+            for (int row = 0; row < table->rowCount() && found == nullptr; ++row) {
+                QString dotted = table->data(table->index(row, 0), path_role).toString();
+                dotted.replace(bracket, QStringLiteral(".\\1"));
+                if (dotted == wanted)
+                    found = qobject_cast<ParameterItem*>(table->data(table->index(row, 0), parameter_role).value<QObject*>());
+            }
+        }
+        if (found == nullptr || !project->setParametersFree({found}, tick.captured(1).isEmpty())) {
+            fail(QStringLiteral("step %1: cannot set the Free box of '%2'").arg(steps_[current_].image, tick.captured(2)));
             return false;
         }
         return true;

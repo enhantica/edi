@@ -365,14 +365,19 @@ QString ScanSession::writeRun(const edi::Project& project, const Run& run) {
 std::string ScanSession::templateIdentity(const edi::Project& project) {
     // The name, title and description (project.edi), the fitting mode and the report's settings (reports/report.edi
     // and analysis.edi's two chart items) are not the template: changing them leaves the results current. Neither are the fits' parameter correlations, a scan's own included (the
-    // `_fit_parameter_correlation` loop, its last category). The minimizer's settings are part of it: rows fitted under
+    // `_fit_parameter_correlation` loop, its last category), nor its results (`_fit_result`, `_fit_result_bank`,
+    // `_fit_parameter`). The minimizer's settings are part of it: rows fitted under
     // another bound or descent are another generation.
     QCryptographicHash hash(QCryptographicHash::Sha256);
     const auto add = [&hash](std::string_view line) {
         hash.addData(QByteArrayView(line.data(), static_cast<qsizetype>(line.size())));
         hash.addData(QByteArrayView("\n", 1));
     };
-    for (const auto& [path, body] : edi::project_edi_files(project)) {
+    // Hashed from a copy, which is never calculated: a save of a calculated project adds its computed columns and
+    // categories (and a newer schema version), so the same inputs would hash differently before and after a
+    // calculation, e.g. the shown model at a scan's start against the template copy at its end.
+    const edi::Project inputs = project;
+    for (const auto& [path, body] : edi::project_edi_files(inputs)) {
         if (path == "project.edi" || path == "reports/report.edi") {
             continue;
         }
@@ -386,7 +391,10 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
             const std::size_t end = std::min(body.find('\n', start), body.size());
             const std::string_view line(body.data() + start, end - start);
             start = end + 1;
-            if (line.starts_with("_fit_parameter_correlation.")) {
+            // A fit's results (its summary, its banks, the start values it began from) are what a run writes, not
+            // the template it ran from: a finished scan leaves its results current.
+            if (line.starts_with("_fit_parameter_correlation.") || line.starts_with("_fit_parameter.") ||
+                line.starts_with("_fit_result.") || line.starts_with("_fit_result_bank.")) {
                 correlations = true;
                 pending.clear();
                 continue;

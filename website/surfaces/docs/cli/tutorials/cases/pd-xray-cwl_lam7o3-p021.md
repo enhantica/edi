@@ -84,35 +84,36 @@ edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 5 free
       1      0.017     42.69       122.50   50.4% ↓
       2      0.024     38.20        98.09   19.9% ↓
       3      0.031     35.23        83.41   15.0% ↓
-      4      0.037     34.19        78.58   5.8% ↓
-      5      0.044     33.91        77.27   1.7% ↓
+      4      0.038     34.19        78.58   5.8% ↓
+      5      0.045     33.91        77.27   1.7% ↓
       6      0.052     33.81        76.83   0.6% ↓
-      7      0.059     33.76        76.62   0.3% ↓
-      8      0.065     33.73        76.49   0.2% ↓
-      9      0.072     33.72        76.41   0.1% ↓
-     10      0.079     33.70        76.35   0.1% ↓
-     11      0.085     33.69        76.31   0.1% ↓
-     12      0.092     33.69        76.29   
-     13      0.099     33.68        76.27   
-     14      0.105     33.68        76.26   
-     15      0.112     33.68        76.25   
-     16      0.118     33.68        76.25   
-     17      0.125     33.68        76.24   
-     18      0.132     33.68        76.24   
-     19      0.143     33.68        76.24   
-  done · converged · 19 iters · reduced χ² 76.24 · Rwp 33.68 % · 0.15 s
+      7      0.060     33.76        76.62   0.3% ↓
+      8      0.067     33.73        76.49   0.2% ↓
+      9      0.074     33.72        76.41   0.1% ↓
+     10      0.081     33.70        76.35   0.1% ↓
+     11      0.088     33.69        76.31   0.1% ↓
+     12      0.094     33.69        76.29   
+     13      0.101     33.68        76.27   
+     14      0.107     33.68        76.26   
+     15      0.114     33.68        76.25   
+     16      0.121     33.68        76.25   
+     17      0.127     33.68        76.24   
+     18      0.134     33.68        76.24   
+     19      0.140     33.68        76.24   
+     20      0.151     33.68        76.24   
+  done · converged · 20 iters · reduced χ² 76.24 · Rwp 33.68 % · 0.16 s
 
   refined parameters (5 free):
   name            parameter                                               start        value      s.u.   change
-  2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.0000      0.00178   0.00092   
+  2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.0000      0.00177   0.00092   
   scale           experiment.linked_structures[lam7o3].scale            5.00e-6     3.596e-6  0.068e-6   28.1% ↓
   a, Å            structure.cell.length_a                                5.5000       5.4992    0.0011   
-  b, Å            structure.cell.length_b                                7.7000       7.7336    0.0017   0.4% ↑
-  c, Å            structure.cell.length_c                                5.5000       5.4620    0.0011   0.7% ↓
+  b, Å            structure.cell.length_b                                7.7000       7.7337    0.0017   0.4% ↑
+  c, Å            structure.cell.length_c                                5.5000       5.4619    0.0011   0.7% ↓
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -143,21 +144,22 @@ The same for every other row (18 more).
 edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 25 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        33.68        77.50
-      1      0.026     10.57         7.63   90.2% ↓
-      2      0.033     10.54         7.58   0.6% ↓
-      3      0.040     10.53         7.58   0.1% ↓
-      4      0.047     10.53         7.58   
-      5      0.054     10.53         7.58   
+      1      0.022     10.57         7.63   90.2% ↓
+      2      0.030     10.53         7.58   0.6% ↓
+      3      0.039     10.53         7.58   0.1% ↓
+      4      0.046     10.53         7.58   
+      5      0.054     10.53         7.57   
       6      0.061     10.53         7.57   
-      7      0.069     10.53         7.57   
-      8      0.075     10.53         7.57   
-      9      0.082     10.53         7.57   
-     10      0.089     10.53         7.57   
-     11      0.095     10.52         7.57   
-     12      0.104     10.52         7.57   
-     13      0.112     10.52         7.57   
-     14      0.157     10.52         7.57   
-  done · converged · 14 iters · reduced χ² 7.57 · Rwp 10.52 % · 0.17 s
+      7      0.068     10.53         7.57   
+      8      0.076     10.53         7.57   
+      9      0.083     10.53         7.57   
+     10      0.091     10.53         7.57   
+     11      0.099     10.52         7.57   
+     12      0.107     10.52         7.57   
+     13      0.114     10.52         7.57   
+     14      0.122     10.52         7.57   
+     15      0.135     10.52         7.57   
+  done · converged · 15 iters · reduced χ² 7.57 · Rwp 10.52 % · 0.14 s
 
   refined parameters (25 free):
   name            parameter                                               start        value      s.u.   change
@@ -181,15 +183,15 @@ edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 25 free
   intensity       experiment.background[5.1].intensity                      300        445.9       7.9   48.6% ↑
   intensity       experiment.background[7].intensity                        300        439.1       7.3   46.4% ↑
   intensity       experiment.background[8].intensity                        300        448.3       7.6   49.4% ↑
-  2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.0018      0.00134   0.00033   25.0% ↓
+  2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.0018      0.00133   0.00033   24.6% ↓
   scale           experiment.linked_structures[lam7o3].scale            3.60e-6     3.238e-6  0.023e-6   10.0% ↓
   a, Å            structure.cell.length_a                                5.4992      5.49643   0.00039   0.1% ↓
-  b, Å            structure.cell.length_b                                7.7336      7.73507   0.00058   
-  c, Å            structure.cell.length_c                                5.4620      5.46172   0.00038   
+  b, Å            structure.cell.length_b                                7.7337      7.73508   0.00058   
+  c, Å            structure.cell.length_c                                5.4619      5.46171   0.00038   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -222,33 +224,34 @@ _peak.broad_lorentz_x 0.1()
 edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 29 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        10.52         7.59
-      1      0.023      7.07         3.43   54.9% ↓
-      2      0.032      6.29         2.71   20.8% ↓
-      3      0.040      6.04         2.50   7.8% ↓
-      4      0.050      5.89         2.38   5.0% ↓
-      5      0.058      5.77         2.29   3.9% ↓
-      6      0.076      5.74         2.26   1.1% ↓
-      7      0.112      5.57         2.13   5.9% ↓
-      8      0.123      5.40         2.00   6.0% ↓
-      9      0.149      5.20         1.85   7.3% ↓
-     10      0.159      3.76         0.97   47.8% ↓
-     11      0.169      3.60         0.89   8.2% ↓
-     12      0.179      3.57         0.87   1.9% ↓
-     13      0.189      3.56         0.87   0.3% ↓
-     14      0.199      3.56         0.87   0.1% ↓
-     15      0.208      3.56         0.87   0.1% ↓
-     16      0.215      3.55         0.87   0.4% ↓
-     17      0.222      3.54         0.86   1.0% ↓
-     18      0.230      3.49         0.84   2.3% ↓
-     19      0.238      3.43         0.81   3.6% ↓
-     20      0.246      3.36         0.77   4.2% ↓
-     21      0.254      3.24         0.72   6.8% ↓
-     22      0.262      3.04         0.63   12.2% ↓
-     23      0.270      2.85         0.56   12.1% ↓
-     24      0.278      2.80         0.54   3.6% ↓
-     25      0.286      2.79         0.53   0.2% ↓
-     26      0.299      2.79         0.53   
-  done · converged · 26 iters · reduced χ² 0.53 · Rwp 2.79 % · 0.31 s
+      1      0.021      7.07         3.43   54.9% ↓
+      2      0.029      6.29         2.71   20.8% ↓
+      3      0.036      6.04         2.50   7.8% ↓
+      4      0.045      5.89         2.38   5.0% ↓
+      5      0.053      5.77         2.29   3.9% ↓
+      6      0.062      5.74         2.26   1.1% ↓
+      7      0.086      5.57         2.13   5.9% ↓
+      8      0.094      5.40         2.00   6.0% ↓
+      9      0.102      5.20         1.86   7.3% ↓
+     10      0.110      3.76         0.97   47.8% ↓
+     11      0.118      3.60         0.89   8.2% ↓
+     12      0.126      3.57         0.87   1.9% ↓
+     13      0.134      3.56         0.87   0.3% ↓
+     14      0.141      3.56         0.87   0.1% ↓
+     15      0.149      3.56         0.87   0.1% ↓
+     16      0.157      3.55         0.87   0.4% ↓
+     17      0.165      3.54         0.86   1.0% ↓
+     18      0.173      3.49         0.84   2.3% ↓
+     19      0.180      3.43         0.81   3.6% ↓
+     20      0.188      3.36         0.77   4.2% ↓
+     21      0.196      3.24         0.72   6.8% ↓
+     22      0.204      3.04         0.63   12.2% ↓
+     23      0.212      2.85         0.56   12.1% ↓
+     24      0.220      2.80         0.54   3.6% ↓
+     25      0.228      2.79         0.53   0.2% ↓
+     26      0.236      2.79         0.53   
+     27      0.250      2.79         0.53   
+  done · converged · 27 iters · reduced χ² 0.53 · Rwp 2.79 % · 0.26 s
 
   refined parameters (29 free):
   name            parameter                                               start        value      s.u.   change
@@ -266,26 +269,30 @@ edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 29 free
   intensity       experiment.background[3.7].intensity                      609        607.7       3.7   0.2% ↓
   intensity       experiment.background[4.1].intensity                      547        551.3       4.6   0.8% ↑
   intensity       experiment.background[4.3].intensity                      690        520.0       9.7   24.6% ↓
-  intensity       experiment.background[4.4].intensity                      703        511.9       9.6   27.2% ↓
+  intensity       experiment.background[4.4].intensity                      703        511.8       9.6   27.2% ↓
   intensity       experiment.background[4.5].intensity                      486        500.8       4.6   3.0% ↑
   intensity       experiment.background[4.9].intensity                      465        455.1       4.0   2.1% ↓
   intensity       experiment.background[5.1].intensity                    445.9        432.4       2.2   3.0% ↓
   intensity       experiment.background[7].intensity                      439.1        414.6       2.1   5.6% ↓
   intensity       experiment.background[8].intensity                      448.3        442.6       2.1   1.3% ↓
-  2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.0013      -6.7e-4    1.1e-4   149.9% ↓
+  2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.0013      -6.7e-4    1.1e-4   150.3% ↓
   scale           experiment.linked_structures[lam7o3].scale            3.24e-6    3.6035e-6 0.0094e-6   11.3% ↑
-  U, deg²         experiment.peak.broad_gauss_u                            0.04        0.067     0.014   67.4% ↑
-  V, deg²         experiment.peak.broad_gauss_v                           -0.01      -0.0098    0.0018   1.8% ↑
-  W, deg²         experiment.peak.broad_gauss_w                           0.001     0.001259  0.000049   25.9% ↑
+  U, deg²         experiment.peak.broad_gauss_u                            0.04        0.067     0.014 ! 67.4% ↑
+  V, deg²         experiment.peak.broad_gauss_v                           -0.01      -0.0098    0.0018 ! 1.8% ↑
+  W, deg²         experiment.peak.broad_gauss_w                           0.001     0.001259  0.000049 ! 25.9% ↑
   X, deg          experiment.peak.broad_lorentz_x                           0.1       0.1736    0.0039   73.6% ↑
   a, Å            structure.cell.length_a                                5.4964      5.46218   0.00019   0.6% ↓
   b, Å            structure.cell.length_b                                7.7351      7.73307   0.00028   
   c, Å            structure.cell.length_c                                5.4617      5.49044   0.00018   0.5% ↑
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiment.peak.broad_gauss_u: strongly correlated with V (p021) (r = -0.96)
+      experiment.peak.broad_gauss_v: strongly correlated with W (p021) (r = -0.98)
+      experiment.peak.broad_gauss_w: strongly correlated with V (p021) (r = -0.98)
 ```
 
 ## Background from the fitted model
@@ -317,8 +324,9 @@ _background_estimate.use_model subtract
 edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 29 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         2.79         0.53
-      1      0.036      2.79         0.53   
-  done · converged · 1 iters · reduced χ² 0.53 · Rwp 2.79 % · 0.05 s
+      1      0.021      2.79         0.53   
+      2      0.035      2.79         0.53   
+  done · converged · 2 iters · reduced χ² 0.53 · Rwp 2.79 % · 0.05 s
 
   refined parameters (29 free):
   name            parameter                                               start        value      s.u.   change
@@ -336,7 +344,7 @@ edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 29 free
   intensity       experiment.background[3.7].intensity                    607.7        607.7       3.7   
   intensity       experiment.background[4.1].intensity                    551.3        551.3       4.6   
   intensity       experiment.background[4.3].intensity                      520        519.9       9.7   
-  intensity       experiment.background[4.4].intensity                    511.9        511.8       9.6   
+  intensity       experiment.background[4.4].intensity                    511.8        511.8       9.6   
   intensity       experiment.background[4.5].intensity                    500.8        500.8       4.6   
   intensity       experiment.background[4.9].intensity                    455.1        455.1       4.0   
   intensity       experiment.background[5.1].intensity                    432.4        432.4       2.2   
@@ -344,18 +352,22 @@ edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 29 free
   intensity       experiment.background[8].intensity                      442.6        442.6       2.1   
   2θ offset, deg  experiment.instrument.calib_twotheta_offset          -6.70e-4      -6.7e-4    1.1e-4   0.2% ↑
   scale           experiment.linked_structures[lam7o3].scale            3.60e-6    3.6036e-6 0.0094e-6   
-  U, deg²         experiment.peak.broad_gauss_u                           0.067        0.067     0.014   
-  V, deg²         experiment.peak.broad_gauss_v                         -0.0098      -0.0098    0.0018   0.3% ↓
-  W, deg²         experiment.peak.broad_gauss_w                        0.001259     0.001259  0.000049   
+  U, deg²         experiment.peak.broad_gauss_u                           0.067        0.067     0.014 ! 
+  V, deg²         experiment.peak.broad_gauss_v                         -0.0098      -0.0098    0.0018 ! 0.3% ↓
+  W, deg²         experiment.peak.broad_gauss_w                        0.001259     0.001259  0.000049 ! 
   X, deg          experiment.peak.broad_lorentz_x                        0.1736       0.1737    0.0039   
   a, Å            structure.cell.length_a                                5.4622      5.46218   0.00019   
   b, Å            structure.cell.length_b                                7.7331      7.73307   0.00028   
   c, Å            structure.cell.length_c                                5.4904      5.49044   0.00018   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiment.peak.broad_gauss_u: strongly correlated with V (p021) (r = -0.96)
+      experiment.peak.broad_gauss_v: strongly correlated with W (p021) (r = -0.98)
+      experiment.peak.broad_gauss_w: strongly correlated with V (p021) (r = -0.98)
 ```
 
 ## Atom positions
@@ -385,21 +397,21 @@ The same for every other row (1 more).
 edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 36 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         2.79         0.54
-      1      0.024      1.90         0.25   54.0% ↓
-      2      0.034      1.87         0.24   3.1% ↓
-      3      0.042      1.87         0.24   
-      4      0.051      1.86         0.24   0.1% ↓
-      5      0.059      1.86         0.24   0.2% ↓
-      6      0.068      1.86         0.24   0.5% ↓
-      7      0.076      1.85         0.24   1.2% ↓
+      1      0.022      1.90         0.25   54.0% ↓
+      2      0.032      1.87         0.24   3.1% ↓
+      3      0.041      1.87         0.24   
+      4      0.050      1.86         0.24   0.1% ↓
+      5      0.060      1.86         0.24   0.2% ↓
+      6      0.069      1.86         0.24   0.5% ↓
+      7      0.077      1.85         0.24   1.2% ↓
       8      0.086      1.83         0.23   2.4% ↓
       9      0.095      1.80         0.22   2.8% ↓
-     10      0.103      1.79         0.22   1.7% ↓
-     11      0.111      1.78         0.22   0.7% ↓
-     12      0.119      1.78         0.22   0.2% ↓
-     13      0.128      1.78         0.22   
-     14      0.138      1.78         0.22   
-     15      0.153      1.78         0.22   
+     10      0.104      1.79         0.22   1.7% ↓
+     11      0.112      1.78         0.22   0.7% ↓
+     12      0.121      1.78         0.22   0.2% ↓
+     13      0.129      1.78         0.22   
+     14      0.137      1.78         0.22   
+     15      0.152      1.78         0.22   
   done · converged · 15 iters · reduced χ² 0.22 · Rwp 1.78 % · 0.16 s
 
   refined parameters (36 free):
@@ -426,9 +438,9 @@ edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 36 free
   intensity       experiment.background[8].intensity                      442.6        438.8       1.4   0.9% ↓
   2θ offset, deg  experiment.instrument.calib_twotheta_offset          -6.70e-4     -6.54e-4   0.68e-4   2.4% ↑
   scale           experiment.linked_structures[lam7o3].scale            3.60e-6    3.6699e-6 0.0064e-6   1.8% ↑
-  U, deg²         experiment.peak.broad_gauss_u                           0.067       0.0603    0.0086   9.9% ↓
-  V, deg²         experiment.peak.broad_gauss_v                         -0.0098      -0.0087    0.0012   11.6% ↑
-  W, deg²         experiment.peak.broad_gauss_w                        0.001259     0.001237  0.000032   1.8% ↓
+  U, deg²         experiment.peak.broad_gauss_u                           0.067       0.0603    0.0086 ! 9.9% ↓
+  V, deg²         experiment.peak.broad_gauss_v                         -0.0098      -0.0087    0.0012 ! 11.6% ↑
+  W, deg²         experiment.peak.broad_gauss_w                        0.001259     0.001237  0.000032 ! 1.8% ↓
   X, deg          experiment.peak.broad_lorentz_x                        0.1737       0.1720    0.0025   1.0% ↓
   x               structure.atom_sites[La].fract_x                      0.48000     0.476610  0.000085   0.7% ↓
   z               structure.atom_sites[La].fract_z                      0.00000      0.00569   0.00023   
@@ -442,9 +454,13 @@ edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 36 free
   c, Å            structure.cell.length_c                                5.4904      5.49028   0.00012   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiment.peak.broad_gauss_u: strongly correlated with V (p021) (r = -0.96)
+      experiment.peak.broad_gauss_v: strongly correlated with W (p021) (r = -0.98)
+      experiment.peak.broad_gauss_w: strongly correlated with V (p021) (r = -0.98)
 ```
 
 ## Displacements
@@ -476,22 +492,22 @@ The same for every other row (1 more).
 edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 39 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         1.78         0.22
-      1      0.025      1.70         0.20   8.0% ↓
-      2      0.034      1.69         0.20   2.2% ↓
-      3      0.044      1.68         0.20   0.4% ↓
-      4      0.053      1.68         0.19   0.3% ↓
-      5      0.062      1.68         0.19   0.2% ↓
-      6      0.072      1.68         0.19   0.2% ↓
-      7      0.081      1.67         0.19   0.5% ↓
-      8      0.090      1.66         0.19   1.0% ↓
-      9      0.100      1.65         0.19   1.3% ↓
-     10      0.109      1.65         0.19   0.8% ↓
-     11      0.118      1.64         0.19   0.2% ↓
-     12      0.128      1.64         0.19   
-     13      0.137      1.64         0.19   
-     14      0.147      1.64         0.19   
-     15      0.163      1.64         0.19   
-  done · converged · 15 iters · reduced χ² 0.19 · Rwp 1.64 % · 0.17 s
+      1      0.026      1.70         0.20   8.0% ↓
+      2      0.036      1.69         0.20   2.2% ↓
+      3      0.046      1.68         0.20   0.4% ↓
+      4      0.056      1.68         0.19   0.3% ↓
+      5      0.066      1.68         0.19   0.2% ↓
+      6      0.075      1.68         0.19   0.2% ↓
+      7      0.085      1.67         0.19   0.5% ↓
+      8      0.095      1.66         0.19   1.0% ↓
+      9      0.106      1.65         0.19   1.3% ↓
+     10      0.116      1.65         0.19   0.8% ↓
+     11      0.125      1.64         0.19   0.2% ↓
+     12      0.135      1.64         0.19   
+     13      0.145      1.64         0.19   
+     14      0.154      1.64         0.19   
+     15      0.171      1.64         0.19   
+  done · converged · 15 iters · reduced χ² 0.19 · Rwp 1.64 % · 0.18 s
 
   refined parameters (39 free):
   name            parameter                                               start        value      s.u.   change
@@ -517,9 +533,9 @@ edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 39 free
   intensity       experiment.background[8].intensity                      438.8        439.7       1.3   0.2% ↑
   2θ offset, deg  experiment.instrument.calib_twotheta_offset          -6.54e-4     -6.96e-4   0.63e-4   6.4% ↓
   scale           experiment.linked_structures[lam7o3].scale            3.67e-6    3.6857e-6 0.0070e-6   0.4% ↑
-  U, deg²         experiment.peak.broad_gauss_u                          0.0603       0.0483    0.0081   19.9% ↓
-  V, deg²         experiment.peak.broad_gauss_v                         -0.0087      -0.0073    0.0011   15.9% ↑
-  W, deg²         experiment.peak.broad_gauss_w                        0.001237     0.001216  0.000029   1.7% ↓
+  U, deg²         experiment.peak.broad_gauss_u                          0.0603       0.0483    0.0081 ! 19.9% ↓
+  V, deg²         experiment.peak.broad_gauss_v                         -0.0087      -0.0073    0.0011 ! 15.9% ↑
+  W, deg²         experiment.peak.broad_gauss_w                        0.001237     0.001216  0.000029 ! 1.7% ↓
   X, deg          experiment.peak.broad_lorentz_x                         0.172       0.1667    0.0024   3.1% ↓
   B iso, Å²       structure.atom_sites[La].adp_iso                        0.500        0.606     0.010   21.1% ↑
   x               structure.atom_sites[La].fract_x                      0.47661     0.476785  0.000084   
@@ -536,9 +552,13 @@ edi fit: project pd-xray-cwl_lam7o3-p021, 1236 pts fitted / 1459 loaded, 39 free
   c, Å            structure.cell.length_c                                5.4903      5.49022   0.00011   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiment.peak.broad_gauss_u: strongly correlated with V (p021) (r = -0.96)
+      experiment.peak.broad_gauss_v: strongly correlated with W (p021) (r = -0.98)
+      experiment.peak.broad_gauss_w: strongly correlated with V (p021) (r = -0.98)
 ```
 
 ## Report

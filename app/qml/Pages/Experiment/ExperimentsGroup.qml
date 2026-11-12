@@ -57,7 +57,7 @@ SideBarGroup {
         DataTable {
             id: table
             objectName: "experiments.list"
-            defaultInfoText: qsTr("No experiments defined")
+            defaultInfoText: qsTr("No experiments")
             sourceModel: group.project ? group.project.experiments : null
             marksCurrentRow: true
             currentRow: group.project ? group.project.currentExperimentIndex : -1

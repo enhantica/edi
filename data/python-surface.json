@@ -244,6 +244,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "stop_rules": {
+     "need": {
+      "by": "deviation",
+      "ref": "D95",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "template_file": {
      "need": {
       "by": "deviation",
@@ -2730,6 +2739,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "last_shift_su": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "reduced_chi_square": {
      "need": {
       "by": "deviation",
@@ -2758,6 +2776,24 @@
      "verdict": "public"
     },
     "status": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "stopping_rule": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "stopping_value": {
      "need": {
       "by": "deviation",
       "ref": "D47",
@@ -3132,6 +3168,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "last_shift_su": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "reduced_chi_square": {
      "need": {
       "by": "counterpart",
@@ -3160,6 +3205,24 @@
      "verdict": "public"
     },
     "status": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "stopping_rule": {
+     "need": {
+      "by": "deviation",
+      "ref": "D47",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "stopping_value": {
      "need": {
       "by": "deviation",
       "ref": "D47",
@@ -4850,6 +4913,15 @@
      "need": {
       "by": "counterpart",
       "ref": "Project.save_as",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "stop_rules": {
+     "need": {
+      "by": "deviation",
+      "ref": "D95",
       "verdict": "keep"
      },
      "reason": "C",
@@ -7433,7 +7505,7 @@
    }
   }
  },
- "directionality": "crysta-py ⊆ edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration — crysta cannot add a public name without edi following",
+ "directionality": "crysta-py \u2286 edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration \u2014 crysta cannot add a public name without edi following",
  "public": {
   "AbsorptionBase": {
    "kind": "class",
@@ -7484,6 +7556,7 @@
     "descent",
     "fit",
     "fitting_mode",
+    "stop_rules",
     "template_file"
    ]
   },
@@ -7928,10 +8001,13 @@
     "correlations",
     "fitting_time",
     "iterations",
+    "last_shift_su",
     "reduced_chi_square",
     "result_kind",
     "rwp",
     "status",
+    "stopping_rule",
+    "stopping_value",
     "success",
     "uncertainty",
     "values"
@@ -8012,10 +8088,13 @@
     "correlations",
     "fitting_time",
     "iterations",
+    "last_shift_su",
     "reduced_chi_square",
     "result_kind",
     "rwp",
     "status",
+    "stopping_rule",
+    "stopping_value",
     "success",
     "uncertainty",
     "values"
@@ -8300,6 +8379,7 @@
     "report",
     "save",
     "save_as",
+    "stop_rules",
     "structure",
     "structures",
     "su_rule"

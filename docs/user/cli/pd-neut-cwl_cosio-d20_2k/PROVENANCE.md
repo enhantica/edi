@@ -60,3 +60,11 @@ param.Co.j2_coefficient.value 0.5896782533 → 0.5867252778. No `reference` valu
 merged tree (crysta `f4620764`), with `python -m edi fit --report machine` and the Python API for the j2 weight:
 reduced_chi_square 6.245620875 → 6.245620606; iterations 23 → 14; param.Co.j2_coefficient.value 0.5867252778 →
 0.5867186461. No `reference` value moved.
+
+**Re-measured 2026-11-11** after the tutorial moved to five stages from everything fixed (scale, 2θ zero, cell,
+moments and j2; background; displacements and positions; peak widths; asymmetry). The finished fit now also frees the
+isotropic displacements of Co1, Si, O1, O2 and O3 (Co2's follows Co1's by the constraint), so the project marks them
+with `()`. Measured on crysta `965dba82` with `python -m edi fit --report machine`, `OMP_NUM_THREADS=4`, and the Python
+API for the j2 weight: n_free 42 → 47 (the `reference` count moves with the freed displacements); reduced_chi_square
+6.245620606 → 6.24919781, a different minimum 0.06 % higher; iterations 14 → 20; param.Co.j2_coefficient.value
+0.5867186461 → 0.6094163294.

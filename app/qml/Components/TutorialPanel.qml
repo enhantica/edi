@@ -41,6 +41,8 @@ Popup {
     property var download: null
     // Whether the step's state already held when it showed: such a step only explains and waits for Next.
     property bool heldAtStart: true
+    // "N<tab>check" for each step that already held when the tutorial came to it (the replay's no-op check).
+    property var doneOnArrival: []
     // Reached by going on (Next, or a step done by itself), not by Back or the start.
     property bool arrivedForward: false
     // Whether the following step's state already held when this step showed: done before, not done ahead now.
@@ -154,6 +156,17 @@ Popup {
         panel.backgroundEstimates = 0;
         panel.loadedEntries = [];
         AppState.tutorialRunning = true;
+        // Each tutorial starts Examples clean, without an earlier tutorial's search: the catalogue itself, so it holds
+        // whether or not the Examples group is built yet.
+        if (Session.examples) {
+            Session.examples.searchText = "";
+            Session.examples.clearFacets();
+        }
+        // The field too, where it exists: typing into it ends its binding to the catalogue's text.
+        const window = Overlay.overlay ? Overlay.overlay.Window.window : null;
+        const searchField = window ? ItemLocator.findAnywhere(window, "examples.search") as TextInput : null;
+        if (searchField !== null)
+            searchField.text = "";
         panel.open();
         panel.show();
     }
@@ -179,11 +192,25 @@ Popup {
     // once goes on at once; one that takes time (a fit, a folder to choose) goes on by itself once it is done.
     function next() {
         if (panel.current && !panel.holds(panel.current.check)) {
+            // An action Next does waits until the project takes edits: one asked while the last edit or fit is still
+            // being published is refused with a message (a scan's Free · all after its fit).
+            if (Session.project && !Session.project.readyForEdit() && readyAgain.tries < 40) {
+                ++readyAgain.tries;
+                readyAgain.restart();
+                return;
+            }
+            readyAgain.tries = 0;
             panel.perform(panel.current.check);
             if (!panel.holds(panel.current.check)) {
                 RunLog.note(`tutorial ${panel.tutorial.id}: step ${panel.step + 1} waits for ${panel.current.check} (fits ${panel.fitsDone - panel.fitsAtStep}, results shown ${AppState.fitResultsShown - panel.resultsAtStep}, results open ${AppState.fitResultsOpen}${panel.groupState()})`);
                 return;
             }
+        } else if (panel.current && (panel.current.check ?? "").startsWith("free-choice")) {
+            // A Free · all (Fixed · all) already in effect: the menu closes as the choice would have closed it.
+            const header = panel.locate("parameters.freeHeader");
+            const menu = header !== null ? header.menu as FreeHeaderMenu : null;
+            if (menu !== null && menu.visible)
+                menu.close();
         }
         if (panel.step + 1 < panel.steps.length) {
             ++panel.step;
@@ -222,8 +249,9 @@ Popup {
         return null;
     }
     // `text` without Markdown's emphasis and code markers.
+    // Bold and code markers dropped; underscores stay, as in names such as wish_1_10.
     function plain(text) {
-        return String(text).replace(/(\*\*|__|\*|_|`)(.+?)\1/g, "$2");
+        return String(text).replace(/(\*\*|`)(.+?)\1/g, "$2");
     }
     // Whether the open From web… dialog has searched EasyDiffraction's collection for `entry` as `kind` and shows it
     // first: remembered results of another search, source or kind never count.
@@ -476,6 +504,16 @@ Popup {
                     menu.apply(true);
                 return;
             }
+        case "tick":
+        case "untick":
+            {
+                // "experiment.instrument.calib_twotheta_offset": one parameter's Free box ticked or cleared in
+                // its own row, as a person sets a single parameter.
+                const found = panel.parameterNamed(argument);
+                if (found !== null && Session.project)
+                    Session.project.setParametersFree([found], name === "tick");
+                return;
+            }
         case "results-closed":
             panel.closeResults();
             return;
@@ -532,8 +570,10 @@ Popup {
                 return;
             }
             // A fit asked for while the project still recalculates is refused; it is asked again until it runs.
+            // Pressed only once the project takes it: an edit still being published would refuse it with a message.
             if (project !== null && !project.fit.running) {
-                project.fit.start();
+                if (project.readyForEdit())
+                    project.fit.start();
                 if (!project.fit.running) {
                     fitAgain.tries = 0;
                     fitAgain.start();
@@ -669,7 +709,10 @@ Popup {
                 const equals = argument.indexOf("=");
                 const name = argument.slice(0, equals);
                 const button = panel.locate(name) as T.AbstractButton;
-                if (button !== null && button.enabled && panel.rowCount(name) < Number(argument.slice(equals + 1)))
+                // Pressed only while its list is seen to hold fewer rows: a list not found counts -1, and pressing
+                // then would append a row on every Next.
+                const count = panel.rowCount(name);
+                if (button !== null && button.enabled && count >= 0 && count < Number(argument.slice(equals + 1)))
                     button.click();
                 return;
             }
@@ -926,6 +969,12 @@ Popup {
         case "fitted":
             // Fitted, and its results read and closed.
             return panel.fitsDone > panel.fitsAtStep && (!Preferences.showFitResults || AppState.fitResultsShown > panel.resultsAtStep) && panel.resultsClosed();
+        case "tick":
+        case "untick":
+            {
+                const found = panel.parameterNamed(argument);
+                return found !== null && found.free === (name === "tick");
+            }
         case "results-closed":
             return panel.resultsClosed();
         case "selected":
@@ -1031,7 +1080,8 @@ Popup {
             {
                 const header = panel.locate("parameters.freeHeader");
                 const menu = header !== null ? header.menu as FreeHeaderMenu : null;
-                return menu !== null && menu.visible;
+                // Open, not still fading out after a close.
+                return menu !== null && menu.opened;
             }
         case "free-choice":
             return panel.holds("group:" + argument);
@@ -1205,6 +1255,60 @@ Popup {
         return d;
     }
 
+    // A menu an earlier step opened closes when the tutorial moves on (Next, a click that completes the step, or
+    // Back), unless the step now shown chooses in it.
+    function closeLeftMenus() {
+        const check = panel.current ? panel.current.check ?? "" : "";
+        const header = panel.locate("parameters.freeHeader");
+        const menu = header !== null ? header.menu : null;
+        if (menu && menu.visible && !check.startsWith("free-choice"))
+            menu.close();
+        if (check.startsWith("web-dialog") || check.startsWith("menu-closed"))
+            return;
+        for (const name of Object.values(panel.webEntries)) {
+            const entry = panel.locate(name);
+            if (entry !== null && entry.visible && entry.menu)
+                entry.menu.close();
+        }
+    }
+    // A stage that fits one experiment among several shows that experiment in the main view from its first step: the
+    // experiment its fit frees beyond the fit before it (a 300 K, then a 55 K, then a 2.5 K lesson).
+    function showFittedExperiment() {
+        const project = Session.project;
+        if (!project || !panel.steps || project.experiments.count < 2)
+            return;
+        // A fit's results stay with the experiment just fitted; the next stage switches when it begins.
+        if (panel.current && ["results-closed", "fitted"].includes(panel.current.check))
+            return;
+        const named = paths => new Set((paths ?? []).map(path => (/^experiments\[([^\]]+)\]/.exec(path) ?? [])[1]).filter(name => name));
+        let fit = -1;
+        for (let at = panel.step; at < panel.steps.length && fit < 0; ++at)
+            if (panel.steps[at].check === "fit-done")
+                fit = at;
+        if (fit < 0)
+            return;
+        let before = new Set();
+        for (let at = fit - 1; at >= 0; --at) {
+            if (panel.steps[at].check === "fit-done") {
+                before = new Set(panel.steps[at].expectFree ?? []);
+                break;
+            }
+        }
+        const added = (panel.steps[fit].expectFree ?? []).filter(path => !before.has(path));
+        let names = named(added);
+        if (names.size !== 1)
+            names = named(panel.steps[fit].expectFree);
+        if (names.size !== 1)
+            return;
+        const name = [...names][0];
+        for (let row = 0; row < project.experiments.count; ++row) {
+            if (project.experiments.text(row, "name") === name) {
+                if (project.currentExperimentIndex !== row)
+                    project.currentExperimentIndex = row;
+                return;
+            }
+        }
+    }
     function back() {
         if (panel.step > 0) {
             --panel.step;
@@ -1213,6 +1317,8 @@ Popup {
     }
     // Opens the step's page, then reveals its control and places the callout once the page is laid out.
     function show() {
+        panel.closeLeftMenus();
+        panel.showFittedExperiment();
         panel.revealTries = 0;
         // What the step counts from, read as it becomes the step: Next may be pressed before its callout has faded in.
         panel.fitsAtStep = panel.fitsDone;
@@ -1224,6 +1330,12 @@ Popup {
         // (Back to a done step stays there), unless it was done ahead: read now, before the fade gives the timer a
         // chance.
         const holdsNow = panel.current ? panel.holds(panel.current.check) : false;
+        // A step already done when the tutorial reaches it asks for nothing; the replay reports these.
+        if (panel.step === 0)
+            panel.doneOnArrival = [];
+        // Fixing the whole table first is a precaution: a project loaded without free marks already holds it.
+        if (holdsNow && panel.arrivedForward && panel.current.check && panel.current.check !== "free-choice:fixed:All categories")
+            panel.doneOnArrival = panel.doneOnArrival.concat([`${panel.step + 1}\t${panel.current.check}`]);
         panel.doneAhead = holdsNow && panel.arrivedForward && !panel.followingHeld;
         panel.heldAtStart = holdsNow && !panel.doneAhead;
         const following = panel.steps[panel.step + 1];
@@ -1257,7 +1369,10 @@ Popup {
                     panel.arrivedForward = true;
                     panel.show();
                 } else {
-                    panel.back();
+                    // Its popup closed before the step was done (the status bar's Next closes a menu): stay on the
+                    // step and show it again, so Next does it, as it reopens the menu first. Never back to an
+                    // earlier step: Next alone must only go forward (the owner, 2026-11-11).
+                    panel.show();
                 }
                 return;
             }
@@ -1363,10 +1478,9 @@ Popup {
         if (name.includes("@")) {
             const parameter = panel.parameterNamed(panel.dotted(name.split("@")[1]));
             const table = ItemLocator.findAnywhere(window, "parameters.list");
-            const source = Session.project ? Session.project.parameters : null;
-            if (table === null || parameter === null || source === null || !table.model || table.model.mapFromSource === undefined)
+            if (table === null || parameter === null || !table.model || table.model.rowOf === undefined)
                 return false;
-            const row = table.model.mapFromSource(source.index(source.rowOf(parameter), 0)).row;
+            const row = table.model.rowOf(parameter);
             return row >= 0 && table.revealRow !== undefined && table.revealRow(row);
         }
         const match = /^(\w+)\.\w+\.(\d+)$/.exec(name);
@@ -1603,14 +1717,19 @@ Popup {
             // previous tab's place, emptied, on screen under the new tab's name.
             if (flickable.contentHeight <= flickable.height)
                 continue;
+            // A list's header stays over its first rows: a row is shown below it, and a list starts above zero.
+            const list = flickable instanceof ListView ? flickable as ListView : null;
+            const covered = list && list.headerItem && list.headerPositioning !== ListView.InlineHeader ? list.headerItem.height : 0;
+            const edge = list ? 0 : margin;
             const rect = item.mapToItem(flickable.contentItem, 0, 0, item.width, item.height);
             const top = flickable.contentY;
             let wanted = top;
             if (rect.y + rect.height > top + flickable.height)
-                wanted = rect.y + rect.height - flickable.height + margin;
-            if (rect.y < wanted)
-                wanted = rect.y - margin;
-            const clamped = Math.max(0, Math.min(Math.max(0, flickable.contentHeight - flickable.height), wanted));
+                wanted = rect.y + rect.height - flickable.height + edge;
+            if (rect.y - covered < wanted)
+                wanted = rect.y - covered - edge;
+            const lowest = flickable.originY;
+            const clamped = Math.max(lowest, Math.min(Math.max(lowest, lowest + flickable.contentHeight - flickable.height), wanted));
             if (clamped !== flickable.contentY) {
                 flickable.contentY = clamped;
                 moved = true;
@@ -1995,6 +2114,15 @@ Popup {
         onTriggered: panel.reveal()
     }
     // Unfolding a group animates its height; the control is scrolled to again once it has its place.
+    // Next asked again once the project takes edits: up to ten seconds.
+    Timer {
+        id: readyAgain
+
+        property int tries: 0
+
+        interval: 250
+        onTriggered: panel.next()
+    }
     // Next's fit, asked again while the project recalculates: up to a minute, while the step still wants it.
     Timer {
         id: fitAgain
@@ -2009,7 +2137,8 @@ Popup {
                 stop();
                 return;
             }
-            fit.start();
+            if (Session.project.readyForEdit())
+                fit.start();
         }
     }
     Timer {
@@ -2199,31 +2328,6 @@ Popup {
                 return `${back} ${keep}${unsaved}`;
             }
         }
-        // The two buttons on one line within the callout, each as wide as its label.
-        Row {
-            objectName: "tutorial.endChoices"
-            visible: panel.atEnd && panel.offersKeep
-            anchors.right: parent.right
-            spacing: EaStyle.Sizes.fontPixelSize
-
-            EaElements.Button {
-                objectName: "tutorial.discard"
-                text: qsTr("Close tutorial")
-                onClicked: panel.stop()
-            }
-            EaElements.Button {
-                objectName: "tutorial.keep"
-                highlighted: true
-                text: qsTr("Keep working")
-                // The tutorial's project stays open as the user's, unsaved until they save it.
-                onClicked: {
-                    RunLog.note("tutorial finished, its project kept");
-                    Session.dropProjectSetAside();
-                    panel.temporary = false;
-                    panel.close();
-                }
-            }
-        }
         // The actions at the bottom right: Stop, Back and Next as the status bar's strip has them (TutorialControls), Next
         // off on the last step, where the end choices stand in for Stop. The arrow keys
         // step back and on and Escape stops, while no text field, list or other control that takes those keys has the
@@ -2259,6 +2363,30 @@ Popup {
                 anchors.right: parent.right
                 spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
+                // The last step's two ways on, left of the arrows on their row, each an icon with a short label (owner
+                // record 2026-11-11, item 8).
+                IconLink {
+                    objectName: "tutorial.discard"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: panel.atEnd && panel.offersKeep
+                    fontIcon: "times-circle"
+                    text: qsTr("Close tutorial")
+                    onClicked: panel.stop()
+                }
+                IconLink {
+                    objectName: "tutorial.keep"
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: panel.atEnd && panel.offersKeep
+                    fontIcon: "check-circle"
+                    text: qsTr("Keep working")
+                    // The tutorial's project stays open as the user's, unsaved until they save it.
+                    onClicked: {
+                        RunLog.note("tutorial finished, its project kept");
+                        Session.dropProjectSetAside();
+                        panel.temporary = false;
+                        panel.close();
+                    }
+                }
                 TutorialControls {
                     id: calloutControls
 

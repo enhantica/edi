@@ -88,11 +88,9 @@ austenite 100() 0.5021971485003485()
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 4 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        41.44       229.84
-      1      0.028     23.98        76.98   66.5% ↓
-      2      0.045     23.84        76.05   1.2% ↓
-      3      0.062     23.83        76.04   
-      4      0.085     23.83        76.04   
-  done · converged · 4 iters · reduced χ² 76.04 · Rwp 23.83 % · 0.11 s
+      1      0.145     23.83        76.04   66.9% ↓
+      2      0.164     23.83        76.04   
+  done · converged · 2 iters · reduced χ² 76.04 · Rwp 23.83 % · 0.18 s
 
   per-bank Rwp (%):   expt_n2 24.49   expt_s2 23.16
 
@@ -104,8 +102,8 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   scale           experiments[expt_s2].linked_structures[ferrite].scale             400        301.6       1.6   24.6% ↓
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -147,9 +145,8 @@ The same for every other row (28 more).
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 64 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        23.83        76.86
-      1      0.322     18.05        44.10   42.6% ↓
-      2      0.642     18.05        44.10   
-  done · converged · 2 iters · reduced χ² 44.10 · Rwp 18.05 % · 0.69 s
+      1      0.705     18.05        44.10   42.6% ↓
+  done · converged · 1 iters · reduced χ² 44.10 · Rwp 18.05 % · 0.75 s
 
   per-bank Rwp (%):   expt_n2 17.91   expt_s2 18.20
 
@@ -176,12 +173,12 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_n2].background[27].intensity                    0.19        1.277     0.097   572.1% ↑
   intensity       experiments[expt_n2].background[28].intensity                    0.19        1.155     0.089   508.1% ↑
   intensity       experiments[expt_n2].background[29].intensity                    0.19        1.040     0.072   447.4% ↑
-  intensity       experiments[expt_n2].background[2].intensity                     0.19         0.13      0.16   33.7% ↓
+  intensity       experiments[expt_n2].background[2].intensity                     0.19         0.13      0.16 ! 33.7% ↓
   intensity       experiments[expt_n2].background[30].intensity                    0.19        0.645     0.033   239.3% ↑
-  intensity       experiments[expt_n2].background[3].intensity                     0.19         0.09      0.18   50.8% ↓
+  intensity       experiments[expt_n2].background[3].intensity                     0.19         0.09      0.18 ! 50.8% ↓
   intensity       experiments[expt_n2].background[4].intensity                     0.19        0.181     0.096   4.8% ↓
   intensity       experiments[expt_n2].background[5].intensity                     0.19        0.186     0.076   1.9% ↓
-  intensity       experiments[expt_n2].background[6].intensity                     0.19        0.060     0.084   68.3% ↓
+  intensity       experiments[expt_n2].background[6].intensity                     0.19        0.060     0.084 ! 68.3% ↓
   intensity       experiments[expt_n2].background[7].intensity                     0.19        0.147     0.041   22.5% ↓
   intensity       experiments[expt_n2].background[8].intensity                     0.19        0.214     0.036   12.7% ↑
   intensity       experiments[expt_n2].background[9].intensity                     0.19        0.195     0.028   2.6% ↑
@@ -196,7 +193,7 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_s2].background[17].intensity                    0.18        0.257     0.027   43.0% ↑
   intensity       experiments[expt_s2].background[18].intensity                    0.18        0.229     0.019   27.4% ↑
   intensity       experiments[expt_s2].background[19].intensity                    0.18        0.222     0.017   23.1% ↑
-  intensity       experiments[expt_s2].background[1].intensity                     0.18      -0.0024      0.13   101.3% ↓
+  intensity       experiments[expt_s2].background[1].intensity                     0.18      -0.0024      0.13 ! 101.3% ↓
   intensity       experiments[expt_s2].background[20].intensity                    0.18        0.172     0.011   4.6% ↓
   intensity       experiments[expt_s2].background[21].intensity                    0.18        0.239     0.012   32.5% ↑
   intensity       experiments[expt_s2].background[22].intensity                    0.18        0.486     0.041   170.1% ↑
@@ -207,12 +204,12 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_s2].background[27].intensity                    0.18        1.284     0.098   613.4% ↑
   intensity       experiments[expt_s2].background[28].intensity                    0.18        1.219     0.092   577.1% ↑
   intensity       experiments[expt_s2].background[29].intensity                    0.18        0.987     0.069   448.4% ↑
-  intensity       experiments[expt_s2].background[2].intensity                     0.18         0.10      0.15   41.7% ↓
+  intensity       experiments[expt_s2].background[2].intensity                     0.18         0.10      0.15 ! 41.7% ↓
   intensity       experiments[expt_s2].background[30].intensity                    0.18        0.652     0.032   262.1% ↑
-  intensity       experiments[expt_s2].background[3].intensity                     0.18         0.08      0.17   53.2% ↓
+  intensity       experiments[expt_s2].background[3].intensity                     0.18         0.08      0.17 ! 53.2% ↓
   intensity       experiments[expt_s2].background[4].intensity                     0.18        0.183     0.090   1.6% ↑
   intensity       experiments[expt_s2].background[5].intensity                     0.18        0.158     0.074   12.2% ↓
-  intensity       experiments[expt_s2].background[6].intensity                     0.18        0.044     0.076   75.6% ↓
+  intensity       experiments[expt_s2].background[6].intensity                     0.18        0.044     0.076 ! 75.6% ↓
   intensity       experiments[expt_s2].background[7].intensity                     0.18        0.154     0.042   14.7% ↓
   intensity       experiments[expt_s2].background[8].intensity                     0.18        0.208     0.036   15.8% ↑
   intensity       experiments[expt_s2].background[9].intensity                     0.18        0.189     0.027   5.1% ↑
@@ -221,9 +218,17 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   scale           experiments[expt_s2].linked_structures[ferrite].scale           301.6        300.2       1.3   0.5% ↓
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiments[expt_n2].background[2].intensity: s.u. larger than the value
+      experiments[expt_n2].background[3].intensity: s.u. larger than the value
+      experiments[expt_n2].background[6].intensity: s.u. larger than the value
+      experiments[expt_s2].background[1].intensity: s.u. larger than the value
+      experiments[expt_s2].background[2].intensity: s.u. larger than the value
+      experiments[expt_s2].background[3].intensity: s.u. larger than the value
+      experiments[expt_s2].background[6].intensity: s.u. larger than the value
 ```
 
 ## Peak widths
@@ -264,10 +269,8 @@ _peak.broad_lorentz_gamma_0 5()
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 72 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        18.05        44.16
-      1      0.339     16.39        36.39   17.6% ↓
-      2      0.370     16.38        36.36   0.1% ↓
-      3      0.709     16.38        36.36   
-  done · converged · 3 iters · reduced χ² 36.36 · Rwp 16.38 % · 0.76 s
+      1      0.773     16.38        36.36   17.7% ↓
+  done · converged · 1 iters · reduced χ² 36.36 · Rwp 16.38 % · 0.82 s
 
   per-bank Rwp (%):   expt_n2 16.15   expt_s2 16.61
 
@@ -293,20 +296,20 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_n2].background[26].intensity                    1.01        0.961     0.062   4.8% ↓
   intensity       experiments[expt_n2].background[27].intensity                   1.277        1.195     0.090   6.5% ↓
   intensity       experiments[expt_n2].background[28].intensity                   1.155        1.089     0.082   5.7% ↓
-  intensity       experiments[expt_n2].background[29].intensity                    1.04        0.997     0.066   4.2% ↓
-  intensity       experiments[expt_n2].background[2].intensity                     0.13         0.13      0.14   2.6% ↓
+  intensity       experiments[expt_n2].background[29].intensity                    1.04        0.997     0.066   4.1% ↓
+  intensity       experiments[expt_n2].background[2].intensity                     0.13         0.13      0.14 ! 2.6% ↓
   intensity       experiments[expt_n2].background[30].intensity                   0.645        0.647     0.030   0.3% ↑
-  intensity       experiments[expt_n2].background[3].intensity                     0.09         0.09      0.17   2.1% ↓
+  intensity       experiments[expt_n2].background[3].intensity                     0.09         0.09      0.17 ! 2.1% ↓
   intensity       experiments[expt_n2].background[4].intensity                    0.181        0.179     0.087   1.2% ↓
   intensity       experiments[expt_n2].background[5].intensity                    0.186        0.183     0.069   1.8% ↓
-  intensity       experiments[expt_n2].background[6].intensity                     0.06        0.046     0.077   22.6% ↓
-  intensity       experiments[expt_n2].background[7].intensity                    0.147        0.147     0.038   0.2% ↑
+  intensity       experiments[expt_n2].background[6].intensity                     0.06        0.046     0.077 ! 22.6% ↓
+  intensity       experiments[expt_n2].background[7].intensity                    0.147        0.147     0.038   0.3% ↑
   intensity       experiments[expt_n2].background[8].intensity                    0.214        0.206     0.033   3.9% ↓
   intensity       experiments[expt_n2].background[9].intensity                    0.195        0.191     0.026   1.8% ↓
   TOF offset, µs  experiments[expt_n2].instrument.calib_d_to_tof_offset           -1.95        -2.17      0.26   11.1% ↓
   σ₀², µs²        experiments[expt_n2].peak.broad_gauss_sigma_0                     900          281        95   68.8% ↓
-  σ₁², µs²/Å²     experiments[expt_n2].peak.broad_gauss_sigma_1                  1.00e3      1.860e3   0.110e3   86.0% ↑
-  σ₂², µs²/Å⁴     experiments[expt_n2].peak.broad_gauss_sigma_2                     300          203        24   32.4% ↓
+  σ₁², µs²/Å²     experiments[expt_n2].peak.broad_gauss_sigma_1                  1.00e3      1.860e3   0.110e3 ! 86.0% ↑
+  σ₂², µs²/Å⁴     experiments[expt_n2].peak.broad_gauss_sigma_2                     300          203        24 ! 32.4% ↓
   γ₀, µs          experiments[expt_n2].peak.broad_lorentz_gamma_0                     5         5.86      0.44   17.3% ↑
   intensity       experiments[expt_s2].background[10].intensity                   0.204        0.206     0.026   1.0% ↑
   intensity       experiments[expt_s2].background[11].intensity                   0.175        0.135     0.061   22.6% ↓
@@ -318,7 +321,7 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_s2].background[17].intensity                   0.257        0.242     0.025   5.9% ↓
   intensity       experiments[expt_s2].background[18].intensity                   0.229        0.229     0.017   0.1% ↓
   intensity       experiments[expt_s2].background[19].intensity                   0.222        0.214     0.016   3.8% ↓
-  intensity       experiments[expt_s2].background[1].intensity                  -0.0024      -0.0044      0.12   84.1% ↓
+  intensity       experiments[expt_s2].background[1].intensity                  -0.0024      -0.0044      0.12 ! 84.0% ↓
   intensity       experiments[expt_s2].background[20].intensity                   0.172       0.1671    0.0095   2.9% ↓
   intensity       experiments[expt_s2].background[21].intensity                   0.239        0.242     0.011   1.1% ↑
   intensity       experiments[expt_s2].background[22].intensity                   0.486        0.432     0.038   11.1% ↓
@@ -329,12 +332,12 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_s2].background[27].intensity                   1.284        1.200     0.091   6.6% ↓
   intensity       experiments[expt_s2].background[28].intensity                   1.219        1.152     0.085   5.5% ↓
   intensity       experiments[expt_s2].background[29].intensity                   0.987        0.947     0.063   4.1% ↓
-  intensity       experiments[expt_s2].background[2].intensity                      0.1         0.11      0.14   10.8% ↑
+  intensity       experiments[expt_s2].background[2].intensity                      0.1         0.11      0.14 ! 10.8% ↑
   intensity       experiments[expt_s2].background[30].intensity                   0.652        0.654     0.030   0.3% ↑
-  intensity       experiments[expt_s2].background[3].intensity                     0.08         0.07      0.15   11.3% ↓
+  intensity       experiments[expt_s2].background[3].intensity                     0.08         0.07      0.15 ! 11.3% ↓
   intensity       experiments[expt_s2].background[4].intensity                    0.183        0.181     0.081   0.8% ↓
   intensity       experiments[expt_s2].background[5].intensity                    0.158        0.153     0.067   2.9% ↓
-  intensity       experiments[expt_s2].background[6].intensity                    0.044        0.028     0.070   35.3% ↓
+  intensity       experiments[expt_s2].background[6].intensity                    0.044        0.029     0.070 ! 35.2% ↓
   intensity       experiments[expt_s2].background[7].intensity                    0.154        0.154     0.038   0.1% ↑
   intensity       experiments[expt_s2].background[8].intensity                    0.208        0.199     0.032   4.4% ↓
   intensity       experiments[expt_s2].background[9].intensity                    0.189        0.186     0.025   1.8% ↓
@@ -342,14 +345,26 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   scale           experiments[expt_s2].linked_structures[austenite].scale         74.03        74.57      0.24   0.7% ↑
   scale           experiments[expt_s2].linked_structures[ferrite].scale           300.2        303.1       1.2   1.0% ↑
   σ₀², µs²        experiments[expt_s2].peak.broad_gauss_sigma_0                     900          276        94   69.3% ↓
-  σ₁², µs²/Å²     experiments[expt_s2].peak.broad_gauss_sigma_1                  1.00e3      1.880e3   0.110e3   87.9% ↑
-  σ₂², µs²/Å⁴     experiments[expt_s2].peak.broad_gauss_sigma_2                     300          192        23   36.1% ↓
+  σ₁², µs²/Å²     experiments[expt_s2].peak.broad_gauss_sigma_1                  1.00e3      1.880e3   0.110e3 ! 87.9% ↑
+  σ₂², µs²/Å⁴     experiments[expt_s2].peak.broad_gauss_sigma_2                     300          192        23 ! 36.1% ↓
   γ₀, µs          experiments[expt_s2].peak.broad_lorentz_gamma_0                     5         5.91      0.44   18.1% ↑
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiments[expt_n2].background[2].intensity: s.u. larger than the value
+      experiments[expt_n2].background[3].intensity: s.u. larger than the value
+      experiments[expt_n2].background[6].intensity: s.u. larger than the value
+      experiments[expt_n2].peak.broad_gauss_sigma_1: strongly correlated with σ₂² (expt_n2) (r = -0.97)
+      experiments[expt_n2].peak.broad_gauss_sigma_2: strongly correlated with σ₁² (expt_n2) (r = -0.97)
+      experiments[expt_s2].background[1].intensity: s.u. larger than the value
+      experiments[expt_s2].background[2].intensity: s.u. larger than the value
+      experiments[expt_s2].background[3].intensity: s.u. larger than the value
+      experiments[expt_s2].background[6].intensity: s.u. larger than the value
+      experiments[expt_s2].peak.broad_gauss_sigma_1: strongly correlated with σ₂² (expt_s2) (r = -0.97)
+      experiments[expt_s2].peak.broad_gauss_sigma_2: strongly correlated with σ₁² (expt_s2) (r = -0.97)
 ```
 
 ## Displacement
@@ -378,12 +393,9 @@ Fe Fe 0 0 0 a 2 1 0.5() Biso
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 73 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        16.38        36.36
-      1      0.354      7.73         8.10   77.7% ↓
-      2      0.398      7.14         6.91   14.7% ↓
-      3      0.433      7.13         6.89   0.3% ↓
-      4      0.469      7.13         6.89   
-      5      0.808      7.13         6.89   
-  done · converged · 5 iters · reduced χ² 6.89 · Rwp 7.13 % · 0.86 s
+      1      0.558      7.13         6.89   81.0% ↓
+      2      0.866      7.13         6.89   
+  done · converged · 2 iters · reduced χ² 6.89 · Rwp 7.13 % · 0.91 s
 
   per-bank Rwp (%):   expt_n2 7.06   expt_s2 7.20
 
@@ -421,8 +433,8 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_n2].background[9].intensity                    0.191        0.205     0.011   7.3% ↑
   TOF offset, µs  experiments[expt_n2].instrument.calib_d_to_tof_offset           -2.17        -2.11      0.13   2.9% ↑
   σ₀², µs²        experiments[expt_n2].peak.broad_gauss_sigma_0                     281          914        60   225.4% ↑
-  σ₁², µs²/Å²     experiments[expt_n2].peak.broad_gauss_sigma_1                  1.86e3      1.247e3   0.060e3   33.0% ↓
-  σ₂², µs²/Å⁴     experiments[expt_n2].peak.broad_gauss_sigma_2                     203          325        12   60.2% ↑
+  σ₁², µs²/Å²     experiments[expt_n2].peak.broad_gauss_sigma_1                  1.86e3      1.247e3   0.060e3 ! 33.0% ↓
+  σ₂², µs²/Å⁴     experiments[expt_n2].peak.broad_gauss_sigma_2                     203          325        12 ! 60.3% ↑
   γ₀, µs          experiments[expt_n2].peak.broad_lorentz_gamma_0                  5.86         4.98      0.21   15.1% ↓
   intensity       experiments[expt_s2].background[10].intensity                   0.206        0.198     0.012   3.6% ↓
   intensity       experiments[expt_s2].background[11].intensity                   0.135        0.228     0.027   68.7% ↑
@@ -434,7 +446,7 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_s2].background[17].intensity                   0.242        0.259     0.011   6.9% ↑
   intensity       experiments[expt_s2].background[18].intensity                   0.229       0.2329    0.0074   1.7% ↑
   intensity       experiments[expt_s2].background[19].intensity                   0.214       0.2163    0.0067   1.1% ↑
-  intensity       experiments[expt_s2].background[1].intensity                  -0.0044        0.017     0.051   489.2% ↑
+  intensity       experiments[expt_s2].background[1].intensity                  -0.0044        0.017     0.051 ! 489.2% ↑
   intensity       experiments[expt_s2].background[20].intensity                  0.1671       0.1695    0.0042   1.4% ↑
   intensity       experiments[expt_s2].background[21].intensity                   0.242       0.2405    0.0046   0.6% ↓
   intensity       experiments[expt_s2].background[22].intensity                   0.432        0.435     0.017   0.7% ↑
@@ -450,7 +462,7 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_s2].background[3].intensity                     0.07        0.185     0.066   164.1% ↑
   intensity       experiments[expt_s2].background[4].intensity                    0.181        0.198     0.036   9.5% ↑
   intensity       experiments[expt_s2].background[5].intensity                    0.153        0.191     0.029   24.6% ↑
-  intensity       experiments[expt_s2].background[6].intensity                    0.028        0.215     0.030   668.2% ↑
+  intensity       experiments[expt_s2].background[6].intensity                    0.029        0.215     0.030   641.7% ↑
   intensity       experiments[expt_s2].background[7].intensity                    0.154        0.189     0.017   22.9% ↑
   intensity       experiments[expt_s2].background[8].intensity                    0.199        0.220     0.014   10.6% ↑
   intensity       experiments[expt_s2].background[9].intensity                    0.186        0.200     0.011   7.3% ↑
@@ -458,15 +470,21 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   scale           experiments[expt_s2].linked_structures[austenite].scale         74.57        95.99      0.20   28.7% ↑
   scale           experiments[expt_s2].linked_structures[ferrite].scale           303.1       402.38      0.96   32.8% ↑
   σ₀², µs²        experiments[expt_s2].peak.broad_gauss_sigma_0                     276          893        59   223.5% ↑
-  σ₁², µs²/Å²     experiments[expt_s2].peak.broad_gauss_sigma_1                  1.88e3      1.286e3   0.059e3   31.6% ↓
-  σ₂², µs²/Å⁴     experiments[expt_s2].peak.broad_gauss_sigma_2                     192          311        12   62.2% ↑
+  σ₁², µs²/Å²     experiments[expt_s2].peak.broad_gauss_sigma_1                  1.88e3      1.286e3   0.059e3 ! 31.6% ↓
+  σ₂², µs²/Å⁴     experiments[expt_s2].peak.broad_gauss_sigma_2                     192          311        12 ! 62.2% ↑
   γ₀, µs          experiments[expt_s2].peak.broad_lorentz_gamma_0                  5.91         4.99      0.21   15.6% ↓
-  B iso, Å²       structures[ferrite].atom_sites[Fe].adp_iso                      0.500       1.7153    0.0089   243.1% ↑
+  B iso, Å²       structures[ferrite].atom_sites[Fe].adp_iso                      0.500       1.7154    0.0089   243.1% ↑
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      experiments[expt_n2].peak.broad_gauss_sigma_1: strongly correlated with σ₂² (expt_n2) (r = -0.98)
+      experiments[expt_n2].peak.broad_gauss_sigma_2: strongly correlated with σ₁² (expt_n2) (r = -0.98)
+      experiments[expt_s2].background[1].intensity: s.u. larger than the value
+      experiments[expt_s2].peak.broad_gauss_sigma_1: strongly correlated with σ₂² (expt_s2) (r = -0.98)
+      experiments[expt_s2].peak.broad_gauss_sigma_2: strongly correlated with σ₁² (expt_s2) (r = -0.98)
 ```
 
 ## Report

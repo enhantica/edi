@@ -15,7 +15,7 @@ runs:
     - uses: actions/cache/restore@v4
       with:
         path: crysta-sdk-archives
-        key: crysta-sdk-${{ inputs.platform }}-${{ steps.pin.outputs.sha }}
+        key: crysta-sdk-v2-${{ inputs.platform }}-${{ steps.pin.outputs.sha }}
         fail-on-cache-miss: true
     - shell: bash
       run: echo "CRYSTA_SDK_ARCHIVES=$GITHUB_WORKSPACE/crysta-sdk-archives" >>"$GITHUB_ENV"

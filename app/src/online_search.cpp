@@ -529,10 +529,9 @@ void OnlineSearch::load(int row, QObject* project, QObject* target) {
                 return;
             }
             const Wanted next = wanted->takeFirst();
-            fetchFrom(bases, next.path, [this, generation, fields, next, files, step, folder](const QByteArray& bytes, const QString& error, bool unreachable) {
+            fetchChecked(bases, next.path, next.bytes, next.digest, next.name, [this, generation, fields, next, files, step, folder](const QByteArray& bytes, const QString& error, bool unreachable) {
                 if (generation != generation_) return;
                 QString problem = error;
-                if (problem.isEmpty()) problem = content_problem(bytes, next.bytes, next.digest, next.name);
                 QString written;
                 if (problem.isEmpty()) {
                     if (!folder->isValid()) problem = tr("No temporary folder for the download");
@@ -616,9 +615,9 @@ void OnlineSearch::loadMany(const QList<int>& rows, QObject* project, QObject* t
             return;
         }
         const Wanted next = wanted->takeFirst();
-        fetchFrom(bases, next.path, [this, generation, next, files, step, folder](const QByteArray& bytes, const QString& error, bool unreachable) {
+        fetchChecked(bases, next.path, next.bytes, next.digest, next.name, [this, generation, next, files, step, folder](const QByteArray& bytes, const QString& error, bool unreachable) {
             if (generation != generation_) return;
-            QString problem = error.isEmpty() ? content_problem(bytes, next.bytes, next.digest, next.name) : error;
+            QString problem = error;
             QString written;
             if (problem.isEmpty()) {
                 if (!folder->isValid()) problem = tr("No temporary folder for the download");
@@ -793,5 +792,44 @@ void OnlineSearch::withIndex(const QStringList& bases, const std::function<void(
 
 void OnlineSearch::fetch(const QUrl& url, Bytes done) { fetch_url(this, network_, url, std::move(done)); }
 void OnlineSearch::fetchFrom(const QStringList& bases, const QString& path, Bytes done) { fetch_from(this, network_, bases, path, std::move(done)); }
+
+// A file checked against the size and digest its index records. One that disagrees may come from a collection
+// published after the index was read: the index is read again and the file once more before the download is refused.
+void OnlineSearch::fetchChecked(const QStringList& bases, const QString& path, long long bytes, const QString& digest, const QString& name,
+                                Bytes done) {
+    fetchFrom(bases, path, [this, bases, path, bytes, digest, name, done](const QByteArray& data, const QString& error, bool unreachable) {
+        if (!error.isEmpty()) {
+            done({}, error, unreachable);
+            return;
+        }
+        const QString problem = content_problem(data, bytes, digest, name);
+        if (problem.isEmpty()) {
+            done(data, {}, false);
+            return;
+        }
+        indexes_.remove(bases.join(u'\n'));
+        withIndex(bases, [this, bases, path, name, problem, done](const edi::online::Index* index, const QString&, bool) {
+            const std::string wanted = path.toStdString();
+            const auto found = index == nullptr ? std::vector<edi::online::Entry>::const_iterator{}
+                                                : std::find_if(index->entries.cbegin(), index->entries.cend(), [&wanted](const edi::online::Entry& e) {
+                                                      return !e.files.empty() && e.files.front().path == wanted;
+                                                  });
+            if (index == nullptr || found == index->entries.cend()) {
+                done({}, problem, false);
+                return;
+            }
+            const edi::online::File file = found->files.front();
+            fetchFrom(bases, path, [file, name, done](const QByteArray& data, const QString& error, bool unreachable) {
+                if (!error.isEmpty()) {
+                    done({}, error, unreachable);
+                    return;
+                }
+                const QString again = content_problem(data, file.bytes, QString::fromStdString(file.sha256), name);
+                if (again.isEmpty()) done(data, {}, false);
+                else done({}, again, false);
+            });
+        });
+    });
+}
 
 }  // namespace edi_app

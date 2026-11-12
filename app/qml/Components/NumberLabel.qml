@@ -9,8 +9,8 @@ import edi.app
 // fit the cell it is shown in scientific notation with the same significant digits, and hovering shows it in full
 // (NumberText.fitted; the owner, 2026-10-22), so no number is cut short.
 EaComponents.ListViewLabel {
-    elide: Text.ElideRight
     id: label
+    elide: Text.ElideRight
 
     // The number as written by its rule (NumberText), before it is fitted to the cell, and the shorter form the cell
     // shows when that does not fit (its scientific notation, unless the column gives another: an s.u.'s own).
