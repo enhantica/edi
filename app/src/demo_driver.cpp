@@ -2286,7 +2286,9 @@ bool DemoDriver::perform(const QString& action) {
     }
     if (const auto tick = QRegularExpression(QStringLiteral("^(un)?tick:(.+)$")).match(action); tick.hasMatch()) {
         // One parameter's Free box set in its own row, as the built-in tutorial's step does.
-        ProjectViewModel* project = open_project(window_);
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        auto* session = engine != nullptr ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
+        ProjectViewModel* project = session != nullptr ? session->project() : nullptr;
         ParameterItem* found = nullptr;
         if (project != nullptr) {
             ParameterTableModel* table = project->parameters();
