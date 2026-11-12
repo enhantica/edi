@@ -1363,13 +1363,6 @@ QString file_sha256(const QString& path) {
     return QString::fromLatin1(hash.result().toHex());
 }
 
-// The hash a receipt recorded for a linked file (its absolute path); empty when it has none or could not read it, which
-// no copy matches.
-QString receipt_hash(const QString& receipt, const QString& entry) {
-    const QJsonObject linked = QJsonDocument::fromJson(receipt.toUtf8()).object().value(QStringLiteral("linked")).toObject();
-    return linked.value(entry).toObject().value(QStringLiteral("sha256")).toString();
-}
-
 // Every entry a save carries from `root`: each regular file and each link, a link to a folder included, without
 // entering a linked folder (the writer carries the link, never what it reaches).
 void walk_carried(const QString& root, const std::function<void(const QString&, const QString&)>& visit) {
@@ -1443,12 +1436,13 @@ QString ProjectViewModel::linkedInputsKey(bool wholeTree) const {
     };
     const edi::Project& project = scan_template_ ? *scan_template_ : *project_;
     const std::string& base = project.scan_data_root.empty() ? project.path : project.scan_data_root;
+    // A scan is referenced by its folder and file pattern (edi ADR-0026): the receipt names the folder and how many
+    // files it lists, and reads none of them, so a save costs the same for ten files or a million.
     if (scan_session_ != nullptr && project.sequential_fit.declared()) {
-        const QString folder = QString::fromStdString(scan_session_->datasets().directory);
-        for (const std::string& file : scan_session_->datasets().files) {
-            const QString path = QDir::cleanPath(QDir(folder).filePath(QString::fromStdString(file)));
-            linked.insert(path, describe(path));
-        }
+        const QString folder = QDir::cleanPath(QString::fromStdString(scan_session_->datasets().directory));
+        linked.insert(folder, QJsonObject{{QStringLiteral("scan_folder"), QFileInfo(folder).canonicalFilePath()},
+                                          {QStringLiteral("pattern"), QString::fromStdString(project.sequential_fit.file_pattern)},
+                                          {QStringLiteral("files"), static_cast<double>(scan_session_->datasets().files.size())}});
     }
     for (const auto& experiment : project.experiments) {
         QString path;
@@ -1456,9 +1450,19 @@ QString ProjectViewModel::linkedInputsKey(bool wholeTree) const {
         else if (!experiment->data_path.empty()) path = QString::fromStdString(edi::linked_data_file(base, experiment->data_path));
         if (!path.isEmpty()) linked.insert(QDir::cleanPath(path), describe(path));
     }
+    // A scan folder inside the project is carried as a plain copy: its files are named with their size, never hashed.
+    const QString scanFolder = scan_session_ != nullptr && project.sequential_fit.declared()
+                                   ? QDir::cleanPath(QString::fromStdString(scan_session_->datasets().directory))
+                                   : QString();
     if (wholeTree && !base.empty()) {
         const QString root = QString::fromStdString(base);
         walk_carried(root, [&](const QString& file, const QString& relative) {
+            if (!scanFolder.isEmpty() && QDir::cleanPath(file).startsWith(scanFolder + QLatin1Char('/')) &&
+                !QFileInfo(file).isSymLink()) {
+                tree.insert(relative, QJsonObject{{QStringLiteral("scan_file"), true},
+                                                  {QStringLiteral("size"), static_cast<double>(QFileInfo(file).size())}});
+                return;
+            }
             // The project record is written again as a document of its own with the save's fields merged, even when
             // it is a link: what it carries is the rest of its content, read through the link.
             if (relative == QLatin1String("project.edi")) {
@@ -1560,6 +1564,11 @@ QString ProjectViewModel::carriedBytesDiffer(const QString& receipt, const QStri
             continue;
         }
         if (info.isSymLink()) return changedText.arg(relative);
+        // A scan's file: copied as it is, checked by its size (edi ADR-0026: no file of a scan is read to save it).
+        if (planned.value(QStringLiteral("scan_file")).toBool()) {
+            if (info.size() != static_cast<qint64>(planned.value(QStringLiteral("size")).toDouble())) return changedText.arg(relative);
+            continue;
+        }
         const QString hash = planned.value(QStringLiteral("sha256")).toString();
         if (hash.isEmpty()) return tr("%1 could not be read when the save was planned: nothing was written").arg(relative);
         if (file_sha256(copied) != hash) return changedText.arg(relative);
@@ -1768,7 +1777,7 @@ void ProjectViewModel::setIncludeDataOnSave(const QString& mode) {
 
 
 QString ProjectViewModel::includeDataInto(edi::Project& written, const QString& directory, QString* linked,
-                                          bool* changed, const QString* receipt) const {
+                                          bool* changed, const QString* /*receipt: a scan's copy is plain, no hashes*/) const {
     if (changed != nullptr) *changed = false;
     const std::string where = directory.toStdString();
     // Linked experiment files: the copy holds their data, read when the project opened, so it is
@@ -1836,14 +1845,6 @@ QString ProjectViewModel::includeDataInto(edi::Project& written, const QString& 
                 QDir(target).removeRecursively();
                 restore();
                 return tr("%1 could not be copied into the saved project").arg(each);
-            }
-            // The copy is the file the save planned: its bytes against the receipt's hash.
-            if (receipt != nullptr &&
-                file_sha256(QDir(target).filePath(each)) !=
-                    receipt_hash(*receipt, QDir::cleanPath(QDir(source).filePath(each)))) {
-                QDir(target).removeRecursively();
-                restore();
-                return tr("%1 changed while the project was being saved: save again").arg(each);
             }
         }
         written.sequential_fit.data_dir = target.toStdString();
