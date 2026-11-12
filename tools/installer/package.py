@@ -540,6 +540,9 @@ def prepare_installer_source(
     (data / 'payload-manifest.json').write_text(
         json.dumps(payload_manifest(data), indent=2) + '\n'
     )
+    if repository_url is None:
+        repository_url, *default_mirrors = repository_urls(channel)
+        mirrors = tuple(default_mirrors)
     write_metadata(
         config, meta, version, repository_url, mirrors, enable_mirrors=channel == 'stable'
     )
@@ -604,7 +607,7 @@ def package_app(
             *template_args,
             '--compression',
             '1',
-            '--online-only' if repository_url else '--offline-only',
+            '--online-only' if repository_url else '--hybrid',
             '-c',
             source / 'config/config.xml',
             '-p',
