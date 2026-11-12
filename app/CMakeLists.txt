@@ -93,6 +93,7 @@ qt_add_qml_module(edi_app_module
     DEPENDENCIES QtGraphs QtQuick3D
     SOURCES
         src/app_info.hpp src/app_info.cpp
+        src/native_dialog.hpp src/native_dialog.cpp
         src/combo_box_metrics.hpp src/combo_box_metrics.cpp
         src/assistant_message_presentation.hpp
         src/assistant_values.hpp
@@ -157,6 +158,7 @@ qt_add_qml_module(edi_app_module
     QML_FILES
         qml/Main.qml
         feedback/Payload.js
+        qml/Components/NativeDialogNotice.qml
         qml/Components/AppDialog.qml
         qml/Components/AppPreferencesDialog.qml
         qml/Components/LoadMenuHeader.qml
@@ -437,6 +439,11 @@ endif()
 qt_add_executable(edi_app main.cpp)
 target_link_libraries(edi_app PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Svg)
 set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE TRUE)
+if(NOT EMSCRIPTEN)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+    target_sources(edi_app PRIVATE src/native_dialog_helper.cpp)
+    target_link_libraries(edi_app PRIVATE Qt6::Widgets)
+endif()
 if(WIN32)
     enable_language(RC)
     file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/edi-app-icon.rc"

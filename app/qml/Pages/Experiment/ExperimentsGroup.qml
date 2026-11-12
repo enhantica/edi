@@ -329,18 +329,18 @@ SideBarGroup {
                 onClicked: group.project.downloadCollectionData()
             }
         }
-        FileDialog {
+        NativeFileDialog {
             id: locateFileDialog
             property ProjectViewModel project: null
             property ExperimentViewModel experiment: null
             title: qsTr("Locate the experiment's data file")
-            fileMode: FileDialog.OpenFile
+            fileMode: NativeFileDialog.OpenFile
             onAccepted: {
                 if (project !== null && project === group.project)
                     project.locateDataFile(experiment, selectedFile);
             }
         }
-        FolderDialog {
+        NativeFolderDialog {
             id: locateDialog
             property ProjectViewModel project: null
             property string missing: ""
@@ -532,17 +532,17 @@ SideBarGroup {
         }
     }
 
-    FileDialog {
+    NativeFileDialog {
         id: loadDialog
         title: qsTr("Load experiments from CIF or .edi files")
-        fileMode: FileDialog.OpenFiles
+        fileMode: NativeFileDialog.OpenFiles
         nameFilters: [qsTr("Experiment files (*.cif *.edi)"), qsTr("CIF files (*.cif)"), qsTr("edi block files (*.edi)")]
         onAccepted: group.project.loadExperiments(selectedFiles)
     }
 
     // The dialog's answer goes to the experiment and the project it was opened for, and only while that project
     // is still the open one.
-    FileDialog {
+    NativeFileDialog {
         id: dataDialog
         property var intent: null
         property var experiment: null
@@ -550,7 +550,7 @@ SideBarGroup {
         title: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? qsTr("Load measured reflections from FullProf's .int or a plain h k l F² su file (.hkl, .dat or any other)") : qsTr("Load measured data from a plain two- or three-column file")
         nameFilters: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? [qsTr("Reflection files (*.int *.hkl *.dat *.txt)"), qsTr("All files (*)")] : [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
         // Several files at once (the owner, 2026-11-04): more than one asks how to load them.
-        fileMode: FileDialog.OpenFiles
+        fileMode: NativeFileDialog.OpenFiles
         onAccepted: {
             if (selectedFiles.length > 1 && dataDialog.experiment !== null && dataDialog.project === group.project) {
                 const experiment = dataDialog.experiment;
@@ -564,7 +564,7 @@ SideBarGroup {
         onRejected: ApplicationInfo.rejectExperimentDataFile()
     }
 
-    FolderDialog {
+    NativeFolderDialog {
         id: dataFolderDialog
         title: qsTr("Choose a folder of sequential-fit datasets")
         acceptLabel: qsTr("Use folder")

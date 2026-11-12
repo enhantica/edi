@@ -12,6 +12,7 @@
 #include <QSurfaceFormat>
 #include <QtQml/qqmlextensionplugin.h>
 #include <cstdio>
+#include <cstring>
 #include <memory>
 #if defined(Q_OS_UNIX)
 #include <unistd.h>
@@ -24,6 +25,7 @@
 #include "run_log.hpp"
 #include "test_observer.hpp"
 #ifndef __EMSCRIPTEN__
+#include "native_dialog_helper.hpp"
 void start_installer_smoke(QQuickWindow&, const QString&);
 #endif
 
@@ -33,6 +35,10 @@ Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 // view-models. No product logic here. One host, two build targets — desktop and WASM — from this one
 // source tree (ADR-0006).
 int main(int argc, char* argv[]) {
+#ifndef __EMSCRIPTEN__
+    if (argc == 2 && std::strcmp(argv[1], "--native-dialog-helper") == 0)
+        return edi_app::native_dialog_helper_main(argc, argv);
+#endif
     if (const auto code = edi_app::refuse_test_observer(argc, argv)) {
         return *code;  // before the platform checks, so the refusal names the observer request
     }

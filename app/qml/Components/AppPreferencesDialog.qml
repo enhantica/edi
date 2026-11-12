@@ -1191,7 +1191,7 @@ AppDialog {
         }
     }
 
-    FolderDialog {
+    NativeFolderDialog {
         id: sourcesFolder
         objectName: "preferences.ai.sources.folder"
         property var selection: null

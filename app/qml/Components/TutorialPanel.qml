@@ -2191,7 +2191,7 @@ Popup {
         }
     }
 
-    FolderDialog {
+    NativeFolderDialog {
         id: filesFolder
 
         title: qsTr("Save the tutorial files to")

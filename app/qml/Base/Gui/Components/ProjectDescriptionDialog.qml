@@ -212,7 +212,7 @@ EaElements.Dialog {
 
     // Choose project parent directory dialog
 
-    FolderDialog {
+    NativeFolderDialog {
         id: projectParentDirDialog
 
         title: qsTr("Choose project parent directory")

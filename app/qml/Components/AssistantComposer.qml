@@ -312,14 +312,14 @@ Rectangle {
     function chooseFiles() {
         ApplicationInfo.composerChooseFiles();
     }
-    FileDialog {
+    NativeFileDialog {
         id: nativeFiles
         objectName: "assistant.files.dialog"
         property var selection: null
         readonly property string requestId: selection ? selection.id : ""
         readonly property var original: selection ? selection.owner : null
         title: qsTr("Add files to the assistant")
-        fileMode: FileDialog.OpenFiles
+        fileMode: NativeFileDialog.OpenFiles
         onAccepted: ApplicationInfo.composerAcceptFiles()
         onRejected: ApplicationInfo.composerCancelFiles()
         Component.onDestruction: ApplicationInfo.composerCancelFiles()
