@@ -84,7 +84,9 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
     const auto metadata = QJsonDocument::fromJson(catalogue.readAll()).object().value("examples").toObject().value(example).toObject();
     if (metadata.isEmpty()) return refuse("unknown documentation example: " + example);
     const auto values = metadata.value("values").toObject();
-    if (values.value("purpose").toArray().first().toString() != "refinement")
+    const QString purpose = values.value("purpose").toArray().first().toString();
+    documentation_simulation_ = workflow == "tutorial" && purpose == "simulation";
+    if (purpose != "refinement" && !documentation_simulation_)
         return refuse("the refinement walkthrough requires an example with measured data");
     // The example's files from the source tree: the app bundles the catalogue, not the projects (ADR-0068).
     const auto base = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/" + example + "/project";
@@ -406,7 +408,7 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
     auto* fit_dialog = window_.findChild<QObject*>("fit.results");
     const bool results_open = fit_dialog && fit_dialog->property("visible").toBool();
     if ((step.page == "report" || (step.page == "analysis" && step.fit_phase != "setup")) &&
-        (!fit || fit->running() || fit->results()->rowCount() == 0 || results_open))
+        (!fit || fit->running() || (fit->results()->rowCount() == 0 && !documentation_simulation_) || results_open))
         return refuse("Analysis and Report captures require a completed fit and a closed results popup");
     const auto collect = [this] {
         QJsonObject items;

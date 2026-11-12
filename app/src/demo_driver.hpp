@@ -144,6 +144,8 @@ class DemoDriver : public QObject {
     QString loaded_cli_project_;
     bool documentation_ = false;
     bool documentation_skip_ = false;
+    // A simulation's tutorial: calculated without measured data, so its Analysis and Report show no fit.
+    bool documentation_simulation_ = false;
     QString documentation_script_;
     QString documentation_example_;
     QString documentation_workflow_;
