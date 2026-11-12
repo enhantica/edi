@@ -105,6 +105,7 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(edi_app::ChartLegendModel* legend READ legend CONSTANT)
     Q_PROPERTY(double labelGap MEMBER label_gap_ WRITE setLabelGap NOTIFY labelGapChanged)
     Q_PROPERTY(QList<bool> shownLabels READ shownLabels NOTIFY shownLabelsChanged)
+    Q_PROPERTY(QList<int> labelledDatasets READ labelledDatasets NOTIFY labelledDatasetsChanged)
     // Diagnostics, never inputs: how many datasets were reduced (a stacked trace or a map's pixel columns), and how
     // many times the drawing was rendered.
     Q_PROPERTY(int traceBuildCount READ traceBuildCount NOTIFY traceBuildCountChanged)
@@ -152,6 +153,8 @@ class ScanLayer : public QQuickPaintedItem {
     static constexpr int kFullLegend = 15;
     void setLabelGap(double gap);
     QList<bool> shownLabels() const;
+    /// Dataset indices whose labels fit in this visible view; hidden views return none.
+    QList<int> labelledDatasets() const { (void)shownLabels(); return labelled_datasets_; }
     double patternHeight() const { return pattern_height_; }
     double stackTop() const { return stack_top_; }
     // Each stacked pattern's extent on the vertical axis, baseline to top, by dataset: NaN for one with no place.
@@ -193,6 +196,7 @@ class ScanLayer : public QQuickPaintedItem {
     void disabledColourChanged();
     void labelGapChanged();
     void shownLabelsChanged();
+    void labelledDatasetsChanged();
     void modeChanged();
     void xMinChanged();
     void xMaxChanged();
@@ -306,6 +310,7 @@ class ScanLayer : public QQuickPaintedItem {
     double label_gap_ = 1.0;
     // shownLabels, and whether what it depends on changed since it was made.
     mutable QList<bool> shown_labels_;
+    mutable QList<int> labelled_datasets_;
     mutable bool shown_labels_stale_ = true;
     void labelsMoved();
     double display_min_ = 0.0, display_max_ = 1.0;

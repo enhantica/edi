@@ -97,7 +97,7 @@ ScanLayer::ScanLayer(QQuickItem* parent)
         Qt::DirectConnection);
     // The labels shown follow the rows, the axis range, the plot's height and the current dataset.
     for (const auto changed : {&ScanLayer::placementChanged, &ScanLayer::yMinChanged, &ScanLayer::yMaxChanged,
-                               &ScanLayer::currentChanged, &ScanLayer::modeChanged, &ScanLayer::modelChanged}) {
+                               &ScanLayer::currentChanged, &ScanLayer::modeChanged, &ScanLayer::modelChanged, &ScanLayer::activeChanged}) {
         connect(this, changed, this, &ScanLayer::labelsMoved);
     }
     connect(this, &QQuickItem::heightChanged, this, &ScanLayer::labelsMoved);
@@ -108,9 +108,13 @@ void ScanLayer::labelsMoved() {
     // re-binds no label.
     shown_labels_stale_ = true;
     const QList<bool> before = shown_labels_;
+    const QList<int> labelled_before = labelled_datasets_;
+    const QPointer<ScanLayer> self(this);
     if (shownLabels() != before) {
         emit shownLabelsChanged();
+        if (!self) return;
     }
+    if (labelled_datasets_ != labelled_before) emit labelledDatasetsChanged();
 }
 
 void ScanLayer::setLabelled(bool labelled) {
@@ -151,6 +155,7 @@ void ScanLayer::toggleHidden(int dataset) {
 }
 
 void ScanLayer::syncLegend() {
+    if (deferred()) return;
     const int count = model_ ? model_->count() : 0;
     std::vector<int> listed;
     if (count <= kFullLegend) {
@@ -200,8 +205,9 @@ QList<bool> ScanLayer::shownLabels() const {
     }
     shown_labels_stale_ = false;
     shown_labels_.clear();
+    labelled_datasets_.clear();
     const int count = model_ ? model_->count() : 0;
-    if (!labelled_ || count == 0 || !(pattern_height_ > 0.0) || !(y_max_ > y_min_) || height() <= 0.0) {
+    if (!active_ || !labelled_ || count == 0 || !(pattern_height_ > 0.0) || !(y_max_ > y_min_) || height() <= 0.0) {
         return shown_labels_;
     }
     // Each row inside the axis range at its pixel row from the top, top first.
@@ -241,8 +247,9 @@ QList<bool> ScanLayer::shownLabels() const {
         shown[static_cast<std::size_t>(current_)] = true;
     }
     shown_labels_.reserve(count);
-    for (const bool row : shown) {
-        shown_labels_.append(row);
+    for (std::size_t row = 0; row < shown.size(); ++row) {
+        shown_labels_.append(shown[row]);
+        if (shown[row]) labelled_datasets_.append(static_cast<int>(row));
     }
     return shown_labels_;
 }
@@ -388,6 +395,7 @@ void ScanLayer::setActive(bool active) {
             measure();
             place();
             recolour();
+            syncLegend();
             update();  // the painted image too: a renderer chosen while hidden may need it cleared
             redraw();
         }

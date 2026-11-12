@@ -4,6 +4,8 @@
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlComponent>
+#include "scan_layer.hpp"
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <QtQml/qqmlextensionplugin.h>
@@ -15,6 +17,51 @@ Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 class ScanSaveTests : public QObject {
     Q_OBJECT
 private slots:
+    void hiddenChartsCreateNoDatasetLabels() {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        const QDir source(QStringLiteral(EDI_SOURCE_DIR "/tests/fixtures/correlations/scan-sequential"));
+        const QDir destination(root.path());
+        for (const auto& relative : {"project.edi", "structures/phase.edi", "experiments/bank.edi",
+                                     "experiments/scan/01.xy", "experiments/scan/02.xy", "analysis/analysis.edi"}) {
+            const auto target = destination.filePath(QString::fromUtf8(relative));
+            QVERIFY(QDir().mkpath(QFileInfo(target).absolutePath()));
+            QVERIFY(QFile::copy(source.filePath(QString::fromUtf8(relative)), target));
+        }
+        for (int file = 3; file <= 64; ++file)
+            QVERIFY(QFile::copy(source.filePath("experiments/scan/01.xy"),
+                destination.filePath(QString("experiments/scan/%1.xy").arg(file, 2, 10, QLatin1Char('0')))));
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(root.path())), qPrintable(session->lastError()));
+        auto* project = session->project();
+        QCOMPARE(project->scanViews()->count(), 64);
+        for (const auto& mode : {"stacked", "map"}) {
+            QQmlComponent component(&engine);
+            component.setData((QByteArray("import edi.app; ScanViewChart { width: 400; height: 300; shown: false; project: Session.project; mode: \"") + mode + "\" }").constData(), QUrl());
+            QScopedPointer<QObject> chart(component.create());
+            QVERIFY2(chart, qPrintable(component.errorString()));
+            auto* labels = chart->findChild<QObject*>(QString("scanView.%1.labels").arg(mode));
+            QVERIFY(labels);
+            QCOMPARE(labels->property("count").toInt(), 0);
+        }
+        edi_app::ScanLayer layer;
+        layer.setMode("map");
+        layer.setModel(project->scanViews());
+        layer.setHeight(100);
+        layer.setYMin(0);
+        layer.setYMax(65);
+        layer.setLabelGap(20);
+        layer.setLabelled(true);
+        layer.setCurrent(30);
+        const auto labels = layer.labelledDatasets();
+        QVERIFY(labels.contains(30));
+        QVERIFY(labels.size() <= 7);
+        layer.setActive(false);
+        QVERIFY(layer.labelledDatasets().isEmpty());
+    }
     void generatedRunRecordIsPartOfSave() {
         QTemporaryDir root;
         QVERIFY(root.isValid());

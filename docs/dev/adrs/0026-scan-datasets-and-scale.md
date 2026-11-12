@@ -139,3 +139,14 @@ Map/Stacked loading without changing their raw-data retention policy.
 Catch-up retains a drawing queue only while Pattern, Stacked or Map can display it. Hiding those views discards
 their queued presentation; Evolution still receives every result row. Manually choosing a dataset stops Follow
 both during fitting and while a completed fit's visible queue is draining.
+
+
+## Visible scan label objects only
+
+A native selector exposes only the dataset indices whose row labels fit on screen. Map and Stacked instantiate
+that compact list; a hidden view creates no row-label objects. The boolean selection mask remains available
+for width calculation. Hidden legends instantiate no entries and defer their native refresh until shown.
+The original full-count row-label Repeater created a dependency on the selected dataset in every hidden label;
+the owner's Adaptive sample showed those scan-chart bindings and legend resets consuming the GUI thread.
+Initial project assignment used that same path. Label choice, spacing and the current dataset's label follow
+the existing native placement rules; only instantiated labels change.

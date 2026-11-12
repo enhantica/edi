@@ -67,7 +67,7 @@ Rectangle {
         bottomPadding: EaStyle.Sizes.fontPixelSize * 0.5
 
         Repeater {
-            model: legend.entries
+            model: legend.visible ? legend.entries : null
             delegate: IconLine {
                 id: entry
 

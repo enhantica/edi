@@ -472,26 +472,27 @@ Item {
     readonly property var shownRowLabels: layer.shownLabels
     Repeater {
         id: rowLabelRepeater
+        objectName: "scanView." + chart.mode + ".labels"
 
-        // One label per dataset, kept while the rows are placed again and while the view labels no row (the Map by scan
-        // value; shownRowLabels hides them): only its text, place and colour follow, and only while the view is shown.
-        model: chart.scan !== null ? chart.scan.count : 0
+        // Instantiate only labels that fit in the visible plot, never one item per scan file.
+        model: chart.shown ? layer.labelledDatasets : []
         delegate: IconLine {
-            required property int index
+            required property int modelData
+            readonly property int dataset: modelData
             // Only a label shown has its text: the others, hidden while the rows are too close, lay out nothing.
-            readonly property string rowText: chart.shown && chart.shownRowLabels[index] === true && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(index) : ""
-            readonly property real at: chart.shown && chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
+            readonly property string rowText: chart.shown && chart.shownRowLabels[dataset] === true && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(dataset) : ""
+            readonly property real at: chart.shown && chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(dataset) : NaN
             // The dataset's colour, its Stacked line's (a joint fit's experiment's own, a scan's dataset's position in the
             // palette). The colours' revision is read here, so the label follows the colour choice and the theme.
-            readonly property color colour: layer.coloursRevision >= 0 ? layer.colourOf(index) : chart.colors.themeForegroundMinor
+            readonly property color colour: layer.coloursRevision >= 0 ? layer.colourOf(dataset) : chart.colors.themeForegroundMinor
 
-            objectName: "scanView." + chart.mode + ".rowLabel." + index
-            visible: chart.hasData && chart.shownRowLabels[index] === true
+            objectName: "scanView." + chart.mode + ".rowLabel." + dataset
+            visible: chart.hasData && chart.shownRowLabels[dataset] === true
             height: AppSizes.legendRowHeight
             // On Stacked (the owner, 2026-10-27): highlighting, the shown dataset's label keeps its colour and every
             // other is disabled-coloured; not highlighting, all keep their colours and the shown one is bold. On the
             // Map, not highlighting, the shown one is bold in the accent colour.
-            readonly property bool current: chart.project !== null && chart.project.currentExperimentIndex === index
+            readonly property bool current: chart.project !== null && chart.project.currentExperimentIndex === dataset
             readonly property bool marked: !Preferences.chartHighlightSelected && current
             readonly property color stackedColour: Preferences.chartHighlightSelected && !current ? chart.colors.themeForegroundDisabled : colour
             // The icon takes the text's colour, so a new colour changes no piece of the line.
