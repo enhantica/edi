@@ -337,6 +337,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::shared_ptr<ScanSession> listing;
         QString refusal;  // why the listing refused, if it did: the scan shows it, the save goes ahead
         std::optional<std::vector<edi::Edit::ScanValue>> shown;
+        bool wroteRun = false;  // stageScan generated the run record in this staged tree
         bool includedData = false;  // the staged save included linked data
         QString included;           // the linked scan folder whose files it copied in, if it did
     };

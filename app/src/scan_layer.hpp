@@ -11,6 +11,8 @@
 #include <atomic>
 #include <cstdint>
 #include <vector>
+#include <optional>
+#include <limits>
 
 #include "chart_models.hpp"
 #include "scan_lines.hpp"
@@ -309,6 +311,21 @@ class ScanLayer : public QQuickPaintedItem {
     double display_min_ = 0.0, display_max_ = 1.0;
     // By dataset: its lowest and highest value on the y scale, and its stacked baseline (NaN while it has no row).
     std::vector<double> lows_, highs_, baselines_;
+    struct RangeKey {
+        QString scale;
+        bool included, subtract, visible;
+        double from, to;
+        bool operator==(const RangeKey&) const = default;
+    };
+    struct Range {
+        std::uint64_t generation = std::numeric_limits<std::uint64_t>::max();
+        double low = std::numeric_limits<double>::infinity(), high = -std::numeric_limits<double>::infinity();
+        double seen_low = std::numeric_limits<double>::infinity(), seen_high = -std::numeric_limits<double>::infinity();
+    };
+    std::optional<RangeKey> measured_for_;
+    std::vector<Range> measured_ranges_;
+    std::vector<double> placed_rows_;
+    double placed_spacing_ = std::numeric_limits<double>::quiet_NaN();
     double pattern_height_ = 1.0;
     double stack_top_ = 1.0;
 

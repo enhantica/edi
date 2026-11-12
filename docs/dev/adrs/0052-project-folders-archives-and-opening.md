@@ -419,5 +419,9 @@ Standalone checks exercise a frozen helper, cancellation, owner destruction, sta
 valid multiple selections, malformed and duplicate replies, failure after a reply, and pipe closure in the real
 helper. A source check keeps every desktop file/folder picker on this route.
 
+A processed scan's stage can generate analysis/scan-run.json even when no earlier run record exists. The staged
+save records that actual write before sealing its carried-file receipt, so its own output is not mistaken for
+an unexpected added file. Existing carried files still undergo the ordinary receipt checks.
+
 - [Qt QFileDialog native platform behavior](https://doc.qt.io/qt-6/qfiledialog.html)
 - [Qt QProcess asynchronous communication](https://doc.qt.io/qt-6/qprocess.html)

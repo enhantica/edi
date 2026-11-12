@@ -306,7 +306,11 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::missingDataFileChanged);
     connect(this, &ProjectViewModel::missingDataFolderChanged, this, &ProjectViewModel::missingDataFileChanged);
     connect(this, &ProjectViewModel::missingDataFileChanged, this, &ProjectViewModel::pendingCollectionDataChanged);
-    connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::syncPatternColours);
+    connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, [this] {
+        if (scan_ && !experiment_models_.isEmpty() && experiment_models_[0]->showsDataset())
+            experiment_models_[0]->setDatasetColourPlace(static_cast<std::size_t>(std::max(current_dataset_, 0)));
+        else syncPatternColours();
+    });
     syncBlocks();
     report_ = new ReportViewModel(*this, this);
     // The report filters its correlations by the Analysis page's level, and in a fit of several experiments shows the
@@ -717,7 +721,7 @@ void ProjectViewModel::setCurrentStructureIndex(int index) {
 void ProjectViewModel::setCurrentExperimentIndex(int index) {
     if (scan_) {
         // A choice while a scan runs stops following it; the chosen dataset is shown as its row gives it.
-        if (fit_ != nullptr && fit_->scanning()) {
+        if (fit_ != nullptr && (fit_->scanning() || fit_->catchingUp())) {
             fit_->setFollowing(false);
         }
         viewDataset(index);
@@ -5942,6 +5946,7 @@ QString ProjectViewModel::stageScan(const QString& directory, const edi::Project
         if (const QString refusal = scan_session_->writeRun(shown, scan_session_->run()); !refusal.isEmpty()) {
             return refusal;
         }
+        scan.wroteRun = true;
     }
     // What the project will read there, read now: the folder's listing, and the shown dataset's values over the
     // staged copy, which is what the template takes.

@@ -509,6 +509,7 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
         experiment_->setChartAxis(this, edi::PatternAxis::Native);
     }
     experiment_ = experiment;
+    scan_styles_.reset();
     // Hidden curves belong to the project they were hidden in: another project's experiment shows every curve.
     if (experiment_ && experiment_->parent() != hidden_project_) {
         hidden_project_ = experiment_->parent();
@@ -521,7 +522,10 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
         experiment_->setChartShown(this, active_);
         experiment_->setChartAxis(this, axis());
         connect(experiment_, &ExperimentViewModel::patternSourceChanged, this, &PatternChartController::invalidate);
-        connect(experiment_, &ExperimentViewModel::colourPositionsChanged, this, &PatternChartController::invalidate);
+        connect(experiment_, &ExperimentViewModel::colourPositionsChanged, this, [this] {
+            scan_styles_.reset();
+            invalidate();
+        });
         // The slider let go: the y range is fitted once again, shrinking as well as growing.
         connect(experiment_, &ExperimentViewModel::adjustingChanged, this, [this] {
             if (!experiment_->adjusting()) {
@@ -612,6 +616,27 @@ std::vector<edi::SeriesStyle> PatternChartController::styles() const {
         return report_->reportModel().pattern_styles;
     }
     const std::size_t experiments = experiment_ ? experiment_->colourCount() : 1;
+    if (experiment_ && experiment_->showsDataset()) {
+        const auto structures = experiment_->structureCount();
+        const auto selected = experiment_->colourPlace();
+        if (!scan_styles_ || scan_styles_->scheme != scheme() || scan_styles_->files != experiments ||
+            scan_styles_->structures != structures) {
+            const auto& configured = experiment_->colourPositions();
+            const auto allocated = configured.size() == experiments + structures ? std::vector<std::size_t>{}
+                : edi::colour_positions(scheme(), experiments, structures);
+            const auto& positions = allocated.empty() ? configured : allocated;
+            ScanStyles next{scheme(), experiments, structures, {},
+                edi::pattern_style_table(scheme(), experiments, structures, positions, true, selected)};
+            if (positions.size() == experiments + structures)
+                next.structure_positions.assign(positions.begin() + static_cast<std::ptrdiff_t>(experiments), positions.end());
+            scan_styles_ = std::move(next);
+        }
+        auto& measured = scan_styles_->table.front();
+        measured.key = "meas." + std::to_string(selected);
+        measured.light = edi::pattern_set_colour(scheme(), selected, experiments, scan_styles_->structure_positions, false);
+        measured.dark = edi::pattern_set_colour(scheme(), selected, experiments, scan_styles_->structure_positions, true);
+        return scan_styles_->table;
+    }
     return edi::pattern_style_table(scheme(), experiments, experiment_ ? experiment_->structureCount() : 0,
                                     experiment_ ? experiment_->colourPositions() : std::vector<std::size_t>{},
                                     experiment_ != nullptr && experiment_->showsDataset(),

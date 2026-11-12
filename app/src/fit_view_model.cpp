@@ -920,6 +920,8 @@ void FitViewModel::scanFrame(const std::string& file, const edi::FitFrame& frame
         return;
     }
     if (pattern_updates_ == kCatchUp) {
+        // A hidden pattern view must not accumulate a playback queue for a later tab switch.
+        if (!owner_.patternShown() && !owner_.scanViewShown()) return;
         // Every file's pattern waits its turn; the fit has gone on already.
         catch_up_.emplace_back(file, frame);
         ++scan_received_;
@@ -1032,6 +1034,12 @@ void FitViewModel::followLatest() {
 }
 
 void FitViewModel::patternShownChanged() {
+    if (pattern_updates_ == kCatchUp && !owner_.patternShown() && !owner_.scanViewShown()) {
+        catch_up_.clear();
+        dropHandedFile();
+        frame_shown_ = true;
+        syncBehind();
+    }
     // Every pattern: the worker waits for a drawing only while a chart can draw one.
     if (job_) {
         job_->wait_for_patterns(waitsForView(pattern_updates_));

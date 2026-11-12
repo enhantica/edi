@@ -372,7 +372,8 @@ void ScanViewModel::deliver(std::size_t first, std::vector<Read>& done) {
         value_texts_[dataset] = read.value_text;
     }
     placeRange();
-    placeRows();
+    // File-index rows and labels stay fixed while batches arrive; extracted values reorder them once at the end.
+    if (loaded_ == count()) placeRows();
     emit loadedChanged();
     ++revision_;
     emit revisionChanged();
@@ -577,14 +578,21 @@ void ScanViewModel::placePattern(Pattern& pattern) {
 
 void ScanViewModel::placeRange() {
     double low = std::numeric_limits<double>::infinity(), high = -low;
-    for (const Pattern& pattern : patterns_) {
-        for (const double x : pattern.shown) {
-            const bool excluded = included_only_ && excludedAt(pattern, x);
-            if (std::isfinite(x) && !excluded) {
-                low = std::min(low, x);
-                high = std::max(high, x);
+    for (Pattern& pattern : patterns_) {
+        if (pattern.range_generation != pattern.generation || pattern.range_included != included_only_) {
+            pattern.range_low = std::numeric_limits<double>::infinity();
+            pattern.range_high = -pattern.range_low;
+            for (const double x : pattern.shown) {
+                if (std::isfinite(x) && !(included_only_ && excludedAt(pattern, x))) {
+                    pattern.range_low = std::min(pattern.range_low, x);
+                    pattern.range_high = std::max(pattern.range_high, x);
+                }
             }
+            pattern.range_generation = pattern.generation;
+            pattern.range_included = included_only_;
         }
+        low = std::min(low, pattern.range_low);
+        high = std::max(high, pattern.range_high);
     }
     if (!(high > low)) {
         low = 0.0;

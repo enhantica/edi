@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
+#include <unordered_set>
 
 namespace edi::detail {
 // data/palettes, one table per scheme in ColourScheme's order, embedded by cmake/edi_core_sources.cmake.
@@ -265,14 +266,17 @@ std::vector<std::size_t> colour_positions(ColourScheme /*scheme*/, std::span<con
         }
     }
     std::vector<std::size_t> positions(items.size());
+    std::array<std::size_t, 2> next{};
     for (std::size_t i = 0; i < items.size(); ++i) {
         if (!out[i]) {
-            std::size_t position = 0;
+            auto& cursor = next[items[i].kind == FigureKind::Experiment ? 0 : 1];
+            std::size_t position = cursor;
             while (!allowed(items[i].kind, position) || !vacant(position)) {
                 ++position;
             }
             out[i] = position;
             take(position);
+            cursor = position + 1;
         }
         positions[i] = *out[i];
     }
@@ -283,8 +287,10 @@ std::vector<std::size_t> free_positions(ColourScheme /*scheme*/, FigureKind kind
                                         std::span<const std::size_t> taken) {
     std::vector<std::size_t> out;
     out.reserve(count);
+    if (count == 0) return out;
+    const std::unordered_set<std::size_t> occupied(taken.begin(), taken.end());
     for (std::size_t position = 0; out.size() < count; ++position) {
-        if (position_allowed(kind, position) && std::find(taken.begin(), taken.end(), position) == taken.end()) {
+        if (position_allowed(kind, position) && occupied.count(position) == 0) {
             out.push_back(position);
         }
     }

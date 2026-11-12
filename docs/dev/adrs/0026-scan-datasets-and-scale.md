@@ -113,3 +113,29 @@ termination, and reads each dataset's reason from the same row as its result. Li
 that reason directly; they no longer open a provenance file for every fitted dataset. The old separate ledger
 is read only for a legacy CSV without the condition columns. The driver's backward-compatible migration owns
 combining and removing that legacy file. Reset and Undo still preserve a legacy sidecar when an old project has one.
+
+
+## Followed-dataset colour updates
+
+Changing the followed dataset updates only its palette index. Its scan-wide positions are allocated when
+membership or palette positions change. Each pattern controller caches the scan's small style table and
+updates only its measured colour for a new dataset; changing structure positions, membership, scheme or
+experiment invalidates that cache. The general palette allocators advance their free-position cursors and
+use indexed occupancy rather than restarting a linear membership search for each item. This removes the
+scan-wide palette rebuild triggered by Adaptive, timed and display-waiting follow updates, and the same
+quadratic allocation during initial project setup. Colour order and held-position rules are unchanged.
+
+
+## Incremental scan-view ranges
+
+Reading a batch extends the axis and intensity ranges from each pattern's cached extrema. A pattern's generation,
+axis, exclusions, intensity scale and background-subtraction settings determine whether its extrema are reusable.
+Unchanged patterns are not rescanned as later files arrive. File-index row positions, labels and stacked placement
+stay fixed while loading; extracted-value ordering is resolved when every file has been read. Rendering keeps its
+existing per-pattern reductions and pixel-sized map image. This removes repeated full-data range scans during
+Map/Stacked loading without changing their raw-data retention policy.
+
+
+Catch-up retains a drawing queue only while Pattern, Stacked or Map can display it. Hiding those views discards
+their queued presentation; Evolution still receives every result row. Manually choosing a dataset stops Follow
+both during fitting and while a completed fit's visible queue is draining.

@@ -255,9 +255,12 @@ void ScanLayer::setModel(ScanViewModel* model) {
         disconnect(model_, nullptr, this, nullptr);
     }
     model_ = model;
+    measured_for_.reset();
+    measured_ranges_.clear();
     if (model_) {
         connect(model_, &ScanViewModel::rowTextsChanged, this, &ScanLayer::syncLegend);
         connect(model_, &ScanViewModel::revisionChanged, this, [this] {
+            if (deferred()) return;
             measure();
             place();
             recolour();
@@ -382,6 +385,9 @@ void ScanLayer::setActive(bool active) {
         lines_->setActive(active_);
         top_->setActive(active_);
         if (active_ && stale_) {
+            measure();
+            place();
+            recolour();
             update();  // the painted image too: a renderer chosen while hidden may need it cleared
             redraw();
         }
@@ -461,26 +467,39 @@ void ScanLayer::measure() {
         const edi::YScale scale = scale_of(scale_);
         const bool visible_only = fitsShownRange();
         const double from = std::min(x_min_, x_max_), to = std::max(x_min_, x_max_);
-        for (const ScanViewModel::Pattern& pattern : model_->patterns()) {
-            double own_low = kInfinity, own_high = -kInfinity, seen_low = kInfinity, seen_high = -kInfinity;
-            for (std::size_t i = 0; i < pattern.intensity.size(); ++i) {
+        const RangeKey key{scale_, included_only_, subtract_background_, visible_only,
+                           visible_only ? from : 0.0, visible_only ? to : 0.0};
+        if (!measured_for_ || !(*measured_for_ == key)) {
+            measured_ranges_.clear();
+            measured_for_ = key;
+        }
+        const auto& patterns = model_->patterns();
+        measured_ranges_.resize(patterns.size());
+        for (std::size_t dataset = 0; dataset < patterns.size(); ++dataset) {
+            const auto& pattern = patterns[dataset];
+            auto& range = measured_ranges_[dataset];
+            if (range.generation != pattern.generation) {
+                range = Range{};
+                range.generation = pattern.generation;
+                for (std::size_t i = 0; i < pattern.intensity.size(); ++i) {
                 const double shown = edi::to_display(drawn_value(pattern, i, subtract_background_), scale);
                 const double x = i < pattern.shown.size() ? pattern.shown[i] : std::nan("");
                 if (!std::isfinite(shown) || (included_only_ && ScanViewModel::excludedAt(pattern, x))) {
                     continue;
                 }
-                own_low = std::min(own_low, shown);
-                own_high = std::max(own_high, shown);
-                if (visible_only && x >= from && x <= to) {
-                    seen_low = std::min(seen_low, shown);
-                    seen_high = std::max(seen_high, shown);
+                    range.low = std::min(range.low, shown);
+                    range.high = std::max(range.high, shown);
+                    if (visible_only && x >= from && x <= to) {
+                        range.seen_low = std::min(range.seen_low, shown);
+                        range.seen_high = std::max(range.seen_high, shown);
+                    }
                 }
             }
-            const bool seen = seen_high >= seen_low;
-            lows_.push_back(seen ? seen_low : own_low);
-            highs_.push_back(seen ? seen_high : own_high);
-            low = std::min(low, own_low);
-            high = std::max(high, own_high);
+            const bool seen = range.seen_high >= range.seen_low;
+            lows_.push_back(seen ? range.seen_low : range.low);
+            highs_.push_back(seen ? range.seen_high : range.high);
+            low = std::min(low, range.low);
+            high = std::max(high, range.high);
         }
     }
     if (!(high > low)) {
@@ -501,6 +520,9 @@ void ScanLayer::measure() {
 // the i-th at i steps (edi::stacked_placement on the plot's height, 1), so the stack fills the plot exactly.
 void ScanLayer::place() {
     const std::vector<double> rows = model_ ? model_->rows() : std::vector<double>{};
+    if (placed_spacing_ == spacing_ && placed_rows_ == rows) return;
+    placed_rows_ = rows;
+    placed_spacing_ = spacing_;
     std::vector<std::size_t> order;
     for (std::size_t d = 0; d < rows.size(); ++d) {
         if (std::isfinite(rows[d])) {

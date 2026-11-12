@@ -1135,6 +1135,7 @@ bool Session::stageCopy(const SaveOperation& operation, const char* purpose, con
         setLastError(refusal);
         return false;
     }
+    if (staged.scan.wroteRun) written << QStringLiteral("analysis/scan-run.json");
     staged.scan.included = included;
     staged.scan.includedData = includedAny;
     staged.written = written;

@@ -23,7 +23,7 @@ requires-pixi = "==0.76.2"
 # The crysta commit edi builds (edi ADR-0083): its CI packs that commit's SDK once per platform
 # (.github/workflows/crysta-sdk.yml) and every job and product uses it. `pixi run crysta-sdk-pin <sha>`
 # moves it.
-CRYSTA_COMMIT = "db61f4343fbf1a84344ce88bb3bffc43154ec005"
+CRYSTA_COMMIT = "f2b685bc646ba83cd768b230cbcc4a80401dfdfe"
 # ONE ruff cache, outside every source and test tree. Same class as crysta's: ruff writes
 # `.ruff_cache` into the directory it is invoked from, and a stray cache can keep a RETIRED
 # directory alive after its tracked files are gone, tripping a layout gate on a folder that
@@ -233,6 +233,7 @@ CMAKE_CXX_COMPILER_LAUNCHER = "ccache"
 CMAKE_C_COMPILER_LAUNCHER = "ccache"
 
 [feature.app.tasks]
+app-test-scan-save = { cmd = "cmake --build build/app --target edi_scan_save_tests --config Release -j 4 && QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software build/app/app/edi_scan_save_tests", depends-on = ["app-build"] }
 app-test-native-dialogs = { cmd = "cmake -S tests/fixtures/native_dialogs -B build/native-dialogs && cmake --build build/native-dialogs --config Release -j 4 && python tests/fixtures/native_dialogs/run.py build/native-dialogs" }
 app-test-updates = { cmd = "cmake --build build/app --target edi_desktop_update_tests -j 4 && QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software build/app/app/edi_desktop_update_tests", depends-on = ["app-build"] }
 release-check = "python -m pytest tests/fixtures/releases/check_*.py tests/unit/py/test_release_promotion.py --noconftest -o addopts= -q"
@@ -526,6 +527,7 @@ latency-bank = { cmd = ["python", "tools/ci/latency_bank.py", "--run"], depends-
 # with its environment: pixi keys an inherited-environment reference apart from an explicit one and would run
 # it twice.
 app-verify = { depends-on = [
+    { task = "app-test-scan-save", environment = "app" },
     { task = "app-test-native-dialogs", environment = "app" },
     "core-build",
     { task = "app-lint", environment = "app" },
