@@ -31,6 +31,31 @@ Item {
     // `elide`.
     property real maximumWidth: 0
     property int elide: Text.ElideRight
+    // The least the elided text keeps (0: no least): leading icons give way first, so a short room still shows the
+    // start of the name and its ellipsis rather than icons alone.
+    property real minimumTextWidth: 0
+    // The leading icons that give way, and the width they leave: {count, width}.
+    readonly property var dropped: {
+        let count = 0;
+        let width = 0;
+        const shown = built >= 0 ? pieces.count : 0;
+        // A short name that fits keeps every icon.
+        const elidedPiece = elidedIndex >= 0 && elidedIndex < shown ? pieces.itemAt(elidedIndex) : null;
+        const least = Math.min(minimumTextWidth, elidedPiece ? elidedPiece.implicitWidth : 0);
+        for (let index = 0; maximumWidth > 0 && index < shown && index < elidedIndex && maximumWidth - otherWidth + width < least; ++index) {
+            if (segments[index]?.icon === undefined)
+                continue;
+            const piece = pieces.itemAt(index);
+            width += (piece ? piece.implicitWidth : 0) + spacing;
+            count = index + 1;
+        }
+        return {
+            "count": count,
+            "width": width
+        };
+    }
+    // The whole line uncut, which a table fits its column to.
+    readonly property real fullWidth: built >= 0 && elidedIndex >= 0 && elidedIndex < pieces.count && pieces.itemAt(elidedIndex) ? otherWidth + pieces.itemAt(elidedIndex).implicitWidth : row.implicitWidth
 
     // The piece that gives way when the line is too long.
     readonly property int elidedIndex: ApplicationInfo.iconElidedIndex()
@@ -44,7 +69,9 @@ Item {
         return ApplicationInfo.iconFixedWidth(segment);
     }
     // The width of every other piece, with their spacing: what the elided piece leaves room for.
-    readonly property real otherWidth: ApplicationInfo.iconOtherWidth()
+    // Pieces made so far: the widths read the pieces themselves, which do not exist yet when the line is first laid out.
+    property int built: 0
+    readonly property real otherWidth: built >= 0 ? ApplicationInfo.iconOtherWidth() : 0
 
     // The centre line, from the line's top: the text baseline, less half a capital's height.
     readonly property real centreY: textMetrics.ascent + capital.tightBoundingRect.y + capital.tightBoundingRect.height / 2
@@ -73,6 +100,7 @@ Item {
 
         Repeater {
             id: pieces
+            onItemAdded: line.built++
             // By count, so a change of a piece's text or colour updates the pieces in place; only a change of how many
             // there are makes them again.
             model: line.segments.length
@@ -99,7 +127,8 @@ Item {
                 text: isIcon ? modelData.icon : mark !== "" ? "" : factors ? FactorText.rich(modelData.text) : modelData.text ?? ""
                 // A text not cut keeps its own width (undefined resets it to the implicit width), so a piece changed
                 // in place never reads its own layout while it is laid out again.
-                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth)) : line.fixedWidth(modelData)
+                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth + line.dropped.width)) : line.fixedWidth(modelData)
+                visible: !(isIcon && index < line.dropped.count)
                 elide: elided ? line.elide : Text.ElideNone
                 y: isIcon ? line.centreY - inkMiddle : textMetrics.ascent - baselineOffset
 

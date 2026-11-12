@@ -373,7 +373,11 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
         hash.addData(QByteArrayView(line.data(), static_cast<qsizetype>(line.size())));
         hash.addData(QByteArrayView("\n", 1));
     };
-    for (const auto& [path, body] : edi::project_edi_files(project)) {
+    // Hashed from a copy, which is never calculated: a save of a calculated project adds its computed columns and
+    // categories (and a newer schema version), so the same inputs would hash differently before and after a
+    // calculation, e.g. the shown model at a scan's start against the template copy at its end.
+    const edi::Project inputs = project;
+    for (const auto& [path, body] : edi::project_edi_files(inputs)) {
         if (path == "project.edi" || path == "reports/report.edi") {
             continue;
         }
