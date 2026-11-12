@@ -151,6 +151,10 @@ def structure_facts(text: str) -> dict:
     return facts
 
 
+# The facts an experiment file states about itself.
+FILE_FACTS = {'radiation', 'technique', 'instrument', 'facility'}
+
+
 def experiment_facts(text: str) -> dict:
     facts = {}
     probe = cif_value(text, '_experiment_type.radiation_probe')
@@ -162,7 +166,8 @@ def experiment_facts(text: str) -> dict:
         facts['technique'] = ' '.join(part for part in (form, mode) if part)
     for tag, key in (('_instrument.name', 'instrument'), ('_instrument.facility', 'facility')):
         value = cif_value(text, tag)
-        if value:
+        # '?' (unknown) and '.' (not applicable) are no name.
+        if value and value not in {'?', '.'}:
             facts[key] = value
     return facts
 
@@ -429,7 +434,10 @@ def entries_of(output: Path) -> list[dict]:
                 'doi',
                 'structures',
             ):
-                value = meta.get(key, facts.get(key))
+                # What a file says of itself (the X-ray half of a neutron and X-ray case) wins
+                # over the case's description.
+                own = key in FILE_FACTS and facts.get(key)
+                value = facts[key] if own else meta.get(key, facts.get(key))
                 if value not in (None, '', []):
                     entry[key] = value
             entry['files'] = [
