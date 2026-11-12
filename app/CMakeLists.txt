@@ -24,7 +24,8 @@ if(EDI_APP_ASSISTANT)
         src/assistant_work_report.hpp src/assistant_work_report.cpp
         src/assistant_history.hpp src/assistant_history.cpp
         src/assistant_markdown.hpp src/assistant_markdown.cpp
-        src/assistant_skill_import.hpp src/assistant_skill_import.cpp)
+        src/assistant_skill_import.hpp src/assistant_skill_import.cpp
+        src/assistant_thread_settings.hpp src/assistant_thread_settings.cpp)
     set(EDI_APP_ASSISTANT_QML
         qml/Components/AssistantPanel.qml
         qml/Components/AssistantWorking.qml
