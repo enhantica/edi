@@ -447,6 +447,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Create structure: a new structure named structure1, structure2, … holding easydiffractionbeta's default phase
     // (P b n m, a = 10, b = 6, c = 5 Å, one O site at the origin), selected and linked to no experiment. One
     // undoable step.
+    // Whether an edit or a fit would be taken now, without the refusal a too-early press shows (a tutorial's Next
+    // waits for this rather than meeting "still being published").
+    Q_INVOKABLE bool readyForEdit() const { return editReadinessRefusal(false).isEmpty(); }
     Q_INVOKABLE bool createStructure();
     // Duplicate structure: a copy of the current structure (edi::structure_copy) named `<name>_copy`, selected and
     // linked to no experiment. One undoable step.

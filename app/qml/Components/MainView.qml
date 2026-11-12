@@ -67,8 +67,20 @@ EaComponents.MainContent {
         openOwnTabOnFirstVisit();
     }
     onPageChanged: openOwnTabOnFirstVisit()
-    onShownChanged: openOwnTabOnFirstVisit()
+    onShownChanged: {
+        openOwnTabOnFirstVisit();
+        Qt.callLater(showCurrentPage);
+    }
     onBarChanged: openOwnTabOnFirstVisit()
+    onTabIndexChanged: Qt.callLater(showCurrentPage)
+    // The pages' list keeps its old position when the tab changes while the view is hidden (a scan project opened
+    // straight onto Analysis showed the previous project's structure under the Pattern tab): put it on the current
+    // tab's page whenever the view shows or the tab changes.
+    function showCurrentPage() {
+        const pages = view.children.length > 1 ? view.children[1] : null;
+        if (pages && pages.contentItem && pages.contentItem.positionViewAtIndex !== undefined && pages.currentIndex >= 0)
+            pages.contentItem.positionViewAtIndex(pages.currentIndex, ListView.Beginning);
+    }
 
     Connections {
         target: AppState

@@ -79,7 +79,15 @@ AppDialog {
         const remembered = dialog.lastSource[kind];
         if (search.sources.count > 0)
             search.sourceId = search.sources.indexOfKey(remembered) >= 0 ? remembered : search.sources.keyAt(0);
-        dialog.recall();
+        // A tutorial starts each search clean, without the last one (another tutorial's, or the user's, which stays
+        // remembered for later).
+        if (AppState.tutorialRunning) {
+            results.clearSelection();
+            search.reset();
+            dialog.values = {};
+        } else {
+            dialog.recall();
+        }
         search.prepare();
         dialog.visible = true;
     }

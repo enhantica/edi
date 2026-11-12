@@ -525,7 +525,11 @@ QString ProjectViewModel::name() const { return QString::fromStdString(project_-
 QString ProjectViewModel::title() const { return QString::fromStdString(project_->metadata.title); }
 QString ProjectViewModel::description() const { return QString::fromStdString(project_->metadata.description); }
 QString ProjectViewModel::lastModified() const { return QString::fromStdString(project_->metadata.last_modified); }
-QString ProjectViewModel::authors() const { return QString::fromStdString(project_->metadata.authors); }
+QString ProjectViewModel::authors() const {
+    // "." (not applicable) and "?" (unknown) are the file's empty markers, never an author.
+    const QString authors = QString::fromStdString(project_->metadata.authors).trimmed();
+    return authors == QLatin1String(".") || authors == QLatin1String("?") ? QString() : authors;
+}
 QString ProjectViewModel::suRule() const { return QString::fromStdString(project_->su_rule); }
 
 UncertaintyText ProjectViewModel::suText(double value, double su) const {
@@ -3497,7 +3501,7 @@ ExperimentListModel::Dataset ProjectViewModel::datasetRow(int index) const {
     const auto& results = scan_session_->index().rows;
     if (static_cast<std::size_t>(index) < results.size() && results[static_cast<std::size_t>(index)].offset >= 0) {
         dataset.reliability = QString::fromStdString(edi::label("fit_result.reduced_chi_square") + " ") +
-                              QString::fromStdString(edi::display_text(
+                              QString::fromStdString(edi::shown_text(
                                   "fit_result.reduced_chi_square", results[static_cast<std::size_t>(index)].reduced_chi_square));
     }
     // A single fit on the template dataset with no scan row gives it that fit's outcome.
