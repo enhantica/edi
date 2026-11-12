@@ -8002,7 +8002,7 @@ QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJ
     case NumberFitted: return value;
     case NumberAxisFormat:
     case NumberAxisTick:
-    case NumberAxisStep: break;
+    case NumberAxisStep: return QJSValue();  // answered above
     default: return numberPresentationRaw(operation, value, second, third, fourth);
     }
 }
