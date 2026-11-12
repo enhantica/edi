@@ -25,7 +25,7 @@
             "scene": "project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-WxKAtq/pd-neut-cwl_cosio-d20",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-sVlGeq/pd-neut-cwl_cosio-d20",
             "scene": "project-details"
         },
         {
@@ -146,6 +146,30 @@
         },
         {
             "action": "appBar.tab.analysis",
+            "scene": "minimizer"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "minimizer"
+        },
+        {
+            "action": "reveal:group.minimizer",
+            "scene": "minimizer"
+        },
+        {
+            "action": "expand:group.minimizer",
+            "scene": "minimizer"
+        },
+        {
+            "action": "choose-token:minimizer.descent=fast_descent",
+            "scene": "minimizer"
+        },
+        {
+            "action": "fill:minimizer.maxIterations=1000",
+            "scene": "minimizer"
+        },
+        {
+            "action": "appBar.tab.analysis",
             "scene": "stage-1-free"
         },
         {
@@ -165,23 +189,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=calib",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.instrument.calib_twotheta_offset",
             "scene": "stage-1-free"
         },
         {
@@ -197,15 +205,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.linked_structures[cosio].scale",
             "scene": "stage-1-free"
         },
         {
@@ -309,31 +309,19 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "tick:experiment.peak.broad_gauss_u",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:experiment.peak.broad_gauss_v",
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "tick:experiment.peak.broad_gauss_w",
             "scene": "stage-3-free"
         },
         {
-            "action": "fill:parameters.nameFilter=lorentz_x",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.peak.broad_lorentz_y",
             "scene": "stage-3-free"
         },
         {
@@ -413,15 +401,27 @@
             "scene": "stage-5-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "tick:structure.atom_sites[Co1].adp_iso",
             "scene": "stage-5-free"
         },
         {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:structure.atom_sites[Co2].adp_iso",
             "scene": "stage-5-free"
         },
         {
-            "action": "parameters.clearFilters",
+            "action": "tick:structure.atom_sites[O1].adp_iso",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "tick:structure.atom_sites[O2].adp_iso",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "tick:structure.atom_sites[O3].adp_iso",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "tick:structure.atom_sites[Si].adp_iso",
             "scene": "stage-5-free"
         },
         {
@@ -477,23 +477,7 @@
             "scene": "stage-6-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-6-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=[Co2]",
-            "scene": "stage-6-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-6-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "stage-6-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "untick:structure.atom_sites[Co2].adp_iso",
             "scene": "stage-6-free"
         },
         {
@@ -645,23 +629,15 @@
             "scene": "stage-7-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "tick:structure.atom_sites[O1].occupancy",
             "scene": "stage-7-free"
         },
         {
-            "action": "fill:parameters.nameFilter=[O",
+            "action": "tick:structure.atom_sites[O2].occupancy",
             "scene": "stage-7-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-7-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-7-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:structure.atom_sites[O3].occupancy",
             "scene": "stage-7-free"
         },
         {
@@ -693,11 +669,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "e638a682711bfa73ec025c480b2aa8933d5d71078b0611e6f824a08158d642b1",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "bd3a86b7d71d1b47ae3adf951bd62136bb93a1e99745071314d5e08a626a117d"
+            "sha256": "eb25ddb4323f27b49ee37478d30a7910428f4d00a7d0003a744a36f680679ace"
         }
     ],
     "error": "",
@@ -782,7 +758,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the structure cosio in the EasyDiffraction collection",
+            "description": "Find the structure",
             "id": "structure-web-0",
             "image": "structure-web-0.webp",
             "metadata": "structure-web-0.json",
@@ -800,7 +776,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the experiment d20 in the EasyDiffraction collection",
+            "description": "Find the experiment",
             "id": "experiment-web-0",
             "image": "experiment-web-0.webp",
             "metadata": "experiment-web-0.json",
@@ -824,6 +800,15 @@
             "metadata": "nothing-free.json",
             "page": "analysis",
             "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Set the minimizer as the project does",
+            "id": "minimizer",
+            "image": "minimizer.webp",
+            "metadata": "minimizer.json",
+            "page": "analysis",
+            "sidebar": "Extra",
             "status": "captured"
         },
         {
@@ -909,8 +894,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "01df23abc1dd7583d888387e294136d4001c5818038b1f390791ecf51f79ce2b",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "fdb3940e601ada9e34c9c33701d951813f7f943275bc4c5d05cc83338316113b",
+    "source_revision": "00b29514389e67e0b2ddc0994d95f4a678012f8b",
     "status": "complete",
     "workflow": "tutorial"
 }

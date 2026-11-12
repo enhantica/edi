@@ -25,7 +25,7 @@
             "scene": "project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-GFCxjC/pd-xray-cwl_lam7o3-p021",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-LgWuFm/pd-xray-cwl_lam7o3-p021",
             "scene": "project-details"
         },
         {
@@ -123,6 +123,26 @@
         {
             "action": "wait-online",
             "scene": "experiment-loaded-0"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
         },
         {
             "action": "appBar.tab.analysis",
@@ -626,23 +646,27 @@
         },
         {
             "action": "appBar.tab.analysis",
-            "scene": "nothing-free"
+            "scene": "minimizer"
         },
         {
-            "action": "sideBar.tab.basic",
-            "scene": "nothing-free"
+            "action": "sideBar.tab.extras",
+            "scene": "minimizer"
         },
         {
-            "action": "parameters.clearFilters",
-            "scene": "nothing-free"
+            "action": "reveal:group.minimizer",
+            "scene": "minimizer"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "nothing-free"
+            "action": "expand:group.minimizer",
+            "scene": "minimizer"
         },
         {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "nothing-free"
+            "action": "choose-token:minimizer.descent=fast_descent",
+            "scene": "minimizer"
+        },
+        {
+            "action": "fill:minimizer.maxIterations=1000",
+            "scene": "minimizer"
         },
         {
             "action": "appBar.tab.analysis",
@@ -665,23 +689,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=calib",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.instrument.calib_twotheta_offset",
             "scene": "stage-1-free"
         },
         {
@@ -697,15 +705,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.linked_structures[lam7o3].scale",
             "scene": "stage-1-free"
         },
         {
@@ -809,31 +809,19 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "tick:experiment.peak.broad_gauss_u",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:experiment.peak.broad_gauss_v",
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "tick:experiment.peak.broad_gauss_w",
             "scene": "stage-3-free"
         },
         {
-            "action": "fill:parameters.nameFilter=lorentz_y",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.peak.broad_lorentz_x",
             "scene": "stage-3-free"
         },
         {
@@ -914,6 +902,30 @@
         },
         {
             "action": "sideBar.tab.basic",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "choose:Background",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.freeHeader.free",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "parameters.clearFilters",
             "scene": "stage-4-free"
         },
         {
@@ -1033,11 +1045,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "628441ba571e2a6b22ca271575dfe4cacb45fbf460022150fbdf74e4308a1294",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "8c43e240eb4f204ad16cd1e80669b719d982c76ba838f3bb29bc675fa960e75a"
+            "sha256": "487e082c579f3bbc602f285738f6169844c7413774acc1d9b1df60030054bd36"
         }
     ],
     "error": "",
@@ -1122,7 +1134,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the structure lam7o3 in the EasyDiffraction collection",
+            "description": "Find the structure",
             "id": "structure-web-0",
             "image": "structure-web-0.webp",
             "metadata": "structure-web-0.json",
@@ -1140,7 +1152,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the experiment p021 in the EasyDiffraction collection",
+            "description": "Find the experiment",
             "id": "experiment-web-0",
             "image": "experiment-web-0.webp",
             "metadata": "experiment-web-0.json",
@@ -1158,7 +1170,16 @@
             "status": "captured"
         },
         {
-            "description": "Add the relations the project starts with",
+            "description": "Start with every parameter fixed",
+            "id": "nothing-free",
+            "image": "nothing-free.webp",
+            "metadata": "nothing-free.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Add the relations",
             "id": "relations-start",
             "image": "relations-start.webp",
             "metadata": "relations-start.json",
@@ -1167,12 +1188,12 @@
             "status": "captured"
         },
         {
-            "description": "Start with every parameter fixed",
-            "id": "nothing-free",
-            "image": "nothing-free.webp",
-            "metadata": "nothing-free.json",
+            "description": "Set the minimizer as the project does",
+            "id": "minimizer",
+            "image": "minimizer.webp",
+            "metadata": "minimizer.json",
             "page": "analysis",
-            "sidebar": "Main",
+            "sidebar": "Extra",
             "status": "captured"
         },
         {
@@ -1249,8 +1270,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "d197466a2d026a4b3ff244151059a185bd8456d87b21bf3a9c734db6b7a817c0",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "c6f82757ec341f58271ff680f7dc20dd069683503e8d8f478cef2fea3fbc67cf",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "status": "complete",
     "workflow": "tutorial"
 }

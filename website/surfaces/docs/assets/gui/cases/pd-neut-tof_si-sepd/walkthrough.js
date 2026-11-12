@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure si in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment sepd in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -196,6 +196,24 @@
   "fitPhase": "setup"
  },
  {
+  "id": "minimizer",
+  "page": "analysis",
+  "description": "Set the minimizer as the project does",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "fill:minimizer.maxIterations=1000"
+  ],
+  "highlights": [
+   "group.minimizer"
+  ],
+  "sidebar": "Extra",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "stage-1-free",
   "page": "analysis",
   "description": "Cell, scale and time-of-flight calibration",
@@ -205,23 +223,15 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=offset",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.instrument.calib_d_to_tof_offset",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.linked_structures[si].scale",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Cell",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:structure.cell.length_a"
   ],
   "highlights": [
    "group.parameters"
@@ -293,19 +303,8 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak broadening",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=sigma_0",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.category",
-   "parameters.category",
-   "choose:Peak broadening",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=sigma_1",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:experiment.peak.broad_gauss_sigma_0",
+   "tick:experiment.peak.broad_gauss_sigma_1"
   ],
   "highlights": [
    "group.parameters"
@@ -340,11 +339,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak broadening",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=gamma_1",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:experiment.peak.broad_lorentz_gamma_1"
   ],
   "highlights": [
    "group.parameters"
@@ -379,9 +374,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic displacement",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:structure.atom_sites[Si].adp_iso"
   ],
   "highlights": [
    "group.parameters"
@@ -416,11 +409,8 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak asymmetry",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=beta",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:experiment.peak.decay_beta_0",
+   "tick:experiment.peak.decay_beta_1"
   ],
   "highlights": [
    "group.parameters"

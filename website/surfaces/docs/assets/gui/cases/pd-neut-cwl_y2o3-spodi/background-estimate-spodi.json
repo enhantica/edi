@@ -8,7 +8,7 @@
     ],
     "id": "background-estimate-spodi",
     "image": "background-estimate-spodi.webp",
-    "image_sha256": "df1477a92c2a3107a4b660bcfdc9f88255456d8f21b9e8d1903b7ad8eb5abeb9",
+    "image_sha256": "5932000efeae737963d88ab8ee73961f16262622ad294306f6af39766491d3ee",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -61,7 +61,7 @@
         "SideBarGroup": {
             "bounds": [
                 784,
-                210.00000000000932,
+                210,
                 682,
                 337.5
             ],
@@ -69,7 +69,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                210.00000000000932,
+                210,
                 682,
                 337.5
             ]
@@ -190,22 +190,6 @@
                 21,
                 35,
                 35
-            ]
-        },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
             ]
         },
         "appBar.tab.analysis": {
@@ -346,7 +330,7 @@
         "background.append": {
             "bounds": [
                 784,
-                508.5000000000093,
+                508.5,
                 218,
                 39
             ],
@@ -355,7 +339,7 @@
             "label": "Add point",
             "visible_bounds": [
                 784,
-                508.5000000000093,
+                508.5,
                 218,
                 39
             ]
@@ -363,7 +347,7 @@
         "background.estimate": {
             "bounds": [
                 1248,
-                508.5000000000093,
+                508.5,
                 218,
                 39
             ],
@@ -372,7 +356,7 @@
             "label": "Estimate",
             "visible_bounds": [
                 1248,
-                508.5000000000093,
+                508.5,
                 218,
                 39
             ]
@@ -380,7 +364,7 @@
         "background.id.0": {
             "bounds": [
                 823,
-                319.0000000000093,
+                319,
                 40,
                 39
             ],
@@ -388,7 +372,7 @@
             "label": "1",
             "visible_bounds": [
                 823,
-                319.0000000000093,
+                319,
                 40,
                 39
             ]
@@ -396,7 +380,7 @@
         "background.id.1": {
             "bounds": [
                 823,
-                358.0000000000093,
+                358,
                 40,
                 39
             ],
@@ -404,7 +388,7 @@
             "label": "2",
             "visible_bounds": [
                 823,
-                358.0000000000093,
+                358,
                 40,
                 39
             ]
@@ -412,7 +396,7 @@
         "background.id.2": {
             "bounds": [
                 823,
-                397.0000000000093,
+                397,
                 40,
                 39
             ],
@@ -420,7 +404,7 @@
             "label": "3",
             "visible_bounds": [
                 823,
-                397.0000000000093,
+                397,
                 40,
                 39
             ]
@@ -428,7 +412,7 @@
         "background.id.3": {
             "bounds": [
                 823,
-                436.0000000000093,
+                436,
                 40,
                 39
             ],
@@ -436,7 +420,7 @@
             "label": "4",
             "visible_bounds": [
                 823,
-                436.0000000000093,
+                436,
                 40,
                 39
             ]
@@ -444,7 +428,7 @@
         "background.id.4": {
             "bounds": [
                 823,
-                475.0000000000093,
+                475,
                 40,
                 39
             ],
@@ -452,7 +436,7 @@
             "label": "5",
             "visible_bounds": [
                 823,
-                475.0000000000093,
+                475,
                 40,
                 19.5
             ]
@@ -460,7 +444,7 @@
         "background.intensity.0": {
             "bounds": [
                 946,
-                319.0000000000093,
+                319,
                 472,
                 39
             ],
@@ -468,7 +452,7 @@
             "label": "9.97×10³",
             "visible_bounds": [
                 946,
-                319.0000000000093,
+                319,
                 472,
                 39
             ]
@@ -476,7 +460,7 @@
         "background.intensity.1": {
             "bounds": [
                 946,
-                358.0000000000093,
+                358,
                 472,
                 39
             ],
@@ -484,7 +468,7 @@
             "label": "8.97×10³",
             "visible_bounds": [
                 946,
-                358.0000000000093,
+                358,
                 472,
                 39
             ]
@@ -492,7 +476,7 @@
         "background.intensity.2": {
             "bounds": [
                 946,
-                397.0000000000093,
+                397,
                 472,
                 39
             ],
@@ -500,7 +484,7 @@
             "label": "8.88×10³",
             "visible_bounds": [
                 946,
-                397.0000000000093,
+                397,
                 472,
                 39
             ]
@@ -508,7 +492,7 @@
         "background.intensity.3": {
             "bounds": [
                 946,
-                436.0000000000093,
+                436,
                 472,
                 39
             ],
@@ -516,7 +500,7 @@
             "label": "8.48×10³",
             "visible_bounds": [
                 946,
-                436.0000000000093,
+                436,
                 472,
                 39
             ]
@@ -524,7 +508,7 @@
         "background.intensity.4": {
             "bounds": [
                 946,
-                475.0000000000093,
+                475,
                 472,
                 39
             ],
@@ -532,7 +516,7 @@
             "label": "8.63×10³",
             "visible_bounds": [
                 946,
-                475.0000000000093,
+                475,
                 472,
                 19.5
             ]
@@ -540,7 +524,7 @@
         "background.list": {
             "bounds": [
                 784,
-                280.0000000000093,
+                280,
                 682,
                 214.5
             ],
@@ -548,7 +532,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                280.0000000000093,
+                280,
                 682,
                 214.5
             ]
@@ -556,7 +540,7 @@
         "background.namePoints": {
             "bounds": [
                 1016,
-                508.5000000000093,
+                508.5,
                 218,
                 39
             ],
@@ -565,7 +549,7 @@
             "label": "Id from position",
             "visible_bounds": [
                 1016,
-                508.5000000000093,
+                508.5,
                 218,
                 39
             ]
@@ -573,7 +557,7 @@
         "background.position.0": {
             "bounds": [
                 867,
-                319.0000000000093,
+                319,
                 75,
                 39
             ],
@@ -581,7 +565,7 @@
             "label": "12.05",
             "visible_bounds": [
                 867,
-                319.0000000000093,
+                319,
                 75,
                 39
             ]
@@ -589,7 +573,7 @@
         "background.position.1": {
             "bounds": [
                 867,
-                358.0000000000093,
+                358,
                 75,
                 39
             ],
@@ -597,7 +581,7 @@
             "label": "22.85",
             "visible_bounds": [
                 867,
-                358.0000000000093,
+                358,
                 75,
                 39
             ]
@@ -605,7 +589,7 @@
         "background.position.2": {
             "bounds": [
                 867,
-                397.0000000000093,
+                397,
                 75,
                 39
             ],
@@ -613,7 +597,7 @@
             "label": "27.4",
             "visible_bounds": [
                 867,
-                397.0000000000093,
+                397,
                 75,
                 39
             ]
@@ -621,7 +605,7 @@
         "background.position.3": {
             "bounds": [
                 867,
-                436.0000000000093,
+                436,
                 75,
                 39
             ],
@@ -629,7 +613,7 @@
             "label": "29.65",
             "visible_bounds": [
                 867,
-                436.0000000000093,
+                436,
                 75,
                 39
             ]
@@ -637,7 +621,7 @@
         "background.position.4": {
             "bounds": [
                 867,
-                475.0000000000093,
+                475,
                 75,
                 39
             ],
@@ -645,7 +629,7 @@
             "label": "31.2",
             "visible_bounds": [
                 867,
-                475.0000000000093,
+                475,
                 75,
                 19.5
             ]
@@ -653,7 +637,7 @@
         "background.remove.0": {
             "bounds": [
                 1422,
-                319.0000000000093,
+                319,
                 39,
                 39
             ],
@@ -662,7 +646,7 @@
             "label": "",
             "visible_bounds": [
                 1422,
-                319.0000000000093,
+                319,
                 39,
                 39
             ]
@@ -670,7 +654,7 @@
         "background.remove.1": {
             "bounds": [
                 1422,
-                358.0000000000093,
+                358,
                 39,
                 39
             ],
@@ -679,7 +663,7 @@
             "label": "",
             "visible_bounds": [
                 1422,
-                358.0000000000093,
+                358,
                 39,
                 39
             ]
@@ -687,7 +671,7 @@
         "background.remove.2": {
             "bounds": [
                 1422,
-                397.0000000000093,
+                397,
                 39,
                 39
             ],
@@ -696,7 +680,7 @@
             "label": "",
             "visible_bounds": [
                 1422,
-                397.0000000000093,
+                397,
                 39,
                 39
             ]
@@ -704,7 +688,7 @@
         "background.remove.3": {
             "bounds": [
                 1422,
-                436.0000000000093,
+                436,
                 39,
                 39
             ],
@@ -713,7 +697,7 @@
             "label": "",
             "visible_bounds": [
                 1422,
-                436.0000000000093,
+                436,
                 39,
                 39
             ]
@@ -721,7 +705,7 @@
         "background.remove.4": {
             "bounds": [
                 1422,
-                475.0000000000093,
+                475,
                 39,
                 39
             ],
@@ -730,7 +714,7 @@
             "label": "",
             "visible_bounds": [
                 1422,
-                475.0000000000093,
+                475,
                 39,
                 19.5
             ]
@@ -738,7 +722,7 @@
         "background.rows": {
             "bounds": [
                 784,
-                210.00000000000932,
+                210,
                 682,
                 337.5
             ],
@@ -746,7 +730,7 @@
             "label": "",
             "visible_bounds": [
                 784,
-                210.00000000000932,
+                210,
                 682,
                 337.5
             ]
@@ -754,7 +738,7 @@
         "background.type": {
             "bounds": [
                 784,
-                210.00000000000932,
+                210,
                 339.25,
                 56
             ],
@@ -778,7 +762,7 @@
             "uid": "background.type",
             "visible_bounds": [
                 784,
-                210.00000000000932,
+                210,
                 339.25,
                 56
             ]
@@ -786,7 +770,7 @@
         "background_estimate.mode": {
             "bounds": [
                 1126.75,
-                210.00000000000932,
+                210,
                 339.25,
                 56
             ],
@@ -806,7 +790,7 @@
             "uid": "background_estimate.mode",
             "visible_bounds": [
                 1126.75,
-                210.00000000000932,
+                210,
                 339.25,
                 56
             ]
@@ -966,7 +950,7 @@
                 69.46875
             ],
             "enabled": true,
-            "label": "<font color=\"#618ec8\">meas</font> − <font color=\"#ad1a6b\">calc</font>",
+            "label": "<font color=\"#618ec8\">meas</font> − <font color=\"#e5533d\">calc</font>",
             "visible_bounds": [
                 15.5,
                 601.765625,
@@ -998,7 +982,7 @@
                 88.09375
             ],
             "enabled": true,
-            "label": "<font color=\"#618ec8\">meas</font>, <font color=\"#ad1a6b\">calc</font>, <font color=\"#8a8a8a\">bkg</font>",
+            "label": "<font color=\"#618ec8\">meas</font>, <font color=\"#e5533d\">calc</font>, <font color=\"#8a8a8a\">bkg</font>",
             "visible_bounds": [
                 15.5,
                 342.453125,
@@ -1274,7 +1258,7 @@
         "group.background": {
             "bounds": [
                 770,
-                161.00000000000932,
+                161,
                 710,
                 400.5
             ],
@@ -1283,15 +1267,31 @@
             "label": "Background (21)",
             "visible_bounds": [
                 770,
-                161.00000000000932,
+                161,
                 710,
                 400.5
+            ]
+        },
+        "group.background.pin": {
+            "bounds": [
+                1433.2261363926236,
+                159.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                161,
+                44.54772721475251,
+                43.273863607376256
             ]
         },
         "group.excluded_region": {
             "bounds": [
                 770,
-                645.4999999999978,
+                645.5,
                 710,
                 42
             ],
@@ -1300,8 +1300,24 @@
             "label": "Excluded regions (2)",
             "visible_bounds": [
                 770,
-                645.4999999999978,
+                645.5,
                 710,
+                42
+            ]
+        },
+        "group.excluded_region.pin": {
+            "bounds": [
+                1433.2261363926236,
+                644.2261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                645.5,
+                44.54772721475251,
                 42
             ]
         },
@@ -1322,10 +1338,26 @@
                 42
             ]
         },
+        "group.experiments.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.instrument": {
             "bounds": [
                 770,
-                561.4999999999978,
+                561.5,
                 710,
                 42
             ],
@@ -1334,15 +1366,31 @@
             "label": "Instrument",
             "visible_bounds": [
                 770,
-                561.4999999999978,
+                561.5,
                 710,
+                42
+            ]
+        },
+        "group.instrument.pin": {
+            "bounds": [
+                1433.2261363926236,
+                560.2261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                561.5,
+                44.54772721475251,
                 42
             ]
         },
         "group.linked_structure": {
             "bounds": [
                 770,
-                687.4999999999978,
+                687.5,
                 710,
                 42
             ],
@@ -1351,15 +1399,31 @@
             "label": "Linked structures (1)",
             "visible_bounds": [
                 770,
-                687.4999999999978,
+                687.5,
                 710,
+                42
+            ]
+        },
+        "group.linked_structure.pin": {
+            "bounds": [
+                1433.2261363926236,
+                686.2261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                687.5,
+                44.54772721475251,
                 42
             ]
         },
         "group.peak": {
             "bounds": [
                 770,
-                603.4999999999978,
+                603.5,
                 710,
                 42
             ],
@@ -1368,8 +1432,24 @@
             "label": "Peak profile",
             "visible_bounds": [
                 770,
-                603.4999999999978,
+                603.5,
                 710,
+                42
+            ]
+        },
+        "group.peak.pin": {
+            "bounds": [
+                1433.2261363926236,
+                602.2261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                603.5,
+                44.54772721475251,
                 42
             ]
         },
@@ -1442,25 +1522,41 @@
                 35
             ]
         },
-        "mainArea.experiment.tab.chart": {
+        "mainArea.divider": {
             "bounds": [
-                0,
+                770,
                 77,
-                57.765625,
-                42
+                1,
+                681
             ],
             "enabled": true,
-            "label": "Pattern",
+            "label": "",
             "visible_bounds": [
-                0,
+                770,
                 77,
-                57.765625,
+                1,
+                681
+            ]
+        },
+        "mainArea.tab.correlations": {
+            "bounds": [
+                126.640625,
+                77,
+                86.15625,
+                42
+            ],
+            "enabled": false,
+            "label": "Correlations",
+            "visible_bounds": [
+                126.640625,
+                77,
+                86.15625,
                 42
             ]
         },
-        "mainArea.experiment.tab.map": {
+        "mainArea.tab.map": {
             "bounds": [
-                118.34375,
+                273.375,
                 77,
                 39.5625,
                 42
@@ -1468,15 +1564,31 @@
             "enabled": false,
             "label": "Map",
             "visible_bounds": [
-                118.34375,
+                273.375,
                 77,
                 39.5625,
                 42
             ]
         },
-        "mainArea.experiment.tab.stacked": {
+        "mainArea.tab.pattern": {
             "bounds": [
+                68.875,
+                77,
                 57.765625,
+                42
+            ],
+            "enabled": true,
+            "label": "Pattern",
+            "visible_bounds": [
+                68.875,
+                77,
+                57.765625,
+                42
+            ]
+        },
+        "mainArea.tab.stacked": {
+            "bounds": [
+                212.796875,
                 77,
                 60.578125,
                 42
@@ -1484,9 +1596,25 @@
             "enabled": false,
             "label": "Stacked",
             "visible_bounds": [
-                57.765625,
+                212.796875,
                 77,
                 60.578125,
+                42
+            ]
+        },
+        "mainArea.tab.structure": {
+            "bounds": [
+                0,
+                77,
+                68.875,
+                42
+            ],
+            "enabled": true,
+            "label": "Structure",
+            "visible_bounds": [
+                0,
+                77,
+                68.875,
                 42
             ]
         },
@@ -1674,7 +1802,7 @@
             "bounds": [
                 875.128125,
                 772,
-                217.859375,
+                210.984375,
                 14
             ],
             "enabled": true,
@@ -1683,7 +1811,7 @@
             "visible_bounds": [
                 875.128125,
                 772,
-                217.859375,
+                210.984375,
                 14
             ]
         },
@@ -1816,8 +1944,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "9493da66f26bd3dcc8fe18ea2b759071f3ef764e9bf8908eebd0ffd95e367808",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "a7ab49fddea9b1d4009d60aac31a01a28d6898a1e473c1c77bb82de0d2a7d8d1",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

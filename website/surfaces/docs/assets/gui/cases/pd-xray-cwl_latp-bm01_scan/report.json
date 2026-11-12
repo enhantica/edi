@@ -7,7 +7,7 @@
     ],
     "id": "report",
     "image": "report.webp",
-    "image_sha256": "378eee0c789985f3505c7cbdfec0c717212e0ae76fc0b0a3c855b37f0fbc35fb",
+    "image_sha256": "6048ad334d7466bfcb8237ecf4a3d24838608dfc41b5ba57f470ba937fbe781b",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -191,22 +191,6 @@
                 35
             ]
         },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
-            ]
-        },
         "appBar.tab.analysis": {
             "bounds": [
                 812.359375,
@@ -359,6 +343,22 @@
                 42
             ]
         },
+        "group.reportContents.pin": {
+            "bounds": [
+                1433.2261363926236,
+                366.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                368,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.reportExport": {
             "bounds": [
                 770,
@@ -374,6 +374,22 @@
                 119,
                 710,
                 249
+            ]
+        },
+        "group.reportExport.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
             ]
         },
         "label": {
@@ -579,7 +595,7 @@
                 45.125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Extra",
             "visible_bounds": [
                 813.515625,
@@ -595,7 +611,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -672,56 +688,56 @@
         },
         "statusBar.fit": {
             "bounds": [
-                742,
+                828,
                 769,
-                724,
+                638,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                742,
+                828,
                 769,
-                724,
+                638,
                 19
             ]
         },
         "statusBar.fit.button": {
             "bounds": [
-                1402,
+                1414,
                 769,
-                64,
+                52,
                 19
             ],
             "enabled": true,
             "icon": "play-circle",
             "label": "",
             "visible_bounds": [
-                1402,
+                1414,
                 769,
-                64,
+                52,
                 19
             ]
         },
         "statusBar.fit.buttons": {
             "bounds": [
-                1332,
+                1344,
                 769,
-                134,
+                122,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1332,
+                1344,
                 769,
-                134,
+                122,
                 19
             ]
         },
         "statusBar.fit.follow": {
             "bounds": [
-                1367,
+                1379,
                 772,
                 28,
                 14
@@ -730,7 +746,7 @@
             "icon": "crosshairs",
             "label": "",
             "visible_bounds": [
-                1367,
+                1379,
                 772,
                 28,
                 14
@@ -738,24 +754,24 @@
         },
         "statusBar.fit.outcome": {
             "bounds": [
-                760,
+                846,
                 769,
-                92,
+                82,
                 19
             ],
             "enabled": true,
-            "icon": "history",
+            "icon": "check-circle",
             "label": "",
             "visible_bounds": [
-                760,
+                846,
                 769,
-                92,
+                82,
                 19
             ]
         },
         "statusBar.fit.reset": {
             "bounds": [
-                1332,
+                1344,
                 772,
                 28,
                 14
@@ -764,7 +780,7 @@
             "icon": "eraser",
             "label": "",
             "visible_bounds": [
-                1332,
+                1344,
                 772,
                 28,
                 14
@@ -775,17 +791,17 @@
         },
         "statusBar.fit.values": {
             "bounds": [
-                869,
+                945,
                 770,
-                446,
+                382,
                 18.109375
             ],
             "enabled": true,
-            "label": "73/73 71 2 155s 83089624.61–152312820.89",
+            "label": "73/73 73 0 166s 3.63×10⁷–1.52×10⁸",
             "visible_bounds": [
-                869,
+                945,
                 770,
-                446,
+                382,
                 18.109375
             ]
         },
@@ -952,18 +968,18 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "896b904ecd2f2fd932bd8e63c23b29096cb44c624dd99ca4dba91503607c63e1",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "2c4debe0f6d083005d0f0cc15986ac101ed8c02f352849151aa6e9c431dedf6b",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "state": {
         "experiments": 1,
-        "fit_outcome": "maxIterations",
+        "fit_outcome": "success",
         "fit_result_rows": 7,
         "fit_results_open": false,
         "fit_running": false,
-        "fit_status": "Max iterations",
+        "fit_status": "Success",
         "has_project": true,
         "page": "report",
-        "scan_failed": 2,
+        "scan_failed": 0,
         "scan_fitted": 73,
         "scan_total": 73,
         "sidebar": "Main",
@@ -976,7 +992,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.extras",
                 "label": "Extra"
             },
@@ -988,7 +1004,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

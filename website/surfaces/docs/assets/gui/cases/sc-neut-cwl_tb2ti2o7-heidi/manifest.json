@@ -25,7 +25,7 @@
             "scene": "project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-IcYqUO/sc-neut-cwl_tb2ti2o7-heidi",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-XZLxNg/sc-neut-cwl_tb2ti2o7-heidi",
             "scene": "project-details"
         },
         {
@@ -165,15 +165,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.linked_structures[tb2ti2o7].scale",
             "scene": "stage-1-free"
         },
         {
@@ -209,15 +201,7 @@
             "scene": "stage-2-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-2-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-2-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:structure.atom_sites[O1].fract_x",
             "scene": "stage-2-free"
         },
         {
@@ -337,11 +321,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "628441ba571e2a6b22ca271575dfe4cacb45fbf460022150fbdf74e4308a1294",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "bcb41f0443973b807efc468d51550db4f628d47a49538b39271c1289c2d66171"
+            "sha256": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876"
         }
     ],
     "error": "",
@@ -426,7 +410,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the structure tb2ti2o7 in the EasyDiffraction collection",
+            "description": "Find the structure",
             "id": "structure-web-0",
             "image": "structure-web-0.webp",
             "metadata": "structure-web-0.json",
@@ -444,7 +428,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the experiment heidi in the EasyDiffraction collection",
+            "description": "Find the experiment",
             "id": "experiment-web-0",
             "image": "experiment-web-0.webp",
             "metadata": "experiment-web-0.json",
@@ -526,8 +510,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "3f836bf082365285b81f9a35599396b231e4ec383897bcea729d137b05098ea5",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "07a96a2015c38d771b1e3d6708c268602bb8c6a812895ea072bfb23ba5d44a83",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "status": "complete",
     "workflow": "tutorial"
 }

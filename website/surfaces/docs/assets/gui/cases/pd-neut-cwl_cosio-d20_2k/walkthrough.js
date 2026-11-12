@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure cosio in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment d20 in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -125,9 +125,28 @@
   "capture": true
  },
  {
+  "id": "nothing-free",
+  "page": "analysis",
+  "description": "Start with every parameter fixed",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.basic",
+   "parameters.clearFilters",
+   "parameters.freeHeader",
+   "parameters.freeHeader.fixed"
+  ],
+  "highlights": [
+   "group.parameters",
+   "parameters.freeHeader"
+  ],
+  "sidebar": "Main",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "relations-start",
   "page": "analysis",
-  "description": "Add the relations the project starts with",
+  "description": "Add the relations",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.extras",
@@ -188,42 +207,41 @@
   "fitPhase": "setup"
  },
  {
-  "id": "nothing-free",
+  "id": "minimizer",
   "page": "analysis",
-  "description": "Start with every parameter fixed",
+  "description": "Set the minimizer as the project does",
   "actions": [
    "appBar.tab.analysis",
-   "sideBar.tab.basic",
-   "parameters.clearFilters",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed"
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "fill:minimizer.maxIterations=1000"
   ],
   "highlights": [
-   "group.parameters",
-   "parameters.freeHeader"
+   "group.minimizer"
   ],
-  "sidebar": "Main",
+  "sidebar": "Extra",
   "capture": true,
   "fitPhase": "setup"
  },
  {
   "id": "stage-1-free",
   "page": "analysis",
-  "description": "Scale, 2θ zero and cell",
+  "description": "Scale, 2θ zero, cell and magnetic moments",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=calib",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.instrument.calib_twotheta_offset",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
+   "tick:experiment.linked_structures[cosio].scale",
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Magnetic moments",
    "parameters.freeHeader",
    "parameters.freeHeader.free",
    "parameters.clearFilters",
@@ -232,7 +250,11 @@
    "choose:Cell",
    "parameters.freeHeader",
    "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "parameters.clearFilters",
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Magnetic form factors",
+   "tick:structure.magnetic_form_factor[Co].j2_coefficient"
   ],
   "highlights": [
    "group.parameters"
@@ -244,7 +266,7 @@
  {
   "id": "stage-1-fit",
   "page": "analysis",
-  "description": "Fit: Scale, 2θ zero and cell",
+  "description": "Fit: Scale, 2θ zero, cell and magnetic moments",
   "actions": [
    "statusBar.fit.button",
    "wait-fit",
@@ -297,88 +319,16 @@
  {
   "id": "stage-3-free",
   "page": "analysis",
-  "description": "Peak widths",
+  "description": "Atomic displacements and positions",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
    "reveal:parameters.category",
    "parameters.category",
-   "choose:Peak broadening",
+   "choose:Atomic displacement",
    "parameters.freeHeader",
    "parameters.freeHeader.free",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=lorentz_x",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
-   "parameters.clearFilters"
-  ],
-  "highlights": [
-   "group.parameters"
-  ],
-  "sidebar": "Main",
-  "capture": false,
-  "fitPhase": "setup"
- },
- {
-  "id": "stage-3-fit",
-  "page": "analysis",
-  "description": "Fit: Peak widths",
-  "actions": [
-   "statusBar.fit.button",
-   "wait-fit",
-   "close-fit-results"
-  ],
-  "highlights": [
-   "workflow.analysis.mainContent",
-   "group.parameters"
-  ],
-  "sidebar": "Main",
-  "capture": true
- },
- {
-  "id": "stage-4-free",
-  "page": "analysis",
-  "description": "Peak asymmetry",
-  "actions": [
-   "appBar.tab.analysis",
-   "sideBar.tab.basic",
-   "reveal:parameters.category",
-   "parameters.category",
-   "choose:Peak asymmetry",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
-  ],
-  "highlights": [
-   "group.parameters"
-  ],
-  "sidebar": "Main",
-  "capture": false,
-  "fitPhase": "setup"
- },
- {
-  "id": "stage-4-fit",
-  "page": "analysis",
-  "description": "Fit: Peak asymmetry",
-  "actions": [
-   "statusBar.fit.button",
-   "wait-fit",
-   "close-fit-results"
-  ],
-  "highlights": [
-   "workflow.analysis.mainContent",
-   "group.parameters"
-  ],
-  "sidebar": "Main",
-  "capture": true
- },
- {
-  "id": "stage-5-free",
-  "page": "analysis",
-  "description": "Atom positions",
-  "actions": [
-   "appBar.tab.analysis",
-   "sideBar.tab.basic",
+   "parameters.clearFilters",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic coordinates",
@@ -394,85 +344,82 @@
   "fitPhase": "setup"
  },
  {
+  "id": "stage-3-fit",
+  "page": "analysis",
+  "description": "Fit: Atomic displacements and positions",
+  "actions": [
+   "statusBar.fit.button",
+   "wait-fit",
+   "close-fit-results"
+  ],
+  "highlights": [
+   "workflow.analysis.mainContent",
+   "group.parameters"
+  ],
+  "sidebar": "Main",
+  "capture": true
+ },
+ {
+  "id": "stage-4-free",
+  "page": "analysis",
+  "description": "Peak widths",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.basic",
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Peak broadening",
+   "tick:experiment.peak.broad_gauss_u",
+   "tick:experiment.peak.broad_gauss_v",
+   "tick:experiment.peak.broad_gauss_w",
+   "tick:experiment.peak.broad_lorentz_y"
+  ],
+  "highlights": [
+   "group.parameters"
+  ],
+  "sidebar": "Main",
+  "capture": false,
+  "fitPhase": "setup"
+ },
+ {
+  "id": "stage-4-fit",
+  "page": "analysis",
+  "description": "Fit: Peak widths",
+  "actions": [
+   "statusBar.fit.button",
+   "wait-fit",
+   "close-fit-results"
+  ],
+  "highlights": [
+   "workflow.analysis.mainContent",
+   "group.parameters"
+  ],
+  "sidebar": "Main",
+  "capture": true
+ },
+ {
+  "id": "stage-5-free",
+  "page": "analysis",
+  "description": "Peak asymmetry",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.basic",
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Peak asymmetry",
+   "tick:experiment.peak.asym_fcj_1"
+  ],
+  "highlights": [
+   "group.parameters"
+  ],
+  "sidebar": "Main",
+  "capture": false,
+  "fitPhase": "setup"
+ },
+ {
   "id": "stage-5-fit",
   "page": "analysis",
-  "description": "Fit: Atom positions",
-  "actions": [
-   "statusBar.fit.button",
-   "wait-fit",
-   "close-fit-results"
-  ],
-  "highlights": [
-   "workflow.analysis.mainContent",
-   "group.parameters"
-  ],
-  "sidebar": "Main",
-  "capture": true
- },
- {
-  "id": "stage-6-free",
-  "page": "analysis",
-  "description": "Magnetic moments",
-  "actions": [
-   "appBar.tab.analysis",
-   "sideBar.tab.basic",
-   "reveal:parameters.category",
-   "parameters.category",
-   "choose:Magnetic moments",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
-  ],
-  "highlights": [
-   "group.parameters"
-  ],
-  "sidebar": "Main",
-  "capture": false,
-  "fitPhase": "setup"
- },
- {
-  "id": "stage-6-fit",
-  "page": "analysis",
-  "description": "Fit: Magnetic moments",
-  "actions": [
-   "statusBar.fit.button",
-   "wait-fit",
-   "close-fit-results"
-  ],
-  "highlights": [
-   "workflow.analysis.mainContent",
-   "group.parameters"
-  ],
-  "sidebar": "Main",
-  "capture": true
- },
- {
-  "id": "stage-7-free",
-  "page": "analysis",
-  "description": "Magnetic form factor",
-  "actions": [
-   "appBar.tab.analysis",
-   "sideBar.tab.basic",
-   "reveal:parameters.category",
-   "parameters.category",
-   "choose:Magnetic form factors",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=j2",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
-  ],
-  "highlights": [
-   "group.parameters"
-  ],
-  "sidebar": "Main",
-  "capture": false,
-  "fitPhase": "setup"
- },
- {
-  "id": "stage-7-fit",
-  "page": "analysis",
-  "description": "Fit: Magnetic form factor",
+  "description": "Fit: Peak asymmetry",
   "actions": [
    "statusBar.fit.button",
    "wait-fit",

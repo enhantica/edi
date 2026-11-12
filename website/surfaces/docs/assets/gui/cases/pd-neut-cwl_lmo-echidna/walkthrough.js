@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure lmo in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment echidna in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -125,9 +125,28 @@
   "capture": true
  },
  {
+  "id": "nothing-free",
+  "page": "analysis",
+  "description": "Start with every parameter fixed",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.basic",
+   "parameters.clearFilters",
+   "parameters.freeHeader",
+   "parameters.freeHeader.fixed"
+  ],
+  "highlights": [
+   "group.parameters",
+   "parameters.freeHeader"
+  ],
+  "sidebar": "Main",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "relations-start",
   "page": "analysis",
-  "description": "Add the relations the project starts with",
+  "description": "Add the relations",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.extras",
@@ -241,21 +260,20 @@
   "fitPhase": "setup"
  },
  {
-  "id": "nothing-free",
+  "id": "minimizer",
   "page": "analysis",
-  "description": "Start with every parameter fixed",
+  "description": "Set the minimizer as the project does",
   "actions": [
    "appBar.tab.analysis",
-   "sideBar.tab.basic",
-   "parameters.clearFilters",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed"
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "fill:minimizer.maxIterations=1000"
   ],
   "highlights": [
-   "group.parameters",
-   "parameters.freeHeader"
+   "group.minimizer"
   ],
-  "sidebar": "Main",
+  "sidebar": "Extra",
   "capture": true,
   "fitPhase": "setup"
  },
@@ -269,17 +287,11 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=offset",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.instrument.calib_twotheta_offset",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.linked_structures[lmo].scale",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Cell",
@@ -320,11 +332,8 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=calib",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:experiment.instrument.calib_sample_displacement",
+   "tick:experiment.instrument.calib_sample_transparency"
   ],
   "highlights": [
    "group.parameters"
@@ -396,13 +405,10 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak broadening",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=lorentz_x",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
-   "parameters.clearFilters"
+   "tick:experiment.peak.broad_gauss_u",
+   "tick:experiment.peak.broad_gauss_v",
+   "tick:experiment.peak.broad_gauss_w",
+   "tick:experiment.peak.broad_lorentz_y"
   ],
   "highlights": [
    "group.parameters"
@@ -437,9 +443,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic coordinates",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:structure.atom_sites[O].fract_z"
   ],
   "highlights": [
    "group.parameters"
@@ -511,11 +515,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic occupancies",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=[Li1]",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:structure.atom_sites[Li1].occupancy"
   ],
   "highlights": [
    "group.parameters"

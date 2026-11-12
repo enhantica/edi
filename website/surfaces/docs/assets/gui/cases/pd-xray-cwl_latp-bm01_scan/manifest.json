@@ -46,6 +46,26 @@
         },
         {
             "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "appBar.tab.analysis",
             "scene": "fitting-mode-single"
         },
         {
@@ -70,42 +90,10 @@
         },
         {
             "action": "appBar.tab.analysis",
-            "scene": "nothing-free"
-        },
-        {
-            "action": "sideBar.tab.basic",
-            "scene": "nothing-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "nothing-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "nothing-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "nothing-free"
-        },
-        {
-            "action": "appBar.tab.analysis",
             "scene": "stage-1-free"
         },
         {
             "action": "sideBar.tab.basic",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:bm01",
             "scene": "stage-1-free"
         },
         {
@@ -121,35 +109,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=calib",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:bm01",
+            "action": "tick:experiment.instrument.calib_twotheta_offset",
             "scene": "stage-1-free"
         },
         {
@@ -174,90 +134,6 @@
         },
         {
             "action": "parameters.clearFilters",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:alpo4_c2221",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.category",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.category",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:Cell",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:alpo4_p63mc",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.category",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.category",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:Cell",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:latp",
             "scene": "stage-1-free"
         },
         {
@@ -349,18 +225,6 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "choose:bm01",
-            "scene": "stage-3-free"
-        },
-        {
             "action": "reveal:parameters.category",
             "scene": "stage-3-free"
         },
@@ -385,18 +249,6 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "choose:bm01",
-            "scene": "stage-3-free"
-        },
-        {
             "action": "reveal:parameters.category",
             "scene": "stage-3-free"
         },
@@ -409,23 +261,7 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=eta_0",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.peak.mixing_eta_0",
             "scene": "stage-3-free"
         },
         {
@@ -449,18 +285,6 @@
             "scene": "stage-4-free"
         },
         {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "choose:bm01",
-            "scene": "stage-4-free"
-        },
-        {
             "action": "reveal:parameters.category",
             "scene": "stage-4-free"
         },
@@ -473,47 +297,11 @@
             "scene": "stage-4-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "tick:experiment.peak.asym_beba_a0",
             "scene": "stage-4-free"
         },
         {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=a1",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=b1",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.peak.asym_beba_b0",
             "scene": "stage-4-free"
         },
         {
@@ -561,27 +349,35 @@
             "scene": "stage-5-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "tick:structures[latp].atom_sites[O1].fract_x",
             "scene": "stage-5-free"
         },
         {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:structures[latp].atom_sites[O1].fract_y",
             "scene": "stage-5-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "tick:structures[latp].atom_sites[O1].fract_z",
             "scene": "stage-5-free"
         },
         {
-            "action": "fill:parameters.nameFilter=[Li3]",
+            "action": "tick:structures[latp].atom_sites[O2].fract_x",
             "scene": "stage-5-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "tick:structures[latp].atom_sites[O2].fract_y",
             "scene": "stage-5-free"
         },
         {
-            "action": "parameters.freeHeader.fixed",
+            "action": "tick:structures[latp].atom_sites[O2].fract_z",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "tick:structures[latp].atom_sites[P1].fract_x",
+            "scene": "stage-5-free"
+        },
+        {
+            "action": "tick:structures[latp].atom_sites[Ti1].fract_z",
             "scene": "stage-5-free"
         },
         {
@@ -633,27 +429,19 @@
             "scene": "stage-6-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "tick:structures[latp].atom_sites[O1].adp_iso",
             "scene": "stage-6-free"
         },
         {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:structures[latp].atom_sites[O2].adp_iso",
             "scene": "stage-6-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "tick:structures[latp].atom_sites[P1].adp_iso",
             "scene": "stage-6-free"
         },
         {
-            "action": "fill:parameters.nameFilter=[L",
-            "scene": "stage-6-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-6-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
+            "action": "tick:structures[latp].atom_sites[Ti1].adp_iso",
             "scene": "stage-6-free"
         },
         {
@@ -725,11 +513,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "628441ba571e2a6b22ca271575dfe4cacb45fbf460022150fbdf74e4308a1294",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "d3af43b8b139a9b5b227f52ac94cf3574a738eafc93a976b98144f2b3d302097"
+            "sha256": "54e3863bd8ff2eda1080f5784b54d828a2bb6050903a9c9d86b2421f1f8deba3"
         },
         {
             "file": "inputs/experiments/bm01_scan/latp_240.dat",
@@ -1118,21 +906,21 @@
             "status": "captured"
         },
         {
-            "description": "Fit the template pattern alone first",
-            "id": "fitting-mode-single",
-            "image": "fitting-mode-single.webp",
-            "metadata": "fitting-mode-single.json",
-            "page": "analysis",
-            "sidebar": "Extra",
-            "status": "captured"
-        },
-        {
             "description": "Start with every parameter fixed",
             "id": "nothing-free",
             "image": "nothing-free.webp",
             "metadata": "nothing-free.json",
             "page": "analysis",
             "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit the template pattern alone first",
+            "id": "fitting-mode-single",
+            "image": "fitting-mode-single.webp",
+            "metadata": "fitting-mode-single.json",
+            "page": "analysis",
+            "sidebar": "Extra",
             "status": "captured"
         },
         {
@@ -1227,8 +1015,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "896b904ecd2f2fd932bd8e63c23b29096cb44c624dd99ca4dba91503607c63e1",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "2c4debe0f6d083005d0f0cc15986ac101ed8c02f352849151aa6e9c431dedf6b",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "status": "complete",
     "workflow": "tutorial"
 }

@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure taurine in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment senju_1 in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -127,7 +127,7 @@
  {
   "id": "experiment-web-1",
   "page": "experiment",
-  "description": "Find the experiment senju_2 in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -163,7 +163,7 @@
  {
   "id": "experiment-web-2",
   "page": "experiment",
-  "description": "Find the experiment senju_3 in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -199,7 +199,7 @@
  {
   "id": "experiment-web-3",
   "page": "experiment",
-  "description": "Find the experiment senju_4 in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -235,7 +235,7 @@
  {
   "id": "experiment-web-4",
   "page": "experiment",
-  "description": "Find the experiment senju_5 in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -271,7 +271,7 @@
  {
   "id": "experiment-web-5",
   "page": "experiment",
-  "description": "Find the experiment senju_6 in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -305,9 +305,28 @@
   "capture": true
  },
  {
+  "id": "nothing-free",
+  "page": "analysis",
+  "description": "Start with every parameter fixed",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.basic",
+   "parameters.clearFilters",
+   "parameters.freeHeader",
+   "parameters.freeHeader.fixed"
+  ],
+  "highlights": [
+   "group.parameters",
+   "parameters.freeHeader"
+  ],
+  "sidebar": "Main",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "relations-start",
   "page": "analysis",
-  "description": "Add the relations the project starts with",
+  "description": "Add the relations",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.extras",
@@ -571,21 +590,20 @@
   "fitPhase": "setup"
  },
  {
-  "id": "nothing-free",
+  "id": "reflection-cutoff",
   "page": "analysis",
-  "description": "Start with every parameter fixed",
+  "description": "Reflection cutoff",
   "actions": [
    "appBar.tab.analysis",
-   "sideBar.tab.basic",
-   "parameters.clearFilters",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed"
+   "sideBar.tab.extras",
+   "reveal:group.refine_ls",
+   "expand:group.refine_ls",
+   "fill:refine_ls.thresholdSigma=3"
   ],
   "highlights": [
-   "group.parameters",
-   "parameters.freeHeader"
+   "group.refine_ls"
   ],
-  "sidebar": "Main",
+  "sidebar": "Extra",
   "capture": true,
   "fitPhase": "setup"
  },
@@ -716,20 +734,15 @@
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiments[senju_1].extinction.coefficient_11",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiments[senju_1].extinction.coefficient_22",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiments[senju_1].extinction.coefficient_33",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
+   "reveal:parameters.datablock",
+   "parameters.datablock",
+   "choose:senju_1",
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Extinction",
+   "tick:experiments[senju_1].extinction.coefficient_11",
+   "tick:experiments[senju_1].extinction.coefficient_22",
+   "tick:experiments[senju_1].extinction.coefficient_33",
    "parameters.clearFilters"
   ],
   "highlights": [
@@ -762,9 +775,6 @@
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:taurine",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic coordinates",
@@ -853,15 +863,6 @@
    "choose:Atomic displacement",
    "parameters.freeHeader",
    "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:taurine",
-   "reveal:parameters.category",
-   "parameters.category",
-   "choose:Atomic displacement",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
    "parameters.clearFilters"
   ],
   "highlights": [

@@ -25,7 +25,7 @@
             "scene": "project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-ycCAuJ/sc-neut-cwl_cosio-heidi",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-gSkvVp/sc-neut-cwl_cosio-heidi",
             "scene": "project-details"
         },
         {
@@ -302,6 +302,26 @@
         },
         {
             "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "appBar.tab.analysis",
             "scene": "fitting-mode-independent"
         },
         {
@@ -323,26 +343,6 @@
         {
             "action": "choose-token:fittingMode.type=independent",
             "scene": "fitting-mode-independent"
-        },
-        {
-            "action": "appBar.tab.analysis",
-            "scene": "nothing-free"
-        },
-        {
-            "action": "sideBar.tab.basic",
-            "scene": "nothing-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "nothing-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "nothing-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "nothing-free"
         },
         {
             "action": "appBar.tab.analysis",
@@ -377,11 +377,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:experiments[heidi_300k].linked_structures[cosio_300k].scale",
             "scene": "stage-1-free"
         },
         {
@@ -601,11 +597,7 @@
             "scene": "stage-5-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:experiments[heidi_55k].linked_structures[cosio_55k].scale",
             "scene": "stage-5-free"
         },
         {
@@ -825,11 +817,7 @@
             "scene": "stage-9-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-9-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:experiments[heidi_2k5].linked_structures[cosio_2k5].scale",
             "scene": "stage-9-free"
         },
         {
@@ -1089,11 +1077,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "628441ba571e2a6b22ca271575dfe4cacb45fbf460022150fbdf74e4308a1294",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "4afc39681909eeeae10a9870c4a271623fcbd623e3ce5007c3e2e6b2cbb10b82"
+            "sha256": "620e93ea4cb063a908db88aff58acfed83234bd6975be42c117a9b433128d7d9"
         },
         {
             "file": "inputs/experiments/heidi_300k.edi",
@@ -1177,7 +1165,7 @@
     "inputs": {
         "experiment": {
             "file": "inputs/experiments/heidi_2k5.edi",
-            "sha256": "398b01a6e461ce2dc8e622bf836a9d84eb13a4c4e67099e8c79c7f953f666d08"
+            "sha256": "942c52ea8de5e11cc9cf892de335b19c0a7da4297ba4eb2250255c3ae3d5dfff"
         },
         "structure": {
             "file": "inputs/structures/cosio_2k5.edi",
@@ -1199,7 +1187,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the structure cosio_300k in the EasyDiffraction collection",
+            "description": "Find the structure",
             "id": "structure-web-0",
             "image": "structure-web-0.webp",
             "metadata": "structure-web-0.json",
@@ -1217,7 +1205,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the experiment heidi_300k in the EasyDiffraction collection",
+            "description": "Find the experiment",
             "id": "experiment-web-0",
             "image": "experiment-web-0.webp",
             "metadata": "experiment-web-0.json",
@@ -1235,21 +1223,21 @@
             "status": "captured"
         },
         {
-            "description": "Fit each experiment on its own",
-            "id": "fitting-mode-independent",
-            "image": "fitting-mode-independent.webp",
-            "metadata": "fitting-mode-independent.json",
-            "page": "analysis",
-            "sidebar": "Extra",
-            "status": "captured"
-        },
-        {
             "description": "Start with every parameter fixed",
             "id": "nothing-free",
             "image": "nothing-free.webp",
             "metadata": "nothing-free.json",
             "page": "analysis",
             "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Fit each experiment on its own",
+            "id": "fitting-mode-independent",
+            "image": "fitting-mode-independent.webp",
+            "metadata": "fitting-mode-independent.json",
+            "page": "analysis",
+            "sidebar": "Extra",
             "status": "captured"
         },
         {
@@ -1389,8 +1377,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "13fc93606362b489bd60c3cf353003c4356587dc2c9dd4d04b7a220fb326734f",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "e37b2674b2d54023e83392941cf6dd38beb221407100afcf22ff4cff3e0689ce",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "status": "complete",
     "workflow": "tutorial"
 }

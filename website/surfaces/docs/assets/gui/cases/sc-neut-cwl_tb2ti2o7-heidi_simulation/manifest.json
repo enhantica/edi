@@ -1,0 +1,180 @@
+{
+    "actions": [
+        {
+            "action": "platform:light",
+            "scene": "home"
+        },
+        {
+            "action": "theme:light",
+            "scene": "home"
+        },
+        {
+            "action": "home.start",
+            "scene": "example-open"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "example-open"
+        },
+        {
+            "action": "reveal:group.examples",
+            "scene": "example-open"
+        },
+        {
+            "action": "expand:group.examples",
+            "scene": "example-open"
+        },
+        {
+            "action": "reveal:examples.search",
+            "scene": "example-open"
+        },
+        {
+            "action": "fill:examples.search=sc-neut-cwl_tb2ti2o7-heidi_simulation",
+            "scene": "example-open"
+        },
+        {
+            "action": "reveal:examples.open.sc-neut-cwl_tb2ti2o7-heidi_simulation",
+            "scene": "example-open"
+        },
+        {
+            "action": "examples.open.sc-neut-cwl_tb2ti2o7-heidi_simulation",
+            "scene": "example-open"
+        },
+        {
+            "action": "pin-time:01 Jan 2026 12:00:00",
+            "scene": "example-open"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "calculated"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "calculated"
+        },
+        {
+            "action": "mainArea.tab.pattern",
+            "scene": "calculated"
+        },
+        {
+            "action": "appBar.tab.report",
+            "scene": "report"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "report"
+        }
+    ],
+    "binary_sha256": "628441ba571e2a6b22ca271575dfe4cacb45fbf460022150fbdf74e4308a1294",
+    "dependencies": [
+        {
+            "file": "inputs/analysis/analysis.edi",
+            "sha256": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3"
+        }
+    ],
+    "error": "",
+    "example": "sc-neut-cwl_tb2ti2o7-heidi_simulation",
+    "fixture": {
+        "detail": "Single crystal · Calculated reflections without measured data",
+        "id": "sc-neut-cwl_tb2ti2o7-heidi_simulation",
+        "origin": "HEiDi @ MLZ (FRM II)",
+        "samples": [
+            "Tb₂Ti₂O₇ [Fd-3m]"
+        ],
+        "searchAliases": [
+            "sc-neut-cwl_tb2ti2o7-heidi_simulation",
+            "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
+            "Single crystal · Calculated reflections without measured data"
+        ],
+        "sources": [
+            "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project/project.edi",
+            "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project/analysis/analysis.edi",
+            "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project/experiments/heidi.edi",
+            "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project/structures/tb2ti2o7.edi"
+        ],
+        "values": {
+            "beamMode": [
+                "constant wavelength"
+            ],
+            "dimensionality": [
+                "1d"
+            ],
+            "facilities": [
+                "MLZ (FRM II)"
+            ],
+            "fittingMode": [
+                "single"
+            ],
+            "instruments": [
+                "HEiDi"
+            ],
+            "polarisation": [
+                "unpolarised"
+            ],
+            "probe": [
+                "neutron"
+            ],
+            "purpose": [
+                "simulation"
+            ],
+            "sampleForm": [
+                "single crystal"
+            ],
+            "scatteringType": [
+                "bragg"
+            ],
+            "structure": [
+                "crystal"
+            ]
+        }
+    },
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "inputs": {
+        "experiment": {
+            "file": "inputs/experiments/heidi.edi",
+            "sha256": "0b599ca8ca6006b41ed3529601d1f598a27ab90e54629b2457835da65db1ca19"
+        },
+        "structure": {
+            "file": "inputs/structures/tb2ti2o7.edi",
+            "sha256": "745e6cd90c21ab52226e3dc3fc5693682b5570a4e0515fc0f780f4c47b3c499e"
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "scenes": [
+        {
+            "description": "Open the example from Examples",
+            "id": "example-open",
+            "image": "example-open.webp",
+            "metadata": "example-open.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "See the calculated pattern",
+            "id": "calculated",
+            "image": "calculated.webp",
+            "metadata": "calculated.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Review the report",
+            "id": "report",
+            "image": "report.webp",
+            "metadata": "report.json",
+            "page": "report",
+            "sidebar": "Main",
+            "status": "captured"
+        }
+    ],
+    "schema": 1,
+    "script_sha256": "379c55d41113f97aaf57ab7150c767d7ee985aeb4c66d76d5b8826c7adf900e6",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
+    "status": "complete",
+    "workflow": "tutorial"
+}
