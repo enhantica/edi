@@ -190,6 +190,12 @@ def by_category(
     """The actions that set `paths` to `state`: a category, or a one-word part of one."""
     chosen = [as_parameter(path, roots) for path in paths]
     now = {as_parameter(path, roots) for path in free_now}
+    # How many blocks of each block's kind the project holds.
+    structures = [item.name for item in project.structures]
+    experiments = [item.name for item in project.experiments]
+    kinds = {name: len(structures) for name in structures} | {
+        name: len(experiments) for name in experiments
+    }
     actions = []
     for group in groups(project, chosen, now, fixing=state == 'fixed'):
         if not group.part and len([p for p in chosen if group.block in {'', p.block}]) < 2:
@@ -197,7 +203,9 @@ def by_category(
             raise SystemExit(f'{group.title}: a whole-category action on one row; tick it')
         if group.part:
             # Part of a category: the category shown, then each of its rows ticked (or cleared).
-            block = group.block if several else ''
+            # The datablock is chosen only where another block of its kind shows the category too:
+            # a project's one experiment holds every experiment category alone.
+            block = group.block if several and kinds.get(group.block, 2) > 1 else ''
             if block:
                 actions += ['reveal:parameters.datablock', 'parameters.datablock']
                 actions += ['choose:' + block]
@@ -210,9 +218,8 @@ def by_category(
             if block:
                 actions += ['parameters.clearFilters']
             continue
-        actions += set_category(
-            group.title, state, group.block if several else '', group.word, group.unword
-        )
+        block = group.block if several and kinds.get(group.block, 2) > 1 else ''
+        actions += set_category(group.title, state, block, group.word, group.unword)
     return actions
 
 

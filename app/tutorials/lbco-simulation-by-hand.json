@@ -109,30 +109,6 @@
       "page": "structure",
       "expected": "The four atom sites are in the table and the structure view shows them.",
       "title": "Atom sites",
-      "text": "Enter **0** as x of site 1.",
-      "target": "atomSite.fractX.0",
-      "check": "field:atomSite.fractX.0=0"
-    },
-    {
-      "page": "structure",
-      "expected": "The four atom sites are in the table and the structure view shows them.",
-      "title": "Atom sites",
-      "text": "Enter **0** as y of site 1.",
-      "target": "atomSite.fractY.0",
-      "check": "field:atomSite.fractY.0=0"
-    },
-    {
-      "page": "structure",
-      "expected": "The four atom sites are in the table and the structure view shows them.",
-      "title": "Atom sites",
-      "text": "Enter **0** as z of site 1.",
-      "target": "atomSite.fractZ.0",
-      "check": "field:atomSite.fractZ.0=0"
-    },
-    {
-      "page": "structure",
-      "expected": "The four atom sites are in the table and the structure view shows them.",
-      "title": "Atom sites",
       "text": "Enter **0.5** as the occupancy of site 1: La and Ba share the site.",
       "target": "atomSite.occupancy.0",
       "check": "field:atomSite.occupancy.0=0.5"
@@ -141,7 +117,7 @@
       "page": "structure",
       "expected": "The four atom sites are in the table and the structure view shows them.",
       "title": "Atom sites",
-      "text": "Click **+** under **Atom sites** to add site 2.",
+      "text": "Click **+** under **Atom sites** to add site 2. It starts as a random element at a random position; the next steps make it the site lbco needs.",
       "target": "atomSites.append",
       "check": "rows:atomSites.append=2"
     },
@@ -165,25 +141,9 @@
       "page": "structure",
       "expected": "The four atom sites are in the table and the structure view shows them.",
       "title": "Atom sites",
-      "text": "Enter **0** as x of site 2.",
-      "target": "atomSite.fractX.1",
-      "check": "field:atomSite.fractX.1=0"
-    },
-    {
-      "page": "structure",
-      "expected": "The four atom sites are in the table and the structure view shows them.",
-      "title": "Atom sites",
-      "text": "Enter **0** as y of site 2.",
-      "target": "atomSite.fractY.1",
-      "check": "field:atomSite.fractY.1=0"
-    },
-    {
-      "page": "structure",
-      "expected": "The four atom sites are in the table and the structure view shows them.",
-      "title": "Atom sites",
-      "text": "Enter **0** as z of site 2.",
-      "target": "atomSite.fractZ.1",
-      "check": "field:atomSite.fractZ.1=0"
+      "text": "Choose **a** as the Wyckoff position of site 2: its coordinates follow from the symmetry.",
+      "target": "atomSite.wyckoffLetter.1",
+      "check": "pick:atomSite.wyckoffLetter.1=a:"
     },
     {
       "page": "structure",
@@ -197,7 +157,7 @@
       "page": "structure",
       "expected": "The four atom sites are in the table and the structure view shows them.",
       "title": "Atom sites",
-      "text": "Click **+** under **Atom sites** to add site 3.",
+      "text": "Click **+** under **Atom sites** to add site 3. It starts as a random element at a random position; the next steps make it the site lbco needs.",
       "target": "atomSites.append",
       "check": "rows:atomSites.append=3"
     },
@@ -221,31 +181,15 @@
       "page": "structure",
       "expected": "The four atom sites are in the table and the structure view shows them.",
       "title": "Atom sites",
-      "text": "Enter **0.5** as x of site 3.",
-      "target": "atomSite.fractX.2",
-      "check": "field:atomSite.fractX.2=0.5"
+      "text": "Choose **b** as the Wyckoff position of site 3: its coordinates follow from the symmetry.",
+      "target": "atomSite.wyckoffLetter.2",
+      "check": "pick:atomSite.wyckoffLetter.2=b:"
     },
     {
       "page": "structure",
       "expected": "The four atom sites are in the table and the structure view shows them.",
       "title": "Atom sites",
-      "text": "Enter **0.5** as y of site 3.",
-      "target": "atomSite.fractY.2",
-      "check": "field:atomSite.fractY.2=0.5"
-    },
-    {
-      "page": "structure",
-      "expected": "The four atom sites are in the table and the structure view shows them.",
-      "title": "Atom sites",
-      "text": "Enter **0.5** as z of site 3.",
-      "target": "atomSite.fractZ.2",
-      "check": "field:atomSite.fractZ.2=0.5"
-    },
-    {
-      "page": "structure",
-      "expected": "The four atom sites are in the table and the structure view shows them.",
-      "title": "Atom sites",
-      "text": "Click **+** under **Atom sites** to add site 4.",
+      "text": "Click **+** under **Atom sites** to add site 4. It starts as a random element at a random position; the next steps make it the site lbco needs.",
       "target": "atomSites.append",
       "check": "rows:atomSites.append=4"
     },
@@ -269,25 +213,9 @@
       "page": "structure",
       "expected": "The four atom sites are in the table and the structure view shows them.",
       "title": "Atom sites",
-      "text": "Enter **0** as x of site 4.",
-      "target": "atomSite.fractX.3",
-      "check": "field:atomSite.fractX.3=0"
-    },
-    {
-      "page": "structure",
-      "expected": "The four atom sites are in the table and the structure view shows them.",
-      "title": "Atom sites",
-      "text": "Enter **0.5** as y of site 4.",
-      "target": "atomSite.fractY.3",
-      "check": "field:atomSite.fractY.3=0.5"
-    },
-    {
-      "page": "structure",
-      "expected": "The four atom sites are in the table and the structure view shows them.",
-      "title": "Atom sites",
-      "text": "Enter **0.5** as z of site 4.",
-      "target": "atomSite.fractZ.3",
-      "check": "field:atomSite.fractZ.3=0.5"
+      "text": "Choose **c** as the Wyckoff position of site 4: its coordinates follow from the symmetry.",
+      "target": "atomSite.wyckoffLetter.3",
+      "check": "pick:atomSite.wyckoffLetter.3=c:"
     },
     {
       "title": "Open Experiment",
@@ -345,7 +273,7 @@
     },
     {
       "title": "The pattern",
-      "text": "The calculated pattern of lbco is in the main area. Change the cell length or a position and watch the peaks move.",
+      "text": "The calculated pattern of lbco is in the main area. On Analysis, next, you change parameters and watch it respond.",
       "page": "experiment",
       "target": "workflow.experiment.mainContent",
       "expected": "The main area shows the calculated pattern."
@@ -485,13 +413,6 @@
       "target": "parameters.clearFilters",
       "expected": "Every parameter is listed.",
       "check": "filters-clear"
-    },
-    {
-      "title": "Free column",
-      "text": "With measured data, the free column is where fitting chooses the parameters it may change. A simulation has nothing to fit, so here they all stay fixed.",
-      "page": "analysis",
-      "target": "parameters.list",
-      "expected": "The free column is in the table."
     }
   ]
 }

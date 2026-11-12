@@ -41,6 +41,8 @@ Popup {
     property var download: null
     // Whether the step's state already held when it showed: such a step only explains and waits for Next.
     property bool heldAtStart: true
+    // "N<tab>check" for each step that already held when the tutorial came to it (the replay's no-op check).
+    property var doneOnArrival: []
     // Reached by going on (Next, or a step done by itself), not by Back or the start.
     property bool arrivedForward: false
     // Whether the following step's state already held when this step showed: done before, not done ahead now.
@@ -222,8 +224,9 @@ Popup {
         return null;
     }
     // `text` without Markdown's emphasis and code markers.
+    // Bold and code markers dropped; underscores stay, as in names such as wish_1_10.
     function plain(text) {
-        return String(text).replace(/(\*\*|__|\*|_|`)(.+?)\1/g, "$2");
+        return String(text).replace(/(\*\*|`)(.+?)\1/g, "$2");
     }
     // Whether the open From web… dialog has searched EasyDiffraction's collection for `entry` as `kind` and shows it
     // first: remembered results of another search, source or kind never count.
@@ -542,8 +545,10 @@ Popup {
                 return;
             }
             // A fit asked for while the project still recalculates is refused; it is asked again until it runs.
+            // Pressed only once the project takes it: an edit still being published would refuse it with a message.
             if (project !== null && !project.fit.running) {
-                project.fit.start();
+                if (project.readyForEdit())
+                    project.fit.start();
                 if (!project.fit.running) {
                     fitAgain.tries = 0;
                     fitAgain.start();
@@ -1240,6 +1245,27 @@ Popup {
                 entry.menu.close();
         }
     }
+    // A fit of one experiment among several shows that experiment in the main view, so the step shows its fit.
+    function showFittedExperiment() {
+        const project = Session.project;
+        if (!project || !panel.current || panel.current.check !== "fit-done" || !panel.current.expectFree)
+            return;
+        const names = new Set();
+        for (const path of panel.current.expectFree) {
+            const match = /^experiments\[([^\]]+)\]/.exec(path);
+            if (match)
+                names.add(match[1]);
+        }
+        if (names.size !== 1)
+            return;
+        const name = [...names][0];
+        for (let row = 0; row < project.experiments.count; ++row) {
+            if (project.experiments.text(row, "name") === name && project.currentExperimentIndex !== row) {
+                project.currentExperimentIndex = row;
+                return;
+            }
+        }
+    }
     function back() {
         if (panel.step > 0) {
             --panel.step;
@@ -1249,6 +1275,7 @@ Popup {
     // Opens the step's page, then reveals its control and places the callout once the page is laid out.
     function show() {
         panel.closeLeftMenus();
+        panel.showFittedExperiment();
         panel.revealTries = 0;
         // What the step counts from, read as it becomes the step: Next may be pressed before its callout has faded in.
         panel.fitsAtStep = panel.fitsDone;
@@ -1260,6 +1287,11 @@ Popup {
         // (Back to a done step stays there), unless it was done ahead: read now, before the fade gives the timer a
         // chance.
         const holdsNow = panel.current ? panel.holds(panel.current.check) : false;
+        // A step already done when the tutorial reaches it asks for nothing; the replay reports these.
+        if (panel.step === 0)
+            panel.doneOnArrival = [];
+        if (holdsNow && panel.arrivedForward && panel.current.check)
+            panel.doneOnArrival = panel.doneOnArrival.concat([`${panel.step + 1}\t${panel.current.check}`]);
         panel.doneAhead = holdsNow && panel.arrivedForward && !panel.followingHeld;
         panel.heldAtStart = holdsNow && !panel.doneAhead;
         const following = panel.steps[panel.step + 1];
@@ -1641,14 +1673,19 @@ Popup {
             // previous tab's place, emptied, on screen under the new tab's name.
             if (flickable.contentHeight <= flickable.height)
                 continue;
+            // A list's header stays over its first rows: a row is shown below it, and a list starts above zero.
+            const list = flickable instanceof ListView ? flickable as ListView : null;
+            const covered = list && list.headerItem && list.headerPositioning !== ListView.InlineHeader ? list.headerItem.height : 0;
+            const edge = list ? 0 : margin;
             const rect = item.mapToItem(flickable.contentItem, 0, 0, item.width, item.height);
             const top = flickable.contentY;
             let wanted = top;
             if (rect.y + rect.height > top + flickable.height)
-                wanted = rect.y + rect.height - flickable.height + margin;
-            if (rect.y < wanted)
-                wanted = rect.y - margin;
-            const clamped = Math.max(0, Math.min(Math.max(0, flickable.contentHeight - flickable.height), wanted));
+                wanted = rect.y + rect.height - flickable.height + edge;
+            if (rect.y - covered < wanted)
+                wanted = rect.y - covered - edge;
+            const lowest = flickable.originY;
+            const clamped = Math.max(lowest, Math.min(Math.max(lowest, lowest + flickable.contentHeight - flickable.height), wanted));
             if (clamped !== flickable.contentY) {
                 flickable.contentY = clamped;
                 moved = true;
@@ -2047,7 +2084,8 @@ Popup {
                 stop();
                 return;
             }
-            fit.start();
+            if (Session.project.readyForEdit())
+                fit.start();
         }
     }
     Timer {

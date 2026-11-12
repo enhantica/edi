@@ -116,14 +116,6 @@
         },
         {
           "title": "Add the atom sites",
-          "text": "Choose **a** as the Wyckoff position of site 1.",
-          "page": "structure",
-          "target": "atomSite.wyckoffLetter.0",
-          "check": "pick:atomSite.wyckoffLetter.0=a:",
-          "tab": "basic"
-        },
-        {
-          "title": "Add the atom sites",
           "text": "Enter **0.5** as the occupancy of site 1.",
           "page": "structure",
           "target": "atomSite.occupancy.0",
@@ -132,7 +124,7 @@
         },
         {
           "title": "Add the atom sites",
-          "text": "Click **+** under **Atom sites** to add a site.",
+          "text": "Click **+** under **Atom sites** to add a site. It starts as a random element at a random position; the next steps make it the site this structure needs.",
           "page": "structure",
           "target": "atomSites.append",
           "check": "rows:atomSites.append=2",
@@ -172,7 +164,7 @@
         },
         {
           "title": "Add the atom sites",
-          "text": "Click **+** under **Atom sites** to add a site.",
+          "text": "Click **+** under **Atom sites** to add a site. It starts as a random element at a random position; the next steps make it the site this structure needs.",
           "page": "structure",
           "target": "atomSites.append",
           "check": "rows:atomSites.append=3",
@@ -204,7 +196,7 @@
         },
         {
           "title": "Add the atom sites",
-          "text": "Click **+** under **Atom sites** to add a site.",
+          "text": "Click **+** under **Atom sites** to add a site. It starts as a random element at a random position; the next steps make it the site this structure needs.",
           "page": "structure",
           "target": "atomSites.append",
           "check": "rows:atomSites.append=4",
@@ -282,30 +274,6 @@
         },
         {
           "title": "Create the experiment",
-          "text": "Choose **powder** as `sampleForm`.",
-          "page": "experiment",
-          "target": "experimentType.sampleForm",
-          "check": "token:experimentType.sampleForm=powder",
-          "tab": "basic"
-        },
-        {
-          "title": "Create the experiment",
-          "text": "Choose **constant wavelength** as `beamMode`.",
-          "page": "experiment",
-          "target": "experimentType.beamMode",
-          "check": "token:experimentType.beamMode=constant wavelength",
-          "tab": "basic"
-        },
-        {
-          "title": "Create the experiment",
-          "text": "Choose **neutron** as `radiationProbe`.",
-          "page": "experiment",
-          "target": "experimentType.radiationProbe",
-          "check": "token:experimentType.radiationProbe=neutron",
-          "tab": "basic"
-        },
-        {
-          "title": "Create the experiment",
           "text": "Enter **hrpt** as the experiment name.",
           "page": "experiment",
           "target": "experiments.name.0",
@@ -342,7 +310,7 @@
         },
         {
           "title": "Instrument and peak widths",
-          "text": "Enter **1.494** as `setup_wavelength`.",
+          "text": "Enter **1.494** as **Wavelength**.",
           "page": "experiment",
           "target": "instrument.setup_wavelength",
           "check": "field:instrument.setup_wavelength=1.494",
@@ -350,7 +318,7 @@
         },
         {
           "title": "Instrument and peak widths",
-          "text": "Enter **0.3** as `calib_twotheta_offset`.",
+          "text": "Enter **0.3** as **2θ offset**.",
           "page": "experiment",
           "target": "instrument.calib_twotheta_offset",
           "check": "field:instrument.calib_twotheta_offset=0.3",
@@ -358,7 +326,7 @@
         },
         {
           "title": "Instrument and peak widths",
-          "text": "Enter **0.08** as `broad_gauss_u`.",
+          "text": "Enter **0.08** as **U**.",
           "page": "experiment",
           "target": "peak.broad_gauss_u",
           "check": "field:peak.broad_gauss_u=0.08",
@@ -366,23 +334,7 @@
         },
         {
           "title": "Instrument and peak widths",
-          "text": "Enter **-0.1** as `broad_gauss_v`.",
-          "page": "experiment",
-          "target": "peak.broad_gauss_v",
-          "check": "field:peak.broad_gauss_v=-0.1",
-          "tab": "basic"
-        },
-        {
-          "title": "Instrument and peak widths",
-          "text": "Enter **0.1** as `broad_gauss_w`.",
-          "page": "experiment",
-          "target": "peak.broad_gauss_w",
-          "check": "field:peak.broad_gauss_w=0.1",
-          "tab": "basic"
-        },
-        {
-          "title": "Instrument and peak widths",
-          "text": "Enter **0.08** as `broad_lorentz_y`.",
+          "text": "Enter **0.08** as **Y**.",
           "page": "experiment",
           "target": "peak.broad_lorentz_y",
           "check": "field:peak.broad_lorentz_y=0.08",
@@ -430,14 +382,6 @@
         },
         {
           "title": "Background and excluded regions",
-          "text": "Enter **160** as the intensity of background point 2.",
-          "page": "experiment",
-          "target": "background.intensity.1",
-          "check": "field:background.intensity.1=160",
-          "tab": "basic"
-        },
-        {
-          "title": "Background and excluded regions",
           "text": "Click **+** under **Background** to add a point.",
           "page": "experiment",
           "target": "background.append",
@@ -450,14 +394,6 @@
           "page": "experiment",
           "target": "background.position.2",
           "check": "field:background.position.2=50",
-          "tab": "basic"
-        },
-        {
-          "title": "Background and excluded regions",
-          "text": "Enter **160** as the intensity of background point 3.",
-          "page": "experiment",
-          "target": "background.intensity.2",
-          "check": "field:background.intensity.2=160",
           "tab": "basic"
         },
         {
@@ -478,14 +414,6 @@
         },
         {
           "title": "Background and excluded regions",
-          "text": "Enter **160** as the intensity of background point 4.",
-          "page": "experiment",
-          "target": "background.intensity.3",
-          "check": "field:background.intensity.3=160",
-          "tab": "basic"
-        },
-        {
-          "title": "Background and excluded regions",
           "text": "Click **+** under **Background** to add a point.",
           "page": "experiment",
           "target": "background.append",
@@ -502,26 +430,10 @@
         },
         {
           "title": "Background and excluded regions",
-          "text": "Enter **160** as the intensity of background point 5.",
-          "page": "experiment",
-          "target": "background.intensity.4",
-          "check": "field:background.intensity.4=160",
-          "tab": "basic"
-        },
-        {
-          "title": "Background and excluded regions",
           "text": "Click **+** under **Excluded regions** to add a region.",
           "page": "experiment",
           "target": "excludedRegions.append",
           "check": "rows:excludedRegions.append=1",
-          "tab": "basic"
-        },
-        {
-          "title": "Background and excluded regions",
-          "text": "Enter **0** as the start of excluded region 1.",
-          "page": "experiment",
-          "target": "excludedRegion.start.0",
-          "check": "field:excludedRegion.start.0=0",
           "tab": "basic"
         },
         {
@@ -839,14 +751,6 @@
         },
         {
           "title": "Constrain La and Ba",
-          "text": "Choose **Atomic displacement** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Atomic displacement",
-          "tab": "basic"
-        },
-        {
-          "title": "Constrain La and Ba",
           "text": "Clear **Free** for **Ba B iso**.",
           "page": "analysis",
           "target": "parameters.free@structure.atom_sites.Ba.adp_iso",
@@ -864,7 +768,7 @@
         },
         {
           "title": "Constrain La and Ba",
-          "text": "Enter **biso_La** as the id of alias 1. La and Ba share one site and scatter neutrons similarly, so the pattern cannot tell their displacements apart.",
+          "text": "Enter **biso_La** as the id of alias 1.",
           "page": "analysis",
           "target": "alias.id.0",
           "check": "field:alias.id.0=biso_La",
@@ -873,7 +777,7 @@
         },
         {
           "title": "Constrain La and Ba",
-          "text": "Choose **lbco.atom_site.La.adp_iso** as the parameter of alias 1. La and Ba share one site and scatter neutrons similarly, so the pattern cannot tell their displacements apart.",
+          "text": "Choose **lbco.atom_site.La.adp_iso** as the parameter of alias 1.",
           "page": "analysis",
           "target": "alias.parameter.0",
           "check": "pick:alias.parameter.0=lbco.atom_site.La.adp_iso",
@@ -882,7 +786,7 @@
         },
         {
           "title": "Constrain La and Ba",
-          "text": "Click **+** under **Aliases** to add an alias. La and Ba share one site and scatter neutrons similarly, so the pattern cannot tell their displacements apart.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=2",
@@ -891,7 +795,7 @@
         },
         {
           "title": "Constrain La and Ba",
-          "text": "Enter **biso_Ba** as the id of alias 2. La and Ba share one site and scatter neutrons similarly, so the pattern cannot tell their displacements apart.",
+          "text": "Enter **biso_Ba** as the id of alias 2.",
           "page": "analysis",
           "target": "alias.id.1",
           "check": "field:alias.id.1=biso_Ba",
@@ -900,7 +804,7 @@
         },
         {
           "title": "Constrain La and Ba",
-          "text": "Choose **lbco.atom_site.Ba.adp_iso** as the parameter of alias 2. La and Ba share one site and scatter neutrons similarly, so the pattern cannot tell their displacements apart.",
+          "text": "Choose **lbco.atom_site.Ba.adp_iso** as the parameter of alias 2.",
           "page": "analysis",
           "target": "alias.parameter.1",
           "check": "pick:alias.parameter.1=lbco.atom_site.Ba.adp_iso",
@@ -909,7 +813,7 @@
         },
         {
           "title": "Constrain La and Ba",
-          "text": "Click **+** under **Constraints** to add a constraint. La and Ba share one site and scatter neutrons similarly, so the pattern cannot tell their displacements apart.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=1",
@@ -918,7 +822,7 @@
         },
         {
           "title": "Constrain La and Ba",
-          "text": "Enter **biso_Ba** as the id of constraint 1. La and Ba share one site and scatter neutrons similarly, so the pattern cannot tell their displacements apart.",
+          "text": "Enter **biso_Ba** as the id of constraint 1.",
           "page": "analysis",
           "target": "constraint.id.0",
           "check": "field:constraint.id.0=biso_Ba",
@@ -927,7 +831,7 @@
         },
         {
           "title": "Constrain La and Ba",
-          "text": "Enter **biso_Ba = biso_La** as the expression of constraint 1. La and Ba share one site and scatter neutrons similarly, so the pattern cannot tell their displacements apart.",
+          "text": "Enter **biso_Ba = biso_La** as the expression of constraint 1.",
           "page": "analysis",
           "target": "constraint.expression.0",
           "check": "field:constraint.expression.0=biso_Ba = biso_La",
@@ -975,7 +879,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -1122,30 +1026,6 @@
           "page": "structure",
           "expected": "The four atom sites are in the table and the structure view shows them.",
           "title": "Atom sites",
-          "text": "Enter **0** as x of site 1.",
-          "target": "atomSite.fractX.0",
-          "check": "field:atomSite.fractX.0=0"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **0** as y of site 1.",
-          "target": "atomSite.fractY.0",
-          "check": "field:atomSite.fractY.0=0"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **0** as z of site 1.",
-          "target": "atomSite.fractZ.0",
-          "check": "field:atomSite.fractZ.0=0"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
           "text": "Enter **0.5** as the occupancy of site 1: La and Ba share the site.",
           "target": "atomSite.occupancy.0",
           "check": "field:atomSite.occupancy.0=0.5"
@@ -1154,7 +1034,7 @@
           "page": "structure",
           "expected": "The four atom sites are in the table and the structure view shows them.",
           "title": "Atom sites",
-          "text": "Click **+** under **Atom sites** to add site 2.",
+          "text": "Click **+** under **Atom sites** to add site 2. It starts as a random element at a random position; the next steps make it the site lbco needs.",
           "target": "atomSites.append",
           "check": "rows:atomSites.append=2"
         },
@@ -1178,25 +1058,9 @@
           "page": "structure",
           "expected": "The four atom sites are in the table and the structure view shows them.",
           "title": "Atom sites",
-          "text": "Enter **0** as x of site 2.",
-          "target": "atomSite.fractX.1",
-          "check": "field:atomSite.fractX.1=0"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **0** as y of site 2.",
-          "target": "atomSite.fractY.1",
-          "check": "field:atomSite.fractY.1=0"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **0** as z of site 2.",
-          "target": "atomSite.fractZ.1",
-          "check": "field:atomSite.fractZ.1=0"
+          "text": "Choose **a** as the Wyckoff position of site 2: its coordinates follow from the symmetry.",
+          "target": "atomSite.wyckoffLetter.1",
+          "check": "pick:atomSite.wyckoffLetter.1=a:"
         },
         {
           "page": "structure",
@@ -1210,7 +1074,7 @@
           "page": "structure",
           "expected": "The four atom sites are in the table and the structure view shows them.",
           "title": "Atom sites",
-          "text": "Click **+** under **Atom sites** to add site 3.",
+          "text": "Click **+** under **Atom sites** to add site 3. It starts as a random element at a random position; the next steps make it the site lbco needs.",
           "target": "atomSites.append",
           "check": "rows:atomSites.append=3"
         },
@@ -1234,31 +1098,15 @@
           "page": "structure",
           "expected": "The four atom sites are in the table and the structure view shows them.",
           "title": "Atom sites",
-          "text": "Enter **0.5** as x of site 3.",
-          "target": "atomSite.fractX.2",
-          "check": "field:atomSite.fractX.2=0.5"
+          "text": "Choose **b** as the Wyckoff position of site 3: its coordinates follow from the symmetry.",
+          "target": "atomSite.wyckoffLetter.2",
+          "check": "pick:atomSite.wyckoffLetter.2=b:"
         },
         {
           "page": "structure",
           "expected": "The four atom sites are in the table and the structure view shows them.",
           "title": "Atom sites",
-          "text": "Enter **0.5** as y of site 3.",
-          "target": "atomSite.fractY.2",
-          "check": "field:atomSite.fractY.2=0.5"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **0.5** as z of site 3.",
-          "target": "atomSite.fractZ.2",
-          "check": "field:atomSite.fractZ.2=0.5"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Click **+** under **Atom sites** to add site 4.",
+          "text": "Click **+** under **Atom sites** to add site 4. It starts as a random element at a random position; the next steps make it the site lbco needs.",
           "target": "atomSites.append",
           "check": "rows:atomSites.append=4"
         },
@@ -1282,25 +1130,9 @@
           "page": "structure",
           "expected": "The four atom sites are in the table and the structure view shows them.",
           "title": "Atom sites",
-          "text": "Enter **0** as x of site 4.",
-          "target": "atomSite.fractX.3",
-          "check": "field:atomSite.fractX.3=0"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **0.5** as y of site 4.",
-          "target": "atomSite.fractY.3",
-          "check": "field:atomSite.fractY.3=0.5"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **0.5** as z of site 4.",
-          "target": "atomSite.fractZ.3",
-          "check": "field:atomSite.fractZ.3=0.5"
+          "text": "Choose **c** as the Wyckoff position of site 4: its coordinates follow from the symmetry.",
+          "target": "atomSite.wyckoffLetter.3",
+          "check": "pick:atomSite.wyckoffLetter.3=c:"
         },
         {
           "title": "Open Experiment",
@@ -1358,7 +1190,7 @@
         },
         {
           "title": "The pattern",
-          "text": "The calculated pattern of lbco is in the main area. Change the cell length or a position and watch the peaks move.",
+          "text": "The calculated pattern of lbco is in the main area. On Analysis, next, you change parameters and watch it respond.",
           "page": "experiment",
           "target": "workflow.experiment.mainContent",
           "expected": "The main area shows the calculated pattern."
@@ -1378,14 +1210,6 @@
           "target": "parameters.category",
           "expected": "The table lists the cell length a.",
           "check": "category:Cell"
-        },
-        {
-          "title": "Select cell a",
-          "text": "Click the row of the cell length a to select it: the slider below the table now changes a.",
-          "page": "analysis",
-          "target": "parameters.name@cell.length_a",
-          "expected": "The cell length a is selected.",
-          "check": "selected:cell.length_a"
         },
         {
           "title": "Change cell a",
@@ -1412,14 +1236,6 @@
           "check": "name-filter:wave"
         },
         {
-          "title": "Select wavelength",
-          "text": "Click the row of the wavelength to select it: the slider below the table now changes the wavelength.",
-          "page": "analysis",
-          "target": "parameters.name@instrument.setup_wavelength",
-          "expected": "The wavelength is selected.",
-          "check": "selected:instrument.setup_wavelength"
-        },
-        {
           "title": "Change wavelength",
           "text": "Drag the slider or type a new value, and watch the peaks spread out to higher angles as it grows.",
           "page": "analysis",
@@ -1442,14 +1258,6 @@
           "target": "parameters.category",
           "expected": "The table lists the sites' B_iso.",
           "check": "category:Atomic displacement"
-        },
-        {
-          "title": "Select B iso",
-          "text": "Click the row of La's B_iso to select it: the slider below the table now changes La's B_iso.",
-          "page": "analysis",
-          "target": "parameters.name@La.adp_iso",
-          "expected": "La's B_iso is selected.",
-          "check": "selected:La.adp_iso"
         },
         {
           "title": "Change B iso",
@@ -1500,13 +1308,6 @@
           "check": "filters-clear"
         },
         {
-          "title": "Free column",
-          "text": "With measured data, the free column is where fitting chooses the parameters it may change. A simulation has nothing to fit, so here they all stay fixed.",
-          "page": "analysis",
-          "target": "parameters.list",
-          "expected": "The free column is in the table."
-        },
-        {
           "title": "The calculated pattern",
           "text": "On **Analysis**, the main view draws the pattern calculated from the model.",
           "page": "analysis",
@@ -1515,7 +1316,7 @@
         },
         {
           "title": "Open Report",
-          "text": "The **Report** page collects the structure, the experiment and the fit.",
+          "text": "The **Report** page collects the structure, the experiment.",
           "page": "report",
           "target": "appBar.tab.report",
           "check": "page:report"
@@ -2067,7 +1868,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -2667,7 +2468,7 @@
         },
         {
           "title": "Constrain the two Co sites",
-          "text": "Enter **biso_Co1** as the id of alias 1. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Enter **biso_Co1** as the id of alias 1.",
           "page": "analysis",
           "target": "alias.id.0",
           "check": "field:alias.id.0=biso_Co1",
@@ -2676,7 +2477,7 @@
         },
         {
           "title": "Constrain the two Co sites",
-          "text": "Choose **cosio.atom_site.Co1.adp_iso** as the parameter of alias 1. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Choose **cosio.atom_site.Co1.adp_iso** as the parameter of alias 1.",
           "page": "analysis",
           "target": "alias.parameter.0",
           "check": "pick:alias.parameter.0=cosio.atom_site.Co1.adp_iso",
@@ -2685,7 +2486,7 @@
         },
         {
           "title": "Constrain the two Co sites",
-          "text": "Click **+** under **Aliases** to add an alias. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=2",
@@ -2694,7 +2495,7 @@
         },
         {
           "title": "Constrain the two Co sites",
-          "text": "Enter **biso_Co2** as the id of alias 2. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Enter **biso_Co2** as the id of alias 2.",
           "page": "analysis",
           "target": "alias.id.1",
           "check": "field:alias.id.1=biso_Co2",
@@ -2703,7 +2504,7 @@
         },
         {
           "title": "Constrain the two Co sites",
-          "text": "Choose **cosio.atom_site.Co2.adp_iso** as the parameter of alias 2. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Choose **cosio.atom_site.Co2.adp_iso** as the parameter of alias 2.",
           "page": "analysis",
           "target": "alias.parameter.1",
           "check": "pick:alias.parameter.1=cosio.atom_site.Co2.adp_iso",
@@ -2712,7 +2513,7 @@
         },
         {
           "title": "Constrain the two Co sites",
-          "text": "Click **+** under **Constraints** to add a constraint. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=1",
@@ -2721,7 +2522,7 @@
         },
         {
           "title": "Constrain the two Co sites",
-          "text": "Enter **biso_Co2** as the id of constraint 1. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Enter **biso_Co2** as the id of constraint 1.",
           "page": "analysis",
           "target": "constraint.id.0",
           "check": "field:constraint.id.0=biso_Co2",
@@ -2730,7 +2531,7 @@
         },
         {
           "title": "Constrain the two Co sites",
-          "text": "Enter **biso_Co2 = biso_Co1** as the expression of constraint 1. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Enter **biso_Co2 = biso_Co1** as the expression of constraint 1.",
           "page": "analysis",
           "target": "constraint.expression.0",
           "check": "field:constraint.expression.0=biso_Co2 = biso_Co1",
@@ -2897,7 +2698,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -3025,7 +2826,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Co1** as the id of alias 1. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Enter **biso_Co1** as the id of alias 1.",
           "page": "analysis",
           "target": "alias.id.0",
           "check": "field:alias.id.0=biso_Co1",
@@ -3034,7 +2835,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **cosio.atom_site.Co1.adp_iso** as the parameter of alias 1. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Choose **cosio.atom_site.Co1.adp_iso** as the parameter of alias 1.",
           "page": "analysis",
           "target": "alias.parameter.0",
           "check": "pick:alias.parameter.0=cosio.atom_site.Co1.adp_iso",
@@ -3043,7 +2844,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=2",
@@ -3052,7 +2853,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Co2** as the id of alias 2. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Enter **biso_Co2** as the id of alias 2.",
           "page": "analysis",
           "target": "alias.id.1",
           "check": "field:alias.id.1=biso_Co2",
@@ -3061,7 +2862,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **cosio.atom_site.Co2.adp_iso** as the parameter of alias 2. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Choose **cosio.atom_site.Co2.adp_iso** as the parameter of alias 2.",
           "page": "analysis",
           "target": "alias.parameter.1",
           "check": "pick:alias.parameter.1=cosio.atom_site.Co2.adp_iso",
@@ -3079,7 +2880,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **sl** as the id of alias 3. The two FCJ asymmetry terms cannot be told apart in this pattern, so they move as one.",
+          "text": "Enter **sl** as the id of alias 3.",
           "page": "analysis",
           "target": "alias.id.2",
           "check": "field:alias.id.2=sl",
@@ -3088,7 +2889,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **d20.peak.asym_fcj_1** as the parameter of alias 3. The two FCJ asymmetry terms cannot be told apart in this pattern, so they move as one.",
+          "text": "Choose **d20.peak.asym_fcj_1** as the parameter of alias 3.",
           "page": "analysis",
           "target": "alias.parameter.2",
           "check": "pick:alias.parameter.2=d20.peak.asym_fcj_1",
@@ -3097,7 +2898,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. The two FCJ asymmetry terms cannot be told apart in this pattern, so they move as one.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=4",
@@ -3106,7 +2907,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **dl** as the id of alias 4. The two FCJ asymmetry terms cannot be told apart in this pattern, so they move as one.",
+          "text": "Enter **dl** as the id of alias 4.",
           "page": "analysis",
           "target": "alias.id.3",
           "check": "field:alias.id.3=dl",
@@ -3115,7 +2916,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **d20.peak.asym_fcj_2** as the parameter of alias 4. The two FCJ asymmetry terms cannot be told apart in this pattern, so they move as one.",
+          "text": "Choose **d20.peak.asym_fcj_2** as the parameter of alias 4.",
           "page": "analysis",
           "target": "alias.parameter.3",
           "check": "pick:alias.parameter.3=d20.peak.asym_fcj_2",
@@ -3133,19 +2934,10 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Co2** as the id of constraint 1. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Enter **biso_Co2** as the id of constraint 1.",
           "page": "analysis",
           "target": "constraint.id.0",
           "check": "field:constraint.id.0=biso_Co2",
-          "tab": "extras",
-          "why": "The two Co sites scatter alike, so the pattern cannot tell their displacements apart."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **biso_Co2 = biso_Co1** as the expression of constraint 1. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
-          "page": "analysis",
-          "target": "constraint.expression.0",
-          "check": "field:constraint.expression.0=biso_Co2 = biso_Co1",
           "tab": "extras",
           "why": "The two Co sites scatter alike, so the pattern cannot tell their displacements apart."
         },
@@ -3160,7 +2952,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **dl** as the id of constraint 2. The two FCJ asymmetry terms cannot be told apart in this pattern, so they move as one.",
+          "text": "Enter **dl** as the id of constraint 2.",
           "page": "analysis",
           "target": "constraint.id.1",
           "check": "field:constraint.id.1=dl",
@@ -3169,7 +2961,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **dl = sl** as the expression of constraint 2. The two FCJ asymmetry terms cannot be told apart in this pattern, so they move as one.",
+          "text": "Enter **dl = sl** as the expression of constraint 2.",
           "page": "analysis",
           "target": "constraint.expression.1",
           "check": "field:constraint.expression.1=dl = sl",
@@ -3679,7 +3471,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -3806,7 +3598,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Li1** as the id of alias 1. Li and Ni mix on one site, so they share its displacement.",
+          "text": "Enter **biso_Li1** as the id of alias 1.",
           "page": "analysis",
           "target": "alias.id.0",
           "check": "field:alias.id.0=biso_Li1",
@@ -3815,7 +3607,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lmo.atom_site.Li1.adp_iso** as the parameter of alias 1. Li and Ni mix on one site, so they share its displacement.",
+          "text": "Choose **lmo.atom_site.Li1.adp_iso** as the parameter of alias 1.",
           "page": "analysis",
           "target": "alias.parameter.0",
           "check": "pick:alias.parameter.0=lmo.atom_site.Li1.adp_iso",
@@ -3833,7 +3625,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Li2** as the id of alias 2. Li and Ni mix on the other site too, so they share its displacement.",
+          "text": "Enter **biso_Li2** as the id of alias 2.",
           "page": "analysis",
           "target": "alias.id.1",
           "check": "field:alias.id.1=biso_Li2",
@@ -3842,7 +3634,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lmo.atom_site.Li2.adp_iso** as the parameter of alias 2. Li and Ni mix on the other site too, so they share its displacement.",
+          "text": "Choose **lmo.atom_site.Li2.adp_iso** as the parameter of alias 2.",
           "page": "analysis",
           "target": "alias.parameter.1",
           "check": "pick:alias.parameter.1=lmo.atom_site.Li2.adp_iso",
@@ -3860,7 +3652,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Ni1** as the id of alias 3. Li and Ni mix on one site, so they share its displacement.",
+          "text": "Enter **biso_Ni1** as the id of alias 3.",
           "page": "analysis",
           "target": "alias.id.2",
           "check": "field:alias.id.2=biso_Ni1",
@@ -3869,7 +3661,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lmo.atom_site.Ni1.adp_iso** as the parameter of alias 3. Li and Ni mix on one site, so they share its displacement.",
+          "text": "Choose **lmo.atom_site.Ni1.adp_iso** as the parameter of alias 3.",
           "page": "analysis",
           "target": "alias.parameter.2",
           "check": "pick:alias.parameter.2=lmo.atom_site.Ni1.adp_iso",
@@ -3887,7 +3679,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Ni2** as the id of alias 4. Li and Ni mix on the other site too, so they share its displacement.",
+          "text": "Enter **biso_Ni2** as the id of alias 4.",
           "page": "analysis",
           "target": "alias.id.3",
           "check": "field:alias.id.3=biso_Ni2",
@@ -3896,7 +3688,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lmo.atom_site.Ni2.adp_iso** as the parameter of alias 4. Li and Ni mix on the other site too, so they share its displacement.",
+          "text": "Choose **lmo.atom_site.Ni2.adp_iso** as the parameter of alias 4.",
           "page": "analysis",
           "target": "alias.parameter.3",
           "check": "pick:alias.parameter.3=lmo.atom_site.Ni2.adp_iso",
@@ -3914,7 +3706,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **occ_Li1** as the id of alias 5. Ni fills what Li leaves of the first site, keeping it fully occupied.",
+          "text": "Enter **occ_Li1** as the id of alias 5.",
           "page": "analysis",
           "target": "alias.id.4",
           "check": "field:alias.id.4=occ_Li1",
@@ -3923,7 +3715,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lmo.atom_site.Li1.occupancy** as the parameter of alias 5. Ni fills what Li leaves of the first site, keeping it fully occupied.",
+          "text": "Choose **lmo.atom_site.Li1.occupancy** as the parameter of alias 5.",
           "page": "analysis",
           "target": "alias.parameter.4",
           "check": "pick:alias.parameter.4=lmo.atom_site.Li1.occupancy",
@@ -3941,7 +3733,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **occ_Li2** as the id of alias 6. Li fills what Ni leaves of the second site, keeping it fully occupied.",
+          "text": "Enter **occ_Li2** as the id of alias 6.",
           "page": "analysis",
           "target": "alias.id.5",
           "check": "field:alias.id.5=occ_Li2",
@@ -3950,7 +3742,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lmo.atom_site.Li2.occupancy** as the parameter of alias 6. Li fills what Ni leaves of the second site, keeping it fully occupied.",
+          "text": "Choose **lmo.atom_site.Li2.occupancy** as the parameter of alias 6.",
           "page": "analysis",
           "target": "alias.parameter.5",
           "check": "pick:alias.parameter.5=lmo.atom_site.Li2.occupancy",
@@ -3968,7 +3760,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **occ_Ni1** as the id of alias 7. Ni fills what Li leaves of the first site, keeping it fully occupied.",
+          "text": "Enter **occ_Ni1** as the id of alias 7.",
           "page": "analysis",
           "target": "alias.id.6",
           "check": "field:alias.id.6=occ_Ni1",
@@ -3977,7 +3769,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lmo.atom_site.Ni1.occupancy** as the parameter of alias 7. Ni fills what Li leaves of the first site, keeping it fully occupied.",
+          "text": "Choose **lmo.atom_site.Ni1.occupancy** as the parameter of alias 7.",
           "page": "analysis",
           "target": "alias.parameter.6",
           "check": "pick:alias.parameter.6=lmo.atom_site.Ni1.occupancy",
@@ -3995,7 +3787,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **occ_Ni2** as the id of alias 8. Every Li on the first site swaps with a Ni on the second, so the two mixings are equal.",
+          "text": "Enter **occ_Ni2** as the id of alias 8.",
           "page": "analysis",
           "target": "alias.id.7",
           "check": "field:alias.id.7=occ_Ni2",
@@ -4004,7 +3796,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lmo.atom_site.Ni2.occupancy** as the parameter of alias 8. Every Li on the first site swaps with a Ni on the second, so the two mixings are equal.",
+          "text": "Choose **lmo.atom_site.Ni2.occupancy** as the parameter of alias 8.",
           "page": "analysis",
           "target": "alias.parameter.7",
           "check": "pick:alias.parameter.7=lmo.atom_site.Ni2.occupancy",
@@ -4022,7 +3814,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **1** as the id of constraint 1. Li and Ni mix on one site, so they share its displacement.",
+          "text": "Enter **1** as the id of constraint 1.",
           "page": "analysis",
           "target": "constraint.id.0",
           "check": "field:constraint.id.0=1",
@@ -4031,7 +3823,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Ni1 = biso_Li1** as the expression of constraint 1. Li and Ni mix on one site, so they share its displacement.",
+          "text": "Enter **biso_Ni1 = biso_Li1** as the expression of constraint 1.",
           "page": "analysis",
           "target": "constraint.expression.0",
           "check": "field:constraint.expression.0=biso_Ni1 = biso_Li1",
@@ -4049,7 +3841,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **2** as the id of constraint 2. Li and Ni mix on the other site too, so they share its displacement.",
+          "text": "Enter **2** as the id of constraint 2.",
           "page": "analysis",
           "target": "constraint.id.1",
           "check": "field:constraint.id.1=2",
@@ -4058,7 +3850,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Li2 = biso_Ni2** as the expression of constraint 2. Li and Ni mix on the other site too, so they share its displacement.",
+          "text": "Enter **biso_Li2 = biso_Ni2** as the expression of constraint 2.",
           "page": "analysis",
           "target": "constraint.expression.1",
           "check": "field:constraint.expression.1=biso_Li2 = biso_Ni2",
@@ -4076,7 +3868,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **3** as the id of constraint 3. Ni fills what Li leaves of the first site, keeping it fully occupied.",
+          "text": "Enter **3** as the id of constraint 3.",
           "page": "analysis",
           "target": "constraint.id.2",
           "check": "field:constraint.id.2=3",
@@ -4085,7 +3877,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **occ_Ni1 = 1 - occ_Li1** as the expression of constraint 3. Ni fills what Li leaves of the first site, keeping it fully occupied.",
+          "text": "Enter **occ_Ni1 = 1 - occ_Li1** as the expression of constraint 3.",
           "page": "analysis",
           "target": "constraint.expression.2",
           "check": "field:constraint.expression.2=occ_Ni1 = 1 - occ_Li1",
@@ -4103,7 +3895,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **4** as the id of constraint 4. Li fills what Ni leaves of the second site, keeping it fully occupied.",
+          "text": "Enter **4** as the id of constraint 4.",
           "page": "analysis",
           "target": "constraint.id.3",
           "check": "field:constraint.id.3=4",
@@ -4112,7 +3904,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **occ_Li2 = 1 - occ_Li1** as the expression of constraint 4. Li fills what Ni leaves of the second site, keeping it fully occupied.",
+          "text": "Enter **occ_Li2 = 1 - occ_Li1** as the expression of constraint 4.",
           "page": "analysis",
           "target": "constraint.expression.3",
           "check": "field:constraint.expression.3=occ_Li2 = 1 - occ_Li1",
@@ -4130,7 +3922,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **5** as the id of constraint 5. Every Li on the first site swaps with a Ni on the second, so the two mixings are equal.",
+          "text": "Enter **5** as the id of constraint 5.",
           "page": "analysis",
           "target": "constraint.id.4",
           "check": "field:constraint.id.4=5",
@@ -4139,7 +3931,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **occ_Ni2 = occ_Li1** as the expression of constraint 5. Every Li on the first site swaps with a Ni on the second, so the two mixings are equal.",
+          "text": "Enter **occ_Ni2 = occ_Li1** as the expression of constraint 5.",
           "page": "analysis",
           "target": "constraint.expression.4",
           "check": "field:constraint.expression.4=occ_Ni2 = occ_Li1",
@@ -4605,7 +4397,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -4723,7 +4515,7 @@
         },
         {
           "title": "Estimate the background",
-          "text": "Enter **21** as the number of points of **Background estimation**. An estimate of 21 points under the peaks gives the fit a good starting background.",
+          "text": "Enter **21** as **Anchor points** in **Background estimation**. An estimate of 21 points under the peaks gives the fit a good starting background.",
           "page": "experiment",
           "target": "background_estimate.n_points",
           "check": "field:background_estimate.n_points=21",
@@ -5126,7 +4918,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -5281,14 +5073,6 @@
         },
         {
           "title": "Cells, scales and 2θ zero",
-          "text": "Choose **spodi** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=spodi",
-          "tab": "basic"
-        },
-        {
-          "title": "Cells, scales and 2θ zero",
           "text": "Choose **Instrument** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -5301,22 +5085,6 @@
           "page": "analysis",
           "target": "parameters.free@experiment.instrument.calib_twotheta_offset",
           "check": "tick:experiment.instrument.calib_twotheta_offset",
-          "tab": "basic"
-        },
-        {
-          "title": "Cells, scales and 2θ zero",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Cells, scales and 2θ zero",
-          "text": "Choose **spodi** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=spodi",
           "tab": "basic"
         },
         {
@@ -5340,15 +5108,7 @@
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Linked structures:spodi",
-          "tab": "basic"
-        },
-        {
-          "title": "Cells, scales and 2θ zero",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "check": "free-choice:free:Linked structures",
           "tab": "basic"
         },
         {
@@ -5482,14 +5242,6 @@
         },
         {
           "title": "Peak widths",
-          "text": "Choose **spodi** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=spodi",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
           "text": "Choose **Peak broadening** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -5509,23 +5261,7 @@
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Peak broadening:spodi",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Choose **spodi** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=spodi",
+          "check": "free-choice:free:Peak broadening",
           "tab": "basic"
         },
         {
@@ -5542,14 +5278,6 @@
           "page": "analysis",
           "target": "parameters.free@experiment.peak.mixing_eta_0",
           "check": "tick:experiment.peak.mixing_eta_0",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
           "tab": "basic"
         },
         {
@@ -5612,14 +5340,6 @@
         },
         {
           "title": "Asymmetry",
-          "text": "Choose **spodi** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=spodi",
-          "tab": "basic"
-        },
-        {
-          "title": "Asymmetry",
           "text": "Choose **Peak asymmetry** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -5639,15 +5359,7 @@
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Peak asymmetry:spodi",
-          "tab": "basic"
-        },
-        {
-          "title": "Asymmetry",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "check": "free-choice:free:Peak asymmetry",
           "tab": "basic"
         },
         {
@@ -5913,7 +5625,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -6045,7 +5757,7 @@
         },
         {
           "title": "Estimate the background",
-          "text": "Enter **14** as the number of points of **Background estimation**. An estimate of 14 points under the peaks gives the fit a good starting background.",
+          "text": "Enter **14** as **Anchor points** in **Background estimation**. An estimate of 14 points under the peaks gives the fit a good starting background.",
           "page": "experiment",
           "target": "background_estimate.n_points",
           "check": "field:background_estimate.n_points=14",
@@ -6258,14 +5970,6 @@
         },
         {
           "title": "Lorentzian width",
-          "text": "Choose **Peak broadening** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Peak broadening",
-          "tab": "basic"
-        },
-        {
-          "title": "Lorentzian width",
           "text": "Tick **Free** for **γ₁**.",
           "page": "analysis",
           "target": "parameters.free@experiment.peak.broad_lorentz_gamma_1",
@@ -6444,7 +6148,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -6676,30 +6380,6 @@
         },
         {
           "title": "Background",
-          "text": "Tick **Free** for **10 coefficient**.",
-          "page": "analysis",
-          "target": "parameters.free@experiment.background.10.coef",
-          "check": "tick:experiment.background.10.coef",
-          "tab": "basic"
-        },
-        {
-          "title": "Background",
-          "text": "Tick **Free** for **11 coefficient**.",
-          "page": "analysis",
-          "target": "parameters.free@experiment.background.11.coef",
-          "check": "tick:experiment.background.11.coef",
-          "tab": "basic"
-        },
-        {
-          "title": "Background",
-          "text": "Tick **Free** for **12 coefficient**.",
-          "page": "analysis",
-          "target": "parameters.free@experiment.background.12.coef",
-          "check": "tick:experiment.background.12.coef",
-          "tab": "basic"
-        },
-        {
-          "title": "Background",
           "text": "Tick **Free** for **2 coefficient**.",
           "page": "analysis",
           "target": "parameters.free@experiment.background.2.coef",
@@ -6760,6 +6440,30 @@
           "page": "analysis",
           "target": "parameters.free@experiment.background.9.coef",
           "check": "tick:experiment.background.9.coef",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Tick **Free** for **10 coefficient**.",
+          "page": "analysis",
+          "target": "parameters.free@experiment.background.10.coef",
+          "check": "tick:experiment.background.10.coef",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Tick **Free** for **11 coefficient**.",
+          "page": "analysis",
+          "target": "parameters.free@experiment.background.11.coef",
+          "check": "tick:experiment.background.11.coef",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Tick **Free** for **12 coefficient**.",
+          "page": "analysis",
+          "target": "parameters.free@experiment.background.12.coef",
+          "check": "tick:experiment.background.12.coef",
           "tab": "basic"
         },
         {
@@ -7141,7 +6845,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -7439,14 +7143,6 @@
         },
         {
           "title": "Lorentzian width",
-          "text": "Choose **Peak broadening** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Peak broadening",
-          "tab": "basic"
-        },
-        {
-          "title": "Lorentzian width",
           "text": "Tick **Free** for **γ₁**.",
           "page": "analysis",
           "target": "parameters.free@experiment.peak.broad_lorentz_gamma_1",
@@ -7672,7 +7368,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -7818,14 +7514,6 @@
         },
         {
           "title": "Scales and cells",
-          "text": "Choose **mcstas** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=mcstas",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and cells",
           "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -7845,15 +7533,7 @@
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Linked structures:mcstas",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales and cells",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "check": "free-choice:free:Linked structures",
           "tab": "basic"
         },
         {
@@ -7967,14 +7647,6 @@
         },
         {
           "title": "Peak widths",
-          "text": "Choose **mcstas** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=mcstas",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
           "text": "Choose **Peak broadening** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -8003,14 +7675,6 @@
           "page": "analysis",
           "target": "parameters.free@experiment.peak.broad_gauss_sigma_2",
           "check": "tick:experiment.peak.broad_gauss_sigma_2",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
           "tab": "basic"
         },
         {
@@ -8056,14 +7720,6 @@
         },
         {
           "title": "Rise and decay",
-          "text": "Choose **mcstas** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=mcstas",
-          "tab": "basic"
-        },
-        {
-          "title": "Rise and decay",
           "text": "Choose **Peak asymmetry** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -8092,14 +7748,6 @@
           "page": "analysis",
           "target": "parameters.free@experiment.peak.rise_alpha_1",
           "check": "tick:experiment.peak.rise_alpha_1",
-          "tab": "basic"
-        },
-        {
-          "title": "Rise and decay",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
           "tab": "basic"
         },
         {
@@ -8237,7 +7885,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -10848,7 +10496,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -11031,7 +10679,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_ferrite** as the id of alias 1. Both phases are iron, so the data cannot tell their displacements apart.",
+          "text": "Enter **biso_ferrite** as the id of alias 1.",
           "page": "analysis",
           "target": "alias.id.0",
           "check": "field:alias.id.0=biso_ferrite",
@@ -11040,7 +10688,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **ferrite.atom_site.Fe.adp_iso** as the parameter of alias 1. Both phases are iron, so the data cannot tell their displacements apart.",
+          "text": "Choose **ferrite.atom_site.Fe.adp_iso** as the parameter of alias 1.",
           "page": "analysis",
           "target": "alias.parameter.0",
           "check": "pick:alias.parameter.0=ferrite.atom_site.Fe.adp_iso",
@@ -11049,7 +10697,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Both phases are iron, so the data cannot tell their displacements apart.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=2",
@@ -11058,7 +10706,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_austenite** as the id of alias 2. Both phases are iron, so the data cannot tell their displacements apart.",
+          "text": "Enter **biso_austenite** as the id of alias 2.",
           "page": "analysis",
           "target": "alias.id.1",
           "check": "field:alias.id.1=biso_austenite",
@@ -11067,7 +10715,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **austenite.atom_site.Fe.adp_iso** as the parameter of alias 2. Both phases are iron, so the data cannot tell their displacements apart.",
+          "text": "Choose **austenite.atom_site.Fe.adp_iso** as the parameter of alias 2.",
           "page": "analysis",
           "target": "alias.parameter.1",
           "check": "pick:alias.parameter.1=austenite.atom_site.Fe.adp_iso",
@@ -11085,7 +10733,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **s2_ferrite_scale** as the id of alias 3. Both banks see the same sample, so ferrite has one phase fraction.",
+          "text": "Enter **s2_ferrite_scale** as the id of alias 3.",
           "page": "analysis",
           "target": "alias.id.2",
           "check": "field:alias.id.2=s2_ferrite_scale",
@@ -11094,7 +10742,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **expt_s2.linked_structure.ferrite.scale** as the parameter of alias 3. Both banks see the same sample, so ferrite has one phase fraction.",
+          "text": "Choose **expt_s2.linked_structure.ferrite.scale** as the parameter of alias 3.",
           "page": "analysis",
           "target": "alias.parameter.2",
           "check": "pick:alias.parameter.2=expt_s2.linked_structure.ferrite.scale",
@@ -11112,7 +10760,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **s2_austenite_scale** as the id of alias 4. Both banks see the same sample, so austenite has one phase fraction.",
+          "text": "Enter **s2_austenite_scale** as the id of alias 4.",
           "page": "analysis",
           "target": "alias.id.3",
           "check": "field:alias.id.3=s2_austenite_scale",
@@ -11121,7 +10769,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **expt_s2.linked_structure.austenite.scale** as the parameter of alias 4. Both banks see the same sample, so austenite has one phase fraction.",
+          "text": "Choose **expt_s2.linked_structure.austenite.scale** as the parameter of alias 4.",
           "page": "analysis",
           "target": "alias.parameter.3",
           "check": "pick:alias.parameter.3=expt_s2.linked_structure.austenite.scale",
@@ -11139,7 +10787,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **n2_ferrite_scale** as the id of alias 5. Both banks see the same sample, so ferrite has one phase fraction.",
+          "text": "Enter **n2_ferrite_scale** as the id of alias 5.",
           "page": "analysis",
           "target": "alias.id.4",
           "check": "field:alias.id.4=n2_ferrite_scale",
@@ -11148,7 +10796,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **expt_n2.linked_structure.ferrite.scale** as the parameter of alias 5. Both banks see the same sample, so ferrite has one phase fraction.",
+          "text": "Choose **expt_n2.linked_structure.ferrite.scale** as the parameter of alias 5.",
           "page": "analysis",
           "target": "alias.parameter.4",
           "check": "pick:alias.parameter.4=expt_n2.linked_structure.ferrite.scale",
@@ -11166,7 +10814,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **n2_austenite_scale** as the id of alias 6. Both banks see the same sample, so austenite has one phase fraction.",
+          "text": "Enter **n2_austenite_scale** as the id of alias 6.",
           "page": "analysis",
           "target": "alias.id.5",
           "check": "field:alias.id.5=n2_austenite_scale",
@@ -11175,7 +10823,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **expt_n2.linked_structure.austenite.scale** as the parameter of alias 6. Both banks see the same sample, so austenite has one phase fraction.",
+          "text": "Choose **expt_n2.linked_structure.austenite.scale** as the parameter of alias 6.",
           "page": "analysis",
           "target": "alias.parameter.5",
           "check": "pick:alias.parameter.5=expt_n2.linked_structure.austenite.scale",
@@ -11193,19 +10841,10 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **1** as the id of constraint 1. Both phases are iron, so the data cannot tell their displacements apart.",
+          "text": "Enter **1** as the id of constraint 1.",
           "page": "analysis",
           "target": "constraint.id.0",
           "check": "field:constraint.id.0=1",
-          "tab": "extras",
-          "why": "Both phases are iron, so the data cannot tell their displacements apart."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **biso_austenite = biso_ferrite** as the expression of constraint 1. Both phases are iron, so the data cannot tell their displacements apart.",
-          "page": "analysis",
-          "target": "constraint.expression.0",
-          "check": "field:constraint.expression.0=biso_austenite = biso_ferrite",
           "tab": "extras",
           "why": "Both phases are iron, so the data cannot tell their displacements apart."
         },
@@ -11220,7 +10859,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **2** as the id of constraint 2. Both banks see the same sample, so ferrite has one phase fraction.",
+          "text": "Enter **2** as the id of constraint 2.",
           "page": "analysis",
           "target": "constraint.id.1",
           "check": "field:constraint.id.1=2",
@@ -11229,7 +10868,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **n2_ferrite_scale = s2_ferrite_scale** as the expression of constraint 2. Both banks see the same sample, so ferrite has one phase fraction.",
+          "text": "Enter **n2_ferrite_scale = s2_ferrite_scale** as the expression of constraint 2.",
           "page": "analysis",
           "target": "constraint.expression.1",
           "check": "field:constraint.expression.1=n2_ferrite_scale = s2_ferrite_scale",
@@ -11247,7 +10886,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **3** as the id of constraint 3. Both banks see the same sample, so austenite has one phase fraction.",
+          "text": "Enter **3** as the id of constraint 3.",
           "page": "analysis",
           "target": "constraint.id.2",
           "check": "field:constraint.id.2=3",
@@ -11256,7 +10895,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **n2_austenite_scale = s2_austenite_scale** as the expression of constraint 3. Both banks see the same sample, so austenite has one phase fraction.",
+          "text": "Enter **n2_austenite_scale = s2_austenite_scale** as the expression of constraint 3.",
           "page": "analysis",
           "target": "constraint.expression.2",
           "check": "field:constraint.expression.2=n2_austenite_scale = s2_austenite_scale",
@@ -11265,7 +10904,7 @@
         },
         {
           "title": "Weigh the experiments",
-          "text": "Enter **0.5** as `weight.0`. The project weighs the two banks equally at a half each, so the joint χ² is their average.",
+          "text": "Enter **0.5** as the weight of **expt_n2**. The project weighs the two banks equally at a half each, so the joint χ² is their average.",
           "page": "analysis",
           "target": "jointFit.weight.0",
           "check": "field:jointFit.weight.0=0.5",
@@ -11274,7 +10913,7 @@
         },
         {
           "title": "Weigh the experiments",
-          "text": "Enter **0.5** as `weight.1`. The project weighs the two banks equally at a half each, so the joint χ² is their average.",
+          "text": "Enter **0.5** as the weight of **expt_s2**.",
           "page": "analysis",
           "target": "jointFit.weight.1",
           "check": "field:jointFit.weight.1=0.5",
@@ -11912,7 +11551,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -12399,14 +12038,6 @@
         },
         {
           "title": "Oxygen positions",
-          "text": "Choose **Atomic coordinates** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Atomic coordinates",
-          "tab": "basic"
-        },
-        {
-          "title": "Oxygen positions",
           "text": "Click the **Free** column header of the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.freeHeader",
@@ -12549,7 +12180,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -12676,7 +12307,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Ti** as the id of alias 1. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **biso_Ti** as the id of alias 1.",
           "page": "analysis",
           "target": "alias.id.0",
           "check": "field:alias.id.0=biso_Ti",
@@ -12685,7 +12316,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lam7o3.atom_site.Ti.adp_iso** as the parameter of alias 1. The seven metals share one site, so they share one displacement.",
+          "text": "Choose **lam7o3.atom_site.Ti.adp_iso** as the parameter of alias 1.",
           "page": "analysis",
           "target": "alias.parameter.0",
           "check": "pick:alias.parameter.0=lam7o3.atom_site.Ti.adp_iso",
@@ -12694,7 +12325,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. The seven metals share one site, so they share one displacement.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=2",
@@ -12703,7 +12334,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Cr** as the id of alias 2. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **biso_Cr** as the id of alias 2.",
           "page": "analysis",
           "target": "alias.id.1",
           "check": "field:alias.id.1=biso_Cr",
@@ -12712,7 +12343,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lam7o3.atom_site.Cr.adp_iso** as the parameter of alias 2. The seven metals share one site, so they share one displacement.",
+          "text": "Choose **lam7o3.atom_site.Cr.adp_iso** as the parameter of alias 2.",
           "page": "analysis",
           "target": "alias.parameter.1",
           "check": "pick:alias.parameter.1=lam7o3.atom_site.Cr.adp_iso",
@@ -12721,7 +12352,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. The seven metals share one site, so they share one displacement.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=3",
@@ -12730,7 +12361,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Mn** as the id of alias 3. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **biso_Mn** as the id of alias 3.",
           "page": "analysis",
           "target": "alias.id.2",
           "check": "field:alias.id.2=biso_Mn",
@@ -12739,7 +12370,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lam7o3.atom_site.Mn.adp_iso** as the parameter of alias 3. The seven metals share one site, so they share one displacement.",
+          "text": "Choose **lam7o3.atom_site.Mn.adp_iso** as the parameter of alias 3.",
           "page": "analysis",
           "target": "alias.parameter.2",
           "check": "pick:alias.parameter.2=lam7o3.atom_site.Mn.adp_iso",
@@ -12748,7 +12379,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. The seven metals share one site, so they share one displacement.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=4",
@@ -12757,7 +12388,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Fe** as the id of alias 4. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **biso_Fe** as the id of alias 4.",
           "page": "analysis",
           "target": "alias.id.3",
           "check": "field:alias.id.3=biso_Fe",
@@ -12766,7 +12397,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lam7o3.atom_site.Fe.adp_iso** as the parameter of alias 4. The seven metals share one site, so they share one displacement.",
+          "text": "Choose **lam7o3.atom_site.Fe.adp_iso** as the parameter of alias 4.",
           "page": "analysis",
           "target": "alias.parameter.3",
           "check": "pick:alias.parameter.3=lam7o3.atom_site.Fe.adp_iso",
@@ -12775,7 +12406,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. The seven metals share one site, so they share one displacement.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=5",
@@ -12784,7 +12415,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Co** as the id of alias 5. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **biso_Co** as the id of alias 5.",
           "page": "analysis",
           "target": "alias.id.4",
           "check": "field:alias.id.4=biso_Co",
@@ -12793,7 +12424,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lam7o3.atom_site.Co.adp_iso** as the parameter of alias 5. The seven metals share one site, so they share one displacement.",
+          "text": "Choose **lam7o3.atom_site.Co.adp_iso** as the parameter of alias 5.",
           "page": "analysis",
           "target": "alias.parameter.4",
           "check": "pick:alias.parameter.4=lam7o3.atom_site.Co.adp_iso",
@@ -12802,7 +12433,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. The seven metals share one site, so they share one displacement.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=6",
@@ -12811,7 +12442,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Ni** as the id of alias 6. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **biso_Ni** as the id of alias 6.",
           "page": "analysis",
           "target": "alias.id.5",
           "check": "field:alias.id.5=biso_Ni",
@@ -12820,7 +12451,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lam7o3.atom_site.Ni.adp_iso** as the parameter of alias 6. The seven metals share one site, so they share one displacement.",
+          "text": "Choose **lam7o3.atom_site.Ni.adp_iso** as the parameter of alias 6.",
           "page": "analysis",
           "target": "alias.parameter.5",
           "check": "pick:alias.parameter.5=lam7o3.atom_site.Ni.adp_iso",
@@ -12829,7 +12460,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. The seven metals share one site, so they share one displacement.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=7",
@@ -12838,7 +12469,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Cu** as the id of alias 7. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **biso_Cu** as the id of alias 7.",
           "page": "analysis",
           "target": "alias.id.6",
           "check": "field:alias.id.6=biso_Cu",
@@ -12847,7 +12478,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lam7o3.atom_site.Cu.adp_iso** as the parameter of alias 7. The seven metals share one site, so they share one displacement.",
+          "text": "Choose **lam7o3.atom_site.Cu.adp_iso** as the parameter of alias 7.",
           "page": "analysis",
           "target": "alias.parameter.6",
           "check": "pick:alias.parameter.6=lam7o3.atom_site.Cu.adp_iso",
@@ -12865,7 +12496,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_O1** as the id of alias 8. The two oxygen sites cannot be told apart in their displacements, so they share one.",
+          "text": "Enter **biso_O1** as the id of alias 8.",
           "page": "analysis",
           "target": "alias.id.7",
           "check": "field:alias.id.7=biso_O1",
@@ -12874,7 +12505,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lam7o3.atom_site.O1.adp_iso** as the parameter of alias 8. The two oxygen sites cannot be told apart in their displacements, so they share one.",
+          "text": "Choose **lam7o3.atom_site.O1.adp_iso** as the parameter of alias 8.",
           "page": "analysis",
           "target": "alias.parameter.7",
           "check": "pick:alias.parameter.7=lam7o3.atom_site.O1.adp_iso",
@@ -12883,7 +12514,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. The two oxygen sites cannot be told apart in their displacements, so they share one.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=9",
@@ -12892,7 +12523,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_O2** as the id of alias 9. The two oxygen sites cannot be told apart in their displacements, so they share one.",
+          "text": "Enter **biso_O2** as the id of alias 9.",
           "page": "analysis",
           "target": "alias.id.8",
           "check": "field:alias.id.8=biso_O2",
@@ -12901,7 +12532,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **lam7o3.atom_site.O2.adp_iso** as the parameter of alias 9. The two oxygen sites cannot be told apart in their displacements, so they share one.",
+          "text": "Choose **lam7o3.atom_site.O2.adp_iso** as the parameter of alias 9.",
           "page": "analysis",
           "target": "alias.parameter.8",
           "check": "pick:alias.parameter.8=lam7o3.atom_site.O2.adp_iso",
@@ -12919,7 +12550,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **1** as the id of constraint 1. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **1** as the id of constraint 1.",
           "page": "analysis",
           "target": "constraint.id.0",
           "check": "field:constraint.id.0=1",
@@ -12928,16 +12559,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Cr = biso_Ti** as the expression of constraint 1. The seven metals share one site, so they share one displacement.",
-          "page": "analysis",
-          "target": "constraint.expression.0",
-          "check": "field:constraint.expression.0=biso_Cr = biso_Ti",
-          "tab": "extras",
-          "why": "The seven metals share one site, so they share one displacement."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. The seven metals share one site, so they share one displacement.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=2",
@@ -12946,7 +12568,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **2** as the id of constraint 2. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **2** as the id of constraint 2.",
           "page": "analysis",
           "target": "constraint.id.1",
           "check": "field:constraint.id.1=2",
@@ -12955,16 +12577,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Mn = biso_Ti** as the expression of constraint 2. The seven metals share one site, so they share one displacement.",
-          "page": "analysis",
-          "target": "constraint.expression.1",
-          "check": "field:constraint.expression.1=biso_Mn = biso_Ti",
-          "tab": "extras",
-          "why": "The seven metals share one site, so they share one displacement."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. The seven metals share one site, so they share one displacement.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=3",
@@ -12973,7 +12586,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **3** as the id of constraint 3. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **3** as the id of constraint 3.",
           "page": "analysis",
           "target": "constraint.id.2",
           "check": "field:constraint.id.2=3",
@@ -12982,16 +12595,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Fe = biso_Ti** as the expression of constraint 3. The seven metals share one site, so they share one displacement.",
-          "page": "analysis",
-          "target": "constraint.expression.2",
-          "check": "field:constraint.expression.2=biso_Fe = biso_Ti",
-          "tab": "extras",
-          "why": "The seven metals share one site, so they share one displacement."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. The seven metals share one site, so they share one displacement.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=4",
@@ -13000,7 +12604,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **4** as the id of constraint 4. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **4** as the id of constraint 4.",
           "page": "analysis",
           "target": "constraint.id.3",
           "check": "field:constraint.id.3=4",
@@ -13009,16 +12613,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Co = biso_Ti** as the expression of constraint 4. The seven metals share one site, so they share one displacement.",
-          "page": "analysis",
-          "target": "constraint.expression.3",
-          "check": "field:constraint.expression.3=biso_Co = biso_Ti",
-          "tab": "extras",
-          "why": "The seven metals share one site, so they share one displacement."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. The seven metals share one site, so they share one displacement.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=5",
@@ -13027,7 +12622,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **5** as the id of constraint 5. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **5** as the id of constraint 5.",
           "page": "analysis",
           "target": "constraint.id.4",
           "check": "field:constraint.id.4=5",
@@ -13036,16 +12631,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_Ni = biso_Ti** as the expression of constraint 5. The seven metals share one site, so they share one displacement.",
-          "page": "analysis",
-          "target": "constraint.expression.4",
-          "check": "field:constraint.expression.4=biso_Ni = biso_Ti",
-          "tab": "extras",
-          "why": "The seven metals share one site, so they share one displacement."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. The seven metals share one site, so they share one displacement.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=6",
@@ -13054,19 +12640,10 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **6** as the id of constraint 6. The seven metals share one site, so they share one displacement.",
+          "text": "Enter **6** as the id of constraint 6.",
           "page": "analysis",
           "target": "constraint.id.5",
           "check": "field:constraint.id.5=6",
-          "tab": "extras",
-          "why": "The seven metals share one site, so they share one displacement."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **biso_Cu = biso_Ti** as the expression of constraint 6. The seven metals share one site, so they share one displacement.",
-          "page": "analysis",
-          "target": "constraint.expression.5",
-          "check": "field:constraint.expression.5=biso_Cu = biso_Ti",
           "tab": "extras",
           "why": "The seven metals share one site, so they share one displacement."
         },
@@ -13081,7 +12658,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **7** as the id of constraint 7. The two oxygen sites cannot be told apart in their displacements, so they share one.",
+          "text": "Enter **7** as the id of constraint 7.",
           "page": "analysis",
           "target": "constraint.id.6",
           "check": "field:constraint.id.6=7",
@@ -13090,7 +12667,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **biso_O2 = biso_O1** as the expression of constraint 7. The two oxygen sites cannot be told apart in their displacements, so they share one.",
+          "text": "Enter **biso_O2 = biso_O1** as the expression of constraint 7.",
           "page": "analysis",
           "target": "constraint.expression.6",
           "check": "field:constraint.expression.6=biso_O2 = biso_O1",
@@ -13348,7 +12925,7 @@
         },
         {
           "title": "Background from the fitted model",
-          "text": "Choose **subtract** as the model of **Background estimation**. With the peaks fitted, an estimate with the calculated peaks subtracted follows the low-angle background better.",
+          "text": "Choose **Subtract** as **Calculated peaks** in **Background estimation**. With the peaks fitted, an estimate with the calculated peaks subtracted follows the low-angle background better.",
           "page": "experiment",
           "target": "background_estimate.use_model",
           "check": "token:background_estimate.use_model=subtract",
@@ -13357,7 +12934,7 @@
         },
         {
           "title": "Background from the fitted model",
-          "text": "Enter **20** as the number of points of **Background estimation**. With the peaks fitted, an estimate with the calculated peaks subtracted follows the low-angle background better.",
+          "text": "Enter **20** as **Anchor points** in **Background estimation**.",
           "page": "experiment",
           "target": "background_estimate.n_points",
           "check": "field:background_estimate.n_points=20",
@@ -13616,7 +13193,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -13763,7 +13340,7 @@
         },
         {
           "title": "Weigh the experiments",
-          "text": "Enter **0.5** as `weight.0`. The project weighs the two patterns equally at a half each, so the joint χ² is their average.",
+          "text": "Enter **0.5** as the weight of **d1a**. The project weighs the two patterns equally at a half each, so the joint χ² is their average.",
           "page": "analysis",
           "target": "jointFit.weight.0",
           "check": "field:jointFit.weight.0=0.5",
@@ -13772,7 +13349,7 @@
         },
         {
           "title": "Weigh the experiments",
-          "text": "Enter **0.5** as `weight.1`. The project weighs the two patterns equally at a half each, so the joint χ² is their average.",
+          "text": "Enter **0.5** as the weight of **lab**.",
           "page": "analysis",
           "target": "jointFit.weight.1",
           "check": "field:jointFit.weight.1=0.5",
@@ -13845,14 +13422,6 @@
         },
         {
           "title": "Scales, 2θ zeros and cell",
-          "text": "Choose **pbso4** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=pbso4",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zeros and cell",
           "text": "Choose **Cell** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -13872,15 +13441,7 @@
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Cell:pbso4",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zeros and cell",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "check": "free-choice:free:Cell",
           "tab": "basic"
         },
         {
@@ -14575,7 +14136,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -14637,15 +14198,6 @@
           "check": "fitting-mode:single",
           "tab": "extras",
           "why": "The template pattern is fitted alone first, so the scan starts from a good model."
-        },
-        {
-          "title": "Descent",
-          "text": "On **Analysis → Extra**, choose **fast_descent** as the **Descent**. With the default descent the scan can stop in a shallower minimum of the peak widths.",
-          "page": "analysis",
-          "target": "minimizer.descent",
-          "check": "descent:fast_descent",
-          "tab": "extras",
-          "why": "With the default descent the scan can stop in a shallower minimum of the peak widths."
         },
         {
           "title": "Start with nothing free",
@@ -15168,7 +14720,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -15248,14 +14800,6 @@
         },
         {
           "title": "Scales, 2θ zero and cells",
-          "text": "Choose **bm01** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=bm01",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
           "text": "Choose **Instrument** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -15268,22 +14812,6 @@
           "page": "analysis",
           "target": "parameters.free@experiment.instrument.calib_twotheta_offset",
           "check": "tick:experiment.instrument.calib_twotheta_offset",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Choose **bm01** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=bm01",
           "tab": "basic"
         },
         {
@@ -15307,15 +14835,7 @@
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Linked structures:bm01",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, 2θ zero and cells",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "check": "free-choice:free:Linked structures",
           "tab": "basic"
         },
         {
@@ -15460,14 +14980,6 @@
         },
         {
           "title": "Peak widths",
-          "text": "Choose **bm01** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=bm01",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
           "text": "Choose **Peak broadening** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -15487,23 +14999,7 @@
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Peak broadening:bm01",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Choose **bm01** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=bm01",
+          "check": "free-choice:free:Peak broadening",
           "tab": "basic"
         },
         {
@@ -15520,14 +15016,6 @@
           "page": "analysis",
           "target": "parameters.free@experiment.peak.mixing_eta_0",
           "check": "tick:experiment.peak.mixing_eta_0",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak widths",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
           "tab": "basic"
         },
         {
@@ -15598,14 +15086,6 @@
         },
         {
           "title": "Peak asymmetry",
-          "text": "Choose **bm01** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=bm01",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak asymmetry",
           "text": "Choose **Peak asymmetry** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -15626,14 +15106,6 @@
           "page": "analysis",
           "target": "parameters.free@experiment.peak.asym_beba_b0",
           "check": "tick:experiment.peak.asym_beba_b0",
-          "tab": "basic"
-        },
-        {
-          "title": "Peak asymmetry",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
           "tab": "basic"
         },
         {
@@ -16032,7 +15504,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -16094,7 +15566,7 @@
         },
         {
           "title": "Open Report",
-          "text": "The **Report** page collects the structure, the experiment and the fit.",
+          "text": "The **Report** page collects the structure, the experiment.",
           "page": "report",
           "target": "appBar.tab.report",
           "check": "page:report"
@@ -16392,7 +15864,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -16637,14 +16109,6 @@
         },
         {
           "title": "Anisotropic displacements",
-          "text": "Choose **Atomic displacement** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Atomic displacement",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
           "text": "Click the **Free** column header of the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.freeHeader",
@@ -16706,7 +16170,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -18639,7 +18103,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",
@@ -18906,7 +18370,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_1** as the id of alias 1. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_1** as the id of alias 1.",
           "page": "analysis",
           "target": "alias.id.0",
           "check": "field:alias.id.0=x11_1",
@@ -18915,7 +18379,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_1.extinction.coefficient_11** as the parameter of alias 1. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_1.extinction.coefficient_11** as the parameter of alias 1.",
           "page": "analysis",
           "target": "alias.parameter.0",
           "check": "pick:alias.parameter.0=senju_1.extinction.coefficient_11",
@@ -18924,7 +18388,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=2",
@@ -18933,7 +18397,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_1** as the id of alias 2. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_1** as the id of alias 2.",
           "page": "analysis",
           "target": "alias.id.1",
           "check": "field:alias.id.1=x22_1",
@@ -18942,7 +18406,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_1.extinction.coefficient_22** as the parameter of alias 2. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_1.extinction.coefficient_22** as the parameter of alias 2.",
           "page": "analysis",
           "target": "alias.parameter.1",
           "check": "pick:alias.parameter.1=senju_1.extinction.coefficient_22",
@@ -18951,7 +18415,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=3",
@@ -18960,7 +18424,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_1** as the id of alias 3. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_1** as the id of alias 3.",
           "page": "analysis",
           "target": "alias.id.2",
           "check": "field:alias.id.2=x33_1",
@@ -18969,7 +18433,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_1.extinction.coefficient_33** as the parameter of alias 3. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_1.extinction.coefficient_33** as the parameter of alias 3.",
           "page": "analysis",
           "target": "alias.parameter.2",
           "check": "pick:alias.parameter.2=senju_1.extinction.coefficient_33",
@@ -18978,7 +18442,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=4",
@@ -18987,7 +18451,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_2** as the id of alias 4. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_2** as the id of alias 4.",
           "page": "analysis",
           "target": "alias.id.3",
           "check": "field:alias.id.3=x11_2",
@@ -18996,7 +18460,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_2.extinction.coefficient_11** as the parameter of alias 4. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_2.extinction.coefficient_11** as the parameter of alias 4.",
           "page": "analysis",
           "target": "alias.parameter.3",
           "check": "pick:alias.parameter.3=senju_2.extinction.coefficient_11",
@@ -19005,7 +18469,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=5",
@@ -19014,7 +18478,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_2** as the id of alias 5. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_2** as the id of alias 5.",
           "page": "analysis",
           "target": "alias.id.4",
           "check": "field:alias.id.4=x22_2",
@@ -19023,7 +18487,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_2.extinction.coefficient_22** as the parameter of alias 5. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_2.extinction.coefficient_22** as the parameter of alias 5.",
           "page": "analysis",
           "target": "alias.parameter.4",
           "check": "pick:alias.parameter.4=senju_2.extinction.coefficient_22",
@@ -19032,7 +18496,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=6",
@@ -19041,7 +18505,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_2** as the id of alias 6. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_2** as the id of alias 6.",
           "page": "analysis",
           "target": "alias.id.5",
           "check": "field:alias.id.5=x33_2",
@@ -19050,7 +18514,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_2.extinction.coefficient_33** as the parameter of alias 6. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_2.extinction.coefficient_33** as the parameter of alias 6.",
           "page": "analysis",
           "target": "alias.parameter.5",
           "check": "pick:alias.parameter.5=senju_2.extinction.coefficient_33",
@@ -19059,7 +18523,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=7",
@@ -19068,7 +18532,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_3** as the id of alias 7. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_3** as the id of alias 7.",
           "page": "analysis",
           "target": "alias.id.6",
           "check": "field:alias.id.6=x11_3",
@@ -19077,7 +18541,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_3.extinction.coefficient_11** as the parameter of alias 7. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_3.extinction.coefficient_11** as the parameter of alias 7.",
           "page": "analysis",
           "target": "alias.parameter.6",
           "check": "pick:alias.parameter.6=senju_3.extinction.coefficient_11",
@@ -19086,7 +18550,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=8",
@@ -19095,7 +18559,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_3** as the id of alias 8. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_3** as the id of alias 8.",
           "page": "analysis",
           "target": "alias.id.7",
           "check": "field:alias.id.7=x22_3",
@@ -19104,7 +18568,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_3.extinction.coefficient_22** as the parameter of alias 8. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_3.extinction.coefficient_22** as the parameter of alias 8.",
           "page": "analysis",
           "target": "alias.parameter.7",
           "check": "pick:alias.parameter.7=senju_3.extinction.coefficient_22",
@@ -19113,7 +18577,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=9",
@@ -19122,7 +18586,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_3** as the id of alias 9. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_3** as the id of alias 9.",
           "page": "analysis",
           "target": "alias.id.8",
           "check": "field:alias.id.8=x33_3",
@@ -19131,7 +18595,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_3.extinction.coefficient_33** as the parameter of alias 9. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_3.extinction.coefficient_33** as the parameter of alias 9.",
           "page": "analysis",
           "target": "alias.parameter.8",
           "check": "pick:alias.parameter.8=senju_3.extinction.coefficient_33",
@@ -19140,7 +18604,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=10",
@@ -19149,7 +18613,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_4** as the id of alias 10. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_4** as the id of alias 10.",
           "page": "analysis",
           "target": "alias.id.9",
           "check": "field:alias.id.9=x11_4",
@@ -19158,7 +18622,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_4.extinction.coefficient_11** as the parameter of alias 10. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_4.extinction.coefficient_11** as the parameter of alias 10.",
           "page": "analysis",
           "target": "alias.parameter.9",
           "check": "pick:alias.parameter.9=senju_4.extinction.coefficient_11",
@@ -19167,7 +18631,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=11",
@@ -19176,7 +18640,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_4** as the id of alias 11. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_4** as the id of alias 11.",
           "page": "analysis",
           "target": "alias.id.10",
           "check": "field:alias.id.10=x22_4",
@@ -19185,7 +18649,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_4.extinction.coefficient_22** as the parameter of alias 11. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_4.extinction.coefficient_22** as the parameter of alias 11.",
           "page": "analysis",
           "target": "alias.parameter.10",
           "check": "pick:alias.parameter.10=senju_4.extinction.coefficient_22",
@@ -19194,7 +18658,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=12",
@@ -19203,7 +18667,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_4** as the id of alias 12. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_4** as the id of alias 12.",
           "page": "analysis",
           "target": "alias.id.11",
           "check": "field:alias.id.11=x33_4",
@@ -19212,7 +18676,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_4.extinction.coefficient_33** as the parameter of alias 12. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_4.extinction.coefficient_33** as the parameter of alias 12.",
           "page": "analysis",
           "target": "alias.parameter.11",
           "check": "pick:alias.parameter.11=senju_4.extinction.coefficient_33",
@@ -19221,7 +18685,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=13",
@@ -19230,7 +18694,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_5** as the id of alias 13. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_5** as the id of alias 13.",
           "page": "analysis",
           "target": "alias.id.12",
           "check": "field:alias.id.12=x11_5",
@@ -19239,7 +18703,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_5.extinction.coefficient_11** as the parameter of alias 13. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_5.extinction.coefficient_11** as the parameter of alias 13.",
           "page": "analysis",
           "target": "alias.parameter.12",
           "check": "pick:alias.parameter.12=senju_5.extinction.coefficient_11",
@@ -19248,7 +18712,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=14",
@@ -19257,7 +18721,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_5** as the id of alias 14. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_5** as the id of alias 14.",
           "page": "analysis",
           "target": "alias.id.13",
           "check": "field:alias.id.13=x22_5",
@@ -19266,7 +18730,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_5.extinction.coefficient_22** as the parameter of alias 14. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_5.extinction.coefficient_22** as the parameter of alias 14.",
           "page": "analysis",
           "target": "alias.parameter.13",
           "check": "pick:alias.parameter.13=senju_5.extinction.coefficient_22",
@@ -19275,7 +18739,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=15",
@@ -19284,7 +18748,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_5** as the id of alias 15. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_5** as the id of alias 15.",
           "page": "analysis",
           "target": "alias.id.14",
           "check": "field:alias.id.14=x33_5",
@@ -19293,7 +18757,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_5.extinction.coefficient_33** as the parameter of alias 15. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_5.extinction.coefficient_33** as the parameter of alias 15.",
           "page": "analysis",
           "target": "alias.parameter.14",
           "check": "pick:alias.parameter.14=senju_5.extinction.coefficient_33",
@@ -19302,7 +18766,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=16",
@@ -19311,7 +18775,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_6** as the id of alias 16. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_6** as the id of alias 16.",
           "page": "analysis",
           "target": "alias.id.15",
           "check": "field:alias.id.15=x11_6",
@@ -19320,7 +18784,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_6.extinction.coefficient_11** as the parameter of alias 16. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_6.extinction.coefficient_11** as the parameter of alias 16.",
           "page": "analysis",
           "target": "alias.parameter.15",
           "check": "pick:alias.parameter.15=senju_6.extinction.coefficient_11",
@@ -19329,7 +18793,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=17",
@@ -19338,7 +18802,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_6** as the id of alias 17. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_6** as the id of alias 17.",
           "page": "analysis",
           "target": "alias.id.16",
           "check": "field:alias.id.16=x22_6",
@@ -19347,7 +18811,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_6.extinction.coefficient_22** as the parameter of alias 17. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_6.extinction.coefficient_22** as the parameter of alias 17.",
           "page": "analysis",
           "target": "alias.parameter.16",
           "check": "pick:alias.parameter.16=senju_6.extinction.coefficient_22",
@@ -19356,7 +18820,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=18",
@@ -19365,7 +18829,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_6** as the id of alias 18. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_6** as the id of alias 18.",
           "page": "analysis",
           "target": "alias.id.17",
           "check": "field:alias.id.17=x33_6",
@@ -19374,7 +18838,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Choose **senju_6.extinction.coefficient_33** as the parameter of alias 18. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Choose **senju_6.extinction.coefficient_33** as the parameter of alias 18.",
           "page": "analysis",
           "target": "alias.parameter.17",
           "check": "pick:alias.parameter.17=senju_6.extinction.coefficient_33",
@@ -19383,7 +18847,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=1",
@@ -19392,7 +18856,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_2** as the id of constraint 1. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_2** as the id of constraint 1.",
           "page": "analysis",
           "target": "constraint.id.0",
           "check": "field:constraint.id.0=x11_2",
@@ -19401,7 +18865,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_2 = x11_1** as the expression of constraint 1. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_2 = x11_1** as the expression of constraint 1.",
           "page": "analysis",
           "target": "constraint.expression.0",
           "check": "field:constraint.expression.0=x11_2 = x11_1",
@@ -19410,7 +18874,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=2",
@@ -19419,7 +18883,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_2** as the id of constraint 2. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_2** as the id of constraint 2.",
           "page": "analysis",
           "target": "constraint.id.1",
           "check": "field:constraint.id.1=x22_2",
@@ -19428,7 +18892,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_2 = x22_1** as the expression of constraint 2. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_2 = x22_1** as the expression of constraint 2.",
           "page": "analysis",
           "target": "constraint.expression.1",
           "check": "field:constraint.expression.1=x22_2 = x22_1",
@@ -19437,7 +18901,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=3",
@@ -19446,7 +18910,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_2** as the id of constraint 3. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_2** as the id of constraint 3.",
           "page": "analysis",
           "target": "constraint.id.2",
           "check": "field:constraint.id.2=x33_2",
@@ -19455,7 +18919,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_2 = x33_1** as the expression of constraint 3. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_2 = x33_1** as the expression of constraint 3.",
           "page": "analysis",
           "target": "constraint.expression.2",
           "check": "field:constraint.expression.2=x33_2 = x33_1",
@@ -19464,7 +18928,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=4",
@@ -19473,7 +18937,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_3** as the id of constraint 4. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_3** as the id of constraint 4.",
           "page": "analysis",
           "target": "constraint.id.3",
           "check": "field:constraint.id.3=x11_3",
@@ -19482,7 +18946,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_3 = x11_1** as the expression of constraint 4. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_3 = x11_1** as the expression of constraint 4.",
           "page": "analysis",
           "target": "constraint.expression.3",
           "check": "field:constraint.expression.3=x11_3 = x11_1",
@@ -19491,7 +18955,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=5",
@@ -19500,7 +18964,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_3** as the id of constraint 5. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_3** as the id of constraint 5.",
           "page": "analysis",
           "target": "constraint.id.4",
           "check": "field:constraint.id.4=x22_3",
@@ -19509,7 +18973,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_3 = x22_1** as the expression of constraint 5. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_3 = x22_1** as the expression of constraint 5.",
           "page": "analysis",
           "target": "constraint.expression.4",
           "check": "field:constraint.expression.4=x22_3 = x22_1",
@@ -19518,7 +18982,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=6",
@@ -19527,7 +18991,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_3** as the id of constraint 6. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_3** as the id of constraint 6.",
           "page": "analysis",
           "target": "constraint.id.5",
           "check": "field:constraint.id.5=x33_3",
@@ -19536,7 +19000,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_3 = x33_1** as the expression of constraint 6. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_3 = x33_1** as the expression of constraint 6.",
           "page": "analysis",
           "target": "constraint.expression.5",
           "check": "field:constraint.expression.5=x33_3 = x33_1",
@@ -19545,7 +19009,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=7",
@@ -19554,7 +19018,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_4** as the id of constraint 7. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_4** as the id of constraint 7.",
           "page": "analysis",
           "target": "constraint.id.6",
           "check": "field:constraint.id.6=x11_4",
@@ -19563,7 +19027,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_4 = x11_1** as the expression of constraint 7. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_4 = x11_1** as the expression of constraint 7.",
           "page": "analysis",
           "target": "constraint.expression.6",
           "check": "field:constraint.expression.6=x11_4 = x11_1",
@@ -19572,7 +19036,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=8",
@@ -19581,7 +19045,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_4** as the id of constraint 8. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_4** as the id of constraint 8.",
           "page": "analysis",
           "target": "constraint.id.7",
           "check": "field:constraint.id.7=x22_4",
@@ -19590,7 +19054,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_4 = x22_1** as the expression of constraint 8. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_4 = x22_1** as the expression of constraint 8.",
           "page": "analysis",
           "target": "constraint.expression.7",
           "check": "field:constraint.expression.7=x22_4 = x22_1",
@@ -19599,7 +19063,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=9",
@@ -19608,7 +19072,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_4** as the id of constraint 9. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_4** as the id of constraint 9.",
           "page": "analysis",
           "target": "constraint.id.8",
           "check": "field:constraint.id.8=x33_4",
@@ -19617,7 +19081,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_4 = x33_1** as the expression of constraint 9. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_4 = x33_1** as the expression of constraint 9.",
           "page": "analysis",
           "target": "constraint.expression.8",
           "check": "field:constraint.expression.8=x33_4 = x33_1",
@@ -19626,7 +19090,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=10",
@@ -19635,7 +19099,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_5** as the id of constraint 10. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_5** as the id of constraint 10.",
           "page": "analysis",
           "target": "constraint.id.9",
           "check": "field:constraint.id.9=x11_5",
@@ -19644,7 +19108,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_5 = x11_1** as the expression of constraint 10. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_5 = x11_1** as the expression of constraint 10.",
           "page": "analysis",
           "target": "constraint.expression.9",
           "check": "field:constraint.expression.9=x11_5 = x11_1",
@@ -19653,7 +19117,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=11",
@@ -19662,7 +19126,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_5** as the id of constraint 11. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_5** as the id of constraint 11.",
           "page": "analysis",
           "target": "constraint.id.10",
           "check": "field:constraint.id.10=x22_5",
@@ -19671,7 +19135,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_5 = x22_1** as the expression of constraint 11. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_5 = x22_1** as the expression of constraint 11.",
           "page": "analysis",
           "target": "constraint.expression.10",
           "check": "field:constraint.expression.10=x22_5 = x22_1",
@@ -19680,7 +19144,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=12",
@@ -19689,7 +19153,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_5** as the id of constraint 12. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_5** as the id of constraint 12.",
           "page": "analysis",
           "target": "constraint.id.11",
           "check": "field:constraint.id.11=x33_5",
@@ -19698,7 +19162,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_5 = x33_1** as the expression of constraint 12. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_5 = x33_1** as the expression of constraint 12.",
           "page": "analysis",
           "target": "constraint.expression.11",
           "check": "field:constraint.expression.11=x33_5 = x33_1",
@@ -19707,7 +19171,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=13",
@@ -19716,7 +19180,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_6** as the id of constraint 13. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_6** as the id of constraint 13.",
           "page": "analysis",
           "target": "constraint.id.12",
           "check": "field:constraint.id.12=x11_6",
@@ -19725,7 +19189,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x11_6 = x11_1** as the expression of constraint 13. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x11_6 = x11_1** as the expression of constraint 13.",
           "page": "analysis",
           "target": "constraint.expression.12",
           "check": "field:constraint.expression.12=x11_6 = x11_1",
@@ -19734,7 +19198,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=14",
@@ -19743,7 +19207,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_6** as the id of constraint 14. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_6** as the id of constraint 14.",
           "page": "analysis",
           "target": "constraint.id.13",
           "check": "field:constraint.id.13=x22_6",
@@ -19752,7 +19216,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x22_6 = x22_1** as the expression of constraint 14. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x22_6 = x22_1** as the expression of constraint 14.",
           "page": "analysis",
           "target": "constraint.expression.13",
           "check": "field:constraint.expression.13=x22_6 = x22_1",
@@ -19761,7 +19225,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=15",
@@ -19770,7 +19234,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_6** as the id of constraint 15. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_6** as the id of constraint 15.",
           "page": "analysis",
           "target": "constraint.id.14",
           "check": "field:constraint.id.14=x33_6",
@@ -19779,7 +19243,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Enter **x33_6 = x33_1** as the expression of constraint 15. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "text": "Enter **x33_6 = x33_1** as the expression of constraint 15.",
           "page": "analysis",
           "target": "constraint.expression.14",
           "check": "field:constraint.expression.14=x33_6 = x33_1",
@@ -20111,14 +19575,6 @@
         },
         {
           "title": "Positions",
-          "text": "Choose **taurine** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=taurine",
-          "tab": "basic"
-        },
-        {
-          "title": "Positions",
           "text": "Choose **Atomic coordinates** as the category filter above the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.category",
@@ -20138,15 +19594,7 @@
           "text": "Choose **Free · all**.",
           "page": "analysis",
           "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Atomic coordinates:taurine",
-          "tab": "basic"
-        },
-        {
-          "title": "Positions",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
+          "check": "free-choice:free:Atomic coordinates",
           "tab": "basic"
         },
         {
@@ -20528,7 +19976,7 @@
           "text": "The **Correlations** view shows which fitted parameters move together.",
           "page": "analysis",
           "target": "mainArea.tab.correlations",
-          "check": "open:mainArea.tab.correlations"
+          "open": true
         },
         {
           "title": "Open Report",

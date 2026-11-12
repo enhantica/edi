@@ -108,12 +108,6 @@
           "title": "Apply the text",
           "text": "After editing the text, click the check mark to apply it to the project. The box beside it chooses what the tab shows: Editable, the parts you can edit, or Everything, with the measured data and results read-only.",
           "target": "text.apply"
-        },
-        {
-          "title": "Settings tab",
-          "text": "Settings: not used on this page yet.",
-          "target": "sideBar.tab.settings",
-          "open": true
         }
       ]
     },
@@ -160,8 +154,8 @@
           "target": "group.atom_site"
         },
         {
-          "title": "Anisotropic ADPs",
-          "text": "Anisotropic displacements, for the sites given an anisotropic type.",
+          "title": "Atomic displacements",
+          "text": "Each site’s displacement: isotropic (B iso) for most sites, or the six anisotropic components for a site given an anisotropic type.",
           "target": "group.atom_site_aniso"
         },
         {
@@ -261,7 +255,7 @@
           "target": "group.background_estimate"
         },
         {
-          "title": "Peak profile",
+          "title": "Peak cutoff",
           "text": "The peak cutoff: how far from its centre each peak is calculated, in peak widths.",
           "target": "group.peak",
           "tab": "extras"
@@ -277,8 +271,8 @@
           "target": "group.preferred_orientation"
         },
         {
-          "title": "Radiation",
-          "text": "The radiation's own properties, such as its polarisation.",
+          "title": "Scattering source",
+          "text": "The radiation’s own settings: for neutrons, the table of scattering lengths the calculation uses.",
           "target": "group.scattering_source"
         },
         {

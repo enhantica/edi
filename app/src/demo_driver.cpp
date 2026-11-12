@@ -1854,8 +1854,11 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
     // as NNN.png, with steps.txt listing each step's number, title and text (the owner's capture-and-review loop,
     // 2026-11-11). Taken before Next is pressed; the step waits for it.
     if (const QString shots = qEnvironmentVariable("EDI_DEMO_STEP_SHOTS"); !shots.isEmpty() && shot_step_ != now) {
-        const bool moving = panel->property("settling").toBool() || panel->property("revealing").toBool();
-        if (waited_ms < 1500 || (moving && waited_ms < 10000)) {
+        bool moving = panel->property("settling").toBool() || panel->property("revealing").toBool();
+        // A page still being built (the app bar's "Preparing this page…") is not the step's view yet.
+        for (const char* tab : {"appBar.tab.project", "appBar.tab.structure", "appBar.tab.experiment", "appBar.tab.analysis", "appBar.tab.report"})
+            if (QQuickItem* item = find(QString::fromLatin1(tab), false); item != nullptr && item->property("preparing").toBool()) moving = true;
+        if (waited_ms < 1500 || (moving && waited_ms < 30000)) {
             QTimer::singleShot(kPollMs, this, [this, next, step, waited_ms, clicked_ms] { tutorial_next_then(next, step, waited_ms + kPollMs, clicked_ms); });
             return;
         }
@@ -1869,6 +1872,20 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
         shot_step_ = now;
     }
     if (panel->property("atEnd").toBool()) {
+        // Steps that were already done when the tutorial came to them: each asks for a click that changes nothing.
+        // EDI_DEMO_NOOPS=<file> collects them as "<tutorial><tab><check>" for the generator to drop.
+        const QStringList done = panel->property("doneOnArrival").toStringList();
+        for (const QString& entry : done) {
+            const QString check = entry.section(u'\t', 1);
+            if (const QString file = qEnvironmentVariable("EDI_DEMO_NOOPS"); !file.isEmpty())
+                if (QFile out(file); out.open(QIODevice::Append | QIODevice::Text)) out.write((id + u'\t' + check + u'\n').toUtf8());
+            const QString text = QStringLiteral("tutorial %1 step %2 (%3) was already done when it came").arg(id, entry.section(u'\t', 0, 0), check);
+            if (!qEnvironmentVariableIsSet("EDI_DEMO_REPORT_ONLY")) {
+                fail(text);
+                return;
+            }
+            std::fprintf(stderr, "edi_app --demo: MISMATCH %s\n", qPrintable(text));
+        }
         qInfo().noquote() << QStringLiteral("edi_app --demo: tutorial %1: reached step %2 of %3 by Next alone")
                                  .arg(id).arg(now + 1).arg(count);
         next();

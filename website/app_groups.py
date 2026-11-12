@@ -231,6 +231,14 @@ def offered(project: object, parameter: Parameter) -> str:
     return 'Atom sites' if owner == 'atom_site' else _titles().get(owner, owner)
 
 
+def _table_order(parameter: Parameter) -> tuple:
+    """Rows in the order a table lists them: coefficient 2 before 10."""
+    return tuple(
+        (0, int(part), '') if part.isdigit() else (1, 0, part)
+        for part in re.split(r'(\d+)', str(parameter))
+    )
+
+
 def groups(
     project: object, freed: list[Parameter], free: set[Parameter], *, fixing: bool = False
 ) -> list[Group]:
@@ -261,7 +269,8 @@ def groups(
         if everything and set(chosen) <= everything and not left and len(chosen) >= 2:
             out.append(Group(title, block, ''))
         else:
-            out.append(Group(title, block, part=ROWS, rows=tuple(sorted(chosen, key=str))))
+            rows = tuple(sorted(chosen, key=_table_order))
+            out.append(Group(title, block, part=ROWS, rows=rows))
     return _across_blocks(project, out, by_category, free, fixing=fixing)
 
 

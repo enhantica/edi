@@ -57,6 +57,13 @@ TAGS = ROOT / 'app/examples/tags.json'
 # The longest step title, in characters, that fits the popup's line beside "Step 107 of 109"
 # (the replay also refuses a title the popup elides).
 TITLE_LIMIT = 32
+NOOPS = {
+    tuple(line.split('\t', 1))
+    for line in (Path(__file__).parent / 'app_tutorial_noops.tsv')
+    .read_text(encoding='utf-8')
+    .splitlines()
+    if line and not line.startswith('#')
+}
 
 
 def step(title: str, text: str, page: str, target: str, check: str, **extra: object) -> dict:
@@ -254,14 +261,17 @@ WORDS = {
     'parameters.datablock': 'the datablock filter above the **Parameters** table',
     'spaceGroup.nameHM': 'the space group',
     'cell.length_a': 'the cell length a',
-    'background_estimate.n_points': 'the number of points of **Background estimation**',
+    'background_estimate.n_points': '**Anchor points** in **Background estimation**',
     'refine_ls.thresholdSigma': 'the s.u. cutoff of **Fitted reflections**',
-    'background_estimate.use_model': 'the model of **Background estimation**',
+    'background_estimate.use_model': '**Calculated peaks** in **Background estimation**',
 }
 APPEND_WORDS = {
     'aliases.append': 'Click **+** under **Aliases** to add an alias.',
     'constraints.append': 'Click **+** under **Constraints** to add a constraint.',
-    'atomSites.append': 'Click **+** under **Atom sites** to add a site.',
+    'atomSites.append': (
+        'Click **+** under **Atom sites** to add a site. It starts as a random element at a '
+        'random position; the next steps make it the site this structure needs.'
+    ),
     'background.append': 'Click **+** under **Background** to add a point.',
     'excludedRegions.append': 'Click **+** under **Excluded regions** to add a region.',
     'structures.create': 'Click **Create** to add a structure.',
@@ -270,13 +280,37 @@ APPEND_WORDS = {
 PAGES = {'structure', 'experiment', 'analysis', 'project', 'report', 'home'}
 
 
-def control_words(control: str) -> str:
-    """How a callout names a control: its row's number and what it holds."""
+def dictionary_item(control: str) -> dict | None:
+    """The dictionary entry a control edits (experimentType.beamMode is beam_mode)."""
+    uid = re.sub(r'(?<=[a-z0-9])([A-Z])', r'_\1', control).lower()
+    return next(
+        (i for i in [*DICTIONARY['items'], *DICTIONARY['parameters']] if i.get('uid') == uid), None
+    )
+
+
+def control_words(control: str, case: str = '') -> str:
+    """How a callout names a control: as its label reads, with its row's number or owner."""
     match = re.fullmatch(r'(.+)\.(\d+)', control)
     base, row = (match[1], int(match[2])) if match else (control, 0)
     if base in WORDS:
         return WORDS[base].format(n=row + 1)
+    if base == 'jointFit.weight' and case:
+        # The joint-fit table lists the experiments in the project's order.
+        names = [item.name for item in load_case(case).experiments]
+        return f'the weight of **{names[row]}**' if row < len(names) else f'weight {row + 1}'
+    item = dictionary_item(base)
+    if item is not None:
+        return f'**{item["display_name"][:1].upper()}{item["display_name"][1:]}**'
     return f'`{control.split(".", 1)[-1]}`'
+
+
+def option_words(control: str, token: str) -> str:
+    """A choice as its selector lists it ("fast_descent" is "Fast descent")."""
+    item = dictionary_item(control)
+    for option in (item or {}).get('options') or []:
+        if option.get('token') == token:
+            return option.get('display_name') or token
+    return token
 
 
 def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]:  # noqa: PLR0912, PLR0914, PLR0915 - one branch per action family
@@ -318,7 +352,7 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
             if control == 'parameters.nameFilter':
                 context['word'] = value
             add(
-                f'Enter **{value}** as {control_words(control)}.',
+                f'Enter **{value}** as {control_words(control, case)}.',
                 control,
                 f'field:{control}={value}',
             )
@@ -326,7 +360,7 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
         elif following.startswith('type:') and not action.startswith(('fill:', 'type:', 'choose')):
             text = following.removeprefix('type:')
             add(
-                f'Choose **{text.rstrip(":")}** as {control_words(action)}.',
+                f'Choose **{text.rstrip(":")}** as {control_words(action, case)}.',
                 action,
                 f'pick:{action}={text}',
             )
@@ -337,6 +371,13 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
             'choose',
         )):
             chosen = following.removeprefix('choose:')
+            # A filter already showing that choice needs no step (the earlier stage chose it).
+            if (
+                action in {'parameters.category', 'parameters.datablock'}
+                and context.get(action.split('.')[1]) == chosen
+            ):
+                index += 2
+                continue
             if action == 'parameters.category':
                 context['category'] = chosen
             elif action == 'parameters.datablock':
@@ -345,7 +386,7 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
                 # Every site switched together (a tutorial's adp_type loop): their names follow.
                 context['adp'] = chosen
             add(
-                f'Choose **{chosen}** as {control_words(action)}.',
+                f'Choose **{chosen}** as {control_words(action, case)}.',
                 action,
                 f'pick:{action}={chosen}',
             )
@@ -353,7 +394,7 @@ def action_steps(case: str, item: dict, title: str, context: dict) -> list[dict]
         elif action.startswith('choose-token:'):
             control, token = action.removeprefix('choose-token:').split('=', 1)
             add(
-                f'Choose **{token}** as {control_words(control)}.',
+                f'Choose **{option_words(control, token)}** as {control_words(control, case)}.',
                 control,
                 f'token:{control}={token}',
             )
@@ -640,7 +681,8 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
     if ident == 'correlations':
         text = 'The **Correlations** view shows which fitted parameters move together.'
         tab = 'mainArea.tab.correlations'
-        return [step('Correlations', text, 'analysis', tab, 'open:' + tab)]
+        # Opened as the step shows, as the tour opens its tabs: it shows the matrix it explains.
+        return [step('Correlations', text, 'analysis', tab, '', open=True)]
     if ident == 'calculated':
         text = 'On **Analysis**, the main view draws the pattern calculated from the model.'
         return [
@@ -649,7 +691,11 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
             )
         ]
     if ident == 'report':
-        text = 'The **Report** page collects the structure, the experiment and the fit.'
+        # A simulation has no fit to report.
+        fitted = 'simulation' not in case
+        text = 'The **Report** page collects the structure, the experiment' + (
+            ' and the fit.' if fitted else '.'
+        )
         return [step('Open Report', text, 'report', 'appBar.tab.report', 'page:report')]
     raise SystemExit(f'{case}: plan step {ident!r} has no translation into tutorial steps')
 
@@ -745,7 +791,16 @@ def with_reasons(case: str, steps: list[dict]) -> list[dict]:
                 f'{case}: the Extra-tab step {check!r} gives no reason (app_tutorial_why.yml)'
             )
         s['why'] = why
-        s['text'] = f'{s["text"]} {why}'
+    # A step the app did before the tutorial reached it asks for nothing (app_tutorial_noops.tsv);
+    # dropped once every reason is known: a dropped expression can explain the steps around it.
+    steps = [s for s in steps if (case, s.get('check', '')) not in NOOPS]
+    said = ''
+    for s in steps:
+        why = s.get('why', '')
+        # Said once, on the first of the steps it explains; the next ones keep only their action.
+        if why and why != said:
+            s['text'] = f'{s["text"]} {why}'
+        said = why or said
     return steps
 
 
