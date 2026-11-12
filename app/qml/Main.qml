@@ -951,6 +951,12 @@ EaComponents.ApplicationWindow {
     }
 
     NativeDialogNotice {}
+    Shortcut {
+        sequence: "Escape"
+        context: Qt.ApplicationShortcut
+        enabled: NativeDialogs.busy
+        onActivated: NativeDialogs.cancel()
+    }
 
     // The browser's file access: an archive that could not be opened or a project not packed.
     Connections {

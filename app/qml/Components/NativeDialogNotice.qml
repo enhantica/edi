@@ -10,7 +10,7 @@ Popup {
     parent: Overlay.overlay
     modal: false
     closePolicy: Popup.NoAutoClose
-    visible: NativeDialogs.busy || NativeDialogs.error !== ""
+    visible: NativeDialogs.error !== ""
     width: Math.min(parent.width - EaStyle.Sizes.fontPixelSize * 2, EaStyle.Sizes.fontPixelSize * 36)
     x: (parent.width - width) / 2
     y: parent.height - height - EaStyle.Sizes.fontPixelSize * 4
@@ -20,13 +20,13 @@ Popup {
         EaElements.Label {
             width: parent.width
             wrapMode: Text.Wrap
-            text: NativeDialogs.error !== "" ? NativeDialogs.error : NativeDialogs.opening ? qsTr("Opening the system file chooser…") : qsTr("Choose a file or folder in the system file chooser.")
+            text: NativeDialogs.error
         }
         EaElements.Button {
             anchors.right: parent.right
-            objectName: "nativeDialog.cancel"
-            text: NativeDialogs.busy ? qsTr("Cancel") : qsTr("Dismiss")
-            onClicked: NativeDialogs.busy ? NativeDialogs.cancel() : NativeDialogs.dismissError()
+            objectName: "nativeDialog.dismiss"
+            text: qsTr("Dismiss")
+            onClicked: NativeDialogs.dismissError()
         }
     }
 }

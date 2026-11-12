@@ -409,7 +409,8 @@ when its dialog opens, then one accepted selection or rejection. Only local abso
 malformed, duplicate, oversized, incomplete or unsuccessful responses reject without changing a project.
 The request keeps the title, filters, file mode, default suffix, accept label and starting location.
 
-A nonmodal notice offers Cancel while the app remains usable. A startup deadline rejects a helper that cannot
+Normal selection shows only the native chooser. Escape in the main application cancels an outstanding chooser;
+a notice appears only when it fails. A startup deadline rejects a helper that cannot
 open its system panel; choosing files has no deadline after the helper reports ready. Closing the requesting
 dialog retires its result. Cancellation kills only that helper and reaps it after process exit, without any
 blocking wait. A helper thread watches its parent pipe for EOF and exits even if the native UI thread is stuck.
