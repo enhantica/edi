@@ -6646,7 +6646,7 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
     // The reads keep the script order: the fitted widths and their length first, then the columns, each read once,
     // so a value a getter replaces on the way is the one returned.
     const auto fittedValue = panelUsageContextRead(f, "fittedWidths");
-    if (panelUsageTruth(panelUsageContextRead(f, "equalColumns"))) return panelUsageContextRead(f, "columns");
+    const bool equal = panelUsageTruth(panelUsageContextRead(f, "equalColumns"));
     const auto length = panelUsageRead(f, fittedValue, "length");
     if (!consentFieldEquals(f, panelUsageContextRead(f, "columns"), "length", length)) return panelUsageContextRead(f, "columns");
     const auto columnsValue = panelUsageContextRead(f, "columns");
@@ -6674,26 +6674,45 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
     const std::size_t count = columns.size();
     std::vector<bool> fits(count);
     int fitting = 0;
-    double fixed = 0, texts = 0;
+    double fixed = 0, texts = 0, shrinkable = 0;
     const double cap = std::max(0.0, width * share);
     const double textLimit = std::max(0.0, cap - padding);
     for (std::size_t index = 0; index < count; ++index) {
         fits[index] = columns[index] == -1;
-        if (fits[index]) { ++fitting; texts += capped(fitted[index], index, textLimit); }
-        else if (columns[index] > 0) fixed += columns[index];
+        if (fits[index]) {
+            ++fitting;
+            const double text = capped(fitted[index], index, textLimit);
+            texts += text;
+            if (index < caps.size() && caps[index]) shrinkable += text;
+        } else if (columns[index] > 0) fixed += columns[index];
     }
     const double gaps = static_cast<double>(count) - 1;
     const double room = width - fixed - spacing * gaps - border * 2 - rowPadding * 2;
-    const double margin = fitting > 0 ? std::max(0.0, std::min(padding, (room - texts) / fitting)) : 0;
-    const double scale = texts > room && texts > 0 ? std::max(0.0, room) / texts : 1;
-    const double spread = !spreadColumns.empty() ? std::max(0.0, room - texts - margin * fitting) / static_cast<double>(spreadColumns.size()) : 0;
     std::vector<double> widths(count);
+    if (equal) {
+        // Equal flex columns, each at least as wide as the widest of their texts: a wider row scrolls sideways.
+        double widest = 0;
+        for (std::size_t index = 0; index < count; ++index)
+            if (fits[index]) widest = std::max(widest, fitted[index]);
+        const double each = fitting > 0 ? std::floor(std::max(std::max(0.0, room) / fitting, widest)) : 0;
+        for (std::size_t index = 0; index < count; ++index) widths[index] = fits[index] ? each : columns[index];
+        auto result = f->newArray(static_cast<uint>(count));
+        for (std::size_t index = 0; index < count; ++index) result.setProperty(static_cast<quint32>(index), widths[index]);
+        return result;
+    }
+    const double margin = fitting > 0 ? std::max(0.0, std::min(padding, (room - texts) / fitting)) : 0;
+    // A row too narrow narrows only its text columns, down to a few characters each; a number, a selector or an icon
+    // keeps its whole width, and a row still too wide scrolls sideways.
+    const double textFloor = 3 * panelUsageRead(f, sizes, "fontPixelSize").toNumber();
+    const double textScale = texts > room && shrinkable > 0 ? std::clamp((room - (texts - shrinkable)) / shrinkable, 0.0, 1.0) : 1;
+    const double spread = !spreadColumns.empty() ? std::max(0.0, room - texts - margin * fitting) / static_cast<double>(spreadColumns.size()) : 0;
     for (std::size_t index = 0; index < count; ++index) {
         if (!fits[index]) { widths[index] = columns[index]; continue; }
         const bool spreads = std::find(spreadColumns.cbegin(), spreadColumns.cend(), static_cast<double>(index)) != spreadColumns.cend();
-        const double text = capped(fitted[index], index, textLimit);
+        double text = capped(fitted[index], index, textLimit);
+        if (index < caps.size() && caps[index]) text = std::max(std::min(text, textFloor), text * textScale);
         // The cap bounds a column's own text; the spare width a spread column is given comes on top of it, as on main.
-        widths[index] = capped(std::floor(text * scale + margin), index, cap) + (spreads ? std::floor(spread) : 0);
+        widths[index] = capped(std::floor(text + margin), index, cap) + (spreads ? std::floor(spread) : 0);
     }
     if (fillerIndex >= 0 && static_cast<std::size_t>(fillerIndex) < count) {
         double used = 0;

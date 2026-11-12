@@ -316,20 +316,20 @@ SideBarGroup {
             // text and share what is left; free at the right with a wider gap before it. Start and change are the
             // report's fit table columns, empty before a fit (owner record 2026-11-10).
             // Every number column is as wide as its widest text and its header, so no number loses digits or its
-            // exponent; the name takes what is left. In a narrow sidebar the margins go first, then the name down to
-            // a few words, and only then the number columns, which then show their short form.
+            // exponent; the name takes what is left. In a narrow sidebar the margins go first, then the min and max
+            // columns, then the name down to a few characters; a row still too wide scrolls sideways (DataTable).
             readonly property var fittedColumns: [2, 3, 4, 5, 6, 7, 8]
-            readonly property var numberColumns: [2, 3, 5, 6]
+            readonly property var rangeColumns: [7, 8]
             readonly property real freeWidth: group.measured ? group.freeColumnWidth : 0
             readonly property real nameMinimum: Math.min((fittedWidths[1] ?? 0) + EaStyle.Sizes.fontPixelSize, EaStyle.Sizes.fontPixelSize * 8)
             readonly property real fittedRoom: width - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * (group.measured ? 9 : 8) - numberColumnWidth - freeWidth - nameMinimum
             readonly property real fittedSum: fittedColumns.reduce((sum, column) => sum + (fittedWidths[column] ?? 0), 0)
-            readonly property real columnMargin: Math.max(0, Math.min(autoColumnPadding, Math.floor((fittedRoom - fittedSum) / fittedColumns.length)))
-            readonly property real numberSum: numberColumns.reduce((sum, column) => sum + (fittedWidths[column] ?? 0), 0)
-            readonly property real numberScale: numberSum > 0 ? Math.max(0, Math.min(1, (fittedRoom - (fittedSum - numberSum)) / numberSum)) : 1
+            readonly property bool rangeShown: fittedRoom >= fittedSum
+            readonly property var shownColumns: rangeShown ? fittedColumns : fittedColumns.filter(column => !rangeColumns.includes(column))
+            readonly property real shownSum: shownColumns.reduce((sum, column) => sum + (fittedWidths[column] ?? 0), 0)
+            readonly property real columnMargin: Math.max(0, Math.min(autoColumnPadding, Math.floor((fittedRoom - shownSum) / shownColumns.length)))
             function fittedColumn(column: int): real {
-                const text = fittedWidths[column] ?? 0;
-                return Math.floor((numberColumns.includes(column) ? text * numberScale : text) + columnMargin);
+                return shownColumns.includes(column) ? Math.floor((fittedWidths[column] ?? 0) + columnMargin) : 0;
             }
             columns: [numberColumnWidth, -1].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : [])
 
@@ -373,11 +373,13 @@ SideBarGroup {
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    visible: table.rangeShown
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("Min")
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
+                    visible: table.rangeShown
                     horizontalAlignment: Text.AlignRight
                     text: qsTr("Max")
                 }
@@ -546,12 +548,14 @@ SideBarGroup {
                     }
                 }
                 NumberLabel {
+                    visible: table.rangeShown
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     number: group.bound(row.minimum)
                     full: NumberText.plainFull(row.minimum)
                 }
                 NumberLabel {
+                    visible: table.rangeShown
                     horizontalAlignment: Text.AlignRight
                     color: EaStyle.Colors.themeForegroundMinor
                     number: group.bound(row.maximum)

@@ -15,6 +15,8 @@ EaComponents.ListViewDelegate {
     // False for a read-only list (the About window's third-party licences): the row shows no hover tint and keeps the
     // arrow pointer, as nothing in it can be chosen.
     property bool highlightsHover: true
+    // As wide as its columns when they are wider than the table, which then scrolls sideways (DataTable.rowsWidth).
+    implicitWidth: ListView.view ? Math.max(ListView.view.width, ListView.view.rowsWidth ?? 0) : 0
 
     // The table that styled this row's cells, which forgets them when the row goes.
     property DataTable styledBy: null

@@ -97,6 +97,8 @@ EaComponents.ListViewParameter {
         font.pixelSize: cell.scaledPixelSize
         font.bold: cell.fit && cell.enabled
     }
+    // Measured at the full size: a width that followed the smaller text would change the room it is made smaller for.
+    implicitWidth: implicitBackgroundWidth + leftInset + rightInset || (fitDigits ? Math.ceil(fullMetrics.advanceWidth(valueText)) : contentWidth) + leftPadding + rightPadding
     font.pixelSize: fitDigits && scaledPixelSize > 1 && scaledPixelSize < EaStyle.Sizes.fontPixelSize && scaledMetrics.advanceWidth(fullText) > room ? scaledPixelSize - 1 : scaledPixelSize
     readonly property bool overflows: contentWidth > width - leftPadding - rightPadding
     horizontalAlignment: overflows ? Text.AlignLeft : columnAlignment
