@@ -1301,7 +1301,7 @@
         },
         {
           "title": "Open Report",
-          "text": "The **Report** page collects the structure, the experiment.",
+          "text": "The **Report** page collects the structure and the experiment.",
           "page": "report",
           "target": "appBar.tab.report",
           "check": "page:report"
@@ -1971,7 +1971,7 @@
         },
         {
           "title": "Descent",
-          "text": "On **Analysis → Extra**, choose **fast_descent** as the **Descent**. From this start the default descent stops in a shallower minimum.",
+          "text": "On **Analysis → Extra**, choose **Fast descent** as the **Descent**. From this start the default descent stops in a shallower minimum.",
           "page": "analysis",
           "target": "minimizer.descent",
           "check": "descent:fast_descent",
@@ -2910,7 +2910,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=1",
@@ -2928,7 +2928,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. The two FCJ asymmetry terms cannot be told apart in this pattern, so they move as one.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=2",
@@ -3628,7 +3628,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Li and Ni mix on one site, so they share its displacement.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=3",
@@ -3655,7 +3655,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Li and Ni mix on the other site too, so they share its displacement.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=4",
@@ -3736,7 +3736,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Ni fills what Li leaves of the first site, keeping it fully occupied.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=7",
@@ -3790,7 +3790,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Li and Ni mix on one site, so they share its displacement.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=1",
@@ -3817,7 +3817,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Li and Ni mix on the other site too, so they share its displacement.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=2",
@@ -3844,7 +3844,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Ni fills what Li leaves of the first site, keeping it fully occupied.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=3",
@@ -3871,7 +3871,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Li fills what Ni leaves of the second site, keeping it fully occupied.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=4",
@@ -3898,7 +3898,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Every Li on the first site swaps with a Ni on the second, so the two mixings are equal.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=5",
@@ -5600,7 +5600,7 @@
         },
         {
           "title": "Fit results",
-          "text": "Read the fit results, then press **OK**.",
+          "text": "Read the fit results, then press **OK**. Al1 in the minor Al₂O₃ phase ends at a slightly negative B iso, −0.37 with an s.u. of 0.25. The few weak Al₂O₃ peaks cannot pin it down, and within about 1.5 s.u. it is zero. A negative displacement is not physical; in your own work, fix it or tie it to the other atoms of that phase.",
           "page": "analysis",
           "target": "fit.results.ok",
           "check": "results-closed"
@@ -6820,7 +6820,7 @@
         },
         {
           "title": "Fit results",
-          "text": "Read the fit results, then press **OK**.",
+          "text": "Read the fit results, then press **OK**. Al3's occupancy ends at 1.020 with an s.u. of 0.008, a little above a full site, because it moves with the site's displacement. A site cannot be more than full, so in your own work keep it fixed at 1.",
           "page": "analysis",
           "target": "fit.results.ok",
           "check": "results-closed"
@@ -10763,7 +10763,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Both banks see the same sample, so ferrite has one phase fraction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=5",
@@ -10790,7 +10790,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Both banks see the same sample, so austenite has one phase fraction.",
+          "text": "Click **+** under **Aliases** to add an alias.",
           "page": "analysis",
           "target": "aliases.append",
           "check": "rows:aliases.append=6",
@@ -10817,7 +10817,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Both phases are iron, so the data cannot tell their displacements apart.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=1",
@@ -10835,7 +10835,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Both banks see the same sample, so ferrite has one phase fraction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=2",
@@ -10862,7 +10862,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. Both banks see the same sample, so austenite has one phase fraction.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=3",
@@ -12526,7 +12526,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. The seven metals share one site, so they share one displacement.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=1",
@@ -12634,7 +12634,7 @@
         },
         {
           "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint. The two oxygen sites cannot be told apart in their displacements, so they share one.",
+          "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
           "check": "rows:constraints.append=7",
@@ -12661,7 +12661,7 @@
         },
         {
           "title": "Descent",
-          "text": "On **Analysis → Extra**, choose **fast_descent** as the **Descent**. With the default descent the fit stops in a shallower minimum, with O1 x stuck near 0.5.",
+          "text": "On **Analysis → Extra**, choose **Fast descent** as the **Descent**. With the default descent the fit stops in a shallower minimum, with O1 x stuck near 0.5.",
           "page": "analysis",
           "target": "minimizer.descent",
           "check": "descent:fast_descent",
@@ -15543,15 +15543,16 @@
           "check": "example:sc-neut-cwl_tb2ti2o7-heidi_simulation"
         },
         {
-          "title": "The calculated pattern",
-          "text": "On **Analysis**, the main view draws the pattern calculated from the model.",
-          "page": "analysis",
-          "target": "appBar.tab.analysis",
-          "check": "page:analysis"
+          "title": "The calculated reflections",
+          "text": "On **Experiment → Extra**, **Reflections** lists every reflection with the F² calculated from the model.",
+          "page": "experiment",
+          "target": "group.refln",
+          "check": "open:group.refln",
+          "tab": "extras"
         },
         {
           "title": "Open Report",
-          "text": "The **Report** page collects the structure, the experiment.",
+          "text": "The **Report** page collects the structure and the experiment.",
           "page": "report",
           "target": "appBar.tab.report",
           "check": "page:report"
@@ -16087,7 +16088,7 @@
         },
         {
           "title": "Fit results",
-          "text": "Read the fit results, then press **OK**.",
+          "text": "Read the fit results, then press **OK**. Freed on its own, Od's displacement goes negative, −0.34 with an s.u. of 0.48, larger than the value. This interstitial oxygen fills only part of its site, so its displacement is barely determined yet; the next stage frees every displacement together and it settles at 2.57.",
           "page": "analysis",
           "target": "fit.results.ok",
           "check": "results-closed"

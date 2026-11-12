@@ -1868,7 +1868,9 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
     // as NNN.png, with steps.txt listing each step's number, title and text (the owner's capture-and-review loop,
     // 2026-11-11). Taken before Next is pressed; the step waits for it.
     if (const QString shots = qEnvironmentVariable("EDI_DEMO_STEP_SHOTS"); !shots.isEmpty() && shot_step_ != now) {
-        bool moving = panel->property("settling").toBool() || panel->property("revealing").toBool();
+        // Still fading in or out (its opacity animates), or still finding its control.
+        bool moving = panel->property("settling").toBool() || panel->property("revealing").toBool() ||
+                      panel->property("opacity").toDouble() < 0.99;
         // A page still being built (the app bar's "Preparing this page…") is not the step's view yet.
         for (const char* tab : {"appBar.tab.project", "appBar.tab.structure", "appBar.tab.experiment", "appBar.tab.analysis", "appBar.tab.report"})
             if (QQuickItem* item = find(QString::fromLatin1(tab), false); item != nullptr && item->property("preparing").toBool()) moving = true;

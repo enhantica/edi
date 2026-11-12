@@ -156,6 +156,11 @@ Popup {
         panel.backgroundEstimates = 0;
         panel.loadedEntries = [];
         AppState.tutorialRunning = true;
+        // Each tutorial starts Examples clean, without an earlier tutorial's search.
+        const window = Overlay.overlay ? Overlay.overlay.Window.window : null;
+        const clearExamples = window ? ItemLocator.findAnywhere(window, "examples.clearFilters") as T.AbstractButton : null;
+        if (clearExamples !== null)
+            clearExamples.clicked();
         panel.open();
         panel.show();
     }
@@ -181,6 +186,14 @@ Popup {
     // once goes on at once; one that takes time (a fit, a folder to choose) goes on by itself once it is done.
     function next() {
         if (panel.current && !panel.holds(panel.current.check)) {
+            // An action Next does waits until the project takes edits: one asked while the last edit or fit is still
+            // being published is refused with a message (a scan's Free · all after its fit).
+            if (Session.project && !Session.project.readyForEdit() && readyAgain.tries < 40) {
+                ++readyAgain.tries;
+                readyAgain.restart();
+                return;
+            }
+            readyAgain.tries = 0;
             panel.perform(panel.current.check);
             if (!panel.holds(panel.current.check)) {
                 RunLog.note(`tutorial ${panel.tutorial.id}: step ${panel.step + 1} waits for ${panel.current.check} (fits ${panel.fitsDone - panel.fitsAtStep}, results shown ${AppState.fitResultsShown - panel.resultsAtStep}, results open ${AppState.fitResultsOpen}${panel.groupState()})`);
@@ -1245,23 +1258,37 @@ Popup {
                 entry.menu.close();
         }
     }
-    // A fit of one experiment among several shows that experiment in the main view, so the step shows its fit.
+    // A stage that fits one experiment among several shows that experiment in the main view from its first step: the
+    // experiment its fit frees beyond the fit before it (a 300 K, then a 55 K, then a 2.5 K lesson).
     function showFittedExperiment() {
         const project = Session.project;
-        if (!project || !panel.current || panel.current.check !== "fit-done" || !panel.current.expectFree)
+        if (!project || !panel.steps || project.experiments.count < 2)
             return;
-        const names = new Set();
-        for (const path of panel.current.expectFree) {
-            const match = /^experiments\[([^\]]+)\]/.exec(path);
-            if (match)
-                names.add(match[1]);
+        const named = paths => new Set((paths ?? []).map(path => (/^experiments\[([^\]]+)\]/.exec(path) ?? [])[1]).filter(name => name));
+        let fit = -1;
+        for (let at = panel.step; at < panel.steps.length && fit < 0; ++at)
+            if (panel.steps[at].check === "fit-done")
+                fit = at;
+        if (fit < 0)
+            return;
+        let before = new Set();
+        for (let at = fit - 1; at >= 0; --at) {
+            if (panel.steps[at].check === "fit-done") {
+                before = new Set(panel.steps[at].expectFree ?? []);
+                break;
+            }
         }
+        const added = (panel.steps[fit].expectFree ?? []).filter(path => !before.has(path));
+        let names = named(added);
+        if (names.size !== 1)
+            names = named(panel.steps[fit].expectFree);
         if (names.size !== 1)
             return;
         const name = [...names][0];
         for (let row = 0; row < project.experiments.count; ++row) {
-            if (project.experiments.text(row, "name") === name && project.currentExperimentIndex !== row) {
-                project.currentExperimentIndex = row;
+            if (project.experiments.text(row, "name") === name) {
+                if (project.currentExperimentIndex !== row)
+                    project.currentExperimentIndex = row;
                 return;
             }
         }
@@ -2070,6 +2097,15 @@ Popup {
         onTriggered: panel.reveal()
     }
     // Unfolding a group animates its height; the control is scrolled to again once it has its place.
+    // Next asked again once the project takes edits: up to ten seconds.
+    Timer {
+        id: readyAgain
+
+        property int tries: 0
+
+        interval: 250
+        onTriggered: panel.next()
+    }
     // Next's fit, asked again while the project recalculates: up to a minute, while the step still wants it.
     Timer {
         id: fitAgain

@@ -57,6 +57,10 @@ TAGS = ROOT / 'app/examples/tags.json'
 # The longest step title, in characters, that fits the popup's line beside "Step 107 of 109"
 # (the replay also refuses a title the popup elides).
 TITLE_LIMIT = 32
+# What a stage's out-of-bounds result means (app_tutorial_notes.yml).
+NOTES = yaml.safe_load(
+    (Path(__file__).parent / 'app_tutorial_notes.yml').read_text(encoding='utf-8')
+)
 NOOPS = {
     tuple(line.split('\t', 1))
     for line in (Path(__file__).parent / 'app_tutorial_noops.tsv')
@@ -103,7 +107,8 @@ def minimizer_steps(case: str, actions: list[str]) -> list[dict]:
     for action in actions:
         if action.startswith('choose-token:minimizer.descent='):
             descent = action.split('=', 1)[1]
-            text = f'On **Analysis → Extra**, choose **{descent}** as the **Descent**.'
+            shown = option_words('minimizer.descent', descent)
+            text = f'On **Analysis → Extra**, choose **{shown}** as the **Descent**.'
             out.append(
                 step(
                     'Descent',
@@ -672,7 +677,14 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
             ),
             step(
                 'Fit results',
-                'Read the fit results, then press **OK**.',
+                ' '.join(
+                    part
+                    for part in (
+                        'Read the fit results, then press **OK**.',
+                        NOTES.get(case, {}).get(int(number.group(1)) if number else 0, ''),
+                    )
+                    if part
+                ),
                 'analysis',
                 'fit.results.ok',
                 'results-closed',
@@ -684,6 +696,23 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         # Opened as the step shows, as the tour opens its tabs: it shows the matrix it explains.
         return [step('Correlations', text, 'analysis', tab, '', open=True)]
     if ident == 'calculated':
+        if case.startswith('sc-'):
+            # A single crystal's chart sets measured against calculated F²: with nothing measured
+            # it has nothing to draw, so the calculated reflections are shown in their table.
+            text = (
+                'On **Experiment → Extra**, **Reflections** lists every reflection with the F² '
+                'calculated from the model.'
+            )
+            return [
+                step(
+                    'The calculated reflections',
+                    text,
+                    'experiment',
+                    'group.refln',
+                    'open:group.refln',
+                    tab='extras',
+                )
+            ]
         text = 'On **Analysis**, the main view draws the pattern calculated from the model.'
         return [
             step(
@@ -693,8 +722,10 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
     if ident == 'report':
         # A simulation has no fit to report.
         fitted = 'simulation' not in case
-        text = 'The **Report** page collects the structure, the experiment' + (
-            ' and the fit.' if fitted else '.'
+        text = (
+            'The **Report** page collects the structure, the experiment and the fit.'
+            if fitted
+            else 'The **Report** page collects the structure and the experiment.'
         )
         return [step('Open Report', text, 'report', 'appBar.tab.report', 'page:report')]
     raise SystemExit(f'{case}: plan step {ident!r} has no translation into tutorial steps')
@@ -721,7 +752,7 @@ def tutorial_steps(case: str) -> list[dict]:
 
 WHY = yaml.safe_load((ROOT / 'tools/docs/app_tutorial_why.yml').read_text(encoding='utf-8'))
 # Checks of Extra-tab steps that only choose where (a row's parameter, the table's filters).
-WHERE = ('pick:parameters.', 'free', 'tick:', 'untick:', 'filters-clear', 'max-iterations:')
+WHERE = ('pick:parameters.', 'free', 'tick:', 'untick:', 'filters-clear', 'max-iterations:', 'open:')
 
 
 def with_reasons(case: str, steps: list[dict]) -> list[dict]:
@@ -794,13 +825,14 @@ def with_reasons(case: str, steps: list[dict]) -> list[dict]:
     # A step the app did before the tutorial reached it asks for nothing (app_tutorial_noops.tsv);
     # dropped once every reason is known: a dropped expression can explain the steps around it.
     steps = [s for s in steps if (case, s.get('check', '')) not in NOOPS]
-    said = ''
+    said = set()
     for s in steps:
         why = s.get('why', '')
-        # Said once, on the first of the steps it explains; the next ones keep only their action.
-        if why and why != said:
+        # Each relationship explained once in the tutorial, on the first step it explains; later
+        # steps for it (its alias, its constraint) keep only their action.
+        if why and why not in said:
             s['text'] = f'{s["text"]} {why}'
-        said = why or said
+            said.add(why)
     return steps
 
 
