@@ -37,6 +37,7 @@
 #include "app_info.hpp"
 #include "edi/io.hpp"
 #include "fit_view_model.hpp"
+#include "parameter_item.hpp"
 #include "parameter_table_model.hpp"
 #include "project_view_model.hpp"
 #include "scan_session.hpp"
@@ -2279,6 +2280,27 @@ bool DemoDriver::perform(const QString& action) {
         if (session == nullptr || session->project() == nullptr || !session->project()->loadExperiments(files)) {
             fail(QStringLiteral("step %1: the load was refused: %2")
                      .arg(steps_[current_].image, session ? session->lastError() : QStringLiteral("no session")));
+            return false;
+        }
+        return true;
+    }
+    if (const auto tick = QRegularExpression(QStringLiteral("^(un)?tick:(.+)$")).match(action); tick.hasMatch()) {
+        // One parameter's Free box set in its own row, as the built-in tutorial's step does.
+        ProjectViewModel* project = open_project(window_);
+        ParameterItem* found = nullptr;
+        if (project != nullptr) {
+            ParameterTableModel* table = project->parameters();
+            const int parameter_role = table->roleNames().key("parameter"), path_role = table->roleNames().key("path");
+            static const QRegularExpression bracket(QStringLiteral("\\[([^\\]]*)\\]"));
+            for (int row = 0; row < table->rowCount() && found == nullptr; ++row) {
+                QString dotted = table->data(table->index(row, 0), path_role).toString();
+                dotted.replace(bracket, QStringLiteral(".\\1"));
+                if (dotted == tick.captured(2))
+                    found = qobject_cast<ParameterItem*>(table->data(table->index(row, 0), parameter_role).value<QObject*>());
+            }
+        }
+        if (found == nullptr || !project->setParametersFree({found}, tick.captured(1).isEmpty())) {
+            fail(QStringLiteral("step %1: cannot set the Free box of '%2'").arg(steps_[current_].image, tick.captured(2)));
             return false;
         }
         return true;
