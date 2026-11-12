@@ -68,17 +68,14 @@ DataTable {
         Item {
             property int horizontalAlignment: Text.AlignLeft
             objectName: `fitStart.name.${row.index}`
-            // As wide as its icons and text, which the table fits the column to; a narrower column ends the name
-            // with an ellipsis, its full name in the tooltip.
-            implicitWidth: nameLine.fullWidth
+            // As wide as its icons and text, which the table fits the column to.
+            implicitWidth: nameLine.implicitWidth
             height: parent.height
             clip: true
 
             IconLine {
                 id: nameLine
                 anchors.verticalCenter: parent.verticalCenter
-                maximumWidth: Math.max(1, parent.width)
-                minimumTextWidth: EaStyle.Sizes.fontPixelSize * 3
                 textColor: EaStyle.Colors.themeForegroundMinor
                 segments: row.parameter !== null ? ParameterNames.segments(row.parameter) : [
                     {

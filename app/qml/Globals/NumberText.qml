@@ -74,9 +74,10 @@ QtObject {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberPlain, value, width, undefined, undefined);
     }
 
-    // How an axis writes its ticks, each on its own by the rule above: a decimal when 0.001 <= |x| < 1000, else three
-    // significant digits times a power of ten, trailing zeros dropped (500, 1×10³, 1.5×10³), with the fewest digits
-    // that write every tick exactly, or else tell neighbours apart. `shared` is not used.
+    // How a chart's value axis writes its ticks: on a linear axis (`shared`) whose largest tick is outside 0.001 to
+    // 1000, every tick in that tick's power of ten (`2.5×10⁴`, `5.0×10⁴`), else plainly; either way with the fewest
+    // decimals that write each tick exactly, or else that tell them apart. On a logarithmic axis each tick is written on
+    // its own (`1×10⁵`).
     function axisFormat(ticks, shared) {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberAxisFormat, ticks, shared, undefined, undefined);
     }
@@ -84,12 +85,6 @@ QtObject {
     // One tick of an axis written by `format` (axisFormat).
     function axisTick(value, format) {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberAxisTick, value, format, undefined, undefined);
-    }
-
-    // The round tick step for an axis from `low` to `high`, `pixels` long, whose labels in `font` leave a gap between
-    // neighbours (their widths along a horizontal axis, their height along a vertical one), nearest `count` ticks.
-    function axisStep(low, high, count, pixels, font, horizontal) {
-        return ApplicationInfo.numberPresentation(ApplicationInfo.NumberAxisStep, [low, high, count], pixels, font, horizontal);
     }
 
     // A plain decimal text as its sign, its digits from the first significant one and that digit's power of ten, and

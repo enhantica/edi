@@ -156,17 +156,11 @@ Popup {
         panel.backgroundEstimates = 0;
         panel.loadedEntries = [];
         AppState.tutorialRunning = true;
-        // Each tutorial starts Examples clean, without an earlier tutorial's search: the catalogue itself, so it holds
-        // whether or not the Examples group is built yet.
-        if (Session.examples) {
-            Session.examples.searchText = "";
-            Session.examples.clearFacets();
-        }
-        // The field too, where it exists: typing into it ends its binding to the catalogue's text.
+        // Each tutorial starts Examples clean, without an earlier tutorial's search.
         const window = Overlay.overlay ? Overlay.overlay.Window.window : null;
-        const searchField = window ? ItemLocator.findAnywhere(window, "examples.search") as TextInput : null;
-        if (searchField !== null)
-            searchField.text = "";
+        const clearExamples = window ? ItemLocator.findAnywhere(window, "examples.clearFilters") as T.AbstractButton : null;
+        if (clearExamples !== null)
+            clearExamples.clicked();
         panel.open();
         panel.show();
     }
@@ -1269,9 +1263,6 @@ Popup {
     function showFittedExperiment() {
         const project = Session.project;
         if (!project || !panel.steps || project.experiments.count < 2)
-            return;
-        // A fit's results stay with the experiment just fitted; the next stage switches when it begins.
-        if (panel.current && ["results-closed", "fitted"].includes(panel.current.check))
             return;
         const named = paths => new Set((paths ?? []).map(path => (/^experiments\[([^\]]+)\]/.exec(path) ?? [])[1]).filter(name => name));
         let fit = -1;

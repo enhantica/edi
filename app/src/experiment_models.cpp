@@ -352,42 +352,6 @@ void SingleCrystalReflectionModel::refresh(bool table) {
         }
         shown = current;
     }
-    // Without measured reflections, the ones the calculation generated up to the resolution limit: F²calc against
-    // sin(θ)/λ, as nothing measured can be plotted against it.
-    QList<double> positions;
-    double position_high = 0.0;
-    bool simulated = false;
-    if (const auto& reflections = experiment_.reflections; reflections.has_value() && reflections->size() == 0) {
-        const std::vector<double>& calc = frame_ ? *frame_ : reflections->intensity_calc.values();
-        const std::size_t n = reflections->generated_index_h.size();
-        simulated = n > 0 && calc.size() == n && reflections->generated_index_k.size() == n &&
-                    reflections->generated_index_l.size() == n && reflections->sin_theta_over_lambda.size() == n &&
-                    (frame_ || experiment_.computed_current());
-        const bool spacings = reflections->d_spacing.size() == n;
-        for (std::size_t i = 0; simulated && i < n; ++i) {
-            const double value = calc[i];
-            const double position = reflections->sin_theta_over_lambda[i];
-            if (table) {
-                rows.append({reinterpret_cast<const void*>(i + 1),
-                             {reflections->generated_index_h[i], reflections->generated_index_k[i],
-                              reflections->generated_index_l[i], spacings ? reflections->d_spacing[i] : qQNaN(),
-                              position, qQNaN(), qQNaN(), value, qQNaN(), qQNaN(), 1.0}});
-            }
-            calculated.append(value);
-            measured.append(qQNaN());
-            su.append(qQNaN());
-            used.append(true);
-            positions.append(position);
-            if (std::isfinite(position)) {
-                position_high = std::max(position_high, position);
-            }
-            if (std::isfinite(value)) {
-                low = std::min(low, value);
-                high = std::max(high, value);
-            }
-        }
-        shown = simulated;
-    }
     if (table) {
         file_rows_ = rows;
         publish();
@@ -452,10 +416,6 @@ void SingleCrystalReflectionModel::refresh(bool table) {
     update(calculated_shown_, shown, &SingleCrystalReflectionModel::calculatedShownChanged);
     update(wavelength_low_, wavelength_low, &SingleCrystalReflectionModel::wavelengthLowChanged);
     update(wavelength_high_, wavelength_high, &SingleCrystalReflectionModel::wavelengthHighChanged);
-    update(positions_, positions, &SingleCrystalReflectionModel::positionsChanged);
-    update(position_high_, position_high > 0.0 ? position_high * 1.05 : 1.0,
-           &SingleCrystalReflectionModel::positionHighChanged);
-    update(simulated_, simulated, &SingleCrystalReflectionModel::simulatedChanged);
     if (changed) {
         emit pointsChanged();
     }
@@ -463,20 +423,6 @@ void SingleCrystalReflectionModel::refresh(bool table) {
 
 QString SingleCrystalReflectionModel::hoverText(int row, bool squared) const {
     const auto& reflections = experiment_.reflections;
-    if (simulated_ && reflections.has_value()) {
-        if (row < 0 || static_cast<std::size_t>(row) >= reflections->generated_index_h.size()) {
-            return {};
-        }
-        const auto at = static_cast<qsizetype>(row);
-        const double calc = squared ? calculated_.value(at, qQNaN()) : calculated_f_.value(at, qQNaN());
-        QStringList lines;
-        for (const std::string& line : edi::reflection_hover_lines(
-                 reflections->generated_index_h[at], reflections->generated_index_k[at],
-                 reflections->generated_index_l[at], qQNaN(), qQNaN(), calc, squared, project_.su_rule)) {
-            lines.append(QString::fromStdString(line));
-        }
-        return lines.join(QStringLiteral("<br>"));
-    }
     if (!reflections.has_value() || !reflections->rectangular() || row < 0 ||
         static_cast<std::size_t>(row) >= reflections->size()) {
         return {};

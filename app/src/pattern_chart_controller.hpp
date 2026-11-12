@@ -3,7 +3,6 @@
 #define EDI_APP_PATTERN_CHART_CONTROLLER_HPP
 
 #include <QColor>
-#include <QFont>
 #include <QList>
 #include <QObject>
 #include <QPointF>
@@ -24,28 +23,6 @@
 #include "report_view_model.hpp"
 
 namespace edi_app {
-
-// How an axis writes its tick labels, by the rule for numbers (owner records 2026-11-09 and 2026-11-11, item 6): each
-// tick on its own, a decimal when 0.001 <= |x| < 1000 and otherwise a power of ten with three significant digits,
-// trailing zeros dropped. `decimals` and `digits` are the fewest that write every tick exactly, or else tell them apart;
-// `quantum` is the size below which a tick is zero (the rounding left in a computed tick).
-struct AxisLabels {
-    int decimals = 0;
-    int digits = 3;
-    double quantum = 0.0;
-};
-AxisLabels axis_labels(const std::vector<double>& ticks);
-QString axis_label(double value, const AxisLabels& format);
-// The same format as text, for QML to keep and hand back, and read back.
-QString axis_labels_text(const AxisLabels& format);
-AxisLabels axis_labels_from_text(const QString& text);
-// The ticks of an axis: every whole multiple of `step` inside [low, high].
-std::vector<double> axis_ticks(double low, double high, double step);
-// The round step (1, 2, 2.5 or 5 times a power of ten) for an axis `pixels` long whose labels, written by axis_label in
-// `font`, leave at least a gap between neighbours (their widths along a horizontal axis, their height along a vertical
-// one); of the steps that leave it, the one whose tick count is nearest `target`. Without a size it is the step nearest
-// `target` ticks.
-double labelled_step(double low, double high, double pixels, const QFont& font, bool horizontal, int target);
 
 // One Bragg row's label (edi::BraggRowLabel): the structure's name, its colour, the row's centre in rows from the
 // bottom, and whether its ticks are hidden. QML reads a list of them as an array.
@@ -95,8 +72,6 @@ class PatternChartController : public QObject {
     Q_PROPERTY(qreal residualPlotHeight READ residualPlotHeight WRITE setResidualPlotHeight NOTIFY
                    residualPlotHeightChanged)
     Q_PROPERTY(qreal devicePixelRatio READ devicePixelRatio WRITE setDevicePixelRatio NOTIFY devicePixelRatioChanged)
-    // The axis labels' font: the tick steps leave room for the widest label written in it.
-    Q_PROPERTY(QFont labelFont READ labelFont WRITE setLabelFont NOTIFY labelFontChanged)
     Q_PROPERTY(YScale yScale READ yScale WRITE setYScale NOTIFY yScaleChanged)
     // The x axis: d-spacing, or the experiment's own (2θ or time-of-flight). On d the pattern is the d-spacing capture
     // (edi::capture_pattern), which needs a calculated pattern; until then the chart stays on the experiment's axis.
@@ -211,8 +186,6 @@ class PatternChartController : public QObject {
     void setResidualPlotHeight(qreal height);
     qreal devicePixelRatio() const { return device_pixel_ratio_; }
     void setDevicePixelRatio(qreal ratio);
-    QFont labelFont() const { return label_font_; }
-    void setLabelFont(const QFont& font);
     YScale yScale() const { return y_scale_; }
     void setYScale(YScale scale);
     bool dSpacing() const { return d_spacing_; }
@@ -320,7 +293,6 @@ class PatternChartController : public QObject {
     void plotHeightChanged();
     void residualPlotHeightChanged();
     void devicePixelRatioChanged();
-    void labelFontChanged();
     void yScaleChanged();
     void dSpacingChanged();
     void dAvailableChanged();
@@ -417,8 +389,6 @@ class PatternChartController : public QObject {
     // The colour scheme the chart is drawn in.
     edi::ColourScheme scheme() const;
     qreal plot_width_ = 0.0, plot_height_ = 0.0, residual_plot_height_ = 0.0, device_pixel_ratio_ = 1.0;
-    QFont label_font_;
-    bool label_font_set_ = false;
     YScale y_scale_ = Linear;
     bool d_spacing_ = false, d_available_ = false;
     bool included_only_ = false;

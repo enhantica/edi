@@ -174,11 +174,6 @@ class SingleCrystalReflectionModel : public RowTableModel {
     // The smallest and the largest reflection wavelength of a time-of-flight single crystal, NaN without one.
     Q_PROPERTY(double wavelengthLow READ wavelengthLow NOTIFY wavelengthLowChanged)
     Q_PROPERTY(double wavelengthHigh READ wavelengthHigh NOTIFY wavelengthHighChanged)
-    // Whether the reflections are the ones a calculation without measured reflections generated; the chart then
-    // plots the calculated value against sin(θ)/λ (`positions`, from 0 to `positionHigh`).
-    Q_PROPERTY(bool simulated READ simulated NOTIFY simulatedChanged)
-    Q_PROPERTY(QList<double> positions READ positions NOTIFY positionsChanged)
-    Q_PROPERTY(double positionHigh READ positionHigh NOTIFY positionHighChanged)
     // The column the table is sorted by (empty: file order) and its direction.
     Q_PROPERTY(QString sortRole READ sortRole NOTIFY sortRoleChanged)
     Q_PROPERTY(bool sortAscending READ sortAscending NOTIFY sortAscendingChanged)
@@ -219,9 +214,6 @@ class SingleCrystalReflectionModel : public RowTableModel {
     double fitCutoff() const { return fit_cutoff_; }
     double wavelengthLow() const { return wavelength_low_; }
     double wavelengthHigh() const { return wavelength_high_; }
-    bool simulated() const { return simulated_; }
-    QList<double> positions() const { return positions_; }
-    double positionHigh() const { return position_high_; }
 
    signals:
     // Any of the points' properties below changed (the chart redraws once for them all).
@@ -241,9 +233,6 @@ class SingleCrystalReflectionModel : public RowTableModel {
     void fitCutoffChanged();
     void wavelengthLowChanged();
     void wavelengthHighChanged();
-    void simulatedChanged();
-    void positionsChanged();
-    void positionHighChanged();
     void sortRoleChanged();
     void sortAscendingChanged();
 
@@ -272,9 +261,6 @@ class SingleCrystalReflectionModel : public RowTableModel {
     double wavelength_high_ = qQNaN();
     QList<bool> used_;
     double fit_cutoff_ = qQNaN();
-    bool simulated_ = false;
-    QList<double> positions_;
-    double position_high_ = 1.0;
 };
 
 // The excluded regions: `start`, `end` pairs, editable, with append and remove.

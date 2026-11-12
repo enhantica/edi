@@ -207,8 +207,7 @@ class ApplicationInfo : public QObject {
         NumberFitted,
         NumberOwnUncertainty,
         NumberExponent,
-        NumberWrittenNarrow,
-        NumberAxisStep
+        NumberWrittenNarrow
     };
     Q_ENUM(NumberOperation)
     enum FitOutcomeOperation { FitIcon, FitRing, FitWord, FitMeaning, FitColor, FitTextColor };

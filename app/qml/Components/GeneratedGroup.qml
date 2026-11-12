@@ -194,15 +194,13 @@ Column {
                                     property int horizontalAlignment: Text.AlignLeft
 
                                     objectName: `generated.${group.categoryId}.${modelData.name}.${row.index}`
-                                    implicitWidth: referenceLine.fullWidth
+                                    implicitWidth: referenceLine.implicitWidth
                                     height: parent ? parent.height : EaStyle.Sizes.tableRowHeight
                                     clip: true
 
                                     IconLine {
                                         id: referenceLine
                                         anchors.verticalCenter: parent.verticalCenter
-                                        maximumWidth: Math.max(1, parent.width)
-                                        minimumTextWidth: EaStyle.Sizes.fontPixelSize * 3
                                         textColor: EaStyle.Colors.themeForegroundMinor
                                         segments: reference.parameter !== null ? ParameterNames.segments(reference.parameter) : [
                                             {

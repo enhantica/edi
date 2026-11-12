@@ -331,18 +331,7 @@ SideBarGroup {
             function fittedColumn(column: int): real {
                 return shownColumns.includes(column) ? Math.floor((fittedWidths[column] ?? 0) + columnMargin) : 0;
             }
-            // The name takes the rest, set here rather than by the table's rule, so it follows only the table's width
-            // and the measured texts, never the rows in view.
-            readonly property real nameWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4, Math.floor(fittedRoom + nameMinimum - shownColumns.reduce((sum, column) => sum + fittedColumn(column), 0)))
-            readonly property var wantedColumns: [numberColumnWidth, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : [])
-            // Applied a moment later: new widths remake rows and measure them again, which would otherwise feed back
-            // into the widths while they are being worked out.
-            function applyColumns() {
-                if (JSON.stringify(columns) !== JSON.stringify(wantedColumns))
-                    columns = wantedColumns;
-            }
-            onWantedColumnsChanged: Qt.callLater(applyColumns)
-            Component.onCompleted: columns = wantedColumns
+            columns: [numberColumnWidth, -1].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : [])
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -468,17 +457,14 @@ SideBarGroup {
                 Item {
                     property int horizontalAlignment: Text.AlignLeft
                     objectName: `parameters.name.${row.index}`
-                    // As wide as its icons and text, which the table fits the column to; a narrower column ends the name
-                    // with an ellipsis, its full name in the tooltip.
-                    implicitWidth: nameLine.fullWidth
+                    // As wide as its icons and text, which the table fits the column to.
+                    implicitWidth: nameLine.implicitWidth
                     height: parent.height
                     clip: true
 
                     IconLine {
                         id: nameLine
                         anchors.verticalCenter: parent.verticalCenter
-                        maximumWidth: Math.max(1, parent.width)
-                        minimumTextWidth: EaStyle.Sizes.fontPixelSize * 3
                         segments: ParameterNames.segments(row.parameter)
                     }
                     TapHandler {

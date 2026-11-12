@@ -4975,12 +4975,6 @@ void Project::publish_calculation(DueEstimates due) {
             rows.d_spacing = shared_column(refln.d_spacing);
             rows.sin_theta_over_lambda = shared_column(refln.sin_theta_over_lambda);
             rows.f_squared_calc = shared_column(refln.intensity_calc);
-            // Without measured reflections crysta generated them: keep their Miller indices too.
-            if (experiments[index]->reflections->size() == 0) {
-                rows.index_h = shared_column(refln.index_h);
-                rows.index_k = shared_column(refln.index_k);
-                rows.index_l = shared_column(refln.index_l);
-            }
             reflections.push_back(std::move(rows));
             continue;
         }
@@ -5018,9 +5012,6 @@ void Project::publish_calculation(DueEstimates due) {
             bank.reflections->d_spacing = std::move(reflections[index].d_spacing);
             bank.reflections->sin_theta_over_lambda = std::move(reflections[index].sin_theta_over_lambda);
             bank.reflections->intensity_calc = std::move(reflections[index].f_squared_calc);
-            bank.reflections->generated_index_h = std::move(reflections[index].index_h);
-            bank.reflections->generated_index_k = std::move(reflections[index].index_k);
-            bank.reflections->generated_index_l = std::move(reflections[index].index_l);
             bank.computed_source = std::move(sources[index]);
             continue;
         }
@@ -5208,9 +5199,6 @@ CalculationResult stage_computed(const Project& calculated, WorkStamps stamps, s
             rows.d_spacing = bank_item->reflections->d_spacing;
             rows.sin_theta_over_lambda = bank_item->reflections->sin_theta_over_lambda;
             rows.f_squared_calc = bank_item->reflections->intensity_calc;
-            rows.index_h = bank_item->reflections->generated_index_h;
-            rows.index_k = bank_item->reflections->generated_index_k;
-            rows.index_l = bank_item->reflections->generated_index_l;
             result.data.emplace_back();
             result.refln.push_back(std::move(rows));
             continue;
@@ -5348,9 +5336,6 @@ PublishOutcome publish(Project& live, CalculationResult&& result) {
             bank.reflections->d_spacing = std::move(result.refln[index].d_spacing);
             bank.reflections->sin_theta_over_lambda = std::move(result.refln[index].sin_theta_over_lambda);
             bank.reflections->intensity_calc = std::move(result.refln[index].f_squared_calc);
-            bank.reflections->generated_index_h = std::move(result.refln[index].index_h);
-            bank.reflections->generated_index_k = std::move(result.refln[index].index_k);
-            bank.reflections->generated_index_l = std::move(result.refln[index].index_l);
             bank.computed_source = std::move(sources[index]);
             continue;
         }

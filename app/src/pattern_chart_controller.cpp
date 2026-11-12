@@ -5,156 +5,10 @@
 #include <charconv>
 #include <cmath>
 #include <limits>
-#include <QFontMetricsF>
 #include <QStringList>
-#include <set>
 #include <utility>
 
 namespace edi_app {
-
-namespace {
-QString superscript_power(int power) {
-    static const QString digits = QStringLiteral("⁰¹²³⁴⁵⁶⁷⁸⁹");
-    QString exponent = power < 0 ? QStringLiteral("⁻") : QString();
-    for (const QChar digit : QString::number(std::abs(power))) exponent += digits.at(digit.digitValue());
-    return QStringLiteral("×10") + exponent;
-}
-
-bool in_decimal_range(double size) { return size >= 0.001 && size < 1000.0; }
-
-// A tick without the rounding its computation left: to the quantum, and 0 below it.
-double snapped(double value, double quantum) {
-    if (!(quantum > 0.0)) return value;
-    const double near = std::round(value / quantum) * quantum;
-    return std::fabs(near) < quantum ? 0.0 : near;
-}
-
-// Whether `digits` places after the point write `value` exactly, to the quantum.
-bool exact(double value, double scale, int places, double tolerance) {
-    const double factor = std::pow(10.0, places);
-    return std::fabs(value * factor - std::round(value * factor)) * scale / factor <= tolerance;
-}
-}  // namespace
-
-QString axis_label(double value, const AxisLabels& format) {
-    value = snapped(value, format.quantum);
-    if (!std::isfinite(value)) return QString::number(value);
-    if (value == 0.0) return QStringLiteral("0");
-    const double size = std::fabs(value);
-    if (in_decimal_range(size)) {
-        QString text = QString::number(value, 'f', format.decimals);
-        return text;
-    }
-    int power = static_cast<int>(std::floor(std::log10(size)));
-    QString mantissa = QString::number(value / std::pow(10.0, power), 'f', std::max(0, format.digits - 1));
-    if (std::fabs(mantissa.toDouble()) >= 10.0) {
-        ++power;
-        mantissa = QString::number(value / std::pow(10.0, power), 'f', std::max(0, format.digits - 1));
-    }
-    if (mantissa.contains(u'.')) {
-        while (mantissa.endsWith(u'0')) mantissa.chop(1);
-        if (mantissa.endsWith(u'.')) mantissa.chop(1);
-    }
-    return mantissa + superscript_power(power);
-}
-
-AxisLabels axis_labels(const std::vector<double>& ticks) {
-    AxisLabels format;
-    double largest = 0.0;
-    for (const double tick : ticks) {
-        if (std::isfinite(tick)) largest = std::max(largest, std::fabs(tick));
-    }
-    if (largest > 0.0) format.quantum = std::pow(10.0, std::floor(std::log10(largest)) - 9);
-    const auto distinct = [&] {
-        std::set<QString> texts;
-        for (const double tick : ticks) texts.insert(axis_label(tick, format));
-        return texts.size() == ticks.size();
-    };
-    const auto all = [&](const auto& test) {
-        return std::all_of(ticks.begin(), ticks.end(), [&](double tick) {
-            const double value = snapped(tick, format.quantum);
-            return !std::isfinite(value) || value == 0.0 || test(value);
-        });
-    };
-    // Decimals for the ticks inside the decimal range, significant digits for the others.
-    while (format.decimals < 6 && !all([&](double v) {
-               return !in_decimal_range(std::fabs(v)) || exact(v, 1.0, format.decimals, format.quantum);
-           }))
-        ++format.decimals;
-    while (format.digits < 6 && !all([&](double v) {
-               if (in_decimal_range(std::fabs(v))) return true;
-               const double power = std::pow(10.0, std::floor(std::log10(std::fabs(v))));
-               return exact(v / power, power, format.digits - 1, format.quantum);
-           }))
-        ++format.digits;
-    while (!distinct() && (format.decimals < 12 || format.digits < 15)) {
-        format.decimals = std::min(12, format.decimals + 1);
-        format.digits = std::min(15, format.digits + 1);
-    }
-    return format;
-}
-
-QString axis_labels_text(const AxisLabels& format) {
-    return QStringLiteral("%1|%2|%3").arg(format.decimals).arg(format.digits).arg(format.quantum, 0, 'g', 17);
-}
-
-AxisLabels axis_labels_from_text(const QString& text) {
-    AxisLabels format;
-    const QStringList parts = text.split(u'|');
-    if (parts.size() == 3) {
-        format.decimals = parts[0].toInt();
-        format.digits = parts[1].toInt();
-        format.quantum = parts[2].toDouble();
-    }
-    return format;
-}
-
-std::vector<double> axis_ticks(double low, double high, double step) {
-    std::vector<double> ticks;
-    if (!(step > 0.0) || !(high >= low) || !std::isfinite(low) || !std::isfinite(high)) return ticks;
-    for (double i = std::ceil(low / step - 1e-9); ticks.size() < 200 && i * step <= high + step * 1e-9; ++i) {
-        ticks.push_back(i * step);
-    }
-    return ticks;
-}
-
-double labelled_step(double low, double high, double pixels, const QFont& font, bool horizontal, int target) {
-    const double span = high - low;
-    if (!(span > 0.0) || !std::isfinite(span)) return 1.0;
-    const QFontMetricsF metrics(font);
-    // A gap of about an em between labels along the axis; a vertical axis keeps half a line between them.
-    const double gap = horizontal ? metrics.height() : 0.5 * metrics.height();
-    const double base = std::pow(10.0, std::floor(std::log10(span / std::max(1, target))) - 1);
-    double best = 0.0, fallback = 0.0;
-    int best_distance = std::numeric_limits<int>::max();
-    for (int decade = 0; decade < 8; ++decade) {
-        for (const double factor : {1.0, 2.0, 2.5, 5.0}) {
-            const double step = factor * base * std::pow(10.0, decade);
-            const std::vector<double> ticks = axis_ticks(low, high, step);
-            if (ticks.size() > 64) continue;
-            if (ticks.size() >= 2 || fallback == 0.0) fallback = step;
-            if (ticks.empty()) continue;
-            if (pixels > 0.0) {
-                double room = 0.0;
-                if (horizontal) {
-                    const AxisLabels format = axis_labels(ticks);
-                    for (const double tick : ticks) room = std::max(room, metrics.horizontalAdvance(axis_label(tick, format)));
-                } else {
-                    room = metrics.height();
-                }
-                if (pixels * step / span < room + gap) continue;
-            }
-            const int distance = std::abs(static_cast<int>(ticks.size()) - target);
-            // On a tie the larger step: fewer, rounder ticks.
-            if (distance <= best_distance) {
-                best_distance = distance;
-                best = step;
-            }
-        }
-    }
-    return best > 0.0 ? best : fallback > 0.0 ? fallback : span;
-}
-
 namespace {
 
 const double kNaN = std::numeric_limits<double>::quiet_NaN();
@@ -637,22 +491,6 @@ void PatternChartController::setPlotHeight(qreal height) {
         plot_height_ = height;
         emit plotHeightChanged();
         scaleResidual();
-        // The y step follows the height, drawn after the binding returns as for the width.
-        dirty_ = true;
-        QMetaObject::invokeMethod(this, [this] {
-            if (dirty_ && active_) {
-                refresh();
-            }
-        }, Qt::QueuedConnection);
-    }
-}
-
-void PatternChartController::setLabelFont(const QFont& font) {
-    if (!label_font_set_ || font != label_font_) {
-        label_font_ = font;
-        label_font_set_ = true;
-        emit labelFontChanged();
-        invalidate();
     }
 }
 
@@ -838,12 +676,6 @@ void PatternChartController::setHiddenFitsRange(bool on) {
 
 void PatternChartController::refresh() {
     dirty_ = false;
-    // A linear axis' step leaves room for its labels as they are written, once the plot's size and font are known.
-    const auto axis_step = [this](double low, double high, bool horizontal) {
-        const double pixels = horizontal ? plot_width_ : plot_height_;
-        return label_font_set_ && pixels > 0.0 ? labelled_step(low, high, pixels, label_font_, horizontal, kTicks)
-                                               : round_step(low, high);
-    };
     if (report_) {
         // The report's presentation as the model holds it; none for an experiment the model does not hold.
         const edi::ReportPattern* pattern = report_->pattern(report_experiment_);
@@ -966,7 +798,7 @@ void PatternChartController::refresh() {
     double y_step = 1.0, y_anchor = 0.0;
     if (animating_) {
         // A frame of an animation shows its ranges as they are: the decades and the padding are the end's.
-        y_step = y_scale_ == Log10 ? std::max(1.0, std::ceil((y_high - y_low) / kTicks)) : axis_step(y_low, y_high, false);
+        y_step = y_scale_ == Log10 ? std::max(1.0, std::ceil((y_high - y_low) / kTicks)) : round_step(y_low, y_high);
         y_anchor = std::ceil(y_low / y_step) * y_step;
     } else if (y_scale_ == Log10) {
         // A log axis has its ticks at whole decades (edi ADR-0021 §5), about five of them, whatever range it
@@ -1002,7 +834,7 @@ void PatternChartController::refresh() {
             y_low -= padding;
             y_high += padding;
         }
-        y_step = axis_step(y_low, y_high, false);
+        y_step = round_step(y_low, y_high);
         y_anchor = std::ceil(y_low / y_step) * y_step;
     }
     // While a parameter's slider is held (the owner, 2026-10-25), a fitted range holds while the calculated curve stays
@@ -1017,14 +849,14 @@ void PatternChartController::refresh() {
             held_range_->x_min == now.x_min && held_range_->x_max == now.x_max) {
             now.low = y_low = std::min(y_low, held_range_->low);
             now.high = y_high = std::max(y_high, held_range_->high);
-            y_step = y_scale_ == Log10 ? std::max(1.0, std::ceil((y_high - y_low) / kTicks)) : axis_step(y_low, y_high, false);
+            y_step = y_scale_ == Log10 ? std::max(1.0, std::ceil((y_high - y_low) / kTicks)) : round_step(y_low, y_high);
             y_anchor = y_scale_ == Log10 ? y_low : std::ceil(y_low / y_step) * y_step;
         }
         held_range_ = now;
     } else if (!fitted) {
         held_range_.reset();
     }
-    const double x_step = axis_step(x_low, x_high, true);
+    const double x_step = round_step(x_low, x_high);
     publish(shown_x_min_, x_low, &PatternChartController::xMinChanged);
     publish(shown_x_max_, x_high, &PatternChartController::xMaxChanged);
     publish(shown_y_min_, y_low, &PatternChartController::yMinChanged);

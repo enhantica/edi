@@ -244,10 +244,7 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment, b
         }
         categories.push_back(linked);
         categories.push_back({"scattering_source"});
-        // Without measured reflections, the ones the calculation generated.
-        const std::size_t measured = experiment.reflections->size();
-        const std::size_t generated = experiment.reflections->generated_index_h.size();
-        categories.push_back({"refln", true, measured > 0 ? measured : generated});
+        categories.push_back({"refln", true, experiment.reflections->size()});
         detail::mark_dependents(categories);
         return categories;
     }
