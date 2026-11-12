@@ -171,6 +171,7 @@ void ParameterItem::refreshFileText() {
         file_value_ = value;
         file_edit_value_ = edit;
         emit fileValueChanged();
+        emit fileEditValueChanged();
     }
     if (su != file_su_) {
         file_su_ = su;
@@ -240,6 +241,10 @@ void ParameterItem::refreshStart() {
         change_direction_ = direction;
         su_reason_ = reason;
         emit startTextChanged();
+        emit changeTextChanged();
+        emit changeDirectionChanged();
+        emit suFlaggedChanged();
+        emit suReasonChanged();
     }
 }
 
