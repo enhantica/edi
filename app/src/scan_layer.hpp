@@ -355,6 +355,7 @@ class ScanLayer : public QQuickPaintedItem {
     int lines_fed_builds_ = -1;
     int reduction_changes_ = 0;  // bumped whenever any dataset's reduction changes
     std::vector<std::size_t> lines_order_;
+    std::vector<std::uint64_t> lines_fed_generations_;
 };
 
 // The map's colour bar: the map's colours from the low end at the bottom to the high end at the top, each pixel row

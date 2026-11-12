@@ -226,3 +226,18 @@ The current VM retains original typed forwarding conversions, property/context a
 ApplicationInfo executes ScanViewChart's palette resolution and selector captions/choices, paired zoom state/publication, shown/project/scan presentation handoff, pointer scroll/drag/pick transactions, intensity readouts and legend/toggle actions. The existing ScanViewModel/ScanLayer remain the owners of loading, scientific patterns, decimation, row placement, hit/value data and rendering; project setters remain authoritative for selected dataset and axis/spacing/direction. Original zoomX/zoomY/settingZoom and presentedTo fields remain the view records. No scan model, load scheduler, presentation controller, timer, cache or store is introduced.
 
 Native code keeps the original sequence of current-owner reads, optional/null checks, presentation retirement/adoption, property writes, reentry and exceptions. Zoom publication still clones the existing shared map with the current Object.assign and publishes the pair once; a throwing assignment retains the original completion behavior. Intrinsic/script array operations, context names, arithmetic, method receiver and caption callbacks remain observable in the current VM. The identical palette-choice projection and first-character capitalization extend the existing preference/Evolution native implementations rather than introducing parallel algorithms. The visual plot/layer/grid/labels, direct bindings and Qt rendering/window observation remain QML declarations or one-call host adapters. Full desktop/browser compilation and scientific/lifecycle/input/error verification follows the complete source migration.
+
+
+## Incremental GPU uploads while reading a scan
+
+A batch of newly read datasets updates only those traces in ScanLines. The existing groups of 64 traces retain
+their geometry until a trace in that group changes; style, selection and y-range updates still change uniforms only.
+A changed x range, width, scale, included/background choice, model or drawing order replaces all affected traces.
+The painter continues using the same reductions. Every dataset and excluded stretch remains in its original draw
+order; no dataset is dropped to speed up a dense scan.
+
+Previously each batch replaced the entire trace list, copied all accumulated reductions and rebuilt all scene-graph
+geometry. That repeated the growing prefix for the whole load. Group revisions now identify geometry changes,
+including changes that arrive while hidden. Recreated scene nodes build from the latest traces independently of
+previous uploads. The scan-line update fixture exercises partial-group/style changes, breaks, full replacement and
+node recreation directly against real scene-graph geometry.

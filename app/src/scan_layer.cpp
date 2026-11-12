@@ -262,6 +262,8 @@ void ScanLayer::setModel(ScanViewModel* model) {
         disconnect(model_, nullptr, this, nullptr);
     }
     model_ = model;
+    reductions_.clear();
+    lines_fed_generations_.clear();
     measured_for_.reset();
     measured_ranges_.clear();
     if (model_) {
@@ -657,6 +659,7 @@ void ScanLayer::reduce() {
     const ReductionKey key = reductionKey();
     if (!(key == reduced_for_) || reduced_mode_ != mode_) {
         reductions_.clear();
+        lines_fed_generations_.clear();
         reduced_for_ = key;
         reduced_mode_ = mode_;
     }
@@ -993,20 +996,29 @@ void ScanLayer::updatePolish() {
 void ScanLayer::feedLines() {
     std::vector<std::size_t> order = top_down(baselines_, std::min(reductions_.size(), model_->patterns().size()));
     std::erase_if(order, [this](std::size_t d) { return hiddenAt(d); });
-    if (reduction_changes_ != lines_fed_builds_ || order != lines_order_) {
+    if (order != lines_order_ || lines_fed_generations_.size() != order.size()) {
         std::vector<ScanLines::Trace> traces;
         traces.reserve(order.size() * 2);
+        lines_fed_generations_.clear();
         for (const std::size_t d : order) {
             traces.push_back({reductions_[d].x, reductions_[d].v});
+            lines_fed_generations_.push_back(reductions_[d].generation);
         }
-        // Then each dataset's excluded stretches, dimmed (none while the excluded ranges are hidden).
         for (const std::size_t d : order) {
             traces.push_back({reductions_[d].excluded_x, reductions_[d].excluded_v});
         }
         lines_->setTraces(std::move(traces));
-        lines_fed_builds_ = reduction_changes_;
         lines_order_ = order;
+    } else if (reduction_changes_ != lines_fed_builds_) {
+        for (std::size_t i = 0; i < order.size(); ++i) {
+            const Reduction& reduction = reductions_[order[i]];
+            if (lines_fed_generations_[i] == reduction.generation) continue;
+            lines_->setTrace(i, {reduction.x, reduction.v});
+            lines_->setTrace(i + order.size(), {reduction.excluded_x, reduction.excluded_v});
+            lines_fed_generations_[i] = reduction.generation;
+        }
     }
+    lines_fed_builds_ = reduction_changes_;
     // A value v reaches H (v - low) / (high - low) above its baseline: the shader's row and lift, folded.
     // Highlighted, the shown dataset is drawn by the line over the others, which are faded.
     const int top = highlighted();

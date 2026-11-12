@@ -7,6 +7,7 @@
 #include <QRectF>
 #include <QtQml/qqmlregistration.h>
 #include <vector>
+#include <cstdint>
 
 namespace edi_app {
 
@@ -39,6 +40,8 @@ class ScanLines : public QQuickItem {
 
     /// Replaces every trace; the styles keep their places, a trace without one is not drawn.
     void setTraces(std::vector<Trace> traces);
+    /// Replaces one existing trace; only its group of GPU vertices is rebuilt. Throws if index is out of range.
+    void setTrace(std::size_t index, Trace trace);
     /// Replaces every style, trace for trace.
     void setStyles(std::vector<Style> styles);
     const std::vector<Style>& styles() const { return styles_; }
@@ -76,7 +79,8 @@ class ScanLines : public QQuickItem {
     QColor paper_ = Qt::white;
     double y_min_ = 0.0, y_max_ = 1.0;
     double line_width_ = 2.0;
-    bool traces_changed_ = true;
+    std::vector<std::uint64_t> group_revisions_;
+    std::uint64_t revision_ = 0;
     bool bands_changed_ = true;
     bool active_ = true, pending_ = false;
 };

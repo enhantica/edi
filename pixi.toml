@@ -233,6 +233,7 @@ CMAKE_CXX_COMPILER_LAUNCHER = "ccache"
 CMAKE_C_COMPILER_LAUNCHER = "ccache"
 
 [feature.app.tasks]
+app-test-scan-lines = { cmd = "cmake -S tests/fixtures/scan_line_updates -B build/scan-line-updates -G Ninja && cmake --build build/scan-line-updates -j 4 && QT_QPA_PLATFORM=offscreen build/scan-line-updates/scan_line_updates" }
 app-test-scan-save = { cmd = "cmake --build build/app --target edi_scan_save_tests --config Release -j 4 && QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software build/app/app/edi_scan_save_tests", depends-on = ["app-build"] }
 app-test-native-dialogs = { cmd = "cmake -S tests/fixtures/native_dialogs -B build/native-dialogs && cmake --build build/native-dialogs --config Release -j 4 && python tests/fixtures/native_dialogs/run.py build/native-dialogs" }
 app-test-updates = { cmd = "cmake --build build/app --target edi_desktop_update_tests -j 4 && QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software build/app/app/edi_desktop_update_tests", depends-on = ["app-build"] }
@@ -303,7 +304,7 @@ wasm-build = { cmd = ["bash", "tools/ci/wasm-build.sh"], depends-on = [{ task = 
 # environment (so the default environment stays Qt-free).
 # Without app-test and app-ui-test while the owner has them disabled (re-enabling is a revert); `pixi run
 # -e app app-test`, `app-ui-test` and `app-ui-bless` still run by hand.
-app-gates = { depends-on = ["app-test-native-dialogs", { task = "app-build", environment = "app" }, "app-lint", "app-format-check"] }
+app-gates = { depends-on = ["app-test-native-dialogs", "app-test-scan-lines", { task = "app-build", environment = "app" }, "app-lint", "app-format-check"] }
 
 [environments]
 app = ["app"]
