@@ -134,7 +134,12 @@ def _check_inputs(root: Path, manifest: dict) -> bool:
 
 
 def _check_actions(
-    manifest: dict, workflow: str, *, raw_inputs: bool, groups: bool = False
+    manifest: dict,
+    workflow: str,
+    *,
+    raw_inputs: bool,
+    groups: bool = False,
+    simulation: bool = False,
 ) -> None:
     actions = [item.get('action', '') for item in manifest.get('actions', [])]
     loads = [
@@ -187,7 +192,8 @@ def _check_actions(
     if workflow == 'tutorial':
         # An Application tutorial loads its blocks with Load > From web... and fits in stages.
         opened = loads or ['project.create', 'createProject.accept', 'onlineLoad.row.0']
-        expected = ['home.start', *opened, 'statusBar.fit.button', 'wait-fit', 'close-fit-results']
+        fitted = [] if simulation else ['statusBar.fit.button', 'wait-fit', 'close-fit-results']
+        expected = ['home.start', *opened, *fitted]
         if any(action.startswith('assistant-attach:') for action in actions):
             # The AI assistant tutorial: the assistant gets the files and does the work itself.
             expected = [
@@ -355,7 +361,13 @@ def validate_bundle(
     manifest = read_json(root / 'manifest.json')
     reference_kind = _check_identity(root, manifest, workflow, groups=groups)
     raw_inputs = False if workflow == 'tutorial' else _check_inputs(root, manifest)
-    _check_actions(manifest, workflow, raw_inputs=raw_inputs, groups=groups)
+    _check_actions(
+        manifest,
+        workflow,
+        raw_inputs=raw_inputs,
+        groups=groups,
+        simulation=reference_kind == 'simulation',
+    )
     captured = []
     ids = set()
     for scene in manifest.get('scenes', []):
