@@ -385,3 +385,12 @@ Open remains a separate real-flow qualification.
 
 - [Qt posted-event receiver scope](https://doc.qt.io/qt-6.11/qcoreapplication.html#sendPostedEvents)
 - [Qt network reply completion lifetime](https://doc.qt.io/qt-6.11/qnetworkreply.html#finished)
+
+
+## Native project picker handoff
+
+On desktop, accepting Folder or Zip records the chosen picker in the native UI owner. Only after the choice
+dialog has closed does it queue that picker's native `open` call. A native file panel must not open while the
+choice popup is still closing or its QML acceptance callback is on the stack. The pending picker is weakly held
+and consumed once; cancelling the choice opens nothing. Both Folder and Zip use the same handoff. Browser
+pickers keep their direct user-gesture call, as required by browser file access.

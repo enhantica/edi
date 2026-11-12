@@ -10940,7 +10940,18 @@ void ApplicationInfo::createProjectDialogEvent(int kind) const {
 void ApplicationInfo::openProjectChoice() const {
     const auto f = panelUsageEngine(this);
     if (panelUsageTruth(assistantContextField(f, "WebFiles", "available"))) projectInvoke(f, "Session", "openWebProject", {panelUsageTruth(panelUsageContextRead(f, "zip")) ? QJSValue(QStringLiteral("file")) : QJSValue(QStringLiteral("folder"))});
-    else if (panelUsageTruth(panelUsageContextRead(f, "zip"))) projectInvoke(f, "openZipDialog", "open"); else projectInvoke(f, "openFolderDialog", "open");
+    else {
+        const char* name = panelUsageTruth(panelUsageContextRead(f, "zip")) ? "openZipDialog" : "openFolderDialog";
+        const auto picker = panelUsageContextRead(f, name);
+        pending_project_picker_ = consentQtObject(f, picker) ? picker.toQObject() : nullptr;
+    }
+}
+void ApplicationInfo::openProjectPicker() const {
+    // A native panel opens after the choice popup has closed and its script callback has returned (ADR-0052).
+    const QPointer<QObject> picker = std::exchange(pending_project_picker_, {});
+    if (picker) {
+        QMetaObject::invokeMethod(picker, "open", Qt::QueuedConnection);
+    }
 }
 void ApplicationInfo::askOpenProjectChoice() const { const auto f = panelUsageEngine(this); const auto state = panelUsageContextRead(f, "AppState"); panelUsageMemberCall(f, state, "afterChanges", {projectGuardedClosure(f, 388)}); }
 void ApplicationInfo::windowSaveChoiceOpened() const {

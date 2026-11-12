@@ -8,6 +8,7 @@
 #include <QJSValue>
 #include <QVariantMap>
 #include <QObject>
+#include <QPointer>
 #include <QPoint>
 #include <QString>
 #include <QList>
@@ -863,6 +864,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void createProjectClicked() const;
     Q_INVOKABLE void createProjectDialogEvent(int kind) const;
     Q_INVOKABLE void openProjectChoice() const;
+    Q_INVOKABLE void openProjectPicker() const;
     Q_INVOKABLE void askOpenProjectChoice() const;
     Q_INVOKABLE void windowSaveChoiceOpened() const;
     Q_INVOKABLE QJSValue windowUnsavedText() const;
@@ -1044,6 +1046,9 @@ class ApplicationInfo : public QObject {
     // `colour` as drawn flat on any of `backgrounds`: its lightness moved to 2:1 contrast on each, its hue kept (edi
     // ADR-0047).
     Q_INVOKABLE QColor readableColour(const QColor& colour, const QList<QColor>& backgrounds) const;
+   private:
+    mutable QPointer<QObject> pending_project_picker_;
+
 };
 
 #endif  // EDI_APP_APP_INFO_HPP
