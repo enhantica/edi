@@ -46,7 +46,11 @@ installers are not signed yet: on macOS, open the installer once, then select **
        anyway** if Windows offers it and you downloaded the installer using the links above.
        Smart App Control can block unsigned apps without offering a per-app exception.
        [Microsoft’s Smart App Control guide](https://support.microsoft.com/en-gb/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions)
-    3. Follow setup to choose the installation folder.
+    3. If there is no **Run anyway** (common on managed office laptops), start the installer from
+       Command Prompt instead: open **Command Prompt**, go to the extracted folder with
+       `cd %USERPROFILE%\Downloads\<extracted folder>`, then type the installer's file name, for example
+       `EasyDiffraction-<version>-windows-x86_64-online.exe`, and press Enter.
+    4. Follow setup to choose the installation folder.
 
 === "Linux"
 
