@@ -230,129 +230,153 @@ AppDialog {
         // A long dataset list scrolls inside the table, so the dialog stays on the screen.
         readonly property real tableHeight: Math.min(agreementTable.contentHeight, agreementTable.headerItem ? agreementTable.headerItem.height + EaStyle.Sizes.tableRowHeight * 8 : agreementTable.contentHeight)
 
+        // The table at its full width: the dataset column fits its longest name, each factor its own width.
+        readonly property real datasetWidth: Math.max(EaStyle.Sizes.fontPixelSize * 6, (agreementTable.fittedWidths[1] ?? 0) + agreementTable.autoColumnPadding)
+        readonly property real naturalWidth: AppSizes.iconOnlyColumnWidth + datasetWidth + dialog.factorColumns.length * dialog.factorWidth + (dialog.factorColumns.length + 1) * EaStyle.Sizes.tableColumnSpacing + 2 * agreementTable.rowPadding + 2 * EaStyle.Sizes.borderThickness
+        // Never wider than the window: a wider table scrolls sideways, so every column can be reached.
+        readonly property real widthCap: dialog.parent ? dialog.parent.width - dialog.leftPadding - dialog.rightPadding - EaStyle.Sizes.fontPixelSize * 4 : naturalWidth
+        readonly property bool scrolls: naturalWidth > widthCap
+
         y: listArea.y + listArea.height + (shown ? EaStyle.Sizes.fontPixelSize : 0)
-        width: shown ? Math.max(AppSizes.messagesDialogContentWidth, AppSizes.iconOnlyColumnWidth + EaStyle.Sizes.fontPixelSize * 8 + dialog.factorColumns.length * dialog.factorWidth + EaStyle.Sizes.fontPixelSize * 2) : 0
-        height: shown ? tableHeight + unitNote.height + EaStyle.Sizes.fontPixelSize * 0.5 : 0
+        width: shown ? Math.max(Math.min(AppSizes.messagesDialogContentWidth, widthCap), Math.min(naturalWidth, widthCap)) : 0
+        height: shown ? agreementScroll.height + unitNote.height + EaStyle.Sizes.fontPixelSize * 0.5 : 0
         visible: shown
 
-        DataTable {
-            id: agreementTable
+        Flickable {
+            id: agreementScroll
 
-            objectName: "fit.results.agreement"
             width: parent.width
-            height: agreementArea.tableHeight
-            interactive: contentHeight > height
-            defaultInfoText: ""
-            // Read-only: no row is ever current (the owner, 2026-10-22).
-            selectable: false
-            sourceModel: dialog.agreement
+            height: agreementArea.tableHeight + (agreementArea.scrolls ? agreementBar.height : 0)
+            contentWidth: agreementTable.width
+            contentHeight: agreementArea.tableHeight
+            flickableDirection: Flickable.HorizontalFlick
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: agreementArea.scrolls
+            clip: agreementArea.scrolls
+            ScrollBar.horizontal: EaElements.ScrollBar {
+                id: agreementBar
+                policy: agreementArea.scrolls ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+            }
 
-            // The icon, the dataset, then one real column per factor.
-            columns: ApplicationInfo.fitResultProjection(2)
+            DataTable {
+                id: agreementTable
 
-            header: EaComponents.ListViewHeader {
-                height: (dialog.structureHeaders ? 2 : 1) * EaStyle.Sizes.tableRowHeight
+                objectName: "fit.results.agreement"
+                width: Math.max(agreementArea.width, agreementArea.naturalWidth)
+                height: agreementArea.tableHeight
+                interactive: contentHeight > height
+                defaultInfoText: ""
+                // Read-only: no row is ever current (the owner, 2026-10-22).
+                selectable: false
+                sourceModel: dialog.agreement
 
-                EaComponents.ListViewLabel {
-                    elide: Text.ElideRight
-                    horizontalAlignment: Text.AlignHCenter
-                }
-                EaComponents.ListViewLabel {
-                    id: datasetHeader
-                    elide: Text.ElideRight
+                // The icon, the dataset, then one real column per factor.
+                columns: ApplicationInfo.fitResultProjection(2)
 
-                    horizontalAlignment: Text.AlignLeft
-                    text: qsTr("Dataset")
-                }
-                // The factor headers join the row as its own cells, after the dataset's (an Instantiator adds no
-                // item of its own, so each header is the row's cell of its column).
-                Instantiator {
-                    model: dialog.factorColumns
-                    onObjectAdded: (index, object) => object.parent = datasetHeader.parent
-                    delegate: Item {
-                        id: factorHeader
+                header: EaComponents.ListViewHeader {
+                    height: (dialog.structureHeaders ? 2 : 1) * EaStyle.Sizes.tableRowHeight
 
-                        required property var modelData
-                        required property int index
+                    EaComponents.ListViewLabel {
+                        elide: Text.ElideRight
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    EaComponents.ListViewLabel {
+                        id: datasetHeader
+                        elide: Text.ElideRight
 
-                        width: dialog.factorWidth
-                        height: datasetHeader.height
+                        horizontalAlignment: Text.AlignLeft
+                        text: qsTr("Dataset")
+                    }
+                    // The factor headers join the row as its own cells, after the dataset's (an Instantiator adds no
+                    // item of its own, so each header is the row's cell of its column).
+                    Instantiator {
+                        model: dialog.factorColumns
+                        onObjectAdded: (index, object) => object.parent = datasetHeader.parent
+                        delegate: Item {
+                            id: factorHeader
 
-                        EaComponents.ListViewLabel {
-                            elide: Text.ElideRight
-                            objectName: `fit.results.agreement.header.${factorHeader.index}`
-                            width: parent.width
-                            height: EaStyle.Sizes.tableRowHeight
-                            horizontalAlignment: Text.AlignHCenter
-                            textFormat: Text.RichText
-                            text: factorHeader.modelData.factor
-                        }
-                        // The structure a phase factor belongs to, under its header, with its coloured icon.
-                        Row {
-                            visible: factorHeader.modelData.structure !== ""
-                            y: EaStyle.Sizes.tableRowHeight
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            height: EaStyle.Sizes.tableRowHeight
-                            spacing: EaStyle.Sizes.fontPixelSize * 0.25
+                            required property var modelData
+                            required property int index
 
-                            IconCell {
-                                width: EaStyle.Sizes.fontPixelSize * 1.2
-                                icon: "layer-group"
-                                iconColor: factorHeader.modelData.place >= 0 ? AppColors.structure(factorHeader.modelData.place) : ""
-                            }
+                            width: dialog.factorWidth
+                            height: datasetHeader.height
+
                             EaComponents.ListViewLabel {
-                                objectName: `fit.results.agreement.structure.${factorHeader.index}`
-                                height: parent.height
-                                width: Math.min(implicitWidth, dialog.factorWidth - EaStyle.Sizes.fontPixelSize * 1.5)
                                 elide: Text.ElideRight
-                                // The structure's chart colour, as its icon (the owner, 2026-10-21).
-                                color: factorHeader.modelData.place >= 0 ? AppColors.structure(factorHeader.modelData.place) : EaStyle.Colors.themeForeground
-                                text: factorHeader.modelData.structure
+                                objectName: `fit.results.agreement.header.${factorHeader.index}`
+                                width: parent.width
+                                height: EaStyle.Sizes.tableRowHeight
+                                horizontalAlignment: Text.AlignHCenter
+                                textFormat: Text.RichText
+                                text: factorHeader.modelData.factor
+                            }
+                            // The structure a phase factor belongs to, under its header, with its coloured icon.
+                            Row {
+                                visible: factorHeader.modelData.structure !== ""
+                                y: EaStyle.Sizes.tableRowHeight
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                height: EaStyle.Sizes.tableRowHeight
+                                spacing: EaStyle.Sizes.fontPixelSize * 0.25
+
+                                IconCell {
+                                    width: EaStyle.Sizes.fontPixelSize * 1.2
+                                    icon: "layer-group"
+                                    iconColor: factorHeader.modelData.place >= 0 ? AppColors.structure(factorHeader.modelData.place) : ""
+                                }
+                                EaComponents.ListViewLabel {
+                                    objectName: `fit.results.agreement.structure.${factorHeader.index}`
+                                    height: parent.height
+                                    width: Math.min(implicitWidth, dialog.factorWidth - EaStyle.Sizes.fontPixelSize * 1.5)
+                                    elide: Text.ElideRight
+                                    // The structure's chart colour, as its icon (the owner, 2026-10-21).
+                                    color: factorHeader.modelData.place >= 0 ? AppColors.structure(factorHeader.modelData.place) : EaStyle.Colors.themeForeground
+                                    text: factorHeader.modelData.structure
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            delegate: TableRow {
-                id: datasetRow
+                delegate: TableRow {
+                    id: datasetRow
 
-                required property string label
-                required property int place
-                required property var values
+                    required property string label
+                    required property int place
+                    required property var values
 
-                // Read-only, as the summary (no hover, no selection, no click).
-                enabled: false
-                Component.onCompleted: dialog.passive(datasetRow)
+                    // Read-only, as the summary (no hover, no selection, no click).
+                    enabled: false
+                    Component.onCompleted: dialog.passive(datasetRow)
 
-                // The global row keeps an empty icon cell, so its cells stay in the dataset rows' columns.
-                IconCell {
-                    horizontalAlignment: Text.AlignHCenter
-                    icon: datasetRow.place >= 0 ? "microscope" : ""
-                    iconColor: datasetRow.place >= 0 ? AppColors.experiment(datasetRow.place) : ""
-                }
-                EaComponents.ListViewLabel {
-                    id: datasetName
-
-                    objectName: `fit.results.agreement.dataset.${datasetRow.index}`
-                    horizontalAlignment: Text.AlignLeft
-                    elide: Text.ElideRight
-                    color: EaStyle.Colors.themeForeground
-                    text: datasetRow.label
-                }
-                Instantiator {
-                    model: datasetRow.values
-                    onObjectAdded: (index, object) => object.parent = datasetName.parent
-                    delegate: NumberLabel {
-                        required property string modelData
-                        required property int index
-
-                        objectName: `fit.results.agreement.value.${datasetRow.index}.${index}`
-                        width: dialog.factorWidth
-                        height: datasetName.height
+                    // The global row keeps an empty icon cell, so its cells stay in the dataset rows' columns.
+                    IconCell {
                         horizontalAlignment: Text.AlignHCenter
+                        icon: datasetRow.place >= 0 ? "microscope" : ""
+                        iconColor: datasetRow.place >= 0 ? AppColors.experiment(datasetRow.place) : ""
+                    }
+                    EaComponents.ListViewLabel {
+                        id: datasetName
+
+                        objectName: `fit.results.agreement.dataset.${datasetRow.index}`
+                        horizontalAlignment: Text.AlignLeft
+                        elide: Text.ElideRight
                         color: EaStyle.Colors.themeForeground
-                        number: modelData
+                        text: datasetRow.label
+                    }
+                    Instantiator {
+                        model: datasetRow.values
+                        onObjectAdded: (index, object) => object.parent = datasetName.parent
+                        delegate: NumberLabel {
+                            required property string modelData
+                            required property int index
+
+                            objectName: `fit.results.agreement.value.${datasetRow.index}.${index}`
+                            width: dialog.factorWidth
+                            height: datasetName.height
+                            horizontalAlignment: Text.AlignHCenter
+                            color: EaStyle.Colors.themeForeground
+                            number: modelData
+                        }
                     }
                 }
             }
@@ -361,7 +385,7 @@ AppDialog {
             id: unitNote
 
             objectName: "fit.results.agreement.note"
-            y: agreementTable.height + EaStyle.Sizes.fontPixelSize * 0.5
+            y: agreementScroll.height + EaStyle.Sizes.fontPixelSize * 0.5
             color: EaStyle.Colors.themeForegroundMinor
             text: qsTr("All R values are in %.")
         }

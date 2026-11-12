@@ -199,7 +199,17 @@ EaComponents.ListView {
         ApplicationInfo.tableApplyRuledWidths(true);
         refit();
     }
-    onHeightChanged: Qt.callLater(repairRows)
+    onHeightChanged: {
+        Qt.callLater(repairRows);
+        Qt.callLater(keepHeaderOnTop);
+    }
+    // The header stays at the top of the view, over the rows scrolled under it. A scroll set while the view was laying
+    // out could leave it where the previous scroll put it, with a slice of an earlier row above it.
+    onContentYChanged: Qt.callLater(keepHeaderOnTop)
+    function keepHeaderOnTop() {
+        if (headerItem && headerPositioning === ListView.OverlayHeader && Math.abs(headerItem.y - contentY) >= 0.5)
+            headerItem.y = contentY;
+    }
     // A view whose rows were all replaced before it laid out again could stop filling and show one stale row of what
     // its count promised (the owner, 2026-11-03): once it has laid out, such a view is rebuilt (ViewRows).
     function repairRows() {
