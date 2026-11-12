@@ -93,6 +93,9 @@ SideBarGroup {
     EaComponents.ProjectDescriptionDialog {
         id: createDialog
         objectName: "createProject.dialog"
+        // During a tutorial a press outside, such as the status bar's Next, keeps the dialog open: the next step is its
+        // OK. Escape still closes it.
+        closePolicy: AppState.tutorialRunning ? Popup.CloseOnEscape : Popup.CloseOnEscape | Popup.CloseOnPressOutside
         readonly property string assistantIntentId: group.createIntent !== null && group.createIntent.assistant !== null ? group.createIntent.assistant.id : ""
         // The base's dialog (edi's copy joins the location cleanly), placed on whole pixels as AppDialog is.
         x: Math.round((parent.width - width) / 2)
