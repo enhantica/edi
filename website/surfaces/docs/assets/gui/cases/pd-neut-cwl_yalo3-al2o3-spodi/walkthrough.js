@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure YAlO3 in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "structure-web-1",
   "page": "structure",
-  "description": "Find the structure Al2O3 in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -129,7 +129,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment spodi in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -182,44 +182,41 @@
   "fitPhase": "setup"
  },
  {
+  "id": "minimizer",
+  "page": "analysis",
+  "description": "Set the minimizer as the project does",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "choose-token:minimizer.stopRule=chi_square_change",
+   "fill:minimizer.maxIterations=1000"
+  ],
+  "highlights": [
+   "group.minimizer"
+  ],
+  "sidebar": "Extra",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "stage-1-free",
   "page": "analysis",
   "description": "Cells, scales and 2θ zero",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:spodi",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=calib",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:spodi",
+   "tick:experiment.instrument.calib_twotheta_offset",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
    "parameters.freeHeader",
    "parameters.freeHeader.free",
    "parameters.clearFilters",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:Al2O3",
-   "reveal:parameters.category",
-   "parameters.category",
-   "choose:Cell",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:YAlO3",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Cell",
@@ -294,26 +291,16 @@
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:spodi",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak broadening",
    "parameters.freeHeader",
    "parameters.freeHeader.free",
    "parameters.clearFilters",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:spodi",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak mixing",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=eta_0",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:experiment.peak.mixing_eta_0"
   ],
   "highlights": [
    "group.parameters"
@@ -345,9 +332,6 @@
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:spodi",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak asymmetry",
@@ -385,18 +369,6 @@
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:Al2O3",
-   "reveal:parameters.category",
-   "parameters.category",
-   "choose:Atomic coordinates",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:YAlO3",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic coordinates",

@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure ceo2 in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment pearl in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -144,32 +144,41 @@
   "fitPhase": "setup"
  },
  {
+  "id": "minimizer",
+  "page": "analysis",
+  "description": "Set the minimizer as the project does",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "fill:minimizer.chiSquareTolerance=1e-4",
+   "fill:minimizer.maxIterations=1000"
+  ],
+  "highlights": [
+   "group.minimizer"
+  ],
+  "sidebar": "Extra",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "stage-1-free",
   "page": "analysis",
   "description": "Scale and time-of-flight calibration",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiment.instrument.calib_d_to_tof_linear",
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Instrument",
    "parameters.freeHeader",
    "parameters.freeHeader.free",
    "parameters.clearFilters",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiment.instrument.calib_d_to_tof_offset",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiment.instrument.calib_d_to_tof_quadratic",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiment.linked_structures[ceo2].scale",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Linked structures",
+   "tick:experiment.linked_structures[ceo2].scale"
   ],
   "highlights": [
    "group.parameters"
@@ -234,25 +243,15 @@
  {
   "id": "stage-3-free",
   "page": "analysis",
-  "description": "Peak widths",
+  "description": "Gaussian widths",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiment.peak.broad_gauss_sigma_1",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiment.peak.broad_gauss_sigma_2",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiment.peak.broad_lorentz_gamma_1",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Peak broadening",
+   "tick:experiment.peak.broad_gauss_sigma_1",
+   "tick:experiment.peak.broad_gauss_sigma_2"
   ],
   "highlights": [
    "group.parameters"
@@ -264,7 +263,7 @@
  {
   "id": "stage-3-fit",
   "page": "analysis",
-  "description": "Fit: Peak widths",
+  "description": "Fit: Gaussian widths",
   "actions": [
    "statusBar.fit.button",
    "wait-fit",
@@ -280,25 +279,14 @@
  {
   "id": "stage-4-free",
   "page": "analysis",
-  "description": "Rise and decay",
+  "description": "Lorentzian width",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiment.peak.decay_beta_0",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiment.peak.decay_beta_1",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiment.peak.rise_alpha_1",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Peak broadening",
+   "tick:experiment.peak.broad_lorentz_gamma_1"
   ],
   "highlights": [
    "group.parameters"
@@ -310,7 +298,7 @@
  {
   "id": "stage-4-fit",
   "page": "analysis",
-  "description": "Fit: Rise and decay",
+  "description": "Fit: Lorentzian width",
   "actions": [
    "statusBar.fit.button",
    "wait-fit",
@@ -326,20 +314,16 @@
  {
   "id": "stage-5-free",
   "page": "analysis",
-  "description": "Displacements",
+  "description": "Rise and decay",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=structure.atom_sites[Ce].adp_iso",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=structure.atom_sites[O].adp_iso",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Peak asymmetry",
+   "tick:experiment.peak.decay_beta_0",
+   "tick:experiment.peak.decay_beta_1",
+   "tick:experiment.peak.rise_alpha_1"
   ],
   "highlights": [
    "group.parameters"
@@ -351,7 +335,7 @@
  {
   "id": "stage-5-fit",
   "page": "analysis",
-  "description": "Fit: Displacements",
+  "description": "Fit: Rise and decay",
   "actions": [
    "statusBar.fit.button",
    "wait-fit",
@@ -367,12 +351,13 @@
  {
   "id": "stage-6-free",
   "page": "analysis",
-  "description": "Absorption",
+  "description": "Displacements",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=experiment.absorption.abscor1",
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Atomic displacement",
    "parameters.freeHeader",
    "parameters.freeHeader.free",
    "parameters.clearFilters"
@@ -386,6 +371,41 @@
  },
  {
   "id": "stage-6-fit",
+  "page": "analysis",
+  "description": "Fit: Displacements",
+  "actions": [
+   "statusBar.fit.button",
+   "wait-fit",
+   "close-fit-results"
+  ],
+  "highlights": [
+   "workflow.analysis.mainContent",
+   "group.parameters"
+  ],
+  "sidebar": "Main",
+  "capture": true
+ },
+ {
+  "id": "stage-7-free",
+  "page": "analysis",
+  "description": "Absorption",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.basic",
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Absorption",
+   "tick:experiment.absorption.abscor1"
+  ],
+  "highlights": [
+   "group.parameters"
+  ],
+  "sidebar": "Main",
+  "capture": false,
+  "fitPhase": "setup"
+ },
+ {
+  "id": "stage-7-fit",
   "page": "analysis",
   "description": "Fit: Absorption",
   "actions": [

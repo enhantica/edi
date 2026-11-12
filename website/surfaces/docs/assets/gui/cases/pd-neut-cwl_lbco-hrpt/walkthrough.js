@@ -71,7 +71,7 @@
  {
   "id": "structure-cell",
   "page": "structure",
-  "description": "Set the space group and the cell",
+  "description": "Space group and cell",
   "actions": [
    "reveal:group.space_group",
    "expand:group.space_group",
@@ -98,7 +98,6 @@
   "actions": [
    "reveal:group.atom_site",
    "expand:group.atom_site",
-   "atomSites.append",
    "fill:atomSite.label.0=La",
    "key:Return",
    "atomSite.typeSymbol.0",
@@ -176,7 +175,7 @@
  {
   "id": "experiment-created",
   "page": "experiment",
-  "description": "Create the experiment and choose its type",
+  "description": "Create the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -200,7 +199,7 @@
  {
   "id": "data-web",
   "page": "experiment",
-  "description": "Find the measured data in the EasyDiffraction collection",
+  "description": "Find the measured data",
   "actions": [
    "experiments.load",
    "experiments.load.dataWeb",
@@ -232,7 +231,7 @@
  {
   "id": "experiment-instrument",
   "page": "experiment",
-  "description": "Set the wavelength, 2θ zero and peak widths",
+  "description": "Instrument and peak widths",
   "actions": [
    "reveal:group.instrument",
    "expand:group.instrument",
@@ -267,7 +266,7 @@
  {
   "id": "experiment-background",
   "page": "experiment",
-  "description": "Add the background points and excluded regions",
+  "description": "Background and excluded regions",
   "actions": [
    "reveal:group.background",
    "expand:group.background",
@@ -332,7 +331,7 @@
  {
   "id": "experiment-linked",
   "page": "experiment",
-  "description": "Link the structure to the experiment",
+  "description": "Link the structure",
   "actions": [
    "reveal:group.linked_structure",
    "expand:group.linked_structure",
@@ -367,6 +366,24 @@
   "fitPhase": "setup"
  },
  {
+  "id": "minimizer",
+  "page": "analysis",
+  "description": "Set the minimizer as the project does",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "fill:minimizer.maxIterations=1000"
+  ],
+  "highlights": [
+   "group.minimizer"
+  ],
+  "sidebar": "Extra",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "stage-1-free",
   "page": "analysis",
   "description": "Scale, 2θ zero and cell",
@@ -376,23 +393,15 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=calib",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.instrument.calib_twotheta_offset",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.linked_structures[lbco].scale",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Cell",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:structure.cell.length_a"
   ],
   "highlights": [
    "group.parameters"
@@ -438,7 +447,7 @@
  {
   "id": "group-free-all",
   "page": "analysis",
-  "description": "Free all from the Free column header",
+  "description": "Free all from the header",
   "actions": [
    "parameters.freeHeader"
   ],
@@ -490,13 +499,10 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak profile",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=lorentz_x",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
-   "parameters.clearFilters"
+   "tick:experiment.peak.broad_gauss_u",
+   "tick:experiment.peak.broad_gauss_v",
+   "tick:experiment.peak.broad_gauss_w",
+   "tick:experiment.peak.broad_lorentz_y"
   ],
   "highlights": [
    "group.parameters"
@@ -531,9 +537,10 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic displacement",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:structure.atom_sites[Ba].adp_iso",
+   "tick:structure.atom_sites[Co].adp_iso",
+   "tick:structure.atom_sites[La].adp_iso",
+   "tick:structure.atom_sites[O].adp_iso"
   ],
   "highlights": [
    "group.parameters"
@@ -568,11 +575,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic displacement",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=[Ba]",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
-   "parameters.clearFilters",
+   "untick:structure.atom_sites[Ba].adp_iso",
    "appBar.tab.analysis",
    "sideBar.tab.extras",
    "reveal:group.alias",

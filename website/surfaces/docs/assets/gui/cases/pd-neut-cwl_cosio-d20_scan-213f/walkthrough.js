@@ -39,25 +39,6 @@
   "capture": true
  },
  {
-  "id": "fitting-mode-single",
-  "page": "analysis",
-  "description": "Fit the template pattern alone first",
-  "actions": [
-   "appBar.tab.analysis",
-   "sideBar.tab.extras",
-   "reveal:group.fitting_mode",
-   "expand:group.fitting_mode",
-   "fittingMode.type",
-   "choose-token:fittingMode.type=single"
-  ],
-  "highlights": [
-   "group.fitting_mode"
-  ],
-  "sidebar": "Extra",
-  "capture": true,
-  "fitPhase": "setup"
- },
- {
   "id": "nothing-free",
   "page": "analysis",
   "description": "Start with every parameter fixed",
@@ -77,6 +58,44 @@
   "fitPhase": "setup"
  },
  {
+  "id": "fitting-mode-single",
+  "page": "analysis",
+  "description": "Fit the template pattern alone first",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.extras",
+   "reveal:group.fitting_mode",
+   "expand:group.fitting_mode",
+   "fittingMode.type",
+   "choose-token:fittingMode.type=single"
+  ],
+  "highlights": [
+   "group.fitting_mode"
+  ],
+  "sidebar": "Extra",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
+  "id": "minimizer",
+  "page": "analysis",
+  "description": "Set the minimizer as the project does",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "choose-token:minimizer.descent=fast_descent",
+   "fill:minimizer.maxIterations=1000"
+  ],
+  "highlights": [
+   "group.minimizer"
+  ],
+  "sidebar": "Extra",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "stage-1-free",
   "page": "analysis",
   "description": "Scale, 2θ zero and cell",
@@ -86,17 +105,11 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=calib",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.instrument.calib_twotheta_offset",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.linked_structures[cosio].scale",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Cell",
@@ -174,11 +187,9 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak broadening",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=gauss",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:experiment.peak.broad_gauss_u",
+   "tick:experiment.peak.broad_gauss_v",
+   "tick:experiment.peak.broad_gauss_w"
   ],
   "highlights": [
    "group.parameters"

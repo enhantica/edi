@@ -7,7 +7,7 @@
     ],
     "id": "report",
     "image": "report.webp",
-    "image_sha256": "3fea8e8a3a76c8469d15523f3d5bded0c0d3732144df84b193a7ad497b4df676",
+    "image_sha256": "7ec0fa9f1f0f5a1e9f33e392c3c4e460ccc1d25c087eab849aebed70687619f0",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -191,22 +191,6 @@
                 35
             ]
         },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
-            ]
-        },
         "appBar.tab.analysis": {
             "bounds": [
                 812.359375,
@@ -359,6 +343,22 @@
                 42
             ]
         },
+        "group.reportContents.pin": {
+            "bounds": [
+                1433.2261363926236,
+                366.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                368,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.reportExport": {
             "bounds": [
                 770,
@@ -374,6 +374,22 @@
                 119,
                 710,
                 249
+            ]
+        },
+        "group.reportExport.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
             ]
         },
         "label": {
@@ -579,7 +595,7 @@
                 45.125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Extra",
             "visible_bounds": [
                 813.515625,
@@ -595,7 +611,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -672,17 +688,17 @@
         },
         "statusBar.fit": {
             "bounds": [
-                1045,
+                1061,
                 769,
-                421,
+                405,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1045,
+                1061,
                 769,
-                421,
+                405,
                 19
             ]
         },
@@ -721,7 +737,7 @@
         },
         "statusBar.fit.outcome": {
             "bounds": [
-                1063,
+                1079,
                 769,
                 82,
                 19
@@ -730,7 +746,7 @@
             "icon": "check-circle",
             "label": "",
             "visible_bounds": [
-                1063,
+                1079,
                 769,
                 82,
                 19
@@ -741,17 +757,17 @@
         },
         "statusBar.fit.values": {
             "bounds": [
-                1162,
+                1178,
                 770,
-                235,
+                219,
                 18.109375
             ],
             "enabled": true,
-            "label": "1 0.13s 111.46→111.46",
+            "label": "2 0.65s 59.19→30.27",
             "visible_bounds": [
-                1162,
+                1178,
                 770,
-                235,
+                219,
                 18.109375
             ]
         },
@@ -918,8 +934,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "721bf7bae23d44d4c4f6a82afc7ddb53de86509a677570f3608007ce24467946",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "13f9f615fd4160fcbeffc40f2760a9d18d591de7dde9c48f56dd9150e842137a",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "state": {
         "experiments": 6,
         "fit_outcome": "success",
@@ -942,7 +958,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.extras",
                 "label": "Extra"
             },
@@ -954,7 +970,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

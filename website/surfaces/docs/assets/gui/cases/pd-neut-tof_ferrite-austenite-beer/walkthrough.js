@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure ferrite in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "structure-web-1",
   "page": "structure",
-  "description": "Find the structure austenite in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -129,7 +129,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment expt_s2 in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -165,7 +165,7 @@
  {
   "id": "experiment-web-1",
   "page": "experiment",
-  "description": "Find the experiment expt_n2 in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -199,9 +199,28 @@
   "capture": true
  },
  {
+  "id": "nothing-free",
+  "page": "analysis",
+  "description": "Start with every parameter fixed",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.basic",
+   "parameters.clearFilters",
+   "parameters.freeHeader",
+   "parameters.freeHeader.fixed"
+  ],
+  "highlights": [
+   "group.parameters",
+   "parameters.freeHeader"
+  ],
+  "sidebar": "Main",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "relations-start",
   "page": "analysis",
-  "description": "Add the relations the project starts with",
+  "description": "Add the relations",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.extras",
@@ -285,21 +304,39 @@
   "fitPhase": "setup"
  },
  {
-  "id": "nothing-free",
+  "id": "joint-weights",
   "page": "analysis",
-  "description": "Start with every parameter fixed",
+  "description": "Weigh the experiments",
   "actions": [
    "appBar.tab.analysis",
-   "sideBar.tab.basic",
-   "parameters.clearFilters",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed"
+   "sideBar.tab.extras",
+   "reveal:group.joint_fit",
+   "expand:group.joint_fit",
+   "fill:jointFit.weight.0=0.5",
+   "fill:jointFit.weight.1=0.5"
   ],
   "highlights": [
-   "group.parameters",
-   "parameters.freeHeader"
+   "group.joint_fit"
   ],
-  "sidebar": "Main",
+  "sidebar": "Extra",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
+  "id": "minimizer",
+  "page": "analysis",
+  "description": "Set the minimizer as the project does",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "fill:minimizer.maxIterations=1000"
+  ],
+  "highlights": [
+   "group.minimizer"
+  ],
+  "sidebar": "Extra",
   "capture": true,
   "fitPhase": "setup"
  },
@@ -316,10 +353,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=offset",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
+   "tick:experiments[expt_n2].instrument.calib_d_to_tof_offset",
    "parameters.clearFilters",
    "reveal:parameters.datablock",
    "parameters.datablock",
@@ -327,10 +361,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=offset",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
+   "tick:experiments[expt_s2].instrument.calib_d_to_tof_offset",
    "parameters.clearFilters",
    "reveal:parameters.datablock",
    "parameters.datablock",
@@ -427,21 +458,10 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak profile",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=gamma_0",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:expt_n2",
-   "reveal:parameters.category",
-   "parameters.category",
-   "choose:Peak profile",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=sigma",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
+   "tick:experiments[expt_n2].peak.broad_gauss_sigma_0",
+   "tick:experiments[expt_n2].peak.broad_gauss_sigma_1",
+   "tick:experiments[expt_n2].peak.broad_gauss_sigma_2",
+   "tick:experiments[expt_n2].peak.broad_lorentz_gamma_0",
    "parameters.clearFilters",
    "reveal:parameters.datablock",
    "parameters.datablock",
@@ -449,21 +469,10 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak profile",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=gamma_0",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:expt_s2",
-   "reveal:parameters.category",
-   "parameters.category",
-   "choose:Peak profile",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=sigma",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
+   "tick:experiments[expt_s2].peak.broad_gauss_sigma_0",
+   "tick:experiments[expt_s2].peak.broad_gauss_sigma_1",
+   "tick:experiments[expt_s2].peak.broad_gauss_sigma_2",
+   "tick:experiments[expt_s2].peak.broad_lorentz_gamma_0",
    "parameters.clearFilters"
   ],
   "highlights": [
@@ -502,8 +511,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic displacement",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
+   "tick:structures[ferrite].atom_sites[Fe].adp_iso",
    "parameters.clearFilters"
   ],
   "highlights": [

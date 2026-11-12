@@ -7,7 +7,7 @@
     ],
     "id": "home",
     "image": "home.webp",
-    "image_sha256": "5709a75ad8432a0767b16f34310284ba58c71476796fbd4a626a132e018a7fd9",
+    "image_sha256": "15b79eec475005f32dd1b0645bfcc193d53985a94e539c0cbfc8343f24318512",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -173,22 +173,6 @@
                 21,
                 35,
                 35
-            ]
-        },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": false,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
             ]
         },
         "appBar.tab.analysis": {
@@ -539,8 +523,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "5a28f6259705a33056c8a0242fd187a5b22fc3a598a2ef03f8bf7b5682641f9f",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "346b3851bd8731abb3dada341f31f4a0d6c31fb4bcd917b79300bf7d369a99b9",
+    "source_revision": "00b29514389e67e0b2ddc0994d95f4a678012f8b",
     "state": {
         "experiments": 0,
         "fit_outcome": "",

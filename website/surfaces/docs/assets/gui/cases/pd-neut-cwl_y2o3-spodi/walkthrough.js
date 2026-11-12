@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure y2o3 in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment spodi in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -169,6 +169,24 @@
   "fitPhase": "setup"
  },
  {
+  "id": "minimizer",
+  "page": "analysis",
+  "description": "Set the minimizer as the project does",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "fill:minimizer.maxIterations=1000"
+  ],
+  "highlights": [
+   "group.minimizer"
+  ],
+  "sidebar": "Extra",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "stage-1-free",
   "page": "analysis",
   "description": "Scale, 2θ zero and cell",
@@ -178,23 +196,15 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=calib",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.instrument.calib_twotheta_offset",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.linked_structures[y2o3].scale",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Cell",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:structure.cell.length_a"
   ],
   "highlights": [
    "group.parameters"
@@ -266,11 +276,9 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak profile",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=gauss",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:experiment.peak.broad_gauss_u",
+   "tick:experiment.peak.broad_gauss_v",
+   "tick:experiment.peak.broad_gauss_w"
   ],
   "highlights": [
    "group.parameters"

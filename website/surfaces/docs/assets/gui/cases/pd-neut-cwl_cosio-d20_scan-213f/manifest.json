@@ -46,6 +46,26 @@
         },
         {
             "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "appBar.tab.analysis",
             "scene": "fitting-mode-single"
         },
         {
@@ -70,23 +90,27 @@
         },
         {
             "action": "appBar.tab.analysis",
-            "scene": "nothing-free"
+            "scene": "minimizer"
         },
         {
-            "action": "sideBar.tab.basic",
-            "scene": "nothing-free"
+            "action": "sideBar.tab.extras",
+            "scene": "minimizer"
         },
         {
-            "action": "parameters.clearFilters",
-            "scene": "nothing-free"
+            "action": "reveal:group.minimizer",
+            "scene": "minimizer"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "nothing-free"
+            "action": "expand:group.minimizer",
+            "scene": "minimizer"
         },
         {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "nothing-free"
+            "action": "choose-token:minimizer.descent=fast_descent",
+            "scene": "minimizer"
+        },
+        {
+            "action": "fill:minimizer.maxIterations=1000",
+            "scene": "minimizer"
         },
         {
             "action": "appBar.tab.analysis",
@@ -109,23 +133,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=calib",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.instrument.calib_twotheta_offset",
             "scene": "stage-1-free"
         },
         {
@@ -141,15 +149,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.linked_structures[cosio].scale",
             "scene": "stage-1-free"
         },
         {
@@ -253,23 +253,15 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "tick:experiment.peak.broad_gauss_u",
             "scene": "stage-3-free"
         },
         {
-            "action": "fill:parameters.nameFilter=gauss",
+            "action": "tick:experiment.peak.broad_gauss_v",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.peak.broad_gauss_w",
             "scene": "stage-3-free"
         },
         {
@@ -469,11 +461,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "e638a682711bfa73ec025c480b2aa8933d5d71078b0611e6f824a08158d642b1",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "1e3e07e8d90b6d07f00a7dc60d9a89213637a3062ed3c3223c47091285f5db6e"
+            "sha256": "38509b411c3da6e12738df723bf64732d13c1c955a4a5b36ff1d464c3d99c0d8"
         },
         {
             "file": "inputs/experiments/d20_scan/01_001_497p3790.dat",
@@ -1411,6 +1403,15 @@
             "status": "captured"
         },
         {
+            "description": "Start with every parameter fixed",
+            "id": "nothing-free",
+            "image": "nothing-free.webp",
+            "metadata": "nothing-free.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
             "description": "Fit the template pattern alone first",
             "id": "fitting-mode-single",
             "image": "fitting-mode-single.webp",
@@ -1420,12 +1421,12 @@
             "status": "captured"
         },
         {
-            "description": "Start with every parameter fixed",
-            "id": "nothing-free",
-            "image": "nothing-free.webp",
-            "metadata": "nothing-free.json",
+            "description": "Set the minimizer as the project does",
+            "id": "minimizer",
+            "image": "minimizer.webp",
+            "metadata": "minimizer.json",
             "page": "analysis",
-            "sidebar": "Main",
+            "sidebar": "Extra",
             "status": "captured"
         },
         {
@@ -1520,8 +1521,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "6ceb2d1c2ae7720a86cf741e1106662c75235d9ed44dcc3f6531fc58a4aae227",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "4ed87aa2c1110f649f100f5d768ba3491d0786e7649fdc72014f7b7adec617a8",
+    "source_revision": "00b29514389e67e0b2ddc0994d95f4a678012f8b",
     "status": "complete",
     "workflow": "tutorial"
 }

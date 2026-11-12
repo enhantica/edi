@@ -25,7 +25,7 @@
             "scene": "project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-GsoXde/sc-neut-tof_taurine-senju",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-YtWgLZ/sc-neut-tof_taurine-senju",
             "scene": "project-details"
         },
         {
@@ -323,6 +323,26 @@
         {
             "action": "wait-online",
             "scene": "experiment-loaded-5"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
         },
         {
             "action": "appBar.tab.analysis",
@@ -1338,23 +1358,23 @@
         },
         {
             "action": "appBar.tab.analysis",
-            "scene": "nothing-free"
+            "scene": "reflection-cutoff"
         },
         {
-            "action": "sideBar.tab.basic",
-            "scene": "nothing-free"
+            "action": "sideBar.tab.extras",
+            "scene": "reflection-cutoff"
         },
         {
-            "action": "parameters.clearFilters",
-            "scene": "nothing-free"
+            "action": "reveal:group.refine_ls",
+            "scene": "reflection-cutoff"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "nothing-free"
+            "action": "expand:group.refine_ls",
+            "scene": "reflection-cutoff"
         },
         {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "nothing-free"
+            "action": "fill:refine_ls.thresholdSigma=3",
+            "scene": "reflection-cutoff"
         },
         {
             "action": "appBar.tab.structure",
@@ -1637,59 +1657,39 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "reveal:parameters.datablock",
             "scene": "stage-3-free"
         },
         {
-            "action": "fill:parameters.nameFilter=experiments[senju_1].extinction.coefficient_11",
+            "action": "parameters.datablock",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "choose:senju_1",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader.free",
+            "action": "reveal:parameters.category",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.clearFilters",
+            "action": "parameters.category",
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "choose:Extinction",
             "scene": "stage-3-free"
         },
         {
-            "action": "fill:parameters.nameFilter=experiments[senju_1].extinction.coefficient_22",
+            "action": "tick:experiments[senju_1].extinction.coefficient_11",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "tick:experiments[senju_1].extinction.coefficient_22",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=experiments[senju_1].extinction.coefficient_33",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:experiments[senju_1].extinction.coefficient_33",
             "scene": "stage-3-free"
         },
         {
@@ -1714,18 +1714,6 @@
         },
         {
             "action": "sideBar.tab.basic",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "choose:taurine",
             "scene": "stage-4-free"
         },
         {
@@ -1981,42 +1969,6 @@
             "scene": "stage-5-free"
         },
         {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "choose:taurine",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "reveal:parameters.category",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.category",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "choose:Atomic displacement",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-5-free"
-        },
-        {
             "action": "statusBar.fit.button",
             "scene": "stage-5-fit"
         },
@@ -2045,11 +1997,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "628441ba571e2a6b22ca271575dfe4cacb45fbf460022150fbdf74e4308a1294",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "34ef90f339d1c733b5bbe2403f4f2600b42088c523cda1eef7bc922d57344c3b"
+            "sha256": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469"
         },
         {
             "file": "inputs/experiments/senju_2.edi",
@@ -2159,7 +2111,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the structure taurine in the EasyDiffraction collection",
+            "description": "Find the structure",
             "id": "structure-web-0",
             "image": "structure-web-0.webp",
             "metadata": "structure-web-0.json",
@@ -2177,7 +2129,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the experiment senju_1 in the EasyDiffraction collection",
+            "description": "Find the experiment",
             "id": "experiment-web-0",
             "image": "experiment-web-0.webp",
             "metadata": "experiment-web-0.json",
@@ -2195,7 +2147,16 @@
             "status": "captured"
         },
         {
-            "description": "Add the relations the project starts with",
+            "description": "Start with every parameter fixed",
+            "id": "nothing-free",
+            "image": "nothing-free.webp",
+            "metadata": "nothing-free.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Add the relations",
             "id": "relations-start",
             "image": "relations-start.webp",
             "metadata": "relations-start.json",
@@ -2204,12 +2165,12 @@
             "status": "captured"
         },
         {
-            "description": "Start with every parameter fixed",
-            "id": "nothing-free",
-            "image": "nothing-free.webp",
-            "metadata": "nothing-free.json",
+            "description": "Reflection cutoff",
+            "id": "reflection-cutoff",
+            "image": "reflection-cutoff.webp",
+            "metadata": "reflection-cutoff.json",
             "page": "analysis",
-            "sidebar": "Main",
+            "sidebar": "Extra",
             "status": "captured"
         },
         {
@@ -2277,8 +2238,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "721bf7bae23d44d4c4f6a82afc7ddb53de86509a677570f3608007ce24467946",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "13f9f615fd4160fcbeffc40f2760a9d18d591de7dde9c48f56dd9150e842137a",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "status": "complete",
     "workflow": "tutorial"
 }

@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure lbco in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "structure-web-1",
   "page": "structure",
-  "description": "Find the structure si in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -129,7 +129,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment mcstas in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -182,33 +182,36 @@
   "fitPhase": "setup"
  },
  {
+  "id": "minimizer",
+  "page": "analysis",
+  "description": "Set the minimizer as the project does",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "fill:minimizer.maxIterations=1000"
+  ],
+  "highlights": [
+   "group.minimizer"
+  ],
+  "sidebar": "Extra",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "stage-1-free",
   "page": "analysis",
   "description": "Scales and cells",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:mcstas",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
    "parameters.freeHeader",
    "parameters.freeHeader.free",
    "parameters.clearFilters",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:lbco",
-   "reveal:parameters.category",
-   "parameters.category",
-   "choose:Cell",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:si",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Cell",
@@ -283,17 +286,12 @@
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:mcstas",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak broadening",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=sigma",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:experiment.peak.broad_gauss_sigma_0",
+   "tick:experiment.peak.broad_gauss_sigma_1",
+   "tick:experiment.peak.broad_gauss_sigma_2"
   ],
   "highlights": [
    "group.parameters"
@@ -325,19 +323,12 @@
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
-   "reveal:parameters.datablock",
-   "parameters.datablock",
-   "choose:mcstas",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak asymmetry",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=alpha_0",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
-   "parameters.clearFilters"
+   "tick:experiment.peak.decay_beta_0",
+   "tick:experiment.peak.decay_beta_1",
+   "tick:experiment.peak.rise_alpha_1"
   ],
   "highlights": [
    "group.parameters"
@@ -375,16 +366,8 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic displacement",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=[Ba]",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=[La]",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
+   "tick:structures[lbco].atom_sites[Co].adp_iso",
+   "tick:structures[lbco].atom_sites[O].adp_iso",
    "parameters.clearFilters"
   ],
   "highlights": [

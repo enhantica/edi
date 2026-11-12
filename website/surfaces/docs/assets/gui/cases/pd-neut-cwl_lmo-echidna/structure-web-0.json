@@ -1,5 +1,5 @@
 {
-    "description": "Find the structure lmo in the EasyDiffraction collection",
+    "description": "Find the structure",
     "fit_phase": "",
     "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
@@ -8,7 +8,7 @@
     ],
     "id": "structure-web-0",
     "image": "structure-web-0.webp",
-    "image_sha256": "5bfb378917282a44fd3908d6e061cc600eb22ad713be0043b503c725543db7a4",
+    "image_sha256": "47db30bf70d3cdf3ebc806a3b71321bcbdaca3dbde8c1b1d4d5fa0a2aa35db2c",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,17 +60,17 @@
         },
         "OnlineLoadDialog": {
             "bounds": [
-                150,
+                74,
                 215,
-                1180.5,
+                1332,
                 370
             ],
             "enabled": true,
             "label": "Load structure from web",
             "visible_bounds": [
-                150,
+                74,
                 215,
-                1180.5,
+                1332,
                 370
             ]
         },
@@ -206,22 +206,6 @@
                 21,
                 35,
                 35
-            ]
-        },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
             ]
         },
         "appBar.tab.analysis": {
@@ -376,10 +360,90 @@
                 194
             ]
         },
+        "group.structures.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
+            ]
+        },
         "label": {
             "ambiguous": true
         },
-        "mainArea.structure.tab.pattern": {
+        "mainArea.divider": {
+            "bounds": [
+                770,
+                77,
+                1,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                1,
+                681
+            ]
+        },
+        "mainArea.emptyState": {
+            "bounds": [
+                265,
+                389,
+                239.96875,
+                58
+            ],
+            "enabled": false,
+            "label": "No structure",
+            "visible_bounds": [
+                265,
+                389,
+                239.96875,
+                58
+            ]
+        },
+        "mainArea.tab.correlations": {
+            "bounds": [
+                126.28125,
+                77,
+                86.15625,
+                42
+            ],
+            "enabled": false,
+            "label": "Correlations",
+            "visible_bounds": [
+                126.28125,
+                77,
+                86.15625,
+                42
+            ]
+        },
+        "mainArea.tab.map": {
+            "bounds": [
+                273.015625,
+                77,
+                39.5625,
+                42
+            ],
+            "enabled": false,
+            "label": "Map",
+            "visible_bounds": [
+                273.015625,
+                77,
+                39.5625,
+                42
+            ]
+        },
+        "mainArea.tab.pattern": {
             "bounds": [
                 69.1875,
                 77,
@@ -395,14 +459,30 @@
                 42
             ]
         },
-        "mainArea.structure.tab.view": {
+        "mainArea.tab.stacked": {
+            "bounds": [
+                212.4375,
+                77,
+                60.578125,
+                42
+            ],
+            "enabled": false,
+            "label": "Stacked",
+            "visible_bounds": [
+                212.4375,
+                77,
+                60.578125,
+                42
+            ]
+        },
+        "mainArea.tab.structure": {
             "bounds": [
                 0,
                 77,
                 69.1875,
                 42
             ],
-            "enabled": true,
+            "enabled": false,
             "label": "Structure",
             "visible_bounds": [
                 0,
@@ -413,24 +493,24 @@
         },
         "onlineLoad.clear": {
             "bounds": [
-                367.75,
+                317,
                 374,
-                175.75,
+                201,
                 39
             ],
             "enabled": true,
             "icon": "eraser",
             "label": "Clear",
             "visible_bounds": [
-                367.75,
+                317,
                 374,
-                175.75,
+                201,
                 39
             ]
         },
         "onlineLoad.close": {
             "bounds": [
-                1253.3125,
+                1328.8125,
                 552,
                 49.1875,
                 19
@@ -439,15 +519,31 @@
             "icon": "times",
             "label": "Close",
             "visible_bounds": [
-                1253.3125,
+                1328.8125,
                 552,
                 49.1875,
                 19
             ]
         },
+        "onlineLoad.content": {
+            "bounds": [
+                102,
+                276,
+                1276,
+                295
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                102,
+                276,
+                1276,
+                295
+            ]
+        },
         "onlineLoad.count": {
             "bounds": [
-                178,
+                102,
                 427,
                 42.125,
                 19
@@ -455,7 +551,7 @@
             "enabled": true,
             "label": "1 entry",
             "visible_bounds": [
-                178,
+                102,
                 427,
                 42.125,
                 19
@@ -463,87 +559,87 @@
         },
         "onlineLoad.field.elements": {
             "bounds": [
-                557.5,
+                532,
                 325,
-                365.5,
+                416,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                557.5,
+                532,
                 325,
-                365.5,
+                416,
                 35
             ]
         },
         "onlineLoad.field.formula": {
             "bounds": [
-                178,
+                102,
                 325,
-                365.5,
+                416,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                178,
+                102,
                 325,
-                365.5,
+                416,
                 35
             ]
         },
         "onlineLoad.field.id": {
             "bounds": [
-                557.5,
+                532,
                 276,
-                365.5,
+                416,
                 35
             ],
             "enabled": true,
             "label": "pd-neut-cwl_lmo-echidna-lmo",
             "visible_bounds": [
-                557.5,
+                532,
                 276,
-                365.5,
+                416,
                 35
             ]
         },
         "onlineLoad.field.name": {
             "bounds": [
-                937,
+                962,
                 276,
-                365.5,
+                416,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                937,
+                962,
                 276,
-                365.5,
+                416,
                 35
             ]
         },
         "onlineLoad.field.space_group": {
             "bounds": [
-                937,
+                962,
                 325,
-                365.5,
+                416,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                937,
+                962,
                 325,
-                365.5,
+                416,
                 35
             ]
         },
         "onlineLoad.id.0": {
             "bounds": [
-                209,
+                133,
                 499,
                 197,
                 39
@@ -551,7 +647,7 @@
             "enabled": true,
             "label": "pd-neut-cwl_lmo-echidna-lmo",
             "visible_bounds": [
-                209,
+                133,
                 499,
                 197,
                 39
@@ -559,82 +655,82 @@
         },
         "onlineLoad.reference.0": {
             "bounds": [
-                892.001,
+                816.001,
                 499,
-                405,
+                556,
                 39
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                892.001,
+                816.001,
                 499,
-                405,
+                556,
                 39
             ]
         },
         "onlineLoad.results": {
             "bounds": [
-                178,
+                102,
                 460,
-                1124.5,
+                1276,
                 78
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                178,
+                102,
                 460,
-                1124.5,
+                1276,
                 78
             ]
         },
         "onlineLoad.row.0": {
             "bounds": [
-                178,
+                102,
                 499,
-                1124.5,
+                1276,
                 39
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                178,
+                102,
                 499,
-                1124.5,
+                1276,
                 39
             ]
         },
         "onlineLoad.search": {
             "bounds": [
-                178,
+                102,
                 374,
-                175.75,
+                201,
                 39
             ],
             "enabled": true,
             "icon": "search",
             "label": "Search",
             "visible_bounds": [
-                178,
+                102,
                 374,
-                175.75,
+                201,
                 39
             ]
         },
         "onlineLoad.source": {
             "bounds": [
-                178,
+                102,
                 276,
-                365.5,
+                416,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                178,
+                102,
                 276,
-                365.5,
+                416,
                 35
             ]
         },
@@ -661,7 +757,7 @@
                 45.125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Extra",
             "visible_bounds": [
                 813.515625,
@@ -677,7 +773,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -693,7 +789,7 @@
                 38.6875,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Text",
             "visible_bounds": [
                 858.640625,
@@ -840,203 +936,6 @@
                 14
             ]
         },
-        "structure.toolbar.a": {
-            "bounds": [
-                391.25,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                391.25,
-                133,
-                35,
-                35
-            ]
-        },
-        "structure.toolbar.axes": {
-            "bounds": [
-                303.75,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "location-arrow",
-            "label": "",
-            "visible_bounds": [
-                303.75,
-                133,
-                35,
-                35
-            ]
-        },
-        "structure.toolbar.b": {
-            "bounds": [
-                429.75,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                429.75,
-                133,
-                35,
-                35
-            ]
-        },
-        "structure.toolbar.c": {
-            "bounds": [
-                468.25,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                468.25,
-                133,
-                35,
-                35
-            ]
-        },
-        "structure.toolbar.cell": {
-            "bounds": [
-                265.25,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "vector-square",
-            "label": "",
-            "visible_bounds": [
-                265.25,
-                133,
-                35,
-                35
-            ]
-        },
-        "structure.toolbar.colors": {
-            "bounds": [
-                180,
-                133,
-                71.25,
-                35
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                180,
-                133,
-                71.25,
-                35
-            ]
-        },
-        "structure.toolbar.projection": {
-            "bounds": [
-                352.75,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "cube",
-            "label": "",
-            "visible_bounds": [
-                352.75,
-                133,
-                35,
-                35
-            ]
-        },
-        "structure.toolbar.reset": {
-            "bounds": [
-                506.75,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "home",
-            "label": "",
-            "visible_bounds": [
-                506.75,
-                133,
-                35,
-                35
-            ]
-        },
-        "structure.toolbar.save": {
-            "bounds": [
-                545.25,
-                133,
-                45.5,
-                35
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                545.25,
-                133,
-                45.5,
-                35
-            ]
-        },
-        "structure.toolbar.save.button": {
-            "bounds": [
-                555.75,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "camera",
-            "label": "",
-            "visible_bounds": [
-                555.75,
-                133,
-                35,
-                35
-            ]
-        },
-        "structure.view": {
-            "bounds": [
-                0,
-                119,
-                770,
-                639
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                0,
-                119,
-                770,
-                639
-            ]
-        },
-        "structure.view.labels": {
-            "bounds": [
-                0,
-                119,
-                770,
-                639
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                0,
-                119,
-                770,
-                639
-            ]
-        },
         "structures.create": {
             "bounds": [
                 1016,
@@ -1179,8 +1078,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "0aeada46401b2c74d51e972944c9fc5ded1d32d5f90c411a417abbf63aef9187",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "14ee70ca76d0ee90e5b3edbfbec12b57558d9a4abaa65fdc3d63a9a99e8c318f",
+    "source_revision": "00b29514389e67e0b2ddc0994d95f4a678012f8b",
     "state": {
         "experiments": 0,
         "fit_outcome": "",
@@ -1203,19 +1102,19 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.extras",
                 "label": "Extra"
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.text",
                 "label": "Text"
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

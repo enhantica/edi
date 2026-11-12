@@ -25,7 +25,7 @@
             "scene": "project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-ZCXJHI/pd-neut-cwl_cosio-d20_2k",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-ndhkGG/pd-neut-cwl_cosio-d20_2k",
             "scene": "project-details"
         },
         {
@@ -123,6 +123,26 @@
         {
             "action": "wait-online",
             "scene": "experiment-loaded-0"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
         },
         {
             "action": "appBar.tab.analysis",
@@ -326,23 +346,23 @@
         },
         {
             "action": "appBar.tab.analysis",
-            "scene": "nothing-free"
+            "scene": "minimizer"
         },
         {
-            "action": "sideBar.tab.basic",
-            "scene": "nothing-free"
+            "action": "sideBar.tab.extras",
+            "scene": "minimizer"
         },
         {
-            "action": "parameters.clearFilters",
-            "scene": "nothing-free"
+            "action": "reveal:group.minimizer",
+            "scene": "minimizer"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "nothing-free"
+            "action": "expand:group.minimizer",
+            "scene": "minimizer"
         },
         {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "nothing-free"
+            "action": "fill:minimizer.maxIterations=1000",
+            "scene": "minimizer"
         },
         {
             "action": "appBar.tab.analysis",
@@ -365,23 +385,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=calib",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.instrument.calib_twotheta_offset",
             "scene": "stage-1-free"
         },
         {
@@ -394,6 +398,22 @@
         },
         {
             "action": "choose:Linked structures",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "tick:experiment.linked_structures[cosio].scale",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:Magnetic moments",
             "scene": "stage-1-free"
         },
         {
@@ -430,6 +450,22 @@
         },
         {
             "action": "parameters.clearFilters",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "reveal:parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "parameters.category",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "choose:Magnetic form factors",
+            "scene": "stage-1-free"
+        },
+        {
+            "action": "tick:structure.magnetic_form_factor[Co].j2_coefficient",
             "scene": "stage-1-free"
         },
         {
@@ -505,7 +541,7 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "choose:Peak broadening",
+            "action": "choose:Atomic displacement",
             "scene": "stage-3-free"
         },
         {
@@ -517,220 +553,128 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=lorentz_x",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "stage-3-free"
-        },
-        {
             "action": "parameters.clearFilters",
             "scene": "stage-3-free"
         },
         {
-            "action": "statusBar.fit.button",
-            "scene": "stage-3-fit"
-        },
-        {
-            "action": "wait-fit",
-            "scene": "stage-3-fit"
-        },
-        {
-            "action": "close-fit-results",
-            "scene": "stage-3-fit"
-        },
-        {
-            "action": "appBar.tab.analysis",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "sideBar.tab.basic",
-            "scene": "stage-4-free"
-        },
-        {
             "action": "reveal:parameters.category",
-            "scene": "stage-4-free"
+            "scene": "stage-3-free"
         },
         {
             "action": "parameters.category",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "choose:Peak asymmetry",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "statusBar.fit.button",
-            "scene": "stage-4-fit"
-        },
-        {
-            "action": "wait-fit",
-            "scene": "stage-4-fit"
-        },
-        {
-            "action": "close-fit-results",
-            "scene": "stage-4-fit"
-        },
-        {
-            "action": "appBar.tab.analysis",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "sideBar.tab.basic",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "reveal:parameters.category",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.category",
-            "scene": "stage-5-free"
+            "scene": "stage-3-free"
         },
         {
             "action": "choose:Atomic coordinates",
-            "scene": "stage-5-free"
+            "scene": "stage-3-free"
         },
         {
             "action": "parameters.freeHeader",
-            "scene": "stage-5-free"
+            "scene": "stage-3-free"
         },
         {
             "action": "parameters.freeHeader.free",
-            "scene": "stage-5-free"
+            "scene": "stage-3-free"
         },
         {
             "action": "parameters.clearFilters",
-            "scene": "stage-5-free"
+            "scene": "stage-3-free"
         },
         {
             "action": "statusBar.fit.button",
-            "scene": "stage-5-fit"
+            "scene": "stage-3-fit"
         },
         {
             "action": "wait-fit",
-            "scene": "stage-5-fit"
+            "scene": "stage-3-fit"
         },
         {
             "action": "close-fit-results",
-            "scene": "stage-5-fit"
+            "scene": "stage-3-fit"
         },
         {
             "action": "appBar.tab.analysis",
-            "scene": "stage-6-free"
+            "scene": "stage-4-free"
         },
         {
             "action": "sideBar.tab.basic",
-            "scene": "stage-6-free"
+            "scene": "stage-4-free"
         },
         {
             "action": "reveal:parameters.category",
-            "scene": "stage-6-free"
+            "scene": "stage-4-free"
         },
         {
             "action": "parameters.category",
-            "scene": "stage-6-free"
+            "scene": "stage-4-free"
         },
         {
-            "action": "choose:Magnetic moments",
-            "scene": "stage-6-free"
+            "action": "choose:Peak broadening",
+            "scene": "stage-4-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-6-free"
+            "action": "tick:experiment.peak.broad_gauss_u",
+            "scene": "stage-4-free"
         },
         {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-6-free"
+            "action": "tick:experiment.peak.broad_gauss_v",
+            "scene": "stage-4-free"
         },
         {
-            "action": "parameters.clearFilters",
-            "scene": "stage-6-free"
+            "action": "tick:experiment.peak.broad_gauss_w",
+            "scene": "stage-4-free"
+        },
+        {
+            "action": "tick:experiment.peak.broad_lorentz_y",
+            "scene": "stage-4-free"
         },
         {
             "action": "statusBar.fit.button",
-            "scene": "stage-6-fit"
+            "scene": "stage-4-fit"
         },
         {
             "action": "wait-fit",
-            "scene": "stage-6-fit"
+            "scene": "stage-4-fit"
         },
         {
             "action": "close-fit-results",
-            "scene": "stage-6-fit"
+            "scene": "stage-4-fit"
         },
         {
             "action": "appBar.tab.analysis",
-            "scene": "stage-7-free"
+            "scene": "stage-5-free"
         },
         {
             "action": "sideBar.tab.basic",
-            "scene": "stage-7-free"
+            "scene": "stage-5-free"
         },
         {
             "action": "reveal:parameters.category",
-            "scene": "stage-7-free"
+            "scene": "stage-5-free"
         },
         {
             "action": "parameters.category",
-            "scene": "stage-7-free"
+            "scene": "stage-5-free"
         },
         {
-            "action": "choose:Magnetic form factors",
-            "scene": "stage-7-free"
+            "action": "choose:Peak asymmetry",
+            "scene": "stage-5-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-7-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=j2",
-            "scene": "stage-7-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-7-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-7-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-7-free"
+            "action": "tick:experiment.peak.asym_fcj_1",
+            "scene": "stage-5-free"
         },
         {
             "action": "statusBar.fit.button",
-            "scene": "stage-7-fit"
+            "scene": "stage-5-fit"
         },
         {
             "action": "wait-fit",
-            "scene": "stage-7-fit"
+            "scene": "stage-5-fit"
         },
         {
             "action": "close-fit-results",
-            "scene": "stage-7-fit"
+            "scene": "stage-5-fit"
         },
         {
             "action": "mainArea.tab.correlations",
@@ -749,11 +693,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "e638a682711bfa73ec025c480b2aa8933d5d71078b0611e6f824a08158d642b1",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "87aed0d15aea1ac6ce289611341709557ca4ef11344a3bab5fcc9c152ea3b1a4"
+            "sha256": "fc3edb415512ca536353f603603646ad83eddedd88d50a81019b54e4e165a616"
         }
     ],
     "error": "",
@@ -821,7 +765,7 @@
         },
         "structure": {
             "file": "inputs/structures/cosio.edi",
-            "sha256": "37983b2243d249186d235bc0eb2b3d5acf78edb0872ddbd0f5314ef39c252443"
+            "sha256": "4505d34c32bb8f576900ea17b478bdd8589bb5ca40f7e5d293db03ad71dcd034"
         }
     },
     "logical_size": [
@@ -839,7 +783,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the structure cosio in the EasyDiffraction collection",
+            "description": "Find the structure",
             "id": "structure-web-0",
             "image": "structure-web-0.webp",
             "metadata": "structure-web-0.json",
@@ -857,7 +801,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the experiment d20 in the EasyDiffraction collection",
+            "description": "Find the experiment",
             "id": "experiment-web-0",
             "image": "experiment-web-0.webp",
             "metadata": "experiment-web-0.json",
@@ -875,15 +819,6 @@
             "status": "captured"
         },
         {
-            "description": "Add the relations the project starts with",
-            "id": "relations-start",
-            "image": "relations-start.webp",
-            "metadata": "relations-start.json",
-            "page": "analysis",
-            "sidebar": "Extra",
-            "status": "captured"
-        },
-        {
             "description": "Start with every parameter fixed",
             "id": "nothing-free",
             "image": "nothing-free.webp",
@@ -893,7 +828,25 @@
             "status": "captured"
         },
         {
-            "description": "Fit: Scale, 2θ zero and cell",
+            "description": "Add the relations",
+            "id": "relations-start",
+            "image": "relations-start.webp",
+            "metadata": "relations-start.json",
+            "page": "analysis",
+            "sidebar": "Extra",
+            "status": "captured"
+        },
+        {
+            "description": "Set the minimizer as the project does",
+            "id": "minimizer",
+            "image": "minimizer.webp",
+            "metadata": "minimizer.json",
+            "page": "analysis",
+            "sidebar": "Extra",
+            "status": "captured"
+        },
+        {
+            "description": "Fit: Scale, 2θ zero, cell and magnetic moments",
             "id": "stage-1-fit",
             "image": "stage-1-fit.webp",
             "metadata": "stage-1-fit.json",
@@ -911,7 +864,7 @@
             "status": "captured"
         },
         {
-            "description": "Fit: Peak widths",
+            "description": "Fit: Atomic displacements and positions",
             "id": "stage-3-fit",
             "image": "stage-3-fit.webp",
             "metadata": "stage-3-fit.json",
@@ -920,7 +873,7 @@
             "status": "captured"
         },
         {
-            "description": "Fit: Peak asymmetry",
+            "description": "Fit: Peak widths",
             "id": "stage-4-fit",
             "image": "stage-4-fit.webp",
             "metadata": "stage-4-fit.json",
@@ -929,28 +882,10 @@
             "status": "captured"
         },
         {
-            "description": "Fit: Atom positions",
+            "description": "Fit: Peak asymmetry",
             "id": "stage-5-fit",
             "image": "stage-5-fit.webp",
             "metadata": "stage-5-fit.json",
-            "page": "analysis",
-            "sidebar": "Main",
-            "status": "captured"
-        },
-        {
-            "description": "Fit: Magnetic moments",
-            "id": "stage-6-fit",
-            "image": "stage-6-fit.webp",
-            "metadata": "stage-6-fit.json",
-            "page": "analysis",
-            "sidebar": "Main",
-            "status": "captured"
-        },
-        {
-            "description": "Fit: Magnetic form factor",
-            "id": "stage-7-fit",
-            "image": "stage-7-fit.webp",
-            "metadata": "stage-7-fit.json",
             "page": "analysis",
             "sidebar": "Main",
             "status": "captured"
@@ -975,8 +910,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "c98a000d55cfe73eed427598417795ded9b8c620094bf96305b129caf579c735",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "9500def06b836ecebe6a7a8b01adbd0ce558333af42247a3a989e6ba0351cd86",
+    "source_revision": "00b29514389e67e0b2ddc0994d95f4a678012f8b",
     "status": "complete",
     "workflow": "tutorial"
 }

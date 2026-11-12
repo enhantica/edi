@@ -25,7 +25,7 @@
             "scene": "project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-eisTxy/pd-neut-cwl_yalo3-al2o3-spodi",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-SwhPbD/pd-neut-cwl_yalo3-al2o3-spodi",
             "scene": "project-details"
         },
         {
@@ -194,22 +194,34 @@
         },
         {
             "action": "appBar.tab.analysis",
+            "scene": "minimizer"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "minimizer"
+        },
+        {
+            "action": "reveal:group.minimizer",
+            "scene": "minimizer"
+        },
+        {
+            "action": "expand:group.minimizer",
+            "scene": "minimizer"
+        },
+        {
+            "action": "choose-token:minimizer.stopRule=chi_square_change",
+            "scene": "minimizer"
+        },
+        {
+            "action": "fill:minimizer.maxIterations=1000",
+            "scene": "minimizer"
+        },
+        {
+            "action": "appBar.tab.analysis",
             "scene": "stage-1-free"
         },
         {
             "action": "sideBar.tab.basic",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:spodi",
             "scene": "stage-1-free"
         },
         {
@@ -225,35 +237,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=calib",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:spodi",
+            "action": "tick:experiment.instrument.calib_twotheta_offset",
             "scene": "stage-1-free"
         },
         {
@@ -278,54 +262,6 @@
         },
         {
             "action": "parameters.clearFilters",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:Al2O3",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.category",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.category",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:Cell",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:YAlO3",
             "scene": "stage-1-free"
         },
         {
@@ -417,18 +353,6 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "choose:spodi",
-            "scene": "stage-3-free"
-        },
-        {
             "action": "reveal:parameters.category",
             "scene": "stage-3-free"
         },
@@ -453,18 +377,6 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "choose:spodi",
-            "scene": "stage-3-free"
-        },
-        {
             "action": "reveal:parameters.category",
             "scene": "stage-3-free"
         },
@@ -477,23 +389,7 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=eta_0",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.peak.mixing_eta_0",
             "scene": "stage-3-free"
         },
         {
@@ -514,18 +410,6 @@
         },
         {
             "action": "sideBar.tab.basic",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "choose:spodi",
             "scene": "stage-4-free"
         },
         {
@@ -570,54 +454,6 @@
         },
         {
             "action": "sideBar.tab.basic",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "choose:Al2O3",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "reveal:parameters.category",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.category",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "choose:Atomic coordinates",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "choose:YAlO3",
             "scene": "stage-5-free"
         },
         {
@@ -717,11 +553,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "628441ba571e2a6b22ca271575dfe4cacb45fbf460022150fbdf74e4308a1294",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "17fe1208c16ef917e0754bd3d524cde0a1af7ea27f78e7e2660e3425459282e1"
+            "sha256": "50e933e87bb7733868748977a43db89b906e76cb55fde4dfbbdb0acec9975b26"
         },
         {
             "file": "inputs/structures/YAlO3.edi",
@@ -812,7 +648,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the structure YAlO3 in the EasyDiffraction collection",
+            "description": "Find the structure",
             "id": "structure-web-0",
             "image": "structure-web-0.webp",
             "metadata": "structure-web-0.json",
@@ -830,7 +666,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the experiment spodi in the EasyDiffraction collection",
+            "description": "Find the experiment",
             "id": "experiment-web-0",
             "image": "experiment-web-0.webp",
             "metadata": "experiment-web-0.json",
@@ -854,6 +690,15 @@
             "metadata": "nothing-free.json",
             "page": "analysis",
             "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Set the minimizer as the project does",
+            "id": "minimizer",
+            "image": "minimizer.webp",
+            "metadata": "minimizer.json",
+            "page": "analysis",
+            "sidebar": "Extra",
             "status": "captured"
         },
         {
@@ -930,8 +775,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "e61befb6365845d10c3518933b4512a6f7afa7dcc1477ae30f0b644e825eb359",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "71074e1260286f77362cb6843001e8f7341031cb2bc73a3e5c9034589d49ded6",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "status": "complete",
     "workflow": "tutorial"
 }

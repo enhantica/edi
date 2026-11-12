@@ -25,7 +25,7 @@
             "scene": "project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-zBCjbu/pd-neut-cwl_hs-hrpt",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-tnJsak/pd-neut-cwl_hs-hrpt",
             "scene": "project-details"
         },
         {
@@ -146,6 +146,26 @@
         },
         {
             "action": "appBar.tab.analysis",
+            "scene": "minimizer"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "minimizer"
+        },
+        {
+            "action": "reveal:group.minimizer",
+            "scene": "minimizer"
+        },
+        {
+            "action": "expand:group.minimizer",
+            "scene": "minimizer"
+        },
+        {
+            "action": "fill:minimizer.maxIterations=1000",
+            "scene": "minimizer"
+        },
+        {
+            "action": "appBar.tab.analysis",
             "scene": "stage-1-free"
         },
         {
@@ -165,23 +185,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=calib",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.instrument.calib_twotheta_offset",
             "scene": "stage-1-free"
         },
         {
@@ -197,15 +201,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.linked_structures[hs].scale",
             "scene": "stage-1-free"
         },
         {
@@ -333,23 +329,7 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=eta_0",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.peak.mixing_eta_0",
             "scene": "stage-3-free"
         },
         {
@@ -513,11 +493,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "e638a682711bfa73ec025c480b2aa8933d5d71078b0611e6f824a08158d642b1",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "17fe1208c16ef917e0754bd3d524cde0a1af7ea27f78e7e2660e3425459282e1"
+            "sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e"
         }
     ],
     "error": "",
@@ -602,7 +582,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the structure hs in the EasyDiffraction collection",
+            "description": "Find the structure",
             "id": "structure-web-0",
             "image": "structure-web-0.webp",
             "metadata": "structure-web-0.json",
@@ -620,7 +600,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the experiment hrpt in the EasyDiffraction collection",
+            "description": "Find the experiment",
             "id": "experiment-web-0",
             "image": "experiment-web-0.webp",
             "metadata": "experiment-web-0.json",
@@ -644,6 +624,15 @@
             "metadata": "nothing-free.json",
             "page": "analysis",
             "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Set the minimizer as the project does",
+            "id": "minimizer",
+            "image": "minimizer.webp",
+            "metadata": "minimizer.json",
+            "page": "analysis",
+            "sidebar": "Extra",
             "status": "captured"
         },
         {
@@ -720,8 +709,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "75435642b7b9365c4c4c9bf84fe9a09af0b77dabedc637cf4af8cfc96fd8544c",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "ab5f251feaf22540a33c33563fae712cfb2580ee179f693c7517d2a74e1c77fa",
+    "source_revision": "00b29514389e67e0b2ddc0994d95f4a678012f8b",
     "status": "complete",
     "workflow": "tutorial"
 }

@@ -25,7 +25,7 @@
             "scene": "project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-CcUpnP/pd-neut-tof_ferrite-austenite-beer",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-LGCqAe/pd-neut-tof_ferrite-austenite-beer",
             "scene": "project-details"
         },
         {
@@ -211,6 +211,26 @@
         {
             "action": "wait-online",
             "scene": "experiment-loaded-1"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.clearFilters",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader",
+            "scene": "nothing-free"
+        },
+        {
+            "action": "parameters.freeHeader.fixed",
+            "scene": "nothing-free"
         },
         {
             "action": "appBar.tab.analysis",
@@ -506,23 +526,47 @@
         },
         {
             "action": "appBar.tab.analysis",
-            "scene": "nothing-free"
+            "scene": "joint-weights"
         },
         {
-            "action": "sideBar.tab.basic",
-            "scene": "nothing-free"
+            "action": "sideBar.tab.extras",
+            "scene": "joint-weights"
         },
         {
-            "action": "parameters.clearFilters",
-            "scene": "nothing-free"
+            "action": "reveal:group.joint_fit",
+            "scene": "joint-weights"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "nothing-free"
+            "action": "expand:group.joint_fit",
+            "scene": "joint-weights"
         },
         {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "nothing-free"
+            "action": "fill:jointFit.weight.0=0.5",
+            "scene": "joint-weights"
+        },
+        {
+            "action": "fill:jointFit.weight.1=0.5",
+            "scene": "joint-weights"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "minimizer"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "minimizer"
+        },
+        {
+            "action": "reveal:group.minimizer",
+            "scene": "minimizer"
+        },
+        {
+            "action": "expand:group.minimizer",
+            "scene": "minimizer"
+        },
+        {
+            "action": "fill:minimizer.maxIterations=1000",
+            "scene": "minimizer"
         },
         {
             "action": "appBar.tab.analysis",
@@ -557,19 +601,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=offset",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:experiments[expt_n2].instrument.calib_d_to_tof_offset",
             "scene": "stage-1-free"
         },
         {
@@ -601,19 +633,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=offset",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:experiments[expt_s2].instrument.calib_d_to_tof_offset",
             "scene": "stage-1-free"
         },
         {
@@ -793,63 +813,19 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "tick:experiments[expt_n2].peak.broad_gauss_sigma_0",
             "scene": "stage-3-free"
         },
         {
-            "action": "fill:parameters.nameFilter=gamma_0",
+            "action": "tick:experiments[expt_n2].peak.broad_gauss_sigma_1",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "tick:experiments[expt_n2].peak.broad_gauss_sigma_2",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "choose:expt_n2",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "reveal:parameters.category",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.category",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "choose:Peak profile",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=sigma",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:experiments[expt_n2].peak.broad_lorentz_gamma_0",
             "scene": "stage-3-free"
         },
         {
@@ -881,63 +857,19 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "tick:experiments[expt_s2].peak.broad_gauss_sigma_0",
             "scene": "stage-3-free"
         },
         {
-            "action": "fill:parameters.nameFilter=gamma_0",
+            "action": "tick:experiments[expt_s2].peak.broad_gauss_sigma_1",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "tick:experiments[expt_s2].peak.broad_gauss_sigma_2",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "choose:expt_s2",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "reveal:parameters.category",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.category",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "choose:Peak profile",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=sigma",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:experiments[expt_s2].peak.broad_lorentz_gamma_0",
             "scene": "stage-3-free"
         },
         {
@@ -989,11 +921,7 @@
             "scene": "stage-4-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:structures[ferrite].atom_sites[Fe].adp_iso",
             "scene": "stage-4-free"
         },
         {
@@ -1029,11 +957,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "628441ba571e2a6b22ca271575dfe4cacb45fbf460022150fbdf74e4308a1294",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "ff0a4bbd939a2e98f06d37f78224f0c2afd2c759f2bc1f7be9b0ff0467fa47cd"
+            "sha256": "1c24e1088d024dfe9edfd8784920133ad4476690edf8d925284411ef3c65700b"
         },
         {
             "file": "inputs/experiments/expt_s2.edi",
@@ -1129,7 +1057,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the structure ferrite in the EasyDiffraction collection",
+            "description": "Find the structure",
             "id": "structure-web-0",
             "image": "structure-web-0.webp",
             "metadata": "structure-web-0.json",
@@ -1147,7 +1075,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the experiment expt_s2 in the EasyDiffraction collection",
+            "description": "Find the experiment",
             "id": "experiment-web-0",
             "image": "experiment-web-0.webp",
             "metadata": "experiment-web-0.json",
@@ -1165,7 +1093,16 @@
             "status": "captured"
         },
         {
-            "description": "Add the relations the project starts with",
+            "description": "Start with every parameter fixed",
+            "id": "nothing-free",
+            "image": "nothing-free.webp",
+            "metadata": "nothing-free.json",
+            "page": "analysis",
+            "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Add the relations",
             "id": "relations-start",
             "image": "relations-start.webp",
             "metadata": "relations-start.json",
@@ -1174,12 +1111,21 @@
             "status": "captured"
         },
         {
-            "description": "Start with every parameter fixed",
-            "id": "nothing-free",
-            "image": "nothing-free.webp",
-            "metadata": "nothing-free.json",
+            "description": "Weigh the experiments",
+            "id": "joint-weights",
+            "image": "joint-weights.webp",
+            "metadata": "joint-weights.json",
             "page": "analysis",
-            "sidebar": "Main",
+            "sidebar": "Extra",
+            "status": "captured"
+        },
+        {
+            "description": "Set the minimizer as the project does",
+            "id": "minimizer",
+            "image": "minimizer.webp",
+            "metadata": "minimizer.json",
+            "page": "analysis",
+            "sidebar": "Extra",
             "status": "captured"
         },
         {
@@ -1238,8 +1184,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "f626118bb0859623e44276d5a639b007ab5d9023f694482310ec022a58faf8e4",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "a1e201e3750e7511351b7baa67d057671a50afb0bcbe94152969d3e0815cfe98",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "status": "complete",
     "workflow": "tutorial"
 }

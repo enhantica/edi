@@ -7,7 +7,7 @@
     ],
     "id": "project-created",
     "image": "project-created.webp",
-    "image_sha256": "5b71c328ea9a2e64fcab2da32674ea288e622db7d67a01719fa977312c61859f",
+    "image_sha256": "583f02b68fdec8236f31e4909e3f2e4b53ebfda7a787a68a54522c68fa999fa1",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -191,22 +191,6 @@
                 35
             ]
         },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
-            ]
-        },
         "appBar.tab.analysis": {
             "bounds": [
                 812.359375,
@@ -359,6 +343,22 @@
                 42
             ]
         },
+        "group.examples.pin": {
+            "bounds": [
+                1433.2261363926236,
+                272.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                274,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.getStarted": {
             "bounds": [
                 770,
@@ -376,6 +376,22 @@
                 155
             ]
         },
+        "group.getStarted.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
+            ]
+        },
         "group.recentProjects": {
             "bounds": [
                 770,
@@ -390,6 +406,22 @@
                 770,
                 316,
                 710,
+                42
+            ]
+        },
+        "group.recentProjects.pin": {
+            "bounds": [
+                1433.2261363926236,
+                314.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                316,
+                44.54772721475251,
                 42
             ]
         },
@@ -469,7 +501,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-ViVYNf/pd-neut-tof_cecoal-polaris",
+            "label": "/tmp/EasyDiffraction-EYYxJE/pd-neut-tof_cecoal-polaris",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -599,7 +631,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -837,8 +869,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "02d223c7553eadd6b5065fe70a14f6293d16bab26cc75207ce1154719f9354dc",
-    "source_revision": "a4b6be4f6926cc6b17811f3263d7a34afff75a6d",
+    "script_sha256": "3bfec290cd76d50ba6e88952c944d4d7d0760523773b7ca2abbd50dd30bc7899",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "state": {
         "experiments": 0,
         "fit_outcome": "",
@@ -873,7 +905,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

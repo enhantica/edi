@@ -25,7 +25,7 @@
             "scene": "project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-IPyRtU/pd-neut-tof_lbco-si-mcstas",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-jSWKuH/pd-neut-tof_lbco-si-mcstas",
             "scene": "project-details"
         },
         {
@@ -194,22 +194,30 @@
         },
         {
             "action": "appBar.tab.analysis",
+            "scene": "minimizer"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "minimizer"
+        },
+        {
+            "action": "reveal:group.minimizer",
+            "scene": "minimizer"
+        },
+        {
+            "action": "expand:group.minimizer",
+            "scene": "minimizer"
+        },
+        {
+            "action": "fill:minimizer.maxIterations=1000",
+            "scene": "minimizer"
+        },
+        {
+            "action": "appBar.tab.analysis",
             "scene": "stage-1-free"
         },
         {
             "action": "sideBar.tab.basic",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:mcstas",
             "scene": "stage-1-free"
         },
         {
@@ -234,54 +242,6 @@
         },
         {
             "action": "parameters.clearFilters",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:lbco",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.category",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.category",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:Cell",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "choose:si",
             "scene": "stage-1-free"
         },
         {
@@ -373,18 +333,6 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "choose:mcstas",
-            "scene": "stage-3-free"
-        },
-        {
             "action": "reveal:parameters.category",
             "scene": "stage-3-free"
         },
@@ -397,23 +345,15 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "tick:experiment.peak.broad_gauss_sigma_0",
             "scene": "stage-3-free"
         },
         {
-            "action": "fill:parameters.nameFilter=sigma",
+            "action": "tick:experiment.peak.broad_gauss_sigma_1",
             "scene": "stage-3-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.peak.broad_gauss_sigma_2",
             "scene": "stage-3-free"
         },
         {
@@ -437,18 +377,6 @@
             "scene": "stage-4-free"
         },
         {
-            "action": "reveal:parameters.datablock",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.datablock",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "choose:mcstas",
-            "scene": "stage-4-free"
-        },
-        {
             "action": "reveal:parameters.category",
             "scene": "stage-4-free"
         },
@@ -461,31 +389,15 @@
             "scene": "stage-4-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "tick:experiment.peak.decay_beta_0",
             "scene": "stage-4-free"
         },
         {
-            "action": "parameters.freeHeader.free",
+            "action": "tick:experiment.peak.decay_beta_1",
             "scene": "stage-4-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=alpha_0",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.peak.rise_alpha_1",
             "scene": "stage-4-free"
         },
         {
@@ -533,43 +445,11 @@
             "scene": "stage-5-free"
         },
         {
-            "action": "parameters.freeHeader",
+            "action": "tick:structures[lbco].atom_sites[Co].adp_iso",
             "scene": "stage-5-free"
         },
         {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=[Ba]",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=[La]",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.freeHeader.fixed",
+            "action": "tick:structures[lbco].atom_sites[O].adp_iso",
             "scene": "stage-5-free"
         },
         {
@@ -605,11 +485,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "628441ba571e2a6b22ca271575dfe4cacb45fbf460022150fbdf74e4308a1294",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "17fe1208c16ef917e0754bd3d524cde0a1af7ea27f78e7e2660e3425459282e1"
+            "sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e"
         },
         {
             "file": "inputs/structures/si.edi",
@@ -700,7 +580,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the structure lbco in the EasyDiffraction collection",
+            "description": "Find the structure",
             "id": "structure-web-0",
             "image": "structure-web-0.webp",
             "metadata": "structure-web-0.json",
@@ -718,7 +598,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the experiment mcstas in the EasyDiffraction collection",
+            "description": "Find the experiment",
             "id": "experiment-web-0",
             "image": "experiment-web-0.webp",
             "metadata": "experiment-web-0.json",
@@ -742,6 +622,15 @@
             "metadata": "nothing-free.json",
             "page": "analysis",
             "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Set the minimizer as the project does",
+            "id": "minimizer",
+            "image": "minimizer.webp",
+            "metadata": "minimizer.json",
+            "page": "analysis",
+            "sidebar": "Extra",
             "status": "captured"
         },
         {
@@ -809,8 +698,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "fd670dbe935ebe1fdb217b0b8cceaa51af761f15b9904811c11dd9455053565e",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "18ef5923ba5cb3c2867ade0c6e8864750667b49db7e204891d96c32fa84082ed",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "status": "complete",
     "workflow": "tutorial"
 }

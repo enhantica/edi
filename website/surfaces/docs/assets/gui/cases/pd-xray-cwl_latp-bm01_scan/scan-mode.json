@@ -7,7 +7,7 @@
     ],
     "id": "scan-mode",
     "image": "scan-mode.webp",
-    "image_sha256": "d1369c9067a93c2a2a30cb060f4767ad5b8fbe968e49e2cebcca01f27517d799",
+    "image_sha256": "e416211f23e4c2365c3245f6e21973296c8ca6a3a87b154e5b8a1732c99ffa27",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -55,6 +55,22 @@
                 0,
                 1480,
                 800
+            ]
+        },
+        "Popup": {
+            "bounds": [
+                784,
+                210,
+                682,
+                105
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                784,
+                210,
+                682,
+                105
             ]
         },
         "SideBarGroup": {
@@ -189,22 +205,6 @@
                 21,
                 35,
                 35
-            ]
-        },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
             ]
         },
         "appBar.tab.analysis": {
@@ -484,7 +484,7 @@
                 69.46875
             ],
             "enabled": true,
-            "label": "<font color=\"#618ec8\">meas</font> − <font color=\"#ad1a6b\">calc</font>",
+            "label": "<font color=\"#618ec8\">meas</font> − <font color=\"#e5533d\">calc</font>",
             "visible_bounds": [
                 15.5,
                 612.265625,
@@ -516,7 +516,7 @@
                 88.09375
             ],
             "enabled": true,
-            "label": "<font color=\"#618ec8\">meas</font>, <font color=\"#ad1a6b\">calc</font>, <font color=\"#8a8a8a\">bkg</font>",
+            "label": "<font color=\"#618ec8\">meas</font>, <font color=\"#e5533d\">calc</font>, <font color=\"#8a8a8a\">bkg</font>",
             "visible_bounds": [
                 15.5,
                 331.953125,
@@ -838,6 +838,22 @@
                 42
             ]
         },
+        "group.alias.pin": {
+            "bounds": [
+                1433.2261363926236,
+                278.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                280,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.constraint": {
             "bounds": [
                 770,
@@ -855,6 +871,22 @@
                 42
             ]
         },
+        "group.constraint.pin": {
+            "bounds": [
+                1433.2261363926236,
+                320.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                322,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.fit_parameter": {
             "bounds": [
                 770,
@@ -864,11 +896,27 @@
             ],
             "enabled": true,
             "icon": "history",
-            "label": "Fit start values (56)",
+            "label": "Fit start values (60)",
             "visible_bounds": [
                 770,
                 406,
                 710,
+                42
+            ]
+        },
+        "group.fit_parameter.pin": {
+            "bounds": [
+                1433.2261363926236,
+                404.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                406,
+                44.54772721475251,
                 42
             ]
         },
@@ -889,6 +937,22 @@
                 42
             ]
         },
+        "group.fit_result.pin": {
+            "bounds": [
+                1433.2261363926236,
+                446.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                448,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.fit_result_bank": {
             "bounds": [
                 770,
@@ -903,6 +967,22 @@
                 770,
                 490,
                 710,
+                42
+            ]
+        },
+        "group.fit_result_bank.pin": {
+            "bounds": [
+                1433.2261363926236,
+                488.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                490,
+                44.54772721475251,
                 42
             ]
         },
@@ -923,6 +1003,22 @@
                 42
             ]
         },
+        "group.fit_result_phase.pin": {
+            "bounds": [
+                1433.2261363926236,
+                530.7261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                532,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.fitting_mode": {
             "bounds": [
                 770,
@@ -940,6 +1036,22 @@
                 119
             ]
         },
+        "group.fitting_mode.pin": {
+            "bounds": [
+                1433.2261363926236,
+                159.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                161,
+                44.54772721475251,
+                43.273863607376256
+            ]
+        },
         "group.minimizer": {
             "bounds": [
                 770,
@@ -954,6 +1066,22 @@
                 770,
                 119,
                 710,
+                42
+            ]
+        },
+        "group.minimizer.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
                 42
             ]
         },
@@ -974,88 +1102,24 @@
                 42
             ]
         },
+        "group.sequential_fit.pin": {
+            "bounds": [
+                1433.2261363926236,
+                362.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                364,
+                44.54772721475251,
+                42
+            ]
+        },
         "label": {
             "ambiguous": true
-        },
-        "mainArea.analysis.tab.correlations": {
-            "bounds": [
-                57.765625,
-                77,
-                86.15625,
-                42
-            ],
-            "enabled": true,
-            "label": "Correlations",
-            "visible_bounds": [
-                57.765625,
-                77,
-                86.15625,
-                42
-            ]
-        },
-        "mainArea.analysis.tab.evolution": {
-            "bounds": [
-                143.921875,
-                77,
-                70.828125,
-                42
-            ],
-            "enabled": true,
-            "label": "Evolution",
-            "visible_bounds": [
-                143.921875,
-                77,
-                70.828125,
-                42
-            ]
-        },
-        "mainArea.analysis.tab.fitting": {
-            "bounds": [
-                0,
-                77,
-                57.765625,
-                42
-            ],
-            "enabled": true,
-            "label": "Pattern",
-            "visible_bounds": [
-                0,
-                77,
-                57.765625,
-                42
-            ]
-        },
-        "mainArea.analysis.tab.map": {
-            "bounds": [
-                275.328125,
-                77,
-                39.5625,
-                42
-            ],
-            "enabled": true,
-            "label": "Map",
-            "visible_bounds": [
-                275.328125,
-                77,
-                39.5625,
-                42
-            ]
-        },
-        "mainArea.analysis.tab.stacked": {
-            "bounds": [
-                214.75,
-                77,
-                60.578125,
-                42
-            ],
-            "enabled": true,
-            "label": "Stacked",
-            "visible_bounds": [
-                214.75,
-                77,
-                60.578125,
-                42
-            ]
         },
         "mainArea.blocks": {
             "bounds": [
@@ -1121,6 +1185,118 @@
                 133,
                 35,
                 35
+            ]
+        },
+        "mainArea.divider": {
+            "bounds": [
+                770,
+                77,
+                1,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                1,
+                681
+            ]
+        },
+        "mainArea.tab.correlations": {
+            "bounds": [
+                126.640625,
+                77,
+                86.15625,
+                42
+            ],
+            "enabled": true,
+            "label": "Correlations",
+            "visible_bounds": [
+                126.640625,
+                77,
+                86.15625,
+                42
+            ]
+        },
+        "mainArea.tab.evolution": {
+            "bounds": [
+                312.9375,
+                77,
+                70.828125,
+                42
+            ],
+            "enabled": true,
+            "label": "Evolution",
+            "visible_bounds": [
+                312.9375,
+                77,
+                70.828125,
+                42
+            ]
+        },
+        "mainArea.tab.map": {
+            "bounds": [
+                273.375,
+                77,
+                39.5625,
+                42
+            ],
+            "enabled": true,
+            "label": "Map",
+            "visible_bounds": [
+                273.375,
+                77,
+                39.5625,
+                42
+            ]
+        },
+        "mainArea.tab.pattern": {
+            "bounds": [
+                68.875,
+                77,
+                57.765625,
+                42
+            ],
+            "enabled": true,
+            "label": "Pattern",
+            "visible_bounds": [
+                68.875,
+                77,
+                57.765625,
+                42
+            ]
+        },
+        "mainArea.tab.stacked": {
+            "bounds": [
+                212.796875,
+                77,
+                60.578125,
+                42
+            ],
+            "enabled": true,
+            "label": "Stacked",
+            "visible_bounds": [
+                212.796875,
+                77,
+                60.578125,
+                42
+            ]
+        },
+        "mainArea.tab.structure": {
+            "bounds": [
+                0,
+                77,
+                68.875,
+                42
+            ],
+            "enabled": true,
+            "label": "Structure",
+            "visible_bounds": [
+                0,
+                77,
+                68.875,
+                42
             ]
         },
         "sideBar.tab.basic": {
@@ -1239,17 +1415,17 @@
         },
         "statusBar.fit": {
             "bounds": [
-                879,
+                959,
                 769,
-                587,
+                507,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                879,
+                959,
                 769,
-                587,
+                507,
                 19
             ]
         },
@@ -1305,7 +1481,7 @@
         },
         "statusBar.fit.outcome": {
             "bounds": [
-                897,
+                977,
                 769,
                 82,
                 19
@@ -1314,7 +1490,7 @@
             "icon": "check-circle",
             "label": "",
             "visible_bounds": [
-                897,
+                977,
                 769,
                 82,
                 19
@@ -1342,17 +1518,17 @@
         },
         "statusBar.fit.values": {
             "bounds": [
-                996,
+                1076,
                 770,
-                331,
+                251,
                 18.109375
             ],
             "enabled": true,
-            "label": "1 0.89s 142050693.64→142050680.05",
+            "label": "1 1.3s 1.42×10⁸→1.42×10⁸",
             "visible_bounds": [
-                996,
+                1076,
                 770,
-                331,
+                251,
                 18.109375
             ]
         },
@@ -1519,8 +1695,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "896b904ecd2f2fd932bd8e63c23b29096cb44c624dd99ca4dba91503607c63e1",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "2c4debe0f6d083005d0f0cc15986ac101ed8c02f352849151aa6e9c431dedf6b",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

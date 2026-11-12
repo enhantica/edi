@@ -25,7 +25,7 @@
             "scene": "project-details"
         },
         {
-            "action": "fill:createProject.location=/tmp/EasyDiffraction-CZGuOl/pd-neut-tof_si-sepd",
+            "action": "fill:createProject.location=/tmp/EasyDiffraction-uDDPLW/pd-neut-tof_si-sepd",
             "scene": "project-details"
         },
         {
@@ -214,6 +214,26 @@
         },
         {
             "action": "appBar.tab.analysis",
+            "scene": "minimizer"
+        },
+        {
+            "action": "sideBar.tab.extras",
+            "scene": "minimizer"
+        },
+        {
+            "action": "reveal:group.minimizer",
+            "scene": "minimizer"
+        },
+        {
+            "action": "expand:group.minimizer",
+            "scene": "minimizer"
+        },
+        {
+            "action": "fill:minimizer.maxIterations=1000",
+            "scene": "minimizer"
+        },
+        {
+            "action": "appBar.tab.analysis",
             "scene": "stage-1-free"
         },
         {
@@ -233,23 +253,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=offset",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.instrument.calib_d_to_tof_offset",
             "scene": "stage-1-free"
         },
         {
@@ -265,15 +269,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.linked_structures[si].scale",
             "scene": "stage-1-free"
         },
         {
@@ -289,15 +285,7 @@
             "scene": "stage-1-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-1-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:structure.cell.length_a",
             "scene": "stage-1-free"
         },
         {
@@ -377,55 +365,11 @@
             "scene": "stage-3-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "tick:experiment.peak.broad_gauss_sigma_0",
             "scene": "stage-3-free"
         },
         {
-            "action": "fill:parameters.nameFilter=sigma_0",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.clearFilters",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "reveal:parameters.category",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.category",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "choose:Peak broadening",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=sigma_1",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-3-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.peak.broad_gauss_sigma_1",
             "scene": "stage-3-free"
         },
         {
@@ -461,23 +405,7 @@
             "scene": "stage-4-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "fill:parameters.nameFilter=gamma_1",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-4-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.peak.broad_lorentz_gamma_1",
             "scene": "stage-4-free"
         },
         {
@@ -513,15 +441,7 @@
             "scene": "stage-5-free"
         },
         {
-            "action": "parameters.freeHeader",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-5-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:structure.atom_sites[Si].adp_iso",
             "scene": "stage-5-free"
         },
         {
@@ -557,23 +477,11 @@
             "scene": "stage-6-free"
         },
         {
-            "action": "reveal:parameters.nameFilter",
+            "action": "tick:experiment.peak.decay_beta_0",
             "scene": "stage-6-free"
         },
         {
-            "action": "fill:parameters.nameFilter=beta",
-            "scene": "stage-6-free"
-        },
-        {
-            "action": "parameters.freeHeader",
-            "scene": "stage-6-free"
-        },
-        {
-            "action": "parameters.freeHeader.free",
-            "scene": "stage-6-free"
-        },
-        {
-            "action": "parameters.clearFilters",
+            "action": "tick:experiment.peak.decay_beta_1",
             "scene": "stage-6-free"
         },
         {
@@ -605,11 +513,11 @@
             "scene": "report"
         }
     ],
-    "binary_sha256": "c1e7a10aae1e189764a5c426c4ae9a395ab61fea21ee84d7b75b6f148fd15b4f",
+    "binary_sha256": "628441ba571e2a6b22ca271575dfe4cacb45fbf460022150fbdf74e4308a1294",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "17fe1208c16ef917e0754bd3d524cde0a1af7ea27f78e7e2660e3425459282e1"
+            "sha256": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e"
         }
     ],
     "error": "",
@@ -694,7 +602,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the structure si in the EasyDiffraction collection",
+            "description": "Find the structure",
             "id": "structure-web-0",
             "image": "structure-web-0.webp",
             "metadata": "structure-web-0.json",
@@ -712,7 +620,7 @@
             "status": "captured"
         },
         {
-            "description": "Find the experiment sepd in the EasyDiffraction collection",
+            "description": "Find the experiment",
             "id": "experiment-web-0",
             "image": "experiment-web-0.webp",
             "metadata": "experiment-web-0.json",
@@ -754,6 +662,15 @@
             "metadata": "nothing-free.json",
             "page": "analysis",
             "sidebar": "Main",
+            "status": "captured"
+        },
+        {
+            "description": "Set the minimizer as the project does",
+            "id": "minimizer",
+            "image": "minimizer.webp",
+            "metadata": "minimizer.json",
+            "page": "analysis",
+            "sidebar": "Extra",
             "status": "captured"
         },
         {
@@ -830,8 +747,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "d3730602ab1033b3aa4955d35bf8ad85c2f6efd7791eb666170f7f810a0a1507",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "717620cba0609e184662063d17df61416ea8d1e25b24a20408481107383286fc",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "status": "complete",
     "workflow": "tutorial"
 }

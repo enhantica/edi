@@ -8,7 +8,7 @@
     ],
     "id": "stage-2-fit",
     "image": "stage-2-fit.webp",
-    "image_sha256": "43a91f457042bf52e03c76c6bef18aeae877b65c2a666f61650aac0b0469a894",
+    "image_sha256": "e7b8b14f44828d86b1f7375838735b9f18728790e73e84f86e2f5f1292d8c239",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -190,22 +190,6 @@
                 21,
                 35,
                 35
-            ]
-        },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
             ]
         },
         "appBar.tab.analysis": {
@@ -498,7 +482,7 @@
                 69.46875
             ],
             "enabled": true,
-            "label": "<font color=\"#618ec8\">meas</font> − <font color=\"#ad1a6b\">calc</font>",
+            "label": "<font color=\"#618ec8\">meas</font> − <font color=\"#e5533d\">calc</font>",
             "visible_bounds": [
                 15.5,
                 601.765625,
@@ -530,7 +514,7 @@
                 88.09375
             ],
             "enabled": true,
-            "label": "<font color=\"#618ec8\">meas</font>, <font color=\"#ad1a6b\">calc</font>, <font color=\"#8a8a8a\">bkg</font>",
+            "label": "<font color=\"#618ec8\">meas</font>, <font color=\"#e5533d\">calc</font>, <font color=\"#8a8a8a\">bkg</font>",
             "visible_bounds": [
                 15.5,
                 342.453125,
@@ -822,70 +806,6 @@
         "label": {
             "ambiguous": true
         },
-        "mainArea.analysis.tab.correlations": {
-            "bounds": [
-                57.765625,
-                77,
-                86.15625,
-                42
-            ],
-            "enabled": true,
-            "label": "Correlations",
-            "visible_bounds": [
-                57.765625,
-                77,
-                86.15625,
-                42
-            ]
-        },
-        "mainArea.analysis.tab.fitting": {
-            "bounds": [
-                0,
-                77,
-                57.765625,
-                42
-            ],
-            "enabled": true,
-            "label": "Pattern",
-            "visible_bounds": [
-                0,
-                77,
-                57.765625,
-                42
-            ]
-        },
-        "mainArea.analysis.tab.map": {
-            "bounds": [
-                204.5,
-                77,
-                39.5625,
-                42
-            ],
-            "enabled": false,
-            "label": "Map",
-            "visible_bounds": [
-                204.5,
-                77,
-                39.5625,
-                42
-            ]
-        },
-        "mainArea.analysis.tab.stacked": {
-            "bounds": [
-                143.921875,
-                77,
-                60.578125,
-                42
-            ],
-            "enabled": false,
-            "label": "Stacked",
-            "visible_bounds": [
-                143.921875,
-                77,
-                60.578125,
-                42
-            ]
-        },
         "mainArea.blocks": {
             "bounds": [
                 28,
@@ -952,6 +872,102 @@
                 35
             ]
         },
+        "mainArea.divider": {
+            "bounds": [
+                770,
+                77,
+                1,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                1,
+                681
+            ]
+        },
+        "mainArea.tab.correlations": {
+            "bounds": [
+                126.640625,
+                77,
+                86.15625,
+                42
+            ],
+            "enabled": true,
+            "label": "Correlations",
+            "visible_bounds": [
+                126.640625,
+                77,
+                86.15625,
+                42
+            ]
+        },
+        "mainArea.tab.map": {
+            "bounds": [
+                273.375,
+                77,
+                39.5625,
+                42
+            ],
+            "enabled": false,
+            "label": "Map",
+            "visible_bounds": [
+                273.375,
+                77,
+                39.5625,
+                42
+            ]
+        },
+        "mainArea.tab.pattern": {
+            "bounds": [
+                68.875,
+                77,
+                57.765625,
+                42
+            ],
+            "enabled": true,
+            "label": "Pattern",
+            "visible_bounds": [
+                68.875,
+                77,
+                57.765625,
+                42
+            ]
+        },
+        "mainArea.tab.stacked": {
+            "bounds": [
+                212.796875,
+                77,
+                60.578125,
+                42
+            ],
+            "enabled": false,
+            "label": "Stacked",
+            "visible_bounds": [
+                212.796875,
+                77,
+                60.578125,
+                42
+            ]
+        },
+        "mainArea.tab.structure": {
+            "bounds": [
+                0,
+                77,
+                68.875,
+                42
+            ],
+            "enabled": true,
+            "label": "Structure",
+            "visible_bounds": [
+                0,
+                77,
+                68.875,
+                42
+            ]
+        },
         "parameters.category": {
             "bounds": [
                 1012.5,
@@ -966,6 +982,182 @@
                 133,
                 225,
                 35
+            ]
+        },
+        "parameters.change.0": {
+            "bounds": [
+                1231,
+                270,
+                67,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1231,
+                270,
+                67,
+                39
+            ]
+        },
+        "parameters.change.1": {
+            "bounds": [
+                1231,
+                309,
+                67,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1231,
+                309,
+                67,
+                39
+            ]
+        },
+        "parameters.change.10": {
+            "bounds": [
+                1231,
+                660,
+                67,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1231,
+                660,
+                67,
+                19.5
+            ]
+        },
+        "parameters.change.2": {
+            "bounds": [
+                1231,
+                348,
+                67,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1231,
+                348,
+                67,
+                39
+            ]
+        },
+        "parameters.change.3": {
+            "bounds": [
+                1231,
+                387,
+                67,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1231,
+                387,
+                67,
+                39
+            ]
+        },
+        "parameters.change.4": {
+            "bounds": [
+                1231,
+                426,
+                67,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1231,
+                426,
+                67,
+                39
+            ]
+        },
+        "parameters.change.5": {
+            "bounds": [
+                1231,
+                465,
+                67,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1231,
+                465,
+                67,
+                39
+            ]
+        },
+        "parameters.change.6": {
+            "bounds": [
+                1231,
+                504,
+                67,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1231,
+                504,
+                67,
+                39
+            ]
+        },
+        "parameters.change.7": {
+            "bounds": [
+                1231,
+                543,
+                67,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1231,
+                543,
+                67,
+                39
+            ]
+        },
+        "parameters.change.8": {
+            "bounds": [
+                1231,
+                582,
+                67,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1231,
+                582,
+                67,
+                39
+            ]
+        },
+        "parameters.change.9": {
+            "bounds": [
+                1231,
+                621,
+                67,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                1231,
+                621,
+                67,
+                39
             ]
         },
         "parameters.clearFilters": {
@@ -1213,7 +1405,7 @@
             "bounds": [
                 823,
                 270,
-                208,
+                112,
                 39
             ],
             "enabled": true,
@@ -1221,7 +1413,7 @@
             "visible_bounds": [
                 823,
                 270,
-                208,
+                112,
                 39
             ]
         },
@@ -1229,7 +1421,7 @@
             "bounds": [
                 823,
                 309,
-                208,
+                112,
                 39
             ],
             "enabled": true,
@@ -1237,7 +1429,7 @@
             "visible_bounds": [
                 823,
                 309,
-                208,
+                112,
                 39
             ]
         },
@@ -1245,7 +1437,7 @@
             "bounds": [
                 823,
                 660,
-                208,
+                112,
                 39
             ],
             "enabled": true,
@@ -1253,7 +1445,7 @@
             "visible_bounds": [
                 823,
                 660,
-                208,
+                112,
                 19.5
             ]
         },
@@ -1261,7 +1453,7 @@
             "bounds": [
                 823,
                 348,
-                208,
+                112,
                 39
             ],
             "enabled": true,
@@ -1269,7 +1461,7 @@
             "visible_bounds": [
                 823,
                 348,
-                208,
+                112,
                 39
             ]
         },
@@ -1277,7 +1469,7 @@
             "bounds": [
                 823,
                 387,
-                208,
+                112,
                 39
             ],
             "enabled": true,
@@ -1285,7 +1477,7 @@
             "visible_bounds": [
                 823,
                 387,
-                208,
+                112,
                 39
             ]
         },
@@ -1293,7 +1485,7 @@
             "bounds": [
                 823,
                 426,
-                208,
+                112,
                 39
             ],
             "enabled": true,
@@ -1301,7 +1493,7 @@
             "visible_bounds": [
                 823,
                 426,
-                208,
+                112,
                 39
             ]
         },
@@ -1309,7 +1501,7 @@
             "bounds": [
                 823,
                 465,
-                208,
+                112,
                 39
             ],
             "enabled": true,
@@ -1317,7 +1509,7 @@
             "visible_bounds": [
                 823,
                 465,
-                208,
+                112,
                 39
             ]
         },
@@ -1325,7 +1517,7 @@
             "bounds": [
                 823,
                 504,
-                208,
+                112,
                 39
             ],
             "enabled": true,
@@ -1333,7 +1525,7 @@
             "visible_bounds": [
                 823,
                 504,
-                208,
+                112,
                 39
             ]
         },
@@ -1341,7 +1533,7 @@
             "bounds": [
                 823,
                 543,
-                208,
+                112,
                 39
             ],
             "enabled": true,
@@ -1349,7 +1541,7 @@
             "visible_bounds": [
                 823,
                 543,
-                208,
+                112,
                 39
             ]
         },
@@ -1357,7 +1549,7 @@
             "bounds": [
                 823,
                 582,
-                208,
+                112,
                 39
             ],
             "enabled": true,
@@ -1365,7 +1557,7 @@
             "visible_bounds": [
                 823,
                 582,
-                208,
+                112,
                 39
             ]
         },
@@ -1373,7 +1565,7 @@
             "bounds": [
                 823,
                 621,
-                208,
+                112,
                 39
             ],
             "enabled": true,
@@ -1381,7 +1573,7 @@
             "visible_bounds": [
                 823,
                 621,
-                208,
+                112,
                 39
             ]
         },
@@ -1625,355 +1817,531 @@
                 35
             ]
         },
-        "parameters.su.0": {
+        "parameters.start.0": {
             "bounds": [
-                1158,
+                939,
                 270,
-                71,
+                70,
                 39
             ],
             "enabled": true,
-            "label": "0.00039",
+            "label": "5.4992",
             "visible_bounds": [
-                1158,
+                939,
                 270,
-                71,
+                70,
+                39
+            ]
+        },
+        "parameters.start.1": {
+            "bounds": [
+                939,
+                309,
+                70,
+                39
+            ],
+            "enabled": true,
+            "label": "7.7337",
+            "visible_bounds": [
+                939,
+                309,
+                70,
+                39
+            ]
+        },
+        "parameters.start.10": {
+            "bounds": [
+                939,
+                660,
+                70,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                939,
+                660,
+                70,
+                19.5
+            ]
+        },
+        "parameters.start.2": {
+            "bounds": [
+                939,
+                348,
+                70,
+                39
+            ],
+            "enabled": true,
+            "label": "5.4619",
+            "visible_bounds": [
+                939,
+                348,
+                70,
+                39
+            ]
+        },
+        "parameters.start.3": {
+            "bounds": [
+                939,
+                387,
+                70,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                939,
+                387,
+                70,
+                39
+            ]
+        },
+        "parameters.start.4": {
+            "bounds": [
+                939,
+                426,
+                70,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                939,
+                426,
+                70,
+                39
+            ]
+        },
+        "parameters.start.5": {
+            "bounds": [
+                939,
+                465,
+                70,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                939,
+                465,
+                70,
+                39
+            ]
+        },
+        "parameters.start.6": {
+            "bounds": [
+                939,
+                504,
+                70,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                939,
+                504,
+                70,
+                39
+            ]
+        },
+        "parameters.start.7": {
+            "bounds": [
+                939,
+                543,
+                70,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                939,
+                543,
+                70,
+                39
+            ]
+        },
+        "parameters.start.8": {
+            "bounds": [
+                939,
+                582,
+                70,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                939,
+                582,
+                70,
+                39
+            ]
+        },
+        "parameters.start.9": {
+            "bounds": [
+                939,
+                621,
+                70,
+                39
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                939,
+                621,
+                70,
+                39
+            ]
+        },
+        "parameters.su.0": {
+            "bounds": [
+                1149,
+                270,
+                78,
+                39
+            ],
+            "enabled": true,
+            "label": "3.9×10⁻⁴",
+            "visible_bounds": [
+                1149,
+                270,
+                78,
                 39
             ]
         },
         "parameters.su.1": {
             "bounds": [
-                1158,
+                1149,
                 309,
-                71,
+                78,
                 39
             ],
             "enabled": true,
-            "label": "0.00058",
+            "label": "5.8×10⁻⁴",
             "visible_bounds": [
-                1158,
+                1149,
                 309,
-                71,
+                78,
                 39
             ]
         },
         "parameters.su.10": {
             "bounds": [
-                1158,
+                1149,
                 660,
-                71,
+                78,
                 39
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1158,
+                1149,
                 660,
-                71,
+                78,
                 19.5
             ]
         },
         "parameters.su.2": {
             "bounds": [
-                1158,
+                1149,
                 348,
-                71,
+                78,
                 39
             ],
             "enabled": true,
-            "label": "0.00038",
+            "label": "3.8×10⁻⁴",
             "visible_bounds": [
-                1158,
+                1149,
                 348,
-                71,
+                78,
                 39
             ]
         },
         "parameters.su.3": {
             "bounds": [
-                1158,
+                1149,
                 387,
-                71,
+                78,
                 39
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1158,
+                1149,
                 387,
-                71,
+                78,
                 39
             ]
         },
         "parameters.su.4": {
             "bounds": [
-                1158,
+                1149,
                 426,
-                71,
+                78,
                 39
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1158,
+                1149,
                 426,
-                71,
+                78,
                 39
             ]
         },
         "parameters.su.5": {
             "bounds": [
-                1158,
+                1149,
                 465,
-                71,
+                78,
                 39
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1158,
+                1149,
                 465,
-                71,
+                78,
                 39
             ]
         },
         "parameters.su.6": {
             "bounds": [
-                1158,
+                1149,
                 504,
-                71,
+                78,
                 39
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1158,
+                1149,
                 504,
-                71,
+                78,
                 39
             ]
         },
         "parameters.su.7": {
             "bounds": [
-                1158,
+                1149,
                 543,
-                71,
+                78,
                 39
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1158,
+                1149,
                 543,
-                71,
+                78,
                 39
             ]
         },
         "parameters.su.8": {
             "bounds": [
-                1158,
+                1149,
                 582,
-                71,
+                78,
                 39
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1158,
+                1149,
                 582,
-                71,
+                78,
                 39
             ]
         },
         "parameters.su.9": {
             "bounds": [
-                1158,
+                1149,
                 621,
-                71,
+                78,
                 39
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1158,
+                1149,
                 621,
-                71,
+                78,
                 39
             ]
         },
         "parameters.value.0": {
             "bounds": [
-                1035,
+                1013,
                 270,
-                71,
+                88,
                 39
             ],
             "enabled": true,
-            "label": "5.49642",
+            "label": "5.49643",
             "visible_bounds": [
-                1035,
+                1013,
                 270,
-                71,
+                88,
                 39
             ]
         },
         "parameters.value.1": {
             "bounds": [
-                1035,
+                1013,
                 309,
-                71,
+                88,
                 39
             ],
             "enabled": true,
-            "label": "7.73511",
+            "label": "7.73508",
             "visible_bounds": [
-                1035,
+                1013,
                 309,
-                71,
+                88,
                 39
             ]
         },
         "parameters.value.10": {
             "bounds": [
-                1035,
+                1013,
                 660,
-                71,
+                88,
                 39
             ],
             "enabled": true,
             "label": "0.14286",
             "visible_bounds": [
-                1035,
+                1013,
                 660,
-                71,
+                88,
                 19.5
             ]
         },
         "parameters.value.2": {
             "bounds": [
-                1035,
+                1013,
                 348,
-                71,
+                88,
                 39
             ],
             "enabled": true,
-            "label": "5.46169",
+            "label": "5.46171",
             "visible_bounds": [
-                1035,
+                1013,
                 348,
-                71,
+                88,
                 39
             ]
         },
         "parameters.value.3": {
             "bounds": [
-                1035,
+                1013,
                 387,
-                71,
+                88,
                 39
             ],
             "enabled": true,
             "label": "0.48",
             "visible_bounds": [
-                1035,
+                1013,
                 387,
-                71,
+                88,
                 39
             ]
         },
         "parameters.value.4": {
             "bounds": [
-                1035,
+                1013,
                 426,
-                71,
+                88,
                 39
             ],
             "enabled": true,
             "label": "0",
             "visible_bounds": [
-                1035,
+                1013,
                 426,
-                71,
+                88,
                 39
             ]
         },
         "parameters.value.5": {
             "bounds": [
-                1035,
+                1013,
                 465,
-                71,
+                88,
                 39
             ],
             "enabled": true,
             "label": "1",
             "visible_bounds": [
-                1035,
+                1013,
                 465,
-                71,
+                88,
                 39
             ]
         },
         "parameters.value.6": {
             "bounds": [
-                1035,
+                1013,
                 504,
-                71,
+                88,
                 39
             ],
             "enabled": true,
             "label": "0.5",
             "visible_bounds": [
-                1035,
+                1013,
                 504,
-                71,
+                88,
                 39
             ]
         },
         "parameters.value.7": {
             "bounds": [
-                1035,
+                1013,
                 543,
-                71,
+                88,
                 39
             ],
             "enabled": true,
             "label": "0.14286",
             "visible_bounds": [
-                1035,
+                1013,
                 543,
-                71,
+                88,
                 39
             ]
         },
         "parameters.value.8": {
             "bounds": [
-                1035,
+                1013,
                 582,
-                71,
+                88,
                 39
             ],
             "enabled": true,
             "label": "0.5",
             "visible_bounds": [
-                1035,
+                1013,
                 582,
-                71,
+                88,
                 39
             ]
         },
         "parameters.value.9": {
             "bounds": [
-                1035,
+                1013,
                 621,
-                71,
+                88,
                 39
             ],
             "enabled": true,
             "label": "0.14286",
             "visible_bounds": [
-                1035,
+                1013,
                 621,
-                71,
+                88,
                 39
             ]
         },
@@ -2184,7 +2552,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "20 0.23s 77.50→7.57",
+            "label": "15 0.23s 77.50→7.57",
             "visible_bounds": [
                 1178,
                 770,
@@ -2355,8 +2723,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "d197466a2d026a4b3ff244151059a185bd8456d87b21bf3a9c734db6b7a817c0",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "c6f82757ec341f58271ff680f7dc20dd069683503e8d8f478cef2fea3fbc67cf",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

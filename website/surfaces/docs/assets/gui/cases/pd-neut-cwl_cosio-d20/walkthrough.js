@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure cosio in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment d20 in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -144,6 +144,25 @@
   "fitPhase": "setup"
  },
  {
+  "id": "minimizer",
+  "page": "analysis",
+  "description": "Set the minimizer as the project does",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "choose-token:minimizer.descent=fast_descent",
+   "fill:minimizer.maxIterations=1000"
+  ],
+  "highlights": [
+   "group.minimizer"
+  ],
+  "sidebar": "Extra",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "stage-1-free",
   "page": "analysis",
   "description": "Scale, 2θ zero and cell",
@@ -153,17 +172,11 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=calib",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.instrument.calib_twotheta_offset",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.linked_structures[cosio].scale",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Cell",
@@ -241,13 +254,10 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak profile",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=lorentz_x",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
-   "parameters.clearFilters"
+   "tick:experiment.peak.broad_gauss_u",
+   "tick:experiment.peak.broad_gauss_v",
+   "tick:experiment.peak.broad_gauss_w",
+   "tick:experiment.peak.broad_lorentz_y"
   ],
   "highlights": [
    "group.parameters"
@@ -319,9 +329,12 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic displacement",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:structure.atom_sites[Co1].adp_iso",
+   "tick:structure.atom_sites[Co2].adp_iso",
+   "tick:structure.atom_sites[O1].adp_iso",
+   "tick:structure.atom_sites[O2].adp_iso",
+   "tick:structure.atom_sites[O3].adp_iso",
+   "tick:structure.atom_sites[Si].adp_iso"
   ],
   "highlights": [
    "group.parameters"
@@ -361,11 +374,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic displacement",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=[Co2]",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
-   "parameters.clearFilters",
+   "untick:structure.atom_sites[Co2].adp_iso",
    "appBar.tab.analysis",
    "sideBar.tab.extras",
    "reveal:group.alias",
@@ -429,11 +438,9 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic occupancies",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=[O",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:structure.atom_sites[O1].occupancy",
+   "tick:structure.atom_sites[O2].occupancy",
+   "tick:structure.atom_sites[O3].occupancy"
   ],
   "highlights": [
    "group.parameters"

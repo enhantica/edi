@@ -8,7 +8,7 @@
     ],
     "id": "experiment-loaded-0",
     "image": "experiment-loaded-0.webp",
-    "image_sha256": "119a5918e32515e0f9dc4990d7f30e7ecd6741b9fa505f40e5ca04def9f8aaed",
+    "image_sha256": "09b53875bff26fa86573fd5246fad3a6ccc89c4901d575fd152254cedb6786f8",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -190,22 +190,6 @@
                 21,
                 35,
                 35
-            ]
-        },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
             ]
         },
         "appBar.tab.analysis": {
@@ -839,6 +823,22 @@
                 334
             ]
         },
+        "group.experiments.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
+            ]
+        },
         "group.extinction": {
             "bounds": [
                 770,
@@ -853,6 +853,22 @@
                 770,
                 495,
                 710,
+                42
+            ]
+        },
+        "group.extinction.pin": {
+            "bounds": [
+                1433.2261363926236,
+                493.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                495,
+                44.54772721475251,
                 42
             ]
         },
@@ -873,6 +889,22 @@
                 42
             ]
         },
+        "group.instrument.pin": {
+            "bounds": [
+                1433.2261363926236,
+                451.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                453,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.linked_structure": {
             "bounds": [
                 770,
@@ -887,6 +919,22 @@
                 770,
                 537,
                 710,
+                42
+            ]
+        },
+        "group.linked_structure.pin": {
+            "bounds": [
+                1433.2261363926236,
+                535.7261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                537,
+                44.54772721475251,
                 42
             ]
         },
@@ -959,25 +1007,41 @@
                 35
             ]
         },
-        "mainArea.experiment.tab.chart": {
+        "mainArea.divider": {
             "bounds": [
-                0,
+                770,
                 77,
-                57.765625,
-                42
+                1,
+                681
             ],
             "enabled": true,
-            "label": "Pattern",
+            "label": "",
             "visible_bounds": [
-                0,
+                770,
                 77,
-                57.765625,
+                1,
+                681
+            ]
+        },
+        "mainArea.tab.correlations": {
+            "bounds": [
+                126.640625,
+                77,
+                86.15625,
+                42
+            ],
+            "enabled": false,
+            "label": "Correlations",
+            "visible_bounds": [
+                126.640625,
+                77,
+                86.15625,
                 42
             ]
         },
-        "mainArea.experiment.tab.map": {
+        "mainArea.tab.map": {
             "bounds": [
-                118.34375,
+                273.375,
                 77,
                 39.5625,
                 42
@@ -985,15 +1049,31 @@
             "enabled": false,
             "label": "Map",
             "visible_bounds": [
-                118.34375,
+                273.375,
                 77,
                 39.5625,
                 42
             ]
         },
-        "mainArea.experiment.tab.stacked": {
+        "mainArea.tab.pattern": {
             "bounds": [
+                68.875,
+                77,
                 57.765625,
+                42
+            ],
+            "enabled": true,
+            "label": "Pattern",
+            "visible_bounds": [
+                68.875,
+                77,
+                57.765625,
+                42
+            ]
+        },
+        "mainArea.tab.stacked": {
+            "bounds": [
+                212.796875,
                 77,
                 60.578125,
                 42
@@ -1001,9 +1081,25 @@
             "enabled": false,
             "label": "Stacked",
             "visible_bounds": [
-                57.765625,
+                212.796875,
                 77,
                 60.578125,
+                42
+            ]
+        },
+        "mainArea.tab.structure": {
+            "bounds": [
+                0,
+                77,
+                68.875,
+                42
+            ],
+            "enabled": true,
+            "label": "Structure",
+            "visible_bounds": [
+                0,
+                77,
+                68.875,
                 42
             ]
         },
@@ -1445,8 +1541,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "36c16d995e53b6cd8b111a566637dfb9cc721a1508eb2ecaa1d8cd8de3c55832",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "6aee66392c038ce4fe3f25f62caed698a7660583ca06c97a221cd465e4fe0d1d",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure lam7o3 in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment p021 in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -125,9 +125,28 @@
   "capture": true
  },
  {
+  "id": "nothing-free",
+  "page": "analysis",
+  "description": "Start with every parameter fixed",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.basic",
+   "parameters.clearFilters",
+   "parameters.freeHeader",
+   "parameters.freeHeader.fixed"
+  ],
+  "highlights": [
+   "group.parameters",
+   "parameters.freeHeader"
+  ],
+  "sidebar": "Main",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "relations-start",
   "page": "analysis",
-  "description": "Add the relations the project starts with",
+  "description": "Add the relations",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.extras",
@@ -263,21 +282,21 @@
   "fitPhase": "setup"
  },
  {
-  "id": "nothing-free",
+  "id": "minimizer",
   "page": "analysis",
-  "description": "Start with every parameter fixed",
+  "description": "Set the minimizer as the project does",
   "actions": [
    "appBar.tab.analysis",
-   "sideBar.tab.basic",
-   "parameters.clearFilters",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed"
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "choose-token:minimizer.descent=fast_descent",
+   "fill:minimizer.maxIterations=1000"
   ],
   "highlights": [
-   "group.parameters",
-   "parameters.freeHeader"
+   "group.minimizer"
   ],
-  "sidebar": "Main",
+  "sidebar": "Extra",
   "capture": true,
   "fitPhase": "setup"
  },
@@ -291,17 +310,11 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=calib",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.instrument.calib_twotheta_offset",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.linked_structures[lam7o3].scale",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Cell",
@@ -379,13 +392,10 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak profile",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=lorentz_y",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
-   "parameters.clearFilters"
+   "tick:experiment.peak.broad_gauss_u",
+   "tick:experiment.peak.broad_gauss_v",
+   "tick:experiment.peak.broad_gauss_w",
+   "tick:experiment.peak.broad_lorentz_x"
   ],
   "highlights": [
    "group.parameters"
@@ -431,7 +441,13 @@
    "reveal:background.estimate",
    "background.estimate",
    "appBar.tab.analysis",
-   "sideBar.tab.basic"
+   "sideBar.tab.basic",
+   "reveal:parameters.category",
+   "parameters.category",
+   "choose:Background",
+   "parameters.freeHeader",
+   "parameters.freeHeader.free",
+   "parameters.clearFilters"
   ],
   "highlights": [
    "group.parameters"

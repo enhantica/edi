@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure cosio_300k in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "structure-web-1",
   "page": "structure",
-  "description": "Find the structure cosio_55k in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -129,7 +129,7 @@
  {
   "id": "structure-web-2",
   "page": "structure",
-  "description": "Find the structure cosio_2k5 in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -167,7 +167,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment heidi_300k in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -203,7 +203,7 @@
  {
   "id": "experiment-web-1",
   "page": "experiment",
-  "description": "Find the experiment heidi_55k in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -239,7 +239,7 @@
  {
   "id": "experiment-web-2",
   "page": "experiment",
-  "description": "Find the experiment heidi_2k5 in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -273,25 +273,6 @@
   "capture": true
  },
  {
-  "id": "fitting-mode-independent",
-  "page": "analysis",
-  "description": "Fit each experiment on its own",
-  "actions": [
-   "appBar.tab.analysis",
-   "sideBar.tab.extras",
-   "reveal:group.fitting_mode",
-   "expand:group.fitting_mode",
-   "fittingMode.type",
-   "choose-token:fittingMode.type=independent"
-  ],
-  "highlights": [
-   "group.fitting_mode"
-  ],
-  "sidebar": "Extra",
-  "capture": true,
-  "fitPhase": "setup"
- },
- {
   "id": "nothing-free",
   "page": "analysis",
   "description": "Start with every parameter fixed",
@@ -311,6 +292,25 @@
   "fitPhase": "setup"
  },
  {
+  "id": "fitting-mode-independent",
+  "page": "analysis",
+  "description": "Fit each experiment on its own",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.extras",
+   "reveal:group.fitting_mode",
+   "expand:group.fitting_mode",
+   "fittingMode.type",
+   "choose-token:fittingMode.type=independent"
+  ],
+  "highlights": [
+   "group.fitting_mode"
+  ],
+  "sidebar": "Extra",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "stage-1-free",
   "page": "analysis",
   "description": "300 K: scale",
@@ -323,8 +323,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
+   "tick:experiments[heidi_300k].linked_structures[cosio_300k].scale",
    "parameters.clearFilters"
   ],
   "highlights": [
@@ -483,8 +482,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
+   "tick:experiments[heidi_55k].linked_structures[cosio_55k].scale",
    "parameters.clearFilters"
   ],
   "highlights": [
@@ -643,8 +641,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
+   "tick:experiments[heidi_2k5].linked_structures[cosio_2k5].scale",
    "parameters.clearFilters"
   ],
   "highlights": [

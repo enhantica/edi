@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure pbso4 in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment lab in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -144,26 +144,69 @@
   "fitPhase": "setup"
  },
  {
+  "id": "minimizer",
+  "page": "analysis",
+  "description": "Set the minimizer as the project does",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.extras",
+   "reveal:group.minimizer",
+   "expand:group.minimizer",
+   "fill:minimizer.maxIterations=1000"
+  ],
+  "highlights": [
+   "group.minimizer"
+  ],
+  "sidebar": "Extra",
+  "capture": true,
+  "fitPhase": "setup"
+ },
+ {
   "id": "stage-1-free",
   "page": "analysis",
-  "description": "Scale, 2θ zero and cell",
+  "description": "Scale and 2θ zero",
   "actions": [
    "appBar.tab.analysis",
    "sideBar.tab.basic",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Instrument",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=calib",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.instrument.calib_twotheta_offset",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters",
+   "tick:experiment.linked_structures[pbso4].scale"
+  ],
+  "highlights": [
+   "group.parameters"
+  ],
+  "sidebar": "Main",
+  "capture": false,
+  "fitPhase": "setup"
+ },
+ {
+  "id": "stage-1-fit",
+  "page": "analysis",
+  "description": "Fit: Scale and 2θ zero",
+  "actions": [
+   "statusBar.fit.button",
+   "wait-fit",
+   "close-fit-results"
+  ],
+  "highlights": [
+   "workflow.analysis.mainContent",
+   "group.parameters"
+  ],
+  "sidebar": "Main",
+  "capture": true
+ },
+ {
+  "id": "stage-2-free",
+  "page": "analysis",
+  "description": "Cell",
+  "actions": [
+   "appBar.tab.analysis",
+   "sideBar.tab.basic",
    "reveal:parameters.category",
    "parameters.category",
    "choose:Cell",
@@ -179,9 +222,9 @@
   "fitPhase": "setup"
  },
  {
-  "id": "stage-1-fit",
+  "id": "stage-2-fit",
   "page": "analysis",
-  "description": "Fit: Scale, 2θ zero and cell",
+  "description": "Fit: Cell",
   "actions": [
    "statusBar.fit.button",
    "wait-fit",
@@ -195,7 +238,7 @@
   "capture": true
  },
  {
-  "id": "stage-2-free",
+  "id": "stage-3-free",
   "page": "analysis",
   "description": "Background",
   "actions": [
@@ -216,7 +259,7 @@
   "fitPhase": "setup"
  },
  {
-  "id": "stage-2-fit",
+  "id": "stage-3-fit",
   "page": "analysis",
   "description": "Fit: Background",
   "actions": [
@@ -232,7 +275,7 @@
   "capture": true
  },
  {
-  "id": "stage-3-free",
+  "id": "stage-4-free",
   "page": "analysis",
   "description": "Peak widths",
   "actions": [
@@ -247,11 +290,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak mixing",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=eta_0",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:experiment.peak.mixing_eta_0"
   ],
   "highlights": [
    "group.parameters"
@@ -261,7 +300,7 @@
   "fitPhase": "setup"
  },
  {
-  "id": "stage-3-fit",
+  "id": "stage-4-fit",
   "page": "analysis",
   "description": "Fit: Peak widths",
   "actions": [
@@ -277,7 +316,7 @@
   "capture": true
  },
  {
-  "id": "stage-4-free",
+  "id": "stage-5-free",
   "page": "analysis",
   "description": "Peak asymmetry",
   "actions": [
@@ -286,17 +325,8 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Peak asymmetry",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=a1",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
-   "reveal:parameters.nameFilter",
-   "fill:parameters.nameFilter=b1",
-   "parameters.freeHeader",
-   "parameters.freeHeader.fixed",
-   "parameters.clearFilters"
+   "tick:experiment.peak.asym_beba_a0",
+   "tick:experiment.peak.asym_beba_b0"
   ],
   "highlights": [
    "group.parameters"
@@ -306,7 +336,7 @@
   "fitPhase": "setup"
  },
  {
-  "id": "stage-4-fit",
+  "id": "stage-5-fit",
   "page": "analysis",
   "description": "Fit: Peak asymmetry",
   "actions": [
@@ -322,7 +352,7 @@
   "capture": true
  },
  {
-  "id": "stage-5-free",
+  "id": "stage-6-free",
   "page": "analysis",
   "description": "Lead and sulphur positions",
   "actions": [
@@ -331,9 +361,10 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic coordinates",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:structure.atom_sites[Pb].fract_x",
+   "tick:structure.atom_sites[Pb].fract_z",
+   "tick:structure.atom_sites[S].fract_x",
+   "tick:structure.atom_sites[S].fract_z"
   ],
   "highlights": [
    "group.parameters"
@@ -343,7 +374,7 @@
   "fitPhase": "setup"
  },
  {
-  "id": "stage-5-fit",
+  "id": "stage-6-fit",
   "page": "analysis",
   "description": "Fit: Lead and sulphur positions",
   "actions": [
@@ -359,7 +390,7 @@
   "capture": true
  },
  {
-  "id": "stage-6-free",
+  "id": "stage-7-free",
   "page": "analysis",
   "description": "Oxygen positions",
   "actions": [
@@ -380,7 +411,7 @@
   "fitPhase": "setup"
  },
  {
-  "id": "stage-6-fit",
+  "id": "stage-7-fit",
   "page": "analysis",
   "description": "Fit: Oxygen positions",
   "actions": [
@@ -396,7 +427,7 @@
   "capture": true
  },
  {
-  "id": "stage-7-free",
+  "id": "stage-8-free",
   "page": "analysis",
   "description": "Displacements",
   "actions": [
@@ -417,7 +448,7 @@
   "fitPhase": "setup"
  },
  {
-  "id": "stage-7-fit",
+  "id": "stage-8-fit",
   "page": "analysis",
   "description": "Fit: Displacements",
   "actions": [
