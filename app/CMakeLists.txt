@@ -522,6 +522,10 @@ add_dependencies(edi_app_tests edi_app_build_commit)
 # The app names it too: its test observers report the build they observe.
 target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_app edi_app_build_commit)
+if(TARGET edi_scan_save_tests)
+    target_sources(edi_scan_save_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+    add_dependencies(edi_scan_save_tests edi_app_build_commit)
+endif()
 # The benchmarks link the app module, whose assistant code names the build as well.
 foreach(bench edi_app_chart_bench edi_app_scan_bench)
     target_sources(${bench} PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
