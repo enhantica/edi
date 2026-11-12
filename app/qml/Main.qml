@@ -1227,7 +1227,6 @@ EaComponents.ApplicationWindow {
     Connections {
         target: Session.project
         function onRefused(message) {
-            console.warn("DEBUG-REFUSED project:", message, new Error().stack);
             ApplicationInfo.windowFailure(2, message);
         }
     }
