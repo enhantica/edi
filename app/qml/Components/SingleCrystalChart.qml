@@ -93,6 +93,49 @@ Item {
     function niceStep(span, count) {
         return ApplicationInfo.chartNiceStep(span, count);
     }
+    // An axis' ticks, every whole step from 0 within its range, and how its labels write them: the pattern chart's
+    // rule, one power of ten for the axis when its largest tick is outside 0.001 to 1000 (NumberText.axisFormat).
+    function ticks(low, high, step) {
+        const out = [];
+        if (!(step > 0) || !(high > low))
+            return out;
+        for (let i = Math.ceil(low / step - 1e-9); out.length < 64 && i * step <= high + step * 1e-9; ++i)
+            out.push(i * step);
+        return out;
+    }
+    readonly property var xFormat: NumberText.axisFormat(ticks(axisX.min, axisX.max, axisX.tickInterval), true)
+    readonly property var yFormat: NumberText.axisFormat(ticks(axisY.min, axisY.max, axisY.tickInterval), true)
+    // A tick label in the app's label font, written by that format from the tick Qt Graphs printed with all its
+    // decimals.
+    component TickLabel: Item {
+        id: tick
+        property string text: ""
+        property var format: null
+        property int horizontalAlignment: Text.AlignHCenter
+        implicitWidth: tickText.implicitWidth
+        implicitHeight: tickText.implicitHeight
+        EaElements.Label {
+            id: tickText
+            anchors.fill: parent
+            horizontalAlignment: tick.horizontalAlignment
+            verticalAlignment: Text.AlignVCenter
+            color: chart.colors.chartLabels
+            text: tick.format !== null && isFinite(parseFloat(tick.text)) ? NumberText.axisTick(parseFloat(tick.text), tick.format) : tick.text
+        }
+    }
+    Component {
+        id: xTickLabel
+        TickLabel {
+            format: chart.xFormat
+        }
+    }
+    Component {
+        id: yTickLabel
+        TickLabel {
+            format: chart.yFormat
+            horizontalAlignment: Text.AlignRight
+        }
+    }
 
     // The points the fit uses (`want` true) or leaves out (false) of three parallel lists, by the model's `used`;
     // a report's points are all used.
@@ -232,6 +275,8 @@ Item {
         }
         axisX: ValueAxis {
             id: axisX
+            labelDecimals: 6
+            labelDelegate: xTickLabel
             min: chart.xLow
             max: chart.xHigh
             tickInterval: chart.niceStep(max - min, chart.xTicks)
@@ -242,6 +287,8 @@ Item {
         }
         axisY: ValueAxis {
             id: axisY
+            labelDecimals: 6
+            labelDelegate: yTickLabel
             min: chart.yLow
             max: chart.yHigh
             tickInterval: chart.niceStep(max - min, chart.yTicks)

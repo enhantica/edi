@@ -49,6 +49,9 @@ Column {
     function derivedText(value, su, crystal) {
         if (typeof value !== "number" || !isFinite(value))
             return "";
+        // Outside 0.001 to 1000 the rule for numbers writes it with a power of ten, its s.u. on hover.
+        if (value !== 0 && (Math.abs(value) < 0.001 || Math.abs(value) >= 1000))
+            return NumberText.parameter(value, su);
         const text = NumberText.ruled(value, su);
         if (text)
             return `${text.value}(${text.bracket})`;
