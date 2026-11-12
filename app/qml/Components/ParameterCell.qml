@@ -103,7 +103,7 @@ EaComponents.ListViewParameter {
     clip: true
 
     // The value as edited: the same text, so a cell left as it was changes nothing.
-    readonly property string editText: written ? item.fileValue : item !== null ? NumberText.full(item.value) : value
+    readonly property string editText: written ? item.fileEditValue : item !== null ? NumberText.full(item.value) : value
 
     onActiveFocusChanged: ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterCellEditor)
     onTextChanged: ApplicationInfo.editorTextChanged()

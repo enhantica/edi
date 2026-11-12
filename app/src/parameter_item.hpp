@@ -71,6 +71,8 @@ class ParameterItem : public QObject {
     // (edi::file_text): what a field, the slider and the Analysis table show. The s.u. is empty without one.
     Q_PROPERTY(QString fileValue READ fileValue NOTIFY fileValueChanged)
     Q_PROPERTY(QString fileSu READ fileSu NOTIFY fileSuChanged)
+    // The file's value as typed into a field to edit it: plain digits, never a power of ten written as ×10.
+    Q_PROPERTY(QString fileEditValue READ fileEditValue NOTIFY fileValueChanged)
     // The value before the last fit and how far the fit moved it, as the report's fit table writes them (start and
     // change, owner record 2026-11-10); both empty before a fit.
     Q_PROPERTY(QString startText READ startText NOTIFY startTextChanged)
@@ -147,6 +149,7 @@ class ParameterItem : public QObject {
     int phaseIndex() const { return phase_index_; }
     QString fileValue() const { return file_value_; }
     QString fileSu() const { return file_su_; }
+    QString fileEditValue() const { return file_edit_value_; }
     QString startText() const { return start_text_; }
     QString changeText() const { return change_text_; }
     int changeDirection() const { return change_direction_; }
@@ -218,7 +221,7 @@ class ParameterItem : public QObject {
     QString domain_warning_;
     QString last_error_;
     QString path_, uid_, block_kind_, block_name_, category_, row_label_, name_, display_name_, display_units_,
-        short_name_, category_icon_, element_symbol_, variant_, file_value_, file_su_,
+        short_name_, category_icon_, element_symbol_, variant_, file_value_, file_su_, file_edit_value_,
         start_text_, change_text_, su_reason_;
     std::string su_rule_;
     bool exact_ = false;

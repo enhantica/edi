@@ -103,9 +103,10 @@ std::string header(std::string_view uid, std::string_view variant = {}) {
     return units.empty() ? label(uid, variant) : label(uid, variant) + " (" + units + ")";
 }
 
-// A number of item `uid`, by its dictionary format for `variant`; an empty cell for one that is not finite.
+// A number of item `uid`, by its dictionary format for `variant` and the rule for numbers (shown_text); an empty cell
+// for one that is not finite.
 std::string formatted(std::string_view uid, double value, std::string_view variant = {}) {
-    return std::isfinite(value) ? display_text(uid, value, variant) : std::string();
+    return std::isfinite(value) ? shown_text(uid, value, variant) : std::string();
 }
 
 void add_fields(std::vector<ReportRow>& rows, const std::vector<CategoryField>& fields, const std::string& rule) {

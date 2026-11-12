@@ -439,7 +439,7 @@ QString SingleCrystalReflectionModel::hoverText(int row, bool squared) const {
     }
     if (at < used_.size() && !used_.at(at)) {
         lines.append(QStringLiteral("left out of the fit: F² at most %1 s.u.")
-                         .arg(QString::fromStdString(edi::display_text("refine_ls.threshold_sigma", fit_cutoff_))));
+                         .arg(QString::fromStdString(edi::shown_text("refine_ls.threshold_sigma", fit_cutoff_))));
     }
     return lines.join(QStringLiteral("<br>"));
 }

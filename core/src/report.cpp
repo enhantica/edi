@@ -239,10 +239,75 @@ std::string shifted(const std::string& text, int shift) {
     return sign + left + (right.empty() ? std::string() : "." + right);
 }
 
+// "6.33e-3" as the decimal "0.00633", keeping its digits; any other text is returned as it is.
+std::string expanded(const std::string& text) {
+    const std::size_t e = text.find_first_of("eE");
+    if (e == std::string::npos || e == 0) return text;
+    const std::string mantissa = text.substr(0, e);
+    const std::string power = text.substr(e + 1);
+    const std::size_t start = !mantissa.empty() && (mantissa[0] == '-' || mantissa[0] == '+') ? 1 : 0;
+    if (start >= mantissa.size() || mantissa.find_first_not_of("0123456789.", start) != std::string::npos) return text;
+    const std::size_t digits = !power.empty() && (power[0] == '-' || power[0] == '+') ? 1 : 0;
+    if (digits >= power.size() || power.find_first_not_of("0123456789", digits) != std::string::npos) return text;
+    return shifted(mantissa, -std::stoi(power));
+}
+
+// A decimal text without the zeros that end its fraction ("0.500" is "0.5").
+std::string trimmed(std::string text) {
+    if (text.find('.') == std::string::npos) return text;
+    text.erase(text.find_last_not_of('0') + 1);
+    if (!text.empty() && text.back() == '.') text.pop_back();
+    return text;
+}
+
+// A decimal text cut to `decimals` places, for digits known to be zeros.
+std::string cut(const std::string& text, int decimals) {
+    const std::size_t dot = text.find('.');
+    if (dot == std::string::npos) return text;
+    return decimals <= 0 ? text.substr(0, dot) : text.substr(0, std::min(text.size(), dot + 1 + decimals));
+}
+
+// The power of ten of the last digit a whole-number s.u. text keeps: its last nonzero digit, or one place lower for an
+// s.u. starting with 1 (written with two digits). Nothing for a text with a fraction.
+std::optional<int> whole_su_place(const std::string& su) {
+    if (su.empty() || su.find('.') != std::string::npos) return std::nullopt;
+    const std::size_t first = su.find_first_of("123456789");
+    if (first == std::string::npos) return std::nullopt;
+    const std::size_t last = su.find_last_of("123456789");
+    int place = static_cast<int>(su.size() - 1 - last);
+    if (su[first] == '1' && first == last) place = std::max(0, place - 1);
+    return place;
+}
+
+// An s.u. shown alone: a decimal inside the range, else in its own power of ten with its own digits ("0.00025" is
+// "2.5×10⁻⁴", "1600" is "1.6×10³").
+std::string su_alone(const std::string& su, bool display) {
+    char* end = nullptr;
+    const double number = su.empty() ? 0.0 : std::strtod(su.c_str(), &end);
+    if (su.empty() || end == su.c_str() || *end != '\0' || number == 0.0 || in_decimal_range(number)) return su;
+    const int power = power_of(number);
+    std::string mantissa = shifted(su, power);
+    if (const std::optional<int> place = whole_su_place(su); place.has_value()) mantissa = cut(mantissa, power - *place);
+    return mantissa + exponent_text(power, display);
+}
+
 }  // namespace
 
 std::string table_number(double value, const std::string& decimal, bool display) {
-    if (in_decimal_range(value)) return decimal;
+    if (!std::isfinite(value)) return decimal;
+    if (in_decimal_range(value)) {
+        const bool exponent = decimal.find_first_of("eE") != std::string::npos;
+        std::string text = exponent ? trimmed(expanded(decimal)) : decimal;
+        // A format that rounds a nonzero value to zero ("0.00") shows its first three significant digits instead.
+        char* end = nullptr;
+        const double shown = text.empty() ? 0.0 : std::strtod(text.c_str(), &end);
+        if (value != 0.0 && (text.empty() || shown == 0.0)) {
+            char digits[32];
+            std::snprintf(digits, sizeof(digits), "%.3g", value);
+            text = trimmed(expanded(digits));
+        }
+        return text;
+    }
     const int power = power_of(value);
     char mantissa[32];
     std::snprintf(mantissa, sizeof(mantissa), "%.2f", value / std::pow(10.0, power));
@@ -255,20 +320,31 @@ std::string table_number(double value, const std::string& decimal, bool display)
 
 std::pair<std::string, std::string> table_value_su(double value, const std::string& value_text,
                                                    const std::string& su_text, bool display) {
-    if (in_decimal_range(value) || value_text.find_first_of("eE") != std::string::npos) return {value_text, su_text};
+    if (!std::isfinite(value)) return {value_text, su_text};
+    const std::string number = expanded(value_text), su = expanded(su_text);
+    if (in_decimal_range(value)) return {number, display ? su_alone(su, display) : su};
     const int power = power_of(value);
     const std::string exponent = exponent_text(power, display);
-    return {shifted(value_text, power) + exponent, su_text.empty() ? su_text : shifted(su_text, power) + exponent};
+    std::string shown = shifted(number, power);
+    std::string shown_su = su.empty() ? su : shifted(su, power);
+    // A whole-number pair keeps the digits down to the s.u.'s last one, not the zeros after it.
+    if (const std::optional<int> place = whole_su_place(su);
+        place.has_value() && number.find('.') == std::string::npos) {
+        shown = cut(shown, power - *place);
+        shown_su = cut(shown_su, power - *place);
+    }
+    return {shown + exponent, shown_su.empty() ? shown_su : shown_su + exponent};
 }
 
 std::string table_text(double value, const std::string& text, bool display) {
-    if (in_decimal_range(value)) return text;
     const std::size_t bracket = text.find('(');
+    const std::string number = expanded(text.substr(0, bracket));
+    const std::string rest = bracket == std::string::npos ? std::string() : text.substr(bracket);
+    if (in_decimal_range(value)) return bracket == std::string::npos ? table_number(value, text, display) : number + rest;
     // Without an s.u. the value alone decides, whatever notation the text came in ("1.8652e-10").
     if (bracket == std::string::npos) return table_number(value, text, display);
-    if (text.find_first_of("eE") != std::string::npos) return text;
     const int power = power_of(value);
-    return shifted(text.substr(0, bracket), power) + text.substr(bracket) + exponent_text(power, display);
+    return shifted(number, power) + rest + exponent_text(power, display);
 }
 
 std::string display_exponents(const std::string& text) {

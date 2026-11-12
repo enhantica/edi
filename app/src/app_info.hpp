@@ -634,7 +634,8 @@ class ApplicationInfo : public QObject {
     /// NumberText presentation; project uncertainty formatting remains ProjectViewModel/core-owned.
     Q_INVOKABLE QJSValue numberPresentation(NumberOperation operation, const QJSValue& value, const QJSValue& second,
                                           const QJSValue& third, const QJSValue& fourth) const;
-    // numberPresentation's own work; numberPresentation then writes any exponent the display way.
+    // The plain-syntax helpers numberPresentation builds on; the displayed texts go through edi::table_number and
+    // edi::table_value_su, the one rule for numbers.
     QJSValue numberPresentationRaw(NumberOperation operation, const QJSValue& value, const QJSValue& second,
                                           const QJSValue& third, const QJSValue& fourth) const;
     /// Report preview/export procedures retain ReportViewModel as data and publication authority.
