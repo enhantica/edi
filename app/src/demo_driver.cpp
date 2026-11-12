@@ -2290,6 +2290,9 @@ bool DemoDriver::perform(const QString& action) {
         auto* session = engine != nullptr ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
         ProjectViewModel* project = session != nullptr ? session->project() : nullptr;
         ParameterItem* found = nullptr;
+        // The plan names a row as the table's path does (`linked_structures[hs]`); compared with dots on both sides.
+        QString wanted = tick.captured(2);
+        wanted.replace(QRegularExpression(QStringLiteral("\\[([^\\]]*)\\]")), QStringLiteral(".\\1"));
         if (project != nullptr) {
             ParameterTableModel* table = project->parameters();
             const int parameter_role = table->roleNames().key("parameter"), path_role = table->roleNames().key("path");
@@ -2297,7 +2300,7 @@ bool DemoDriver::perform(const QString& action) {
             for (int row = 0; row < table->rowCount() && found == nullptr; ++row) {
                 QString dotted = table->data(table->index(row, 0), path_role).toString();
                 dotted.replace(bracket, QStringLiteral(".\\1"));
-                if (dotted == tick.captured(2))
+                if (dotted == wanted)
                     found = qobject_cast<ParameterItem*>(table->data(table->index(row, 0), parameter_role).value<QObject*>());
             }
         }
