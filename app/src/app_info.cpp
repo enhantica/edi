@@ -9,6 +9,7 @@
 #endif
 #include "web_files.hpp"
 
+#include <QtGraphs/QValueAxis>
 #include <QMap>
 #include <QJsonArray>
 
@@ -8970,8 +8971,37 @@ void patternSetMargin(const PanelUsageFrame& f, const QJSValue& view, const QJSV
 }
 } // namespace
 
+namespace {
+std::optional<std::vector<double>> numericPatternTicks(const PanelUsageFrame& f, const QJSValue& axis) {
+    if (!qobject_cast<QValueAxis*>(axis.toQObject())) return std::nullopt;
+    // Read through the wrapper so QML still captures each axis property as a binding dependency.
+    const double high = panelUsageRead(f, axis, "max").toNumber();
+    const double low = panelUsageRead(f, axis, "min").toNumber();
+    const double interval = panelUsageRead(f, axis, "tickInterval").toNumber();
+    const double anchor = panelUsageRead(f, axis, "tickAnchor").toNumber();
+    std::vector<double> ticks;
+    const double span = high - low;
+    if (!(interval > 0.0) || !(span > 0.0) || !std::isfinite(span) || !std::isfinite(anchor) || !std::isfinite(interval)) return ticks;
+    const double first = std::ceil((low - anchor) / interval - 1e-9);
+    for (int index = 0; index < 64; ++index) {
+        const double value = anchor + (first + index) * interval;
+        if (!std::isfinite(value) || (value - low) / span > 1 + 1e-9) break;
+        ticks.push_back(value);
+    }
+    return ticks;
+}
+QJSValue numericPatternTickArray(const PanelUsageFrame& f, const std::vector<double>& ticks) {
+    auto out = f->newArray(static_cast<uint>(ticks.size()));
+    for (uint index = 0; index < ticks.size(); ++index) out.setProperty(index, ticks[index]);
+    return out;
+}
+} // namespace
+
 QJSValue ApplicationInfo::patternTickValues(const QJSValue& axis) const {
-    const auto f = panelUsageEngine(this); const auto out = controlEmptyArray(f);
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageReady(f)) return {};
+    if (const auto ticks = numericPatternTicks(f, axis)) return numericPatternTickArray(f, *ticks);
+    const auto out = controlEmptyArray(f);
     const auto high = panelUsageRead(f, axis, "max"), low = panelUsageRead(f, axis, "min"); const auto span = viewArithmetic(f, high, low, 0);
     if (!assistantRelation(f, panelUsageRead(f, axis, "tickInterval"), QJSValue(0), 1) || !assistantRelation(f, span, QJSValue(0), 1)) return out;
     const auto first = numberMath(f, "ceil", [&] {
@@ -8999,7 +9029,18 @@ QJSValue ApplicationInfo::patternGridTicks(const QJSValue& axis) const {
     return panelUsageMemberCall(f, ticks, "map", {panelUsageClosure(f, 241, {axis}, 1)});
 }
 QJSValue ApplicationInfo::patternYLabelText(const QJSValue& text, const QJSValue& axis, const QJSValue& scale, const QJSValue& format) const {
-    const auto f = panelUsageEngine(this); const auto shown = panelUsageGlobalCall(f, "Number", {text}); auto display = panelUsageContextRead(f, "NaN");
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageReady(f)) return {};
+    if (const auto ticks = numericPatternTicks(f, axis)) {
+        const double shown = text.toNumber();
+        if (!std::isfinite(shown) || ticks->empty()) return text;
+        double display = ticks->front();
+        for (const double value : *ticks)
+            if (std::abs(value - shown) < std::abs(display - shown)) display = value;
+        const auto original = projectInvoke(f, "controller", "originalValue", {QJSValue(display), scale});
+        return panelUsageMemberCall(f, panelUsageContextRead(f, "NumberText"), "axisTick", {original, format});
+    }
+    const auto shown = panelUsageGlobalCall(f, "Number", {text}); auto display = panelUsageContextRead(f, "NaN");
     panelUsageEach(f, panelUsageGlobalCall(f, "tickValues", {axis}), [&](const QJSValue& value) {
         bool nearer = panelUsageTruth(panelUsageGlobalCall(f, "isNaN", {display}));
         if (!nearer) {

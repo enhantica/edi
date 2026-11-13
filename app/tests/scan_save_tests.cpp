@@ -20,6 +20,54 @@ Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 class ScanSaveTests : public QObject {
     Q_OBJECT
 private slots:
+    void numericPatternAxisProjection() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        QQmlComponent component(&engine);
+        component.setData(R"(
+            import QtQuick
+            import QtGraphs
+            import edi.app
+            Item {
+                id: chart
+                property alias low: axis.min
+                property alias high: axis.max
+                property alias interval: axis.tickInterval
+                property alias anchor: axis.tickAnchor
+                property var ticks: ApplicationInfo.patternTickValues(axis)
+                ValueAxis { id: axis; min: -2; max: 4; tickInterval: 2; tickAnchor: 0 }
+                PatternChartController { id: controller }
+                function label(text: string, scale: int): string {
+                    return ApplicationInfo.patternYLabelText(text, axis, scale, "0|3|0");
+                }
+            }
+        )", QUrl());
+        QScopedPointer<QObject> chart(component.create());
+        QVERIFY2(chart, qPrintable(component.errorString()));
+        const auto ticks = [&] { return chart->property("ticks").value<QJSValue>().toVariant().toList(); };
+        QCOMPARE(ticks(), QVariantList({-2.0, 0.0, 2.0, 4.0}));
+        const auto label = [&](const QString& text, int scale) {
+            QQmlExpression expression(qmlContext(chart.data()), chart.data(),
+                QString("label("%1", %2)").arg(text).arg(scale));
+            const auto result = expression.evaluate().toString();
+            if (expression.hasError()) QTest::qFail(qPrintable(expression.error().toString()), __FILE__, __LINE__);
+            return result;
+        };
+        QCOMPARE(label("3", 0), QString("2"));
+        QCOMPARE(label("2", 1), QString("4"));
+        QCOMPARE(label("2", 2), QString("100"));
+        QCOMPARE(label("invalid", 0), QString("invalid"));
+        chart->setProperty("anchor", 1.0);
+        QCOMPARE(ticks(), QVariantList({-1.0, 1.0, 3.0}));
+        chart->setProperty("low", 0.0);
+        QCOMPARE(ticks(), QVariantList({1.0, 3.0}));
+        chart->setProperty("high", 0.0);
+        QVERIFY(ticks().isEmpty());
+        QCOMPARE(label("3", 0), QString("3"));
+        chart->setProperty("high", 1.0);
+        chart->setProperty("interval", 0.0);
+        QVERIFY(ticks().isEmpty());
+    }
     void hiddenChartsCreateNoDatasetLabels() {
         QTemporaryDir root;
         QVERIFY(root.isValid());
