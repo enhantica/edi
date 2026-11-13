@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-10
-- **Implementation:** 🟡 Partially implemented — Linux and macOS; Windows follows
+- **Implementation:** 🟡 Shared production and native consumers implemented; Windows and final consumer qualification pending
 - **Priority:** High
 - **Supersedes:** ADR-0017 (edi consumes crysta as a pinned, prebuilt C++ SDK)
 - **Forward constraint (binding on new features):** an edi job or product that needs crysta takes the SDK and
@@ -23,14 +23,16 @@ build logs may be public.
    `pixi run crysta-sdk-pin <sha>` moves it; `--check` proves exactly one well-formed pin.
 2. **Built once per commit.** `.github/workflows/crysta-sdk.yml`, a reusable workflow, checks crysta out at the
    pinned commit with the app's read-only token, runs crysta's own `sdk-pack` (build, tests, headers, static
-   library, CLI and the fingerprint manifest) for Linux x86-64 and macOS arm64, archives crysta's source at the same
-   commit, and keeps both in the Actions cache under `crysta-sdk-<platform>-<sha>`. A cache hit skips the build.
+   library, CLI and the fingerprint manifest) for Linux x86-64, macOS arm64 and Windows x64, archives crysta's source
+   at the same commit, and caches both under the exact platform, source and producer-recipe identity described
+   below. A complete qualified archive cache hit skips compilation.
    It is the only place edi reads crysta.
 3. **Every job uses it.** Each workflow runs the crysta-sdk job first; a consuming job restores the archives with
    `.github/actions/crysta-sdk` and needs no token. `tools/ci/crysta_sdk.py fetch` unpacks the SDK and checks it
    against the environment as before (I25); `tools/ci/crysta-src.sh` unpacks the source for the corpus and reference
-   readers, the ThreadSanitizer tree and the web build. The desktop installers build the pinned commit from that
-   source; taking the prebuilt SDK there too follows with the Windows port.
+   readers, the ThreadSanitizer tree and the web build. Desktop installers, native CLI and Python wheel consume
+   that qualified native SDK. The web target compiles the same source with its own Emscripten toolchain and
+   compiler cache; native machine code cannot serve that target.
 4. **Attached to the release.** The publish job attaches `crysta-sdk-<sha>-<platform>.tar.gz` for each platform to
    the edi release, beside the products built with it.
 5. **Retired:** downloading crysta's `build-<sha>` releases and pull-request packages, the crysta-sdk update
@@ -44,8 +46,8 @@ build logs may be public.
 - The first job of a run at a new crysta commit pays crysta's build and tests once per platform; later jobs and
   runs at that commit reuse it.
 - crysta's CI no longer has to publish builds for edi; its own tests stay its own.
-- Windows has no SDK yet; its release installer currently builds pinned source directly. Completing the
-  shared Windows SDK removes that temporary source-build path.
+- Windows SDK production and its installer consumer use the same archive contract as Unix. Their actual
+  platform qualification must pass before the shared candidate ships.
 
 ## Alternatives considered
 
@@ -68,14 +70,14 @@ publication downloads SDK artifacts from the exact qualified installer run alrea
 rather than asking for whichever matching cache remains. Both cold and warm producers require nonempty
 SDK/source/checksum files and verify the archive checksum before an error-on-missing upload. The SDK reader continues its manifest,
 qualification, binary hash and ABI checks; archive transfer does not substitute for them. This extends the
-original producer/action/publish paths together. Upstream dispatch coordination and Windows packaging
-still require completion; the standalone entry alone does not automatically trigger downstream builds.
+original producer/action/publish paths together. Consumer workflows call the shared producer before their
+builds. The standalone entry produces SDK artifacts; it does not itself publish or dispatch products.
 
 The owner chose one native SDK variant per platform for desktop, CLI and Python. The existing standalone
-builder's separate lean engine compilation is to be retired by aligning link/CRT settings and packaging the
-required accelerated-runtime closure. Preserve the existing protection against a Python process's already
-loaded C++ runtime. Target-specific WebAssembly compilation remains necessary. These packaging changes
-are planned, not implemented by the artifact-transfer change above.
+builder's separate lean engine compilation is retired: native consumers align link/CRT settings and package
+the required accelerated-runtime closure from that SDK. The existing protection against a Python process's
+already loaded C++ runtime remains. Target-specific WebAssembly compilation remains necessary. The
+packaging implementation and its pending qualification are detailed below.
 
 
 The pinned archive reader additionally binds the extracted manifest's source and platform to the requested
