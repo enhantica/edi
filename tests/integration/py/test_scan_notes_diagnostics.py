@@ -234,7 +234,7 @@ def test_event_scan_append_refuses_a_replaced_provenance_path(tmp_path, mode, ki
 import edi, os, sys
 from pathlib import Path
 project = edi.Project.load(sys.argv[1])
-state = Path(sys.argv[1]) / 'analysis/results-provenance.csv'
+state = Path(sys.argv[1]) / 'analysis/results.csv'
 injected = False
 def replace(_):
     global injected
@@ -271,7 +271,7 @@ project.analysis.fit(on_scan_start=lambda _: None, on_iteration=replace,
     assert 'INJECTED' in result.stdout, (
         'A real iteration must replace provenance after native preflight and stream creation'
     )
-    assert result.returncode != 0 and 'results-provenance.csv' in result.stderr, (
+    assert result.returncode != 0 and 'results.csv' in result.stderr, (
         'The live scan must diagnose unsupported provenance before its next append'
     )
     assert 'ADOPTED-AFTER' not in result.stdout, (

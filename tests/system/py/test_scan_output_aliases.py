@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures import phase_scan
+from tests.fixtures.scan_csv import CONDITION_COLUMNS, legacy_scan
 
 ROOT = Path(__file__).resolve().parents[3]
 ENGINE = 'edi'
@@ -39,6 +40,7 @@ def scan_history(tmp_path_factory):
             hidden[data.name] = data.read_bytes()
             data.unlink()
         engine.Project.load(path).analysis.fit()
+        legacy_scan(path)
         for name, body in hidden.items():
             (path / 'experiments/scan' / name).write_bytes(body)
         (path / 'analysis/scan-notes.csv').write_text(
@@ -339,7 +341,14 @@ def test_provenance_backfill_and_ordinary_scan_controls(
         assert result.returncode == 0, (
             'An owned ordinary scan completes both appending and legacy provenance backfill: '
         ) + result.stderr
-        assert len(list(csv.DictReader((path / 'analysis/results-provenance.csv').open()))) == 3, (
+        assert not (path / 'analysis/results-provenance.csv').exists(), (
+            'A successful resume migrates the historical sidecar into its result rows'
+        )
+        with (path / 'analysis/results.csv').open() as stream:
+            reader = csv.DictReader(stream)
+            assert reader.fieldnames[-4:] == CONDITION_COLUMNS
+            rows = list(reader)
+        assert len(rows) == 3 and all(row['fit_result.descent'] for row in rows), (
             'Backfill and ordinary append retain exactly one provenance row per scan dataset'
         )
 

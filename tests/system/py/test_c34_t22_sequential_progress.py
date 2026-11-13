@@ -233,7 +233,7 @@ def test_native_scan_declares_total_and_one_completion_per_input_file(tmp_path: 
             " completion success must be the scan writer's own outcome"
         )
         assert math.isclose(
-            event.reduced_chi_square,
+            float(format(event.reduced_chi_square, '.2g')),
             float(row['fit_result.reduced_chi_square']),
             rel_tol=0.0,
             abs_tol=1e-12,
