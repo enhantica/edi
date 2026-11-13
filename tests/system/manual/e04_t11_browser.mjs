@@ -11,12 +11,15 @@ import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 import { nativePickerOptionChecks } from './browser_picker_options.mjs';
+import { installNativePickerTransport, assertNativePickerCapture, nativePickerTransportControls } from './browser_native_picker.mjs';
 import { checkDesktopOnlyAssistant } from './web_assistant_desktop_only.mjs';
 import { statusActionLifetimeChecks } from './web_status_action_lifetime.mjs';
 import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport, waitControlGeometry } from './web_control_geometry.mjs';
 import { assertSavedProject, assertSavedNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
+
+nativePickerTransportControls();
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
 const saveRouteOnly = process.argv.includes('--save-route-only');
@@ -27,7 +30,7 @@ const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('
   (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
 assert(['lbco', 'ncaf'].includes(fitCase), 'browser fit case must name a committed native reference');
 const fileRequestCase = process.argv.find(arg => arg.startsWith('--file-request-case='))?.split('=')[1] || 'all';
-assert(['all','none','overlap','replacement','cancel-structure','cancel-experiment','load-data'].includes(fileRequestCase),
+assert(['all','none','overlap','replacement','cancel-structure','cancel-experiment','load-data','native-picker'].includes(fileRequestCase),
   'each scoped request case must be declared explicitly');
 const reopenControl = process.argv.find(arg => arg.startsWith('--reopen-control='))?.split('=')[1];
 assert(!fileRequestsOnly || !reopenControl, 'request-only checks cannot impersonate a reopen control');
@@ -901,6 +904,28 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     const releaseRead = async index => evaluate(`window.__e04Reads[${index}].release(); true`);
     const completedPicker = async id => waitBrowser(`window.__e04FolderCompleted.includes(${id})`,
       'the actual folder handler must finish before checking its destination');
+
+    if (['all','native-picker'].includes(fileRequestCase)) {
+      await createEmpty('routing_native_picker');
+      await click(/^Structure$/); await waitAX(/Structures \(0\)/);
+      const bytes=await readFile(join(inputs,'blocks/structure.edi'));
+      const transport=await installNativePickerTransport(evaluate,bytes,'native_structure.edi');
+      try {
+        await click(/^Load\b/,'button','structures.load');
+        await click(/^From file…$/,'menuitem','structures.load.file');
+        await waitBrowser('window.__e04NativePickerTransport.calls.length===1 && window.__e04NativePickerTransport.reads===1',
+          'The real Qt Load action must call the native API and read its returned File handle');
+        const capture=await transport.snapshot();
+        assertNativePickerCapture(capture,['.cif','.edi'],false);
+        await waitAX(/Structures \(1\)/);
+        await writeFile(join(output,`${mode}-qt-native-picker.json`),JSON.stringify({
+          capture,loadedStructures:1,inputBytes:bytes.length,
+          scope:'Actual Qt options and File-handle read/import; OS chooser transport intercepted; not Windows OS-dialog qualification',
+        },null,2));
+      } finally { await transport.restore(); }
+      assert.equal(await evaluate('typeof window.showOpenFilePicker'),'undefined',
+        'The native transport observer is removed before all retained HTML fallback and cancellation cases');
+    }
 
     if (['all','overlap'].includes(fileRequestCase)) {
     for (const newerFirst of [false,true]) {
