@@ -48,7 +48,7 @@ private slots:
         QCOMPARE(ticks(), QVariantList({-2.0, 0.0, 2.0, 4.0}));
         const auto label = [&](const QString& text, int scale) {
             QQmlExpression expression(qmlContext(chart.data()), chart.data(),
-                QString("label("%1", %2)").arg(text).arg(scale));
+                QString(R"(label("%1", %2))").arg(text).arg(scale));
             const auto result = expression.evaluate().toString();
             if (expression.hasError()) QTest::qFail(qPrintable(expression.error().toString()), __FILE__, __LINE__);
             return result;
