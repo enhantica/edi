@@ -150,3 +150,14 @@ Qt.binding requires its actual compiled QML expression function. Existing entrie
 ## Native recent-project persistence and navigation
 
 ApplicationInfo executes RecentProjects' browser/recovery-row construction, path/key/open decisions, recent filtering/deduplication and Settings writes, in-place row updates/removal and startup selection. The first store remains RecentProjects' Projects Settings group described above; Session, WebStorage and the existing ListModel remain the opening/storage/row authorities. Paths, order, duplicates/admission, synchronous settings-triggered refreshes and browser recovery/drop behavior retain their original sequence. No recent-project store, controller, cache or alternate persistence policy is added. Script methods, callbacks, coercions, literal fields and translations remain current-VM operations.
+
+
+## Selection persistence after presentation
+
+A changed structure/experiment selection updates the UI immediately and restarts a single 200 ms persistence
+timer. It stores only the latest selection after a short burst of navigation. Unchanged publications schedule
+no selection write. Project destruction flushes an outstanding selection before its view-models are released;
+initial selection restoration still records the initial value once. This keeps QSettings' atomic-file flush and
+lock out of the direct pattern-switch callback, where the NCAF debugger replay caught synchronous fdatasync.
+It changes no scientific state or project files. A crash during the short debounce interval can retain the
+previous UI selection, but normal close records the final one.

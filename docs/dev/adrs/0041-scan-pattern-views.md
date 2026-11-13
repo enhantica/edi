@@ -226,3 +226,71 @@ The current VM retains original typed forwarding conversions, property/context a
 ApplicationInfo executes ScanViewChart's palette resolution and selector captions/choices, paired zoom state/publication, shown/project/scan presentation handoff, pointer scroll/drag/pick transactions, intensity readouts and legend/toggle actions. The existing ScanViewModel/ScanLayer remain the owners of loading, scientific patterns, decimation, row placement, hit/value data and rendering; project setters remain authoritative for selected dataset and axis/spacing/direction. Original zoomX/zoomY/settingZoom and presentedTo fields remain the view records. No scan model, load scheduler, presentation controller, timer, cache or store is introduced.
 
 Native code keeps the original sequence of current-owner reads, optional/null checks, presentation retirement/adoption, property writes, reentry and exceptions. Zoom publication still clones the existing shared map with the current Object.assign and publishes the pair once; a throwing assignment retains the original completion behavior. Intrinsic/script array operations, context names, arithmetic, method receiver and caption callbacks remain observable in the current VM. The identical palette-choice projection and first-character capitalization extend the existing preference/Evolution native implementations rather than introducing parallel algorithms. The visual plot/layer/grid/labels, direct bindings and Qt rendering/window observation remain QML declarations or one-call host adapters. Full desktop/browser compilation and scientific/lifecycle/input/error verification follows the complete source migration.
+
+
+## Incremental GPU uploads while reading a scan
+
+A batch of newly read datasets updates only those traces in ScanLines. The existing groups of 64 traces retain
+their geometry until a trace in that group changes; style, selection and y-range updates still change uniforms only.
+A changed x range, width, scale, included/background choice, model or drawing order replaces all affected traces.
+The painter continues using the same reductions. Every dataset and excluded stretch remains in its original draw
+order; no dataset is dropped to speed up a dense scan.
+
+Previously each batch replaced the entire trace list, copied all accumulated reductions and rebuilt all scene-graph
+geometry. That repeated the growing prefix for the whole load. Group revisions now identify geometry changes,
+including changes that arrive while hidden. Recreated scene nodes build from the latest traces independently of
+previous uploads. The scan-line update fixture exercises partial-group/style changes, breaks, full replacement and
+node recreation directly against real scene-graph geometry.
+
+
+## Screen-limited dense views
+
+The owner approved drawing fewer Stacked curves after a dense scan became a solid band and loading still slowed
+as more geometry accumulated. The Stacked picture now uses an evenly spread selection of curves whose baselines lie inside
+the vertical range, with roughly one curve per 12 logical pixels of plot height (at least two, at most 256), plus
+the selected curve when it intersects the view. Small visible sets keep every curve. End rows are retained, and
+zooming narrows the eligible set. All original files, fits, row positions and results remain available. This
+supersedes the earlier all-curves drawing rule; it does not average curves or alter their measured values.
+
+The GPU and painter share this selection, as do hit testing, row labels and row ticks. The existing progress line
+states how many curves are shown. Only selected curves retain Stacked reductions; changing the selection or
+viewport prepares the newly needed curves from the original measured points.
+
+The owner also requested the same screen-based work limit for Map. Its original dataset bands and quarter-band
+smooth interpolation remain unchanged. A cached pixel-row plan identifies the original band and up to two
+neighbours actually used by each image row; only those datasets keep Map reductions. The painter consumes the
+same plan, so no skipped dataset's values are substituted for a visible band. Global colour extrema still use all
+loaded datasets. A new viewport prepares its needed rows. Coincident opaque row ticks coalesce to one rectangle
+per logical pixel row, preserving the last tick's colour in Map. Neither view performs fitting or a new load pass
+as part of this display choice.
+
+
+Zoom selects Stacked curves by baselines inside the visible vertical range, rather than by their full peak extents.
+Otherwise the Wide spacing's tall off-screen curves occupy nearly every display slot and leave only a few baselines
+in the zoomed plot. The selected curve alone may enter from below the viewport, in addition to the visible-row set.
+The caption states the shown and total curve counts; it does not promise that zooming increases the curve count.
+
+
+Refreshing scan results, including the fresh-run preparation before Fit starts, retains the loaded view data and
+its generations when the file list, directory, extract title and axis/background/exclusion conversion are unchanged.
+Previously this path always re-placed every loaded pattern, which copies its axis and re-interpolates its background
+on the GUI thread before any fit progress. A changed conversion still re-places the patterns and invalidates the
+reductions. The two-file native scan-refresh test reaches both paths without fitting or a scale run.
+
+
+While fitting with Stacked or Map visible, the current dataset moves only through the existing scanFrame cadence
+(Adaptive, timed, every-pattern or catch-up); completion counts and per-file result rows still arrive for each file.
+The old direct per-file selection notification bypassed that cadence, and rebuilding chart labels could starve
+progress presentation even though the worker was already completing files. Pattern/Evolution indicator behavior
+is retained. Label bindings now consume only sparse dataset indices, never a boolean array as long as the scan.
+A numeric Repeater retains its label items while the list changes at the same length; its indexed dataset binding
+updates the existing items. Text measurement also visits only those sparse indices.
+
+
+Selecting another experiment in a joint or ordinary multi-experiment project does not rebuild the parameter table
+or re-prepare every experiment's Stacked/Map data. Those inputs depend on scientific model edits and calculations,
+which still refresh them in ProjectViewModel::publish. Only a scan-scoped parameter table is refreshed for a
+selection change. The selected chart, correlations, colour indicators and selection persistence still follow the
+existing current-experiment notifications. Previously publishCurrent called syncParameterTable unconditionally,
+which reconstructed every joint pattern, including background interpolation, only to compare it with unchanged
+cached patterns before the selected chart could appear.

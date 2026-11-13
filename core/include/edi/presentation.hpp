@@ -213,10 +213,12 @@ struct SeriesStyle {
 // excluded-region style. `positions` holds the experiments' positions, then the structures'; empty, or of another
 // length, they are colour_positions' for a project with none held. Rows beyond the items take the next free positions.
 // With `pattern_set`, the `experiments` are one view's patterns (a scan's datasets) and take pattern_set_colour beside
-// the structures' positions, as the Stacked view colours them.
+// the structures' positions, as the Stacked view colours them. With measured_place, only that measured row is
+// built; the role and structure rows are unchanged, so a scan's Pattern view need not build every dataset's style.
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = kDefaultColourScheme, std::size_t experiments = 3,
                                              std::size_t structures = 0, std::span<const std::size_t> positions = {},
-                                             bool pattern_set = false);
+                                             bool pattern_set = false,
+                                             std::optional<std::size_t> measured_place = std::nullopt);
 
 // The display scales. Linear: the value. Sqrt: sign(y) × sqrt(|y|). Log10: log10(y) for y > 0,
 // NaN otherwise.

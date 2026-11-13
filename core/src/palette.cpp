@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
+#include <unordered_set>
 
 namespace edi::detail {
 // data/palettes, one table per scheme in ColourScheme's order, embedded by cmake/edi_core_sources.cmake.
@@ -265,14 +266,17 @@ std::vector<std::size_t> colour_positions(ColourScheme /*scheme*/, std::span<con
         }
     }
     std::vector<std::size_t> positions(items.size());
+    std::array<std::size_t, 2> next{};
     for (std::size_t i = 0; i < items.size(); ++i) {
         if (!out[i]) {
-            std::size_t position = 0;
+            auto& cursor = next[items[i].kind == FigureKind::Experiment ? 0 : 1];
+            std::size_t position = cursor;
             while (!allowed(items[i].kind, position) || !vacant(position)) {
                 ++position;
             }
             out[i] = position;
             take(position);
+            cursor = position + 1;
         }
         positions[i] = *out[i];
     }
@@ -283,8 +287,10 @@ std::vector<std::size_t> free_positions(ColourScheme /*scheme*/, FigureKind kind
                                         std::span<const std::size_t> taken) {
     std::vector<std::size_t> out;
     out.reserve(count);
+    if (count == 0) return out;
+    const std::unordered_set<std::size_t> occupied(taken.begin(), taken.end());
     for (std::size_t position = 0; out.size() < count; ++position) {
-        if (position_allowed(kind, position) && std::find(taken.begin(), taken.end(), position) == taken.end()) {
+        if (position_allowed(kind, position) && occupied.count(position) == 0) {
             out.push_back(position);
         }
     }
@@ -294,12 +300,14 @@ std::vector<std::size_t> free_positions(ColourScheme /*scheme*/, FigureKind kind
 std::string pattern_set_colour(ColourScheme scheme, std::size_t place, std::size_t count,
                                std::span<const std::size_t> taken, bool dark) {
     const std::size_t at = std::min(place, count > 0 ? count - 1 : 0);
-    const std::vector<std::size_t> positions = free_positions(scheme, FigureKind::Experiment, std::max<std::size_t>(count, 1), taken);
+    // Only palette positions decide between discrete colours and the gradient (ADR-0084).
+    const std::size_t sample = std::min(std::max<std::size_t>(count, 1), kPaletteColourCount + 1);
+    const std::vector<std::size_t> positions = free_positions(scheme, FigureKind::Experiment, sample, taken);
     if (positions.back() < kPaletteColourCount) {
         return figure_colour(scheme, positions[at], positions[at] + 1, dark);
     }
     const std::string first = figure_colour(scheme, 0, 1, dark), second = figure_colour(scheme, 1, 2, dark);
-    return mix_colours(first, second, static_cast<double>(at) / static_cast<double>(count - 1));
+    return mix_colours(first, second, count > 1 ? static_cast<double>(at) / static_cast<double>(count - 1) : 0.0);
 }
 
 std::vector<std::size_t> colour_positions(ColourScheme scheme, std::size_t experiments, std::size_t structures) {

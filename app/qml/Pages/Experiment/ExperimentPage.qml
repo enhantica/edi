@@ -16,7 +16,14 @@ WorkflowPage {
     id: page
 
     readonly property ProjectViewModel project: Session.project
-    readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
+    property ExperimentViewModel experiment: null
+    Binding {
+        target: page
+        property: "experiment"
+        value: page.project ? page.project.currentExperiment : null
+        when: page.current
+        restoreMode: Binding.RestoreNone
+    }
     // Whether the shown experiment holds measured data: what only works on it is hidden or disabled without.
     readonly property bool measured: experiment !== null && !experiment.calculationOnly
 

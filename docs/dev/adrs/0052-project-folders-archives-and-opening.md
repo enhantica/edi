@@ -385,3 +385,27 @@ Open remains a separate real-flow qualification.
 
 - [Qt posted-event receiver scope](https://doc.qt.io/qt-6.11/qcoreapplication.html#sendPostedEvents)
 - [Qt network reply completion lifetime](https://doc.qt.io/qt-6.11/qnetworkreply.html#finished)
+
+
+## Native project picker handoff
+
+On desktop, accepting Folder or Zip records the chosen picker in the native UI owner. Only after the choice
+dialog has closed does it queue that picker's native `open` call. A native file panel must not open while the
+choice popup is still closing or its QML acceptance callback is on the stack. The pending picker is weakly held
+and consumed once; cancelling the choice opens nothing. Both Folder and Zip use the same handoff. Browser
+pickers keep their direct user-gesture call, as required by browser file access.
+
+
+## In-process native file choosers
+
+The owner reverted chooser process isolation after testing it: its extra application icon is unwanted. Every file
+and folder picker again uses the original Qt Quick FileDialog or FolderDialog in the main application, with the
+platform's native panel. The helper-only entry point, broker, notice, cancellation shortcut and process tests are
+removed. The queued native project-picker handoff above remains in place. The earlier macOS File Provider wait
+is an external panel-service issue; no alternate picker or speculative provider workaround is introduced here.
+
+A processed scan's stage can generate analysis/scan-run.json even when no earlier run record exists. The staged
+save records that actual write before sealing its carried-file receipt, so its own output is not mistaken for
+an unexpected added file. Existing carried files still undergo the ordinary receipt checks.
+
+- [Qt QFileDialog native platform behavior](https://doc.qt.io/qt-6/qfiledialog.html)

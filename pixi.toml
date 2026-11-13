@@ -23,7 +23,7 @@ requires-pixi = "==0.76.2"
 # The crysta commit edi builds (edi ADR-0083): its CI packs that commit's SDK once per platform
 # (.github/workflows/crysta-sdk.yml) and every job and product uses it. `pixi run crysta-sdk-pin <sha>`
 # moves it.
-CRYSTA_COMMIT = "965dba82fd8b0f0f840ff048687d8f5a4da5048d"
+CRYSTA_COMMIT = "f2b685bc646ba83cd768b230cbcc4a80401dfdfe"
 # ONE ruff cache, outside every source and test tree. Same class as crysta's: ruff writes
 # `.ruff_cache` into the directory it is invoked from, and a stray cache can keep a RETIRED
 # directory alive after its tracked files are gone, tripping a layout gate on a folder that
@@ -233,6 +233,9 @@ CMAKE_CXX_COMPILER_LAUNCHER = "ccache"
 CMAKE_C_COMPILER_LAUNCHER = "ccache"
 
 [feature.app.tasks]
+app-test-scan-lines = { cmd = "cmake -S tests/fixtures/scan_line_updates -B build/scan-line-updates -G Ninja && cmake --build build/scan-line-updates -j 4 && QT_QPA_PLATFORM=offscreen build/scan-line-updates/scan_line_updates" }
+app-test-scan-refresh = { cmd = "cmake --build build/app --target edi_scan_refresh_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_scan_refresh_tests" }
+app-test-scan-save = { cmd = "cmake --build build/app --target edi_scan_save_tests --config Release -j 4 && QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software build/app/app/edi_scan_save_tests", depends-on = ["app-build"] }
 app-test-updates = { cmd = "cmake --build build/app --target edi_desktop_update_tests -j 4 && QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software build/app/app/edi_desktop_update_tests", depends-on = ["app-build"] }
 release-check = "python -m pytest tests/fixtures/releases/check_*.py tests/unit/py/test_release_promotion.py --noconftest -o addopts= -q"
 installer-check = "pixi run --manifest-path tools/installer/pixi.toml python -m pytest tests/fixtures/installer/check_*.py --noconftest -o addopts= -q"
@@ -301,7 +304,7 @@ wasm-build = { cmd = ["bash", "tools/ci/wasm-build.sh"], depends-on = [{ task = 
 # environment (so the default environment stays Qt-free).
 # Without app-test and app-ui-test while the owner has them disabled (re-enabling is a revert); `pixi run
 # -e app app-test`, `app-ui-test` and `app-ui-bless` still run by hand.
-app-gates = { depends-on = [{ task = "app-build", environment = "app" }, "app-lint", "app-format-check"] }
+app-gates = { depends-on = ["app-test-scan-lines", "app-test-scan-refresh", { task = "app-build", environment = "app" }, "app-lint", "app-format-check"] }
 
 [environments]
 app = ["app"]
@@ -525,6 +528,9 @@ latency-bank = { cmd = ["python", "tools/ci/latency_bank.py", "--run"], depends-
 # with its environment: pixi keys an inherited-environment reference apart from an explicit one and would run
 # it twice.
 app-verify = { depends-on = [
+    { task = "app-test-scan-refresh", environment = "app" },
+    { task = "app-test-scan-lines", environment = "app" },
+    { task = "app-test-scan-save", environment = "app" },
     "core-build",
     { task = "app-lint", environment = "app" },
     { task = "app-format-check", environment = "app" },

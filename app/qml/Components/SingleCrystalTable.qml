@@ -58,7 +58,7 @@ DataTable {
 
     objectName: "singleCrystal.reflections"
     maxRowCountShow: spareHeight > 0 ? Math.max(5, Math.floor((spareHeight - (headerItem ? headerItem.height : 0) - AppSizes.groupContentSpacing) / tableRowHeight - 0.5)) : EaStyle.Sizes.tableMaxRowCountShow
-    defaultInfoText: qsTr("No reflections")
+    defaultInfoText: qsTr("No reflections yet")
     sourceModel: experiment ? experiment.singleCrystalReflections : null
 
     // The Miller indices are short integers, so their columns are narrow and the numbers keep their room.

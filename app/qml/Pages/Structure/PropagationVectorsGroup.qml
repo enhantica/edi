@@ -23,7 +23,7 @@ Column {
 
     DataTable {
         objectName: "propagationVectors.list"
-        defaultInfoText: qsTr("No propagation vectors")
+        defaultInfoText: qsTr("No propagation vectors yet")
         sourceModel: group.vectors
 
         columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]

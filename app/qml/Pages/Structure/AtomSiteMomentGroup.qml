@@ -104,7 +104,7 @@ Column {
         id: table
         objectName: "atomSiteMoments.list"
         visible: group.crystalAxes
-        defaultInfoText: qsTr("No atom sites")
+        defaultInfoText: qsTr("No atom sites yet")
         sourceModel: group.moments
 
         equalColumns: true
@@ -270,7 +270,7 @@ Column {
         id: converted
         objectName: "atomSiteMoments.converted"
         visible: !group.crystalAxes
-        defaultInfoText: qsTr("No atom sites")
+        defaultInfoText: qsTr("No atom sites yet")
         sourceModel: group.moments
 
         readonly property bool spherical: group.form === "spherical"

@@ -153,7 +153,7 @@ class FitViewModel : public QObject {
     // The model holds a fit's start state (`_fit_parameter`): the app bar's Undo restores it.
     Q_PROPERTY(bool canUndo READ canUndo NOTIFY canUndoChanged)
     // The status bar's fit area: empty before the first fit and after an undo. `elapsed` is the running
-    // fit's time, then the fit's own; `status` is the outcome's word, "Running" while a fit runs; `outcome`
+    // solver's reported time, then the result's time; `status` is the outcome's word, "Running" while a fit runs; `outcome`
     // is its key (recorded_outcome), empty while a fit runs.
     Q_PROPERTY(QString iterations READ iterations NOTIFY iterationsChanged)
     Q_PROPERTY(QString elapsed READ elapsed NOTIFY elapsedChanged)

@@ -169,6 +169,7 @@ SideBarGroup {
         contentHeight: openChoiceColumn.implicitHeight
         onAboutToShow: zip = false
         onAccepted: ApplicationInfo.openProjectChoice()
+        onClosed: ApplicationInfo.openProjectPicker()
 
         Column {
             id: openChoiceColumn

@@ -11,9 +11,12 @@
 #include <atomic>
 #include <cstdint>
 #include <vector>
+#include <optional>
+#include <limits>
 
 #include "chart_models.hpp"
 #include "scan_lines.hpp"
+#include "scan_draw_rows.hpp"
 #include "scan_view_model.hpp"
 
 namespace edi_app {
@@ -103,13 +106,19 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(edi_app::ChartLegendModel* legend READ legend CONSTANT)
     Q_PROPERTY(double labelGap MEMBER label_gap_ WRITE setLabelGap NOTIFY labelGapChanged)
     Q_PROPERTY(QList<bool> shownLabels READ shownLabels NOTIFY shownLabelsChanged)
+    Q_PROPERTY(QList<int> labelledDatasets READ labelledDatasets NOTIFY labelledDatasetsChanged)
     // Diagnostics, never inputs: how many datasets were reduced (a stacked trace or a map's pixel columns), and how
     // many times the drawing was rendered.
+    Q_PROPERTY(int drawnDatasetCount READ drawnDatasetCount NOTIFY drawnDatasetCountChanged)
     Q_PROPERTY(int traceBuildCount READ traceBuildCount NOTIFY traceBuildCountChanged)
     Q_PROPERTY(int redrawCount READ redrawCount NOTIFY redrawCountChanged)
 
    public:
     explicit ScanLayer(QQuickItem* parent = nullptr);
+
+    /// Datasets drawn by the current Stacked view, bounded by its screen height.
+    const std::vector<std::size_t>& drawnDatasets() const { return drawn_datasets_; }
+    int drawnDatasetCount() const { return static_cast<int>(drawn_datasets_.size()); }
 
     ScanViewModel* model() const { return model_; }
     void setModel(ScanViewModel* model);
@@ -150,6 +159,8 @@ class ScanLayer : public QQuickPaintedItem {
     static constexpr int kFullLegend = 15;
     void setLabelGap(double gap);
     QList<bool> shownLabels() const;
+    /// Dataset indices whose labels fit in this visible view; hidden views return none.
+    QList<int> labelledDatasets() const { (void)shownLabels(); return labelled_datasets_; }
     double patternHeight() const { return pattern_height_; }
     double stackTop() const { return stack_top_; }
     // Each stacked pattern's extent on the vertical axis, baseline to top, by dataset: NaN for one with no place.
@@ -191,6 +202,7 @@ class ScanLayer : public QQuickPaintedItem {
     void disabledColourChanged();
     void labelGapChanged();
     void shownLabelsChanged();
+    void labelledDatasetsChanged();
     void modeChanged();
     void xMinChanged();
     void xMaxChanged();
@@ -221,6 +233,8 @@ class ScanLayer : public QQuickPaintedItem {
     void displayMaxChanged();
     void coloursRevisionChanged();
     void traceBuildCountChanged();
+    void drawnDatasetCountChanged();
+    void drawingRowsChanged();
     void redrawCountChanged();
 
    protected:
@@ -304,16 +318,38 @@ class ScanLayer : public QQuickPaintedItem {
     double label_gap_ = 1.0;
     // shownLabels, and whether what it depends on changed since it was made.
     mutable QList<bool> shown_labels_;
+    mutable QList<int> labelled_datasets_;
     mutable bool shown_labels_stale_ = true;
     void labelsMoved();
     double display_min_ = 0.0, display_max_ = 1.0;
     // By dataset: its lowest and highest value on the y scale, and its stacked baseline (NaN while it has no row).
     std::vector<double> lows_, highs_, baselines_;
+    struct RangeKey {
+        QString scale;
+        bool included, subtract, visible;
+        double from, to;
+        bool operator==(const RangeKey&) const = default;
+    };
+    struct Range {
+        std::uint64_t generation = std::numeric_limits<std::uint64_t>::max();
+        double low = std::numeric_limits<double>::infinity(), high = -std::numeric_limits<double>::infinity();
+        double seen_low = std::numeric_limits<double>::infinity(), seen_high = -std::numeric_limits<double>::infinity();
+    };
+    std::optional<RangeKey> measured_for_;
+    std::vector<Range> measured_ranges_;
+    std::vector<double> placed_rows_;
+    double placed_spacing_ = std::numeric_limits<double>::quiet_NaN();
     double pattern_height_ = 1.0;
     double stack_top_ = 1.0;
 
     // The reductions, by dataset, and what they were made for.
     std::vector<Reduction> reductions_;
+    std::vector<std::size_t> drawn_datasets_;
+    std::vector<MapPixelRow> map_pixels_;
+    std::vector<double> map_rows_;
+    double map_low_ = 0, map_high_ = 0;
+    bool map_smooth_ = false;
+    std::vector<std::size_t> drawingRows() const;
     ReductionKey reduced_for_;
     QString reduced_mode_;
     int trace_builds_ = 0;
@@ -333,6 +369,7 @@ class ScanLayer : public QQuickPaintedItem {
     int lines_fed_builds_ = -1;
     int reduction_changes_ = 0;  // bumped whenever any dataset's reduction changes
     std::vector<std::size_t> lines_order_;
+    std::vector<std::uint64_t> lines_fed_generations_;
 };
 
 // The map's colour bar: the map's colours from the low end at the bottom to the high end at the top, each pixel row

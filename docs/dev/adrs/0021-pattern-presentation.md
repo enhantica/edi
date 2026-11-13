@@ -85,3 +85,13 @@ ADR-0017 §15's.
 ApplicationInfo executes PatternChart's tick and label projection, pane alignment, toolbar choices, shared-view synchronization, structure/Bragg series registration, label measurement, pointer and hover procedures, with ChartToolbar's state actions and ProjectPatternChart's renewal transaction. PatternChartController and the core presentation remain the sole owners of scientific series, scales, range transforms, decimation and hover/pick data. The first implementations are the chart and three-pane alignment described above, extended without another chart controller, range store, cache or policy.
 
 The existing QML fields and original named functions remain the view surface. Qt's queue still receives the same named alignPanes function. Native callbacks retain the original scale/axis captures, arity, QML context and lifetime relation; array methods, coercions, intrinsic iteration, type casts and script getters/setters execute in the same VM. Shared ranges retain original equality/NaN checks and read/write order. Removed series are still unregistered, cleared, given the undrawable point and then removed; renewal creates and assigns the new chart before hiding/destroying the old one. No extra retirement or currentness guard is added. QML keeps declarative QtGraphs/axis/grid/series/style objects, bindings and single native dispatches. Full desktop/browser compilation and scientific, lifecycle, pointer, reentry and error checks follow the complete source migration.
+
+## Numeric axis projection
+
+The original ApplicationInfo tick projection and nearest-tick label matching used VM arithmetic and
+context resolution for every tick and every comparison. For Qt Graphs ValueAxis inputs, read the
+numeric axis fields once through the QML wrapper (retaining binding dependencies), enumerate the same
+bounded tick list with C++ arithmetic, and find the nearest tick directly. Keep the original first-tick
+choice on a distance tie, scale conversion and NumberText formatting. Empty, invalid and transient
+axis ranges produce no tick list; invalid label text stays unchanged. Script-object inputs retain the
+original procedure. This extends the existing chart projection, without another chart or range cache.

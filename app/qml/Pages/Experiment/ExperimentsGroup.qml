@@ -57,7 +57,7 @@ SideBarGroup {
         DataTable {
             id: table
             objectName: "experiments.list"
-            defaultInfoText: qsTr("No experiments")
+            defaultInfoText: qsTr("No experiments yet")
             sourceModel: group.project ? group.project.experiments : null
             marksCurrentRow: true
             currentRow: group.project ? group.project.currentExperimentIndex : -1
@@ -366,7 +366,7 @@ SideBarGroup {
                 width: buttons.buttonWidth
                 enabled: group.project !== null
                 fontIcon: "upload"
-                text: qsTr("Load")
+                text: group.project && group.project.listingDatasetFolder ? qsTr("Listing datasets…") : qsTr("Load")
 
                 // The menu's caret, from the icon font: the text fonts have no such character.
                 EaElements.Label {
@@ -431,6 +431,16 @@ SideBarGroup {
                         hint: ".xye .xy .dat .txt .csv · .int .hkl"
                         toolTip: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : loadMenu.replacing ? qsTr("Replace the measured data of %1 with a file's; its type and parameters stay, Undo brings the data back").arg(loadMenu.selected.name) : qsTr("Load a measured pattern or reflection list into %1").arg(loadMenu.selected.name)
                         onTriggered: group.confirmScanReplacement(() => group.chooseDataForSelected())
+                    }
+                    LoadMenuItem {
+                        objectName: "experiments.load.dataFolder"
+                        visible: !WebFiles.available
+                        enabled: loadMenu.dataIntoSelected && group.project !== null && !group.project.listingDatasetFolder
+                        fontIcon: "folder-open"
+                        text: qsTr("From folder…")
+                        hint: qsTr("Sequential fit")
+                        toolTip: qsTr("Link all datasets in a folder; fit the template first, then choose Sequential in Analysis")
+                        onTriggered: group.confirmScanReplacement(() => ApplicationInfo.chooseDatasetFolder(dataFolderDialog, group.project, loadMenu.selected))
                     }
                     LoadMenuItem {
                         objectName: "experiments.load.dataWeb"
@@ -554,6 +564,13 @@ SideBarGroup {
         onRejected: ApplicationInfo.rejectExperimentDataFile()
     }
 
+    FolderDialog {
+        id: dataFolderDialog
+        title: qsTr("Choose a folder of sequential-fit datasets")
+        acceptLabel: qsTr("Use folder")
+        onAccepted: ApplicationInfo.acceptDatasetFolder(dataFolderDialog, group.project, selectedFolder)
+    }
+
     // Load N datasets as (the owner, 2026-11-04): separate experiments, each a copy of the selected experiment's setup
     // named after its file, or one experiment with a scan, the selected experiment its template and the files its
     // datasets. Up to five files default to separate experiments, more to a scan.
@@ -624,6 +641,7 @@ SideBarGroup {
                 ChoiceRadioButton {
                     id: jointChoice
                     objectName: "datasets.separate"
+                    width: datasetsColumn.width
                     // Named by the fit each choice is for (the owner, 2026-11-04).
                     text: qsTr("Joint fit: one experiment per file, fitted together")
                     checked: !datasetsChoice.asScan
@@ -631,9 +649,16 @@ SideBarGroup {
                 }
                 ChoiceRadioButton {
                     objectName: "datasets.scan"
-                    text: qsTr("Sequential fit: the first dataset is the template for the initial fit. When it is ready, switch to sequential mode yourself.")
+                    width: datasetsColumn.width
+                    text: qsTr("Sequential fit: one experiment for all datasets")
                     checked: datasetsChoice.asScan
                     onClicked: datasetsChoice.asScan = true
+                }
+                EaElements.Label {
+                    width: datasetsColumn.width
+                    wrapMode: Text.Wrap
+                    visible: datasetsChoice.asScan
+                    text: qsTr("First fit the template dataset in Single mode. When it is ready, choose Sequential in Analysis to fit the folder. Evolution is available as soon as the scan is loaded.")
                 }
                 EaElements.CheckBox {
                     id: copyBox

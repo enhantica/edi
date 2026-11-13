@@ -34,7 +34,7 @@ Column {
     DataTable {
         id: table
         objectName: "magneticFormFactors.list"
-        defaultInfoText: qsTr("No magnetic atom types")
+        defaultInfoText: qsTr("No magnetic atom types yet")
         sourceModel: group.formFactors
 
         columns: [numberColumnWidth, group.typeWidth, group.typeWidth, -1, group.coefficientWidth, group.coefficientWidth, group.coefficientWidth]

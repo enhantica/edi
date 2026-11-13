@@ -87,8 +87,10 @@ Row {
                 x: EaStyle.Sizes.fontPixelSize * 0.75
                 anchors.verticalCenter: parent.verticalCenter
                 segments: selector.segments(selector.currentIndex, selector.currentText, selector.foregroundColor, row.currentOutcome, row.currentTemplate)
-                // A long name is cut in the middle, so both its ends still tell blocks apart.
-                maximumWidth: Math.max(1, parent.width - x)
+                // Keep the arrow's hit area clear even when the label and its marks are too wide.
+                width: Math.max(0, Math.min(parent.width - x, selector.indicator && selector.indicator.visible && !selector.mirrored ? selector.indicator.x - parent.x - x - EaStyle.Sizes.fontPixelSize * 0.5 : parent.width - x))
+                maximumWidth: Math.max(1, width)
+                clip: true
                 elide: Text.ElideMiddle
             }
         }

@@ -2101,8 +2101,8 @@ std::filesystem::path scan_results_path(const Project& project) {
 // regular file throws (scan_state_present).
 class LedgerReader {
    public:
-    explicit LedgerReader(const std::filesystem::path& path) {
-        if (!scan_state_present(path, "analysis/results-provenance.csv")) {
+    explicit LedgerReader(const std::filesystem::path& path, bool enabled = true) {
+        if (!enabled || !scan_state_present(path, "analysis/results-provenance.csv")) {
             return;  // no ledger: no reasons
         }
         input_.open(path, std::ios::binary);
@@ -2131,27 +2131,16 @@ class LedgerReader {
     bool usable_ = false;
 };
 
-// The termination the ledger's last line records for `file_cell`; empty when that line is another file's, the
-// ledger does not record reasons, or there is none. Reads only the file's end.
-std::string ledger_termination(const std::filesystem::path& path, const std::string& file_cell) {
-    if (!scan_state_present(path, "analysis/results-provenance.csv")) {
-        return {};
+const std::array<const char*, 4> kScanConditionColumns{
+    "fit_result.descent", "fit_result.chi_square_tolerance", "fit_result.max_iterations", "fit_result.termination"};
+
+bool has_scan_conditions(const std::vector<std::string>& header) {
+    const auto count = std::count_if(kScanConditionColumns.begin(), kScanConditionColumns.end(),
+        [&header](const char* name) { return std::find(header.begin(), header.end(), name) != header.end(); });
+    if (count != 0 && count != 4) {
+        throw std::invalid_argument("analysis/results.csv: its fit-condition columns are incomplete");
     }
-    std::ifstream input(path, std::ios::binary | std::ios::ate);
-    if (!input) {
-        return {};
-    }
-    const std::streamoff size = input.tellg();
-    const std::streamoff tail = std::min<std::streamoff>(size, 64 * 1024);
-    std::string text(static_cast<std::size_t>(tail), '\0');
-    input.seekg(size - tail);
-    input.read(text.data(), tail);
-    if (!text.empty() && text.back() == '\n') {
-        text.pop_back();
-    }
-    const std::size_t start = text.rfind('\n');
-    const std::vector<std::string> cells = split_scan_row(start == std::string::npos ? text : text.substr(start + 1));
-    return cells.size() == 5 && cells[0] == file_cell ? cells[4] : std::string();
+    return count == 4;
 }
 
 // The results header, its columns resolved by name (crysta's order and any other alike): the file, χ², success and
@@ -2181,6 +2170,9 @@ void check_scan_header(const Project& project, ScanResultIndex& index) {
     index.success = required("fit_result.success");
     index.iterations = required("fit_result.iterations");
     std::set<std::size_t> taken{index.file, index.chi, index.success, index.iterations};
+    if (has_scan_conditions(header)) {
+        for (const char* name : kScanConditionColumns) taken.insert(required(name));
+    }
     index.extract.clear();
     for (const auto& rule : project.sequential_fit.extract) {
         auto found = column.find(rule->target);
@@ -2275,6 +2267,27 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
         refuse("has no whole iteration count an int holds");
     }
     row.iterations = static_cast<int>(iterations);
+    if (has_scan_conditions(index.header)) {
+        const auto condition = [&](const char* name) -> const std::string& {
+            return cells[static_cast<std::size_t>(std::find(index.header.begin(), index.header.end(), name) - index.header.begin())];
+        };
+        double tolerance = 0.0, maximum = 0.0;
+        const auto& tolerance_text = condition(kScanConditionColumns[1]);
+        const auto& maximum_text = condition(kScanConditionColumns[2]);
+        if ((!tolerance_text.empty() && (!parse_scan_number(tolerance_text, tolerance) ||
+                                        !std::isfinite(tolerance) || tolerance < 0.0)) ||
+            (!maximum_text.empty() && (!parse_scan_number(maximum_text, maximum) ||
+                                      !std::isfinite(maximum) || maximum < 0.0 ||
+                                      maximum != std::floor(maximum) || maximum > std::numeric_limits<int>::max()))) {
+            refuse("has invalid recorded fit conditions");
+        }
+        row.termination = condition(kScanConditionColumns[3]);
+        const std::array<std::string_view, 7> reasons{"", "chi_converged", "step_small", "no_accepted_step",
+                                                   "max_iter_exhausted", "cancelled", "refused"};
+        if (std::find(reasons.begin(), reasons.end(), row.termination) == reasons.end()) {
+            refuse("has an unknown fit termination");
+        }
+    }
     for (const std::ptrdiff_t column : index.extract) {
         row.extracted.push_back(column < 0 ? std::string() : cells[static_cast<std::size_t>(column)]);
     }
@@ -2484,7 +2497,8 @@ ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& data
         check_scan_header(project, index);
         std::int64_t offset = input.tellg();
         index.end = offset;
-        LedgerReader reasons(scan_results_path(project).parent_path() / "results-provenance.csv");
+        const bool inline_conditions = has_scan_conditions(index.header);
+        LedgerReader reasons(scan_results_path(project).parent_path() / "results-provenance.csv", !inline_conditions);
         while (std::getline(input, line)) {
             if (input.eof()) {
                 if (writing) {
@@ -2499,7 +2513,7 @@ ScanResultIndex index_scan_rows(const Project& project, const ScanDatasets& data
                 throw std::invalid_argument("analysis/results.csv: '" + datasets.files[dataset] +
                                             "' has two rows");
             }
-            row.termination = reasons.next(cells[index.file]);
+            if (!inline_conditions) row.termination = reasons.next(cells[index.file]);
             row.offset = offset;
             index.rows[dataset] = std::move(row);
             ++index.fitted;
@@ -6315,8 +6329,12 @@ std::vector<ScanFileRecord> read_scan_rows(const std::filesystem::path& csv_path
     }
     std::string line;
     bool header = true;
+    std::optional<std::size_t> termination;
     while (std::getline(in, line)) {
         if (header) {
+            const auto columns = split_scan_row(line);
+            const auto found = std::find(columns.begin(), columns.end(), kScanConditionColumns[3]);
+            if (found != columns.end()) termination = static_cast<std::size_t>(found - columns.begin());
             header = false;
             continue;
         }
@@ -6325,6 +6343,7 @@ std::vector<ScanFileRecord> read_scan_rows(const std::filesystem::path& csv_path
         }
         std::optional<ScanFileRecord> record = scan_record_from_row(line);
         if (record.has_value()) {
+            if (termination && *termination < record->cells.size()) record->termination = record->cells[*termination];
             rows.push_back(std::move(*record));
         }
     }
@@ -6453,7 +6472,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
             crysta::TokenField::FittingMode, crysta::BeamModeEnum::TimeOfFlight, fitting_mode);
         cproject.minimizer_max_iterations = minimizer_max_iterations;
         // Crysta's driver runs every inner fit under the declared descent and
-        // tolerance and records them per row in analysis/results-provenance.csv.
+        // tolerance and records them in the same analysis/results.csv row.
         cproject.minimizer_descent = descent;
         cproject.minimizer_chi_square_tolerance = minimizer_chi_square_tolerance;
         cproject.minimizer_stop_rules = minimizer_stop_rules;
@@ -6480,7 +6499,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         const std::filesystem::path csv_path = project_root / "analysis" / "results.csv";
         // The retained state is proven before anything is published: every state file the run reads, here and (for
         // a dry run that starts from the loaded project's results) there, is absent or a regular file.
-        for (const char* name : {"results.csv", "results-provenance.csv", "scan-notes.csv"}) {
+        for (const char* name : {"results.csv", "scan-notes.csv"}) {
             scan_state_present(project_root / "analysis" / name, std::string("analysis/") + name);
             if (!scan_data_root.empty()) {
                 scan_state_present(data_root / "analysis" / name, std::string("analysis/") + name);
@@ -6537,7 +6556,6 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 record.iteration = static_cast<int>(file_history->size()) + 1;
                 file_history->push_back(record);
             };
-        const std::filesystem::path ledger_path = project_root / "analysis" / "results-provenance.csv";
         auto completed_files = std::make_shared<std::size_t>(0);
         // ADR-0034: each file's results, by file: those an earlier run kept (a resume fits only the rest), then this
         // run's, each made once by its file's fit and shared from then on. The rows read with a file stay as read.
@@ -6551,7 +6569,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // Each file's event carries its own fit result, so its correlations are crysta's from its covariance, as a
         // single fit's are, over the template project its labels name.
         const crysta::FileResultCallback engine_file_result =
-            [this, file_history, last_file_history, ledger_path, completed_files, scan, &on_file_complete,
+            [this, file_history, last_file_history, completed_files, scan, &on_file_complete,
              &cproject](const std::vector<std::string>& row, const crysta::FitResultBase& file_result) {
                 ++*completed_files;
                 std::swap(*last_file_history, *file_history);
@@ -6564,9 +6582,8 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 scan->results[record->file_name] = record->result;
                 scan->fitted.insert(record->file_name);
                 if (on_file_complete) {
-                    // The driver wrote this file's ledger row just before its results row and waits
-                    // here, so the ledger's last line is this file's.
-                    record->termination = ledger_termination(ledger_path, row.empty() ? std::string() : row[0]);
+                    // The current driver appends the four fit-condition cells to this same row.
+                    record->termination = row.size() >= 8 ? row.back() : std::string();
                     on_file_complete(*record);
                 }
             };

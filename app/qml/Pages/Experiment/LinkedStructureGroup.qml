@@ -30,7 +30,7 @@ Column {
         id: table
 
         objectName: "linkedStructure.list"
-        defaultInfoText: qsTr("No linked structure")
+        defaultInfoText: qsTr("No linked structure yet")
         sourceModel: group.rows
 
         columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, -1, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
