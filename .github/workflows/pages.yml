@@ -101,6 +101,7 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
       - uses: ./.github/actions/setup-pixi
+      - uses: ./.github/actions/wasm-cache
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}

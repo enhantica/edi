@@ -18,7 +18,7 @@ def build_namespace(tmp_path):
     root = tmp_path / 'edi'
     scripts = root / 'tools/ci'
     scripts.mkdir(parents=True)
-    for name in ('wasm-build.sh', 'wasm-env.sh'):
+    for name in ('wasm-build.sh', 'wasm-env.sh', 'wasm-assistant-check.sh'):
         shutil.copy2(ROOT / 'tools/ci' / name, scripts / name)
     source = root / 'build/crysta-src'
     source.mkdir(parents=True)

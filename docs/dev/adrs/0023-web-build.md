@@ -247,3 +247,16 @@ The packer accepts `EDI_WASM_OPTIMIZE_SIZE=1` for qualification builds. It proce
 copies of the linked modules, requires each copy to shrink, checks imports against
 its JavaScript loader, and hashes the final bytes for delivery. The default remains
 the ordinary build pending the full scientific and timing checks.
+
+
+## Shared caches for browser build workflows
+
+The full CI WebAssembly build and the Pages/release WebAssembly build use the same wasm-cache composite
+action for the existing pinned toolchain cache and ccache compiler outputs. This extends the first full-CI
+cache implementation to publication rather than maintaining divergent setup. Compiler entries are restored
+across runs; ccache checks actual compiler contents, inputs and flags, while namespace keys include platform,
+architecture, dependency lock, engine pin and browser toolchain pins. Toolchain installation still validates
+its existing receipts. Every build configures, links and packages its own source/version, then runs its owed
+checks; a cache hit never supplies qualification or skips a build/check step. CI cache access scopes remain
+GitHub's own. Native and browser object code are not interchangeable. The existing incremental CMake build
+directories remain local and are not restored as a substitute for compiler caching.

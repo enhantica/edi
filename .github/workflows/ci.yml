@@ -785,18 +785,7 @@ jobs:
         with:
           fetch-depth: 0  # the app's version line is `git describe`
       - uses: ./.github/actions/setup-pixi
-      # The compiler cache (wasm), between runs: this job keeps it for the next run.
-      - id: ccache
-        uses: ./.github/actions/ccache
-        with:
-          max-size: 2G
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/edi-ccache
-          key: ccache-wasm-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            ccache-wasm-${{ steps.ccache.outputs.key-prefix }}
-            ccache-wasm-${{ runner.os }}-${{ runner.arch }}-
+      - uses: ./.github/actions/wasm-cache
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
@@ -804,13 +793,6 @@ jobs:
       # checks' tests import.
       - name: Build the native code
         run: pixi run core-build
-      # Emscripten, Qt's wasm kits, Eigen and Chrome, kept between runs and keyed by their pins (wasm-env.sh); the
-      # install step below checks each one's recorded version and reinstalls only what differs.
-      - name: Restore the WebAssembly toolchain
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/edi-wasm
-          key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}
       - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
         run: pixi run -e app wasm-toolchain
       - name: Build both kits and pack the site
