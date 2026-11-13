@@ -142,3 +142,9 @@ locked package, including compiler C++/CRT libraries, and their full notices are
 the archive/wheel. The installed-wheel checks preserve private Linux C++ symbols, reject a
 dynamic libstdc++ dependency, preload the OS C++ runtime, and exercise both real PyZMQ import
 orders before calculation. PyZMQ is a locked packaging-test dependency, not a shipped app library.
+
+
+The pull-request browser compile also restores the shared wasm-cache action, including the
+compiler cache. It uses the same toolchain/compiler cache policy as the full browser CI and
+Pages build. Changes to that action, browser build scripts or their workflows require the
+pull-request multithread build and assistant-exclusion check, even without an assistant source edit.

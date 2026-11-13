@@ -105,3 +105,50 @@ def test_required_linux_wasm_compile_routes_through_sdk_build_and_exclusion_chec
     assert dispatch(tmp_path, step['run'], owed) == expected, (
         'Changed wasm inputs acquire the SDK, build the kit and check assistant exclusion in order'
     )
+
+
+def shared_cache_routes(ci, pages):
+    routes = [('app', ci['app']), ('app-wasm', ci['app-wasm']), ('pages', pages['wasm'])]
+    for name, job in routes:
+        calls = [
+            step for step in job['steps'] if step.get('uses') == './.github/actions/wasm-cache'
+        ]
+        assert len(calls) == 1, (
+            'Every PR, dedicated CI and Pages wasm build inherits the complete shared cache action'
+        )
+        if name == 'app':
+            assert calls[0].get('if') == (
+                "${{ !cancelled() && matrix.platform == 'Linux' "
+                "&& needs.changes.outputs.wasm_build == 'true' }}"
+            ), 'The PR cache retains its original Linux and actual owed-input guard'
+        else:
+            assert not calls[0].get('if'), (
+                'Dedicated wasm builders always restore their shared caches'
+            )
+
+
+def test_every_wasm_route_uses_shared_toolchain_and_compiler_caches_and_rejects_partial_restore():
+    import copy  # noqa: PLC0415 - independent source mutation controls
+
+    ci = workflow()
+    pages = yaml.safe_load((ROOT / '.github/workflows/pages.yml').read_text())['jobs']
+    shared_cache_routes(ci, pages)
+    action = yaml.safe_load((ROOT / '.github/actions/wasm-cache/action.yml').read_text())
+    caches = [step for step in action['runs']['steps'] if step.get('uses') == 'actions/cache@v4']
+    assert {step['with']['path'] for step in caches} == {
+        '~/.cache/edi-wasm',
+        '~/.cache/edi-ccache',
+    }, 'The one shared action restores both the pinned toolchain and validated compiler outputs'
+    assert any(
+        step.get('uses') == './.github/actions/ccache' for step in action['runs']['steps']
+    ), 'The shared action activates the original compiler-wrapper configuration owner'
+    for area in ['app', 'app-wasm', 'pages']:
+        changed_ci, changed_pages = copy.deepcopy(ci), copy.deepcopy(pages)
+        job = changed_pages['wasm'] if area == 'pages' else changed_ci[area]
+        step = next(
+            step for step in job['steps'] if step.get('uses') == './.github/actions/wasm-cache'
+        )
+        step['uses'] = 'actions/cache@v4'
+        step['with'] = {'path': '~/.cache/edi-wasm', 'key': 'partial-toolchain-only'}
+        with pytest.raises(AssertionError):
+            shared_cache_routes(changed_ci, changed_pages)

@@ -770,19 +770,16 @@ jobs:
       # parts of the assistant are native-only, and the full WebAssembly job runs on main only, so a pull request
       # would not notice a broken web build without this. One kit, no site checks; the toolchain comes from the
       # same cache as the WebAssembly job's.
-      - name: Restore the WebAssembly toolchain
+      - name: Restore the WebAssembly toolchain and compiler cache
         if: ${{ !cancelled() && matrix.platform == 'Linux' && needs.changes.outputs.wasm_build == 'true' }}
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/edi-wasm
-          key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}
+        uses: ./.github/actions/wasm-cache
       # The step itself runs on every Linux app job, an earlier failure notwithstanding, so the CI contract can
-      # require it; it compiles only when the pull request changed the assistant's sources and says so either way.
+      # require it; it compiles when the pull request changes browser build inputs and says so either way.
       - name: Compile the app for WebAssembly
         if: ${{ !cancelled() && matrix.platform == 'Linux' }}
         run: |
           if [ "$EDI_WASM_OWED" != true ]; then
-            echo "compile-wasm: not owed, no change under app/src/assistant* in this run"
+            echo "compile-wasm: not owed, no browser build input changed in this run"
             exit 0
           fi
           echo "compile-wasm: owed, the multithread kit follows"

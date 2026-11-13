@@ -230,7 +230,7 @@ jobs:
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --check-compiler --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
       - name: Fetch the data collection for the offline copy
         run: git clone --depth 1 https://github.com/enhantica/edi-data "${{ github.workspace }}/.edi-data"
-      - name: Build crysta, desktop bundle and release CLI
+      - name: Build desktop bundle and CLI with the qualified SDK
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer" --collection "${{ github.workspace }}/.edi-data"
       - name: Compiler cache hits
         if: always()

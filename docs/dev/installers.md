@@ -1,6 +1,6 @@
 # Desktop installers
 
-The packaging path builds the C++ crysta library first, links the C++ application, deploys its Qt/QML
+The packaging path consumes the qualified native crysta SDK, links the C++ application, deploys its Qt/QML
 runtime, then wraps the result with Qt Installer Framework 4.11.0. Python is a build tool only.
 The installed application includes its native assistant runtime and lifetime guard.
 
@@ -13,7 +13,14 @@ and Xcode; portable build/runtime libraries come from Pixi. Native compilation u
 
 ## Local Linux build
 
-Install the locked toolchain, then build against a crysta checkout:
+Obtain the `crysta-sdk-linux-64` artifact from a successful `crysta-sdk.yml` producer run for the
+commit pinned in `pixi.toml`. Keep its SDK, source archive and checksums together in
+`build/crysta-sdk-archives`, or set `CRYSTA_SDK_ARCHIVES` to that directory. The packager verifies
+the qualification, source identity, binary hashes and compatibility with the installer lock.
+The source checkout below must name that same commit; it is not compiled. A missing or incompatible
+SDK fails before configuration rather than falling back to an engine rebuild.
+
+Install the locked toolchain, then build using that SDK:
 
 ```sh
 pixi install --frozen --manifest-path tools/installer/pixi.toml
@@ -86,10 +93,12 @@ available.
 ## Standalone CLI archives
 
 Versioned desktop qualification also builds `edi` for each platform from the
-same source and engine commit. This separate build links the static engine and
-uses the engine's standard thread pool and scalar math to avoid shipping
-OpenMP or vector math libraries. On Windows it uses the static C++ runtime.
-It excludes Qt, Python bindings and the assistant.
+same source and qualified static engine archive as the desktop and Python wheel.
+The engine's accelerated math and OpenMP settings are shared. Packaging copies the
+manifest-hashed runtime dependency closure, relocates the copies and includes their
+locked-package licence notices. Windows uses the release DLL C++ runtime, matching
+the SDK. There is no second standalone engine variant or engine compilation.
+The CLI excludes Qt, Python bindings and the assistant.
 
 CI unpacks each CLI ZIP, verifies its platform dependencies and embedded
 release version, and refines a fixture project with the extracted executable.
@@ -130,7 +139,10 @@ Each versioned native build also produces a CPython 3.12+ stable-ABI wheel.
 The wheel uses the same release version and native engine as the standalone
 CLI and includes the JavaScript needed for offline reports. Qualification
 installs the wheel in a fresh virtual environment without a package index,
-then checks the import, command line, refinement and offline report.
+then checks the import, command line, refinement and offline report. Linux retains
+a private static C++ runtime with hidden symbols and rejects a dynamic libstdc++ dependency.
+Qualification preloads the OS C++ runtime and exercises real calculations with both
+PyZMQ import orders, so loading in a notebook process is covered separately from a clean import.
 
 The preview and stable GitHub release jobs attach the qualified wheels as
 individual assets. The docs build generates a static Simple API index from
