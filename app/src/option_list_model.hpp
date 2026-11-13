@@ -18,6 +18,7 @@ class OptionListModel : public QAbstractListModel {
     QML_ELEMENT
     QML_UNCREATABLE("Options come from the core")
     Q_PROPERTY(int count READ count NOTIFY countChanged)
+    Q_PROPERTY(quint64 revision READ revision NOTIFY revisionChanged)
 
    public:
     enum Role { TokenRole = Qt::UserRole + 1, LabelRole, IsDefaultRole };
@@ -33,6 +34,7 @@ class OptionListModel : public QAbstractListModel {
     void setItemOptions(const std::string& uid, const std::vector<std::string>& tokens,
                         const std::string& default_token = {});
     int count() const { return static_cast<int>(tokens_.size()); }
+    quint64 revision() const { return revision_; }
     Q_INVOKABLE int indexOf(const QString& token) const { return static_cast<int>(tokens_.indexOf(token)); }
     Q_INVOKABLE QString tokenAt(int row) const { return row >= 0 && row < tokens_.size() ? tokens_.at(row) : QString(); }
 
@@ -42,11 +44,13 @@ class OptionListModel : public QAbstractListModel {
 
    signals:
     void countChanged();
+    void revisionChanged();
 
    private:
     QStringList tokens_;
     QStringList labels_;
     QString default_token_;
+    quint64 revision_ = 0;
 };
 
 }  // namespace edi_app

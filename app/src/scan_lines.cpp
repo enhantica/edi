@@ -89,6 +89,12 @@ const QSGGeometry::AttributeSet& vertex_layout() {
     return layout;
 }
 
+class LineNode : public QSGGeometryNode {
+   public:
+    std::uint64_t revision = 0;
+    std::size_t count = 0;
+};
+
 bool finite_point(const ScanLines::Trace& trace, std::size_t k) {
     return std::isfinite(trace.x[k]) && std::isfinite(trace.v[k]);
 }
@@ -149,7 +155,13 @@ ScanLines::ScanLines(QQuickItem* parent) : QQuickItem(parent) { setFlag(ItemHasC
 
 void ScanLines::setTraces(std::vector<Trace> traces) {
     traces_ = std::move(traces);
-    traces_changed_ = true;
+    group_revisions_.assign((traces_.size() + kGroup - 1) / kGroup, ++revision_);
+    update();
+}
+
+void ScanLines::setTrace(std::size_t index, Trace trace) {
+    traces_.at(index) = std::move(trace);
+    group_revisions_[index / kGroup] = ++revision_;
     update();
 }
 
@@ -236,25 +248,28 @@ QSGNode* ScanLines::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*data*/)
     }
     const std::size_t lines = std::min(traces_.size(), styles_.size());
     const std::size_t groups = (lines + kGroup - 1) / kGroup;
-    const bool rebuild = traces_changed_ || static_cast<std::size_t>(root->childCount() - 1) != groups;
-    if (rebuild) {
-        while (QSGNode* child = bands->nextSibling()) {
-            root->removeChildNode(child);
-            delete child;
-        }
+    while (static_cast<std::size_t>(root->childCount() - 1) > groups) {
+        QSGNode* child = root->lastChild();
+        root->removeChildNode(child);
+        delete child;
     }
     const double span = y_max_ - y_min_;
     const double h = height();
     QSGNode* child = bands->nextSibling();
     for (std::size_t g = 0; g < groups; ++g) {
         const std::size_t first = g * kGroup, count = std::min(kGroup, lines - first);
-        auto* node = static_cast<QSGGeometryNode*>(child);
-        if (rebuild) {
-            node = new QSGGeometryNode;
-            node->setGeometry(quads_of(traces_, first, count));
+        auto* node = static_cast<LineNode*>(child);
+        if (node == nullptr) {
+            node = new LineNode;
             node->setMaterial(new LineMaterial);
             node->setFlags(QSGNode::OwnsGeometry | QSGNode::OwnsMaterial);
             root->appendChildNode(node);
+        }
+        if (node->revision != group_revisions_[g] || node->count != count) {
+            node->setGeometry(quads_of(traces_, first, count));
+            node->revision = group_revisions_[g];
+            node->count = count;
+            node->markDirty(QSGNode::DirtyGeometry);
         }
         auto* material = static_cast<LineMaterial*>(node->material());
         for (std::size_t i = 0; i < count; ++i) {
@@ -273,7 +288,6 @@ QSGNode* ScanLines::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*data*/)
         node->markDirty(QSGNode::DirtyMaterial);
         child = node->nextSibling();
     }
-    traces_changed_ = false;
     // A hidden item draws nothing: a size change syncs it while the painter draws the view.
     if (isVisible()) {
         emit rendered();

@@ -173,11 +173,11 @@ def render_interface_links() -> None:
 def download_buttons(family: str, entries: list[dict]) -> list[str]:
     """The download buttons of a distribution family, disabled until a release links them.
 
-    The desktop installers come online and offline, a row each, one button per platform; a
-    button's third line names its kind and, once a release is read, its size (render_downloads).
+    The desktop installers show one online button per platform; a button's third line
+    names its kind and, once a release is read, its size (render_downloads).
     The command line has one kind.
     """
-    kinds = ('online', 'offline') if family == 'desktop' else (None,)
+    kinds = ('online',) if family == 'desktop' else (None,)
     buttons = []
     for kind in kinds:
         for entry in entries:

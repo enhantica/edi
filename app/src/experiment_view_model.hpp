@@ -318,6 +318,8 @@ class ExperimentViewModel : public QObject {
     // Whether it shows one dataset of a scan, coloured as one of the scan's patterns (edi::pattern_set_colour).
     bool showsDataset() const { return colour_place_.has_value(); }
     void setColourPlace(std::optional<std::size_t> place, std::size_t count, std::vector<std::size_t> positions);
+    /// Move within the same scan without reallocating its palette positions.
+    void setDatasetColourPlace(std::size_t place);
     // An edit was admitted: what the pattern shows was calculated before it. The frame stays; the pattern
     // reports stale and the chart's source reports that it no longer describes the model, until the newest
     // request's publication captures the pattern again.

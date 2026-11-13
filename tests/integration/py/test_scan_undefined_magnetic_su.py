@@ -11,6 +11,7 @@ import edi
 import pytest
 
 from tests.fixtures.magnetic_pnma import commensurate, reference
+from tests.fixtures.scan_csv import CONDITION_COLUMNS, assert_reported_legacy
 
 FIRST = '01_152_054p9730.dat'
 SECOND = '02_153_055p0000.dat'
@@ -139,9 +140,11 @@ def test_converged_nan_moment_su_loads_continues_and_stays_undefined(tmp_path, s
         + result.stderr
     )
     actual = rows(root / 'analysis/results.csv')
-    assert len(actual) == 2 and actual[0] == initial[0], (
+    assert len(actual) == 2, (
         'Continue keeps the converged first row and appends exactly the remaining frame'
     )
+    assert_reported_legacy(actual[0], initial[0])
+    assert list(actual[0]) == [*FIELDS, *CONDITION_COLUMNS]
     assert Path(actual[1]['file_path']).name == SECOND, (
         'The scan continues to the next declared data file'
     )

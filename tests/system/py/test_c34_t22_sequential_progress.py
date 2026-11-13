@@ -118,6 +118,8 @@ class _FakeAnalysis:
 
 
 class _FakeProject:
+    _scan_declared = True
+
     def __init__(self) -> None:
         self.analysis = _FakeAnalysis()
 
@@ -129,6 +131,7 @@ def _run_fake_human(
     tty: bool,
 ) -> tuple[str, _FakeProject]:
     project = _FakeProject()
+    monkeypatch.setattr(cli.edi._edi, '_metric_variant', lambda _project: 'powder')
     output = _Capture(tty=tty)
     monkeypatch.setattr(cli.sys, 'stdout', output)
     # Start plus one reading after each declared completion. There is no wall-clock tolerance:
@@ -233,7 +236,7 @@ def test_native_scan_declares_total_and_one_completion_per_input_file(tmp_path: 
             " completion success must be the scan writer's own outcome"
         )
         assert math.isclose(
-            event.reduced_chi_square,
+            float(format(event.reduced_chi_square, '.2g')),
             float(row['fit_result.reduced_chi_square']),
             rel_tol=0.0,
             abs_tol=1e-12,
@@ -258,7 +261,7 @@ def test_core_renderers_use_declared_counts_and_injected_elapsed_values() -> Non
     )
     assert line == (
         '[██████░░░░░░░░] · 3/7 · 43% · elapsed 2m39s · eta 3m32s · '
-        '2 ok · 1 fail · cosio_213K · χ² 4.81'
+        '2 ok · 1 fail · cosio_213K · reduced χ² 4.81'
     ), ' progress content must use the house groups and mean-elapsed ETA formula'
 
     summary = edi.scan_summary(
@@ -270,9 +273,9 @@ def test_core_renderers_use_declared_counts_and_injected_elapsed_values() -> Non
         elapsed_seconds=892.0,
         measured_completed=3,
     )
-    assert summary == ('scan · 3 files · 2 converged · 1 failed · χ² 3.91-8.44 · 14m52s\n'), (
-        ' failed scan summary must retain counts and omit the failed-file list'
-    )
+    assert summary == (
+        'scan · 3 files · 2 converged · 1 failed · reduced χ² 3.91-8.44 · 14m52s\n'
+    ), ' failed scan summary must retain counts and omit the failed-file list'
 
 
 def test_unknown_total_never_fabricates_percentage_or_eta() -> None:
@@ -320,7 +323,7 @@ def test_non_tty_emits_one_line_per_file_without_carriage_returns(
         ' live progress must expose failures as soon as a file fails'
     )
     assert lines[-1:] == [
-        'scan · 3 files · 2 converged · 1 failed · χ² 3.91-8.44 · 5m00s',
+        'scan · 3 files · 2 converged · 1 failed · reduced χ² 3.91-8.44 · 5m00s',
     ], ' final progress must freeze before the truthful failure-count summary'
 
 
@@ -402,7 +405,7 @@ def test_tty_updates_in_place_then_freezes_before_summary(
     visible_lines = _terminal_visible_lines(output)
     assert visible_lines == [
         '[██████████████] · 3/3 · 100% · elapsed 5m00s · 2 ok · 1 fail',
-        'scan · 3 files · 2 converged · 1 failed · χ² 3.91-8.44 · 5m00s',
+        'scan · 3 files · 2 converged · 1 failed · reduced χ² 3.91-8.44 · 5m00s',
     ], (
         ' TTY output must overwrite the longer penultimate progress row completely, '
         'freeze the exact 100% row, and then show the truthful failure-count summary'
@@ -412,7 +415,9 @@ def test_tty_updates_in_place_then_freezes_before_summary(
 def test_scan_iteration_stream_is_suppressed_by_default_and_present_at_full(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(cli.edi, 'iteration_line', lambda row, _previous: f'ITER {row.iteration}')
+    monkeypatch.setattr(
+        cli.edi, 'iteration_line', lambda row, _previous, _variant: f'ITER {row.iteration}'
+    )
     compact_output, compact = _run_fake_human(
         monkeypatch,
         verbosity=edi.VerbosityEnum.COMPACT,
@@ -433,6 +438,7 @@ def test_scan_iteration_stream_is_suppressed_by_default_and_present_at_full(
 
 def test_scan_off_runs_without_subscribers_or_output(monkeypatch: pytest.MonkeyPatch) -> None:
     project = _FakeProject()
+    monkeypatch.setattr(cli.edi._edi, '_metric_variant', lambda _project: 'powder')
     output = _Capture(tty=False)
     monkeypatch.setattr(cli.sys, 'stdout', output)
     assert (
@@ -458,7 +464,20 @@ def test_cli_delegates_every_scan_line_to_core_renderers() -> None:
         for node in module.body
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
-    run_human = functions.get('_run_human', '')
+    reachable = {'_run_human'}
+    pending = ['_run_human']
+    while pending:
+        name = pending.pop()
+        assert name in functions, 'The delegated CLI formatting path must resolve'
+        calls = {
+            call.func.id
+            for call in ast.walk(ast.parse(functions[name]))
+            if isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+        }
+        for called in calls & functions.keys() - reachable:
+            reachable.add(called)
+            pending.append(called)
+    run_human = '\n'.join(functions[name] for name in reachable)
     assert 'edi.scan_progress_line' in run_human and 'edi.scan_summary' in run_human, (
         ' CLI must delegate scan progress and summary formatting to the core'
     )
@@ -487,9 +506,10 @@ def test_single_fit_stream_contract_remains_byte_unchanged(
 
     analysis = SingleAnalysis()
     project = SimpleNamespace(analysis=analysis)
-    monkeypatch.setattr(cli.edi, 'stream_header', lambda _p, _name: 'HEADER\n')
-    monkeypatch.setattr(cli.edi, 'iteration_line', lambda _row, _previous: 'ROW')
-    monkeypatch.setattr(cli.edi, 'summary_line', lambda _outcome: 'SUMMARY\n')
+    monkeypatch.setattr(cli.edi._edi, '_metric_variant', lambda _project: 'powder')
+    monkeypatch.setattr(cli.edi, 'stream_header', lambda _p, _name, _variant: 'HEADER\n')
+    monkeypatch.setattr(cli.edi, 'iteration_line', lambda _row, _previous, _variant: 'ROW')
+    monkeypatch.setattr(cli.edi, 'summary_line', lambda _outcome, _variant: 'SUMMARY\n')
     output = _Capture(tty=False)
     monkeypatch.setattr(cli.sys, 'stdout', output)
     assert (

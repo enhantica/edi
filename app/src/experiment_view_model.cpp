@@ -770,6 +770,14 @@ void ExperimentViewModel::showPattern(edi::PatternSource source, std::optional<e
     emit patternSourceChanged();
 }
 
+void ExperimentViewModel::setDatasetColourPlace(std::size_t place) {
+    if (!colour_place_ || *colour_place_ == place) return;
+    colour_place_ = place;
+    pattern_source_.experiment_place = place;
+    if (d_source_) d_source_->experiment_place = place;
+    emit patternSourceChanged();
+}
+
 void ExperimentViewModel::setColourPlace(std::optional<std::size_t> place, std::size_t count,
                                          std::vector<std::size_t> positions) {
     if (place == colour_place_ && (!place || count == colour_count_) && positions == colour_positions_) {

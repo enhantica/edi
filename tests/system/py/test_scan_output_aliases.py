@@ -3,6 +3,7 @@
 
 import csv
 import importlib
+import io
 import os
 import shutil
 import subprocess
@@ -12,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures import phase_scan
+from tests.fixtures.scan_csv import CONDITION_COLUMNS, legacy_scan
 
 ROOT = Path(__file__).resolve().parents[3]
 ENGINE = 'edi'
@@ -133,6 +135,8 @@ def invoke(
         )
         environment['SCAN_FAULT_RECEIPT'] = str(receipt)
         if fault == 'read':
+            if selected.name == 'results-provenance.csv':
+                environment['SCAN_FAULT_ARMED'] = '1'
             environment['SCAN_FAULT_READ_PATH'] = str(selected.resolve())
             if prefix:
                 environment['SCAN_FAULT_PREFIX'] = '1'
@@ -177,6 +181,8 @@ def project(tmp_path, scan_history, mode, history):
 
 def alias_file(path, external, filename, alias):
     selected = path / 'analysis' / filename
+    if filename == 'results-provenance.csv' and not selected.exists():
+        legacy_scan(path)
     sentinel = external / filename
     sentinel.write_bytes(selected.read_bytes())
     selected.unlink()
@@ -265,6 +271,20 @@ def test_each_csv_detaches_final_and_temporary_aliases(
         )
     elif failure != 'none' and receipt.exists():
         pytest.fail('An injected scan output removal or replacement failure must reach the caller')
+    elif filename == 'results-provenance.csv':
+        assert not selected.exists(), 'A successful legacy migration removes the old sidecar'
+        historical = list(csv.DictReader(io.StringIO(previous.decode())))
+        with (path / 'analysis/results.csv').open() as stream:
+            reader = csv.DictReader(stream)
+            assert reader.fieldnames[-4:] == CONDITION_COLUMNS
+            rows = list(reader)
+        assert len(rows) == 3, 'Migration and continuation retain every measured-file result'
+        for old in historical:
+            retained = next(row for row in rows if row['file_path'] == old['file_path'])
+            for column in CONDITION_COLUMNS:
+                assert retained[column] == old[column.removeprefix('fit_result.')], (
+                    'Migration retains each historical row condition without relabelling'
+                )
     else:
         assert not selected.is_symlink(), 'Successful scan output owns its final entry'
         assert selected.stat().st_nlink == 1, 'Successful scan output owns the final CSV inode'
@@ -319,6 +339,7 @@ def test_provenance_backfill_and_ordinary_scan_controls(
     tmp_path, scan_history, core_scan, scan_faults, mode, caller, parent, rewrite
 ):
     path = project(tmp_path, scan_history, mode, 'resume')
+    legacy_scan(path)
     if rewrite:
         provenance = path / 'analysis/results-provenance.csv'
         lines = provenance.read_text().splitlines()
@@ -339,7 +360,14 @@ def test_provenance_backfill_and_ordinary_scan_controls(
         assert result.returncode == 0, (
             'An owned ordinary scan completes both appending and legacy provenance backfill: '
         ) + result.stderr
-        assert len(list(csv.DictReader((path / 'analysis/results-provenance.csv').open()))) == 3, (
+        assert not (path / 'analysis/results-provenance.csv').exists(), (
+            'A successful resume migrates the historical sidecar into its result rows'
+        )
+        with (path / 'analysis/results.csv').open() as stream:
+            reader = csv.DictReader(stream)
+            assert reader.fieldnames[-4:] == CONDITION_COLUMNS
+            rows = list(reader)
+        assert len(rows) == 3 and all(row['fit_result.descent'] for row in rows), (
             'Backfill and ordinary append retain exactly one provenance row per scan dataset'
         )
 
@@ -351,6 +379,8 @@ def test_dry_scan_copies_resume_state_only_into_an_owned_destination(
     tmp_path, scan_history, core_scan, scan_faults, mode, parent, target
 ):
     path = project(tmp_path, scan_history, mode, 'resume')
+    if target == 'results-provenance.csv':
+        legacy_scan(path)
     scratch = tmp_path / 'dry'
     scratch.mkdir()
     external = tmp_path / 'outside'
@@ -396,7 +426,14 @@ def test_real_cli_scan_uses_the_same_output_boundary(tmp_path, scan_history, mod
         external.mkdir()
         if alias != 'none':
             if not (path / 'analysis' / alias).exists():
-                shutil.copy2(scan_history[mode] / 'analysis' / alias, path / 'analysis' / alias)
+                if alias == 'results-provenance.csv':
+                    (path / 'analysis' / alias).write_text(
+                        'file_path,descent,chi_square_tolerance,max_iterations,termination\n'
+                    )
+                else:
+                    shutil.copy2(
+                        scan_history[mode] / 'analysis' / alias, path / 'analysis' / alias
+                    )
             alias_file(path, external, alias, 'symbolic')
     previous = contents(external)
     arguments = (

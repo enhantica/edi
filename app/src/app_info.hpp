@@ -8,6 +8,7 @@
 #include <QJSValue>
 #include <QVariantMap>
 #include <QObject>
+#include <QPointer>
 #include <QPoint>
 #include <QString>
 #include <QList>
@@ -438,6 +439,8 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE bool chooseStructureFile() const;
     Q_INVOKABLE QJSValue takeStructureWebIntent(const QJSValue& request) const;
     Q_INVOKABLE void chooseExperimentData(const QJSValue& experiment) const;
+    Q_INVOKABLE void chooseDatasetFolder(QObject* picker, QObject* project, QObject* experiment) const;
+    Q_INVOKABLE void acceptDatasetFolder(QObject* picker, QObject* currentProject, const QUrl& folder) const;
     Q_INVOKABLE void formFilesOpened(const QJSValue& request, const QJSValue& files, bool experiments) const;
     Q_INVOKABLE void formFilesCancelled(const QJSValue& request, bool experiments) const;
     Q_INVOKABLE void acceptExperimentDataFile() const;
@@ -781,7 +784,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void tableRowDestroyed() const;
     /// Searchable popup filtering, geometry and existing opening/request lifecycle.
     Q_INVOKABLE void searchPositionPopup(const QJSValue& opening) const;
-    Q_INVOKABLE QJSValue searchMeasuredWidth(bool optionsOnly) const;
     Q_INVOKABLE QJSValue searchAnyMatch() const;
     Q_INVOKABLE QJSValue searchFolded(const QJSValue& text) const;
     Q_INVOKABLE void searchPlacePopup(const QJSValue& opening) const;
@@ -864,6 +866,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void createProjectClicked() const;
     Q_INVOKABLE void createProjectDialogEvent(int kind) const;
     Q_INVOKABLE void openProjectChoice() const;
+    Q_INVOKABLE void openProjectPicker() const;
     Q_INVOKABLE void askOpenProjectChoice() const;
     Q_INVOKABLE void windowSaveChoiceOpened() const;
     Q_INVOKABLE QJSValue windowUnsavedText() const;
@@ -1045,6 +1048,10 @@ class ApplicationInfo : public QObject {
     // `colour` as drawn flat on any of `backgrounds`: its lightness moved to 2:1 contrast on each, its hue kept (edi
     // ADR-0047).
     Q_INVOKABLE QColor readableColour(const QColor& colour, const QList<QColor>& backgrounds) const;
+   private:
+    mutable QPointer<QObject> pending_project_picker_;
+    mutable QPointer<QObject> dataset_folder_picker_, dataset_folder_project_, dataset_folder_experiment_;
+
 };
 
 #endif  // EDI_APP_APP_INFO_HPP

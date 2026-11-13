@@ -66,6 +66,7 @@ class RowTableModel : public QAbstractListModel {
 
    private:
     QStringList roles_;
+    QHash<int, QByteArray> role_names_;
     QList<Row> rows_;
 };
 

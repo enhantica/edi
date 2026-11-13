@@ -316,7 +316,8 @@ std::vector<std::size_t> decimate_min_max(std::span<const double> x, std::span<c
 }
 
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t experiments, std::size_t structures,
-                                             std::span<const std::size_t> positions, bool pattern_set) {
+                                             std::span<const std::size_t> positions, bool pattern_set,
+                                             std::optional<std::size_t> measured_place) {
     // edi ADR-0017 §15: easydiffractionbeta's chart widths (its QtCharts1dTab.qml; the residual's 1 px line and the
     // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02). Every colour is the palette's (ADR-0038): an
     // experiment's and a structure's at its position, the calculated, background and residual colours its role colours.
@@ -325,8 +326,9 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
     // The items at their positions, as given (they never collide) or as a project with none held takes them; the rows
     // past them at the next free positions.
     const bool given = positions.size() == experiments + structures;
-    const std::vector<std::size_t> held = given ? std::vector<std::size_t>(positions.begin(), positions.end())
-                                                : colour_positions(scheme, experiments, structures);
+    const std::vector<std::size_t> allocated = given ? std::vector<std::size_t>{}
+                                                     : colour_positions(scheme, experiments, structures);
+    const std::span<const std::size_t> held = given ? positions : std::span<const std::size_t>(allocated);
     const std::vector<std::size_t> spare_measured =
         free_positions(scheme, FigureKind::Experiment, measured_rows - experiments, held);
     // The structure rows past the project's own (a magnetic structure's magnetic part, edi ADR-0078) take the
@@ -351,7 +353,9 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
                    : colour(measured_at(place), dark);
     };
     std::vector<SeriesStyle> table;
-    for (std::size_t place = 0; place < measured_rows; ++place) {
+    const std::size_t first_measured = measured_place ? std::min(*measured_place, measured_rows - 1) : 0;
+    const std::size_t last_measured = measured_place ? first_measured + 1 : measured_rows;
+    for (std::size_t place = first_measured; place < last_measured; ++place) {
         table.push_back({"meas." + std::to_string(place), measured(place, false), measured(place, true),
                          "line+markers+bars", 2.0, 1.0, 5.0});
     }

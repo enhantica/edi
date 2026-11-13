@@ -257,7 +257,6 @@ TEST_CASE("E09-T55 adapter conversion preserves the complete TOF experiment layo
     source.peak.cutoff_fwhm = 17.5;
     source.absorption.type = "cylinder";
     source.absorption.abscor1 = edi::Parameter{0.2, 0.02, true};
-    source.absorption.abscor2 = edi::Parameter{0.3, 0.03, false};
     source.background.push_back(edi::LineSegment{});
     source.background[0]->position = 10000.0;
     source.background[0]->intensity = {2.0, 0.20, true};
@@ -284,9 +283,12 @@ TEST_CASE("E09-T55 adapter conversion preserves the complete TOF experiment layo
     CHECK_MESSAGE((converted.background[0].position == 10000.0 &&
                    converted.background[0].intensity.value() == 2.0),
                   "the adapter must preserve background coordinates and intensity");
-    CHECK_MESSAGE((converted.absorption.size() == 2 && converted.absorption[0].value() == 0.2 &&
-                   converted.absorption[1].value() == 0.3),
-                  "the adapter must preserve the two-term absorption body");
+    REQUIRE_MESSAGE(converted.absorption.size() == 1,
+                    "the TOF adapter must contain exactly its active absorption coefficient");
+    CHECK_MESSAGE((converted.absorption[0].value() == 0.2 &&
+                   converted.absorption[0].uncertainty() == doctest::Approx(0.02) &&
+                   converted.absorption[0].free()),
+                  "the adapter must preserve the active absorption value, uncertainty and flag");
     CHECK_MESSAGE((converted.excluded_regions[0].id == "low angle"),
                   "the adapter must retain the exclusion's stored ID independently of row number");
     CHECK_MESSAGE((converted.dataset_weight == 2.5 &&

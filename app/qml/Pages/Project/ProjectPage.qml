@@ -16,7 +16,7 @@ WorkflowPage {
     readonly property ProjectViewModel project: Session.project
 
     pageName: "project"
-    defaultInfo: project ? "" : qsTr("No project defined")
+    defaultInfo: project ? "" : qsTr("No project yet")
     mainTabs: [
         IconTabButton {
             objectName: "mainArea.project.tab.description"

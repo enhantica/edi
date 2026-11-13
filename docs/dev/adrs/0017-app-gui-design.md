@@ -1451,3 +1451,13 @@ AssistantViewModel uses its existing observed map for per-property publication v
 AssistantMarkdown's own callbacks now use a private QObject lifetime context owned by that same presentation item. QQuickItem base teardown can emit windowChanged after AssistantMarkdown's derived members have been destroyed; waiting for QObject's later automatic disconnection allows a captured-this render callback to access those dead members. The explicit derived destructor removes its owned window event filter and destroys the private context while every derived member is still alive. Context destruction disconnects incoming functors and removes their queued deliveries before base teardown begins, without a post-destruction member flag or a change to public document/editor values.
 
 The context covers the self windowChanged and desktop clipboard callbacks, editor/document lifetime callbacks, and every PassiveDocument contents/layout callback, including old externally parented documents/layouts retained after a newer document is selected. It is declared last so construction unwinding also destroys it before the fields those callbacks use. It owns no model, document, editor, window or clipboard state and introduces no service/controller. Alive callbacks retain their captured actual owner, existing property publication/currentness checks, rendering, formatting, clipboard and DPI behavior. External observers' connections remain untouched. Qt's ordinary item virtual/polish/scenegraph lifecycle stays with QQuickItem; no live callback is disabled and no public setter/reset is invoked as a teardown substitute. Normal lifetime, reentry, rendering and platform verification remains required.
+
+## Selection updates on retained pages
+
+WorkflowPage keeps offscreen pages resident. Previously the Structure and Experiment pages bound their
+selected block continuously, rebuilding both category repeaters and their table trees even while a
+different page owned the window. Their selected block now follows the project only while the page is
+current, retaining the last block while hidden. On showing a page the binding resumes with the newest
+selection before its controls are used. QObject deletion clears a retained block; no snapshot owns it.
+The shared main-view selector and chart continue to follow the project directly. This extends the
+existing hidden-chart/hidden-text policy to the original sidebar trees; it adds no second selection store.

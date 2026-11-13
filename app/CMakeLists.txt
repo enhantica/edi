@@ -93,6 +93,7 @@ qt_add_qml_module(edi_app_module
     DEPENDENCIES QtGraphs QtQuick3D
     SOURCES
         src/app_info.hpp src/app_info.cpp
+        src/combo_box_metrics.hpp src/combo_box_metrics.cpp
         src/assistant_message_presentation.hpp
         src/assistant_values.hpp
         src/assistant_panel_presentation.hpp
@@ -132,6 +133,7 @@ qt_add_qml_module(edi_app_module
         src/measured_layer.hpp src/measured_layer.cpp
         src/evolution_view_model.hpp src/evolution_view_model.cpp
         src/scan_view_model.hpp src/scan_view_model.cpp
+        src/scan_draw_rows.hpp
         src/scan_layer.hpp src/scan_layer.cpp
         src/scan_lines.hpp src/scan_lines.cpp
         src/rendering_info.hpp src/rendering_info.cpp
@@ -436,6 +438,23 @@ endif()
 qt_add_executable(edi_app main.cpp)
 target_link_libraries(edi_app PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Svg)
 set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE TRUE)
+if(NOT EMSCRIPTEN)
+    qt_add_executable(edi_scan_refresh_tests EXCLUDE_FROM_ALL tests/scan_refresh_tests.cpp
+        src/scan_view_model.hpp src/scan_view_model.cpp src/scan_session.hpp src/scan_session.cpp)
+    target_link_libraries(edi_scan_refresh_tests PRIVATE edi_core Qt6::Core Qt6::Gui Qt6::Qml Qt6::Concurrent Qt6::Test)
+    target_include_directories(edi_scan_refresh_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_compile_definitions(edi_scan_refresh_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    set_target_properties(edi_scan_refresh_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE
+        QT_QML_MODULE_NO_IMPORT_SCAN TRUE)
+    qt_add_executable(edi_scan_save_tests EXCLUDE_FROM_ALL tests/scan_save_tests.cpp)
+    target_link_libraries(edi_scan_save_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
+    target_include_directories(edi_scan_save_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_compile_definitions(edi_scan_save_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    set_target_properties(edi_scan_save_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+    if(TARGET edi_assistant_native)
+        target_link_libraries(edi_scan_save_tests PRIVATE edi_assistant_native)
+    endif()
+endif()
 if(WIN32)
     enable_language(RC)
     file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/edi-app-icon.rc"
@@ -506,6 +525,10 @@ add_dependencies(edi_app_tests edi_app_build_commit)
 # The app names it too: its test observers report the build they observe.
 target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_app edi_app_build_commit)
+if(TARGET edi_scan_save_tests)
+    target_sources(edi_scan_save_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+    add_dependencies(edi_scan_save_tests edi_app_build_commit)
+endif()
 # The benchmarks link the app module, whose assistant code names the build as well.
 foreach(bench edi_app_chart_bench edi_app_scan_bench)
     target_sources(${bench} PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")

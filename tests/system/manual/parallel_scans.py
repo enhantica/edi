@@ -68,8 +68,10 @@ def scan_rows(root, free_c2):
         return []
     with (root / 'analysis/results.csv').open(newline='') as stream:
         rows = list(csv.DictReader(stream))
-    with (root / 'analysis/results-provenance.csv').open(newline='') as stream:
-        provenance = list(csv.DictReader(stream))
+    assert not (root / 'analysis/results-provenance.csv').exists(), (
+        'Fresh scan conditions share their results.csv rows'
+    )
+    provenance = rows
     source_files = {p.name for p in (root / 'experiments/d20_scan').glob('*.dat')}
     assert len(rows) == len(source_files), 'Every measured file appears once in the executed scan'
     assert {Path(row['file_path']).name for row in rows} == source_files, (
@@ -79,9 +81,9 @@ def scan_rows(root, free_c2):
         'Each fitted row retains its own ordered termination provenance'
     )
     stalled = [
-        (Path(r['file_path']).name, r['termination'])
+        (Path(r['file_path']).name, r['fit_result.termination'])
         for r in provenance
-        if r['termination'] != 'chi_converged'
+        if r['fit_result.termination'] != 'chi_converged'
     ]
     assert not stalled, f'Every parallel scan file reaches chi_converged: {stalled}'
     if free_c2:

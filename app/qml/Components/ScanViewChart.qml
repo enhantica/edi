@@ -450,7 +450,7 @@ Item {
         property: "rowLabelsRoom"
         when: chart.shown
         restoreMode: Binding.RestoreNone
-        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.ceil(labelIcon.implicitWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownRowLabels, labelBold.font)) : 0
+        value: chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? Math.ceil(labelIcon.implicitWidth + chart.em * 0.5 + chart.scan.widestRowText(chart.shownLabelDatasets, labelBold.font)) : 0
     }
     // The row label's pieces as IconLine draws them: the icon a label of the icon font, measured by the width it takes
     // (an icon is measured in the font of an item drawing it, never one built from the family alone).
@@ -467,31 +467,32 @@ Item {
         font.styleName: "Bold"
         font.pixelSize: chart.em
     }
-    // Which labels show (ScanLayer.shownLabels): all while they fit, else an evenly spread share with the shown dataset
+    // Which labels show: a short list of dataset indices, evenly spread with the shown dataset
     // always among them. A view not shown chooses none: a followed scan moves the shown dataset with every file.
-    readonly property var shownRowLabels: layer.shownLabels
+    readonly property var shownLabelDatasets: layer.labelledDatasets
     Repeater {
         id: rowLabelRepeater
+        objectName: "scanView." + chart.mode + ".labels"
 
-        // One label per dataset, kept while the rows are placed again and while the view labels no row (the Map by scan
-        // value; shownRowLabels hides them): only its text, place and colour follow, and only while the view is shown.
-        model: chart.scan !== null ? chart.scan.count : 0
+        // Instantiate only labels that fit in the visible plot, never one item per scan file.
+        model: chart.shown ? chart.shownLabelDatasets.length : 0
         delegate: IconLine {
             required property int index
+            readonly property int dataset: chart.shownLabelDatasets[index] ?? -1
             // Only a label shown has its text: the others, hidden while the rows are too close, lay out nothing.
-            readonly property string rowText: chart.shown && chart.shownRowLabels[index] === true && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(index) : ""
-            readonly property real at: chart.shown && chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
+            readonly property string rowText: chart.shown && dataset >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(dataset) : ""
+            readonly property real at: chart.shown && chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(dataset) : NaN
             // The dataset's colour, its Stacked line's (a joint fit's experiment's own, a scan's dataset's position in the
             // palette). The colours' revision is read here, so the label follows the colour choice and the theme.
-            readonly property color colour: layer.coloursRevision >= 0 ? layer.colourOf(index) : chart.colors.themeForegroundMinor
+            readonly property color colour: layer.coloursRevision >= 0 ? layer.colourOf(dataset) : chart.colors.themeForegroundMinor
 
-            objectName: "scanView." + chart.mode + ".rowLabel." + index
-            visible: chart.hasData && chart.shownRowLabels[index] === true
+            objectName: "scanView." + chart.mode + ".rowLabel." + dataset
+            visible: chart.hasData && dataset >= 0
             height: AppSizes.legendRowHeight
             // On Stacked (the owner, 2026-10-27): highlighting, the shown dataset's label keeps its colour and every
             // other is disabled-coloured; not highlighting, all keep their colours and the shown one is bold. On the
             // Map, not highlighting, the shown one is bold in the accent colour.
-            readonly property bool current: chart.project !== null && chart.project.currentExperimentIndex === index
+            readonly property bool current: chart.project !== null && chart.project.currentExperimentIndex === dataset
             readonly property bool marked: !Preferences.chartHighlightSelected && current
             readonly property color stackedColour: Preferences.chartHighlightSelected && !current ? chart.colors.themeForegroundDisabled : colour
             // The icon takes the text's colour, so a new colour changes no piece of the line.
@@ -836,10 +837,12 @@ Item {
 
         EaElements.Label {
             objectName: "scanView." + chart.mode + ".progress"
-            visible: chart.scan !== null && chart.scan.wanted && chart.scan.loaded < chart.scan.count
+            visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.loaded < chart.scan.count) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
             anchors.right: parent.right
             color: chart.colors.chartLabels
-            text: chart.scan ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : ""
+            text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
+            width: Math.min(implicitWidth, chart.width - 2 * chart.sideMargin)
+            elide: Text.ElideRight
         }
         EaElements.Label {
             objectName: "scanView." + chart.mode + ".refused"

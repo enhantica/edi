@@ -29,7 +29,7 @@ DataTable {
     }
 
     objectName: "reflections.list"
-    defaultInfoText: qsTr("No reflections")
+    defaultInfoText: qsTr("No reflections yet")
     sourceModel: experiment ? experiment.reflections : null
 
     readonly property bool magnetic: experiment !== null && experiment.reflections !== null && experiment.reflections.magnetic

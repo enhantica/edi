@@ -78,7 +78,7 @@ Column {
         id: table
         objectName: "data.list"
         visible: group.experiment !== null && !group.experiment.calculationOnly
-        defaultInfoText: qsTr("No measured points")
+        defaultInfoText: qsTr("No measured points yet")
         sourceModel: visible ? group.experiment.pattern : null
 
         // Each structure's curve, one column per structure at the end of the row. A Repeater places its cells before

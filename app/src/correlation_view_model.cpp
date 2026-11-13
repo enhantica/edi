@@ -73,6 +73,7 @@ const std::vector<double>& CorrelationViewModel::numbers(
 void CorrelationViewModel::show(const std::string& file,
                                 const std::vector<std::shared_ptr<const edi::FitParameterCorrelation>>& rows,
                                 const std::vector<std::string>& hidden, const QString& reason) {
+    table_.reset();
     names_.clear();
     matrix_.clear();
     reason_.clear();
@@ -109,6 +110,11 @@ void CorrelationViewModel::show(const std::string& file,
 }
 
 void CorrelationViewModel::setTable(const edi::CorrelationTable& table) {
+    // Scan tables are immutable; selection and completion can publish the same one (ADR-0034).
+    if (table_ && table_->names == table.names && table_->values == table.values) {
+        return;
+    }
+    table_ = table;
     // ADR-0034: the matrix straight from the table's numbers, its pairs i < j row by row (I2, I10).
     names_.clear();
     matrix_.clear();

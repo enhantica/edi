@@ -9,6 +9,7 @@
 #endif
 #include "web_files.hpp"
 
+#include <QtGraphs/QValueAxis>
 #include <QMap>
 #include <QJsonArray>
 
@@ -20,6 +21,7 @@
 #include "web_files.hpp"
 #include "engine_setup.hpp"
 #include "pattern_chart_controller.hpp"
+#include "project_view_model.hpp"
 #include "edi/display.hpp"
 #include "edi/report.hpp"
 #include "edi/model.hpp"
@@ -4395,6 +4397,25 @@ QJSValue ApplicationInfo::takeStructureWebIntent(const QJSValue& request) const 
         || !pickerSessionProject(f, original)) return consentNull();
     return original;
 }
+void ApplicationInfo::chooseDatasetFolder(QObject* picker, QObject* project, QObject* experiment) const {
+    auto* owner = qobject_cast<edi_app::ProjectViewModel*>(project);
+    auto* target = qobject_cast<edi_app::ExperimentViewModel*>(experiment);
+    if (!picker || !owner || !target || owner->listingDatasetFolder()) return;
+    dataset_folder_picker_ = picker;
+    dataset_folder_project_ = owner;
+    dataset_folder_experiment_ = target;
+    QMetaObject::invokeMethod(picker, "open", Qt::QueuedConnection);
+}
+void ApplicationInfo::acceptDatasetFolder(QObject* picker, QObject* currentProject, const QUrl& folder) const {
+    if (picker != dataset_folder_picker_) return;
+    const QPointer<QObject> owner = std::exchange(dataset_folder_project_, {});
+    const QPointer<QObject> target = std::exchange(dataset_folder_experiment_, {});
+    dataset_folder_picker_.clear();
+    if (owner && owner == currentProject && target) {
+        auto* project = qobject_cast<edi_app::ProjectViewModel*>(owner.data());
+        if (project) project->loadDatasetFolder(qobject_cast<edi_app::ExperimentViewModel*>(target.data()), folder);
+    }
+}
 void ApplicationInfo::chooseExperimentData(const QJSValue& experiment) const {
     const auto f = panelUsageEngine(this);
     if (panelUsageTruth(assistantContextField(f, "WebFiles", "available"))) {
@@ -7048,8 +7069,12 @@ void ApplicationInfo::tableMeasureRows(int run, int from) const {
     }
     const auto measuring = panelUsageContextRead(f, "measuringRows");
     assistantMemberWrite(f, measuring, "model", panelUsageContextRead(f, "model")); if (!editorLife(f, life) || !panelUsageReady(f)) return;
-    const int total = panelUsageRead(f, measuring, "count").toInt();
     const int atOnce = panelUsageContextRead(f, "measuredAtOnce").toInt();
+    // A table of a scan's datasets can hold a million rows (edi ADR-0026: views make only what is on screen). Above
+    // 1000 rows the columns fit the first measuredAtOnce rows, so a refit, which every changed row asks for, costs the
+    // same however long the table is.
+    const int modelRows = panelUsageRead(f, measuring, "count").toInt();
+    const int total = modelRows > 1000 ? std::min(modelRows, atOnce) : modelRows;
     QElapsedTimer started; started.start();
     const auto rows = f->newArray(); const auto host = panelUsageContextRead(f, "measuringHost");
     int next = from;
@@ -8946,8 +8971,37 @@ void patternSetMargin(const PanelUsageFrame& f, const QJSValue& view, const QJSV
 }
 } // namespace
 
+namespace {
+std::optional<std::vector<double>> numericPatternTicks(const PanelUsageFrame& f, const QJSValue& axis) {
+    if (!qobject_cast<QValueAxis*>(axis.toQObject())) return std::nullopt;
+    // Read through the wrapper so QML still captures each axis property as a binding dependency.
+    const double high = panelUsageRead(f, axis, "max").toNumber();
+    const double low = panelUsageRead(f, axis, "min").toNumber();
+    const double interval = panelUsageRead(f, axis, "tickInterval").toNumber();
+    const double anchor = panelUsageRead(f, axis, "tickAnchor").toNumber();
+    std::vector<double> ticks;
+    const double span = high - low;
+    if (!(interval > 0.0) || !(span > 0.0) || !std::isfinite(span) || !std::isfinite(anchor) || !std::isfinite(interval)) return ticks;
+    const double first = std::ceil((low - anchor) / interval - 1e-9);
+    for (int index = 0; index < 64; ++index) {
+        const double value = anchor + (first + index) * interval;
+        if (!std::isfinite(value) || (value - low) / span > 1 + 1e-9) break;
+        ticks.push_back(value);
+    }
+    return ticks;
+}
+QJSValue numericPatternTickArray(const PanelUsageFrame& f, const std::vector<double>& ticks) {
+    auto out = f->newArray(static_cast<uint>(ticks.size()));
+    for (uint index = 0; index < ticks.size(); ++index) out.setProperty(index, ticks[index]);
+    return out;
+}
+} // namespace
+
 QJSValue ApplicationInfo::patternTickValues(const QJSValue& axis) const {
-    const auto f = panelUsageEngine(this); const auto out = controlEmptyArray(f);
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageReady(f)) return {};
+    if (const auto ticks = numericPatternTicks(f, axis)) return numericPatternTickArray(f, *ticks);
+    const auto out = controlEmptyArray(f);
     const auto high = panelUsageRead(f, axis, "max"), low = panelUsageRead(f, axis, "min"); const auto span = viewArithmetic(f, high, low, 0);
     if (!assistantRelation(f, panelUsageRead(f, axis, "tickInterval"), QJSValue(0), 1) || !assistantRelation(f, span, QJSValue(0), 1)) return out;
     const auto first = numberMath(f, "ceil", [&] {
@@ -8975,7 +9029,18 @@ QJSValue ApplicationInfo::patternGridTicks(const QJSValue& axis) const {
     return panelUsageMemberCall(f, ticks, "map", {panelUsageClosure(f, 241, {axis}, 1)});
 }
 QJSValue ApplicationInfo::patternYLabelText(const QJSValue& text, const QJSValue& axis, const QJSValue& scale, const QJSValue& format) const {
-    const auto f = panelUsageEngine(this); const auto shown = panelUsageGlobalCall(f, "Number", {text}); auto display = panelUsageContextRead(f, "NaN");
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageReady(f)) return {};
+    if (const auto ticks = numericPatternTicks(f, axis)) {
+        const double shown = text.toNumber();
+        if (!std::isfinite(shown) || ticks->empty()) return text;
+        double display = ticks->front();
+        for (const double value : *ticks)
+            if (std::abs(value - shown) < std::abs(display - shown)) display = value;
+        const auto original = projectInvoke(f, "controller", "originalValue", {QJSValue(display), scale});
+        return panelUsageMemberCall(f, panelUsageContextRead(f, "NumberText"), "axisTick", {original, format});
+    }
+    const auto shown = panelUsageGlobalCall(f, "Number", {text}); auto display = panelUsageContextRead(f, "NaN");
     panelUsageEach(f, panelUsageGlobalCall(f, "tickValues", {axis}), [&](const QJSValue& value) {
         bool nearer = panelUsageTruth(panelUsageGlobalCall(f, "isNaN", {display}));
         if (!nearer) {
@@ -10237,31 +10302,6 @@ void ApplicationInfo::searchPositionPopup(const QJSValue& opening) const {
         return QJSValueList{numberMath(f, "max", [&] { return QJSValueList{QJSValue(0), panelUsageRead(f, component, "currentIndex")}; }), assistantContextField(f, "ListView", "Contain")};
     });
 }
-QJSValue ApplicationInfo::searchMeasuredWidth(bool optionsOnly) const {
-    const auto f = panelUsageEngine(this); QJSValue widest(0);
-    if (!optionsOnly) widest = panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "optionMetrics"), "advanceWidth", [&] { return QJSValueList{panelUsageContextRead(f, "displayText")}; });
-    for (double index = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(index), panelUsageContextRead(f, "count"), 0); ++index)
-        widest = numberMath(f, "max", [&] {
-            return QJSValueList{widest, panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "optionMetrics"), "advanceWidth", [&] { return QJSValueList{panelUsageGlobalCall(f, "textAt", {QJSValue(index)})}; })};
-        });
-    if (optionsOnly) {
-        const auto measured = numberMath(f, "ceil", [&] { return QJSValueList{widest}; }); const auto pixels = panelUsageRead(f, panelUsageContextRead(f, "font"), "pixelSize");
-        return panelUsageAdd(f, measured, viewArithmetic(f, pixels, QJSValue(3), 1));
-    }
-    QJSValue label(0);
-    if (panelUsageTruth(panelUsageContextRead(f, "contentItemLabel"))) {
-        const auto left = assistantContextField(f, "contentItemLabel", "leftPadding"), right = assistantContextField(f, "contentItemLabel", "rightPadding"); label = panelUsageAdd(f, left, right);
-    }
-    QJSValue besides = label;
-    if (panelUsageTruth(panelUsageContextRead(f, "contentItem"))) {
-        const auto implicit = assistantContextField(f, "contentItem", "implicitWidth");
-        const auto measured = panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "optionMetrics"), "advanceWidth", [&] { return QJSValueList{panelUsageContextRead(f, "displayText")}; }); besides = viewArithmetic(f, implicit, measured, 0);
-    }
-    const auto fit = numberMath(f, "ceil", [&] {
-        const auto spacing = numberMath(f, "max", [&] { return QJSValueList{label, besides}; }); const auto first = panelUsageAdd(f, widest, spacing);
-        const auto pixels = panelUsageRead(f, panelUsageContextRead(f, "font"), "pixelSize"); return QJSValueList{panelUsageAdd(f, first, viewArithmetic(f, pixels, QJSValue(0.5), 1))};
-    }); const auto left = panelUsageAdd(f, fit, panelUsageContextRead(f, "leftPadding")); return panelUsageAdd(f, left, panelUsageContextRead(f, "rightPadding"));
-}
 QJSValue ApplicationInfo::searchAnyMatch() const {
     const auto f = panelUsageEngine(this); if (panelUsageContextRead(f, "filter").strictlyEquals(QJSValue(QStringLiteral("")))) return QJSValue(true);
     for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageContextRead(f, "count"), 0); ++i)
@@ -10961,7 +11001,18 @@ void ApplicationInfo::createProjectDialogEvent(int kind) const {
 void ApplicationInfo::openProjectChoice() const {
     const auto f = panelUsageEngine(this);
     if (panelUsageTruth(assistantContextField(f, "WebFiles", "available"))) projectInvoke(f, "Session", "openWebProject", {panelUsageTruth(panelUsageContextRead(f, "zip")) ? QJSValue(QStringLiteral("file")) : QJSValue(QStringLiteral("folder"))});
-    else if (panelUsageTruth(panelUsageContextRead(f, "zip"))) projectInvoke(f, "openZipDialog", "open"); else projectInvoke(f, "openFolderDialog", "open");
+    else {
+        const char* name = panelUsageTruth(panelUsageContextRead(f, "zip")) ? "openZipDialog" : "openFolderDialog";
+        const auto picker = panelUsageContextRead(f, name);
+        pending_project_picker_ = consentQtObject(f, picker) ? picker.toQObject() : nullptr;
+    }
+}
+void ApplicationInfo::openProjectPicker() const {
+    // A native panel opens after the choice popup has closed and its script callback has returned (ADR-0052).
+    const QPointer<QObject> picker = std::exchange(pending_project_picker_, {});
+    if (picker) {
+        QMetaObject::invokeMethod(picker, "open", Qt::QueuedConnection);
+    }
 }
 void ApplicationInfo::askOpenProjectChoice() const { const auto f = panelUsageEngine(this); const auto state = panelUsageContextRead(f, "AppState"); panelUsageMemberCall(f, state, "afterChanges", {projectGuardedClosure(f, 388)}); }
 void ApplicationInfo::windowSaveChoiceOpened() const {

@@ -141,7 +141,7 @@ class ScanViewModel : public QObject {
         return dataset >= 0 && dataset < row_texts_.size() ? row_texts_.at(dataset) : QString();
     }
     // The widest label text of the rows `shown` marks (true by dataset), in `font`; in pixels.
-    Q_INVOKABLE double widestRowText(const QList<bool>& shown, const QFont& font) const;
+    Q_INVOKABLE double widestRowText(const QList<int>& shown, const QFont& font) const;
     // The dataset whose row holds `row` on the vertical axis, or -1.
     Q_INVOKABLE int datasetAt(double row) const;
     // A dataset's row on the vertical axis, NaN when it has none yet.
@@ -162,6 +162,10 @@ class ScanViewModel : public QObject {
         // Changes whenever the points or their place on the axis shown change: a view's cached reduction of the
         // pattern holds while it is the same.
         std::uint64_t generation = 0;
+        std::uint64_t range_generation = 0;
+        bool range_included = false;
+        double range_low = std::numeric_limits<double>::infinity();
+        double range_high = -std::numeric_limits<double>::infinity();
     };
     const std::vector<Pattern>& patterns() const { return patterns_; }
     // Whether `x`, on the axis shown, falls in one of the pattern's excluded regions.
