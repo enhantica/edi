@@ -822,6 +822,17 @@ jobs:
           path: build/wasm/site
           if-no-files-found: error
           # The repository's default retention: the site is downloaded by hand.
+      - name: Retain the browser CLI and its source identity
+        uses: actions/upload-artifact@v4
+        with:
+          name: edi-wasm-cli
+          path: |
+            build/wasm/multithread/crysta-prefix/bin/crysta*
+            build/wasm/multithread/crysta-prefix/.edi-wasm-key
+            build/wasm/multithread/app/app/CRYSTA_SOURCE_SHA
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error
       # The wasm crysta CLI's fit against the native reference, the zip's contents, and the app in headless
       # Chrome for each build.
       - name: Check the site in the browser
