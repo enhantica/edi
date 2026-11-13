@@ -808,7 +808,6 @@ TEST_CASE("E09-T55 TOF writer covers absorption") {
         edi::experiment_from_edi_text(read_text(fixtures / "cases/tof_valid.edi")));
     project.experiment().absorption.type = "cylinder";
     project.experiment().absorption.abscor1 = edi::Parameter{0.2, 0.01, true};
-    project.experiment().absorption.abscor2 = edi::Parameter{0.3, 0.02, false};
     project.minimizer_max_iterations = 3;
     TempTree output = temp_tree("tof-absorption-write");
     edi::save_project(project, output.path.string());
@@ -819,6 +818,13 @@ TEST_CASE("E09-T55 TOF writer covers absorption") {
                     "the TOF writer must retain present ABSCOR1");
     CHECK_MESSAGE(restored.experiment().absorption.abscor1->value == doctest::Approx(0.2),
                   "the TOF writer must retain the independently specified ABSCOR1 value");
+    CHECK_MESSAGE(restored.experiment().absorption.abscor1->uncertainty.value_or(-1.0) ==
+                      doctest::Approx(0.01),
+                  "the TOF writer must retain the active coefficient's uncertainty");
+    CHECK_MESSAGE(restored.experiment().absorption.abscor1->free,
+                  "the TOF writer must retain the active coefficient's free flag");
+    CHECK_MESSAGE(!restored.experiment().absorption.mu_r.has_value(),
+                  "the TOF writer must not create a CW-only absorption coefficient");
 }
 
 TEST_CASE("E09-T55 TOF writer refuses ragged observations") {
