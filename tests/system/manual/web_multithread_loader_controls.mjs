@@ -15,8 +15,10 @@ function host(options={}) {
     SharedArrayBuffer:options.shared===false?undefined:SharedArrayBuffer,
     crossOriginIsolated:options.isolated!==false,isSecureContext:options.secure!==false,
     location:{search:options.search||'',reload(){++reloads;}},
-    sessionStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key)},
-    navigator:{serviceWorker:{register:async()=>{if(options.registrationFailure)throw Error('denied');},
+    sessionStorage:{getItem:key=>{if(options.storageFailure==='get')throw Error('storage denied');return storage.get(key)||null;},
+      setItem:(key,value)=>{if(options.storageFailure==='set')throw Error('storage denied');storage.set(key,value);},
+      removeItem:key=>{if(options.storageFailure==='remove')throw Error('storage denied');storage.delete(key);}},
+    navigator:{serviceWorker:{register:async()=>{if(options.registrationFailure)throw Error('denied');if(options.registerPending)await new Promise(()=>{});},
       ready:options.pending?new Promise(()=>{}):Promise.resolve()}},
     addEventListener(){},
     document:{documentElement:{dataset:{}},getElementById:name=>nodes[name],
@@ -43,6 +45,11 @@ for(const search of ['', '?build=multithread']) {
    'The loader requests only the declared content-addressed threaded scripts');
  assert.equal(h.stats().qtCalls,1,'The supported startup reaches its Qt transport once');
 }
+for(const storageFailure of ['get','remove','set']) {
+ const h=host({storageFailure});await h.context.loader.start();
+ assert.equal(h.stats().qtCalls,1,'Direct header isolation does not require successful optional storage methods');
+ assert.equal(h.stats().reloads,0,'Broken optional storage cannot redirect an already isolated app');
+}
 for(const [options,reason] of [
  [{search:'?build=singlethread'},/multithreaded build/],
  [{search:'?build=unknown'},/multithreaded build/],
@@ -51,6 +58,9 @@ for(const [options,reason] of [
  [{shared:false},/shared memory/],
  [{isolated:false,noWorker:true},/cross-origin isolation/],
  [{isolated:false,noStorage:true},/session storage/],
+ [{isolated:false,storageFailure:'get'},/session storage/],
+ [{isolated:false,storageFailure:'remove'},/session storage/],
+ [{isolated:false,storageFailure:'set'},/could not be enabled/],
  [{isolated:false,reloaded:true},/still unavailable/],
  [{isolated:false,registrationFailure:true},/could not be enabled/],
 ]) {
@@ -67,13 +77,13 @@ for(const [options,reason] of [
  assert.equal(h.storage.get('edi.coi-reloaded'),'multithread-a1b2',
    'The reload marker binds the exact declared kit');
 }
-{
- const h=host({isolated:false,pending:true});const pending=h.context.loader.chooseBuild('multithread-a1b2');
+for(const stalled of ['registerPending','pending']) {
+ const h=host({isolated:false,[stalled]:true});const pending=h.context.loader.chooseBuild('multithread-a1b2');
  await new Promise(setImmediate);
  assert.equal(h.timers.length,1,'A stalled service-worker activation has one owned deadline');
  assert.equal(h.timers[0].ms,15000,'The existing activation bound remains fifteen seconds');
  h.timers[0].callback();
- await assert.rejects(pending,/timed out/,'Service-worker readiness cannot leave startup pending indefinitely');
+ await assert.rejects(pending,/timed out/,'Neither registration nor readiness can leave startup pending indefinitely');
  assert(h.cleared.includes(h.timers[0]),'The activation timer is cleared after refusal');
 }
 for(const manifest of [{},{singlethread:'singlethread-abcd'},{multithread:4},
