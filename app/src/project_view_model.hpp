@@ -770,6 +770,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void storeSelection() const;
     QString selectionKey() const;
     bool selection_restored_ = false;
+    QTimer selection_store_timer_;
     void syncBlocks();
     void completeSymmetry();
     void syncParameterTable(bool refresh_report = true);

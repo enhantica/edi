@@ -5,6 +5,9 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
+#include <QQmlExpression>
+#include <QQuickWindow>
+#include <QSettings>
 #include "scan_layer.hpp"
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -84,6 +87,50 @@ private slots:
         QVERIFY(labels.size() <= 7);
         layer.setActive(false);
         QVERIFY(layer.labelledDatasets().isEmpty());
+    }
+    void freeMenuVisitsRowsOnlyWhileOpen() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(EDI_SOURCE_DIR "/tests/fixtures/correlations/scan-sequential")),
+                 qPrintable(session->lastError()));
+        QQmlComponent component(&engine);
+        component.setData("import edi.app; FreeHeaderMenu { project: Session.project; filter: ParameterFilterModel { sourceModel: Session.project.parameters } }", QUrl());
+        QScopedPointer<QObject> menu(component.create());
+        QVERIFY2(menu, qPrintable(component.errorString()));
+        QQmlExpression count(QQmlEngine::contextForObject(menu.data()), menu.data(), "shown.length");
+        QCOMPARE(count.evaluate().toInt(), 0);
+        QQuickWindow window;
+        window.setGeometry(0, 0, 400, 300);
+        window.show();
+        menu->setProperty("parent", QVariant::fromValue(window.contentItem()));
+        QVERIFY(QMetaObject::invokeMethod(menu.data(), "open"));
+        QTRY_VERIFY(menu->property("visible").toBool());
+        QVERIFY(count.evaluate().toInt() > 0);
+        QVERIFY(QMetaObject::invokeMethod(menu.data(), "close"));
+        QTRY_VERIFY(!menu->property("visible").toBool());
+        QCOMPARE(count.evaluate().toInt(), 0);
+    }
+    void selectionIsStoredAfterSwitchAndOnClose() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        const auto source = QStringLiteral(EDI_SOURCE_DIR "/tests/fixtures/report_context/joint");
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(source)), qPrintable(session->lastError()));
+        auto* project = session->project();
+        const auto key = QString("Selections/%1").arg(QString::fromLatin1(QUrl::toPercentEncoding(QFileInfo(source).absoluteFilePath())));
+        const auto stored = [&] { QSettings settings(edi_app::settings_file_path(), QSettings::IniFormat); return settings.value(key).toStringList(); };
+        const auto before = stored();
+        project->setCurrentExperimentIndex(project->currentExperimentIndex() == 0 ? 1 : 0);
+        const auto selected = project->currentExperiment()->name();
+        QCOMPARE(stored(), before);
+        QTRY_COMPARE_WITH_TIMEOUT(stored().value(1), selected, 2000);
+        project->setCurrentExperimentIndex(project->currentExperimentIndex() == 0 ? 1 : 0);
+        const auto last = project->currentExperiment()->name();
+        session->closeProject();
+        QTRY_COMPARE_WITH_TIMEOUT(stored().value(1), last, 2000);
     }
     void generatedRunRecordIsPartOfSave() {
         QTemporaryDir root;

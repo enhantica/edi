@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "scan_lines.hpp"
+#include "row_table_model.hpp"
 #include "scan_draw_rows.hpp"
 #include <set>
 #include <numeric>
@@ -17,6 +18,17 @@ public:
 class LineUpdates : public QObject {
     Q_OBJECT
 private slots:
+    void roleMetadataIsSharedAndIsolated() {
+        edi_app::RowTableModel model({"parameter", "value", "name"}, nullptr);
+        const auto first = model.roleNames();
+        const auto second = model.roleNames();
+        QVERIFY(!first.isEmpty());
+        QCOMPARE(&*first.constBegin(), &*second.constBegin());
+        auto changed = first;
+        changed.insert(Qt::UserRole + 1, "changed");
+        QCOMPARE(model.roleNames().value(Qt::UserRole + 1), QByteArray("parameter"));
+        QCOMPARE(first.value(Qt::UserRole + 3), QByteArray("name"));
+    }
     void screenLimitedStackedRows() {
         const std::vector<double> rows{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
         const auto full = edi_app::stacked_draw_rows(rows, 0.5, 0, 12, 600, 5, {});

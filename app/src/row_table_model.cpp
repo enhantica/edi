@@ -6,7 +6,9 @@
 
 namespace edi_app {
 
-RowTableModel::RowTableModel(const QStringList& roles, QObject* parent) : QAbstractListModel(parent), roles_(roles) {}
+RowTableModel::RowTableModel(const QStringList& roles, QObject* parent) : QAbstractListModel(parent), roles_(roles) {
+    for (int i = 0; i < roles_.size(); ++i) role_names_.insert(Qt::UserRole + 1 + i, roles_.at(i).toUtf8());
+}
 
 int RowTableModel::rowCount(const QModelIndex& parent) const { return parent.isValid() ? 0 : count(); }
 
@@ -18,13 +20,7 @@ QVariant RowTableModel::data(const QModelIndex& index, int role) const {
     return roleValue(index.row(), column);
 }
 
-QHash<int, QByteArray> RowTableModel::roleNames() const {
-    QHash<int, QByteArray> names;
-    for (int i = 0; i < roles_.size(); ++i) {
-        names.insert(Qt::UserRole + 1 + i, roles_.at(i).toUtf8());
-    }
-    return names;
-}
+QHash<int, QByteArray> RowTableModel::roleNames() const { return role_names_; }
 
 bool RowTableModel::setData(const QModelIndex& index, const QVariant& value, int role) {
     const int column = roleIndex(role);

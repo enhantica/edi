@@ -486,6 +486,9 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
             }
         }
     }
+    selection_store_timer_.setSingleShot(true);
+    selection_store_timer_.setInterval(200);
+    connect(&selection_store_timer_, &QTimer::timeout, this, &ProjectViewModel::storeSelection);
     selection_restored_ = true;
     storeSelection();
     restoreViewSettings();
@@ -508,6 +511,10 @@ void ProjectViewModel::holdPublicationFailure(const QString& warning) noexcept {
 }
 
 ProjectViewModel::~ProjectViewModel() {
+    if (selection_store_timer_.isActive()) {
+        selection_store_timer_.stop();
+        storeSelection();
+    }
     // No delivery after this: the fit and the preview first, then the worker, which waits for the job in flight.
     if (fit_ != nullptr) {
         fit_->close();
@@ -822,7 +829,9 @@ QString ProjectViewModel::selectionKey() const {
 void ProjectViewModel::publishCurrent() {
     const PublicationScope publication(*this);
     if (retired_) return;
-    storeSelection();
+    const bool changed = current_structure_ != published_structure_index_ || currentStructure() != published_structure_ ||
+        currentExperimentIndex() != published_experiment_index_ || currentExperiment() != published_experiment_;
+    if (changed && selection_restored_) selection_store_timer_.start();
     if (current_structure_ != published_structure_index_) {
         published_structure_index_ = current_structure_;
         emit currentStructureIndexChanged();
