@@ -19,7 +19,8 @@ ROOT = Path(__file__).resolve().parents[3]
 @pytest.fixture
 def reader():
     spec = importlib.util.spec_from_file_location(
-        'windows_sdk_reader', ROOT / 'tools/ci/crysta_sdk.py'
+        'windows_sdk_reader',
+        Path(os.environ.get('EDI_SDK_READER_CONTRACT_TOOL', ROOT / 'tools/ci/crysta_sdk.py')),
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -202,3 +203,35 @@ def test_macos_target_compatibility_requires_valid_numeric_order(
     else:
         with pytest.raises(reader.RefusedError):
             reader.check(prefix, 'osx-arm64')
+
+
+@pytest.mark.parametrize('runtime', ['empty', 'retained'])
+@pytest.mark.parametrize(
+    'compiler', ['valid', 'absent', 'wrong-id', 'null', 'list', 'numeric-version']
+)
+def test_windows_reader_requires_runtime_and_compiler_independently_of_entry_count(
+    reader, tmp_path, monkeypatch, runtime, compiler
+):
+    prefix, repo, manifest = make(tmp_path)
+    monkeypatch.delenv('MACOSX_DEPLOYMENT_TARGET', raising=False)
+    if runtime == 'empty':
+        for name in list(manifest['tested']['sha256']):
+            if name.lower().endswith('.dll'):
+                manifest['tested']['sha256'].pop(name)
+                (prefix / name).unlink()
+    if compiler == 'absent':
+        manifest['fingerprint'].pop('compiler')
+    elif compiler == 'wrong-id':
+        manifest['fingerprint']['compiler']['id'] = 'Unknown'
+    elif compiler in {'null', 'list'}:
+        manifest['fingerprint']['compiler'] = None if compiler == 'null' else []
+    elif compiler == 'numeric-version':
+        manifest['fingerprint']['compiler']['version'] = 1944
+    write_manifest(prefix, manifest)
+    if runtime == 'retained' and compiler == 'valid':
+        assert check(reader, prefix, repo) == manifest, (
+            'The independently complete runtime and compiler control must admit'
+        )
+    else:
+        with pytest.raises(reader.RefusedError, match=r'runtime|compiler'):
+            check(reader, prefix, repo)

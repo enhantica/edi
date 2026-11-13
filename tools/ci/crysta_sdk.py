@@ -209,15 +209,21 @@ def windows_shape(sdk_dir: Path, manifest: dict, carried: dict) -> None:
         if not re.fullmatch(r'bin/[A-Za-z0-9_.-]+\.dll', rel, re.IGNORECASE):
             refuse(f'{sdk_dir}: unsafe Windows runtime name {rel!r}')
 
-        compiler = manifest['fingerprint'].get('compiler', {})
-        if (
-            not carried
-            or compiler.get('id') != 'MSVC'
-            or compiler.get('architecture') != 'x64'
-            or compiler.get('runtime') != 'MultiThreadedDLL'
-            or not re.fullmatch(r'19\.[0-9]+\.[0-9]+(?:\.[0-9]+)?', compiler.get('version', ''))
-        ):
-            refuse(f'{sdk_dir}: Windows SDK lacks its qualified MSVC DLL runtime/compiler')
+    compiler = manifest['fingerprint'].get('compiler', {})
+    profile_error = f'{sdk_dir}: Windows SDK lacks its qualified MSVC DLL runtime/compiler'
+    if (
+        not carried
+        or not isinstance(compiler, dict)
+        or not isinstance(compiler.get('version'), str)
+    ):
+        refuse(profile_error)
+    if (
+        compiler.get('id') != 'MSVC'
+        or compiler.get('architecture') != 'x64'
+        or compiler.get('runtime') != 'MultiThreadedDLL'
+        or not re.fullmatch(r'19\.[0-9]+\.[0-9]+(?:\.[0-9]+)?', compiler['version'])
+    ):
+        refuse(profile_error)
 
 
 def shape(sdk_dir: Path, manifest: dict, platform: str) -> None:

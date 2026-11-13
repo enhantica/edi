@@ -125,9 +125,17 @@ jobs:
           echo "CCACHE_DIR=$RUNNER_TEMP/crysta-ccache" >> "$GITHUB_ENV"
           echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
           echo "CCACHE_MAXSIZE=2G" >> "$GITHUB_ENV"
+          # Apply the SDK's existing CPU/memory cap to the binding bootstrap as well.
+          sdk_build_jobs="$(cd "$RUNNER_TEMP/crysta" && bash tools/ci/build-jobs.sh)"
+          echo "CMAKE_BUILD_PARALLEL_LEVEL=$sdk_build_jobs" >> "$GITHUB_ENV"
+          # MSBuild ignores CMake's compiler launcher; Ninja also caches the required Python bootstrap.
+          if [ "$RUNNER_OS" = Windows ]; then
+            echo "CMAKE_GENERATOR=Ninja" >> "$GITHUB_ENV"
+          fi
       - name: Restore the SDK compiler cache
         if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache@v4
+        id: compiler-cache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/crysta-ccache
           key: crysta-objects-v1-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-${{ needs.resolve.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -138,6 +146,7 @@ jobs:
         uses: ./.github/actions/setup-pixi
         with:
           manifest-path: ${{ runner.temp }}/crysta/pixi.toml
+          environments: cpp-ci
       - name: Build, test and pack the SDK, and archive the source
         if: steps.cache.outputs.cache-hit != 'true'
         env:
@@ -153,6 +162,12 @@ jobs:
           tar -rf "$RUNNER_TEMP/crysta-src.tar" -C "$RUNNER_TEMP" runner-source-objects.json
           gzip -n -c "$RUNNER_TEMP/crysta-src.tar" >"$out/crysta-src-$SHA.tar.gz"
           ls -l "$out"
+      - name: Save the SDK compiler cache
+        if: ${{ !cancelled() && steps.compiler-inputs.outcome == 'success' && steps.compiler-cache.outcome == 'success' && steps.cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/crysta-ccache
+          key: crysta-objects-v1-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-${{ needs.resolve.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Require the complete SDK and source archives
         env:
           SHA: ${{ needs.resolve.outputs.sha }}

@@ -771,6 +771,7 @@ jobs:
       # would not notice a broken web build without this. One kit, no site checks; the toolchain comes from the
       # same cache as the WebAssembly job's.
       - name: Restore the WebAssembly toolchain and compiler cache
+        id: wasm-cache
         if: ${{ !cancelled() && matrix.platform == 'Linux' && needs.changes.outputs.wasm_build == 'true' }}
         uses: ./.github/actions/wasm-cache
       # The step itself runs on every Linux app job, an earlier failure notwithstanding, so the CI contract can
@@ -790,6 +791,11 @@ jobs:
           bash tools/ci/wasm-assistant-check.sh build/wasm/multithread/app
         env:
           EDI_WASM_OWED: ${{ needs.changes.outputs.wasm_build }}
+      - name: Save the WebAssembly toolchain and compiler cache
+        if: ${{ !cancelled() && steps.wasm-cache.outcome == 'success' }}
+        uses: ./.github/actions/wasm-cache
+        with:
+          operation: save
 
   # The app as a WebAssembly site (ADR-0023): both Qt wasm kits, the start page and the service-worker shim,
   # packed as one site folder and uploaded as the `edi-webapp` artifact. The toolchain (Emscripten, Qt's wasm
@@ -812,6 +818,7 @@ jobs:
           fetch-depth: 0  # the app's version line is `git describe`
       - uses: ./.github/actions/setup-pixi
       - uses: ./.github/actions/wasm-cache
+        id: wasm-cache
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
@@ -826,6 +833,11 @@ jobs:
         run: pixi run -e app wasm-toolchain
       - name: Build both kits and pack the site
         run: pixi run -e app --skip-deps wasm-build
+      - name: Save the WebAssembly toolchain and compiler cache
+        if: ${{ !cancelled() && steps.wasm-cache.outcome == 'success' }}
+        uses: ./.github/actions/wasm-cache
+        with:
+          operation: save
       - name: Upload the site
         uses: actions/upload-artifact@v4
         with:

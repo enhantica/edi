@@ -102,6 +102,7 @@ jobs:
           fetch-tags: true
       - uses: ./.github/actions/setup-pixi
       - uses: ./.github/actions/wasm-cache
+        id: wasm-cache
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
@@ -111,6 +112,11 @@ jobs:
         run: pixi run -e app wasm-toolchain
       - name: Build both kits and pack the web app
         run: pixi run -e app --skip-deps wasm-build
+      - name: Save the WebAssembly toolchain and compiler cache
+        if: ${{ !cancelled() && steps.wasm-cache.outcome == 'success' }}
+        uses: ./.github/actions/wasm-cache
+        with:
+          operation: save
       - name: Upload WebAssembly
         uses: actions/upload-artifact@v4
         with:

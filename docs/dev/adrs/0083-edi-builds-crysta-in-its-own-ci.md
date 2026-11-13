@@ -148,3 +148,19 @@ The pull-request browser compile also restores the shared wasm-cache action, inc
 compiler cache. It uses the same toolchain/compiler cache policy as the full browser CI and
 Pages build. Changes to that action, browser build scripts or their workflows require the
 pull-request multithread build and assistant-exclusion check, even without an assistant source edit.
+
+
+Object and browser-toolchain caches restore before building and save explicitly after the
+attempt, including a later compile or qualification failure. The shared browser action exposes
+restore/save operations, and each caller saves only after its restore/setup succeeded. Object
+keys distinguish the job's snapshot. Windows SDK bootstrap uses Ninja so CMake's existing
+compiler launcher also applies there; MSVC and the release DLL CRT stay unchanged. Qualified
+SDK archives still enter their separate cache only after complete qualification and output
+checks. A saved object cache never represents a successful test or a qualified SDK.
+
+
+The SDK producer installs only Crysta's cpp-ci environment, which already includes the genuine
+binding and test/numerics dependencies consumed by corpus policy. Installing the default binding
+first duplicated that compilation before sdk-pack installed cpp-ci. The existing setup wrapper
+therefore accepts an environment selection, defaulting to its previous default for other callers.
+This changes bootstrap duplication, not SDK test inventory or corpus-policy admission.

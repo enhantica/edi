@@ -320,6 +320,9 @@ def test_compiler_cache_precedes_install_and_is_keyed_by_actual_engine_lock(tmp_
     ), 'Writes retain source identity and cross-pin restores remain compiler-validated'
     engine = tmp_path / 'crysta'
     engine.mkdir()
+    jobs = engine / 'tools' / 'ci' / 'build-jobs.sh'
+    jobs.parent.mkdir(parents=True)
+    jobs.write_text("printf '%s\\n' 4\n", encoding='utf-8')
     output, environment = tmp_path / 'output', tmp_path / 'environment'
     observed = []
     for content in (b'actual engine ABI lock', b'changed actual engine ABI lock'):
