@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import json
 import os
 import shutil
 import subprocess
@@ -233,6 +234,12 @@ def workflow_contract(steps):
         < steps.index(bootstrap)
         < steps.index(package)
     ), 'Cold admission must follow exact source/Python setup and precede binding bootstrap'
+    assert python['with'].get('update-environment') is False, (
+        'Metadata Python setup must preserve the later Pixi bootstrap interpreter environment'
+    )
+    assert python.get('id') == 'sdk-python', (
+        'The metadata interpreter output must be addressable explicitly'
+    )
     assert python['with']['python-version'] == '3.14', (
         'ABI metadata parsing must use the declared Python3.14 tool'
     )
@@ -249,10 +256,16 @@ def test_workflow_preflight_orders_cold_build_and_rejects_reordered_or_warm_admi
         'build'
     ]['steps']
     preflight = workflow_contract(steps)
-    for defect in ('late', 'early', 'warm'):
+    for defect in ('late', 'early', 'warm', 'python-env', 'python-output'):
         changed = copy.deepcopy(steps)
         index = next(i for i, step in enumerate(changed) if step.get('name') == preflight['name'])
-        if defect == 'warm':
+        if defect.startswith('python-'):
+            setup = next(step for step in changed if step.get('uses') == 'actions/setup-python@v6')
+            if defect == 'python-env':
+                setup['with']['update-environment'] = True
+            else:
+                setup.pop('id')
+        elif defect == 'warm':
             changed[index]['if'] = "steps.cache.outputs.cache-hit == 'true'"
         else:
             step = changed.pop(index)
@@ -261,16 +274,49 @@ def test_workflow_preflight_orders_cold_build_and_rejects_reordered_or_warm_admi
             workflow_contract(changed)
 
 
+def python_calls(tmp_path):
+    bindir = tmp_path / 'metadata python'
+    bindir.mkdir()
+    records = tmp_path / 'python-calls.jsonl'
+    program = (
+        '#!' + sys.executable + '\nimport json,os,sys\n'
+        'with open(os.environ["PREFLIGHT_CALLS"],"a") as output:\n'
+        ' output.write(json.dumps(sys.argv[1:])+"\\n")\n'
+        'os.execv(' + repr(sys.executable) + ',[' + repr(sys.executable) + ',*sys.argv[1:]])\n'
+    )
+    for name in ('python', 'python3'):
+        path = bindir / name
+        path.write_text(program)
+        path.chmod(0o755)
+    ambient = tmp_path / 'ambient-python'
+    ambient.mkdir()
+    for name in ('python', 'python3'):
+        path = ambient / name
+        path.write_text('#!/bin/sh\nprintf ambient-called > ambient-called\nexit 91\n')
+        path.chmod(0o755)
+    return (
+        records,
+        {
+            **os.environ,
+            'PATH': str(ambient) + os.pathsep + os.environ['PATH'],
+            'Python_ROOT_DIR': 'untouched-pixi-interpreter-root',
+            'PREFLIGHT_CALLS': str(records),
+        },
+        bindir / 'python',
+    )
+
+
 @pytest.mark.parametrize('platform', PACKAGES)
+@pytest.mark.parametrize('ambient', ['absent', 'poisoned'])
 def test_actual_preflight_step_checks_installer_and_only_supported_root_environments(
-    tmp_path, platform
+    tmp_path, platform, ambient
 ):
     steps = yaml.safe_load((ROOT / '.github/workflows/crysta-sdk.yml').read_text())['jobs'][
         'build'
     ]['steps']
     step = workflow_contract(steps)
-    assert step['env']['PLATFORM'] == '${{ matrix.platform }}', (
-        'The ABI preflight must use its actual SDK matrix platform'
+    assert '${{ matrix.platform }}' in step['run'], (
+        'The shell must receive literal matrix identity without step environment delivery'
     )
     (tmp_path / 'tools/ci').mkdir(parents=True)
     shutil.copy2(ROOT / 'tools/ci/crysta_sdk.py', tmp_path / 'tools/ci/crysta_sdk.py')
@@ -285,13 +331,19 @@ def test_actual_preflight_step_checks_installer_and_only_supported_root_environm
     )
     if platform == 'win-64':
         root_lock.unlink()
-    env = {
-        **os.environ,
-        'RUNNER_TEMP': str(tmp_path / 'runner'),
-        'PLATFORM': platform,
-        'PATH': str(Path(sys.executable).parent) + os.pathsep + os.environ['PATH'],
-    }
-    script = step['run'] + '\nprintf bootstrap-admitted > admitted\n'
+    records, env, interpreter = python_calls(tmp_path)
+    env['RUNNER_TEMP'] = str(tmp_path / 'runner')
+    env.pop('PLATFORM', None)
+    env.pop('sdk_platform', None)
+    if ambient == 'poisoned':
+        env['PLATFORM'] = 'not-the-matrix-platform'
+    script = step['run'].replace('${{ matrix.platform }}', platform)
+    script = script.replace('${{ steps.sdk-python.outputs.python-path }}', str(interpreter))
+    assert '${{' not in script, (
+        'The bounded shell replay must resolve every actual matrix expression'
+    )
+    script += '\nprintf bootstrap-admitted > admitted\n'
+    script += 'printf "%s\\n" "$PATH" "${Python_ROOT_DIR-}" > environment-after\n'
 
     def run():
         return subprocess.run(
@@ -311,6 +363,17 @@ def test_actual_preflight_step_checks_installer_and_only_supported_root_environm
     assert good.stdout.count('SDK ABI package locks match') == (
         1 if platform == 'win-64' else 3
     ), 'Windows must check installer only; Unix must check installer, root default and app'
+    assert (tmp_path / 'environment-after').read_text().splitlines() == [
+        env['PATH'],
+        env['Python_ROOT_DIR'],
+    ], 'Metadata checks must leave the ambient PATH and Pixi Python root unchanged'
+    assert not (tmp_path / 'ambient-called').exists(), (
+        'Metadata checks must use the explicit action output rather than ambient Python lookup'
+    )
+    observed = [json.loads(line) for line in records.read_text().splitlines()]
+    assert all(call[call.index('--platform') + 1] == platform for call in observed), (
+        'Every reader call must receive the matrix platform despite absent or poisoned env'
+    )
     for selected, environment in [
         (installer, 'default'),
         *([(root_lock, 'default'), (root_lock, 'app')] if platform != 'win-64' else []),
@@ -335,4 +398,44 @@ def test_actual_preflight_step_checks_installer_and_only_supported_root_environm
         write_lock(selected, platform, {name: locked(platform) for name in environments})
     assert source.is_file(), (
         'The actual pinned producer lock remains present throughout the admission controls'
+    )
+
+
+@pytest.mark.parametrize('missing', [False, True])
+@pytest.mark.parametrize('field', ['platform', 'python'])
+def test_preflight_missing_matrix_identity_refuses_before_any_python_call(
+    tmp_path, missing, field
+):
+    steps = yaml.safe_load((ROOT / '.github/workflows/crysta-sdk.yml').read_text())['jobs'][
+        'build'
+    ]['steps']
+    step = workflow_contract(steps)
+    assert '${{ matrix.platform }}' in step['run'], (
+        'The missing-context control must address the real matrix-to-shell assignment'
+    )
+    records, env, interpreter = python_calls(tmp_path)
+    script = step['run'].replace('${{ matrix.platform }}', '' if field == 'platform' else 'win-64')
+    script = script.replace(
+        '${{ steps.sdk-python.outputs.python-path }}',
+        '' if field == 'python' else str(interpreter),
+    )
+    variable = 'sdk_platform' if field == 'platform' else 'metadata_python'
+    if missing:
+        script = '\n'.join(line for line in script.splitlines() if variable + '=' not in line)
+    for key in ('PLATFORM', 'sdk_platform', 'metadata_python'):
+        env.pop(key, None)
+    result = subprocess.run(
+        ['bash', '-e', '-u', '-c', script],
+        cwd=tmp_path,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=5,
+    )
+    assert result.returncode != 0, (
+        'Missing matrix identity or metadata interpreter must refuse immediately'
+    )
+    assert not records.exists(), (
+        'Missing metadata context must refuse before any Python or bootstrap call'
     )

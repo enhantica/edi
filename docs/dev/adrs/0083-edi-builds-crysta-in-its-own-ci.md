@@ -195,7 +195,13 @@ ABI package's exact version and build in Crysta's cpp-ci lock with the installer
 Linux and macOS additionally compare Edi's default and app environments; those root
 environments do not declare Windows. The existing SDK lock reader and required package
 inventory own this check. Missing or mismatched packages refuse before bootstrap.
-A metadata-only Python setup supplies the reader's declared language version.
+A metadata-only Python setup supplies the reader's declared language version without
+updating PATH or Python root hints. Only the check invokes its explicit executable;
+Pixi's locked Python remains authoritative for subsequent CMake/binding builds.
+The fixed matrix platform is assigned directly inside the check's script. A Windows
+compiler environment already contains `Platform`, which collides case-insensitively
+with a step environment entry named `PLATFORM`; Bash cannot rely on that uppercase
+spelling surviving the runner's merge.
 
 This admission check joins the producer recipe hash. Cache hits still require the
 existing independent consumer manifest and binary qualification checks. Neither object

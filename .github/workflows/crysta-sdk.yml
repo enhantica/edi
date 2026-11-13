@@ -113,18 +113,22 @@ jobs:
           git -C "$RUNNER_TEMP/crysta" checkout -q --detach "$SHA"
       - name: Set up Python for SDK metadata checks
         if: steps.cache.outputs.cache-hit != 'true'
+        id: sdk-python
         uses: actions/setup-python@v6
         with:
           python-version: '3.14'
+          update-environment: false
       - name: Check SDK and consumer ABI package locks before compilation
         if: steps.cache.outputs.cache-hit != 'true'
-        env:
-          PLATFORM: ${{ matrix.platform }}
         run: |
-          python tools/ci/crysta_sdk.py preflight --source-lock "$RUNNER_TEMP/crysta/pixi.lock" --platform "$PLATFORM" --lockfile tools/installer/pixi.lock --environment default
-          if [ "$PLATFORM" != win-64 ]; then
+          sdk_platform='${{ matrix.platform }}'
+          metadata_python='${{ steps.sdk-python.outputs.python-path }}'
+          : "${sdk_platform:?The SDK matrix must declare its platform}"
+          : "${metadata_python:?SDK metadata Python must be available}"
+          "$metadata_python" tools/ci/crysta_sdk.py preflight --source-lock "$RUNNER_TEMP/crysta/pixi.lock" --platform "$sdk_platform" --lockfile tools/installer/pixi.lock --environment default
+          if [ "$sdk_platform" != win-64 ]; then
             for environment in default app; do
-              python tools/ci/crysta_sdk.py preflight --source-lock "$RUNNER_TEMP/crysta/pixi.lock" --platform "$PLATFORM" --lockfile pixi.lock --environment "$environment"
+              "$metadata_python" tools/ci/crysta_sdk.py preflight --source-lock "$RUNNER_TEMP/crysta/pixi.lock" --platform "$sdk_platform" --lockfile pixi.lock --environment "$environment"
             done
           fi
       - name: Identify the SDK compiler-cache inputs
@@ -188,16 +192,16 @@ jobs:
       - name: Require the complete SDK and source archives
         env:
           SHA: ${{ needs.resolve.outputs.sha }}
-          PLATFORM: ${{ matrix.platform }}
+          CRYSTA_SDK_PLATFORM: ${{ matrix.platform }}
         run: |
           cd crysta-sdk-archives
-          for file in "crysta-sdk-$SHA-$PLATFORM.tar.gz" "crysta-sdk-$SHA-$PLATFORM.tar.gz.sha256" "crysta-src-$SHA.tar.gz"; do
+          for file in "crysta-sdk-$SHA-$CRYSTA_SDK_PLATFORM.tar.gz" "crysta-sdk-$SHA-$CRYSTA_SDK_PLATFORM.tar.gz.sha256" "crysta-src-$SHA.tar.gz"; do
             test -s "$file" || { echo "Missing SDK producer output: $file" >&2; exit 1; }
           done
           python3 - <<'PYTHON'
           import hashlib, os
           from pathlib import Path
-          archive = Path(f'crysta-sdk-{os.environ["SHA"]}-{os.environ["PLATFORM"]}.tar.gz')
+          archive = Path(f'crysta-sdk-{os.environ["SHA"]}-{os.environ["CRYSTA_SDK_PLATFORM"]}.tar.gz')
           digest = hashlib.sha256()
           with archive.open('rb') as stream:
               for block in iter(lambda: stream.read(1 << 20), b''):

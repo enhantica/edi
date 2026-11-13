@@ -117,7 +117,7 @@ def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(tmp_
     guard = next(
         step
         for step in steps
-        if step.get('env', {}).get('PLATFORM') == '${{ matrix.platform }}'
+        if step.get('env', {}).get('CRYSTA_SDK_PLATFORM') == '${{ matrix.platform }}'
         and 'crysta-sdk-archives' in step.get('run', '')
     )
     upload = next(step for step in steps if step.get('uses') == 'actions/upload-artifact@v4')
@@ -127,7 +127,7 @@ def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(tmp_
             'Every cold and warm artifact crosses the same complete-output boundary'
         )
     assert guard['env']['SHA'] == '${{ needs.resolve.outputs.sha }}'
-    assert guard['env']['PLATFORM'] == '${{ matrix.platform }}'
+    assert guard['env']['CRYSTA_SDK_PLATFORM'] == '${{ matrix.platform }}'
     for platform in ('linux-64', 'osx-arm64', 'win-64'):
         pin = 'a7' * 20
         archive = f'crysta-sdk-{pin}-{platform}.tar.gz'
@@ -166,7 +166,16 @@ def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(tmp_
             result = subprocess.run(
                 ['bash', '-e', '-c', guard['run']],
                 cwd=world,
-                env={**os.environ, 'SHA': pin, 'PLATFORM': platform},
+                env={
+                    **{
+                        key: value
+                        for key, value in os.environ.items()
+                        if key.casefold() != 'platform'
+                    },
+                    'SHA': pin,
+                    'Platform': 'x64',
+                    'CRYSTA_SDK_PLATFORM': platform,
+                },
                 capture_output=True,
                 text=True,
                 check=False,
@@ -562,3 +571,41 @@ def test_compiler_objects_cross_lock_fallback_never_escapes_platform_or_qualifie
         bad_objects['with']['restore-keys'] = '\n'.join(prefixes)
         with pytest.raises(AssertionError):
             compiler_restore_scope(bad_objects, bad_archive)
+
+
+def no_ambiguous_windows_platform_environment(node):
+    if isinstance(node, dict):
+        environment = node.get('env', {})
+        if isinstance(environment, dict):
+            assert not any(str(name).casefold() == 'platform' for name in environment), (
+                'SDK identities must use task-specific names instead of MSVC Platform aliases'
+            )
+        script = node.get('run', '')
+        assert not isinstance(script, str) or not re.search(
+            r'\$(?:platform\b|\{platform(?:[}:]))', script, re.IGNORECASE
+        ), 'Windows workflow shell cannot read a case-ambiguous inherited Platform identity'
+        for value in node.values():
+            no_ambiguous_windows_platform_environment(value)
+    elif isinstance(node, list):
+        for value in node:
+            no_ambiguous_windows_platform_environment(value)
+
+
+@pytest.mark.parametrize('workflow', [PRODUCER, '.github/workflows/installers.yml'])
+def test_windows_sdk_workflows_refuse_case_ambiguous_platform_environment_routes(workflow):
+    source = document(workflow)
+    no_ambiguous_windows_platform_environment(source)
+    for spelling in ('PLATFORM', 'Platform', 'platform'):
+        for scope in ('workflow', 'job', 'step'):
+            changed = copy.deepcopy(source)
+            job = next(job for job in changed['jobs'].values() if job.get('steps'))
+            target = changed if scope == 'workflow' else job if scope == 'job' else job['steps'][0]
+            target.setdefault('env', {})[spelling] = '${{ matrix.platform }}'
+            with pytest.raises(AssertionError, match='task-specific'):
+                no_ambiguous_windows_platform_environment(changed)
+        changed = copy.deepcopy(source)
+        next(job for job in changed['jobs'].values() if job.get('steps'))['steps'][0]['run'] = (
+            'printf "%s" "$' + spelling + '"'
+        )
+        with pytest.raises(AssertionError, match='case-ambiguous'):
+            no_ambiguous_windows_platform_environment(changed)

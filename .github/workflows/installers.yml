@@ -107,7 +107,6 @@ jobs:
           - runner: ${{ inputs.windows_only && 'ubuntu-24.04' || 'none' }}
           - runner: ${{ inputs.windows_only && 'macos-15' || 'none' }}
     env:
-      PLATFORM: ${{ matrix.runner == 'windows-2022' && 'Windows' || matrix.runner == 'macos-15' && 'macOS' || 'Linux' }}
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
       EDI_INSTALLER_PREVIEW_DATE: ${{ needs.preview-version.outputs.date }}
       EDI_RELEASE_PLAN: ${{ inputs.release_plan_run && format('{0}/build/release-plan', github.workspace) || '' }}
