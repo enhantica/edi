@@ -6,6 +6,7 @@ import {join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 export async function nativePickerOptionChecks(chrome, output) {
+  assert(chrome, 'Native option validation requires the declared pinned browser executable');
   const toolchain = process.env.EDI_WASM_TOOLCHAIN || join(process.env.HOME, '.cache/edi-wasm');
   const {chromium} = await import(join(toolchain, 'playwright/node_modules/playwright-core/index.mjs'));
   const server = createServer((_request, response) => {
