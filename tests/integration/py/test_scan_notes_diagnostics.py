@@ -220,6 +220,48 @@ def test_results_state_readers_prove_the_supported_kind(
             'State refusal and dry-run seeding must retain every analysis entry'
         )
 
+    if filename == 'results-provenance.csv' and kind in {'directory', 'fifo'}:
+        modern = phase_scan.materialize(tmp_path / 'combined', mode)
+        edi.Project.load(modern).analysis.fit()
+        modern_state = phase_scan.scan_state_path(modern, filename, kind)
+        modern_before = phase_scan.scan_state_fingerprint(modern)
+        modern_result = subprocess.run(
+            [sys.executable, '-c', code, str(modern), str(tmp_path / 'combined-dry')],
+            env={**os.environ, 'PYTHONPATH': str(Path(edi.__file__).resolve().parents[1])},
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        assert modern_result.returncode == 0, (
+            'Combined CSV conditions remain authoritative over an obsolete sidecar: '
+            + modern_result.stderr
+        )
+        assert phase_scan.scan_state_fingerprint(modern) == modern_before, (
+            'Ignoring an obsolete sidecar preserves the original combined scan state'
+        )
+        assert modern_state.exists(), 'Ignoring an obsolete sidecar does not remove it'
+        if surface == 'dry-events':
+            fresh = phase_scan.materialize(tmp_path / 'fresh-source', mode)
+            destination = tmp_path / 'bad-dry'
+            (destination / 'analysis').mkdir(parents=True)
+            bad_state = phase_scan.scan_state_path(destination, filename, kind)
+            bad_before = bad_state.lstat()
+            dry_result = subprocess.run(
+                [sys.executable, '-c', code, str(fresh), str(destination)],
+                env={**os.environ, 'PYTHONPATH': str(Path(edi.__file__).resolve().parents[1])},
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            )
+            assert dry_result.returncode != 0, 'Unsupported dry output refuses before scanning'
+            assert filename in dry_result.stderr, 'Dry output refusal identifies its state path'
+            assert 'PREAMBLE' not in dry_result.stdout, 'Dry output is admitted before preamble'
+            assert bad_state.lstat().st_ino == bad_before.st_ino, (
+                'Refusing a dry destination preserves its unsupported entry'
+            )
+
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])
 @pytest.mark.parametrize('kind', ['directory', 'fifo'])
