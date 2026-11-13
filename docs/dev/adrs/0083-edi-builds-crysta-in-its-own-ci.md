@@ -217,3 +217,10 @@ prior objects. Ccache still checks compiler content and each full compilation in
 the broader object lookup does not admit a qualified SDK or relax package matching.
 This preserves reusable objects when an unrelated lock record or compiler selector
 package build changes. Complete SDK archive keys remain exact source and recipe.
+
+
+Failed native SDK qualification retains its raw XML and stdout/stderr observations
+in a separate platform/source-named diagnostic artifact after the packer removes
+its scratch checkout. Diagnostic artifacts never use the qualified SDK artifact
+name, never satisfy consumer transfer, and never populate the qualified archive
+cache. The existing successful-output checks and publication gates remain required.

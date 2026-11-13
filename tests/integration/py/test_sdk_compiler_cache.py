@@ -176,3 +176,30 @@ def test_selected_windows_bootstrap_uses_ninja_and_wrapper_keeps_other_callers_d
     assert upstream['with']['frozen'] is True, (
         'Choosing one environment never changes frozen lock admission'
     )
+
+
+def test_failed_native_observations_are_retained_without_promoting_an_sdk():
+    steps = producer()['steps']
+    evidence = next(
+        step
+        for step in steps
+        if step.get('with', {}).get('name')
+        == 'crysta-sdk-red-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}'
+    )
+    artifact = next(
+        step
+        for step in steps
+        if step.get('with', {}).get('name') == 'crysta-sdk-${{ matrix.platform }}'
+    )
+    assert evidence['uses'] == 'actions/upload-artifact@v4'
+    assert evidence['with']['path'] == (
+        '${{ runner.temp }}/crysta/build/sdk-pack-red/${{ needs.resolve.outputs.sha }}'
+    ), 'The observer owns retained native logs after the packer removes its scratch checkout'
+    for state, cancelled in [('success', False), ('failure', False), ('failure', True)]:
+        context = {'states': {'qualification': state}, 'cancelled': cancelled}
+        assert active(evidence, 'workflow_dispatch', **context) == (
+            state == 'failure' and not cancelled
+        )
+        assert active(artifact, 'workflow_dispatch', **context) == (
+            state == 'success' and not cancelled
+        ), 'Failure evidence can never satisfy successful SDK transport'

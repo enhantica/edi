@@ -216,3 +216,11 @@ jobs:
           path: crysta-sdk-archives
           retention-days: 30
           if-no-files-found: error
+      - name: Retain failed SDK native observations
+        if: ${{ failure() && !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: crysta-sdk-red-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}
+          path: ${{ runner.temp }}/crysta/build/sdk-pack-red/${{ needs.resolve.outputs.sha }}
+          retention-days: 7
+          if-no-files-found: ignore
