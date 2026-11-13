@@ -24,7 +24,16 @@ on:
         default: false
         type: boolean
   push:
-    branches: ['**']
+    branches: [main]
+    paths:
+      - .github/workflows/installers.yml
+      - .github/actions/setup-pixi/action.yml
+      - tools/installer/**
+      - cmake/assistant_runtime*
+      - app/src/installer_smoke.cpp
+
+  pull_request:
+    types: [ready_for_review]
     paths:
       - .github/workflows/installers.yml
       - .github/actions/setup-pixi/action.yml
@@ -160,6 +169,8 @@ jobs:
       - name: Set up the Windows compiler
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          toolset: '14.44'
       # The compiler cache, kept per platform between runs: a re-run of the same or a nearby commit compiles only
       # what changed. ccache hands back the object the compiler wrote for the same input, so the release bytes
       # do not depend on it. Keyed on the packaging lock, which fixes the compilers; restored from the newest entry.
@@ -207,35 +218,9 @@ jobs:
               raise RuntimeError('Installer qualification requires a complete engine commit')
           PYTHON
       - uses: ./.github/actions/crysta-sdk
-        if: runner.os != 'Windows'
         with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
-      # Windows has no prebuilt crysta SDK yet; the installer build compiles crysta from its source here.
-      - name: Mint a crysta installation token
-        id: crysta-token
-        if: runner.os == 'Windows'
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ vars.ENHANTICA_APP_ID }}
-          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
-          owner: enhantica
-          repositories: crysta
-          permission-contents: read
-      - name: Check out the pinned crysta source
-        if: runner.os == 'Windows'
-        uses: actions/checkout@v5
-        with:
-          repository: enhantica/crysta
-          ref: ${{ env.CRYSTA_SOURCE_COMMIT }}
-          token: ${{ steps.crysta-token.outputs.token }}
-          path: .crysta
-          persist-credentials: false
-      - name: Record the crysta source commit
-        if: runner.os == 'Windows'
-        shell: bash
-        run: printf '%s\n' "$CRYSTA_SOURCE_COMMIT" >.crysta/CRYSTA_SOURCE_SHA
+          platform: ${{ runner.os == 'Windows' && 'win-64' || runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Unpack the pinned crysta source
-        if: runner.os != 'Windows'
         shell: bash
         run: |
           mkdir -p .crysta

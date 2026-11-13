@@ -6,8 +6,7 @@ The EasyDiffraction application built from it is distributed under the
 Tools, which are available under that licence only ([app/DISTRIBUTION-LICENSE.md](app/DISTRIBUTION-LICENSE.md)).
 
 This file is the one list of the third-party components edi ships. Each surface has its own column: the desktop
-application, the web application (its site), the Python package and the `easydiffraction` command-line binary (today a
-stub that prints the core's version, so it carries only the C++ runtime). A cell
+application, the web application (its site), the Python package and the native `edi` command-line binary. A cell
 says how that surface carries the component: linked, bundled (shipped as a file beside or inside it) or compiled in;
 `—` means it does not carry it. A version in a cell is that surface's own, where it differs from the Version column.
 Each surface lists only its own column: the application's About window reads this file from its resources, and
@@ -18,14 +17,15 @@ Each surface lists only its own column: the application's About window reads thi
 
 | Component | Version | Licence | Desktop app | Web app | Python package | CLI | In edi |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| crysta |  | BSD-3-Clause | linked | linked | linked | — | the diffraction engine, statically linked |
-| SLEEF | 3.9.0 | BSL-1.0 | linked | compiled in | linked | — | vectorised mathematical functions, through crysta |
-| Eigen | 3.4.0 | MPL-2.0 | compiled in | compiled in | compiled in | — | linear algebra headers, compiled into crysta and edi |
+| crysta |  | BSD-3-Clause | linked | linked | linked | linked | the diffraction engine, statically linked |
+| SLEEF | 3.9.0 | BSL-1.0 | linked | compiled in | linked | linked | vectorised mathematical functions, through crysta |
+| Eigen | 3.4.0 | MPL-2.0 | compiled in | compiled in | compiled in | compiled in | linear algebra headers, compiled into crysta and edi |
 | libgomp | 15.2.0 | GPL-3.0-only WITH GCC-exception-3.1 | linked | — | linked | linked | the GCC OpenMP runtime (Linux), with the GCC runtime libraries libstdc++ and libgcc_s, under the GCC Runtime Library Exception |
-| llvm-openmp | 23.1.2 | Apache-2.0 WITH LLVM-exception | linked | — | linked | — | the LLVM OpenMP runtime (macOS) |
+| llvm-openmp | 23.1.2 | Apache-2.0 WITH LLVM-exception | linked | — | linked | linked | the LLVM OpenMP runtime (macOS) |
+| libc++ | 23.1.4 | Apache-2.0 WITH LLVM-exception AND MIT | linked | — | linked | linked | the LLVM C++ runtime carried with native macOS packages |
 | nanobind | 2.13.0 | BSD-3-Clause | — | — | compiled in | — | the Python bindings, compiled into the Python extension |
 | robin-map |  | MIT | — | — | compiled in | — | the hash map inside nanobind, compiled into the Python extension |
-| miniz | 3.0.2 | MIT | compiled in | compiled in | compiled in | — | reads and writes project .zip archives, compiled into edi's core |
+| miniz | 3.0.2 | MIT | compiled in | compiled in | compiled in | compiled in | reads and writes project .zip archives, compiled into edi's core |
 | JKQTMathText / JKQTCommon | 5.0.0 (9e9f0af8) | LGPL-2.1-or-later | linked | — | — | — | native assistant equation layout and generated images; only MathText/Common |
 | Emscripten runtime | 4.0.7 | MIT AND Apache-2.0 WITH LLVM-exception | — | compiled in | — | — | the C and C++ runtime of the web build (Emscripten's libc from musl, libc++ and libc++abi from LLVM) |
 

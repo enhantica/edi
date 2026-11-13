@@ -14,6 +14,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tools/installer'))
+import native_runtime  # noqa: E402
 import standalone_cli  # noqa: E402
 
 CMAKE = (ROOT / 'cli/CMakeLists.txt').read_text(encoding='utf-8')
@@ -29,7 +30,7 @@ def linked(branch: str) -> list[str]:
 
 def verdict(system: str, listing: str) -> None:
     with (
-        mock.patch.object(standalone_cli, 'SYSTEM', system),
+        mock.patch.object(native_runtime, 'SYSTEM', system),
         mock.patch.object(standalone_cli.subprocess, 'check_output', return_value=listing),
     ):
         standalone_cli.verify_dependencies(Path('edi'))
@@ -114,7 +115,7 @@ def test_a_macos_row_in_another_shape_refuses():
 
 def test_the_check_reads_the_shipped_executable_through_the_platform_tool():
     with (
-        mock.patch.object(standalone_cli, 'SYSTEM', 'windows'),
+        mock.patch.object(native_runtime, 'SYSTEM', 'windows'),
         mock.patch.object(
             standalone_cli.subprocess, 'check_output', return_value=dumpbin('WINHTTP.dll')
         ) as tool,

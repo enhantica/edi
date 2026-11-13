@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""Source-build crysta before deploying the native edi application."""
+"""Deploy the native application using its qualified Crysta SDK."""
 
 import argparse
 import datetime
@@ -18,7 +18,8 @@ from package import (
     PLATFORM_ID,
     ROOT,
     SYSTEM,
-    acquire_package_licenses,
+    collect_dependency_licenses,
+    deployed_package_names,
     payload_manifest,
     read_release_plan,
     relocate_linux,
@@ -26,34 +27,9 @@ from package import (
     sha256,
 )
 
+__all__ = ('deployed_package_names',)
+
 WINDOWS_CXX_FLAGS = '/utf-8 /EHsc /Zc:ternary'
-
-
-def deployed_package_names(files: list[Path], records: list[dict]) -> set[str]:
-    """Resolve deployed paths to their nearest package path, refusing ambiguous ownership."""
-    candidates = {}
-    for record in records:
-        for name in record.get('files', []):
-            path = Path(name)
-            candidates.setdefault(path.name, []).append((path.parts, record['name']))
-    owners = set()
-    for path in files:
-        matches = {}
-        for parts, owner in candidates.get(path.name, []):
-            score = 0
-            for left, right in zip(reversed(path.parts), reversed(parts), strict=False):
-                if left != right:
-                    break
-                score += 1
-            matches[owner] = max(matches.get(owner, 0), score)
-        if not matches:
-            continue
-        best = max(matches.values())
-        selected = [owner for owner, score in matches.items() if score == best]
-        if len(selected) != 1:
-            raise RuntimeError(f'Ambiguous deployed dependency ownership: {path}')
-        owners.add(selected[0])
-    return owners
 
 
 def collect_notices(stage: Path, qt: Path, crysta: Path, inputs: Path) -> None:
@@ -86,22 +62,7 @@ def collect_notices(stage: Path, qt: Path, crysta: Path, inputs: Path) -> None:
                 }:
                     continue
             deployed_files.append(path.relative_to(stage))
-    metadata_records = [
-        json.loads(record.read_text(encoding='utf-8')) for record in records.glob('*.json')
-    ]
-    owners = deployed_package_names(deployed_files, metadata_records)
-    inputs.mkdir(parents=True, exist_ok=True)
-    for metadata in metadata_records:
-        if metadata['name'] not in owners:
-            continue
-        licenses = Path(metadata.get('link', {}).get('source', '')) / 'info/licenses'
-        if not licenses.is_dir():
-            licenses = inputs / metadata['name']
-            if not licenses.is_dir():
-                acquire_package_licenses(metadata, inputs, licenses)
-        if not any(path.is_file() for path in licenses.rglob('*')):
-            raise RuntimeError(f'Missing deployed dependency licences: {metadata["name"]}')
-        shutil.copytree(licenses, notices / metadata['name'])
+    collect_dependency_licenses(deployed_files, records, notices, inputs)
 
 
 def copy_windows_compiler_runtime(prefix: Path, stage: Path) -> None:
@@ -362,6 +323,35 @@ def write_preview_history(work: Path, version: str, commit: str) -> Path:
     return history
 
 
+def acquire_sdk(crysta: Path) -> Path:
+    """Acquire and verify the one pinned SDK against the actual packaging lock."""
+    sdk_platform = {'linux': 'linux-64', 'macos': 'osx-arm64', 'windows': 'win-64'}[SYSTEM]
+    environment = dict(os.environ)
+    if SYSTEM == 'macos':
+        environment.setdefault('MACOSX_DEPLOYMENT_TARGET', '14.0')
+    output = subprocess.check_output(
+        [
+            sys.executable,
+            ROOT / 'tools/ci/crysta_sdk.py',
+            'fetch',
+            '--platform',
+            sdk_platform,
+            '--lockfile',
+            ROOT / 'tools/installer/pixi.lock',
+            '--environment',
+            'default',
+        ],
+        text=True,
+        env=environment,
+    )
+    print(output, end='', flush=True)
+    prefix = Path(output.splitlines()[-1])
+    manifest = json.loads((prefix / 'share/crysta-sdk/manifest.json').read_text())
+    if manifest['source_sha'] != crysta_commit(crysta):
+        raise RuntimeError('The installer source does not match its qualified Crysta SDK')
+    return prefix
+
+
 def build(
     crysta: Path,
     work: Path,
@@ -379,7 +369,8 @@ def build(
     if (work / 'stage').exists():
         raise RuntimeError('Stage already exists; choose a fresh build directory')
     qt = resolve_qt_prefix(qt)
-    engine, prefix, app, stage = [work / name for name in ['crysta', 'prefix', 'app', 'stage']]
+    prefix = acquire_sdk(crysta)
+    app, stage = work / 'app', work / 'stage'
     common = [
         '-G',
         'Ninja',
@@ -387,20 +378,15 @@ def build(
         f'-DPython_EXECUTABLE={sys.executable}',
         '-DCMAKE_OSX_DEPLOYMENT_TARGET=' + os.environ.get('MACOSX_DEPLOYMENT_TARGET', '14.0'),
     ]
-    options = ['-DCRYSTA_CXX_PACKAGE=ON', '-DCRYSTA_LTO=OFF']
     if SYSTEM == 'windows':
-        common.append('-DCMAKE_CXX_FLAGS=' + WINDOWS_CXX_FLAGS)
-        options.extend([
-            f'-DEigen3_DIR={qt.as_posix()}/share/eigen3/cmake',
-            f'-DCMAKE_PREFIX_PATH={qt.as_posix()}',
+        common.extend([
+            '-DCMAKE_CXX_FLAGS=' + WINDOWS_CXX_FLAGS,
+            '-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL',
         ])
-    run(['cmake', '-S', crysta, '-B', engine, *common, *options])
-    run(['cmake', '--build', engine, '--target', 'crysta_core', 'crysta_cli', '--parallel', '4'])
-    run(['cmake', '--install', engine, '--prefix', prefix])
     if version:
         from standalone_cli import build_cli  # noqa: PLC0415 - versioned packaging only
 
-        build_cli(crysta, work, common, options, version, identity['commit'], PLATFORM_ID)
+        build_cli(prefix, work, common, version, identity['commit'], PLATFORM_ID)
     options = [
         '-DEDI_BUILD_APP=ON',
         '-DEDI_BUILD_BINDINGS=OFF',
@@ -463,6 +449,11 @@ def build(
         json.dumps(
             {
                 'crysta_commit': crysta_commit(crysta),
+                'crysta_sdk_manifest_sha256': sha256(prefix / 'share/crysta-sdk/manifest.json'),
+                'crysta_library_sha256': sha256(
+                    prefix
+                    / ('lib/crysta_core.lib' if SYSTEM == 'windows' else 'lib/libcrysta_core.a')
+                ),
                 'platform': SYSTEM,
                 'architecture': platform.machine(),
                 'edi_commit': identity['commit'],

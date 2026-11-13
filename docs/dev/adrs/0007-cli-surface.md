@@ -77,10 +77,11 @@ and report functions as the Python entry point. Its version is the prepared
 release version. The Windows, macOS and Linux ZIPs each contain the executable
 and its license notices, with separate online installer assets for the GUI.
 
-Release builds use a static crysta core with the standard thread pool and
-scalar math. That keeps the CLI usable without OpenMP or a vector math
-runtime. Linux links the compiler runtimes statically and keeps the system
-C library as the platform boundary. Windows uses the static compiler runtime.
+Release builds link the same accelerated native SDK as the desktop and Python wheel. The
+archive carries the required SDK runtime libraries beside the executable, with relative loader
+paths. Linux keeps the C++ runtime static and the system C library as the platform boundary;
+Windows uses the SDK's release DLL runtime. The wheel also keeps its existing private static
+C++ runtime on Linux to protect processes that have already loaded a different C++ runtime.
 Qualification runs the extracted executable and checks its dependencies,
 version and fit against a saved project. The public download page exposes
 only CLI ZIPs present in published GitHub releases.
@@ -109,8 +110,8 @@ predecessor chain. The CLI help and fit guide state this same behavior as the ap
 The native artifact source inventory includes the existing compiled acceptance-fixture tree and native
 integration sources as well as unit/probe sources. This covers the first single-crystal observer and the
 new CLI performance observer together, including future fixture directories, so an uncommitted observer
-input cannot be treated as the committed native build. The legacy artifact transport still needs its
-separate SDK-contract update before it can be re-enabled in current workflows.
+input cannot be treated as the committed native build. The native artifact transport now binds the
+current SDK manifest/library and Python ABI before reuse (ADR-0083).
 
 
 ## Bounded scan progress rows

@@ -83,6 +83,38 @@ pin/platform before recording its cache marker. A correctly named archive contai
 self-consistent SDK is refused. Explicit diagnostic SDK-directory checks retain their existing ability to
 admit a qualified candidate outside the pin; they are a different, declared input boundary.
 
+
+## Shared native packaging inputs
+
+The SDK producer qualifies Windows x64 in addition to Linux x64 and macOS arm64. Its Edi checkout
+contains the producer recipe and tools; engine tests and corpus come from the exact pinned Crysta
+checkout. Excluding Edi docs/tests from that producer checkout also avoids Windows reserved fixture
+paths without changing the engine qualification inventory. Windows uses native MSVC inspection,
+release DLL CRT, real .lib/.exe paths and the manifest-hashed transitive DLL closure. Unix keeps
+its existing accelerated SDK settings. WebAssembly remains a separate target/toolchain.
+
+Installers acquire the SDK against tools/installer/pixi.lock, including its deployment target,
+and require the source export's commit to match. Desktop, native CLI and Python wheel link that
+same qualified archive; neither installer nor CLI configuration builds Crysta. A newer compatible
+macOS deployment target may consume an older SDK minimum; ABI package versions/builds still match
+exactly. Imported MSVC packages refuse an older compiler or a different CRT mode.
+
+The standalone dependency inspectors now live in native_runtime.py, shared by CLI and wheel
+packaging. The runtime copier accepts only manifest-hashed SDK files, follows ordinary and delayed
+dependencies transitively, relocates copies and verifies the extracted closure. It never patches
+the SDK itself. Linux links the wheel's C++ runtime statically with hidden symbols as before;
+OpenMP and vector math remain enabled. Windows carries its CRT DLLs beside the executable/module.
+Actual platform packaging and co-resident Python-runtime checks remain required before shipping.
+
+SDK compilation also restores ccache before installing the producer environment, preserving the
+existing binding needed by corpus-policy hooks. The object cache is scoped by platform and actual
+engine lock; ccache checks the compiler and full inputs before reuse across source pins. Artifact
+cache hits still skip compilation entirely. Installer candidate builds run on an allowed PR merge
+ref when it becomes ready, rather than pushing an arbitrary branch into a main/PR-only protected
+environment. Main pushes and explicit diagnostic dispatch remain available. No publication input
+is enabled by the candidate build.
+
+
 ## Native Edi artifacts within one CI run
 
 The existing edi_native.py transport is brought onto this SDK contract: the committed engine
@@ -97,3 +129,16 @@ artifact after a test failure. Core waits for that producer; existing native/cor
 are retained. Core, CLI, notebook, docs, system, app bootstrap and browser-reference jobs reuse
 the default native build. The app's own Qt host/core configuration and WebAssembly target remain
 separate builds; their ABI/worker definitions differ. Compiler caches continue to cover those.
+
+The CLI/wheel dependency verifier retains the first standalone implementation's exact system
+allowlist; a system-root prefix or arbitrary API-set spelling is insufficient. The Windows
+DLL profile additionally admits the named Universal CRT contracts in [Microsoft KB2999226](https://support.microsoft.com/en-us/servicing/os/windows/2020/04/update-for-universal-c-runtime-in-windows).
+Unknown imports must be carried from the qualified SDK or refuse. The Crysta producer applies
+the same named UCRT rule, rather than trusting an arbitrary api-ms-win vendor namespace.
+
+Runtime licence collection shares the desktop's existing nearest-package ownership and
+locked-archive recovery implementation. CLI/wheel runtime files must all resolve to an actual
+locked package, including compiler C++/CRT libraries, and their full notices are included in
+the archive/wheel. The installed-wheel checks preserve private Linux C++ symbols, reject a
+dynamic libstdc++ dependency, preload the OS C++ runtime, and exercise both real PyZMQ import
+orders before calculation. PyZMQ is a locked packaging-test dependency, not a shipped app library.

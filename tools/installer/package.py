@@ -309,6 +309,69 @@ def bundled_runtime_licenses(metadata: dict, target: Path) -> bool:
     return True
 
 
+def deployed_package_names(files: list[Path], records: list[dict]) -> set[str]:
+    """Resolve deployed paths to their nearest package path, refusing ambiguous ownership."""
+    candidates = {}
+    for record in records:
+        for name in record.get('files', []):
+            path = Path(name)
+            candidates.setdefault(path.name, []).append((path.parts, record['name']))
+    owners = set()
+    for path in files:
+        matches = {}
+        for parts, owner in candidates.get(path.name, []):
+            score = 0
+            for left, right in zip(reversed(path.parts), reversed(parts), strict=False):
+                if left != right:
+                    break
+                score += 1
+            matches[owner] = max(matches.get(owner, 0), score)
+        if not matches:
+            continue
+        best = max(matches.values())
+        selected = [owner for owner, score in matches.items() if score == best]
+        if len(selected) != 1:
+            raise RuntimeError(f'Ambiguous deployed dependency ownership: {path}')
+        owners.add(selected[0])
+    return owners
+
+
+def collect_dependency_licenses(
+    deployed_files: list[Path],
+    records: Path,
+    notices: Path,
+    inputs: Path,
+    *,
+    require_owned: bool = False,
+) -> None:
+    """Carry the actual locked packages' licences for the deployed runtime files."""
+    if not records.is_dir():
+        raise RuntimeError(
+            'Packaging requires locked dependency records for its licence inventory'
+        )
+    notices.mkdir(parents=True, exist_ok=True)
+    metadata_records = [
+        json.loads(record.read_text(encoding='utf-8')) for record in records.glob('*.json')
+    ]
+    if require_owned:
+        for path in deployed_files:
+            if not deployed_package_names([path], metadata_records):
+                raise RuntimeError(f'Missing deployed dependency ownership: {path}')
+    owners = deployed_package_names(deployed_files, metadata_records)
+    inputs.mkdir(parents=True, exist_ok=True)
+    for metadata in metadata_records:
+        if metadata['name'] not in owners:
+            continue
+        licenses = Path(metadata.get('link', {}).get('source', '')) / 'info/licenses'
+        if not licenses.is_dir():
+            licenses = inputs / metadata['name']
+            if not licenses.is_dir():
+                acquire_package_licenses(metadata, inputs, licenses)
+        if not any(path.is_file() for path in licenses.rglob('*')):
+            raise RuntimeError(f'Missing deployed dependency licences: {metadata["name"]}')
+        shutil.copytree(licenses, notices / metadata['name'])
+
+
 def acquire_package_licenses(metadata: dict, destination: Path, target: Path) -> None:
     """Recover pinned licence files when CI restores the environment without its cache."""
     if bundled_runtime_licenses(metadata, target):
