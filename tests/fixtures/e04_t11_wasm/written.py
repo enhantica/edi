@@ -19,6 +19,7 @@ import edi
 import gemmi
 import numpy as np
 
+from tests.fixtures.e04_t11_wasm import iteration_domains
 from tests.fixtures.e04_t11_wasm.generate_catalogue import CASES
 from tests.fixtures.e04_t11_wasm.reopen import archive_files
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
@@ -87,6 +88,7 @@ def inputs(root, case):
             digest.update(pre_catalogue_bytes(path))
     if digest.hexdigest() != fixture['project_sha256']:
         raise ValueError('written reference requires the exact authenticated catalogue input')
+    fixture['_iteration_domain'] = iteration_domains.historical(root, case, fixture, raw)
     names = blocks(source, fixture['scientific'])
     identity.conditioning_semantics(fixture['scientific'], condition, names)
     if raw['labels'] != condition['labels'] or raw['n_data'] != condition['n_data']:
@@ -233,6 +235,8 @@ def qualify_raw(fixture, old, raw, report, candidates, names, source):
         selected[column] = path
     if len(set(selected.values())) != len(selected) or set(selected.values()) != values.keys():
         raise ValueError('raw fitted population has missing, duplicate or unowned paths')
+    if '_iteration_domain' in fixture:
+        iteration_domains.current(fixture, raw, report)
     qualify_raw_numbers(fixture, old, raw, selected)
     qualify_terminal(old, raw, report)
     return selected
@@ -263,6 +267,10 @@ def qualify_raw_numbers(fixture, old, raw, selected):
         ):
             raise ValueError('raw value or SU differs from the independent original anchor')
     for name, expected in fixture['native_start_and_finish'].items():
+        if name == 'iterations' and '_iteration_domain' in fixture:
+            # The authenticated historical count is checked by historical(); current()
+            # checks actual callbacks/history/count in the declared continuation domain.
+            continue
         actual = raw[name]
         if (
             type(actual) not in {int, float}
@@ -404,7 +412,7 @@ def admit(root, case, reference):
             for name in ('native.json', 'conditioning.json', 'conditioning-raw.json')
         },
     }
-    if producer.get('schema') != 'ordinary-native-written/1' or any(
+    if producer.get('schema') != 'ordinary-native-written/2' or any(
         producer.get(k) != v for k, v in expected.items()
     ):
         raise ValueError('written reference producer does not own this authenticated input')
@@ -413,7 +421,12 @@ def admit(root, case, reference):
     ):
         raise ValueError('written reference capture custody changed')
     validate_capture_flags(result.get('capture_flags'))
-    if producer.get('recorder_sha256') != sha(__file__):
+    if (
+        producer.get('recorder_sha256') != sha(__file__)
+        or producer.get('iteration_checker_sha256') != sha(iteration_domains.__file__)
+        or producer.get('iteration_domains_sha256')
+        != sha(iteration_domains.HERE / 'iteration-domains.json')
+    ):
         raise ValueError('written reference recorder differs from the reviewed source')
     for field in ('module_sha256', 'module_path', 'build_commit', 'python', 'recorder_path'):
         if not isinstance(producer.get(field), str) or not producer[field]:
@@ -451,6 +464,7 @@ def admit(root, case, reference):
         'chi_square_tolerance': float(
             analysis.find_value('_minimizer.chi_square_tolerance') or '0'
         ),
+        **fixture['_iteration_domain']['conditions'],
     }:
         raise ValueError('written reference loaded state differs from the source declarations')
     raw = json.loads((reference / 'raw.json').read_text())
@@ -463,6 +477,7 @@ def admit(root, case, reference):
         names,
         source,
     )
+    iteration_domains.saved(reference / 'project', raw, (reference / 'machine.txt').read_text())
     validate_arrays(reference, banks, fixture)
     return fixture
 
@@ -523,7 +538,7 @@ def capture_arrays(owner, output, banks, name):
     return data
 
 
-def capture_loaded(project, source, case, old, output):
+def capture_loaded(project, source, case, old, output, conditions):
     if (
         project.analysis.fitting_mode != ('single' if case == 'lbco' else 'joint')
         or project.su_rule != 'iucr_99'
@@ -538,6 +553,8 @@ def capture_loaded(project, source, case, old, output):
         'free_count': len(project.free_parameters),
         'max_iterations': project._minimizer_max_iterations,
         'chi_square_tolerance': project._minimizer_chi_square_tolerance,
+        'descent': project.analysis.descent,
+        'stop_rules': project.analysis.stop_rules,
     }
     if (
         loaded['free_count'] != len(old['labels'])
@@ -545,7 +562,41 @@ def capture_loaded(project, source, case, old, output):
         or loaded['chi_square_tolerance'] != expected_tolerance
     ):
         raise ValueError('reference changed the original free set or minimizer declarations')
+    if {key: loaded[key] for key in ('descent', 'stop_rules')} != conditions:
+        raise ValueError('reference changed the declared current descent or stop rules')
     (output / 'loaded.json').write_text(json.dumps(loaded, indent=2, allow_nan=False) + '\n')
+    return loaded
+
+
+def fit_with_trace(project, loaded):
+    starts, callbacks = [], []
+    result = project.analysis.fit(
+        on_start=lambda preamble: starts.append(preamble.pre_fit.reduced_chi_square),
+        on_iteration=lambda record: callbacks.append({
+            'iteration': record.iteration,
+            'rwp': record.rwp,
+            'reduced_chi_square': record.reduced_chi_square,
+        }),
+    )
+    if len(starts) != 1:
+        raise ValueError('native reference needs exactly one actual fit preamble')
+    raw = {
+        'initial_reduced_chi_square': starts[0],
+        'final_reduced_chi_square': result.reduced_chi_square,
+        'rwp': result.rwp,
+        'iterations': result.iterations,
+        'iteration_domain': {
+            'conditions': {
+                key: loaded[key] for key in ('descent', 'stop_rules', 'max_iterations')
+            },
+            'callbacks': callbacks,
+        },
+        'converged': result.converged,
+        'status': str(result.status),
+        'values': dict(result.values),
+        'uncertainty': dict(result.uncertainty),
+    }
+    return raw, result
 
 
 def capture(root, case, output, module_sha256, build_commit):
@@ -561,7 +612,7 @@ def capture(root, case, output, module_sha256, build_commit):
         raise ValueError('reference output must be absolute and outside the authenticated input')
     output.mkdir(mode=0o700)  # Exclusive, never reuse a previous failed/reference capture.
     producer = {
-        'schema': 'ordinary-native-written/1',
+        'schema': 'ordinary-native-written/2',
         'case': case,
         'project': fixture['project'],
         'source_files': files(source),
@@ -571,6 +622,8 @@ def capture(root, case, output, module_sha256, build_commit):
         'python': str(Path(sys.executable).resolve()),
         'recorder_path': str(Path(__file__).resolve()),
         'recorder_sha256': sha(__file__),
+        'iteration_checker_sha256': sha(iteration_domains.__file__),
+        'iteration_domains_sha256': sha(iteration_domains.HERE / 'iteration-domains.json'),
         'fixture_files': {
             name: sha(
                 root / 'tests/fixtures/e04_t11_wasm/catalogue_scientific' / (case + '-' + name)
@@ -582,23 +635,10 @@ def capture(root, case, output, module_sha256, build_commit):
     # discard actual producer custody as it did in root497.
     (output / 'producer.json').write_text(json.dumps(producer, indent=2) + '\n')
     project = edi.Project.load(source)
-    capture_loaded(project, source, case, old, output)
-    starts = []
-    result = project.analysis.fit(
-        on_start=lambda preamble: starts.append(preamble.pre_fit.reduced_chi_square)
+    loaded = capture_loaded(
+        project, source, case, old, output, fixture['_iteration_domain']['conditions']
     )
-    if len(starts) != 1:
-        raise ValueError('native reference needs exactly one actual fit preamble')
-    raw = {
-        'initial_reduced_chi_square': starts[0],
-        'final_reduced_chi_square': result.reduced_chi_square,
-        'rwp': result.rwp,
-        'iterations': result.iterations,
-        'converged': result.converged,
-        'status': str(result.status),
-        'values': dict(result.values),
-        'uncertainty': dict(result.uncertainty),
-    }
+    raw, result = fit_with_trace(project, loaded)
     (output / 'raw.json').write_text(json.dumps(raw, indent=2, allow_nan=False) + '\n')
     report = edi.machine_report(project, result, edi.VerbosityEnum.FULL)
     (output / 'machine.txt').write_text(report)
@@ -615,9 +655,11 @@ def capture(root, case, output, module_sha256, build_commit):
     capture_arrays(project, output, banks, 'raw-arrays.npz')
     destination = output / 'project'
     project.save_as(destination)
+    iteration_domains.saved(destination, raw, report)
     capture_arrays(project, output, banks, 'written-arrays.npz')
     opened = edi.Project.load(destination)
     capture_arrays(opened, output, banks, 'reopened-arrays.npz')
+    iteration_domains.saved(destination, raw, report)
     validate_arrays(output, banks, fixture)
     if files(source) != producer['source_files']:
         raise ValueError('reference operations changed the original catalogue input')

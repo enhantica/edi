@@ -50,12 +50,14 @@ const writtenReference = process.argv.find(arg => arg.startsWith('--written-refe
 const writtenRequired = !fileRequestsOnly && !exampleOnly && !statusActionLifetimeOnly &&
   !process.argv.includes('--startup-only') && !process.argv.includes('--diagnostics-only');
 const sourceRoot = fileURLToPath(new URL('../../../', import.meta.url));
+let currentNative;
 if (writtenRequired) {
   assert(writtenReference, 'Full browser fitting requires the explicitly owned ordinary-native-written reference directory');
   const admitted = spawnSync('python', ['-m','tests.fixtures.e04_t11_wasm.written','admit',
     '--root',sourceRoot,'--case',fitCase,'--reference',join(resolve(writtenReference),fitCase)],
     {encoding:'utf8',timeout:10000});
   assert.equal(admitted.status,0,'Written reference custody, raw anchors and reopen captures must qualify before browser actions: '+admitted.stderr);
+  currentNative=JSON.parse(await readFile(join(resolve(writtenReference),fitCase,'raw.json')));
 }
 console.log(`browser ${mode}: starting`);
 assert(siteArg && outputArg && ['multithread', 'shim'].includes(mode),
@@ -726,10 +728,15 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const iterations = Number(before.analysis.match(/^_fit_result.iterations\s+(\S+)/m)?.[1]);
   assert.equal(iterations,finalIteration,
     'The successful saved fit must confirm the progress hook\'s actual final iteration');
+  assert.equal(iterations,currentNative.iterations,
+    'Both catalogue cases must retain the exact independently traced current native continuation count');
+  assert.equal(before.analysis.match(/^_fit_result.descent\s+(\S+)/m)?.[1],
+    currentNative.iteration_domain.conditions.descent,
+    'The saved browser fit must confirm the same declared current descent as native');
   const rwp = Number(before.analysis.match(/^_fit_result.prof_wr_factor\s+(\S+)/m)?.[1]);
   if (fitCase === 'ncaf') {
-    assert(iterations === nativeOracle.iterations && Number.isFinite(rwp) && Math.abs(rwp-nativeOracle.rwp)*100 <= 0.005,
-      'the five-bank browser fit must retain the catalogue native parity regression pins for iterations and Rwp');
+    assert(Number.isFinite(rwp) && Math.abs(rwp-nativeOracle.rwp)*100 <= 0.005,
+      'the five-bank browser fit must retain its unchanged historical Rwp pin and separately traced current count');
   }
 
   // The public reset action closes the model. Observe all four actual left toolbar buttons

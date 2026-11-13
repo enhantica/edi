@@ -6,11 +6,13 @@ fitting in the GUI and requires completion, a results popup and save/reopen.
 
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
 
+from tests.fixtures.e04_t11_wasm import iteration_domains, written
 from tests.fixtures.e04_t11_wasm.cli_domains import compare_current, vehicle
 from tests.fixtures.e04_t11_wasm.compare import compare
 
@@ -56,3 +58,43 @@ def test_numeric_gate_accepts_native_reference_and_rejects_every_perturbed_opera
         planted = {name: number for name, number in fields.items() if name != key}
         with pytest.raises(ValueError, match='wasm fit'):
             compare('\n'.join(f'{name}={number}' for name, number in planted.items()), oracle)
+
+
+@pytest.mark.parametrize('case', ['lbco', 'ncaf'])
+def test_catalogue_wasm_continuation_matches_current_native_work(tmp_path, case):
+    cli_path = os.environ.get('EDI_WASM_CLI_MULTITHREAD')
+    reference = os.environ.get('EDI_WASM_WRITTEN_REFERENCE')
+    if not cli_path:
+        pytest.skip('real catalogue backend parity belongs to app WebAssembly qualification')
+    assert reference, 'Catalogue WASM count parity requires the explicitly captured native work'
+    fixture = written.admit(ROOT, case, Path(reference) / case)
+    _, _, source, _, _ = written.inputs(ROOT, case)
+    project = tmp_path / 'project'
+    shutil.copytree(source, project)
+    before = written.files(project)
+    run = subprocess.run(
+        [
+            'node',
+            str(Path(cli_path).resolve()),
+            'fit',
+            str(project),
+            '--dry',
+            '--verbosity',
+            'full',
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    (Path(reference) / (case + '-wasm-machine.txt')).write_text(run.stdout)
+    (Path(reference) / (case + '-wasm-stderr.txt')).write_text(run.stderr)
+    assert run.returncode == 0, (
+        'The real catalogue WASM fit must complete before any current work parity claim: '
+        + run.stdout
+        + run.stderr
+    )
+    assert written.files(project) == before, 'Dry catalogue parity retains every input byte'
+    iteration_domains.compare_runtime(
+        run.stdout, (Path(reference) / case / 'machine.txt').read_text(), fixture
+    )

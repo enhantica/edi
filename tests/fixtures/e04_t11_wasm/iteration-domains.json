@@ -1,0 +1,35 @@
+{
+  "schema": "catalogue-iteration-domains/1",
+  "authority": [
+    "edi ADR-0023"
+  ],
+  "historical": {
+    "lbco": {
+      "project_sha256": "4bda2cd7b92130d6b331a5abff7f797a865f05d9800a54ee1e5f88c69fb5523c",
+      "descent": "ladder",
+      "files": {
+        "native.json": "92a7f2d9efa6dc856c91215f01f427a2be13e027af62f17b9d3d698a770d6b11",
+        "native-report.txt": "acb1f40b9998391e99421ec8f1da43d8be1228b742581c28393cfed2d17a67fd",
+        "conditioning.json": "640c6c6361a04e670481ee4ed8e09ede69b9ba60d4816d5567d575de68ad2143",
+        "conditioning-raw.json": "b56a23ae88ca56e5c6fa0a8306e6465b5ab89db53295a32c1cd0875961f9be54"
+      }
+    },
+    "ncaf": {
+      "project_sha256": "b642f5393eb8ecbc41d33a926b0ae13836131cba2cc9d6a1ec921194cd482429",
+      "descent": "ladder",
+      "files": {
+        "native.json": "d6bd48be972d9ac4f8d16d8c9949259e1e18289499479826a3b633fe2c98b321",
+        "native-report.txt": "8da8ec360d6c4b197142e478437ee42c61dfb8b0684167fa0862b1cf82cc15f3",
+        "conditioning.json": "2251dfb2a78cc8037c9af4cdc0cb0043719fb67a20ec71d361a4c98efcfe29d0",
+        "conditioning-raw.json": "468106be7f89d2041704579faedc636287844226353cfd77c447a6aec55afe98"
+      }
+    }
+  },
+  "current": {
+    "conditions": {
+      "descent": "multistart_prune",
+      "stop_rules": "chi_square_change shift_su"
+    },
+    "probe_horizon": 3
+  }
+}
