@@ -180,3 +180,9 @@ ccache refuses when requested; explicit empty, custom and list launchers retain 
 The rule covers enabled project languages (Crysta C++; Edi C and C++) and preserves Unix
 lookup. This keeps the existing cache
 owner across the binding bootstrap, SDK and app configurations without changing the backend.
+
+The enabled language launcher variables also join CMake's try-compile platform variables.
+Compiler probes run a nested CMake project, which must inherit the chosen resolved, empty,
+custom or list value instead of re-importing the original environment default. Real native
+compiler configure/probe controls cover this boundary; a successful post-configure Ninja
+command alone does not qualify it.

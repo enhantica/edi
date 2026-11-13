@@ -106,3 +106,162 @@ def execute_lookup(result, language):
         check=False,
         timeout=10,
     )
+
+
+def native_probe_tools():
+    search = str(Path(sys.executable).parent) + os.pathsep + os.environ['PATH']
+    tools = {name: shutil.which(name, path=search) for name in ['cmake', 'ninja', 'ccache']}
+    if tools['ccache'] is None and os.name == 'nt':
+        candidate = Path(sys.executable).parent / 'Library/bin/ccache.exe'
+        tools['ccache'] = str(candidate) if candidate.is_file() else None
+    assert all(tools.values()), 'Native compiler probes require the actual locked build tools'
+    return tools
+
+
+def native_cache_alias(root, cache):
+    alias = root / 'native cache prefix with spaces/Library/bin'
+    alias.parent.mkdir(parents=True)
+    if os.name == 'nt':
+        made = subprocess.run(
+            [
+                os.environ['COMSPEC'],
+                '/d',
+                '/c',
+                'mklink',
+                '/J',
+                str(alias),
+                str(Path(cache).parent),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        assert made.returncode == 0, 'The cache directory alias retains native DLL dependencies'
+    else:
+        alias.symlink_to(Path(cache).parent, target_is_directory=True)
+    return alias / Path(cache).name
+
+
+def native_probe_environment(root, languages, program):
+    environment = {
+        **os.environ,
+        'CONDA_PREFIX': str(program.parent.parent.parent),
+        'CCACHE_DIR': str(root / 'cache'),
+        'CCACHE_LOGFILE': str(root / 'cache.log'),
+        'CCACHE_RECACHE': 'true',
+    }
+    environment.update({
+        'CMAKE_' + language + '_COMPILER_LAUNCHER': 'ccache' if language in languages else ''
+        for language in ['C', 'CXX']
+    })
+    for name in [
+        'CFLAGS',
+        'CXXFLAGS',
+        'CPPFLAGS',
+        'LDFLAGS',
+        'CMAKE_PROGRAM_PATH',
+        'CMAKE_PREFIX_PATH',
+        'CMAKE_GENERATOR_PLATFORM',
+        'CMAKE_GENERATOR_TOOLSET',
+        'CMAKE_GENERATOR_INSTANCE',
+        'CCACHE_DISABLE',
+    ]:
+        environment.pop(name, None)
+    if os.name == 'nt':
+        directories = [
+            item
+            for item in os.environ['PATH'].split(os.pathsep)
+            if not (Path(item) / 'ccache.exe').exists()
+        ]
+        environment['PATH'] = os.pathsep.join(directories)
+        compilers = dict.fromkeys(languages, shutil.which('cl'))
+    else:
+        directory = root / 'safe-tools'
+        directory.mkdir()
+        for name in ['as', 'ld', 'ar', 'ranlib', 'strip', 'objdump']:
+            tool = shutil.which(name, path=os.defpath)
+            if tool:
+                (directory / name).symlink_to(tool)
+        environment['PATH'] = str(directory)
+        compilers = {
+            language: shutil.which('cc' if language == 'C' else 'c++', path=os.defpath)
+            for language in languages
+        }
+    assert all(compilers.values()), 'Each enabled language has an actual native compiler'
+    assert shutil.which('ccache', path=environment['PATH']) is None, (
+        'Compiler children cannot recover a bare cache launcher from the test PATH'
+    )
+    return environment, compilers
+
+
+def native_probe_project(root, source, languages):
+    declaration = re.search(r'(?m)^project\s*\([^\n]*\)', source)
+    assert declaration, 'The native probe retains the actual declared project language boundary'
+    project = root / 'source'
+    project.mkdir()
+    body = ''
+    for language in languages:
+        name = 'probe.' + ('c' if language == 'C' else 'cpp')
+        (project / name).write_text('int main(void) { return 0; }\n', encoding='utf-8')
+        body += (
+            'try_compile(NATIVE_OK "${CMAKE_BINARY_DIR}/nested-' + language + '" '
+            '"${CMAKE_CURRENT_SOURCE_DIR}/' + name + '" OUTPUT_VARIABLE NATIVE_OUTPUT)\n'
+            'if(NOT NATIVE_OK)\n'
+            'message(FATAL_ERROR "Nested native compiler failed: ${NATIVE_OUTPUT}")\nendif()\n'
+            'file(WRITE "${CMAKE_BINARY_DIR}/' + language + '.launcher" '
+            '"${CMAKE_' + language + '_COMPILER_LAUNCHER}")\n'
+            'file(WRITE "${CMAKE_BINARY_DIR}/' + language + '.environment" '
+            '"$ENV{CMAKE_' + language + '_COMPILER_LAUNCHER}")\n'
+        )
+    (project / 'CMakeLists.txt').write_text(
+        'set(CMAKE_HOST_WIN32 TRUE)\n'
+        'set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES USER_PROBE_WITNESS)\n'
+        'set(USER_PROBE_WITNESS "retained-toolchain-value")\n'
+        + source[: declaration.start()]
+        + '\n'
+        'set(CMAKE_HOST_WIN32 '
+        + ('TRUE' if os.name == 'nt' else 'FALSE')
+        + ')\n'
+        + declaration[0]
+        + '\n'
+        + body,
+        encoding='utf-8',
+    )
+    return project
+
+
+def run_compiler_probe(root, source, languages, selection='default'):
+    tools = native_probe_tools()
+    program = native_cache_alias(root, tools['ccache'])
+    choice = {
+        'empty': '',
+        'absolute': program.as_posix(),
+        'list': program.as_posix() + ';compiler_check=content',
+    }.get(selection)
+    definitions = {} if choice is None else dict.fromkeys(languages, choice)
+    environment, compilers = native_probe_environment(root, languages, program)
+    project = native_probe_project(root, source, languages)
+    tree = root / 'tree'
+    command = [
+        tools['cmake'],
+        '--debug-trycompile',
+        '-G',
+        'Ninja',
+        '-S',
+        str(project),
+        '-B',
+        str(tree),
+        '-DCMAKE_MAKE_PROGRAM=' + tools['ninja'],
+    ]
+    command += [
+        '-DCMAKE_' + language + '_COMPILER=' + compiler for language, compiler in compilers.items()
+    ]
+    command += [
+        '-DCMAKE_' + language + '_COMPILER_LAUNCHER=' + value
+        for language, value in definitions.items()
+    ]
+    configured = subprocess.run(
+        command, env=environment, capture_output=True, text=True, check=False, timeout=25
+    )
+    return configured, tree, program, definitions

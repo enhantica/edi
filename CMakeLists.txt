@@ -19,6 +19,8 @@ if(CMAKE_HOST_WIN32)
                 HINTS "$ENV{CONDA_PREFIX}/Library/bin")
             set(CMAKE_${_cache_language}_COMPILER_LAUNCHER "${_cache_executable}")
         endif()
+        list(APPEND CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
+            CMAKE_${_cache_language}_COMPILER_LAUNCHER)
     endforeach()
     unset(_cache_language)
     unset(_cache_launcher)
