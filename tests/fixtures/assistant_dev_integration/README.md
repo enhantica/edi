@@ -58,3 +58,15 @@ checked out `b176b5ab`. These assistant source gates do not exist at that commit
 so that run supplies neither a green nor a red verdict for these cases. The
 adaptations follow the specific source changes above; they make no new runtime,
 SDK compatibility, or numerical correctness claim.
+
+The original `prechange_stamp_codec.inc` remains byte-identical historical data
+(SHA-256 `8b300f35b31f9f5b9bf54a5af9e4e470255f8983817ef4f463b91d46707d7800`).
+Run `freeze_stamp_codec.py --active-domain` to generate `active_stamp_codec.inc`
+from that frozen snapshot. The original upstream source revision is not required
+by this mode. Its exact one-site projection removes only the retired absorption
+optional slot, with no substituted absent marker. Every surviving traversal,
+scalar representation and field order remains the historical algorithm, with no
+bytes derived from the current encoder. Native equality and stale-publication
+controls explicitly exercise both current TOF and CW absorption coefficients.
+The source census treats the old include as hash-checked data and rejects direct
+compilation of it. Legacy reader strings remain data rather than typed members.
