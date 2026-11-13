@@ -790,7 +790,7 @@ jobs:
       - name: Check the site in the browser
         run: >-
           pixi run --skip-deps wasm-check "$RUNNER_TEMP/edi-webapp-checks" tests/system/manual/e04_t11_browser.mjs
-          tests/system/py/test_e04_t11_wasm_fit.py tests/system/py/test_e04_t11_wasm_delivery.py
+          tests/system/py/test_e04_t11_wasm_fit.py tests/system/py/test_e04_t11_wasm_delivery.py tests/system/py/test_web_multithread_loader.py
       # The multithread kit's parallel fit: all three routes timed against each other (the speed ratio is in the log)
       # and crysta's executed-body witness built from the same crysta source with the same options. It takes about
       # 20 minutes, so it runs on main pushes, the nightly run and dispatch, not on pull requests.
