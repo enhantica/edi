@@ -86,14 +86,20 @@ def test_scan_stop_continue_and_follow_have_model_state(tmp_path):
 
 
 def assert_structure_selector(text):
+    selector = block(text, 'MainAreaBlockSelector {')
     expressions = {
-        name: property_value(text, name)
+        name: property_value(selector, name)
         for name in ('blocks', 'blockIndex', 'blockKind', 'onBlockActivated')
     }
-    result = javascript(
+    observed = javascript(
         'const project={structures:{tag:"structures"},experiments:{tag:"experiments"},'
         'currentStructureIndex:2,currentExperimentIndex:5};const seen=[];'
-        'for(const patternShown of [false,true]){const page={project,patternShown};'
+        'for(const tabIndex of [0,1,2,3,4,5]){'
+        'project.currentStructureIndex=2;project.currentExperimentIndex=5;'
+        'const view={project,tabIndex};view.structureShown=('
+        + property_value(text, 'structureShown')
+        + ');'
+        'const experiments=(' + property_value(selector, 'experiments') + ');'
         'seen.push([('
         + expressions['blocks']
         + ').tag,('
@@ -105,53 +111,59 @@ def assert_structure_selector(text):
         'seen.push([project.currentStructureIndex,project.currentExperimentIndex]);}'
         'console.log(JSON.stringify(seen));'
     )
-    assert result == [
+    assert observed == [
         ['structures', 2, 'structure'],
         [7, 5],
-        ['experiments', 5, 'experiment'],
-        [7, 7],
+        *[['experiments', 5, 'experiment'], [2, 7]] * 5,
     ], (
-        'Structure selects structures in its view and experiments in Pattern, '
-        'retaining independent indices and activating only the current collection'
+        'The shared main view selects structures only on Structure, experiments on every '
+        'other tab, and changes only the chosen collection index'
     )
-    assert javascript(
-        'const project=null,patternShown=true;console.log(JSON.stringify(['
-        + expressions['blocks']
-        + ','
-        + expressions['blockIndex']
-        + ']));'
-    ) == [None, -1], 'Structure keeps the null-project selector empty on either tab'
+    for experiments in (False, True):
+        assert javascript(
+            'const view={project:null};const experiments='
+            + json.dumps(experiments)
+            + ';console.log(JSON.stringify(['
+            + expressions['blocks']
+            + ','
+            + expressions['blockIndex']
+            + ']));'
+        ) == [None, -1], 'The main-area selector keeps a null project empty on every tab'
 
 
 def test_empty_selectors_are_hidden_on_experiment_and_structure_pages():
-    workflow = source('qml/Components/WorkflowPage.qml')
-    selector = block(workflow, 'MainAreaBlockSelector {')
-    assert (
-        property_value(selector, 'visible')
-        == 'page.blockSelectorShown && page.blocks !== null && page.bloc'
-        'ks.count > 0'
-    ), 'Selector wiring: the actual main-area selector hides for an empty bound model'
-    for page, model in [('Experiment', 'experiments')]:
-        text = source(f'qml/Pages/{page}/{page}Page.qml')
-        require(
-            text,
-            r'blocks:\s*project \? project\.' + model + r' : null',
-            'Selector wiring: each page supplies its own project-item model',
-        )
-
-    assert_structure_selector(source('qml/Pages/Structure/StructurePage.qml'))
+    main = source('qml/Components/MainView.qml')
+    selector = block(main, 'MainAreaBlockSelector {')
+    visible = property_value(selector, 'visible')
+    assert javascript(
+        'console.log(JSON.stringify([null,{count:0},{count:3}].map(blocks=>(' + visible + '))));'
+    ) == [False, False, True], 'The actual shared selector hides empty and absent collections'
+    assert_structure_selector(main)
+    for original, replacement in (
+        ('!view.structureShown', 'view.structureShown'),
+        ('tabIndex === 0', 'tabIndex === 1'),
+        (
+            'view.project.currentExperimentIndex : view.project.currentStructureIndex',
+            'view.project.currentStructureIndex : view.project.currentExperimentIndex',
+        ),
+        ('view.project.currentExperimentIndex = index', 'view.project.currentExperimentIndex = 0'),
+    ):
+        changed = main.replace(original, replacement)
+        assert changed != main, 'A selector escape control changes its intended binding'
+        with pytest.raises(AssertionError):
+            assert_structure_selector(changed)
 
 
 def test_selector_moves_to_main_tab_bar_once():
-    workflow = source('qml/Components/WorkflowPage.qml')
-    main = block(workflow, 'mainView:')
+    main = source('qml/Components/MainView.qml')
     assert main.count('MainAreaBlockSelector {') == 1, (
-        'Selector wiring: the main view owns one placement component'
+        'Selector wiring: the shared main view owns exactly one placement component'
     )
-    sidebar = block(workflow, 'sideBar:')
-    assert 'BlockSelector' not in sidebar, (
-        'Selector wiring: no selector instance remains in the sidebar'
-    )
+    for page in ('Experiment', 'Structure', 'Analysis'):
+        text = source(f'qml/Pages/{page}/{page}Page.qml')
+        assert not re.search(r'\b(?:BlockSelector|MainAreaBlockSelector)\s*\{', text), (
+            'Selector wiring: sidebar pages share the main view selector'
+        )
     placement = source('qml/Components/MainAreaBlockSelector.qml')
     assert placement.count('BlockSelector {') == 1, (
         'Selector wiring: placement composes exactly one original selector'
@@ -160,58 +172,32 @@ def test_selector_moves_to_main_tab_bar_once():
     assert property_value(child, 'width') == 'placement.width', (
         'Selector wiring: the actual selector follows main-area width'
     )
-    for page in ('Experiment', 'Structure', 'Analysis'):
-        text = source(f'qml/Pages/{page}/{page}Page.qml')
-        assert not re.search(r'\b(?:BlockSelector|MainAreaBlockSelector)\s*\{', text), (
-            'Selector wiring: pages use the workflow selector rather than duplicate it'
-        )
-
-    selector = block(source('qml/Components/WorkflowPage.qml'), 'MainAreaBlockSelector {')
     for name in ('blocks', 'blockIndex', 'blocksTextRole'):
-        assert property_value(selector, name) == 'page.' + name, (
-            'Selector wiring: the placed child receives the page model and selection'
-        )
         require(
             placement,
             r'property alias ' + name + r': selector\.' + name + r'\s*(?:\n|$)',
-            'Selector wiring: placement forwards its exposed model and index '
-            'to the original child',
+            'Selector wiring: placement forwards its model and index to the original child',
         )
-    assert property_value(selector, 'onBlockActivated') == 'index => page.blockActivated(index)', (
-        'Selector wiring: the placed child returns the actual activated index'
-    )
     assert (
         property_value(child, 'onBlockActivated') == 'index => placement.blockActivated(index)'
     ), 'Selector wiring: activation crosses placement without changing its index'
     original = source('qml/Components/BlockSelector.qml')
     picker = block(original, 'SearchableComboBox {')
-    assert (
-        property_value(picker, 'model') == 'blocks'
-        and property_value(picker, 'currentIndex') == 'blockIndex'
-    ), 'Selector wiring: the actual picker consumes the forwarded blocks and current index'
+    assert property_value(picker, 'model') == 'blocks' and (
+        property_value(picker, 'currentIndex') == 'blockIndex'
+    ), 'Selector wiring: the picker consumes the forwarded blocks and current index'
     handler = property_value(picker, 'onActivated')
     result = javascript(
         'const Qt={binding:f=>f()};let picked=[];const '
         'row={blockActivated:i=>picked.push(i)};const '
         'selector={blockIndex:3,currentIndex:0};('
         + handler
-        + ')(17);console.log(JSON.stringify([picked,selector.currentInd'
-        'ex]));'
+        + ')(17);console.log(JSON.stringify([picked,selector.currentIndex]));'
     )
     assert result == [[17], 3], (
-        'Selector wiring: activation retains the source index and rebinds the shared selection'
+        'Selector wiring: activation retains the source index and rebinds shared selection'
     )
-    for page, kind in [('Experiment', 'Experiment'), ('Analysis', 'Experiment')]:
-        text = source(f'qml/Pages/{page}/{page}Page.qml')
-        assert (
-            property_value(text, 'blockIndex') == 'project ? project.current' + kind + 'Index : -1'
-        ), 'Selector wiring: each page follows its shared project index'
-        assert (
-            property_value(text, 'onBlockActivated')
-            == 'index => page.project.current' + kind + 'Index = index'
-        ), 'Selector wiring: each page forwards the activated index to the same project selection'
-
-    assert_structure_selector(source('qml/Pages/Structure/StructurePage.qml'))
+    assert_structure_selector(main)
 
 
 def test_scan_explorer_header_has_declared_columns_in_order():
@@ -293,8 +279,8 @@ def test_scan_explorer_header_has_declared_columns_in_order():
 
 
 def evolution_component():
-    page = source('qml/Pages/Analysis/AnalysisPage.qml')
-    items = re.search(r'mainItems:\s*\[([\s\S]*?)\n\s*\]', page)
+    page = source('qml/Components/MainView.qml')
+    items = re.search(r'items:\s*\[([\s\S]*?)\n\s*\]', page)
     assert items, 'Evolution wiring: the analysis main view declares its tab content'
     components = re.findall(r'(?m)^\s*(\w+)\s*\{', items.group(1))
     assert components.count('EvolutionChart') == 1, (
@@ -676,7 +662,9 @@ using FitResultBase=std::string;
 std::string receipt(std::string mode,std::initializer_list<int> args){
 
 for(int arg:args)mode+=":"+std::to_string(arg);return mode;}
-struct Project {std::string mode;
+struct Project {struct Scan {bool declared() const {return true;}} sequential_fit;
+std::string mode;
+Project(std::string selected):mode(selected){}
 std::string fit(int a,int b,int c){return receipt("single",{a,b,c});
 
 }
@@ -741,7 +729,7 @@ def selection_follow(text, tmp_path, *, program_only=False):
 #include <vector>
 #define emit
 struct Fit{bool following=true;
-bool scanning(){return true;
+bool scanning(){return true;} bool catchingUp(){return false;
 }void setFollowing(bool value){following=value;
 
 
