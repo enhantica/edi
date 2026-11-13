@@ -153,7 +153,10 @@ def assert_same_fit(row, record, *, reporting=True):
 
 
 @pytest.mark.parametrize('mode', ['single', 'joint'])
-@pytest.mark.parametrize('descent', ['fast_descent', 'fast_descent_guarded_linear_snap'])
+@pytest.mark.parametrize(
+    'descent',
+    ['fast_descent', pytest.param('ladder', id='fast_descent_guarded_linear_snap')],
+)
 def test_single_and_joint_execute_declared_selection_and_budget(tmp_path, mode, descent):
     case = 'cosio-d20-s1' if mode == 'single' else 'ncaf-wish-2bank-s3'
     project = copy_case(
@@ -194,7 +197,10 @@ def test_absent_conditions_equal_explicit_engine_defaults(tmp_path):
     records = []
     for name, values in [
         ('absent', {'descent': None, 'chi_square_tolerance': None, 'max_iterations': None}),
-        ('explicit', {'descent': 'ladder', 'chi_square_tolerance': 1e-6, 'max_iterations': 50}),
+        (
+            'explicit',
+            {'descent': 'multistart_prune', 'chi_square_tolerance': 1e-6, 'max_iterations': 50},
+        ),
     ]:
         project = copy_case(tmp_path, 'cosio-d20-s1', name=name, **values)
         records.append(run_fit(project))
@@ -205,7 +211,7 @@ def test_absent_conditions_equal_explicit_engine_defaults(tmp_path):
 
 
 def test_scan_inner_fits_and_provenance_match_declared_conditions(tmp_path):
-    chosen = ('fast_descent', 1e-4, 2)
+    chosen = ('fast_descent', 1e-12, 4)
     project = copy_case(
         tmp_path, descent=chosen[0], chi_square_tolerance=chosen[1], max_iterations=chosen[2]
     )
@@ -219,7 +225,7 @@ def test_scan_inner_fits_and_provenance_match_declared_conditions(tmp_path):
         project,
         max((project / 'experiments/d20_scan').glob('*.dat')),
         'dropped',
-        descent='ladder',
+        descent='multistart_prune',
     )
     live = run_fit(project)
     header, rows = read_csv(project / 'analysis/results.csv')
@@ -272,7 +278,7 @@ def test_scan_tolerance_reaches_the_inner_fit(tmp_path):
 
 def test_resume_preserves_old_provenance_and_records_new_conditions(tmp_path):
     old = ('fast_descent', 1e-4, 1)
-    new = ('fast_descent_guarded_linear_snap', 0.00037, 2)
+    new = ('ladder', 0.00037, 2)
     project = copy_case(
         tmp_path, descent=old[0], chi_square_tolerance=old[1], max_iterations=old[2]
     )
@@ -330,7 +336,7 @@ def test_provenance_gate_rejects_each_misattribution(escape):
 def test_guarded_scan_records_its_observed_outcomes_without_assuming_convergence(tmp_path):
     #  is out of scope: measure the guarded flow's actual bailout, never
     # manufacture a convergence requirement or conceal failed scan rows.
-    chosen = ('fast_descent_guarded_linear_snap', 1e-4, 1000)
+    chosen = ('ladder', 1e-4, 1000)
     project = copy_case(
         tmp_path, descent=chosen[0], chi_square_tolerance=chosen[1], max_iterations=chosen[2]
     )
