@@ -827,6 +827,8 @@ void FitViewModel::started(const edi::FitPreamble& preamble) {
 }
 
 void FitViewModel::iterated(const edi::IterationRecord& record) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (owner_.retired_) return;
     if (!scanning_) setElapsed(duration(record.elapsed_ms / 1000.0));
     if (owner_.retired_) return;
     setProgress(QString::number(record.iteration),
