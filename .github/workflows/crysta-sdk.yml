@@ -3,7 +3,7 @@ name: crysta SDK
 # The crysta SDK edi builds against (edi ADR-0083): pixi.toml's CRYSTA_COMMIT, built here once per commit and
 # platform and kept in the cache under that commit, with crysta's source at the same commit. Every edi job and
 # product takes it from there (.github/actions/crysta-sdk). Only this workflow reads crysta, with the app's
-# read-only token. Windows follows in a later change.
+# read-only token.
 
 on:
   workflow_dispatch:
@@ -50,13 +50,30 @@ jobs:
             runner: ubuntu-24.04
           - platform: osx-arm64
             runner: macos-15
+          - platform: win-64
+            runner: windows-2022
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     concurrency:
       group: crysta-sdk-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}-${{ needs.resolve.outputs.recipe }}
       cancel-in-progress: false
       queue: max
     steps:
       - uses: actions/checkout@v5
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/tests/
+            !/docs/
+            !/website/
+      - name: Set up the Windows compiler
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          toolset: '14.44'
       - id: pin
         run: bash tools/ci/crysta-source.sh
       - name: Confirm the resolved engine identity
@@ -88,6 +105,28 @@ jobs:
           git init -q "$RUNNER_TEMP/crysta"
           git -C "$RUNNER_TEMP/crysta" fetch -q --depth 1 "https://x-access-token:$TOKEN@github.com/enhantica/crysta" "$SHA"
           git -C "$RUNNER_TEMP/crysta" checkout -q --detach "$SHA"
+      - name: Identify the SDK compiler-cache inputs
+        if: steps.cache.outputs.cache-hit != 'true'
+        id: compiler-inputs
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, os
+          from pathlib import Path
+          lock = Path(os.environ['RUNNER_TEMP']) / 'crysta/pixi.lock'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'lock={hashlib.sha256(lock.read_bytes()).hexdigest()}\n')
+          PYTHON
+          echo "CCACHE_DIR=$RUNNER_TEMP/crysta-ccache" >> "$GITHUB_ENV"
+          echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=2G" >> "$GITHUB_ENV"
+      - name: Restore the SDK compiler cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/crysta-ccache
+          key: crysta-objects-v1-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-${{ needs.resolve.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            crysta-objects-v1-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-
       - name: Set up pixi for crysta
         if: steps.cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/setup-pixi
@@ -121,10 +160,12 @@ jobs:
           import hashlib, os
           from pathlib import Path
           archive = Path(f'crysta-sdk-{os.environ["SHA"]}-{os.environ["PLATFORM"]}.tar.gz')
+          digest = hashlib.sha256()
           with archive.open('rb') as stream:
-              digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+              for block in iter(lambda: stream.read(1 << 20), b''):
+                  digest.update(block)
           checksum = Path(str(archive) + '.sha256').read_text(encoding='ascii')
-          if checksum != f'{digest}  {archive.name}\n':
+          if checksum != f'{digest.hexdigest()}  {archive.name}\n':
               raise RuntimeError(f'SDK checksum does not bind the requested archive: {archive}')
           PYTHON
       - uses: actions/upload-artifact@v4

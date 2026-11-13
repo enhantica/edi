@@ -47,7 +47,7 @@ jobs:
         env:
           SHA: ${{ steps.crysta.outputs.sha }}
         run: |
-          for platform in linux-64 osx-arm64; do
+          for platform in linux-64 osx-arm64 win-64; do
             cp "crysta-sdk-archives/crysta-sdk-$SHA-$platform.tar.gz" publication/assets/
           done
       # The web app Pages built from the release commit, as one archive beside the installers.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -70,10 +71,11 @@ def test_sdk_producer_serializes_platform_pin_and_recipe_without_cancelling_wait
         keys = [
             expanded_identity(identity),
             expanded_identity(identity, platform='osx-arm64'),
+            expanded_identity(identity, platform='win-64'),
             expanded_identity(identity, pin='b8' * 20),
             expanded_identity(identity, recipe='d0' * 32),
         ]
-        assert len(set(keys)) == 4, 'Each platform, source or recipe change invalidates identity'
+        assert len(set(keys)) == 5, 'Each platform, source or recipe change invalidates identity'
         for field in (
             'matrix.platform',
             'needs.resolve.outputs.sha',
@@ -121,7 +123,7 @@ def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(tmp_
         )
     assert guard['env']['SHA'] == '${{ needs.resolve.outputs.sha }}'
     assert guard['env']['PLATFORM'] == '${{ matrix.platform }}'
-    for platform in ('linux-64', 'osx-arm64'):
+    for platform in ('linux-64', 'osx-arm64', 'win-64'):
         pin = 'a7' * 20
         archive = f'crysta-sdk-{pin}-{platform}.tar.gz'
         checksum = archive + '.sha256'
@@ -239,3 +241,163 @@ def test_release_sdk_download_uses_the_exact_qualified_installer_run():
     assert not any('cache' in step.get('uses', '') for step in steps), (
         'Publication must not substitute an opportunistic cache for qualified run artifacts'
     )
+
+
+def test_native_sdk_matrix_and_windows_compiler_match_the_declared_platform_contract():
+    build = document(PRODUCER)['jobs']['build']
+    matrix = {row['platform']: row['runner'] for row in build['strategy']['matrix']['include']}
+    assert matrix == {
+        'linux-64': 'ubuntu-24.04',
+        'osx-arm64': 'macos-15',
+        'win-64': 'windows-2022',
+    }, 'All native SDK platforms have an explicit matching architecture and supported host'
+    assert build['strategy']['fail-fast'] is False, (
+        'One platform failure cannot cancel another platform qualification'
+    )
+    steps = build['steps']
+    compiler = next(step for step in steps if step.get('uses') == 'ilammy/msvc-dev-cmd@v1')
+    assert compiler['if'] == "runner.os == 'Windows'", (
+        'The Visual Studio environment is selected only on the actual Windows SDK host'
+    )
+    assert compiler['with']['toolset'] == '14.44', (
+        'The SDK compiler toolset matches the locked Windows installer ABI family'
+    )
+    install = next(step for step in steps if step.get('uses') == './.github/actions/setup-pixi')
+    pack = next(step for step in steps if 'sdk-pack' in step.get('run', ''))
+    assert steps.index(compiler) < steps.index(install) < steps.index(pack), (
+        'The selected compiler is active before required binding installation and full SDK pack'
+    )
+    assert '--skip crysta' not in str(install) + str(pack), (
+        'Required binding-backed corpus policy remains installed rather than bypassed'
+    )
+
+
+def test_minimal_producer_checkout_does_not_remove_engine_qualification_inputs():
+    steps = document(PRODUCER)['jobs']['build']['steps']
+    checkout = next(step for step in steps if step.get('uses') == 'actions/checkout@v5')
+    sparse = checkout['with']['sparse-checkout'].splitlines()
+    assert checkout['with']['sparse-checkout-cone-mode'] is False, (
+        'The SDK producer uses the declared explicit sparse checkout grammar'
+    )
+    assert set(sparse) == {'/*', '!/tests/', '!/docs/', '!/website/'}, (
+        'Only unrelated Edi render/test trees are omitted from the local producer checkout'
+    )
+    engine = next(step for step in steps if 'git init -q' in step.get('run', ''))
+    assert '--depth 1' in engine['run'] and '"$SHA"' in engine['run'], (
+        'The engine qualification source is the exact resolved commit rather than a branch tip'
+    )
+    assert 'sparse' not in engine['run'], (
+        'The complete engine CPP/corpus inputs remain in the independently checked-out source'
+    )
+    pack = next(step for step in steps if 'sdk-pack' in step.get('run', ''))
+    assert '"$RUNNER_TEMP/crysta"' in pack['run'] and 'cpp-ci sdk-pack' in pack['run'], (
+        'Qualification executes the owning engine recipe with all its declared cases'
+    )
+
+
+def test_compiler_cache_precedes_install_and_is_keyed_by_actual_engine_lock(tmp_path):
+    steps = document(PRODUCER)['jobs']['build']['steps']
+    inputs = next(step for step in steps if step.get('id') == 'compiler-inputs')
+    cache = next(
+        step
+        for step in steps
+        if step.get('with', {}).get('path') == '${{ runner.temp }}/crysta-ccache'
+    )
+    install = next(step for step in steps if step.get('uses') == './.github/actions/setup-pixi')
+    pack = next(step for step in steps if 'sdk-pack' in step.get('run', ''))
+    assert steps.index(inputs) < steps.index(cache) < steps.index(install) < steps.index(pack), (
+        'Compiler objects are restored before required package installation and SDK compilation'
+    )
+    key, restore = cache['with']['key'], cache['with']['restore-keys']
+    for identity in (key, restore):
+        assert (
+            '${{ matrix.platform }}' in identity
+            and '${{ steps.compiler-inputs.outputs.lock }}' in identity
+        ), 'Compiler-cache reuse preserves platform and actual engine lock identity'
+    assert (
+        '${{ needs.resolve.outputs.sha }}' in key
+        and '${{ needs.resolve.outputs.sha }}' not in restore
+    ), 'Writes retain source identity and cross-pin restores remain compiler-validated'
+    engine = tmp_path / 'crysta'
+    engine.mkdir()
+    output, environment = tmp_path / 'output', tmp_path / 'environment'
+    observed = []
+    for content in (b'actual engine ABI lock', b'changed actual engine ABI lock'):
+        (engine / 'pixi.lock').write_bytes(content)
+        output.write_text('')
+        result = subprocess.run(
+            ['bash', '-e', '-c', inputs['run']],
+            cwd=tmp_path,
+            env={
+                **os.environ,
+                'RUNNER_TEMP': str(tmp_path),
+                'GITHUB_OUTPUT': str(output),
+                'GITHUB_ENV': str(environment),
+            },
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        assert result.returncode == 0, (
+            'The actual engine-lock identity step executes independently'
+        )
+        fields = dict(line.split('=', 1) for line in output.read_text().splitlines())
+        assert fields['lock'] == hashlib.sha256(content).hexdigest(), (
+            'The cache fingerprint comes from the cloned engine lock bytes, not the Edi host lock'
+        )
+        observed.append(fields['lock'])
+    assert observed[0] != observed[1], (
+        'Changing the actual engine lock invalidates cross-pin object reuse'
+    )
+
+
+def test_future_sdk_publication_retains_all_promoted_platform_artifacts():
+    publisher = document('.github/workflows/release-publish.yml')['jobs']['publish']['steps']
+    copy = next(
+        step['run']
+        for step in publisher
+        if 'publication/assets' in step.get('run', '') and 'crysta-sdk-' in step['run']
+    )
+    assert 'win-64' in copy and 'linux-64' in copy and 'osx-arm64' in copy, (
+        'Future publication carries all qualified platform SDKs from the promoted run'
+    )
+
+
+def compiler_cache_path_policy(workflow):
+    build = workflow['jobs']['build']
+    assert 'CCACHE_BASEDIR' not in workflow.get('env', {}), (
+        'Workflow-wide cache configuration cannot rewrite absolute fixture source paths'
+    )
+    assert 'CCACHE_BASEDIR' not in build.get('env', {}), (
+        'Producer job cache configuration preserves actual absolute __FILE__ identities'
+    )
+    for step in build['steps']:
+        assert 'CCACHE_BASEDIR' not in step.get('env', {}), (
+            'Individual producer steps cannot enable unsafe fixture path rewriting'
+        )
+        assert not re.search(r'CCACHE_BASEDIR\s*=', step.get('run', '')), (
+            'Shell environment writes cannot restore unsafe cache base-directory rewriting'
+        )
+    setup = next(step for step in build['steps'] if step.get('id') == 'compiler-inputs')
+    assert 'CCACHE_COMPILERCHECK=content' in setup['run'], (
+        'Cross-pin cache reuse checks actual compiler bytes while preserving source-path semantics'
+    )
+
+
+def test_compiler_cache_preserves_absolute_fixture_paths_and_rejects_unsafe_rewrites():
+    workflow = document(PRODUCER)
+    compiler_cache_path_policy(workflow)
+    for location in ('workflow', 'job', 'step', 'shell'):
+        changed = copy.deepcopy(workflow)
+        build = changed['jobs']['build']
+        if location == 'workflow':
+            changed.setdefault('env', {})['CCACHE_BASEDIR'] = '${{ runner.temp }}'
+        elif location == 'job':
+            build.setdefault('env', {})['CCACHE_BASEDIR'] = '${{ runner.temp }}'
+        elif location == 'step':
+            build['steps'][0].setdefault('env', {})['CCACHE_BASEDIR'] = '${{ runner.temp }}'
+        else:
+            build['steps'].append({'run': 'echo "CCACHE_BASEDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"'})
+        with pytest.raises(AssertionError):
+            compiler_cache_path_policy(changed)
