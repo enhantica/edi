@@ -166,3 +166,15 @@ Public report_to_json/ReportModel.to_json and report_from_json retain the origin
 One existing serializer takes an internal mode. Its raw public wrapper emits the original representation; core-private detail::report_html_model_json requests the same serializer's native chart/mesh/subset/style projections for the one HTML embedded model. Projection algorithms and field-writing code are not duplicated. HTML mode reuses the existing check_indices admission before derived index dereferences; raw mode keeps its original writer behavior, and the public reader retains its existing admission. The new internal seam is neither a QML/test API nor a new model/store/controller.
 
 Only report_html's embedded application/json call selects HTML mode. The PDF digest, app ReportViewModel, Python ReportModel JSON and other raw callers keep the public function. HTML fingerprints continue to hash the actual HTML including its derived payload and pinned renderer; offline report JavaScript still receives the native projections/number codec and needs no QML runtime. Native/shared-mesh admission and collision-proof renderer-number tag recognition remain intact. Normal checks must confirm raw machine round trips and unchanged-data PDF fingerprints separately from HTML projection/render equivalence.
+
+
+## HTML rendering after a raw model round trip
+
+The raw version-one structure contains its authoritative base scene and drawing, but no cache of alternate
+colour schemes or atom subsets. HTML projection of such a model now offers one Current view, derived from
+that base scene and drawing through the existing browser_variant projection. It preserves their geometry,
+labels, cell, camera and home views; it does not invent alternate colour or subset geometry. The browser's
+initial all token names that current view rather than promising regeneration of atoms absent from the model.
+Models built with cached variants retain their existing choices. Public raw JSON and its version remain
+unchanged. This extends the same writer and standalone structure renderer, and prevents a drawable imported
+model from claiming nonempty content while exposing an empty toolbar/variant table.

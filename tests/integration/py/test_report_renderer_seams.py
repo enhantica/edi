@@ -265,13 +265,13 @@ def test_pattern_traces_preserve_gaps_asymmetric_errors_and_pane_shares(tmp_path
     )
     assert shares == pytest.approx(
         sorted([
-            seam['stretch']['main'] * (height - fixed) / height,
+            seam['stretch']['main'] * (height - fixed - 2 * 16) / height,
             fixed / height,
-            seam['stretch']['residual'] * (height - fixed) / height,
+            seam['stretch']['residual'] * (height - fixed - 2 * 16) / height,
         ])
     ), (
-        'The fixed Bragg pane takes 36 plot-body pixels and stretch panes split the rest 7:3; '
-        f'plot height={height!r}, actual domains={shares!r}'
+        'The fixed Bragg pane takes 36 pixels, two one-em gaps take 32, and stretch panes '
+        f'split the rest 7:3; plot height={height!r}, actual domains={shares!r}'
     )
     assert any(trace.get('marker', {}).get('color') == '#123456' for trace in traces), (
         'The second phase must resolve its light colour from the bragg.1 core style row'

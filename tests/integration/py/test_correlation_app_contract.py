@@ -38,7 +38,7 @@ def body(source, declaration):
 
 
 def test_correlations_follows_the_existing_analysis_tabs():
-    source = text('Pages/Analysis/AnalysisPage.qml')
+    source = text('Components/MainView.qml')
     positions = [
         source.find(f'qsTr("{name}")') for name in ('Pattern', 'Correlations', 'Evolution')
     ]
@@ -49,7 +49,7 @@ def test_correlations_follows_the_existing_analysis_tabs():
     assert 'CorrelationChart {' in source, (
         'The Correlations tab must instantiate the production correlation chart'
     )
-    assert 'currentExperimentIndex' in source and 'blockSelectorShown: true' in source, (
+    assert 'currentExperimentIndex' in source and 'MainAreaBlockSelector {' in source, (
         'Correlations must share Analysis experiment selection with Pattern and Evolution'
     )
 
@@ -266,27 +266,24 @@ def test_diagnostics_uses_the_preferences_shared_control_width():
         'from a property binding'
     )
     source = text('Components/AppPreferencesDialog.qml')
-    match = re.search(
-        r'(?P<kind>(?:EaElements\.)?Button|RowButton)\s*\{\s*'
-        r'objectName:\s*"preferences.diagnostics"(?P<body>[^}]+)',
-        source,
-    )
-    assert match and 'qsTr("Show")' in match['body'], (
+    button = item(source, 'preferences.diagnostics')
+    assert property_value(button, 'text') == 'qsTr("Show diagnostics")', (
         'Diagnostics Show remains the actual preferences.diagnostics button'
     )
-    declaration = (
-        body(source, 'component RowButton:') if match['kind'] == 'RowButton' else match['body']
+    assert property_value(button, 'onClicked') == 'diagnostics.open()', (
+        'The actual Diagnostics button opens the diagnostics dialog'
     )
-    assert 'dialog.controlWidth' in declaration and not re.search(
-        r'\bwidth:\s*loggingLevel\.width\b', declaration
-    ), (
-        'The actual Diagnostics button uses the dialog shared control column; '
-        f'actual width declaration: {declaration}'
+    start = source.index(button)
+    assert re.search(r'FieldButton\s*$', source[:start]), (
+        'Diagnostics uses the shared Preferences field button'
     )
-    if match['kind'] == 'RowButton':
-        assert not re.search(r'\bhalf:\s*true\b', match['body']), (
-            'Diagnostics occupies the full Preferences control width, not a paired half row'
-        )
+    declaration = body(source, 'component FieldButton:')
+    assert re.search(r'\bwidth:\s*dialog\.columnWidth\b', declaration), (
+        'The actual Diagnostics button uses the dialog shared control column'
+    )
+    assert property_value(source, 'columnWidth') == (
+        'Math.floor((contentRowWidth - columnSpacing) / 2)'
+    ), 'Preferences gives every control the same measured two-column width'
 
 
 @pytest.mark.parametrize(

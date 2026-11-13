@@ -931,7 +931,7 @@ def test_data_free_experiment_type_has_a_write_boundary(axis):
     program = (
         """const Qt={binding:f=>f()}; let calls=[];
 const row={experimentIndex:3,project:{setExperimentType:(...args)=>calls.push(args)}};
-const options={tokenAt:index=>['old','chosen','other'][index],
+const options={revision:0,tokenAt:index=>['old','chosen','other'][index],
                indexOf:value=>['old','chosen','other'].indexOf(value)};
 const editorLife={alive:true}; let activation=null;
 const selector={token:'old',options,get activation(){return activation}};
