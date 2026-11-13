@@ -48,13 +48,22 @@ def commit(root):
         'tests/fixtures/cli_performance/observer.cpp',
         'tests/fixtures/future_native/CMakeLists.txt',
         'tests/integration/cpp/test_native.cpp',
+        'data/elements/element-styles.tsv',
+        'data/palettes/scientific.tsv',
+        'data/colormaps/scientific.tsv',
+        'data/report/report.js',
+        'data/assistant/openai-capabilities.json',
+        'data/assistant/skills/future/native-input.md',
+        'data/future-compiled-input/payload.bin',
+        'pyproject.toml',
+        'tools/ci/crysta_sdk.py',
     ],
 )
 @pytest.mark.parametrize('transition', ['modified', 'deleted', 'untracked'])
 def test_compiled_test_input_drift_is_admitted_to_refusal(native_inputs, relative, transition):
     root = native_inputs.ROOT
     path = root / relative
-    path.parent.mkdir(parents=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     (root / '.gitignore').write_text('build/\n', encoding='utf-8')
     if transition != 'untracked':
         path.write_text('original compiled input\n', encoding='utf-8')

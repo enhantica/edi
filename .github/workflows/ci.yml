@@ -129,7 +129,15 @@ jobs:
       - name: Build the native code once (core-build, then edi_tests in the same tree)
         run: pixi run core-build
         env:
-          EDI_CORE_TARGETS: edi_tests
+          EDI_CORE_TARGETS: edi_tests edi_integration_tests
+      - name: Pack the validated native build
+        run: pixi run python tools/ci/edi_native.py pack --out build/edi-native-artifact
+      - uses: actions/upload-artifact@v4
+        with:
+          name: edi-native-${{ matrix.sdk }}
+          path: build/edi-native-artifact
+          retention-days: 7
+          if-no-files-found: error
       - name: C++ unit tests
         run: pixi run --skip-deps cpp-test
       - name: Standalone and Python fit output agree
@@ -163,6 +171,9 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
         run: pixi run core-build
       - name: Runtime-manifest equality audit
@@ -170,9 +181,9 @@ jobs:
 
   core:
     name: core · ${{ matrix.platform }}
-    if: github.event.pull_request.head.repo.fork == false
+    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.crysta-sdk.result == 'success' && github.event.pull_request.head.repo.fork == false }}
     environment: crysta-sdk
-    needs: [changes, crysta-sdk]
+    needs: [changes, native, crysta-sdk]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
     strategy:
@@ -204,6 +215,9 @@ jobs:
             ccache-core-${{ steps.ccache.outputs.key-prefix }}
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
@@ -296,6 +310,9 @@ jobs:
             ccache-core-${{ steps.ccache.outputs.key-prefix }}
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
@@ -440,7 +457,7 @@ jobs:
     if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
     environment: crysta-sdk
     # After the native build and the core tests of this run, which take the runners first. Each job still
-    # builds its own tree (no artifact carries crysta).
+    # validates and restores this run's default native build before notebook execution.
     needs: [changes, native, core, crysta-sdk]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
@@ -461,6 +478,9 @@ jobs:
             ccache-core-${{ steps.ccache.outputs.key-prefix }}
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
@@ -509,6 +529,9 @@ jobs:
             ccache-core-${{ steps.ccache.outputs.key-prefix }}
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
@@ -565,6 +588,9 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
         run: pixi run core-build
       - name: Execute notebooks for rendering
@@ -611,6 +637,9 @@ jobs:
         with:
           max-size: 1G
       - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       # A pull request builds and tests the app only when it changes an app input (tools/ci/app_inputs.py) or runs
@@ -787,6 +816,9 @@ jobs:
       - uses: ./.github/actions/setup-pixi
       - uses: ./.github/actions/wasm-cache
       - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       # The pinned crysta SDK and its source (the wasm builds compile that source), and the native build the

@@ -82,3 +82,18 @@ The pinned archive reader additionally binds the extracted manifest's source and
 pin/platform before recording its cache marker. A correctly named archive containing another qualified,
 self-consistent SDK is refused. Explicit diagnostic SDK-directory checks retain their existing ability to
 admit a qualified candidate outside the pin; they are a different, declared input boundary.
+
+## Native Edi artifacts within one CI run
+
+The existing edi_native.py transport is brought onto this SDK contract: the committed engine
+pin replaces the retired paired-build/tag resolver. The producer binds the actual SDK manifest
+and static-library hashes, source commit/tree, lock, Python SOABI, platform, run and workspace.
+It refuses source drift before packing. Consumers read those facts independently, verify the
+archive and every restored byte/mode, then prove the extension imports from that tree at the
+checked-out commit. Restore never falls back to compiling or to another SDK/source.
+
+The native job packs before executing its tests so diagnostic jobs can still inspect the same
+artifact after a test failure. Core waits for that producer; existing native/core test selections
+are retained. Core, CLI, notebook, docs, system, app bootstrap and browser-reference jobs reuse
+the default native build. The app's own Qt host/core configuration and WebAssembly target remain
+separate builds; their ABI/worker definitions differ. Compiler caches continue to cover those.

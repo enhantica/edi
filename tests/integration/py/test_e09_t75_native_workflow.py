@@ -30,8 +30,6 @@ def public_profile(data):
 
 
 def public_build_boundary(data, name, platform=None):
-    # The public repository builds locally in each job: its private SDK object
-    # code cannot be uploaded. The private repository's artifact gates below stay.
     job = data[name]
     runners = self_hosted_runners(job)
     assert all(runner[0] == 'github-hosted' for runner in runners), (
@@ -68,13 +66,25 @@ def public_build_boundary(data, name, platform=None):
                 'pull_request',
                 fork=True,
                 core_only=core_only,
-                states={'changes': 'success', 'native': 'success', 'core': 'success'},
+                states={
+                    'changes': 'success',
+                    'native': 'success',
+                    'core': 'success',
+                    'crysta-sdk': 'success',
+                },
             ), 'every public SDK job must refuse forks with either core-only input'
     for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
         expected = not (name in {'system', 'app-wasm'} and event == 'pull_request')
         assert (
             active(
-                job, event, states={'changes': 'success', 'native': 'success', 'core': 'success'}
+                job,
+                event,
+                states={
+                    'changes': 'success',
+                    'native': 'success',
+                    'core': 'success',
+                    'crysta-sdk': 'success',
+                },
             )
             == expected
         ), 'trusted PRs retain fast SDK jobs; full events also require system and WebAssembly'
@@ -82,7 +92,12 @@ def public_build_boundary(data, name, platform=None):
             job,
             event,
             core_only=True,
-            states={'changes': 'success', 'native': 'success', 'core': 'success'},
+            states={
+                'changes': 'success',
+                'native': 'success',
+                'core': 'success',
+                'crysta-sdk': 'success',
+            },
         ) == (expected and name in {'native', 'core', 'system'}), (
             'core-only repairs retain native/core and skip every downstream public SDK job'
         )
@@ -91,61 +106,49 @@ def public_build_boundary(data, name, platform=None):
     )
     needs = job.get('needs')
     needs = [needs] if isinstance(needs, str) else needs
-    expected_needs = {'changes'}
+    expected_needs = {'changes', 'crysta-sdk'}
     if name == 'system':
         expected_needs.add('app')
+    elif name == 'core':
+        expected_needs.add('native')
     elif name == 'notebooks':
         expected_needs |= {'native', 'core'}
-    elif name not in {'native', 'core', 'system'}:
+    elif name != 'native':
         expected_needs.add('core')
     assert set(needs or []) == expected_needs, (
-        'Public jobs bind source once, build native code locally '
-        'and await the app for system reuse'
+        'Native consumers wait for the exact SDK and their transitive native producer'
     )
     assert job.get('env', {}).get('CRYSTA_SOURCE_SHA') == (
         '${{ needs.changes.outputs.crysta_sha }}'
-    ), 'each public native build must consume the workflow-resolved SDK source identity'
+    ), 'Each native consumer retains the workflow-resolved engine source identity'
     steps = job['steps']
     builds = [
         (i, step)
         for i, step in enumerate(steps)
         if shlex.split(step.get('run', '')) == ['pixi', 'run', 'core-build']
     ]
-    assert len(builds) == 1, 'every public native job must have one actual local native build'
+    assert len(builds) == 1, 'Every native route crosses one explicit core-build boundary'
     index, build = builds[0]
-    assert (
-        build.get('if') == 'github.event.pull_request.head.repo.fork == false'
-        if name == 'notebooks'
-        else 'if' not in build
-    ) and not build.get('continue-on-error'), (
-        'the public local native build must be required whenever its protected job executes'
+    expected_condition = {
+        'notebooks': 'github.event.pull_request.head.repo.fork == false',
+        'app': "steps.inputs.outputs.run == 'true'",
+    }.get(name)
+    assert build.get('if') == expected_condition and not build.get('continue-on-error'), (
+        'The native build or restore follows the declared protected execution scope'
     )
-    for step in steps:
-        environment = {**job.get('env', {}), **step.get('env', {})}
-        assert str(environment.get('EDI_NATIVE_ARTIFACT', '0')) == '0', (
-            'public native jobs must build locally and cannot select engine object restoration'
-        )
-        assert 'edi_native.py' not in step.get('run', '') and 'edi-native-' not in str(
-            step.get('with', {})
-        ), 'public native workflows must neither pack nor transfer private engine object artifacts'
     if name == 'native':
-        assert build.get('env', {}).get('EDI_CORE_TARGETS') == 'edi_tests', (
-            'the public native producer must include the independently required C++ unit target'
-        )
+        producer_boundary(job)
         first_use = 'cpp-test'
     else:
+        public_native_transfer(steps, index)
         first_use = FIRST_USE[name]
     uses = [i for i, step in enumerate(steps) if first_use in step.get('run', '')]
     assert uses and index < uses[0], (
-        'each public native job must build its local objects before the first declared native use'
+        'Each native build or restore finishes before the first public native use'
     )
-    assert (
-        steps[uses[0]].get('if') == 'github.event.pull_request.head.repo.fork == false'
-        if name == 'notebooks'
-        else 'if' not in steps[uses[0]]
-    ) and not steps[uses[0]].get('continue-on-error'), (
-        'the first public native use must execute whenever the protected build job succeeds'
-    )
+    assert steps[uses[0]].get('if') == expected_condition and not steps[uses[0]].get(
+        'continue-on-error'
+    ), 'The first public native use executes whenever its protected restore succeeds'
 
 
 @pytest.mark.parametrize(
@@ -412,12 +415,19 @@ def producer_boundary(job):
     pi, pack = packs[0]
     ui, upload = uploads[0]
     assert bi < pi < ui, ' I34 actual workflow must build before packing before uploading'
+    assert upload.get('with', {}).get('name') == 'edi-native-${{ matrix.sdk }}', (
+        'The producer artifact name matches the platform-addressed native consumer'
+    )
+    assert upload.get('with', {}).get('path') == 'build/edi-native-artifact', (
+        'The producer uploads only its validated tar and binding manifest directory'
+    )
+
     for step in (build, pack, upload):
         for event in ('pull_request', 'push', 'workflow_dispatch'):
             reached(job, event)
             reached(step, event)
     environment = {**job.get('env', {}), **build.get('env', {})}
-    assert environment.get('EDI_CORE_TARGETS') == 'edi_tests', (
+    assert environment.get('EDI_CORE_TARGETS') == 'edi_tests edi_integration_tests', (
         ' I34 producer build must include the independently required native test target'
     )
     assert str(environment.get('EDI_NATIVE_ARTIFACT', '0')) == '0', (
@@ -433,9 +443,18 @@ def producer_boundary(job):
 def test_native_producer_contract_refuses_missing_reordered_or_nonbuilding_work(defect):
     job = {
         'steps': [
-            {'run': 'pixi run core-build', 'env': {'EDI_CORE_TARGETS': 'edi_tests'}},
+            {
+                'run': 'pixi run core-build',
+                'env': {'EDI_CORE_TARGETS': 'edi_tests edi_integration_tests'},
+            },
             {'run': 'pixi run python tools/ci/edi_native.py pack --out "$RUNNER_TEMP/edi-native"'},
-            {'uses': 'actions/upload-artifact@v5'},
+            {
+                'uses': 'actions/upload-artifact@v5',
+                'with': {
+                    'name': 'edi-native-${{ matrix.sdk }}',
+                    'path': 'build/edi-native-artifact',
+                },
+            },
         ]
     }
     producer_boundary(job)
@@ -464,13 +483,11 @@ def test_native_producer_contract_refuses_missing_reordered_or_nonbuilding_work(
 
 
 def require_public_producer_escapes(defect):
-    # The public profile keeps no object-transfer steps. Reuse every existing
-    # producer escape against that independently declared hosted-build boundary.
     public_job = {
         'runs-on': '${{ matrix.runner }}',
         'environment': 'crysta-sdk',
         'if': 'github.event.pull_request.head.repo.fork == false',
-        'needs': 'changes',
+        'needs': ['changes', 'crysta-sdk'],
         'env': {'CRYSTA_SOURCE_SHA': '${{ needs.changes.outputs.crysta_sha }}'},
         'strategy': {
             'matrix': {
@@ -481,7 +498,18 @@ def require_public_producer_escapes(defect):
             }
         },
         'steps': [
-            {'run': 'pixi run core-build', 'env': {'EDI_CORE_TARGETS': 'edi_tests'}},
+            {
+                'run': 'pixi run core-build',
+                'env': {'EDI_CORE_TARGETS': 'edi_tests edi_integration_tests'},
+            },
+            {'run': 'pixi run python tools/ci/edi_native.py pack --out native-objects'},
+            {
+                'uses': 'actions/upload-artifact@v4',
+                'with': {
+                    'name': 'edi-native-${{ matrix.sdk }}',
+                    'path': 'build/edi-native-artifact',
+                },
+            },
             {'run': 'pixi run --skip-deps cpp-test'},
         ],
     }
@@ -490,17 +518,9 @@ def require_public_producer_escapes(defect):
     if defect == 'missing-build':
         public_mutant['steps'].pop(0)
     elif defect == 'upload-first':
-        public_mutant['steps'].insert(
-            0,
-            {
-                'uses': 'actions/upload-artifact@v5',
-                'with': {'name': 'edi-native-linux-64'},
-            },
-        )
+        public_mutant['steps'].insert(0, public_mutant['steps'].pop(2))
     elif defect == 'pack-first':
-        public_mutant['steps'].insert(
-            0, {'run': 'pixi run python tools/ci/edi_native.py pack --out native-objects'}
-        )
+        public_mutant['steps'][:2] = public_mutant['steps'][1::-1]
     elif defect == 'target':
         public_mutant['steps'][0]['env']['EDI_CORE_TARGETS'] = 'edi_core'
     elif defect == 'mode':
@@ -513,6 +533,111 @@ def require_public_producer_escapes(defect):
         public_build_boundary({'native': public_mutant}, 'native', 'linux-64')
     if defect == 'build-if':
         disabled_use = copy.deepcopy(public_job)
-        disabled_use['steps'][1]['if'] = False
+        disabled_use['steps'][3]['if'] = False
         with pytest.raises(AssertionError, match='first public native use'):
             public_build_boundary({'native': disabled_use}, 'native', 'linux-64')
+
+
+def public_native_transfer(steps, index):
+    transports = [
+        (i, step)
+        for i, step in enumerate(steps)
+        if step.get('uses') == './.github/actions/edi-native'
+    ]
+    assert len(transports) == 1, 'Each consumer selects one same-run native artifact action'
+    transfer_index, transfer = transports[0]
+    assert transfer_index < index, 'Artifact selection precedes restoration and first use'
+    assert transfer.get('with', {}).get('platform') == (
+        "${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}"
+    ), 'Each consumer requests its actual platform artifact rather than a sibling platform'
+    assert not transfer.get('if') and not transfer.get('continue-on-error'), (
+        'The native artifact action cannot be optional or bypassed'
+    )
+    for step in steps:
+        assert str(step.get('env', {}).get('EDI_NATIVE_ARTIFACT', '1')) == '1', (
+            'A later consumer step cannot switch artifact restoration back to compilation'
+        )
+
+
+def native_action_boundary(action):
+    steps = action['runs']['steps']
+    downloads = [step for step in steps if step.get('uses') == 'actions/download-artifact@v4']
+    assert len(downloads) == 1, 'Native restoration selects exactly one addressed artifact'
+    download = downloads[0]
+    options = download['with']
+    assert options.get('name') == 'edi-native-${{ inputs.platform }}', (
+        'Native artifact names bind their platform'
+    )
+    assert options.get('path') == 'build/edi-native-artifact', (
+        'The native checker reads the selected download directory'
+    )
+    assert options.get('run-id', '${{ github.run_id }}') == '${{ github.run_id }}', (
+        'Native downloads address this exact run'
+    )
+    assert options.get('repository', '${{ github.repository }}') == '${{ github.repository }}', (
+        'Native downloads address this repository'
+    )
+    assert not options.get('pattern') and not options.get('merge-multiple'), (
+        'Native downloads cannot merge sibling artifacts'
+    )
+    assert not any('cache' in step.get('uses', '') for step in steps), (
+        'A cache cannot replace native artifact transport'
+    )
+    for step in steps:
+        assert not step.get('if') and not step.get('continue-on-error'), (
+            'Every native selection step is required'
+        )
+    selectors = [step for step in steps if 'EDI_NATIVE_ARTIFACT=1' in step.get('run', '')]
+    assert len(selectors) == 1, 'The consumer explicitly enables refuse-without-compile mode'
+    assert steps.index(download) < steps.index(selectors[0]), (
+        'Artifact download precedes selection for restoration'
+    )
+    return selectors[0]['run']
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'run-id',
+        'repository',
+        'name',
+        'path',
+        'pattern',
+        'merge-multiple',
+        'cache',
+        'optional',
+        'disabled',
+        'mode',
+    ],
+)
+def test_native_action_refuses_foreign_optional_and_fallback_routes(tmp_path, damage):
+    action = yaml.safe_load((ROOT / '.github/actions/edi-native/action.yml').read_text())
+    selector = native_action_boundary(action)
+    import os  # noqa: PLC0415
+    import subprocess  # noqa: PLC0415 - execute only the authored transport selector
+
+    environment = tmp_path / 'job-environment'
+    subprocess.run(
+        ['bash', '-e', '-c', selector],
+        env={**os.environ, 'GITHUB_ENV': str(environment)},
+        check=True,
+        capture_output=True,
+        timeout=5,
+    )
+    assert environment.read_text() == 'EDI_NATIVE_ARTIFACT=1\n', (
+        'The actual action selects artifact mode before any native use'
+    )
+    mutant = copy.deepcopy(action)
+    download = mutant['runs']['steps'][0]
+    if damage == 'cache':
+        download['uses'] = 'actions/cache/restore@v4'
+    elif damage in {'optional', 'disabled'}:
+        download['continue-on-error' if damage == 'optional' else 'if'] = (
+            True if damage == 'optional' else 'false'
+        )
+    elif damage == 'mode':
+        mutant['runs']['steps'][1]['run'] = 'echo EDI_NATIVE_ARTIFACT=0'
+    else:
+        download['with'][damage] = 'foreign'
+    with pytest.raises(AssertionError):
+        native_action_boundary(mutant)

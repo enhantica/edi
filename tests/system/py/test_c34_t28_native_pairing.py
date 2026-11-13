@@ -1,163 +1,66 @@
-"""F28: execute both native pack and every restore handoff with a stale pin.
-
-The native payload is independently planted importable/executable protocol data,
-not a live producer build. The real native tool and artifact-mode core dependency
-run unchanged; run/head/platform/workspace and byte refusal remain required.
-"""
+"""Native transport binds the committed SDK, source, ABI, run and every restored byte."""
 
 import hashlib
 import io
 import json
 import shutil
 import subprocess
-import sys
+import sysconfig
 import tarfile
-import tomllib
 from pathlib import Path
 
 import pytest
-from ci_runner_contract import platform_job
 
-from tests.fixtures.c34_t28_paired_sdk import commit, fetch, install_transport, paired_sdk
-from tests.integration.py.test_e09_t75_native_workflow import (
-    ROSTER,
-    consumer_boundary,
-    jobs,
-)
+from tests.fixtures.native_transport import run as native
+from tests.fixtures.native_transport import world
+from tests.integration.py.test_e09_t75_native_workflow import ROSTER
 
 
-def native_world(tmp_path, platform, event, *, matching_pin=False):
-    context = paired_sdk(tmp_path, platform, event)
-    root = context['root']
-    if matching_pin:
-        pin = root / 'pixi.toml'
-        pin.write_text(
-            pin
-            .read_text()
-            .replace(context['stale'], context['head'])
-            .replace(context['declared_digest'], context['digest'])
-        )
-    (root / '.gitignore').write_text('build/\n__pycache__/\n')
-    (root / 'CMakeLists.txt').write_text('cmake_minimum_required(VERSION 3.28)\n')
-    commit(
-        root,
-        context['history'].git,
-        'Prepare independent native inputs',
-        'tools',
-        'pixi.toml',
-        'pixi.lock',
-        '.gitignore',
-        'CMakeLists.txt',
-    )
-    head = subprocess.check_output(
-        [context['history'].git, '-C', str(root), 'rev-parse', 'HEAD'], text=True
-    ).strip()
-    tree = subprocess.check_output(
-        [context['history'].git, '-C', str(root), 'rev-parse', 'HEAD^{tree}'], text=True
-    ).strip()
-    code, output = fetch(context)
-    assert code == 0, (
-        ' F28 native handoff first requires the real branch SDK acquisition: ' + output
-    )
-    payloads = {
-        'build/ci/.crysta-linked-sha': (context['head'] + '\n').encode(),
-        'build/ci/python/edi/__init__.py': (
-            'from . import _edi\n__build_commit__ = ' + repr(head) + '\n'
-        ).encode(),
-        'build/ci/python/edi/_edi.py': b'WITNESS = "independent branch native handoff"\n',
-        'build/ci/cli/easydiffraction': b'#!/bin/sh\necho easydiffraction-branch-witness\n',
-        'build/ci/core/edi_tests': b'#!/bin/sh\necho branch-native-test-witness\n',
-    }
-    for relative, payload in payloads.items():
-        path = root / relative
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(payload)
-        path.chmod(0o755 if relative.endswith(('edi_tests', 'easydiffraction')) else 0o644)
-    # Prefix and corpus contain the SDK actually acquired, never the declared pin.
-    sdk = root / 'build/crysta-sdk' / f'{context["head"]}-{platform}'
-    prefix = root / 'build/crysta-prefix'
-    prefix.mkdir()
-    for entry in sdk.iterdir():
-        if not entry.name.startswith('.'):
-            (prefix / entry.name).symlink_to(entry, target_is_directory=entry.is_dir())
-    (prefix / '.crysta-sha').write_text(context['head'] + '\n')
-    source = root / 'build/crysta-src'
-    subprocess.run(
-        [context['history'].git, 'clone', '-q', str(context['history'].sibling), str(source)],
-        check=True,
-        capture_output=True,
-        timeout=2,
-    )
-    subprocess.run(
-        [context['history'].git, '-C', str(source), 'checkout', '-q', context['head']],
-        check=True,
-        capture_output=True,
-        timeout=2,
-    )
-    env = {
-        **context['env'],
-        'GITHUB_WORKSPACE': str(root),
-        'GITHUB_SHA': head,
-        'GITHUB_RUN_ID': '75134',
-        'GITHUB_RUN_ATTEMPT': '2',
-        'GITHUB_JOB': 'native',
-        'RUNNER_TEMP': str(tmp_path),
-        'PYTHONPATH': str(root / 'build/ci/python'),
-        'EDI_NATIVE_DIR': str(tmp_path / 'edi-native'),
-        'EDI_CORE_BUILD_LOCK_WAIT_S': '0',
-    }
-    # A restore dependency must compile nothing; the original refusing compiler
-    # transports remain in place. Only the warm artifact GETs are served below.
-    install_transport(context, env)
-    env['GITHUB_ENV'] = str(tmp_path / 'job-env')
-    return context, env, head, tree, payloads
-
-
-def native(context, env, *args):
-    return subprocess.run(
-        [sys.executable, str(context['root'] / 'tools/ci/edi_native.py'), *args],
-        cwd=context['root'],
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=4,
-    )
-
-
-def independent_artifact(context, env, head, tree, payloads):
-    folder = Path(env['EDI_NATIVE_DIR'])
+def independent_artifact(context):
+    folder = Path(context.env['EDI_NATIVE_ARCHIVES'])
     folder.mkdir()
     asset = folder / 'edi-native.tar'
     with tarfile.open(asset, 'w') as archive:
-        for relative, payload in payloads.items():
+        for relative, payload in context.payloads.items():
             info = tarfile.TarInfo(relative)
             info.size = len(payload)
-            info.mode = 0o755 if relative.endswith(('edi_tests', 'easydiffraction')) else 0o644
+            info.mode = mode(relative)
             archive.addfile(info, io.BytesIO(payload))
-    pin = tomllib.loads((context['root'] / 'pixi.toml').read_text())['target'][
-        context['platform']
-    ]['activation']['env']
+    prefix = context.root / 'build/crysta-prefix'
     record = {
-        'source_sha': head,
-        'source_tree': tree,
-        'run_id': env['GITHUB_RUN_ID'],
+        'source_sha': context.head,
+        'source_tree': context.tree,
+        'run_id': context.env['GITHUB_RUN_ID'],
         'run_attempt': '1',
         'job': 'native',
-        'platform': context['platform'],
-        'workspace': str(context['root']),
-        'crysta_linked_sha': context['head'],
-        'CRYSTA_SDK_TAG': pin['CRYSTA_SDK_TAG'],
-        'CRYSTA_SDK_SHA256': pin['CRYSTA_SDK_SHA256'],
-        'sha256': hashlib.sha256(asset.read_bytes()).hexdigest(),
+        'platform': context.platform,
+        'workspace': str(context.root),
+        'python_abi': sysconfig.get_config_var('SOABI'),
+        'pixi_lock_sha256': digest(context.root / 'pixi.lock'),
+        'crysta_source_sha': context.pin,
+        'crysta_sdk_sha256': digest(prefix / 'share/crysta-sdk/manifest.json'),
+        'crysta_library_sha256': digest(prefix / 'lib/libcrysta_core.a'),
+        'crysta_linked_sha': context.pin,
+        'sha256': digest(asset),
         'files': {
-            name: hashlib.sha256(payload).hexdigest()
-            + (' 755' if name.endswith(('edi_tests', 'easydiffraction')) else ' 644')
-            for name, payload in payloads.items()
+            name: hashlib.sha256(data).hexdigest() + f' {mode(name):o}'
+            for name, data in context.payloads.items()
         },
     }
-    (folder / 'edi-native.json').write_text(json.dumps(record))
+    (folder / 'edi-native.json').write_text(json.dumps(record), encoding='utf-8')
     return folder, record
+
+
+def mode(name):
+    return (
+        0o755
+        if name.endswith(('easydiffraction', 'edi_tests', 'edi_integration_tests'))
+        else 0o644
+    )
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 @pytest.mark.parametrize('platform', ['linux-64', 'osx-arm64'])
@@ -166,99 +69,82 @@ def independent_artifact(context, env, head, tree, payloads):
 def test_intermediate_native_producer_packs_the_branch_sdk_without_repinning(
     tmp_path, platform, event, mode
 ):
-    context, env, head, tree, _ = native_world(
-        tmp_path, platform, event, matching_pin=mode == 'matching'
+    context = world(tmp_path, platform, event, matching_pin=mode == 'matching')
+    before = (context.root / 'pixi.toml').read_bytes()
+    result = native(context, 'pack', '--out', context.env['EDI_NATIVE_ARCHIVES'])
+    assert (result.returncode == 0) == (mode == 'matching'), (
+        'Native production admits its committed SDK and refuses a foreign candidate: '
+        + result.stdout
+        + result.stderr
     )
-    before = (context['root'] / 'pixi.toml').read_bytes()
-    folder = env['EDI_NATIVE_DIR']
-    result = native(context, env, 'pack', '--out', folder)
-    assert result.returncode == 0, (
-        ' F28 the real native pack must admit the branch build: ' + result.stdout + result.stderr
+    if mode == 'matching':
+        record = json.loads(
+            (Path(context.env['EDI_NATIVE_ARCHIVES']) / 'edi-native.json').read_text()
+        )
+        assert record['crysta_source_sha'] == context.pin, (
+            'Native packing binds its committed engine'
+        )
+        assert record['source_sha'] == context.head, (
+            'Native packing binds its actual source commit'
+        )
+        assert record['source_tree'] == context.tree, 'Native packing binds its actual source tree'
+    else:
+        assert 'committed SDK pin' in result.stderr, 'Foreign SDK refusal names the pin boundary'
+    assert (context.root / 'pixi.toml').read_bytes() == before, (
+        'Native packing cannot rewrite its pin'
     )
-    record = json.loads((Path(folder) / 'edi-native.json').read_text())
-    assert record['crysta_linked_sha'] == context['head'], (
-        ' F28 native packing records the branch SDK actually linked'
-    )
-    assert record['CRYSTA_SDK_TAG'] == 'build-' + (
-        context['head'] if mode == 'matching' else context['stale']
-    ), ' F28 native packing retains the distinct declared-pin obligation'
-    assert record['source_sha'] == head, ' F28 the pack binds this edi source commit'
-    assert record['source_tree'] == tree, ' F28 the pack binds this edi source tree'
-    assert (context['root'] / 'pixi.toml').read_bytes() == before, (
-        ' F28 native pack cannot silently repin an intermediate build'
-    )
-    assert not json.loads(Path(env['C34_PAIRED_API_RECORDS']).read_text(encoding='utf-8'))[
-        'refusals'
-    ], ' F5 native pack cannot swallow an unsupported transport request'
+    assert not context.commands.exists(), 'Native packaging performs no compiler fallback'
 
 
 @pytest.mark.parametrize(('consumer', 'platform'), ROSTER)
 @pytest.mark.parametrize('event', ['pull_request', 'workflow_dispatch'])
-@pytest.mark.usefixtures('private_native_workflow')
 def test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes(
     tmp_path, consumer, platform, event
 ):
-    context, env, head, tree, payloads = native_world(tmp_path, platform, event)
-    folder, _ = independent_artifact(context, env, head, tree, payloads)
-    # Direct restore proves this route even when pack itself refuses on the old head.
-    shutil.rmtree(context['root'] / 'build/ci')
-    job = {**platform_job(jobs(), consumer, platform), '_consumer': consumer}
-    _, step, _ = consumer_boundary(job, platform)
-    assert step['run'].strip() == 'pixi run core-build', (
-        ' F28 every actual consumer reaches the same native dependency'
-    )
-    env['EDI_NATIVE_ARTIFACT'] = '1'
-    env['GITHUB_JOB'] = consumer
+    context = world(tmp_path, platform, event)
+    folder, _ = independent_artifact(context)
+    shutil.rmtree(context.root / 'build/ci')
+    context.env |= {'EDI_NATIVE_ARTIFACT': '1', 'GITHUB_JOB': consumer}
     for attempt in range(2):
         if attempt:
-            (context['root'] / 'build/ci/cli/easydiffraction').write_text(
-                'ordinary overwritten native cache bytes\n'
-            )
+            (context.root / 'build/ci/cli/easydiffraction').write_text('overwritten cache bytes\n')
         dependency = subprocess.run(
             ['bash', 'tools/ci/core-build.sh'],
-            cwd=context['root'],
-            env=env,
+            cwd=context.root,
+            env=context.env,
             capture_output=True,
             text=True,
             check=False,
-            timeout=4,
+            timeout=5,
         )
-        assert not json.loads(Path(env['C34_PAIRED_API_RECORDS']).read_text(encoding='utf-8'))[
-            'refusals'
-        ], ' F5 native dependency cannot swallow an unsupported transport request'
         assert dependency.returncode == 0, (
-            ' F28 the real native dependency admits and revalidates its branch artifact: '
+            'Every actual core dependency restores and rechecks native transport: '
             + dependency.stdout
             + dependency.stderr
         )
-        for relative, payload in payloads.items():
-            assert (context['root'] / relative).read_bytes() == payload, (
-                ' F28 restored native bytes equal independently packaged inputs'
+        for relative, payload in context.payloads.items():
+            assert (context.root / relative).read_bytes() == payload, (
+                'Every restore preserves the independent artifact payload including cache repair'
             )
-    assert folder.is_dir(), ' F28 consumer restoration retains its addressed artifact'
-    assert not (context['home'] / 'commands').exists(), (
-        ' F28 native consumers never compile a fallback'
+    assert folder.is_dir(), 'Restoration retains its exact addressed artifact'
+    assert not context.commands.exists(), (
+        'Consumers restore without ever invoking a fallback compiler'
     )
 
 
 @pytest.mark.parametrize('platform', ['linux-64', 'osx-arm64'])
 @pytest.mark.parametrize('event', ['pull_request', 'workflow_dispatch'])
 def test_native_tool_independently_restores_the_branch_artifact(tmp_path, platform, event):
-    context, env, head, tree, payloads = native_world(tmp_path, platform, event)
-    independent_artifact(context, env, head, tree, payloads)
-    shutil.rmtree(context['root'] / 'build/ci')
-    result = native(context, env, 'restore')
-    assert not json.loads(Path(env['C34_PAIRED_API_RECORDS']).read_text(encoding='utf-8'))[
-        'refusals'
-    ], ' F5 direct native restoration cannot swallow a transport refusal'
+    context = world(tmp_path, platform, event)
+    independent_artifact(context)
+    shutil.rmtree(context.root / 'build/ci')
+    result = native(context, 'restore')
     assert result.returncode == 0, (
-        ' F28 the real restore admits the separately planted branch artifact: '
-        + result.stdout
-        + result.stderr
+        'The real restore admits independently planted matching bytes: ' + result.stderr
     )
-    for relative, payload in payloads.items():
-        assert (context['root'] / relative).read_bytes() == payload, (
-            ' F28 direct restoration preserves independent payload bytes'
+    for relative, payload in context.payloads.items():
+        assert (context.root / relative).read_bytes() == payload, (
+            'Restoration preserves independent native bytes'
         )
 
 
@@ -276,33 +162,150 @@ def test_native_tool_independently_restores_the_branch_artifact(tmp_path, platfo
         'CRYSTA_SDK_TAG',
         'CRYSTA_SDK_SHA256',
         'tar-bytes',
+        'python_abi',
+        'pixi_lock_sha256',
+        'crysta_library_sha256',
     ],
 )
 def test_branch_native_handoff_retains_every_independent_binding(tmp_path, platform, damage):
-    good, control_env, control_head, control_tree, control_payloads = native_world(
-        tmp_path / 'matching', platform, 'pull_request', matching_pin=True
-    )
-    independent_artifact(good, control_env, control_head, control_tree, control_payloads)
-    admitted = native(good, control_env, 'restore')
+    context = world(tmp_path, platform, 'pull_request')
+    folder, record = independent_artifact(context)
+    admitted = native(context, 'restore')
     assert admitted.returncode == 0, (
-        ' F28 unchanged matching-pin restoration must first admit: '
-        + admitted.stdout
-        + admitted.stderr
+        'The undamaged transport must admit before each challenge: ' + admitted.stderr
     )
-    context, env, head, tree, payloads = native_world(
-        tmp_path / 'branch', platform, 'pull_request'
-    )
-    folder, record = independent_artifact(context, env, head, tree, payloads)
     if damage == 'tar-bytes':
         with (folder / 'edi-native.tar').open('ab') as archive:
-            archive.write(b'ordinary changed artifact bytes')
+            archive.write(b'independent changed archive bytes')
     else:
-        record[damage] = 'incorrect independently supplied coordinate'
-        (folder / 'edi-native.json').write_text(json.dumps(record))
-    result = native(context, env, 'restore')
+        field = {
+            'CRYSTA_SDK_TAG': 'crysta_source_sha',
+            'CRYSTA_SDK_SHA256': 'crysta_sdk_sha256',
+        }.get(damage, damage)
+        record[field] = 'incorrect independently supplied coordinate'
+        (folder / 'edi-native.json').write_text(json.dumps(record), encoding='utf-8')
+    result = native(context, 'restore')
     assert result.returncode != 0, (
-        ' F28 stale-pin branch mode keeps every run/head/platform/workspace/byte refusal'
+        'Every source, ABI, run, pin, manifest, library and byte binding refuses drift'
     )
-    assert not json.loads(Path(env['C34_PAIRED_API_RECORDS']).read_text(encoding='utf-8'))[
-        'refusals'
-    ], ' F5 failed native restore cannot swallow an unsupported transport request'
+    assert not context.commands.exists(), 'A refused artifact cannot invoke a fallback compiler'
+
+
+@pytest.mark.parametrize('command', ['pack', 'restore'])
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'missing-integration',
+        'nonexecutable-integration',
+        'dirty-source',
+        'embedded-data',
+        'untracked-data',
+    ],
+)
+def test_native_transport_requires_the_declared_runners_and_clean_source(
+    tmp_path, command, damage
+):
+    context = world(tmp_path, 'linux-64', 'pull_request')
+    runner = context.root / 'build/ci/core/edi_integration_tests'
+    if damage in {'embedded-data', 'untracked-data'}:
+        path = context.root / 'data/report/report.js'
+        path.parent.mkdir(parents=True)
+        if damage == 'embedded-data':
+            path.write_text('original embedded script\n', encoding='utf-8')
+            from tests.fixtures.native_transport import git  # noqa: PLC0415
+
+            git(context.root, 'add', 'data')
+            git(context.root, 'commit', '-qm', 'Record independent embedded input')
+            context.head = git(context.root, 'rev-parse', 'HEAD')
+            context.tree = git(context.root, 'rev-parse', 'HEAD^{tree}')
+            context.payloads['build/ci/python/edi/_edi.py'] = (
+                '__build_commit__ = ' + repr(context.head) + '\n'
+            ).encode()
+        path.write_text('uncommitted embedded input\n', encoding='utf-8')
+    elif damage == 'dirty-source':
+        (context.root / 'CMakeLists.txt').write_text('uncommitted producer input\n')
+    elif damage == 'missing-integration':
+        runner.unlink()
+        context.payloads.pop('build/ci/core/edi_integration_tests')
+    else:
+        runner.chmod(0o644)
+    if command == 'restore':
+        folder, record = independent_artifact(context)
+        if damage == 'nonexecutable-integration':
+            with tarfile.open(folder / 'edi-native.tar') as source:
+                members = [(info, source.extractfile(info).read()) for info in source.getmembers()]
+            with tarfile.open(folder / 'edi-native.tar', 'w') as archive:
+                for info, data in members:
+                    if info.name.endswith('edi_integration_tests'):
+                        info.mode = 0o644
+                        record['files'][info.name] = hashlib.sha256(data).hexdigest() + ' 644'
+                    archive.addfile(info, io.BytesIO(data))
+            record['sha256'] = digest(folder / 'edi-native.tar')
+            (folder / 'edi-native.json').write_text(json.dumps(record), encoding='utf-8')
+    result = native(
+        context,
+        command,
+        *(['--out', context.env['EDI_NATIVE_ARCHIVES']] if command == 'pack' else []),
+    )
+    assert result.returncode != 0, (
+        'Both producer and consumer require all declared runners and clean native input'
+    )
+    assert not context.commands.exists(), (
+        'A missing artifact precondition never starts compilation'
+    )
+
+
+@pytest.mark.parametrize('escape', ['parent', 'absolute', 'symlink', 'hardlink', 'fifo'])
+def test_native_restore_refuses_archive_containment_escapes_before_replacing_tree(
+    tmp_path, escape
+):
+    context = world(tmp_path, 'linux-64', 'pull_request')
+    folder, record = independent_artifact(context)
+    entry = tarfile.TarInfo(
+        '../outside'
+        if escape == 'parent'
+        else '/outside'
+        if escape == 'absolute'
+        else 'build/ci/escape'
+    )
+    if escape in {'symlink', 'hardlink'}:
+        entry.type = tarfile.SYMTYPE if escape == 'symlink' else tarfile.LNKTYPE
+        entry.linkname = '../../outside' if escape == 'symlink' else '../outside'
+    elif escape == 'fifo':
+        entry.type = tarfile.FIFOTYPE
+    with tarfile.open(folder / 'edi-native.tar', 'a') as archive:
+        archive.addfile(entry)
+    record['sha256'] = digest(folder / 'edi-native.tar')
+    (folder / 'edi-native.json').write_text(json.dumps(record), encoding='utf-8')
+    before = (context.root / 'build/ci/cli/easydiffraction').read_bytes()
+    result = native(context, 'restore')
+    assert result.returncode != 0, (
+        'Archive paths, links and special files cannot escape the native tree'
+    )
+    assert (context.root / 'build/ci/cli/easydiffraction').read_bytes() == before, (
+        'Containment refusal precedes replacement of the admitted native tree'
+    )
+    assert not context.commands.exists(), 'A malformed native archive never invokes compilation'
+
+
+@pytest.mark.parametrize('damage', ['bytes', 'mode', 'foreign-import', 'wrong-commit'])
+def test_native_restore_rechecks_independent_file_modes_and_import_identity(tmp_path, damage):
+    context = world(tmp_path, 'linux-64', 'pull_request')
+    if damage == 'wrong-commit':
+        context.payloads['build/ci/python/edi/_edi.py'] = b'__build_commit__ = "foreign-source"\n'
+    elif damage == 'foreign-import':
+        context.payloads['build/ci/python/edi/_edi.py'] += b'__file__ = "/outside/_edi.py"\n'
+    folder, record = independent_artifact(context)
+    if damage in {'bytes', 'mode'}:
+        name = 'build/ci/cli/easydiffraction'
+        record['files'][name] = (
+            '0' * 64 if damage == 'bytes' else digest(context.root / name)
+        ) + ' 644'
+        (folder / 'edi-native.json').write_text(json.dumps(record), encoding='utf-8')
+    result = native(context, 'restore')
+    assert result.returncode != 0, (
+        'Archive hashes cannot bypass file bytes, modes, imported source or module confinement'
+    )
+    assert not context.commands.exists(), (
+        'A refused native import cannot trigger a compiler fallback'
+    )

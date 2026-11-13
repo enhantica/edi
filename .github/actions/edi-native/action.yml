@@ -1,0 +1,15 @@
+name: Native Edi artifacts
+description: Restore the same run's native build after checking its source, SDK and Python ABI.
+inputs:
+  platform:
+    description: The native producer platform (linux-64 or osx-arm64)
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: edi-native-${{ inputs.platform }}
+        path: build/edi-native-artifact
+    - shell: bash
+      run: echo 'EDI_NATIVE_ARTIFACT=1' >> "$GITHUB_ENV"
