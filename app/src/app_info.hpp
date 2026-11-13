@@ -441,6 +441,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void chooseExperimentData(const QJSValue& experiment) const;
     Q_INVOKABLE void chooseDatasetFolder(QObject* picker, QObject* project, QObject* experiment) const;
     Q_INVOKABLE void acceptDatasetFolder(QObject* picker, QObject* currentProject, const QUrl& folder) const;
+    Q_INVOKABLE void formDatasetFolderOpened(const QJSValue& request, const QJSValue& folder) const;
     Q_INVOKABLE void formFilesOpened(const QJSValue& request, const QJSValue& files, bool experiments) const;
     Q_INVOKABLE void formFilesCancelled(const QJSValue& request, bool experiments) const;
     Q_INVOKABLE void acceptExperimentDataFile() const;

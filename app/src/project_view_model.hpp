@@ -510,7 +510,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
     Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
     /// List a local folder off the GUI thread, then link its datasets through the normal scan loader.
-    Q_INVOKABLE void loadDatasetFolder(edi_app::ExperimentViewModel* experiment, const QUrl& folder);
+    Q_INVOKABLE void loadDatasetFolder(edi_app::ExperimentViewModel* experiment, const QUrl& folder, bool copy = false);
     Q_PROPERTY(bool listingDatasetFolder READ listingDatasetFolder NOTIFY listingDatasetFolderChanged)
     bool listingDatasetFolder() const { return listing_dataset_folder_; }
     QString includeDataOnSave() const;

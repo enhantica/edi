@@ -295,9 +295,9 @@ plot-bench = { cmd = "EDI_APP_TARGETS=edi_app_plot_bench bash tools/ci/app-build
 plot-bench-compare = { cmd = ["python", "app/tools/plot_bench_compare.py"] }
 # app-build's recovery from a stale build/app (another environment's compilers): CI's last app step.
 app-build-recovery = { cmd = ["bash", "tools/ci/app-build-recovery.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
-# ADR-0023: the app as a WebAssembly site. `wasm-toolchain` installs Emscripten and Qt's two wasm kits once
-# (~/.cache/edi-wasm); `wasm-build` builds crysta and the app for both kits and packs the site zip into
-# build/wasm (`wasm-build multithread` or `singlethread` builds one).
+# ADR-0023: the multithreaded WebAssembly site. `wasm-toolchain` installs Emscripten and Qt's wasm kit once
+# (~/.cache/edi-wasm); `wasm-build` builds crysta and the app and packs the site zip into
+# build/wasm (`wasm-build multithread` builds without packing).
 wasm-toolchain = { cmd = ["bash", "tools/ci/wasm-toolchain.sh"] }
 wasm-build = { cmd = ["bash", "tools/ci/wasm-build.sh"], depends-on = [{ task = "crysta-sdk", environment = "default" }, { task = "wasm-toolchain", environment = "app" }] }
 # Every app gate, for verify-quick / verify-full, which reach it through `app-verify` in the default
