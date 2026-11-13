@@ -171,3 +171,12 @@ activation clears inherited Visual Studio-only platform, toolset and instance de
 selection. The existing explicit -G Ninja SDK/installer calls already override those environment
 defaults. Both forms are exercised by real CMake controls. MSVC still selects x64, and SDK
 compiler/CRT compatibility checks remain mandatory.
+
+
+Both native CMake entries resolve an exact bare ccache launcher to an absolute executable
+before Windows compiler probes. The activated prefix's Library/bin is an explicit lookup
+hint, so a bootstrap child does not depend on ambient PATH finding that executable. Missing
+ccache refuses when requested; explicit empty, custom and list launchers retain their meaning.
+The rule covers enabled project languages (Crysta C++; Edi C and C++) and preserves Unix
+lookup. This keeps the existing cache
+owner across the binding bootstrap, SDK and app configurations without changing the backend.

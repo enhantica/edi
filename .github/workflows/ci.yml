@@ -5,9 +5,9 @@
 # events from this repository (never a fork's pull request) and in the reviewed `crysta-sdk`
 # environment, which holds the app key. A fork's pull request runs the jobs that need no token, and
 # the pin-currency job without its token steps.
-# Each job builds the native code itself: no artifact carries crysta's object code, and no
-# artifact is named after a runner. The latency bank runs on the self-hosted fleet, by dispatch
-# only (bank-latency.yml).
+# Compatible native consumers share this run's validated Edi artifacts and qualified SDK.
+# Qt and browser configurations keep their own builds; compiler caches cover both.
+# The latency bank runs on the self-hosted fleet by dispatch only (bank-latency.yml).
 name: CI
 
 on:
