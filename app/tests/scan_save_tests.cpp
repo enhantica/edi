@@ -49,6 +49,10 @@ private slots:
             chart->setProperty("shown", true);
             auto* layer = chart->findChild<edi_app::ScanLayer*>(QString("scanView.%1.layer").arg(mode));
             QVERIFY(layer);
+            layer->setHeight(100);
+            layer->setYMin(0);
+            layer->setYMax(QString::fromUtf8(mode) == "stacked" ? 1 : 65);
+            layer->setLabelGap(20);
             bool retained = false;
             for (int dataset = 16; dataset < 32; ++dataset) {
                 const int before = labels->property("count").toInt();
