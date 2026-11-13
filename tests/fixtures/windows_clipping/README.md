@@ -7,11 +7,11 @@ collection. Restore them with a reproducible Windows case and a working producer
 
 
 `job.yml` is the job to add beside `app-wasm` in the application workflow. The
-existing Linux `app-wasm` job builds both Qt kits with
+existing Linux `app-wasm` job builds the Qt multithread kit with
 `pixi run -e app --skip-deps wasm-build` and uploads the directory
 `build/wasm/site` as `edi-webapp`. Download that artifact directly into the site's
 folder. Do not expand a zip: the uploaded directory contains `build.json`, the
-start page and the two content-addressed kit folders.
+start page and the sole content-addressed multithread kit folder.
 
 The consumer is `windows-web-clipping` on `windows-2025`. It needs no Windows
 compiler or Pixi environment. It needs Node 22.23.2, Python 3.13, the locked
@@ -26,7 +26,7 @@ than calling it a hardware-GPU result. If WebGL2 cannot start, the job fails.
 ## Producer work required before the job can pass
 
 The ordinary site currently has `ediControlGeometry` and `ediOpenExample` but no
-clipping fixture. The producer must compile a test-only host into **both** kits,
+clipping fixture. The producer must compile a test-only host into the sole multithread kit,
 using the same app module, pinned gui-components, compiler options and rendering
 backend as the normal app. Resolve the shared-cell pin from `cmake/EdiGuiBase.cmake`. Record that full pin, edi commit, source hashes of the host
 and preset QML, Qt kit and Emscripten version in `clipping-host.json` at the site
@@ -38,8 +38,8 @@ native observation bridge to `SOURCES`, and install that bridge immediately
 after `install_web_page_hooks(engine)` in a temporary source snapshot. Use the
 existing `tools/ci/wasm-build.sh` kit configuration and `wasm-pack.sh` packing
 recipe against that snapshot. The host must be disabled on a normal start and
-activate only for `?acceptance=clipping`. Publish the instrumented site's two
-kits together as this run's `edi-webapp` artifact. That producer integration is
+activate only for `?acceptance=clipping`. Publish the instrumented site's sole
+multithread kit as this run's `edi-webapp` artifact. That producer integration is
 implementation work still required; this test job refuses a normal artifact
 without its host manifest. Wiring the consumer alone cannot produce a green.
 
@@ -94,7 +94,7 @@ wheel input, nonzero `dy`. Preset actions must still be real input with a comple
 native observation; the host does not mutate state during `read`.
 
 
-Exercise every combination of the two kits and light/dark themes. The six
+Exercise the sole multithread kit with both light/dark themes. The six
 minimal presets named in the task brief are clipped rows, an antialiased clipped
 border, outer clipping off, both clips on, `layer.enabled`, and an opaque cover
 with clipping off. Give each a saturated sentinel crossing both the inner and

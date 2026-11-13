@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/e04_t11_wasm'
 
 
-@pytest.mark.parametrize('mode', ['singlethread', 'multithread'])
+@pytest.mark.parametrize('mode', ['multithread'])
 def test_wasm_cli_fit_matches_the_native_cli(tmp_path, mode):
     explicit = os.environ.get('EDI_WASM_CLI_' + mode.upper())
     if not explicit:

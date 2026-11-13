@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.distribution_licences import stage
 from tests.integration.py.test_production_licence_scope import require_production_components
 from tests.integration.py.test_table_and_about_contract import ROOT, dependency_matrix
 
@@ -44,10 +45,15 @@ def require_actual_artifact(root, surface):
         )
     elif surface == 'web':
         build_file = root / 'build.json'
-        assert build_file.is_file(), 'The web distribution carries its real two-kit site manifest'
+        assert build_file.is_file(), 'The web distribution carries its real sole-kit site manifest'
         builds = json.loads(build_file.read_text())
-        for kit in ('singlethread', 'multithread'):
-            assert isinstance(builds.get(kit), str), 'The delivered site names both Qt web kits'
+        assert 'singlethread' not in builds, (
+            'The delivered site cannot restore a retired serial kit'
+        )
+        for kit in ('multithread',):
+            assert isinstance(builds.get(kit), str), (
+                'The delivered site names its sole Qt multithread kit'
+            )
             folder = (root / builds[kit]).resolve()
             assert folder.is_relative_to(root.resolve()), (
                 'The delivered kit path remains inside its actual distribution'
@@ -148,3 +154,22 @@ def test_delivered_surface_lists_only_its_bundled_components(surface, variable):
             assert name in required, (
                 'A physically bundled library is declared on its surface: ' + surface + '/' + name
             )
+
+
+def test_web_licence_staging_replaces_old_serial_delivery(tmp_path, monkeypatch):
+    source = tmp_path / 'source'
+    site = source / 'build/wasm/site'
+    site.mkdir(parents=True)
+    (site / 'build.json').write_text('{"multithread":"multithread-abcd"}')
+    target = tmp_path / 'staged'
+    stale = target / 'web/singlethread-old'
+    stale.mkdir(parents=True)
+    (stale / 'edi_app.wasm').write_bytes(b'old serial artifact')
+    monkeypatch.setattr(stage, 'ROOT', source)
+    stage.stage_web(target)
+    assert not stale.exists(), (
+        'Web licence staging replaces its old delivery instead of retaining retired kit bytes'
+    )
+    assert (target / 'web/build.json').read_bytes() == (site / 'build.json').read_bytes(), (
+        'The distribution stage copies the actual sole-kit manifest byte for byte'
+    )

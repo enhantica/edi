@@ -1,5 +1,5 @@
 // independent browser acceptance. Run separately for each shipped thread mode.
-// node tests/system/manual/e04_t11_browser.mjs <site-dir> <singlethread|multithread|shim> <output-dir> [chrome]
+// node tests/system/manual/e04_t11_browser.mjs <site-dir> <multithread|shim> <output-dir> [chrome]
 // No delay is a readiness predicate: CDP events, animation frames, AX state and completed downloads are.
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 import { nativePickerOptionChecks } from './browser_picker_options.mjs';
+import { multithreadStartupRefusals } from './browser_multithread_refusal.mjs';
 import { installNativePickerTransport, assertNativePickerCapture, nativePickerTransportControls } from './browser_native_picker.mjs';
 import { checkDesktopOnlyAssistant } from './web_assistant_desktop_only.mjs';
 import { statusActionLifetimeChecks } from './web_status_action_lifetime.mjs';
@@ -27,8 +28,10 @@ const exampleOnly = process.argv.includes('--example-only');
 const statusActionLifetimeOnly = process.argv.includes('--status-action-lifetime-only');
 const fileRequestsOnly = saveRouteOnly || process.argv.includes('--file-requests-only');
 const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] ||
-  (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
+  (mode === 'multithread' || fileRequestsOnly ? 'lbco' : 'ncaf');
 assert(['lbco', 'ncaf'].includes(fitCase), 'browser fit case must name a committed native reference');
+const engineWorkers=process.argv.find(arg=>arg.startsWith('--engine-workers='))?.split('=')[1] || 'auto';
+assert(['auto','1'].includes(engineWorkers),'The shared-kit speed comparison selects actual Auto or one-worker preferences');
 const fileRequestCase = process.argv.find(arg => arg.startsWith('--file-request-case='))?.split('=')[1] || 'all';
 assert(['all','none','overlap','replacement','cancel-structure','cancel-experiment','load-data','native-picker','dataset-folder-cancel'].includes(fileRequestCase),
   'each scoped request case must be declared explicitly');
@@ -55,12 +58,13 @@ if (writtenRequired) {
   assert.equal(admitted.status,0,'Written reference custody, raw anchors and reopen captures must qualify before browser actions: '+admitted.stderr);
 }
 console.log(`browser ${mode}: starting`);
-assert(siteArg && outputArg && ['singlethread', 'multithread', 'shim'].includes(mode),
+assert(siteArg && outputArg && ['multithread', 'shim'].includes(mode),
   'requires the produced site, an explicit thread case and a persistent output directory');
 const site = resolve(siteArg), output = resolve(outputArg);
 await readFile(join(site, 'index.html')); // A missing product fails before the browser is launched.
 await mkdir(output, { recursive: true });
 await nativePickerOptionChecks(chromeArg || process.env.CHROME_HEADLESS_SHELL, output);
+await multithreadStartupRefusals(chromeArg || process.env.CHROME_HEADLESS_SHELL,site,output);
 const scratch = await mkdtemp(join(tmpdir(), 'e04-browser-'));
 const chrome = chromeArg || process.env.CHROME_HEADLESS_SHELL;
 assert(chrome, 'CHROME_HEADLESS_SHELL must identify the pinned headless Chrome executable');
@@ -71,9 +75,6 @@ const mime = { '.wasm': 'application/wasm', '.js': 'text/javascript', '.html': '
   '.json': 'application/json', '.svg': 'image/svg+xml' };
 const server = createServer(async (req, res) => {
   try {
-    if (mode === 'singlethread' && req.url.includes('coi-serviceworker.js')) {
-      res.writeHead(404); res.end(); return;
-    }
     const rawPath = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
     const pathname = rawPath.startsWith('/webapp/') ? rawPath.slice('/webapp'.length) : rawPath;
     const path = resolve(site, '.' + pathname + (pathname.endsWith('/') ? 'index.html' : ''));
@@ -140,7 +141,6 @@ try {
   for (const method of ['Page.enable', 'Runtime.enable', 'Network.enable', 'Accessibility.enable']) await send(method);
   await send('Browser.setDownloadBehavior', { behavior: 'allowAndName', downloadPath: output, eventsEnabled: true }, true);
   await send('Page.setInterceptFileChooserDialog', { enabled: true });
-  if (mode === 'singlethread') await send('Network.setBlockedURLs', { urls: ['*coi-serviceworker.js*'] });
   const evaluate = async expression => {
     const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
     if (result.exceptionDetails) {
@@ -463,13 +463,13 @@ try {
   const isolated = await evaluate('self.crossOriginIsolated');
   const sharedArrayBuffer = await evaluate('typeof SharedArrayBuffer !== "undefined"');
   const coreCount = await evaluate('navigator.hardwareConcurrency');
-  assert.equal(sharedArrayBuffer, mode !== 'singlethread', 'each shipped route must prove SharedArrayBuffer availability');
-  assert.equal(isolated, mode !== 'singlethread', 'the browser itself must prove the selected isolation case');
+  assert.equal(sharedArrayBuffer, true, 'each shipped route must prove SharedArrayBuffer availability');
+  assert.equal(isolated, true, 'the browser itself must prove the selected isolation case');
   const wasm = network.filter(url => url.endsWith('.wasm'));
-  const expected = mode === 'singlethread' ? 'singlethread' : 'multithread';
+  const expected = 'multithread';
   assert(wasm.length && wasm.some(url => url.replace(/[-_]/g, '').includes(expected)),
     'automatic start-page selection must load the thread kit the browser can actually run');
-  assert(!wasm.some(url => url.replace(/[-_]/g, '').includes(mode === 'singlethread' ? 'multithread' : 'singlethread')),
+  assert(!wasm.some(url => url.replace(/[-_]/g, '').includes('singlethread')),
     'automatic selection must not launch an incompatible second kit');
   await writeFile(join(output, `${mode}-startup.json`), JSON.stringify({ isolated, sharedArrayBuffer, coreCount, wasm, errors, transcript }, null, 2));
   assert.equal(errors.length, 0, 'startup must have no uncaught browser exception');
@@ -485,9 +485,25 @@ try {
     functionDeclaration: 'function() { this.click(); }' });
   await waitAX(/Get started|Home/);
   await checkDesktopOnlyAssistant({send, evaluate, frame, click, output, mode});
+  if (process.argv.some(arg=>arg.startsWith('--engine-workers='))) {
+    await click(/^Application preferences$/,'button','appBar.button.preferences');
+    for (const name of ['preferences.tab.performance','preferences.engineThreads']) {
+      const point=await waitNative(name);
+      for(const type of ['mousePressed','mouseReleased'])
+        await send('Input.dispatchMouseEvent',{type,...point,button:'left',clickCount:1});
+      await frame();
+    }
+    for(const key of engineWorkers==='1'?['Home','ArrowDown','Enter']:['Home','Enter']) {
+      const code=key==='ArrowDown'?40:key==='Home'?36:13;
+      for(const type of ['keyDown','keyUp'])
+        await send('Input.dispatchKeyEvent',{type,key,code:key,windowsVirtualKeyCode:code});
+    }
+    await frame();
+    await click(/^OK$/,'button');
+  }
   await inspectDevelopDiagnostics(evaluate, frame, mode,
     snapshot => writeFile(join(output, `${mode}-diagnostics.json`), JSON.stringify(snapshot, null, 2)),
-    () => shot('develop-diagnostics'));
+    () => shot('develop-diagnostics'), engineWorkers==='1');
   if (process.argv.includes('--diagnostics-only')) {
     console.log(`${mode}: actual Develop-view diagnostics passed`);
   } else {
@@ -676,7 +692,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   assert(!runningProgress(['Stop'],[{running:false,visible:true,text:'fitting · it 3'}],5) &&
     !runningProgress(['Stop'],[{running:true,visible:true,text:'Success · it 3'}],5),
     'completed report text and minimizer settings cannot impersonate live fitting progress');
-  if (mode !== 'singlethread') {
+  if (true) {
     assert(progress.some(value => fittingObservationKind(value) === 'control') &&
       observesOrderedFitProgress(nativeProgress,finalIteration),
       'Multithread fitting must expose its actual running control and ordered visible native counters');
@@ -704,7 +720,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const chiTolerance = fitCase === 'ncaf' ? 0.005 : 1e-11 + 1e-9*Math.abs(referenceChi);
   const writtenReferenceChi = assertSavedNativeChi(chi, referenceChi, chiTolerance);
   await writeFile(join(output, `${mode}-saved-fit.json`), JSON.stringify({
-    project:before.name, chi, referenceChi, writtenReferenceChi, chiTolerance,
+    project:before.name, chi, referenceChi, writtenReferenceChi, chiTolerance,engineWorkers,
   }, null, 2));
 
   const iterations = Number(before.analysis.match(/^_fit_result.iterations\s+(\S+)/m)?.[1]);
@@ -770,8 +786,8 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     {encoding:'utf8',timeout:10000});
   assert.equal(numerical.status, 0, 'browser written parameters, SUs, bank fields and pattern arrays must agree with the independently raw-qualified ordinary native Save: ' + numerical.stderr);
   await writeFile(join(output, `${mode}-${fitCase}-measurement.json`), JSON.stringify({
-    mode, fitCase, coreCount, fitElapsedMs, isolated, sharedArrayBuffer, kit: expected,
-    chiSquare: chi, iterations, rwp, nativeNumerics: true
+    mode, fitCase, coreCount, fitElapsedMs, isolated, sharedArrayBuffer, kit: expected,wasm:wasm.map(url=>new URL(url).pathname),
+    chiSquare: chi, iterations, rwp, nativeNumerics: true,engineWorkers
   }, null, 2));
 
   if (reopenControl === 'noop') {

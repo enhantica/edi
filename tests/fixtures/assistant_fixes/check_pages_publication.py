@@ -126,7 +126,7 @@ def test_wasm_update_preserves_current_docs(tmp_path):
     app = tmp_path / 'app'
     (app / 'kit').mkdir(parents=True)
     (app / 'index.html').write_text('new app')
-    (app / 'build.json').write_text('{"singlethread": "kit"}')
+    (app / 'build.json').write_text('{"multithread": "multithread-test"}')
     (app / 'coi-serviceworker.js').write_text('worker')
     (app / 'kit/edi_app.wasm').write_bytes(b'new compiled app')
     MODULE.overlay_component(site, app, 'wasm')
