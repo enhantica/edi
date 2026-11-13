@@ -747,7 +747,7 @@ jobs:
   # wasm from the pinned SDK's source, per kit.
   app-wasm:
     name: app · WebAssembly
-    # Browser input changes qualify both kits and their browser routes on pull requests too.
+    # Browser input changes qualify the multithread kit and both isolation routes on pull requests too.
     if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && (github.event_name != 'pull_request' || needs.changes.outputs.wasm_build == 'true') && inputs.core_only != true }}
     environment: crysta-sdk
     # Browser qualification is independent of the native test outcome.
@@ -771,7 +771,7 @@ jobs:
         run: pixi run core-build
       - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
         run: pixi run -e app wasm-toolchain
-      - name: Build both kits and pack the site
+      - name: Build the multithread kit and pack the site
         run: pixi run -e app --skip-deps wasm-build
       - name: Save the WebAssembly toolchain and compiler cache
         if: ${{ !cancelled() && steps.wasm-cache.outcome == 'success' }}

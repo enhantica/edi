@@ -110,7 +110,7 @@ jobs:
         run: pixi run crysta-sdk
       - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
         run: pixi run -e app wasm-toolchain
-      - name: Build both kits and pack the web app
+      - name: Build the multithread kit and pack the web app
         run: pixi run -e app --skip-deps wasm-build
       - name: Save the WebAssembly toolchain and compiler cache
         if: ${{ !cancelled() && steps.wasm-cache.outcome == 'success' }}
