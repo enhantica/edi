@@ -42,22 +42,22 @@ def _calculated_patterns(project: edi.Project) -> list[np.ndarray]:
 @pytest.mark.parametrize(
     ('body', 'expected'),
     [
-        ('_absorption.type cylinder\n', (0.0, 0.0)),
-        ('_absorption.type cylinder\n_absorption.abscor1 0.125\n', (0.125, 0.0)),
-        ('_absorption.type cylinder\n_absorption.abscor2 0.375\n', (0.0, 0.375)),
+        ('_absorption.type cylinder\n', 0.0),
+        ('_absorption.type cylinder\n_absorption.abscor1 0.125\n', 0.125),
+        ('_absorption.type cylinder\n_absorption.abscor2 0.375\n', 0.0),
         ('_absorption.type none\n_absorption.abscor1 0.125\n', None),
         ('_absorption.type unknown-family\n', None),
     ],
     ids=['missing', 'first-only', 'second-only', 'none-with-coefficient', 'unknown'],
 )
 def test_absorption_family_acceptance_and_contents_match_crysta(
-    tmp_path: Path, body: str, expected: tuple[float, float] | None
+    tmp_path: Path, capfd: pytest.CaptureFixture[str], body: str, expected: float | None
 ) -> None:
     corpus = Path(
         os.environ.get('EDI_CRYSTA_CORPUS_ROOT', str(crysta_reference_source() / 'tests/fitting'))
     )
     source = corpus / 'ncaf-wish-3bank-s5/project'
-    original = '_absorption.type cylinder\n_absorption.abscor1 0.0(10)\n_absorption.abscor2 0.0\n'
+    original = '_absorption.type cylinder\n_absorption.abscor1 0.0(10)\n'
     for name in ('crysta', 'edi'):
         destination = tmp_path / name
         shutil.copytree(source, destination)
@@ -94,17 +94,24 @@ def test_absorption_family_acceptance_and_contents_match_crysta(
         'F4 crysta must accept and save the valid defaulted cylinder: ' + reference.stderr
     )
     project = edi.Project.load(tmp_path / 'edi')
+    diagnostics = capfd.readouterr().err
+    if '_absorption.abscor2' in body:
+        assert diagnostics.count('_absorption.abscor2 has no effect and is ignored') == 3, (
+            'F4 an older ignored coefficient must emit its declared compatibility warning'
+        )
     for experiment in project.experiments:
         absorption = experiment.absorption
         assert isinstance(absorption, edi.CylinderHewatAbsorption), (
             'F4 cylinder selection must produce the typed cylinder model family'
         )
-        pair = (absorption.abscor1, absorption.abscor2)
-        assert all(parameter is not None for parameter in pair), (
-            'F4 a cylinder model must contain both parameters even when input keys are absent'
+        assert absorption.abscor1 is not None and absorption.mu_r is None, (
+            'F4 a TOF cylinder must contain its active coefficient and no CW-only coefficient'
         )
-        assert tuple(parameter.value for parameter in pair) == pytest.approx(expected), (
-            'F4 missing cylinder coefficients must default to zero without losing supplied values'
+        assert not hasattr(absorption, 'abscor2'), (
+            'F4 the retired coefficient must not reappear in the live model'
+        )
+        assert absorption.abscor1.value == pytest.approx(expected), (
+            'F4 missing active coefficients default to zero without losing supplied values'
         )
     saved = tmp_path / 'edi-saved'
     project.save_as(saved)
@@ -124,8 +131,8 @@ def test_switching_a_loaded_cylinder_to_none_clears_calculation_state(
     source = corpus / 'ncaf-wish-3bank-s5/project'
     staged = tmp_path / 'loaded-cylinder'
     shutil.copytree(source, staged)
-    original = '_absorption.type cylinder\n_absorption.abscor1 0.0(10)\n_absorption.abscor2 0.0\n'
-    nonzero = '_absorption.type cylinder\n_absorption.abscor1 0.125\n_absorption.abscor2 0.0\n'
+    original = '_absorption.type cylinder\n_absorption.abscor1 0.0(10)\n'
+    nonzero = '_absorption.type cylinder\n_absorption.abscor1 0.125\n'
     for file in sorted((staged / 'experiments').glob('*.edi')):
         text = file.read_text(encoding='utf-8')
         assert text.count(original) == 1, (
@@ -134,6 +141,10 @@ def test_switching_a_loaded_cylinder_to_none_clears_calculation_state(
         file.write_text(text.replace(original, nonzero), encoding='utf-8')
 
     project = edi.Project.load(staged)
+    # Start the exact roundtrip witness at the declared serialized precision.
+    canonical = tmp_path / 'canonical-cylinder'
+    project.save_as(canonical)
+    project = edi.Project.load(canonical)
     cylinder_patterns = _calculated_patterns(project)
     assert all(
         isinstance(experiment.absorption, edi.CylinderHewatAbsorption)

@@ -40,6 +40,7 @@ REQUIRED_POST_BASE_REMOVED_PATHS = {
     'Structure.free_parameters',
 }
 POST_BASE_REMOVED_PATHS = REQUIRED_POST_BASE_REMOVED_PATHS | {
+    'CylinderHewatAbsorption.abscor2',
     'ExperimentBase.absorption',
     'ExperimentBase.background',
     'ExperimentBase.data',
@@ -158,7 +159,7 @@ def _expected_parameters(project: object) -> list[tuple[object, list[object]]]:
         peak = _present_parameters(experiment.peak, PEAK_FIELDS)
         instrument = _present_parameters(experiment.instrument, INSTRUMENT_FIELDS)
         linked = [experiment.linked_structure.scale]
-        absorption = _present_parameters(experiment.absorption, ('abscor1', 'abscor2'))
+        absorption = _present_parameters(experiment.absorption, ('abscor1', 'mu_r'))
         background: list[object] = []
         for point in experiment.background:
             point_parameters = [point.intensity]
@@ -247,7 +248,7 @@ def _expected_project_free_flags(project: object, project_path: Path) -> list[bo
         flags.append(_flag(experiment_flags, '_linked_structure.scale'))
         flags.extend(
             _flag(experiment_flags, f'_absorption.{name}')
-            for name in ('abscor1', 'abscor2')
+            for name in ('abscor1', 'mu_r')
             if hasattr(experiment.absorption, name)
             and getattr(experiment.absorption, name) is not None
         )
@@ -538,7 +539,12 @@ def _partition_findings(
             findings.append(f'{path}: removal metadata is not an object')
         elif (
             not isinstance(row.get('removed_in'), str)
-            or row['removed_in'] not in {'necessity review (ADR-0011)', 'refine-to-fit rename'}
+            or row['removed_in']
+            not in (
+                {'2026-11-10'}
+                if path == 'CylinderHewatAbsorption.abscor2'
+                else {'necessity review (ADR-0011)', 'refine-to-fit rename'}
+            )
             or not str(row.get('reason', '')).strip()
         ):
             findings.append(

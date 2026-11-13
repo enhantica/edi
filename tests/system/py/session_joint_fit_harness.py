@@ -63,8 +63,8 @@ def _model_parameters(project: object, source: Path) -> dict[str, list[float]]:
         for index, point in enumerate(experiment.background):
             identity = reference[experiment.name]['background'][index]
             record(f'{prefix}.background[{identity}].intensity', point.intensity)
-        for field in ('abscor1', 'abscor2'):
-            parameter = getattr(experiment.absorption, field)
+        for field in ('abscor1', 'mu_r'):
+            parameter = getattr(experiment.absorption, field, None)
             if parameter is not None:
                 record(f'{prefix}.absorption.{field}', parameter)
     return mapped

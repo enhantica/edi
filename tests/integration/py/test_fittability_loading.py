@@ -223,31 +223,39 @@ def test_tof_capability_load_keeps_value_and_uncertainty(api, tmp_path, field):
     source = staged(root / relative, tmp_path / 'input', 'iucr_19')
     experiment_file = next((source / 'experiments').glob('*.edi'))
     category = 'absorption' if field == 'abscor2' else 'instrument'
-    tag = '_' + category + '.' + field
+    active_field = 'abscor1' if field == 'abscor2' else field
+    tag = '_' + category + '.' + active_field
     text = experiment_file.read_text()
     text = re.sub(r'(?m)^' + re.escape(tag) + r'[^\n]*\n?', '', text)
     if field == 'abscor2':
         text = re.sub(r'(?m)^_absorption.type[^\n]*', '_absorption.type cylinder', text)
-        if '_absorption.abscor1' not in text:
-            text += '\n_absorption.abscor1 0\n'
     experiment_file.write_text(text + '\n' + tag + ' 0.037(2)\n')
     project, notes = load(api, source)
-    parameter = getattr(getattr(project.experiments[0], category), field)
-    assert not parameter.free, 'Unsupported TOF derivatives load as fixed parameters'
+    parameter = getattr(getattr(project.experiments[0], category), active_field)
+    if field == 'abscor2':
+        assert not hasattr(project.experiments[0].absorption, 'abscor2')
+        assert parameter.free, 'The active TOF coefficient retains its supported free mark'
+    else:
+        assert not parameter.free, 'Unsupported TOF derivatives load as fixed parameters'
     assert parameter.value == pytest.approx(0.037), (
         'A capability block preserves the parameter value'
     )
     assert parameter.uncertainty == pytest.approx(0.002), (
         'A capability block preserves the input s.u.'
     )
-    selected = [note for note in notes if 'unfittable_free_ignored' in note and field in note]
-    assert len(selected) == 1, 'Each ignored TOF free mark emits one named loader note'
-    assert all(
-        token in selected[0] for token in (CAPABILITY, 'crysta has no derivative for it')
-    ), 'Unsupported TOF derivatives use the shared capability reason and detail'
-    if API == 'edi':
-        with pytest.raises(ValueError, match=re.escape(CAPABILITY)):
-            parameter.free = True
+    selected = [
+        note for note in notes if 'unfittable_free_ignored' in note and active_field in note
+    ]
+    if field == 'abscor2':
+        assert not selected, 'The active absorption derivative must remain admitted'
+    else:
+        assert len(selected) == 1, 'Each ignored TOF free mark emits one named loader note'
+        assert all(
+            token in selected[0] for token in (CAPABILITY, 'crysta has no derivative for it')
+        ), 'Unsupported TOF derivatives use the shared capability reason and detail'
+        if API == 'edi':
+            with pytest.raises(ValueError, match=re.escape(CAPABILITY)):
+                parameter.free = True
     parameter.free = False
     assert not parameter.free, 'Clearing an unsupported derivative flag is always allowed'
 
