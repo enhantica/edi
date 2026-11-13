@@ -187,7 +187,7 @@
   },
   {
    "file": "app/qml/Pages/Structure/MagneticFormFactorsGroup.qml",
-   "match": "return Number((2 / (1 + value)).toPrecision(4)).toString();",
+   "match": "return NumberText.compact(Number((2 / (1 + value)).toPrecision(4)).toString());",
    "reason": "the Landé g a C2 coefficient stands for, g = 2 / (1 + C2), derived for display and not an item"
   },
   {
@@ -204,6 +204,56 @@
    "file": "core/src/report.cpp",
    "match": "std::snprintf(mantissa, sizeof(mantissa), \"%.2f\", value / std::pow(10.0, power));",
    "reason": "the CLI and report tables' power-of-ten form for a number outside the decimal range, a mantissa beside its exponent; a number in range keeps its item's format"
+  },
+  {
+   "file": "app/qml/Base/Gui/Elements/Slider.qml",
+   "match": "property string toolTipText: EaLogic.Utils.toDefaultPrecision(control.value)",
+   "reason": "the generic base slider has no dictionary item; parameter sliders supply their selected parameter's fileValue explicitly"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "match": "return QJSValue(shownNumberText(QString::number(value.toNumber(), 'g', 6)));",
+   "reason": "finite fit-parameter bounds, which have no dictionary item of their own; parameter values take their own item and s.u. formats"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "match": "suText = QString::number(su.toNumber(), 'e', 0);",
+   "reason": "a detached generic value/s.u. fallback when no project rule is available; an open project's parameter pairs use its suText before this branch"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "match": "return QJSValue(shownNumberText(QString::number(su.toNumber(), 'g', 1)));",
+   "reason": "an uncertainty shown without any usable parameter value, so no item format or paired decimal place is available"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "match": "QString mantissa = QString::number(value.toNumber() / std::pow(10.0, power), 'f', 3);",
+   "reason": "the compatibility axis formatter's logarithmic tick mantissa, not a value of an item"
+  },
+  {
+   "file": "app/src/app_info.cpp",
+   "match": "return QJSValue(QString::fromStdString(edi::table_number(value.toNumber(), QString::number(value.toNumber(), 'f', 2).toStdString(), true)));",
+   "reason": "the single-crystal normalised residual (measured minus calculated)/s.u., which has no dictionary item; the same two decimals as the report table"
+  },
+  {
+   "file": "app/src/pattern_chart_controller.cpp",
+   "match": "QString text = QString::number(value, 'f', format.decimals);",
+   "reason": "native axis tick labels at the precision that distinguishes adjacent ticks, not a value of an item"
+  },
+  {
+   "file": "app/src/pattern_chart_controller.cpp",
+   "match": "QString mantissa = QString::number(value / std::pow(10.0, power), 'f', std::max(0, format.digits - 1));",
+   "reason": "a native axis tick's mantissa, including decade carry; not a value of an item"
+  },
+  {
+   "file": "app/src/pattern_chart_controller.cpp",
+   "match": "mantissa = QString::number(value / std::pow(10.0, power), 'f', std::max(0, format.digits - 1));",
+   "reason": "the native axis tick mantissa after carrying into the next decade, not a value of an item"
+  },
+  {
+   "file": "core/src/report.cpp",
+   "match": "std::snprintf(digits, sizeof(digits), \"%.3g\", value);",
+   "reason": "the shared table-number presentation rule prevents a nonzero value being shown as zero; otherwise the caller's item-formatted decimal is preserved"
   }
  ],
  "names": [
