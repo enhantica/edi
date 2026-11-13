@@ -100,7 +100,6 @@ def snapshot(api, source, scratch, rule, *, order_reference=None):
         if parameter.free and parameter.name in {
             'crystal_radius',
             'asym_beba_limit',
-            'abscor2',
             'calib_d_to_tof_reciprocal',
         }:
             message = 'The input marks a descriptor or unsupported derivative free'
