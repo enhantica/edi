@@ -30,7 +30,7 @@ const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('
   (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
 assert(['lbco', 'ncaf'].includes(fitCase), 'browser fit case must name a committed native reference');
 const fileRequestCase = process.argv.find(arg => arg.startsWith('--file-request-case='))?.split('=')[1] || 'all';
-assert(['all','none','overlap','replacement','cancel-structure','cancel-experiment','load-data','native-picker'].includes(fileRequestCase),
+assert(['all','none','overlap','replacement','cancel-structure','cancel-experiment','load-data','native-picker','dataset-folder-cancel'].includes(fileRequestCase),
   'each scoped request case must be declared explicitly');
 const reopenControl = process.argv.find(arg => arg.startsWith('--reopen-control='))?.split('=')[1];
 assert(!fileRequestsOnly || !reopenControl, 'request-only checks cannot impersonate a reopen control');
@@ -925,6 +925,38 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
       } finally { await transport.restore(); }
       assert.equal(await evaluate('typeof window.showOpenFilePicker'),'undefined',
         'The native transport observer is removed before all retained HTML fallback and cancellation cases');
+    }
+
+    if (['all','dataset-folder-cancel'].includes(fileRequestCase)) {
+      await createWithStructure('routing_dataset_folder');
+      await click(/^Experiment$/); await waitAX(/Experiments \(0\)/);
+      await click(/^Create experiment$/,'button','experiments.create');
+      await waitAX(/Experiments \(1\)/);
+      await beginPicker(/^From folder…$/,'experiments.load','experiments.load.dataFolder');
+      const picker=await evaluate(`(() => {const input=window.__e04FileInput;
+        return {id:input.id,directory:input.webkitdirectory,multiple:input.multiple,
+          connected:input.isConnected,request:input.__e04Picker};})()`);
+      assert.equal(picker.id,'edi-open-folder',
+        'The actual unsaved-project folder action reaches the owned browser directory input');
+      assert(picker.directory===true && picker.multiple===true && picker.connected===true,
+        'Dataset folders use a connected real directory input with multiple files enabled');
+      await evaluate(`(() => {const input=window.__e04FileInput;
+        input.__e04Cancelled=false;
+        input.addEventListener('cancel',()=>{input.__e04Cancelled=true;},{once:true});
+        input.dispatchEvent(new Event('cancel'));return true;})()`);
+      await waitBrowser('window.__e04FileInput.__e04Cancelled===true && !window.__e04FileInput.isConnected && document.getElementById("edi-open-folder")===null',
+        'The actual folder cancellation terminates and removes its browser picker');
+      await frame(); await settleRenderedPage();
+      await waitAX(/Experiments \(1\)/); await waitName('routing_dataset_folder');
+      await click(/^Undo the last change$/,'button','appBar.button.undo');
+      await waitAX(/Experiments \(0\)/);
+      await click(/^Structure$/); await waitAX(/Structures \(1\)/);
+      await waitName('routing_dataset_folder');
+      await writeFile(join(output,`${mode}-dataset-folder-cancel.json`),JSON.stringify({
+        picker,cancelled:true,experimentCountAfterCancel:1,experimentCountAfterUndo:0,
+        structureCount:1,project:'routing_dataset_folder',
+        scope:'Actual unsaved-project Qt folder start and browser cancellation; no upload, Save or scientific baseline mutation',
+      },null,2));
     }
 
     if (['all','overlap'].includes(fileRequestCase)) {
