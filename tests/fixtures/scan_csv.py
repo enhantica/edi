@@ -70,6 +70,27 @@ def assert_reported_legacy(actual, historical):
         if name in paired:
             continue
         if name == 'fit_result.reduced_chi_square':
-            assert Decimal(actual[name]) == Decimal(format(float(text), '.2g'))
+            original = Decimal(text)
+            quantum = Decimal(1).scaleb(original.adjusted() - 1)
+            expected = original.quantize(quantum, rounding=ROUND_HALF_UP)
+            assert Decimal(actual[name]) == expected
         else:
             assert actual[name] == text, 'Migration retains each metadata cell and file identity'
+
+
+def assert_migrated_prefix(
+    path, original_header, historical, *, allow_legacy=False, original_bytes=None
+):
+    """Retain historical identities and values at their declared reporting precision."""
+    with path.open(newline='') as stream:
+        reader = csv.DictReader(stream)
+        header = reader.fieldnames
+        retained = list(reader)
+    if allow_legacy and header == original_header:
+        assert retained == historical, 'A reader-only resume retains every original row'
+        assert path.read_bytes() == original_bytes, 'A reader-only resume retains every byte'
+        return
+    assert header == [*original_header, *CONDITION_COLUMNS]
+    assert len(retained) >= len(historical), 'Continue retains every historical result row'
+    for actual, original in zip(retained[: len(historical)], historical, strict=True):
+        assert_reported_legacy(actual, original)

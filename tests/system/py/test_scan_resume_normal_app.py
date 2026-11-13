@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.scan_csv import assert_migrated_prefix
 from tests.fixtures.scan_lifecycle.oracle import signals
 from tests.fixtures.scan_pair.protocol import App
 from tests.fixtures.scan_resume.generate import stage
@@ -65,8 +66,12 @@ def test_resume_preserves_carry_forward_and_processed_terminal_state_in_normal_a
         e['event'] in {'inner_fit_started', 'file_fitted', 'fit_signal'}
         for e in events[after + 1 :]
     ), 'A resumed scan must deliver no inner-fit work or fit signal after its terminal boundary'
-    assert (project / 'analysis/results.csv').read_bytes().startswith(vehicle[3]), (
-        'Continue must retain every existing prefix byte instead of replaying or replacing it'
+    assert_migrated_prefix(
+        project / 'analysis/results.csv',
+        vehicle[1],
+        vehicle[2],
+        allow_legacy=case != 'failed-prefix-tail',
+        original_bytes=vehicle[3],
     )
     if case != 'failed-prefix-tail':
         assert not starts and not fits, 'A completed resume must perform exactly zero inner fits'
