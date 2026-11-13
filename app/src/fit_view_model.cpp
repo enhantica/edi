@@ -590,7 +590,8 @@ void FitViewModel::startImpl(std::uint64_t attempt) {
         results_->clear();
         if (owner_.retired_) return;
         clock_.start();
-        clock_timer_.start();
+        if (scan) clock_timer_.start();
+        else clock_timer_.stop();
         setElapsed(duration(0.0));
         if (owner_.retired_) return;
         setRunning(true);
@@ -826,6 +827,8 @@ void FitViewModel::started(const edi::FitPreamble& preamble) {
 }
 
 void FitViewModel::iterated(const edi::IterationRecord& record) {
+    setElapsed(duration(record.elapsed_ms / 1000.0));
+    if (owner_.retired_) return;
     setProgress(QString::number(record.iteration),
                 QStringLiteral("%1 → %2").arg(chi(chi_before_), chi(record.reduced_chi_square)), tr("Running"));
 }

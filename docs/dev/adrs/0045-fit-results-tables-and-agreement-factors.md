@@ -42,3 +42,11 @@ datasets the table ran off the bottom of the screen, the same factor appeared on
 | Keep one table and group the rows by dataset | Rejected: still too long for several datasets, and the same factor is still hard to compare. |
 | A χ² column in the agreement table | Rejected by the owner: χ² is in the summary, and it is not a per-cent factor. |
 | Write the subscripts into the stored texts | Rejected: the reports and the search read the plain texts. |
+
+## One fit clock in progress and results
+
+Single and joint fits show the engine's IterationRecord.elapsed_ms as progress and its recorded
+fitting_time when finished. GUI queueing, frame presentation and result publication do not advance
+that solver clock. Previously the running display used a wall timer and then changed to the engine's
+shorter duration, so the displayed time could go backwards at completion. Scan runs retain the wall
+clock for the entire run, matching their existing run summary. No recorded solver durations change.

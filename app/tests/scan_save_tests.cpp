@@ -14,12 +14,57 @@
 #include <QtQml/qqmlextensionplugin.h>
 #include "engine_setup.hpp"
 #include "session.hpp"
+#include "edi/duration_text.hpp"
 #include "project_view_model.hpp"
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 class ScanSaveTests : public QObject {
     Q_OBJECT
 private slots:
+    void fitProgressAndResultsUseSolverTime() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        const QDir source(QStringLiteral(EDI_SOURCE_DIR "/tests/fixtures/correlations/polynomial-1"));
+        const QDir destination(root.path());
+        for (const auto& relative : {"project.edi", "structures/phase.edi", "experiments/bank.edi", "analysis/analysis.edi"}) {
+            QFile input(source.filePath(QString::fromUtf8(relative)));
+            QVERIFY(input.open(QIODevice::ReadOnly));
+            QByteArray text = input.readAll();
+            if (QString::fromUtf8(relative) == "analysis/analysis.edi")
+                text = "_edi.schema_version 3\n_fitting_mode.type single\n_minimizer.max_iterations 3\n";
+            const auto target = destination.filePath(QString::fromUtf8(relative));
+            QVERIFY(QDir().mkpath(QFileInfo(target).absolutePath()));
+            QFile output(target);
+            QVERIFY(output.open(QIODevice::WriteOnly));
+            QCOMPARE(output.write(text), text.size());
+        }
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(root.path())), qPrintable(session->lastError()));
+        QTRY_VERIFY_WITH_TIMEOUT(!session->project()->calculating(), 15000);
+        auto* fit = session->project()->fit();
+        QVERIFY2(fit->available(), qPrintable(fit->unavailableReason()));
+        QList<double> runningTimes;
+        connect(fit, &edi_app::FitViewModel::elapsedChanged, this, [&] {
+            if (!fit->running()) return;
+            QString text = fit->elapsed();
+            text.chop(1);
+            bool ok = false;
+            const double value = text.toDouble(&ok);
+            if (ok) runningTimes.append(value);
+        });
+        QSignalSpy done(fit, &edi_app::FitViewModel::finished);
+        fit->start();
+        QTRY_COMPARE_WITH_TIMEOUT(done.count(), 1, 15000);
+        QVERIFY(!runningTimes.isEmpty());
+        const auto& result = session->project()->project().fit_result;
+        const QString duration = QString::fromStdString(edi::duration_text(result.fitting_time));
+        QCOMPARE(fit->elapsed(), duration + "s");
+        QCOMPARE(fit->results()->text(1, "value"), duration + " s");
+        for (const double time : runningTimes) QVERIFY(time <= duration.toDouble());
+    }
     void hiddenWorkflowPagesDeferSelection() {
         QQmlApplicationEngine engine;
         edi_app::configure_engine(engine);
