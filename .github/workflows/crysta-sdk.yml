@@ -41,6 +41,7 @@ jobs:
   build:
     needs: resolve
     name: crysta SDK · ${{ matrix.platform }}
+    if: github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false
     environment: crysta-sdk
     strategy:
       fail-fast: false

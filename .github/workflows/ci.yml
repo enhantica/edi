@@ -58,8 +58,8 @@ jobs:
         with:
           filters: |
             app_build: ['tools/ci/app-build.sh']
-            # The assistant is native-only in parts, so its sources are the ones a wasm build catches out.
-            wasm_build: ['app/src/assistant*']
+            # Exercise browser infrastructure changes on the candidate PR too.
+            wasm_build: ['app/src/assistant*', '.github/actions/wasm-cache/**', '.github/workflows/ci.yml', '.github/workflows/pages.yml', 'tools/ci/wasm*']
 
   # The crysta SDK this run builds against, once per crysta commit (edi ADR-0083).
   crysta-sdk:

@@ -1,4 +1,4 @@
-"""Exact syntactic regression adaptation; the frozen archive remains the authority.
+"""Exact declared witness projections; the frozen archive remains the authority.
 
 Run this visible verifier after editing the receipt; it never derives new pins.
 """
@@ -21,6 +21,61 @@ GUI_AFTER = (
     '        tryVerify(() => Probe.computedCurrent(experiment), 10000,\n'
     '                  "GUI edit: an equal-write witness must await the initial calculation");\n'
 )
+
+
+SAVE_WITNESS = 'tests/integration/py/test_c34_t26_live_currentness.py'
+SAVE_EDITS = [
+    (
+        ('import test_c13_t4_march as march\n\n'),
+        (
+            'import test_c13_t4_march as march\n\nfrom tests.fixtures.'
+            'project_save.computed_columns import check as check_com'
+            'puted\n\n'
+        ),
+    ),
+    (
+        ("    original = (source / 'experiments/experiment.edi').read_text()\n"),
+        (
+            "    original = (source / 'experiments/experiment.edi')."
+            'read_text()\n    # The same zero background is explicit '
+            'so the independent interpolation\n    # reference reache'
+            's authored anchors, without changing the Bragg witness.'
+            "\n    original += (\n        '\\n_background.type line-seg"
+            "ment\\nloop_\\n_background.id\\n'\n        '_background.pos"
+            "ition\\n_background.intensity\\n'\n        'left 0 0\\nrigh"
+            "t 180 0\\n'\n    )\n    (source / 'experiments/experiment."
+            "edi').write_text(original)\n"
+        ),
+    ),
+    (
+        (
+            "    assert '_data.intensity_calc' not in edited_file an"
+            "d '_refln.index_h' not in edited_file, (\n        ' a st"
+            "ale bank is omitted if saved before a non-UI read'\n    "
+            ')\n'
+        ),
+        (
+            "    assert '_data.intensity_calc' in edited_file and '_"
+            "refln.index_h' in edited_file, (\n        'Save renews a"
+            ' held stale bank from its own saved inputs before a non'
+            "-UI read'\n    )\n    check_computed(destination, edi)\n"
+        ),
+    ),
+    (
+        (
+            "    assert '_data.intensity_calc' not in saved_text(pro"
+            "ject, tmp_path / route), (\n        ' an equal write sta"
+            "les a computed unit before any read'\n    )\n"
+        ),
+        (
+            "    assert '_data.intensity_calc' in saved_text(project"
+            ", tmp_path / route), (\n        'Save renews held result"
+            's after an equal dependency write before any non-UI rea'
+            "d'\n    )\n    check_computed(tmp_path / route / 'saved',"
+            ' edi)\n'
+        ),
+    ),
+]
 
 
 def tokens(text):
@@ -77,13 +132,42 @@ def adapted_gui_blob(original):
     return result
 
 
+def adapted_save_blob(original):
+    receipt = json.loads((HERE / 'api_witness_adaptation.json').read_text())['save']
+    assert (
+        receipt['kind'] == 'save-held-results-current-contract'
+        and receipt['witness'] == SAVE_WITNESS
+    ), 'The Save projection names only the original held-result currentness witness'
+    assert hashlib.sha256(original).hexdigest() == receipt['original_sha256'], (
+        'Save contract adaptation starts from its unchanged independent archived source'
+    )
+    assert receipt['replacements'] == [
+        {'before': before, 'after': after} for before, after in SAVE_EDITS
+    ], 'Save allows only declared renewal assertions, independent verification and zero anchors'
+    result = original.decode()
+    for before, after in SAVE_EDITS:
+        assert result.count(before) == 1, (
+            'Each authorized Save adaptation reaches one original site'
+        )
+        result = result.replace(before, after, 1)
+    projected = result.encode()
+    assert hashlib.sha256(projected).hexdigest() == receipt['adapted_sha256'], (
+        'Every other original currentness witness byte remains bound to its archive'
+    )
+    return projected
+
+
 if __name__ == '__main__':
     root = HERE.parents[2]
     with zipfile.ZipFile(
         root / 'tests/fixtures/e04_t12_public_release/history/api.zip'
     ) as archive:
-        for witness, adapt in ((WITNESS, adapted_blob), (GUI_WITNESS, adapted_gui_blob)):
+        for witness, adapt in (
+            (WITNESS, adapted_blob),
+            (GUI_WITNESS, adapted_gui_blob),
+            (SAVE_WITNESS, adapted_save_blob),
+        ):
             assert (root / witness).read_bytes() == adapt(archive.read(witness)), (
                 'each live witness is precisely its declared immutable-archive adaptation'
             )
-    print('Original archive and exact geometry/link and GUI/await adaptations verified')
+    print('Original archive and all declared witness projections verified')

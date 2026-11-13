@@ -122,7 +122,7 @@ jobs:
   publish-docs:
     name: publish documentation
     needs: docs
-    if: github.event.repository.private == false
+    if: github.event.repository.private == false && github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false
     concurrency:
       group: pages-publication
       cancel-in-progress: false
@@ -174,7 +174,7 @@ jobs:
   publish-wasm:
     name: publish WebAssembly
     needs: wasm
-    if: github.event.repository.private == false
+    if: github.event.repository.private == false && github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false
     concurrency:
       group: pages-publication
       cancel-in-progress: false
