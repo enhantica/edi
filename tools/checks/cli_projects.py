@@ -31,8 +31,10 @@ allowed resumes, though every value has settled. Every other fit must end ``done
 
 A quantity is a key of the machine record (``param.<label>.value`` included), or
 ``results[<x>].<column>`` — the ``analysis/results.csv`` row a scan wrote whose ``diffrn.*`` value
-is ``<x>``, or, when ``<x>`` is not a number, the row of the data file named ``<x>``. Every
-non-null ``tol_abs``/``tol_rel`` bound must hold; a fit's record must say ``status=done``. Every
+is ``<x>``, or, when ``<x>`` is not a number, the row of the data file named ``<x>``.
+Scan pins are compared to raw terminal results of fresh completed prefixes; each written
+CSV cell must also equal its declared reporting projection. Every non-null
+``tol_abs``/``tol_rel`` bound must hold; a fit's record must say ``status=done``. Every
 deviation is reported, never only the first, and any deviation is red.
 
 ``--settings <project-dir>`` prints :func:`loaded_settings` as JSON instead: an external shipment
@@ -56,6 +58,7 @@ import sys
 import tempfile
 import time
 from collections.abc import Callable
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 
 import yaml
@@ -420,11 +423,124 @@ def _float_or_none(value: str | None) -> float | None:
         return None
 
 
-def _measured(name: str, record: dict[str, str], project: Path) -> float:
-    match = RESULTS_KEY.fullmatch(name)
-    if match:
-        return float(_results_row(project, match['key'])[match['column']])
-    return float(record[name])
+def _check_prefix_rows(rows: list[dict], reproduced: list[dict]) -> None:
+    if len(reproduced) != len(rows):
+        raise ValueError('raw scan prefix did not complete its exact file walk')
+    for original, actual in zip(rows, reproduced, strict=True):
+        if Path(original['file_path']).name != Path(actual['file_path']).name:
+            raise ValueError('raw scan prefix changed the file order')
+        # Exact reported agreement with the CLI proves the prefix retained its predecessor chain.
+        for column, value in original.items():
+            if column != 'file_path' and value != actual.get(column):
+                raise ValueError(f'raw scan prefix changed reported {column}')
+
+
+def _raw_outcome_columns(project, outcome) -> dict[str, float]:
+    values = {
+        'fit_result.reduced_chi_square': outcome.reduced_chi_square,
+        'fit_result.iterations': outcome.iterations,
+        'fit_result.success': float(outcome.success),
+    }
+    roots = [(f'structures[{item.name}].', item.name + '.') for item in project.structures]
+    roots += [(f'experiments[{item.name}].', item.name + '.') for item in project.experiments]
+    if len(project.structures):
+        roots.append(('structure.', project.structures[0].name + '.'))
+    if len(project.experiments):
+        roots.append(('experiment.', project.experiments[0].name + '.'))
+    for raw_path, value in outcome.values.items():
+        matches = [
+            label + raw_path[len(head) :] for head, label in roots if raw_path.startswith(head)
+        ]
+        if len(matches) != 1:
+            raise ValueError(f'raw result path is not uniquely labelled: {raw_path}')
+        column = matches[0]
+        if column in values:
+            raise ValueError(f'duplicate raw result column: {column}')
+        values[column] = value
+        if raw_path in outcome.uncertainty:
+            values[column + '.uncertainty'] = outcome.uncertainty[raw_path]
+    return values
+
+
+def _prefix_outcome(template: Path, project: Path, rows: list[dict]) -> dict[str, float]:
+    import edi  # noqa: PLC0415
+
+    with tempfile.TemporaryDirectory(prefix='raw-scan-', dir=project.parent) as scratch:
+        prefix = Path(scratch) / 'project'
+        shutil.copytree(template, prefix, symlinks=True)
+        data = prefix / 'raw-scan-prefix'
+        data.mkdir()
+        for row in rows:
+            source = Path(row['file_path'])
+            source = source if source.is_absolute() else project / source
+            shutil.copy2(source, data / source.name)
+        analysis = prefix / 'analysis/analysis.edi'
+        lines = analysis.read_text(encoding='utf-8').splitlines()
+        lines = [
+            line
+            for line in lines
+            if not line.split() or line.split()[0] != '_sequential_fit.data_dir'
+        ]
+        analysis.write_text(
+            '\n'.join([*lines, '_sequential_fit.data_dir raw-scan-prefix']) + '\n',
+            encoding='utf-8',
+        )
+        raw_project = edi.Project.load(prefix)
+        deadline = time.monotonic() + FIT_TIMEOUT_S
+        outcome = raw_project.analysis.fit(
+            verbosity='off', should_cancel=lambda: time.monotonic() >= deadline
+        )
+        if time.monotonic() >= deadline:
+            raise TimeoutError('raw scan prefix exceeded the declared fit timeout')
+        with (prefix / 'analysis/results.csv').open(encoding='utf-8', newline='') as handle:
+            reproduced = list(csv.DictReader(handle))
+        _check_prefix_rows(rows, reproduced)
+        return _raw_outcome_columns(raw_project, outcome)
+
+
+def _raw_scan_rows(template: Path, project: Path, keys: list[str]) -> dict[str, dict]:
+    """Read each needed file's raw result from a fresh, completed prefix of the same scan.
+
+    The written CSV is reporting precision. A completed prefix preserves the full-precision
+    predecessor chain and leaves its last raw result on the public outcome. A cancelled scan
+    can return a later partial solve; a resumed scan seeds from rounded rows. Neither is a
+    substitute for this fresh, uninterrupted prefix.
+    """
+    with (project / 'analysis/results.csv').open(encoding='utf-8', newline='') as handle:
+        rows = list(csv.DictReader(handle))
+    selected = {key: _results_row(project, key) for key in keys}
+    needed = {rows.index(row) for row in selected.values()}
+    answers = {}
+    for index in sorted(needed):
+        values = _prefix_outcome(template, project, rows[: index + 1])
+        # Several extraction keys can select the same row: keep each alias explicit.
+        for key, row in selected.items():
+            if row == rows[index]:
+                answers[key] = values
+    return answers
+
+
+def _reported(column: str, raw: dict) -> Decimal:
+    """The declared two-significant-digit CSV projection, independently in decimal arithmetic."""
+    value = Decimal(str(raw[column]))
+    if not value.is_finite():
+        raise ValueError(f'{column}: raw value is not finite')
+    if column == 'fit_result.reduced_chi_square':
+        if value == 0:
+            return value
+        return value.quantize(Decimal(1).scaleb(value.adjusted() - 1), rounding=ROUND_HALF_UP)
+    base = column.removesuffix('.uncertainty')
+    su = Decimal(str(raw.get(base + '.uncertainty', 0)))
+    if not su.is_finite() or su < 0:
+        raise ValueError(f'{column}: raw uncertainty is invalid')
+    if su > 0:
+        quantum = Decimal(1).scaleb(su.adjusted() - 1)
+        rounded_su = su.quantize(quantum, rounding=ROUND_CEILING)
+        if column.endswith('.uncertainty'):
+            return rounded_su
+        quantum = Decimal(1).scaleb(rounded_su.adjusted() - 1)
+        return value.quantize(quantum, rounding=ROUND_HALF_UP)
+    return value
 
 
 def _deviations(name: str, spec: dict, measured: float) -> list[str]:
@@ -439,6 +555,20 @@ def _deviations(name: str, spec: dict, measured: float) -> list[str]:
     if spec.get('tol_abs') is None and spec.get('tol_rel') is None and not math.isfinite(measured):
         out.append(f'{name}: {measured} is not finite')
     return out
+
+
+def _measurement(
+    name: str, record: dict, project: Path, raw_rows: dict
+) -> tuple[float, list[str]]:
+    match = RESULTS_KEY.fullmatch(name)
+    if not match:
+        return float(record[name]), []
+    raw = raw_rows[match['key']]
+    measured = raw[match['column']]
+    written = Decimal(_results_row(project, match['key'])[match['column']])
+    expected = _reported(match['column'], raw)
+    findings = [] if written == expected else [f'{name}: reporting {written} vs {expected}']
+    return measured, findings
 
 
 def run_project(root: Path, pid: str) -> list[str]:
@@ -457,6 +587,17 @@ def run_project(root: Path, pid: str) -> list[str]:
             if change is not None:
                 change(project)
             declare_conditions(project, conditions)
+            scan_keys = [
+                match['key']
+                for name in quantities
+                if (match := RESULTS_KEY.fullmatch(name)) is not None
+            ]
+            if scan_keys:
+                shutil.copytree(project, Path(scratch) / 'raw-template', symlinks=True)
+                if (Path(scratch) / 'raw-template/analysis/results.csv').exists():
+                    raise ValueError(
+                        'raw scan verification requires a fresh input without results.csv'
+                    )
             command = 'calc' if label == 'calc' else 'fit'
             argv = [sys.executable, '-m', 'edi', command, str(project), '--report', 'machine']
             argv += ['--verbosity', 'full']
@@ -469,12 +610,18 @@ def run_project(root: Path, pid: str) -> list[str]:
             record = dict(line.split('=', 1) for line in result.stdout.splitlines() if '=' in line)
             if command == 'fit' and record.get('status') != status:
                 deviations.append(f'{label}: status={record.get("status")!r}, expected {status}')
+            raw_rows = (
+                _raw_scan_rows(Path(scratch) / 'raw-template', project, scan_keys)
+                if scan_keys
+                else {}
+            )
             for name, spec in quantities.items():
                 try:
-                    measured = _measured(name, record, project)
-                except (KeyError, ValueError, OSError) as exc:
+                    measured, reporting = _measurement(name, record, project, raw_rows)
+                except (KeyError, ValueError, OSError, InvalidOperation) as exc:
                     deviations.append(f'{label}: {name}: not measured ({exc})')
                     continue
+                deviations.extend(f'{label}: {line}' for line in reporting)
                 deviations.extend(f'{label}: {line}' for line in _deviations(name, spec, measured))
     return deviations
 
