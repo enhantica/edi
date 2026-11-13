@@ -38,6 +38,7 @@ import argparse
 import contextlib
 import json
 import math
+import os
 import signal
 import sys
 import tempfile
@@ -492,6 +493,15 @@ def _run_human(project: edi.Project, verbosity, project_name: str, *, clock=time
     return _exit_code(human_fit(project, verbosity, project_name, clock=clock))
 
 
+def _terminal_columns(*, tty: bool) -> int:
+    if not tty:
+        return 0
+    try:
+        return max(1, os.get_terminal_size(sys.stdout.fileno()).columns)
+    except (OSError, ValueError, AttributeError):
+        return 80
+
+
 def human_fit(
     project: edi.Project, verbosity, project_name: str, *, clock=time.monotonic, cancel=None
 ) -> edi.FitResultBase:
@@ -561,15 +571,11 @@ def human_fit(
 
         def _emit_progress(line: str) -> None:
             if tty:
-                # An in-place rewrite must cover the PREVIOUS line's full width: `\r` moves the
-                # cursor, it erases nothing, so any SHORTER successor — the frozen 100 % line
-                # dropping eta/file/χ², a shorter file name — would leave the predecessor's
-                # tail visible (owner-measured on the 213-file scan: the stale ` · 2 fail ·
-                # <file> · χ² …` read as a doubled fail group). Space padding, not an ANSI
-                # erase, so a TTY that interprets no escape sequences still shows a clean line;
-                # every character this line emits is single-column, so its length is its width.
-                padding = ' ' * max(0, last_width[0] - len(line))
-                sys.stdout.write('\r' + line + padding)
+                sys.stdout.write(
+                    edi._edi._scan_progress_rewrite(
+                        line, last_width[0], _terminal_columns(tty=tty)
+                    )
+                )
                 last_width[0] = len(line)
                 live[0] = True
             else:
@@ -585,20 +591,31 @@ def human_fit(
             for row in getattr(preamble, 'completed_rows', []):
                 tally.add(row)
             prior[0] = tally.completed
+            sys.stdout.write(
+                edi._edi._scan_progress_heading(
+                    project_name,
+                    project.fitting_mode == 'sequential',
+                    state['total'],
+                    prior[0] > 0,
+                    _terminal_columns(tty=tty),
+                )
+                + '\n'
+            )
+            sys.stdout.flush()
 
         def on_file_complete(record: object) -> None:
             tally.add(record)
             state['elapsed'] = clock() - started
             _emit_progress(
-                edi.scan_progress_line(
-                    completed=tally.completed,
-                    total_files=state['total'],
-                    elapsed_seconds=state['elapsed'],
-                    measured_completed=tally.completed - prior[0],
-                    ok_count=tally.ok,
-                    fail_count=tally.failed,
-                    file_name=record.file_name,
-                    reduced_chi_square=record.reduced_chi_square,
+                edi._edi._scan_progress_row(
+                    tally.completed,
+                    state['total'],
+                    state['elapsed'],
+                    tally.completed - prior[0],
+                    tally.ok,
+                    tally.failed,
+                    record.reduced_chi_square,
+                    _terminal_columns(tty=tty),
                 )
             )
 

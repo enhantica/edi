@@ -9,6 +9,7 @@ import csv
 import io
 import math
 import os
+import re
 import shutil
 from pathlib import Path
 from types import SimpleNamespace
@@ -119,6 +120,7 @@ class _FakeAnalysis:
 
 class _FakeProject:
     _scan_declared = True
+    fitting_mode = 'sequential'
 
     def __init__(self) -> None:
         self.analysis = _FakeAnalysis()
@@ -309,17 +311,17 @@ def test_non_tty_emits_one_line_per_file_without_carriage_returns(
         ' non-TTY output must contain no carriage returns that pollute captured logs'
     )
     lines = output.splitlines()
-    progress = [line for line in lines if line.startswith('[')]
+    progress = [line for line in lines if re.match(r'^\s*\d+/3\s', line)]
     assert len(progress) == 3, (
         ' non-TTY output must emit exactly one progress line per completed file'
     )
-    assert '1/3' in progress[0] and '33%' in progress[0], (
+    assert progress[0].split()[:2] == ['1/3', '33.3%'], (
         ' first line must use the scan preamble N and first completion count'
     )
-    assert 'elapsed 1m01s' in progress[0] and 'eta 2m02s' in progress[0], (
+    assert progress[0].split()[2:4] == ['1m01s', '2m02s'], (
         ' elapsed and ETA must come exactly from the injected clock values'
     )
-    assert '1 ok' in progress[1] and '1 fail' in progress[1], (
+    assert progress[1].split()[4:6] == ['1', '1'], (
         ' live progress must expose failures as soon as a file fails'
     )
     assert lines[-1:] == [
@@ -349,13 +351,16 @@ def test_partial_resume_uses_current_run_eta_and_counts_prior_failures(
 
     rows = _read_result_rows(project_dir)
     lines = output.getvalue().splitlines()
-    progress = [line for line in lines if line.startswith('[')]
+    progress = [line for line in lines if re.match(r'^\s*\d+/3\s', line)]
     assert len(progress) == 2 and '2/3' in progress[0], (
         ' partial resume must emit only the two newly completed files while retaining N'
     )
-    assert 'elapsed 1m00s' in progress[0] and 'eta 1m00s' in progress[0], (
+    assert progress[0].split()[2:4] == ['1m00s', '1m00s'], (
         ' resume ETA must divide this run elapsed by this run completions, not by the '
         'historical-plus-current completed count'
+    )
+    assert 'Elapsed (this run)' in output.getvalue(), (
+        'Resumed elapsed facts explicitly identify the current measured invocation'
     )
     _assert_failure_count_without_file_list(lines, rows)
 
@@ -381,7 +386,7 @@ def test_completed_noop_resume_reports_all_committed_facts_without_fake_time(
     ), ' completed no-op resume must complete without a new fit'
 
     lines = output.getvalue().splitlines()
-    assert not any(line.startswith('[') for line in lines), (
+    assert not any(re.match(r'^\s*\d+/3\s', line) for line in lines), (
         ' completed no-op resume must not fabricate a per-file completion line'
     )
     _assert_failure_count_without_file_list(lines, seeded)
@@ -403,13 +408,26 @@ def test_tty_updates_in_place_then_freezes_before_summary(
     )
     assert output.count('\r') >= 2, ' TTY progress must update earlier file completions in place'
     visible_lines = _terminal_visible_lines(output)
-    assert visible_lines == [
-        '[██████████████] · 3/3 · 100% · elapsed 5m00s · 2 ok · 1 fail',
-        'scan · 3 files · 2 converged · 1 failed · reduced χ² 3.91-8.44 · 5m00s',
-    ], (
-        ' TTY output must overwrite the longer penultimate progress row completely, '
-        'freeze the exact 100% row, and then show the truthful failure-count summary'
+    assert len(visible_lines) == 5 and visible_lines[:2] == ['Sequential fit: scan-demo', ''], (
+        'TTY output retains one static project title and one numeric progress row before summary'
     )
+    assert visible_lines[2].split() == [
+        'Completed',
+        'Progress',
+        'Elapsed',
+        'ETA',
+        '(est.)',
+        'OK',
+        'Failed',
+        'chi2',
+    ], 'The static heading owns the complete labelled progress schema'
+    assert visible_lines[3].split() == ['3/3', '100.0%', '5m00s', '2', '1'], (
+        'The final row freezes exact completed clocks and failures with no stale earlier cells'
+    )
+    assert (
+        visible_lines[4]
+        == 'scan · 3 files · 2 converged · 1 failed · reduced χ² 3.91-8.44 · 5m00s'
+    ), 'The existing truthful failure-count and chi-square summary remains byte unchanged'
 
 
 def test_scan_iteration_stream_is_suppressed_by_default_and_present_at_full(
@@ -478,9 +496,17 @@ def test_cli_delegates_every_scan_line_to_core_renderers() -> None:
             reachable.add(called)
             pending.append(called)
     run_human = '\n'.join(functions[name] for name in reachable)
-    assert 'edi.scan_progress_line' in run_human and 'edi.scan_summary' in run_human, (
-        ' CLI must delegate scan progress and summary formatting to the core'
-    )
+    called = {
+        call.func.attr
+        for call in ast.walk(ast.parse(run_human))
+        if isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
+    }
+    assert {
+        '_scan_progress_heading',
+        '_scan_progress_row',
+        '_scan_progress_rewrite',
+        'scan_summary',
+    } <= called, 'Every actual progress projection, rewrite and summary call delegates to the core'
     forbidden = ('████', 'elapsed ', ' eta ', 'failed ·')
     assert not any(token in run_human for token in forbidden), (
         ' CLI may choose stdout policy but must not own scan-line format literals'

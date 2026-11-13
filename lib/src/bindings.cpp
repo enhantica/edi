@@ -31,6 +31,7 @@
 #include <variant>
 #include <vector>
 
+#include "scan_progress.hpp"
 #include "edi/online_fetch.hpp"
 #include "edi/online_index.hpp"
 #include "edi/background_estimate.hpp"
@@ -4371,6 +4372,9 @@ NB_MODULE(_edi, m) {
           "The sample form a fit's metrics are named by: `single crystal` for a single-crystal fit, else empty.");
     // Scan renderers: the core owns every line; a surface only chooses the emission mode (in
     // place on a TTY, one line per file otherwise) and supplies the injected-clock elapsed.
+    m.def("_scan_progress_heading", &edi::detail::scan_progress_heading);
+    m.def("_scan_progress_row", &edi::detail::scan_progress_row);
+    m.def("_scan_progress_rewrite", &edi::detail::scan_progress_rewrite);
     m.def("scan_progress_line", &edi::scan_progress_line, "completed"_a,
           "total_files"_a.none() = nb::none(), "elapsed_seconds"_a, "measured_completed"_a,
           "ok_count"_a, "fail_count"_a, "file_name"_a, "reduced_chi_square"_a,

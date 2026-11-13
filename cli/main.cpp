@@ -14,8 +14,13 @@
 
 #ifdef _WIN32
 #include <io.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #else
 #include <unistd.h>
+#include <sys/ioctl.h>
 #endif
 
 #include "edi/io.hpp"
@@ -26,6 +31,7 @@
 #include "edi/threading.hpp"
 #include "edi/version.hpp"
 #include "downloads.hpp"
+#include "scan_progress.hpp"
 
 namespace {
 
@@ -52,6 +58,18 @@ bool stdout_is_terminal() {
 #else
     return isatty(STDOUT_FILENO) != 0;
 #endif
+}
+
+std::size_t terminal_columns() {
+#ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO info{};
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info))
+        return static_cast<std::size_t>(info.srWindow.Right - info.srWindow.Left + 1);
+#else
+    winsize size{};
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == 0 && size.ws_col > 0) return size.ws_col;
+#endif
+    return 80;
 }
 
 // The scan's counts and reduced chi-square range, folded once per committed row: the resumed rows
@@ -155,20 +173,20 @@ void fit(const std::string& source, const std::string& output, bool dry,
             total = preamble.total_files;
             for (const auto& row : preamble.completed_rows) tally.add(row);
             tally.prior = tally.completed;
+            std::cout << edi::detail::scan_progress_heading(name, project.fitting_mode == "sequential",
+                                                            total, tally.prior > 0, in_place ? terminal_columns() : 0)
+                      << '\n' << std::flush;
         };
         on_file_complete = [&](const edi::ScanFileRecord& record) {
             tally.add(record);
             elapsed =
                 std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-            const std::string line = edi::scan_progress_line(
+            const std::size_t columns = in_place ? terminal_columns() : 0;
+            const std::string line = edi::detail::scan_progress_row(
                 tally.completed, total, elapsed, tally.completed - tally.prior, tally.ok,
-                tally.completed - tally.ok, record.file_name, record.reduced_chi_square);
+                tally.completed - tally.ok, record.reduced_chi_square, columns);
             if (in_place) {
-                // A shorter line must cover the one it replaces: \r moves the cursor and erases
-                // nothing.
-                std::cout << '\r' << line
-                          << std::string(last_width > line.size() ? last_width - line.size() : 0,
-                                         ' ');
+                std::cout << edi::detail::scan_progress_rewrite(line, last_width, columns);
                 last_width = line.size();
                 live = true;
             } else {

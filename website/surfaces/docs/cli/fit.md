@@ -148,3 +148,11 @@ When scan files run in parallel, each fit uses one thread. In a sequential scan,
 starts from the preceding group's result, so using more than one parallel fit can change starting
 values and results. Use `--parallel-fits 1` for a strict chain in which each file starts from its
 immediate predecessor.
+
+### Scan progress
+
+Scan fits print the project and column headings once. The row reports completed files, progress,
+elapsed time, estimated time remaining, successful and failed fits, and the latest chi-square.
+On a terminal it updates in place; narrower terminals omit optional columns to keep the row
+within the window. Redirected output writes one row per completed file. On a resumed fit,
+elapsed time is marked `this run` and the estimate uses only files fitted during that invocation.

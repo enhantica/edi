@@ -111,3 +111,20 @@ integration sources as well as unit/probe sources. This covers the first single-
 new CLI performance observer together, including future fixture directories, so an uncommitted observer
 input cannot be treated as the committed native build. The legacy artifact transport still needs its
 separate SDK-contract update before it can be re-enabled in current workflows.
+
+
+## Bounded scan progress rows
+
+Both CLI hosts use one private core table projection: project identity and column labels precede
+the numeric rows. Counts reserve their total's digit width (the count type's maximum width for
+an unknown total), so crossing a digit boundary cannot move the columns. The elapsed value
+still names “this run” on resume, and ETA uses only the completions covered by that clock.
+Unknown totals have no percentage or ETA; failures remain visible at completion. The original
+public scan_progress_line remains available for callers and shares the duration/ETA calculation.
+
+TTY hosts read the actual terminal width on each event, leaving its last column unused to prevent
+automatic wrapping. The projection drops chi-square, percentage, then ETA when necessary; the
+rewrite bounds both the row and its clearing spaces after a resize. Plain ASCII rows avoid
+byte/display-width disagreement. Redirected output retains one complete row per completion.
+The private functions are host plumbing, outside the public Python surface. Machine records
+and saved scientific values are unaffected.

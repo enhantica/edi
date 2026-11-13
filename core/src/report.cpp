@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "edi/report.hpp"
+#include "scan_progress.hpp"
 
 #include "crysta/dictionary_items.hpp"
 #include "edi/report_model.hpp"
@@ -15,6 +16,7 @@
 #include <cstdio>
 #include <iomanip>
 #include <locale>
+#include <limits>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -505,6 +507,8 @@ constexpr int kScanBarCells = 14;
 // `MmSSs` / `Ss` / `HhMMmSSs`, rounded to whole seconds — a progress line reads as a clock, not
 // a measurement (the machine record carries exact elapsed_ms; this channel is the human one).
 std::string scan_duration(double seconds) {
+    if (!std::isfinite(seconds) || seconds < 0 ||
+        seconds >= static_cast<double>(std::numeric_limits<long long>::max()) - 1) return "-";
     const long long total = static_cast<long long>(seconds + 0.5);
     char buffer[48];
     if (total < 60) {
@@ -534,6 +538,39 @@ std::string scan_elapsed_suffix(const std::string& duration, int measured, int p
 
 std::string scan_elapsed(double seconds, int measured, int population) {
     return scan_elapsed_suffix(scan_duration(seconds), measured, population);
+}
+
+std::optional<double> scan_eta(int completed, std::optional<int> total, double elapsed,
+                               int measured) {
+    if (!total || measured <= 0 || completed >= *total) return std::nullopt;
+    return elapsed / measured * (*total - completed);
+}
+
+std::string scan_table(std::optional<int> total, const std::vector<std::string>& values,
+                       std::size_t columns) {
+    const auto digits = std::to_string(total && *total > 0 ? *total : std::numeric_limits<int>::max()).size();
+    const std::vector<std::size_t> widths{std::max(std::size_t{9}, 2 * digits + 1), 8, 18,
+                                          10, std::max(std::size_t{2}, digits),
+                                          std::max(std::size_t{6}, digits), 10};
+    std::vector<bool> visible(widths.size(), true);
+    const auto width = [&] {
+        std::size_t result = 0;
+        for (std::size_t i = 0; i < widths.size(); ++i) if (visible[i]) result += widths[i] + 2;
+        return result - 2;
+    };
+    const auto budget = columns > 0 ? columns - 1 : std::numeric_limits<std::size_t>::max();
+    for (std::size_t omit : {6, 1, 3}) {
+        if (width() > budget) visible[omit] = false;
+    }
+    std::string line;
+    for (std::size_t i = 0; i < widths.size(); ++i) {
+        if (!visible[i]) continue;
+        if (!line.empty()) line += "  ";
+        if (values[i].size() < widths[i]) line += std::string(widths[i] - values[i].size(), ' ');
+        line += values[i];
+    }
+    if (line.size() > budget) line.resize(budget);
+    return line;
 }
 
 void append_scan_part(std::string& line, const std::string& part) {
@@ -572,14 +609,8 @@ std::string scan_progress_line(int completed, std::optional<int> total_files,
     }
     append_scan_part(line,
                      "elapsed " + scan_elapsed(elapsed_seconds, measured_completed, completed));
-    if (total_files.has_value() && measured_completed > 0 && completed < *total_files) {
-        // mean(elapsed over the completions the clock COVERS) × remaining — an ESTIMATE, and
-        // labelled as one. The denominator is `measured_completed`, never `completed`: on a
-        // resumed scan the elapsed covers only this call's files, so dividing by the whole-scan
-        // total would pair one population's time with another's count and systematically
-        // under-estimate.
-        const double eta = elapsed_seconds / measured_completed * (*total_files - completed);
-        append_scan_part(line, "eta " + scan_duration(eta));
+    if (const auto eta = scan_eta(completed, total_files, elapsed_seconds, measured_completed)) {
+        append_scan_part(line, "eta " + scan_duration(*eta));
     }
     append_scan_part(line, std::to_string(ok_count) + " ok");
     append_scan_part(line, std::to_string(fail_count) + " fail");
@@ -590,6 +621,43 @@ std::string scan_progress_line(int completed, std::optional<int> total_files,
     }
     return line;
 }
+
+namespace detail {
+std::string scan_progress_heading(const std::string& project_name, bool sequential,
+                                  std::optional<int> total_files, bool resumed, std::size_t columns) {
+    std::string name = project_name;
+    for (char& ch : name) if (static_cast<unsigned char>(ch) < 32 || ch == 127) ch = ' ';
+    return std::string(sequential ? "Sequential fit: " : "Independent fit: ") + name + "\n\n" +
+        scan_table(total_files, {"Completed", "Progress", resumed ? "Elapsed (this run)" : "Elapsed", "ETA (est.)", "OK", "Failed", "chi2"}, columns);
+}
+
+std::string scan_progress_row(int completed, std::optional<int> total_files,
+                              double elapsed_seconds, int measured_completed, int ok_count,
+                              int fail_count, double reduced_chi_square, std::size_t columns) {
+    const bool known = total_files && *total_files > 0;
+    const bool finished = known && completed >= *total_files;
+    std::ostringstream percent, chi;
+    percent.imbue(std::locale::classic());
+    chi.imbue(std::locale::classic());
+    if (known) percent << std::fixed << std::setprecision(1) << 100.0 * completed / *total_files << '%';
+    if (!finished && std::isfinite(reduced_chi_square)) chi << std::setprecision(3) << reduced_chi_square;
+    const auto eta = scan_eta(completed, total_files, elapsed_seconds, measured_completed);
+    return scan_table(total_files, {
+        std::to_string(completed) + (known ? "/" + std::to_string(*total_files) : ""),
+        percent.str(), scan_duration(elapsed_seconds),
+        eta ? scan_duration(*eta) : "", std::to_string(ok_count), std::to_string(fail_count), chi.str()
+    }, columns);
+}
+
+std::string scan_progress_rewrite(const std::string& line, std::size_t previous_width,
+                                  std::size_t columns) {
+    const auto budget = columns > 0 ? columns - 1 : std::numeric_limits<std::size_t>::max();
+    std::string visible = line.substr(0, budget);
+    const auto erase_width = std::min(previous_width, budget);
+    if (visible.size() < erase_width) visible.append(erase_width - visible.size(), ' ');
+    return "\r" + visible;
+}
+}  // namespace detail
 
 std::string scan_summary(int total_files, int ok_count, int fail_count, double chi2_min,
                          double chi2_max, double elapsed_seconds, int measured_completed) {

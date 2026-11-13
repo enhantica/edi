@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <mutex>
 #include <string>
 #include <utility>
@@ -22,7 +23,14 @@ void finished() {
 void starting(const std::string& file,
               const std::vector<std::pair<std::string, double>>& starts) {
     std::lock_guard lock(mutex);
-    std::ofstream out(std::getenv("EDI_CLI_PERFORMANCE_TRACE"), std::ios::app);
+    if (std::getenv("EDI_CLI_PROGRESS_CONTROL")) {
+        std::cerr << "EDI_PROGRESS_BOUNDARY\n" << std::flush;
+        std::string reply;
+        if (!std::getline(std::cin, reply) || reply != "continue") std::abort();
+    }
+    const char* trace = std::getenv("EDI_CLI_PERFORMANCE_TRACE");
+    if (!trace) return;
+    std::ofstream out(trace, std::ios::app);
     out << "{\"kind\":\"start\",\"file\":" << std::quoted(file)
         << ",\"threads\":" << edi::engine_threads_setting()
         << ",\"parallel\":" << edi::scan_workers_setting() << ",\"values\":{";
@@ -36,7 +44,7 @@ void starting(const std::string& file,
 }
 struct Observe {
     Observe() {
-        if (!std::getenv("EDI_CLI_PERFORMANCE_TRACE")) return;
+        if (!std::getenv("EDI_CLI_PERFORMANCE_TRACE") && !std::getenv("EDI_CLI_PROGRESS_CONTROL")) return;
         edi::set_engine_threads(5);
         edi::set_scan_workers(7);
         crysta::set_scan_file_start_observer(starting);
