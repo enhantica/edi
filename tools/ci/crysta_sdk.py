@@ -3,6 +3,8 @@
 
   crysta_sdk.py fetch --platform P    reuse or unpack the pinned commit's SDK, check it
   crysta_sdk.py check --sdk DIR --platform P    the fingerprint check alone (CRYSTA_SDK_DIR)
+  crysta_sdk.py preflight --source-lock PATH --platform P --lockfile PATH --environment ENV
+      compare producer and consumer ABI package locks before compiling a cold SDK
   crysta_sdk.py pins pixi.toml    the pinned commit
 
 The pin is `CRYSTA_COMMIT` under `[activation.env]` in pixi.toml. edi's own CI builds that commit's
@@ -70,7 +72,10 @@ def lock_packages(
 ) -> dict[str, tuple[str, str]]:
     """Return ``{name: (version, build)}`` pixi.lock resolves for ``env`` on ``platform``."""
     lines = (lockfile or ROOT / 'pixi.lock').read_text(encoding='utf-8').splitlines()
-    head = lines[: next(i for i, x in enumerate(lines) if x.startswith('environments:'))]
+    environments_at = next((i for i, line in enumerate(lines) if line == 'environments:'), None)
+    if environments_at is None:
+        refuse(f'{lockfile or ROOT / "pixi.lock"}: missing lock environments')
+    head = lines[:environments_at]
     plats: dict[str, str] = {}  # lock platform name -> conda subdir (without `subdir:`, its name)
     name = None
     for ln in head:
@@ -124,6 +129,22 @@ REQUIRED = {
 REQUIRED['win-64'] = {'vs2022_win-64', 'vc14_runtime', 'vcomp14', 'eigen'}
 TESTED = ('lib/libcrysta_core.a', 'bin/crysta')  # the qualified bytes the manifest's hashes bind
 RUNTIME = 'lib/crysta-runtime'  # The env libraries the SDK's CLI carries
+
+
+def preflight(source_lock: Path, platform: str, lockfile: Path, environment: str) -> None:
+    """Refuse incompatible locked ABI packages before an uncached SDK is compiled."""
+    producer = lock_packages('cpp-ci', platform, source_lock)
+    consumer = lock_packages(environment, platform, lockfile)
+    differences = []
+    for name in sorted(REQUIRED[platform]):
+        built, used = producer.get(name), consumer.get(name)
+        if built is None or used is None or built != used:
+            differences.append(f'{name}: producer {built!r}, consumer {used!r}')
+    if differences:
+        refuse(
+            f'SDK package locks differ for {platform}, environment {environment!r}: '
+            + '; '.join(differences)
+        )
 
 
 def tested_paths(platform: str) -> tuple[str, str]:
@@ -353,6 +374,11 @@ def main(argv: list[str]) -> int:
     sub = parser.add_subparsers(dest='cmd', required=True)
     fetch_parser = sub.add_parser('fetch')
     fetch_parser.add_argument('--platform', required=True, choices=PLATFORMS)
+    pre = sub.add_parser('preflight')
+    pre.add_argument('--source-lock', required=True, type=Path)
+    pre.add_argument('--platform', required=True, choices=PLATFORMS)
+    pre.add_argument('--lockfile', required=True, type=Path)
+    pre.add_argument('--environment', required=True)
     # The pinned commit
     sub.add_parser('pins').add_argument('pixi_toml', type=Path)
     p = sub.add_parser('check')
@@ -374,6 +400,10 @@ def run(a: argparse.Namespace) -> None:
     """Run one subcommand; `fetch` and `check` print the provenance line the CI evidence reads."""
     if a.cmd == 'pins':
         print(pinned(a.pixi_toml.read_text(encoding='utf-8')))
+        return
+    if a.cmd == 'preflight':
+        preflight(a.source_lock, a.platform, a.lockfile, a.environment)
+        print(f'crysta: SDK ABI package locks match {a.platform} / {a.environment}')
         return
     home = fetch(a.platform) if a.cmd == 'fetch' else a.sdk.resolve()
     options = {

@@ -17,7 +17,12 @@ from tests.fixtures.e09_t75_workflow import active
 
 ROOT = Path(__file__).resolve().parents[3]
 PRODUCER = '.github/workflows/crysta-sdk.yml'
-INPUTS = (PRODUCER, 'tools/ci/crysta_source_receipt.py', '.github/actions/setup-pixi/action.yml')
+INPUTS = (
+    PRODUCER,
+    'tools/ci/crysta_source_receipt.py',
+    '.github/actions/setup-pixi/action.yml',
+    'tools/ci/crysta_sdk.py',
+)
 
 
 def document(path):
@@ -351,7 +356,7 @@ def test_compiler_cache_precedes_install_and_is_keyed_by_actual_engine_lock(tmp_
         )
         observed.append(fields['lock'])
     assert observed[0] != observed[1], (
-        'Changing the actual engine lock invalidates cross-pin object reuse'
+        'Changing the actual engine lock invalidates the exact object-cache identity'
     )
 
 
@@ -523,3 +528,37 @@ def test_actual_sparse_checkout_omits_reserved_fixture_and_keeps_producer_inputs
             )
         else:
             assert (target / name).read_bytes() == data, 'Producer configuration remains complete'
+
+
+def compiler_restore_scope(object_cache, archive_cache):
+    prefixes = [
+        line.strip() for line in object_cache['with']['restore-keys'].splitlines() if line.strip()
+    ]
+    assert prefixes == [
+        'crysta-objects-v1-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-',
+        'crysta-objects-v1-${{ matrix.platform }}-',
+    ], 'Compiler objects restore exact lock first, then the same platform with content validation'
+    assert not archive_cache['with'].get('restore-keys'), (
+        'A qualified SDK archive must never use the broader compiler-object fallback'
+    )
+
+
+def test_compiler_objects_cross_lock_fallback_never_escapes_platform_or_qualified_archive():
+    steps = document(PRODUCER)['jobs']['build']['steps']
+    objects = next(step for step in steps if step.get('id') == 'compiler-cache')
+    archive = next(step for step in steps if step.get('id') == 'cache')
+    compiler_restore_scope(objects, archive)
+    for escape in ('cross-platform', 'broad', 'reordered', 'qualified-archive'):
+        bad_objects, bad_archive = copy.deepcopy(objects), copy.deepcopy(archive)
+        prefixes = bad_objects['with']['restore-keys'].splitlines()
+        if escape == 'cross-platform':
+            prefixes[-1] = 'crysta-objects-v1-linux-64-'
+        elif escape == 'broad':
+            prefixes.append('crysta-objects-v1-')
+        elif escape == 'reordered':
+            prefixes.reverse()
+        else:
+            bad_archive['with']['restore-keys'] = 'crysta-sdk-v3-${{ matrix.platform }}-'
+        bad_objects['with']['restore-keys'] = '\n'.join(prefixes)
+        with pytest.raises(AssertionError):
+            compiler_restore_scope(bad_objects, bad_archive)

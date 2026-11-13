@@ -779,8 +779,9 @@ jobs:
     # Browser input changes qualify the multithread kit and both isolation routes on pull requests too.
     if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && (github.event_name != 'pull_request' || needs.changes.outputs.wasm_build == 'true') && inputs.core_only != true }}
     environment: crysta-sdk
-    # Browser qualification is independent of the native test outcome.
-    needs: [changes, crysta-sdk]
+    # Browser qualification restores the native producer artifact after it finishes;
+    # its own scientific checks remain independent of the native test outcome.
+    needs: [changes, native, crysta-sdk]
     runs-on: *linux
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}

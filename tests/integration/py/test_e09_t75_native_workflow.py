@@ -641,3 +641,89 @@ def test_native_action_refuses_foreign_optional_and_fallback_routes(tmp_path, da
         download['with'][damage] = 'foreign'
     with pytest.raises(AssertionError):
         native_action_boundary(mutant)
+
+
+def native_ancestors(data, name, trail=()):
+    assert name in data, 'Artifact scheduling must reference an existing workflow job'
+    assert name not in trail, 'Artifact scheduling cannot rely on a cyclic dependency graph'
+    dependencies = data[name].get('needs', [])
+    dependencies = [dependencies] if isinstance(dependencies, str) else dependencies
+    ancestors = set(dependencies)
+    for dependency in dependencies:
+        ancestors.update(native_ancestors(data, dependency, (*trail, name)))
+    return ancestors
+
+
+def native_reusers_wait_for_producer(data):
+    reusers = {
+        name
+        for name, job in data.items()
+        if any(step.get('uses') == './.github/actions/edi-native' for step in job.get('steps', []))
+    }
+    assert reusers, 'The workflow must expose its real native artifact restoration routes'
+    for name in reusers:
+        assert 'native' in native_ancestors(data, name), (
+            'Every same-run native artifact reuser must wait transitively for its producer'
+        )
+    return reusers
+
+
+def test_every_actual_native_artifact_reuser_waits_for_completed_producer():
+    data = jobs()
+    reusers = native_reusers_wait_for_producer(data)
+    for name in reusers:
+        changed = copy.deepcopy(data)
+        changed[name]['needs'] = ['changes', 'crysta-sdk']
+        with pytest.raises(AssertionError, match='wait transitively'):
+            native_reusers_wait_for_producer(changed)
+    changed = copy.deepcopy(data)
+    changed['future-unordered-consumer'] = {
+        'steps': [{'uses': './.github/actions/edi-native'}],
+        'needs': 'changes',
+    }
+    with pytest.raises(AssertionError, match='wait transitively'):
+        native_reusers_wait_for_producer(changed)
+
+
+def test_native_artifact_scheduling_accepts_real_transitive_edges_and_refuses_graph_escapes():
+    data = {
+        'changes': {},
+        'crysta-sdk': {},
+        'native': {'needs': ['changes', 'crysta-sdk']},
+        'diagnostic-ready': {'needs': 'native'},
+        'reader': {
+            'needs': 'diagnostic-ready',
+            'steps': [{'uses': './.github/actions/edi-native'}],
+        },
+    }
+    assert native_reusers_wait_for_producer(data) == {'reader'}, (
+        'A proven transitive wait may carry the artifact without imposing direct-edge duplication'
+    )
+    for escape in ('absent-job', 'reader'):
+        changed = copy.deepcopy(data)
+        changed['diagnostic-ready']['needs'] = escape
+        with pytest.raises(AssertionError):
+            native_reusers_wait_for_producer(changed)
+
+
+def test_browser_diagnostics_wait_for_native_completion_without_requiring_native_test_success():
+    job = copy.deepcopy(jobs()['app-wasm'])
+    assert 'native' in native_ancestors(jobs(), 'app-wasm'), (
+        'Browser restoration must wait until its same-run native producer has finished'
+    )
+    selector = 'needs.changes.outputs.wasm_build'
+    assert selector in job['if'], 'The actual browser diagnostic retains its owed-input selector'
+    job['if'] = job['if'].replace(selector, "'true'")
+    states = {'changes': 'success', 'native': 'failure', 'crysta-sdk': 'success'}
+    assert active(job, 'pull_request', states=states), (
+        'Native test failure after upload must still permit independent browser diagnostics'
+    )
+    assert not active(job, 'pull_request', states=states, cancelled=True), (
+        'A cancelled workflow must not launch independent browser diagnostics'
+    )
+    assert not active(job, 'pull_request', states=states, fork=True), (
+        'Native diagnostic independence must retain the trusted-repository boundary'
+    )
+    assert not active(job, 'pull_request', states=states, core_only=True), (
+        'Native diagnostic independence must retain the explicit core-only selection'
+    )

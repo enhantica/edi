@@ -32,7 +32,7 @@ jobs:
           import hashlib, os
           from pathlib import Path
           digest = hashlib.sha256()
-          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_source_receipt.py', '.github/actions/setup-pixi/action.yml']:
+          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_source_receipt.py', 'tools/ci/crysta_sdk.py', '.github/actions/setup-pixi/action.yml']:
               digest.update(name.encode() + b'\0' + Path(name).read_bytes() + b'\0')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write(f'sha={digest.hexdigest()}\n')
@@ -111,6 +111,22 @@ jobs:
           git init -q "$RUNNER_TEMP/crysta"
           git -C "$RUNNER_TEMP/crysta" fetch -q --depth 1 "https://x-access-token:$TOKEN@github.com/enhantica/crysta" "$SHA"
           git -C "$RUNNER_TEMP/crysta" checkout -q --detach "$SHA"
+      - name: Set up Python for SDK metadata checks
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Check SDK and consumer ABI package locks before compilation
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          python tools/ci/crysta_sdk.py preflight --source-lock "$RUNNER_TEMP/crysta/pixi.lock" --platform "$PLATFORM" --lockfile tools/installer/pixi.lock --environment default
+          if [ "$PLATFORM" != win-64 ]; then
+            for environment in default app; do
+              python tools/ci/crysta_sdk.py preflight --source-lock "$RUNNER_TEMP/crysta/pixi.lock" --platform "$PLATFORM" --lockfile pixi.lock --environment "$environment"
+            done
+          fi
       - name: Identify the SDK compiler-cache inputs
         if: steps.cache.outputs.cache-hit != 'true'
         id: compiler-inputs
@@ -141,6 +157,7 @@ jobs:
           key: crysta-objects-v1-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-${{ needs.resolve.outputs.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             crysta-objects-v1-${{ matrix.platform }}-${{ steps.compiler-inputs.outputs.lock }}-
+            crysta-objects-v1-${{ matrix.platform }}-
       - name: Set up pixi for crysta
         if: steps.cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/setup-pixi

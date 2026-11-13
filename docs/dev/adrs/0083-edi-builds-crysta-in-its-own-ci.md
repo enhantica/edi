@@ -186,3 +186,26 @@ Compiler probes run a nested CMake project, which must inherit the chosen resolv
 custom or list value instead of re-importing the original environment default. Real native
 compiler configure/probe controls cover this boundary; a successful post-configure Ninja
 command alone does not qualify it.
+
+
+## Check locked ABI packages before cold compilation
+
+Before installing or compiling an uncached SDK, the producer compares every required
+ABI package's exact version and build in Crysta's cpp-ci lock with the installer lock.
+Linux and macOS additionally compare Edi's default and app environments; those root
+environments do not declare Windows. The existing SDK lock reader and required package
+inventory own this check. Missing or mismatched packages refuse before bootstrap.
+A metadata-only Python setup supplies the reader's declared language version.
+
+This admission check joins the producer recipe hash. Cache hits still require the
+existing independent consumer manifest and binary qualification checks. Neither object
+cache reuse nor matching package locks substitutes for executed SDK tests, staged runtime
+qualification or source identity. The common doctest interface supplies complete standard
+stream types to every test tier; the SDK's initial Ninja build collects independent
+compile errors across all existing tiers and the report probe, then refuses on any failure.
+
+Compiler-object restore prefers the exact engine lock and then the same platform's
+prior objects. Ccache still checks compiler content and each full compilation input;
+the broader object lookup does not admit a qualified SDK or relax package matching.
+This preserves reusable objects when an unrelated lock record or compiler selector
+package build changes. Complete SDK archive keys remain exact source and recipe.
