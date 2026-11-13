@@ -42,8 +42,7 @@ constexpr std::array optional{
     &edi::PeakBase::asym_beba_b0, &edi::PeakBase::asym_beba_a1,
     &edi::PeakBase::asym_beba_b1, &edi::PeakBase::asym_beba_limit};
 constexpr std::array absorption{
-    &edi::AbsorptionBase::abscor1, &edi::AbsorptionBase::abscor2,
-    &edi::AbsorptionBase::mu_r};
+    &edi::AbsorptionBase::abscor1, &edi::AbsorptionBase::mu_r};
 void seed(edi::Parameter& p, double v) {
     p.value=v; p.uncertainty=v/7; p.free=true;
     p.start_value=v+3; p.start_uncertainty=v/11;
