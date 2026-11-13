@@ -23,7 +23,7 @@ requires-pixi = "==0.76.2"
 # The crysta commit edi builds (edi ADR-0083): its CI packs that commit's SDK once per platform
 # (.github/workflows/crysta-sdk.yml) and every job and product uses it. `pixi run crysta-sdk-pin <sha>`
 # moves it.
-CRYSTA_COMMIT = "07a6947b145a808f18830b254acb5078c02f49db"
+CRYSTA_COMMIT = "77150dc8e3d0a2136adca2874d9cc12d9df8c308"
 # ONE ruff cache, outside every source and test tree. Same class as crysta's: ruff writes
 # `.ruff_cache` into the directory it is invoked from, and a stray cache can keep a RETIRED
 # directory alive after its tracked files are gone, tripping a layout gate on a folder that
