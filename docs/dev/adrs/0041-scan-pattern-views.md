@@ -285,3 +285,12 @@ progress presentation even though the worker was already completing files. Patte
 is retained. Label bindings now consume only sparse dataset indices, never a boolean array as long as the scan.
 A numeric Repeater retains its label items while the list changes at the same length; its indexed dataset binding
 updates the existing items. Text measurement also visits only those sparse indices.
+
+
+Selecting another experiment in a joint or ordinary multi-experiment project does not rebuild the parameter table
+or re-prepare every experiment's Stacked/Map data. Those inputs depend on scientific model edits and calculations,
+which still refresh them in ProjectViewModel::publish. Only a scan-scoped parameter table is refreshed for a
+selection change. The selected chart, correlations, colour indicators and selection persistence still follow the
+existing current-experiment notifications. Previously publishCurrent called syncParameterTable unconditionally,
+which reconstructed every joint pattern, including background interpolation, only to compare it with unchanged
+cached patterns before the selected chart could appear.

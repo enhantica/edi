@@ -834,8 +834,8 @@ void ProjectViewModel::publishCurrent() {
         emit currentStructureChanged();
         if (retired_) return;
     }
-    if (currentExperiment() != published_experiment_) {
-        syncParameterTable();  // a scan mode lists the selected experiment's parameters; before the signals
+    if (currentExperiment() != published_experiment_ && edi::fits_a_scan(*project_)) {
+        syncParameterTable();  // only the scoped table changes with selection; model edits refresh all views in publish
         if (retired_) return;
     }
     if (currentExperimentIndex() != published_experiment_index_) {
