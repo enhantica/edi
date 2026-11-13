@@ -32,7 +32,7 @@ jobs:
           import hashlib, os
           from pathlib import Path
           digest = hashlib.sha256()
-          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_source_receipt.py', 'tools/ci/crysta_sdk.py', '.github/actions/setup-pixi/action.yml']:
+          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_source_receipt.py', 'tools/ci/crysta_source_archive.py', 'tools/ci/crysta_sdk.py', '.github/actions/setup-pixi/action.yml']:
               digest.update(name.encode() + b'\0' + Path(name).read_bytes() + b'\0')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write(f'sha={digest.hexdigest()}\n')
@@ -180,7 +180,7 @@ jobs:
           # export that has no .git.
           git -C "$RUNNER_TEMP/crysta" archive --format=tar -o "$RUNNER_TEMP/crysta-src.tar" "$SHA"
           python3 tools/ci/crysta_source_receipt.py "$RUNNER_TEMP/crysta" "$SHA" "$RUNNER_TEMP/runner-source-objects.json"
-          tar -rf "$RUNNER_TEMP/crysta-src.tar" -C "$RUNNER_TEMP" runner-source-objects.json
+          python3 tools/ci/crysta_source_archive.py append "$RUNNER_TEMP/crysta-src.tar" "$RUNNER_TEMP/runner-source-objects.json"
           gzip -n -c "$RUNNER_TEMP/crysta-src.tar" >"$out/crysta-src-$SHA.tar.gz"
           ls -l "$out"
       - name: Save the SDK compiler cache

@@ -223,7 +223,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p .crysta
-          tar -xzf "$CRYSTA_SDK_ARCHIVES/crysta-src-$CRYSTA_SOURCE_COMMIT.tar.gz" -C .crysta
+          pixi run --manifest-path tools/installer/pixi.toml python tools/ci/crysta_source_archive.py extract "$CRYSTA_SDK_ARCHIVES/crysta-src-$CRYSTA_SOURCE_COMMIT.tar.gz" .crysta
           printf '%s\n' "$CRYSTA_SOURCE_COMMIT" >.crysta/CRYSTA_SOURCE_SHA
       - name: Check engine compiler portability before the full build
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --check-compiler --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"

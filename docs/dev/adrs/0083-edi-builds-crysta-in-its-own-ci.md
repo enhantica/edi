@@ -224,3 +224,11 @@ in a separate platform/source-named diagnostic artifact after the packer removes
 its scratch checkout. Diagnostic artifacts never use the qualified SDK artifact
 name, never satisfy consumer transfer, and never populate the qualified archive
 cache. The existing successful-output checks and publication gates remain required.
+
+
+Source receipt append and archive-file extraction use the same Python tarfile helper
+in the SDK producer, installer and core/source consumer. Windows drive prefixes must
+remain local path operands; shell tar may interpret a drive colon as a remote host.
+Git still creates the source archive from the exact pin, the receipt still binds its
+Git objects, and extraction uses the SDK reader's data filter. The helper belongs to
+the producer recipe identity, so a changed archive policy cannot reuse an older recipe.

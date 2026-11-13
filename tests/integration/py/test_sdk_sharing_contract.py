@@ -20,6 +20,7 @@ PRODUCER = '.github/workflows/crysta-sdk.yml'
 INPUTS = (
     PRODUCER,
     'tools/ci/crysta_source_receipt.py',
+    'tools/ci/crysta_source_archive.py',
     '.github/actions/setup-pixi/action.yml',
     'tools/ci/crysta_sdk.py',
 )
