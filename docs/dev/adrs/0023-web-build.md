@@ -105,6 +105,21 @@ unexecuted, since the native build would use the pin (owner, 2026-10-23).
   folder on the user's disk. To open it again the user unpacks it. The archive stores no folder entries and its files
   as `rw-r--r--`, so an unzip tool, macOS's included, makes folders that open (owner, 2026-10-23). Data files are asked
   for as files: one structure file, as on the desktop, or several experiment files.
+- **Dataset folders:** the Experiment Load menu exposes the same folder action on desktop and
+  web. The web route extends the existing directory-upload request owner in `WebFiles`;
+  project-folder requests still validate `project.edi`, while dataset-folder requests return
+  the uploaded directory to the existing dataset loader. The loader selects the same supported
+  powder data files and starts with a single template fit. Browser uploads are copied into
+  the project, since their temporary memory paths cannot be reopened after reloading the page.
+  Desktop selection keeps its existing linked-data default. A partial upload is a failure,
+  not an incomplete successful selection. Replies retain the request and original-project
+  checks; starting another form request disarms the old reply before installing new context.
+- **File filters:** `WebFiles.openFiles` accepts comma-separated extensions, as the page's
+  inputs already declare them, and converts their separator to Qt's space-separated name
+  filters at the Qt boundary. Qt turns each extension into one File System Access API type
+  entry on Chromium; passing a combined comma token there rejects before the picker opens.
+  Safari's HTML input route accepts commas, which previously hid the mismatch. One and
+  several file selections use the same conversion; the chooser is still Qt's.
 - **Requests and their answers.** A browser file chooser answers later, or never when it is dismissed, so each
   request (a folder, data files) has an id and exactly one answer carrying it: the files, a failure, or a
   cancellation. One request is active at a time, as the browser shows one chooser: a new request cancels the one
@@ -247,3 +262,14 @@ The packer accepts `EDI_WASM_OPTIMIZE_SIZE=1` for qualification builds. It proce
 copies of the linked modules, requires each copy to shrink, checks imports against
 its JavaScript loader, and hashes the final bytes for delivery. The default remains
 the ordinary build pending the full scientific and timing checks.
+
+
+### Browser loading qualification
+
+Changes to browser app inputs require the existing dedicated WebAssembly CI job on pull
+requests. It builds both kits and runs the retained single-thread, multithread and shim
+browser routes with delivery and fit checks. Native tests remain independent; the browser
+job does not wait for their outcome. The Linux desktop job points to this one owner instead
+of compiling the same browser target again. CI and Pages restore the shared compiler and
+toolchain cache and save after an attempted build, including a later check failure.
+Qualified SDK admission and browser/runtime checks remain separate from cache reuse.

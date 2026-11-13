@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
+import { nativePickerOptionChecks } from './browser_picker_options.mjs';
 import { checkDesktopOnlyAssistant } from './web_assistant_desktop_only.mjs';
 import { statusActionLifetimeChecks } from './web_status_action_lifetime.mjs';
 import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
@@ -56,6 +57,7 @@ assert(siteArg && outputArg && ['singlethread', 'multithread', 'shim'].includes(
 const site = resolve(siteArg), output = resolve(outputArg);
 await readFile(join(site, 'index.html')); // A missing product fails before the browser is launched.
 await mkdir(output, { recursive: true });
+await nativePickerOptionChecks(chromeArg || process.env.CHROME_HEADLESS_SHELL, output);
 const scratch = await mkdtemp(join(tmpdir(), 'e04-browser-'));
 const chrome = chromeArg || process.env.CHROME_HEADLESS_SHELL;
 assert(chrome, 'CHROME_HEADLESS_SHELL must identify the pinned headless Chrome executable');
