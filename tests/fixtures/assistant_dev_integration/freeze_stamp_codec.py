@@ -1,9 +1,53 @@
 """Freeze the pre-integration dev codec; never derive expected bytes from new code."""
 
+import argparse
 import hashlib
+import json
 import subprocess
 import sys
 from pathlib import Path
+
+if '--retire-absorption-slot' in sys.argv:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--retire-absorption-slot', action='store_true')
+    parser.add_argument('--fixture-base', required=True)
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parents[3]
+    target = Path(__file__).with_name('prechange_stamp_codec.inc')
+    relative = target.relative_to(root).as_posix()
+    base = subprocess.check_output(
+        [
+            'git',
+            '-C',
+            str(root),
+            'rev-parse',
+            '--verify',
+            '--end-of-options',
+            args.fixture_base + '^{commit}',
+        ],
+        text=True,
+    ).strip()
+    before = subprocess.check_output(['git', '-C', str(root), 'show', f'{base}:{relative}'])
+    retired = b'    put_optional_parameter(out, experiment.absorption.abscor2, scope);\n'
+    if before.count(retired) != 1:
+        parser.error('The frozen codec must contain exactly one retired optional-field write')
+    after = before.replace(retired, b'')
+    if target.read_bytes() not in {before, after}:
+        parser.error('Refusing unrelated pending changes to the independent frozen codec')
+    target.write_bytes(after)
+    receipt = {
+        'fixture_base': base,
+        'source': relative,
+        'before_sha256': hashlib.sha256(before).hexdigest(),
+        'after_sha256': hashlib.sha256(after).hexdigest(),
+        'transition': 'Remove the retired optional absorption slot; keep all other frozen bytes',
+        'command': 'python tests/fixtures/assistant_dev_integration/freeze_stamp_codec.py '
+        '--retire-absorption-slot --fixture-base ' + base,
+    }
+    target.with_name('retired-absorption-codec.json').write_text(
+        json.dumps(receipt, indent=2) + '\n'
+    )
+    raise SystemExit(0)
 
 BASE = 'e782d2d84a984c8d9df86e6e6c4df361baf89f2c'
 ROOT = Path(__file__).resolve().parents[3]
