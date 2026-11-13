@@ -243,6 +243,14 @@ def fetch(platform: str) -> Path:
         home.mkdir(parents=True)
         with tarfile.open(tarball) as tar:
             tar.extractall(home, filter='data')
+        manifest = json.loads((home / MANIFEST).read_text(encoding='utf-8'))
+        if not isinstance(manifest, dict):
+            refuse(f'{tarball}: SDK manifest is not an object; requested {sha} on {platform}')
+        if manifest.get('source_sha') != sha or manifest.get('platform') != platform:
+            refuse(
+                f'{tarball}: SDK source {manifest.get("source_sha")!r} on '
+                f'{manifest.get("platform")!r} differs from requested source {sha} on {platform}'
+            )
         marker.write_text(sha256(tarball) + '\n', encoding='utf-8')
         return home
 

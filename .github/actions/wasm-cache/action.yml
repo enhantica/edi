@@ -1,0 +1,21 @@
+name: WebAssembly caches
+description: Reuse the pinned browser toolchain and compiler outputs across CI and publication builds.
+runs:
+  using: composite
+  steps:
+    - id: compiler
+      uses: ./.github/actions/ccache
+      with:
+        max-size: 2G
+    - uses: actions/cache@v4
+      with:
+        path: ~/.cache/edi-ccache
+        key: ccache-wasm-${{ steps.compiler.outputs.key-prefix }}${{ hashFiles('tools/ci/wasm-env.sh') }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          ccache-wasm-${{ steps.compiler.outputs.key-prefix }}${{ hashFiles('tools/ci/wasm-env.sh') }}-
+          ccache-wasm-${{ steps.compiler.outputs.key-prefix }}
+          ccache-wasm-${{ runner.os }}-${{ runner.arch }}-
+    - uses: actions/cache@v4
+      with:
+        path: ~/.cache/edi-wasm
+        key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}

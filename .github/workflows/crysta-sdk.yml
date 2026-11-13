@@ -6,17 +6,40 @@ name: crysta SDK
 # read-only token. Windows follows in a later change.
 
 on:
+  workflow_dispatch:
   workflow_call:
     outputs:
       sha:
         description: The crysta commit built
-        value: ${{ jobs.build.outputs.sha }}
+        value: ${{ jobs.resolve.outputs.sha }}
 
 permissions:
   contents: read
 
 jobs:
+  resolve:
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.pin.outputs.sha }}
+      recipe: ${{ steps.recipe.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: pin
+        run: bash tools/ci/crysta-source.sh
+      - id: recipe
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, os
+          from pathlib import Path
+          digest = hashlib.sha256()
+          for name in ['.github/workflows/crysta-sdk.yml', 'tools/ci/crysta_source_receipt.py', '.github/actions/setup-pixi/action.yml']:
+              digest.update(name.encode() + b'\0' + Path(name).read_bytes() + b'\0')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'sha={digest.hexdigest()}\n')
+          PYTHON
+
   build:
+    needs: resolve
     name: crysta SDK · ${{ matrix.platform }}
     environment: crysta-sdk
     strategy:
@@ -28,17 +51,24 @@ jobs:
           - platform: osx-arm64
             runner: macos-15
     runs-on: ${{ matrix.runner }}
-    outputs:
-      sha: ${{ steps.pin.outputs.sha }}
+    concurrency:
+      group: crysta-sdk-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}-${{ needs.resolve.outputs.recipe }}
+      cancel-in-progress: false
+      queue: max
     steps:
       - uses: actions/checkout@v5
       - id: pin
         run: bash tools/ci/crysta-source.sh
+      - name: Confirm the resolved engine identity
+        env:
+          RESOLVED_SHA: ${{ needs.resolve.outputs.sha }}
+          CHECKED_OUT_SHA: ${{ steps.pin.outputs.sha }}
+        run: test "$RESOLVED_SHA" = "$CHECKED_OUT_SHA"
       - id: cache
         uses: actions/cache@v4
         with:
           path: crysta-sdk-archives
-          key: crysta-sdk-v2-${{ matrix.platform }}-${{ steps.pin.outputs.sha }}
+          key: crysta-sdk-v3-${{ matrix.platform }}-${{ needs.resolve.outputs.sha }}-${{ needs.resolve.outputs.recipe }}
       - name: Mint a crysta read token
         if: steps.cache.outputs.cache-hit != 'true'
         id: token
@@ -78,8 +108,28 @@ jobs:
           tar -rf "$RUNNER_TEMP/crysta-src.tar" -C "$RUNNER_TEMP" runner-source-objects.json
           gzip -n -c "$RUNNER_TEMP/crysta-src.tar" >"$out/crysta-src-$SHA.tar.gz"
           ls -l "$out"
+      - name: Require the complete SDK and source archives
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          cd crysta-sdk-archives
+          for file in "crysta-sdk-$SHA-$PLATFORM.tar.gz" "crysta-sdk-$SHA-$PLATFORM.tar.gz.sha256" "crysta-src-$SHA.tar.gz"; do
+            test -s "$file" || { echo "Missing SDK producer output: $file" >&2; exit 1; }
+          done
+          python3 - <<'PYTHON'
+          import hashlib, os
+          from pathlib import Path
+          archive = Path(f'crysta-sdk-{os.environ["SHA"]}-{os.environ["PLATFORM"]}.tar.gz')
+          with archive.open('rb') as stream:
+              digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+          checksum = Path(str(archive) + '.sha256').read_text(encoding='ascii')
+          if checksum != f'{digest}  {archive.name}\n':
+              raise RuntimeError(f'SDK checksum does not bind the requested archive: {archive}')
+          PYTHON
       - uses: actions/upload-artifact@v4
         with:
           name: crysta-sdk-${{ matrix.platform }}
           path: crysta-sdk-archives
           retention-days: 30
+          if-no-files-found: error
