@@ -30,3 +30,17 @@ served users and contributors together, with the web application at `/webapp/` (
 - User-facing pages are written in `website/surfaces/docs/`; contributor pages stay in `docs/`.
 - The published layout of the earlier preview site is kept: pages, anchors and redirects keep their paths, now under
   the edi address.
+
+
+## Recorded assistant prompt trials
+
+The existing Python and command-line assistant pages cite a public authoring-trial summary.
+A trial fetches the actual published prompt and references, executes its generated artifact,
+and records the assistant/date, source and artifact hashes, results and comparisons. Both the
+existing prerelease-preview route and the official published-release route require this evidence;
+metadata alone does not qualify either route. Historical prerequisite failures remain immutable.
+
+CI checks the recorded provenance, citation and comparisons; it does not run an online assistant.
+Staged tutorial/scientific-reference matches and separate single-fit regression mismatches stay
+separate, with original numerical references and tolerances unchanged. Diagnostic executables
+are identified as such and do not establish release or current-candidate qualification.

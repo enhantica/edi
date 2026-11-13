@@ -21,6 +21,11 @@ from tests.fixtures.tutorial_cases.assistant_versions import (
     assistant_version_sites,  # noqa: F401 - shared public builder
 )
 from tests.fixtures.tutorial_cases.contract import ROOT
+from tests.fixtures.tutorial_cases.published_trials import (
+    assert_history,
+    assert_published_trial,
+    assert_recorded_trial,
+)
 from tests.fixtures.tutorial_cases.screenshots import assert_webp_asset
 
 FIT_WORD_PARTS = ('re', 'fin')
@@ -258,7 +263,7 @@ def assert_preview_trial(row, interface, digest):
     assert row['model'] and re.fullmatch(r'\d{4}-\d{2}-\d{2}', row['date']), (
         'Gate 3/5: the published preview rerun names the actual model and date'
     )
-    assert row['status'] in {'passed', 'failed'} and row['findings'], (
+    assert row['status'] in {'passed', 'failed', 'completed-with-findings'} and row['findings'], (
         'Gate 3/5: the preview rerun reports its pin comparison or precise execution finding'
     )
 
@@ -271,30 +276,37 @@ def test_each_prompt_has_fresh_committed_authoring_trial_evidence(
     evidence = json.loads(
         (ROOT / 'tests/fixtures/tutorial_cases/assistant_trials.json').read_text()
     )
+    current_evidence = json.loads(
+        (ROOT / 'tests/fixtures/tutorial_cases/published_assistant_trials.json').read_text()
+    )
+    assert_history(ROOT, current_evidence)
     summary = 'assistant-prompt-trials'
     assert evidence['source'] and evidence['source']['document'] == summary, (
-        'Gate 3/5: export the committed preview rerun summary, preserving first-trial history'
+        'Gate 3/5: retain the committed historical source alongside current trial evidence'
     )
     rows = [
         row
-        for row in evidence['records']
-        if row['interface'] == interface and row.get('publication_route') == 'prerelease-preview'
+        for row in evidence['records'] + current_evidence['records']
+        if row['interface'] == interface
+        and row.get('publication_route') in {'prerelease-preview', 'published-release'}
     ]
-    assert rows, (
-        'Gate 3/5: each prompt needs its live prerelease-preview rerun; old 404s do not qualify'
-    )
+    assert rows, 'Gate 3/5: each prompt needs an executed published trial; old 404s do not qualify'
     page = assistant_version_sites['preview'] / interface / 'tutorials/assistant/index.html'
     assert page.is_file(), 'Gate 3/5: the preview build publishes the literal prompt page'
     digest = hashlib.sha256(prompt(page).encode()).hexdigest()
     current = [row for row in rows if row['prompt_sha256'] == digest]
-    assert current, 'Gate 3/5: the committed rerun covers the current preview prompt'
+    assert current, 'Gate 3/5: committed authoring evidence covers the current copyable prompt'
     for row in current:
-        assert_preview_trial(row, interface, digest)
+        if row['publication_route'] == 'prerelease-preview':
+            assert_preview_trial(row, interface, digest)
+            assert_recorded_trial(ROOT, current_evidence, row, interface, digest)
+        else:
+            assert_published_trial(ROOT, current_evidence, row, interface, digest)
     soup = BeautifulSoup(page.read_text(), 'html.parser')
     assert any(
         unquote(urlparse(link['href']).path).rstrip('/').endswith('/' + summary)
         for link in soup.select('main a[href]')
-    ), 'Gate 3/5: the prompt page cites the published preview rerun summary used by the gate'
+    ), 'Gate 3/5: both authoring routes cite their actual public trial summary'
 
 
 def test_all_assistant_interfaces_offer_the_same_two_input_files(
