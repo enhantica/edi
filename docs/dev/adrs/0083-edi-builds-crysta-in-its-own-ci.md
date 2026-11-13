@@ -164,3 +164,10 @@ binding and test/numerics dependencies consumed by corpus policy. Installing the
 first duplicated that compilation before sdk-pack installed cpp-ci. The existing setup wrapper
 therefore accepts an environment selection, defaulting to its previous default for other callers.
 This changes bootstrap duplication, not SDK test inventory or corpus-policy admission.
+
+
+The Windows binding bootstrap selects Ninja through the environment, so Crysta's cpp
+activation clears inherited Visual Studio-only platform, toolset and instance defaults for that
+selection. The existing explicit -G Ninja SDK/installer calls already override those environment
+defaults. Both forms are exercised by real CMake controls. MSVC still selects x64, and SDK
+compiler/CRT compatibility checks remain mandatory.
