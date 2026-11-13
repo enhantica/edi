@@ -6,12 +6,12 @@ fitting in the GUI and requires completion, a results popup and save/reopen.
 
 import json
 import os
-import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
 
+from tests.fixtures.e04_t11_wasm.cli_domains import compare_current, vehicle
 from tests.fixtures.e04_t11_wasm.compare import compare
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -25,9 +25,8 @@ def test_wasm_cli_fit_matches_the_native_cli(tmp_path, mode):
         pytest.skip('real wasm numerical parity runs in app · WebAssembly via wasm-check')
     cli = Path(explicit)
     assert cli.is_file(), 'each wasm kit requires its compiled CLI numerical acceptance vehicle'
-    oracle = json.loads((FIXTURE / 'native.json').read_text())
     project = tmp_path / 'project'
-    shutil.copytree(ROOT / oracle['project'], project)
+    oracle = vehicle(project)
     run = subprocess.run(
         ['node', str(cli.resolve()), 'fit', str(project), '--verbosity', 'full'],
         capture_output=True,
@@ -40,7 +39,7 @@ def test_wasm_cli_fit_matches_the_native_cli(tmp_path, mode):
         + run.stdout
         + run.stderr
     )
-    compare(run.stdout, oracle)
+    compare_current(run.stdout, oracle)
 
 
 def test_numeric_gate_accepts_native_reference_and_rejects_every_perturbed_operand():

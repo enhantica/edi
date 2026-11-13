@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.e04_t11_wasm.cli_domains import domain, historical_bytes, input_bytes
 from tests.fixtures.metadata_transition.source_bytes import previous_bytes
 from tests.fixtures.web_parallel.numeric import uncertainty_tolerances
 
@@ -141,11 +142,9 @@ def test_public_webapp_packer_preserves_inventory_through_symlinked_build_parent
 def test_native_fixture_is_bound_to_the_committed_nontrivial_project():
     oracle = json.loads((FIXTURE / 'native.json').read_text())
     digest = hashlib.sha256()
-    for path in sorted((ROOT / oracle['project']).rglob('*')):
-        if path.is_file():
-            digest.update(path.relative_to(ROOT / oracle['project']).as_posix().encode() + b'\0')
-            # This native fixture was regenerated after the explicit stop-rule input.
-            digest.update(path.read_bytes())
+    for name, data in sorted(historical_bytes(input_bytes(), domain()).items()):
+        digest.update(name.encode() + b'\0')
+        digest.update(data)
     assert digest.hexdigest() == oracle['project_sha256'], (
         'numeric oracle must describe the identical committed CLI input project'
     )

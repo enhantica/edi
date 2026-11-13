@@ -18,6 +18,14 @@ Regenerate only with a native edi extension and a pinned Python environment:
 python tests/fixtures/e04_t11_wasm/generate.py
 ```
 
+The original files above are now the historical explicit scalar-rule domain and remain byte-for-byte frozen.
+`cli-domains.json` declares the current standalone backend vehicle separately: the existing
+`web_parallel/lbco-native.json` and full native report own its start-4 parity values.
+`cli_domains.py` authenticates the exact archived input transition, selects the recorded ladder descent
+and current chi-square stopping rule before solving, and checks the actual report conditions afterward.
+All sixteen fitted quantities, chi-square and the original relative/absolute bounds remain checked.
+This is backend parity, distinct from the catalogue LBCO/NCAF captures and external scientific references.
+
 The core numerical vehicles are the compiled wasm `crysta` CLI, for the sole multithread kit. Set
 `EDI_WASM_CLI_MULTITHREAD` to its generated JavaScript entrypoint, then
 run the system Python gates. They copy the committed project before executing a fit.

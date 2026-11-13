@@ -91,8 +91,8 @@ def test_before_oracles_are_available_without_repository_history(tmp_path, monke
 def test_decided_input_transition_retains_all_other_bytes(name, declaration, damage):
     from tests.fixtures.metadata_transition import task_inputs  # noqa: PLC0415
 
-    raw = (ROOT / name).read_bytes()
     row = task_inputs.rows()[name]
+    raw = task_inputs.archived(row['after_sha256'])
     assert task_inputs.previous_bytes(name, raw) == task_inputs.archived(row['before_sha256']), (
         'Each accepted input transition recovers its complete independently committed source'
     )
@@ -106,6 +106,11 @@ def test_decided_input_transition_retains_all_other_bytes(name, declaration, dam
         changed = raw.replace(declaration, b'')
     else:
         changed = raw + b'_unowned.numeric 1.25\n'
+    if changed == task_inputs.archived(row['before_sha256']):
+        assert task_inputs.previous_bytes(name, changed) == changed, (
+            'The approved exact archived before-state remains an idempotent source projection'
+        )
+        changed += b'_unowned.numeric 1.25\n'
     assert changed != raw, 'The input transition adversary must alter the actual source bytes'
     with pytest.raises(AssertionError, match='entire independently archived source'):
         task_inputs.previous_bytes(name, changed)

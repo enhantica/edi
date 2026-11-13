@@ -28,7 +28,10 @@ def previous_bytes(name, data):
     row = rows().get(str(name))
     if row is None:
         return data
-    assert hashlib.sha256(data).hexdigest() == row['after_sha256'], (
+    digest = hashlib.sha256(data).hexdigest()
+    if digest == row['before_sha256']:
+        return archived(row['before_sha256'])
+    assert digest == row['after_sha256'], (
         'A live descriptive input must match its entire independently archived source, '
         'including every scientific byte'
     )
