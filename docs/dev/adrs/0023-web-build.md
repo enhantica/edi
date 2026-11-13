@@ -313,3 +313,15 @@ The existing standalone Qt probe prerequisite also builds the source-qualified c
 geometry carrier before the app integration group. Native Qt verifies the provider's
 extent/refusal semantics; the packed browser checks still prove actual trusted input.
 Duplicate-control diagnostics preserve both the control name and the visible count.
+
+
+The catalogue's historical ladder captures retain their complete file hashes and
+original numerical bounds. Current multistart results report continuation iterations
+separately from probe work. Qualification authenticates the historical count across
+its retained raw, FULL report and saved records, then checks the current declared
+conditions, actual callback sequence and FULL report history. Terminal, native/WASM
+and ordinary-Save counts must agree exactly; probe work is compared separately.
+No historical count is substituted into a current Save, and reopen retains the whole
+fit record. Physical values and uncertainties still face their independent original
+checks. The same-input catalogue WASM CLI uses the explicitly admitted native-written
+reference in addition to the existing standalone backend-parity vehicle.

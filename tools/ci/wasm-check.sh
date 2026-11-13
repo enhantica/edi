@@ -41,6 +41,7 @@ export EDI_WASM_CLI_MULTITHREAD="$ROOT/build/wasm/multithread/crysta-prefix/bin/
 
 REFERENCE="$(mktemp -d "$OUT/native-written.XXXXXX")"
 bash "$ROOT/tools/ci/wasm-written-reference.sh" "$REFERENCE"
+export EDI_WASM_WRITTEN_REFERENCE="$REFERENCE"
 
 status=0
 python -m pytest -q "$@" || status=1
