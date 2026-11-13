@@ -16,6 +16,7 @@ from tests.fixtures.independent_experiments.reference import (
     project_files,
     scan_files,
 )
+from tests.fixtures.scan_csv import reported_pair
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -203,10 +204,11 @@ def test_declared_scan_keeps_file_results_and_weighted_mean_values(tmp_path, mod
     su_key = value_key.removesuffix('.value') + '.uncertainty'
     for row in rows:
         reference = expected[Path(row['file_path']).name]
-        assert float(row[value_key]) == pytest.approx(reference['value'], rel=2e-5, abs=1e-8), (
+        reported_value, reported_su = reported_pair(reference['value'], reference['su'])
+        assert float(row[value_key]) == pytest.approx(reported_value, rel=2e-5, abs=1e-8), (
             'A scan retains its own data-file weighted optimum in either scan mode'
         )
-        assert float(row[su_key]) == pytest.approx(reference['su'], rel=3e-4, abs=1e-8), (
+        assert float(row[su_key]) == pytest.approx(reported_su, rel=3e-4, abs=1e-8), (
             'A scan retains its own data-file uncertainty rather than mixing non-scan experiments'
         )
 

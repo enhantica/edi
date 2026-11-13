@@ -84,7 +84,12 @@ def _sequential_quantity(
 
 
 def _assert_quantity(case_id: str, name: str, spec: dict, measured: float) -> None:
-    delta = abs(measured - spec['value'])
+    expected = (
+        float(format(spec['value'], '.2g'))
+        if _SEQUENTIAL_CHI2_RE.fullmatch(name)
+        else spec['value']
+    )
+    delta = abs(measured - expected)
     if spec['tol_abs'] is not None:
         assert delta <= spec['tol_abs'], (
             f'{case_id}.{name} ({spec["kind"]}): |{measured} - {spec["value"]}| = '

@@ -18,6 +18,8 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.scan_csv import CONDITION_COLUMNS, legacy_scan
+
 ROOT = Path(__file__).resolve().parents[3]
 CORPUS_ROOT = Path(
     os.environ.get('EDI_CRYSTA_CORPUS_ROOT', ROOT / 'build/crysta-src/tests/fitting')
@@ -333,6 +335,7 @@ def test_completed_resume_partitions_terminal_outcome_on_cli(
 
 
 def _prepare_cause_ledger(project_dir, terminal, live_cause, ledger, max_iterations):
+    legacy_scan(project_dir)
     provenance = project_dir / 'analysis/results-provenance.csv'
     recorded = list(csv.DictReader(io.StringIO(provenance.read_text())))
     expected_reason = 'max_iter_exhausted' if live_cause == 'max-iter' else 'no_accepted_step'
@@ -348,7 +351,7 @@ def _prepare_cause_ledger(project_dir, terminal, live_cause, ledger, max_iterati
         # row, or re-inferring from the current bound, must fail this identity-based witness.
         others = [dict(row) for row in recorded if row is not terminal_ledger]
         for row in others:
-            row['termination'] = 'converged'
+            row['termination'] = 'chi_converged'
         _write_cause_rows(provenance, [terminal_ledger, *others])
         csv_path = project_dir / 'analysis/results.csv'
         csv_rows = list(csv.DictReader(io.StringIO(csv_path.read_text())))
@@ -383,7 +386,7 @@ def test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python(
     fieldnames, _reference_rows = _reference_header_and_ascending_rows()
     with (project_dir / 'analysis' / 'results.csv').open(newline='', encoding='utf-8') as stream:
         reader = csv.DictReader(stream)
-        assert reader.fieldnames == fieldnames, (
+        assert reader.fieldnames == [*fieldnames, *CONDITION_COLUMNS], (
             ' edi cause honesty must retain the frozen diffraction-lib column identities'
         )
         assert len(fieldnames) == 83, (
@@ -466,7 +469,7 @@ def test_completed_resume_cli_recovers_recorded_cause_or_legacy_unknown(
     fieldnames, _reference_rows = _reference_header_and_ascending_rows()
     with (project_dir / 'analysis' / 'results.csv').open(newline='', encoding='utf-8') as stream:
         reader = csv.DictReader(stream)
-        assert reader.fieldnames == fieldnames, (
+        assert reader.fieldnames == [*fieldnames, *CONDITION_COLUMNS], (
             ' CLI cause honesty must retain frozen diffraction-lib column identities'
         )
         assert len(fieldnames) == 83, (

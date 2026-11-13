@@ -125,15 +125,17 @@ def check_moment_trend(rows):
 
 
 def check_file_convergence(directory, rows):
-    with (directory / 'analysis/results-provenance.csv').open(newline='') as stream:
-        provenance = list(csv.DictReader(stream))
+    assert not (directory / 'analysis/results-provenance.csv').exists(), (
+        'Fresh scan conditions share their results.csv rows'
+    )
+    provenance = rows
     assert [row['file_path'] for row in provenance] == [row['file_path'] for row in rows], (
         'Every result has its own termination record in the same file order'
     )
     stalled = [
-        (Path(row['file_path']).name, row['termination'])
+        (Path(row['file_path']).name, row['fit_result.termination'])
         for row in provenance
-        if row['termination'] != 'chi_converged'
+        if row['fit_result.termination'] != 'chi_converged'
     ]
     assert not stalled, f'Every file reaches chi_converged, observed {stalled}'
 
@@ -247,9 +249,11 @@ def check_stall(frame_only):
             assert {Path(row['file_path']).name for row in rows} == source, (
                 'The seeded explicit-ladder scan covers every measured file exactly once'
             )
-        with (directory / 'analysis/results-provenance.csv').open(newline='') as stream:
-            provenance = list(csv.DictReader(stream))
-        assert all(row['descent'] == 'ladder' for row in provenance[len(seeded) :]), (
+        assert not (directory / 'analysis/results-provenance.csv').exists(), (
+            'Completed legacy scans migrate conditions into results.csv'
+        )
+        provenance = rows
+        assert all(row['fit_result.descent'] == 'ladder' for row in provenance[len(seeded) :]), (
             'Every newly fitted stalled-path file uses the explicit ladder'
         )
         check_file_convergence(directory, rows)

@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.scan_csv import CONDITION_COLUMNS, legacy_scan
+
 ROOT = Path(__file__).resolve().parents[3]
 CORPUS = Path(
     __import__('os').environ.get('EDI_CRYSTA_CORPUS_ROOT', ROOT / 'build/crysta-src/tests/fitting')
@@ -61,7 +63,7 @@ def run_fit(project):
 
 
 def read_csv(path):
-    assert path.is_file(), ' scan must materialize its results and per-row provenance sidecar'
+    assert path.is_file(), ' scan must materialize its results and per-row fit provenance'
     with path.open(newline='') as handle:
         reader = csv.DictReader(handle)
         return reader.fieldnames, list(reader)
@@ -90,6 +92,15 @@ def assert_provenance(rows, result_rows, expected):
         assert int(condition(row, 'max_iterations')) == limit, (
             ' provenance must record each row actual iteration bound'
         )
+        assert condition(row, 'termination') in {
+            'chi_converged',
+            'step_small',
+            'no_accepted_step',
+            'max_iter_exhausted',
+            'cancelled',
+            'refused',
+            'unavailable',
+        }, 'Fit provenance must record a named terminal cause'
 
 
 def single_from_scan(tmp_path, scan, data_file, name, **values):
@@ -129,12 +140,15 @@ def single_from_scan(tmp_path, scan, data_file, name, **values):
     return project
 
 
-def assert_same_fit(row, record):
+def assert_same_fit(row, record, *, reporting=True):
     assert int(row['fit_result.iterations']) == int(record['iterations']), (
         ' scan inner fit must use the same declared stopping conditions as a single fit'
     )
+    expected = float(record['reduced_chi_square'])
+    if reporting:
+        expected = float(format(expected, '.2g'))
     assert float(row['fit_result.reduced_chi_square']) == pytest.approx(
-        float(record['reduced_chi_square']), rel=2e-6, abs=1e-6
+        expected, rel=2e-6, abs=1e-6
     ), ' scan inner fit must execute the declared descent beyond its provenance label'
 
 
@@ -203,22 +217,30 @@ def test_scan_inner_fits_and_provenance_match_declared_conditions(tmp_path):
     dropped = single_from_scan(
         tmp_path,
         project,
-        min((project / 'experiments/d20_scan').glob('*.dat')),
+        max((project / 'experiments/d20_scan').glob('*.dat')),
         'dropped',
         descent='ladder',
     )
-    run_fit(project)
+    live = run_fit(project)
     header, rows = read_csv(project / 'analysis/results.csv')
     reference_header, _ = read_csv(SCAN / 'diffraction-lib/project/analysis/results.csv')
-    assert header == reference_header, (
+    assert header == [*reference_header, *CONDITION_COLUMNS], (
         ' results.csv must retain the exact diffraction-lib column set and order'
     )
-    for row, control in zip(rows, controls, strict=True):
-        assert_same_fit(row, run_fit(control))
-    # Exercise the omitted-descent escape using a real alternate engine run.
+    records = [run_fit(control) for control in controls]
+    for row, record in zip(rows, records, strict=True):
+        assert_same_fit(row, record)
+    terminal = {
+        'fit_result.iterations': int(live['iterations']),
+        'fit_result.reduced_chi_square': float(live['reduced_chi_square']),
+    }
+    assert_same_fit(terminal, records[-1], reporting=False)
     with pytest.raises(AssertionError, match=' scan inner fit'):
-        assert_same_fit(rows[0], run_fit(dropped))
-    _, provenance = read_csv(project / 'analysis/results-provenance.csv')
+        assert_same_fit(terminal, run_fit(dropped), reporting=False)
+    assert not (project / 'analysis/results-provenance.csv').exists(), (
+        'Fresh scans keep fit conditions in their results.csv rows'
+    )
+    provenance = rows
     assert_provenance(provenance, rows, [chosen] * len(rows))
     corrupted = [dict(row) for row in provenance]
     key = next(key for key in corrupted[-1] if key.rsplit('.', 1)[-1] == 'descent')
@@ -255,25 +277,24 @@ def test_resume_preserves_old_provenance_and_records_new_conditions(tmp_path):
         tmp_path, descent=old[0], chi_square_tolerance=old[1], max_iterations=old[2]
     )
     run_fit(project)
+    legacy_scan(project)
     paths = [project / 'analysis' / name for name in ('results.csv', 'results-provenance.csv')]
-    before = []
     for path in paths:
         assert path.is_file(), ' resume requires paired result and provenance files'
         prefix = b''.join(path.read_bytes().splitlines(keepends=True)[:2])
         path.write_bytes(prefix)
-        before.append(prefix)
+    _, historical = read_csv(paths[0])
     declare(project, descent=new[0], chi_square_tolerance=new[1], max_iterations=new[2])
     run_fit(project)
-    for path, prefix in zip(paths, before, strict=True):
-        assert path.read_bytes().startswith(prefix), (
-            ' resume must never relabel or rewrite historical result/provenance rows'
-        )
     _, rows = read_csv(paths[0])
-    _, provenance = read_csv(paths[1])
-    assert_provenance(provenance, rows, [old, new, new])
-    completed = [path.read_bytes() for path in paths]
+    assert {key: rows[0][key] for key in historical[0]} == historical[0], (
+        ' resume must never relabel or rewrite historical result/provenance rows'
+    )
+    assert not paths[1].exists(), 'A successful legacy resume migrates conditions into results.csv'
+    assert_provenance(rows, rows, [old, new, new])
+    completed = paths[0].read_bytes()
     run_fit(project)
-    assert [path.read_bytes() for path in paths] == completed, (
+    assert paths[0].read_bytes() == completed and not paths[1].exists(), (
         ' a completed resume must append neither result nor provenance rows'
     )
 
@@ -291,6 +312,7 @@ def test_provenance_gate_rejects_each_misattribution(escape):
             'descent': descent,
             'chi_square_tolerance': str(tol),
             'max_iterations': str(limit),
+            'termination': 'max_iter_exhausted',
         }
         for item, (descent, tol, limit) in zip(result, expected, strict=True)
     ]
@@ -314,7 +336,10 @@ def test_guarded_scan_records_its_observed_outcomes_without_assuming_convergence
     )
     run_fit(project)
     _, rows = read_csv(project / 'analysis/results.csv')
-    _, provenance = read_csv(project / 'analysis/results-provenance.csv')
+    assert not (project / 'analysis/results-provenance.csv').exists(), (
+        'Fresh scans keep fit conditions in their results.csv rows'
+    )
+    provenance = rows
     assert len(rows) == 3, ' guarded scan must record every input, including any  bailout'
     assert_provenance(provenance, rows, [chosen] * len(rows))
     observations = [

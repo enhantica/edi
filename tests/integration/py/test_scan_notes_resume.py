@@ -11,6 +11,7 @@ import edi as engine
 import pytest
 
 from tests.fixtures import phase_scan
+from tests.fixtures.scan_csv import legacy_scan
 
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])
@@ -135,6 +136,7 @@ def complete_results_history(tmp_path_factory):
     for mode in ('sequential', 'independent'):
         directory = phase_scan.materialize(root / mode, mode)
         engine.Project.load(directory).analysis.fit()
+        legacy_scan(directory)
         histories[mode] = directory
     return histories
 

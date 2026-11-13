@@ -39,7 +39,12 @@ def reduced_input(destination, mode):
 
 
 def event_cells(record):
-    return (record.file_name, record.converged, record.reduced_chi_square, record.iterations)
+    return (
+        record.file_name,
+        record.converged,
+        float(format(record.reduced_chi_square, '.2g')),
+        record.iterations,
+    )
 
 
 def row_cells(row):
