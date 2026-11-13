@@ -989,8 +989,8 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     await click(/^Create experiment$/, 'button', 'experiments.create');
     await waitAX(/Experiments \(1\)/);
     await beginPicker(/^From file…$/, 'experiments.load', 'experiments.load.dataFile');
-    assert.equal(await evaluate('window.__e04FileInput.multiple'),false,
-      'Measured data From file must open a real single-file browser chooser for the selected experiment');
+    assert.equal(await evaluate('window.__e04FileInput.multiple'),true,
+      'Measured data From file must open a real multiple-file browser chooser for the selected experiment');
     await evaluate("window.__e04FileInput.dispatchEvent(new Event('cancel')); true"); await frame();
     await waitAX(/Experiments \(1\)/);
     }
