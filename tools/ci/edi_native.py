@@ -46,7 +46,17 @@ MARK = TREE / '.edi-native.json'
 TAR, MANIFEST = 'edi-native.tar', 'edi-native.json'
 # What the native build reads: the root CMakeLists.txt, its subdirectories core, cli and lib, and
 # the probe and test sources core/CMakeLists.txt names. A CMake source added elsewhere joins it.
-SOURCES = ('CMakeLists.txt', 'cmake', 'core', 'cli', 'lib', 'tests/unit/cpp', 'tools/probes')
+SOURCES = (
+    'CMakeLists.txt',
+    'cmake',
+    'core',
+    'cli',
+    'lib',
+    'tests/unit/cpp',
+    'tests/integration/cpp',
+    'tests/fixtures',
+    'tools/probes',
+)
 
 
 class RefusedError(Exception):

@@ -46,6 +46,7 @@ from pathlib import Path
 from typing import Self
 
 import edi
+from edi import _edi as _native
 from edi import _project_output as _output
 
 # One verbosity for both channels, so --verbosity means the same thing whichever --report is
@@ -113,6 +114,38 @@ def take_log_level(argv: list[str]) -> tuple[str, list[str]]:
             kept.append(argument)
         index += 1
     return level, kept
+
+
+def _positive_count(value: str) -> int:
+    if not value.isascii() or not value.isdecimal():
+        raise argparse.ArgumentTypeError('requires a positive integer')
+    digits = value.lstrip('0')
+    if not digits or len(digits) > 10 or int(digits) > 2**31 - 1:
+        raise argparse.ArgumentTypeError('requires a positive integer within the supported range')
+    return int(digits)
+
+
+def _thread_count(value: str) -> int:
+    return 0 if value == 'auto' else _positive_count(value)
+
+
+def _add_performance_options(fit: argparse.ArgumentParser, calc: argparse.ArgumentParser) -> None:
+    for parser in (fit, calc):
+        parser.add_argument(
+            '--threads',
+            type=_thread_count,
+            default=0,
+            metavar='auto|N',
+            help='threads per calculation (default: auto)',
+        )
+    fit.add_argument(
+        '--parallel-fits',
+        type=_positive_count,
+        default=1,
+        metavar='N',
+        help='scan files fitted together (default: 1); each uses one thread and in a sequential '
+        "scan each group starts from the preceding group's result",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -184,6 +217,7 @@ def build_parser() -> argparse.ArgumentParser:
     # versioned record=calc machine record, byte-comparable with crysta's by construction
     # (both render through crysta's own emitter).
     calc = subcommands.add_parser('calc', help='forward-calculate a project directory')
+    _add_performance_options(fit, calc)
     calc.add_argument(
         'project',
         help='project directory (structures/, experiments/, analysis/) with embedded measured '
@@ -993,6 +1027,9 @@ def main(argv: list[str] | None = None) -> int:
         build_parser().error(f"--log-level: '{level}' is not one of {', '.join(LOG_LEVELS)}")
     edi.set_log_level(level)
     args = build_parser().parse_args(argv)
+    if args.command in {'fit', 'calc'}:
+        _native._set_engine_threads(args.threads)
+        _native._set_scan_workers(getattr(args, 'parallel_fits', 1))
     # The commands without a fit record: an error is one stderr line beside the non-zero exit.
     plain = {'report': run_report, 'export': run_export, 'collection': run_collection}
     plain.update(

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <algorithm>
 #include <chrono>
+#include <charconv>
 #include <cmath>
 #include <filesystem>
 #include <iostream>
@@ -22,6 +23,7 @@
 #include "edi/project_archive.hpp"
 #include "edi/report.hpp"
 #include "edi/selectors.hpp"
+#include "edi/threading.hpp"
 #include "edi/version.hpp"
 #include "downloads.hpp"
 
@@ -29,7 +31,20 @@ namespace {
 
 constexpr std::string_view usage =
     "Usage: edi fit PROJECT [--dry | --output DIRECTORY] "
-    "[--verbosity off|compact|full] [--report human|machine] [--log-level error|warning|info|debug]\n";
+    "[--verbosity off|compact|full] [--report human|machine] [--log-level error|warning|info|debug] "
+    "[--threads auto|N] [--parallel-fits N]\n"
+    "  --threads: threads per calculation (default: auto).\n"
+    "  --parallel-fits: scan files fitted together (default: 1); each uses one thread.\n"
+    "    In a sequential scan, files in a group start from the preceding group's result.\n";
+
+int positive_count(std::string_view value, std::string_view option) {
+    int count = 0;
+    const auto [end, error] = std::from_chars(value.data(), value.data() + value.size(), count);
+    if (error != std::errc{} || end != value.data() + value.size() || count < 1) {
+        throw std::invalid_argument(std::string(option) + " requires a positive integer");
+    }
+    return count;
+}
 
 bool stdout_is_terminal() {
 #ifdef _WIN32
@@ -239,20 +254,33 @@ int main(int argc, char** argv) {
     std::string source;
     std::string output;
     auto verbosity = edi::VerbosityEnum::COMPACT;
+    int threads = 0;
+    int parallel_fits = 1;
     try {
         if (argc < 3 || std::string_view(argv[1]) != "fit") {
             throw std::invalid_argument("expected a fit or download command");
         }
         for (int i = 2; i < argc; ++i) {
-            const std::string_view argument = argv[i];
+            std::string_view argument = argv[i];
+            std::optional<std::string_view> inline_value;
+            if (argument.starts_with("--threads=") || argument.starts_with("--parallel-fits=")) {
+                const auto separator = argument.find('=');
+                inline_value = argument.substr(separator + 1);
+                argument = argument.substr(0, separator);
+            }
             if (argument == "--dry") {
                 dry = true;
-            } else if (argument == "--output" || argument == "--verbosity" || argument == "--report") {
-                if (++i == argc || std::string_view(argv[i]).starts_with("--")) {
+            } else if (argument == "--output" || argument == "--verbosity" || argument == "--report" ||
+                       argument == "--threads" || argument == "--parallel-fits") {
+                if (!inline_value && (++i == argc || std::string_view(argv[i]).starts_with("--"))) {
                     throw std::invalid_argument("missing value for " + std::string(argument));
                 }
-                const std::string_view value = argv[i];
-                if (argument == "--output") {
+                const std::string_view value = inline_value ? *inline_value : argv[i];
+                if (argument == "--threads") {
+                    threads = value == "auto" ? 0 : positive_count(value, argument);
+                } else if (argument == "--parallel-fits") {
+                    parallel_fits = positive_count(value, argument);
+                } else if (argument == "--output") {
                     output = value;
                 } else if (argument == "--verbosity" && value == "off") {
                     verbosity = edi::VerbosityEnum::OFF;
@@ -279,6 +307,8 @@ int main(int argc, char** argv) {
         return 2;
     }
     try {
+        edi::set_engine_threads(threads);
+        edi::set_scan_workers(parallel_fits);
         fit(source, output, dry, verbosity, machine);
     } catch (const std::exception& error) {
         std::cerr << "edi fit: " << error.what() << '\n';

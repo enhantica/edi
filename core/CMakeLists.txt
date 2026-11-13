@@ -168,3 +168,8 @@ if(NOT EMSCRIPTEN AND EXISTS "${CMAKE_SOURCE_DIR}/tests/fixtures/single_crystal_
     add_subdirectory(${CMAKE_SOURCE_DIR}/tests/fixtures/single_crystal_edges
                      ${CMAKE_BINARY_DIR}/single_crystal_edges)
 endif()
+
+if(NOT EMSCRIPTEN AND EXISTS "${CMAKE_SOURCE_DIR}/tests/fixtures/cli_performance/CMakeLists.txt")
+    add_subdirectory(${CMAKE_SOURCE_DIR}/tests/fixtures/cli_performance
+                     ${CMAKE_BINARY_DIR}/cli_performance)
+endif()

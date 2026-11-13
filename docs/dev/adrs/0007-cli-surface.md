@@ -84,3 +84,30 @@ C library as the platform boundary. Windows uses the static compiler runtime.
 Qualification runs the extracted executable and checks its dependencies,
 version and fit against a saved project. The public download page exposes
 only CLI ZIPs present in published GitHub releases.
+
+
+## Process performance selections
+
+The standalone fit command and Python fit entry expose the existing app Performance selections as
+--threads auto|N and --parallel-fits N. Python calc also accepts --threads. Both hosts forward to the
+existing edi/threading.hpp setters before loading/fitting/calculating; Python uses private binding
+forwards used by its real CLI, with no additional public Python settings surface. The first implementation
+is the app Preferences calculation/scan fields and the existing shared engine policy. No scheduling,
+thread pool or project-state implementation is duplicated.
+
+Defaults are Auto and one scan fit at a time on every invocation. Explicit counts are positive decimal
+integers representable by the engine's count type; malformed, zero, missing and overflowing input is a
+usage error before a fit. Both space and equals forms are supported. Settings apply to this process and
+are not saved as project preferences or minimizer conditions. Existing output channels are unchanged.
+
+The engine owns the interaction: parallel scan files each run on one thread. Sequential files grouped
+for parallel fitting start from the preceding group's result, so choosing more than one parallel fit can
+change the starting values and fitted results. The default one-at-a-time choice retains the strict
+predecessor chain. The CLI help and fit guide state this same behavior as the app/core contract.
+
+
+The native artifact source inventory includes the existing compiled acceptance-fixture tree and native
+integration sources as well as unit/probe sources. This covers the first single-crystal observer and the
+new CLI performance observer together, including future fixture directories, so an uncommitted observer
+input cannot be treated as the committed native build. The legacy artifact transport still needs its
+separate SDK-contract update before it can be re-enabled in current workflows.
