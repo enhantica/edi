@@ -6,3 +6,6 @@ NaN breaks stay breaks, hidden updates apply on activation, partial groups track
 replacement or scene recreation uses the latest traces.
 
 Run `pixi run -e app --skip-deps app-test-scan-lines` from the repository root.
+
+The fixture also checks screen-limited Stacked selection, selected/hidden/overlaid rows, zoom expansion,
+and Map pixel centres, smooth edge weights, original dataset identities and out-of-range pixels.

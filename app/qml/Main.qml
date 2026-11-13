@@ -918,26 +918,26 @@ EaComponents.ApplicationWindow {
 
     // The project's folder by its name, as a file is named: the dialog is filled with the project's own name, in the
     // folder it is in (owner, 2026-10-25); the folder is made if it is new.
-    NativeFileDialog {
+    FileDialog {
         id: saveFolder
         onRejected: window.cancelAssistantSaveAs()
         function openAt(target) {
             ApplicationInfo.openProjectSavePicker(target);
         }
         title: saveAsChoice.copy ? qsTr("Save a copy of the project as a folder") : qsTr("Save the project as a folder")
-        fileMode: NativeFileDialog.SaveFile
+        fileMode: FileDialog.SaveFile
         acceptLabel: qsTr("Save")
         onAccepted: ApplicationInfo.acceptProjectSavePicker(false)
     }
 
-    NativeFileDialog {
+    FileDialog {
         id: saveZip
         onRejected: window.cancelAssistantSaveAs()
         function openAt(target) {
             ApplicationInfo.openProjectSavePicker(target);
         }
         title: saveAsChoice.copy ? qsTr("Save a copy of the project as a .zip") : qsTr("Save the project as a .zip")
-        fileMode: NativeFileDialog.SaveFile
+        fileMode: FileDialog.SaveFile
         defaultSuffix: "zip"
         nameFilters: [qsTr("Zip archives (*.zip)")]
         acceptLabel: qsTr("Save")
@@ -948,14 +948,6 @@ EaComponents.ApplicationWindow {
     DropArea {
         anchors.fill: parent
         onDropped: drop => ApplicationInfo.dropProject(drop)
-    }
-
-    NativeDialogNotice {}
-    Shortcut {
-        sequence: "Escape"
-        context: Qt.ApplicationShortcut
-        enabled: NativeDialogs.busy
-        onActivated: NativeDialogs.cancel()
     }
 
     // The browser's file access: an archive that could not be opened or a project not packed.

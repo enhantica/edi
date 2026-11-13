@@ -16,6 +16,7 @@
 
 #include "chart_models.hpp"
 #include "scan_lines.hpp"
+#include "scan_draw_rows.hpp"
 #include "scan_view_model.hpp"
 
 namespace edi_app {
@@ -108,11 +109,16 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(QList<int> labelledDatasets READ labelledDatasets NOTIFY labelledDatasetsChanged)
     // Diagnostics, never inputs: how many datasets were reduced (a stacked trace or a map's pixel columns), and how
     // many times the drawing was rendered.
+    Q_PROPERTY(int drawnDatasetCount READ drawnDatasetCount NOTIFY drawnDatasetCountChanged)
     Q_PROPERTY(int traceBuildCount READ traceBuildCount NOTIFY traceBuildCountChanged)
     Q_PROPERTY(int redrawCount READ redrawCount NOTIFY redrawCountChanged)
 
    public:
     explicit ScanLayer(QQuickItem* parent = nullptr);
+
+    /// Datasets drawn by the current Stacked view, bounded by its screen height.
+    const std::vector<std::size_t>& drawnDatasets() const { return drawn_datasets_; }
+    int drawnDatasetCount() const { return static_cast<int>(drawn_datasets_.size()); }
 
     ScanViewModel* model() const { return model_; }
     void setModel(ScanViewModel* model);
@@ -227,6 +233,8 @@ class ScanLayer : public QQuickPaintedItem {
     void displayMaxChanged();
     void coloursRevisionChanged();
     void traceBuildCountChanged();
+    void drawnDatasetCountChanged();
+    void drawingRowsChanged();
     void redrawCountChanged();
 
    protected:
@@ -336,6 +344,12 @@ class ScanLayer : public QQuickPaintedItem {
 
     // The reductions, by dataset, and what they were made for.
     std::vector<Reduction> reductions_;
+    std::vector<std::size_t> drawn_datasets_;
+    std::vector<MapPixelRow> map_pixels_;
+    std::vector<double> map_rows_;
+    double map_low_ = 0, map_high_ = 0;
+    bool map_smooth_ = false;
+    std::vector<std::size_t> drawingRows() const;
     ReductionKey reduced_for_;
     QString reduced_mode_;
     int trace_builds_ = 0;

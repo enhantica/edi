@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "scan_lines.hpp"
+#include "scan_draw_rows.hpp"
+#include <set>
+#include <numeric>
 
 #include <QGuiApplication>
 #include <QSGGeometryNode>
@@ -14,6 +17,56 @@ public:
 class LineUpdates : public QObject {
     Q_OBJECT
 private slots:
+    void screenLimitedStackedRows() {
+        const std::vector<double> rows{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+        const auto full = edi_app::stacked_draw_rows(rows, 0.5, 0, 12, 600, 5, {});
+        QCOMPARE(full.size(), rows.size());
+        const auto dense = edi_app::stacked_draw_rows(rows, 0.5, 0, 12, 36, 5, {});
+        QCOMPARE(dense, (std::vector<std::size_t>{11, 6, 5, 0}));
+        const auto selected = edi_app::stacked_draw_rows(rows, 0.5, 0, 12, 36, 7, {});
+        QCOMPARE(selected, (std::vector<std::size_t>{11, 7, 6, 0}));
+        const auto zoom = edi_app::stacked_draw_rows(rows, 0.5, 4, 6, 36, 5, {});
+        QCOMPARE(zoom, (std::vector<std::size_t>{6, 5, 4}));
+        const auto hidden = edi_app::stacked_draw_rows(rows, 0.5, 0, 12, 36, 5, std::vector<int>{0, 5, 11});
+        QVERIFY(std::find(hidden.begin(), hidden.end(), 5) == hidden.end());
+        QVERIFY(std::find(hidden.begin(), hidden.end(), 0) == hidden.end());
+        const auto overlay = edi_app::stacked_draw_rows(std::vector<double>(20, 0), 1, 0, 1, 36, 10, {});
+        QVERIFY(overlay.size() <= 4);
+        QVERIFY(std::find(overlay.begin(), overlay.end(), 10) != overlay.end());
+        QVERIFY(edi_app::stacked_draw_rows(rows, 1, 0, 1, 0, 1, {}).empty());
+        const double nan = std::numeric_limits<double>::quiet_NaN();
+        QCOMPARE(edi_app::stacked_draw_rows(std::vector<double>{nan, 0, 1}, 1, 0, 1, 600, 0, {}),
+                 (std::vector<std::size_t>{2, 1}));
+    }
+    void mapUsesOriginalPixelBands() {
+        const std::vector<double> rows{0, 1};
+        const std::vector<edi::ScanRowSpan> spans{{-0.5, 0.5}, {0.5, 1.5}};
+        const auto stepped = edi_app::map_pixel_rows(rows, spans, -0.5, 1.5, 8, false);
+        const auto smooth = edi_app::map_pixel_rows(rows, spans, -0.5, 1.5, 8, true);
+        QCOMPARE(stepped.size(), std::size_t{8});
+        QCOMPARE(stepped[3].band, std::size_t{1});
+        QCOMPARE(stepped[3].lower, std::size_t{1});
+        QCOMPARE(smooth[3].band, std::size_t{1});
+        QCOMPARE(smooth[3].lower, std::size_t{0});
+        QCOMPARE(smooth[3].upper, std::size_t{1});
+        QCOMPARE(smooth[3].share, 0.75);
+        QCOMPARE(smooth[4].share, 0.25);
+        const auto outside = edi_app::map_pixel_rows(rows, spans, -2, 2, 4, true);
+        QCOMPARE(outside.back().band, edi_app::MapPixelRow::none);
+        const std::vector<double> unsorted{1, 0};
+        const auto reordered = edi_app::map_pixel_rows(unsorted,
+            std::vector<edi::ScanRowSpan>{{0.5, 1.5}, {-0.5, 0.5}}, -0.5, 1.5, 8, true);
+        QCOMPARE(reordered[3].band, std::size_t{0});
+        QCOMPARE(reordered[3].lower, std::size_t{1});
+        QCOMPARE(reordered[3].share, 0.75);
+        const auto zoom = edi_app::map_pixel_rows(rows, spans, 0.8, 1.2, 3, true);
+        for (const auto& row : zoom) {
+            QCOMPARE(row.band, std::size_t{1});
+            QCOMPARE(row.lower, std::size_t{1});
+            QCOMPARE(row.upper, std::size_t{1});
+        }
+        QVERIFY(edi_app::map_pixel_rows(rows, spans, 1, 0, 3, true).empty());
+    }
     void keepUnchangedGroups() {
         Lines lines;
         lines.setHeight(100);

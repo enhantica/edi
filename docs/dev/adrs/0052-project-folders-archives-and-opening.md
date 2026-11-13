@@ -396,33 +396,16 @@ and consumed once; cancelling the choice opens nothing. Both Folder and Zip use 
 pickers keep their direct user-gesture call, as required by browser file access.
 
 
-## Isolate desktop file choosers
+## In-process native file choosers
 
-The original Qt Quick FileDialog and FolderDialog calls now use NativeFileDialog and NativeFolderDialog
-through one NativeDialogs broker. Desktop choosers run in a child of the installed application executable,
-selected by an early helper-only entry point. The helper uses Qt's native QFileDialog and does not load the
-project, QML application, assistant or run log. This keeps the signed/deployed application as the only executable.
-The browser continues to use its existing WebFiles routes and Qt Quick fallback, without a process.
-
-The parent starts the helper asynchronously and sends a versioned JSON request on stdin. The helper reports
-when its dialog opens, then one accepted selection or rejection. Only local absolute file URLs are accepted;
-malformed, duplicate, oversized, incomplete or unsuccessful responses reject without changing a project.
-The request keeps the title, filters, file mode, default suffix, accept label and starting location.
-
-Normal selection shows only the native chooser. Escape in the main application cancels an outstanding chooser;
-a notice appears only when it fails. A startup deadline rejects a helper that cannot
-open its system panel; choosing files has no deadline after the helper reports ready. Closing the requesting
-dialog retires its result. Cancellation kills only that helper and reaps it after process exit, without any
-blocking wait. A helper thread watches its parent pipe for EOF and exits even if the native UI thread is stuck.
-This contains an unresponsive native service; it does not repair an iCloud/File Provider problem in macOS.
-
-Standalone checks exercise a frozen helper, cancellation, owner destruction, startup failure and timeout,
-valid multiple selections, malformed and duplicate replies, failure after a reply, and pipe closure in the real
-helper. A source check keeps every desktop file/folder picker on this route.
+The owner reverted chooser process isolation after testing it: its extra application icon is unwanted. Every file
+and folder picker again uses the original Qt Quick FileDialog or FolderDialog in the main application, with the
+platform's native panel. The helper-only entry point, broker, notice, cancellation shortcut and process tests are
+removed. The queued native project-picker handoff above remains in place. The earlier macOS File Provider wait
+is an external panel-service issue; no alternate picker or speculative provider workaround is introduced here.
 
 A processed scan's stage can generate analysis/scan-run.json even when no earlier run record exists. The staged
 save records that actual write before sealing its carried-file receipt, so its own output is not mistaken for
 an unexpected added file. Existing carried files still undergo the ordinary receipt checks.
 
 - [Qt QFileDialog native platform behavior](https://doc.qt.io/qt-6/qfiledialog.html)
-- [Qt QProcess asynchronous communication](https://doc.qt.io/qt-6/qprocess.html)

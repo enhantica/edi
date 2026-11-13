@@ -219,7 +219,7 @@ SideBarGroup {
         }
     }
 
-    NativeFileDialog {
+    FileDialog {
         id: loadDialog
         title: qsTr("Load a structure from a CIF or .edi file")
         nameFilters: [qsTr("Structure files (*.cif *.edi)"), qsTr("CIF files (*.cif)"), qsTr("edi block files (*.edi)")]

@@ -241,3 +241,25 @@ geometry. That repeated the growing prefix for the whole load. Group revisions n
 including changes that arrive while hidden. Recreated scene nodes build from the latest traces independently of
 previous uploads. The scan-line update fixture exercises partial-group/style changes, breaks, full replacement and
 node recreation directly against real scene-graph geometry.
+
+
+## Screen-limited dense views
+
+The owner approved drawing fewer Stacked curves after a dense scan became a solid band and loading still slowed
+as more geometry accumulated. The Stacked picture now uses an evenly spread selection of curves intersecting
+the vertical range, with roughly one curve per 12 logical pixels of plot height (at least two, at most 256), plus
+the selected curve when it intersects the view. Small visible sets keep every curve. End rows are retained, and
+zooming narrows the eligible set. All original files, fits, row positions and results remain available. This
+supersedes the earlier all-curves drawing rule; it does not average curves or alter their measured values.
+
+The GPU and painter share this selection, as do hit testing, row labels and row ticks. The existing progress line
+states how many curves are shown. Only selected curves retain Stacked reductions; changing the selection or
+viewport prepares the newly needed curves from the original measured points.
+
+The owner also requested the same screen-based work limit for Map. Its original dataset bands and quarter-band
+smooth interpolation remain unchanged. A cached pixel-row plan identifies the original band and up to two
+neighbours actually used by each image row; only those datasets keep Map reductions. The painter consumes the
+same plan, so no skipped dataset's values are substituted for a visible band. Global colour extrema still use all
+loaded datasets. A new viewport prepares its needed rows. Coincident opaque row ticks coalesce to one rectangle
+per logical pixel row, preserving the last tick's colour in Map. Neither view performs fitting or a new load pass
+as part of this display choice.

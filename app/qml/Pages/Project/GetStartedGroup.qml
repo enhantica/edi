@@ -192,13 +192,13 @@ SideBarGroup {
 
     // The system's choosers. On the next turn the opened project replaces this page, dialogs and all
     // (AppState.afterChanges).
-    NativeFolderDialog {
+    FolderDialog {
         id: openFolderDialog
         title: qsTr("Open an edi project folder")
         acceptLabel: qsTr("Open")
         onAccepted: Qt.callLater(Session.openProject, selectedFolder)
     }
-    NativeFileDialog {
+    FileDialog {
         id: openZipDialog
         title: qsTr("Open an edi project archive")
         nameFilters: [qsTr("edi project archives (*.zip)")]

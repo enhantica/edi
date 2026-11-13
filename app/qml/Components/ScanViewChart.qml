@@ -837,10 +837,12 @@ Item {
 
         EaElements.Label {
             objectName: "scanView." + chart.mode + ".progress"
-            visible: chart.scan !== null && chart.scan.wanted && chart.scan.loaded < chart.scan.count
+            visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.loaded < chart.scan.count) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
             anchors.right: parent.right
             color: chart.colors.chartLabels
-            text: chart.scan ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : ""
+            text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 curves; zoom for more").arg(layer.drawnDatasetCount) : "")) : ""
+            width: Math.min(implicitWidth, chart.width - 2 * chart.sideMargin)
+            elide: Text.ElideRight
         }
         EaElements.Label {
             objectName: "scanView." + chart.mode + ".refused"

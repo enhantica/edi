@@ -74,14 +74,14 @@ Row {
         enabled: save.target !== null
         onClicked: save.grab()
     }
-    NativeFileDialog {
+    FileDialog {
         id: dialog
 
         property var grabbed: null
         property real cut: 0
 
         title: qsTr("Save image")
-        fileMode: NativeFileDialog.SaveFile
+        fileMode: FileDialog.SaveFile
         defaultSuffix: "png"
         nameFilters: [qsTr("PNG images (*.png)")]
         onAccepted: {
