@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.e04_t11_wasm import iteration_domains, written
+from tests.fixtures.e04_t11_wasm import iteration_domains, solver_vehicles, written
 from tests.fixtures.e04_t11_wasm.cli_domains import compare_current, vehicle
 from tests.fixtures.e04_t11_wasm.compare import compare
 
@@ -60,6 +60,26 @@ def test_numeric_gate_accepts_native_reference_and_rejects_every_perturbed_opera
             compare('\n'.join(f'{name}={number}' for name, number in planted.items()), oracle)
 
 
+def historical_wasm(cli, fixture, old, source, project, evidence):
+    """Exercise every frozen vector operand under the source-backed old conditions."""
+    solver_vehicles.vehicle(source, project)
+    before = written.files(project)
+    run = subprocess.run(
+        ['node', str(Path(cli).resolve()), 'fit', str(project), '--dry', '--verbosity', 'full'],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    evidence.with_suffix('.txt').write_text(run.stdout)
+    evidence.with_suffix('.stderr').write_text(run.stderr)
+    assert run.returncode == 0, 'Historical WASM fit must complete: ' + run.stdout + run.stderr
+    assert written.files(project) == before, (
+        'Historical WASM fit must preserve its declared input bytes'
+    )
+    solver_vehicles.qualify_historical_report(fixture, old, run.stdout)
+
+
 @pytest.mark.parametrize('case', ['lbco', 'ncaf'])
 def test_catalogue_wasm_continuation_matches_current_native_work(tmp_path, case):
     cli_path = os.environ.get('EDI_WASM_CLI_MULTITHREAD')
@@ -68,7 +88,15 @@ def test_catalogue_wasm_continuation_matches_current_native_work(tmp_path, case)
         pytest.skip('real catalogue backend parity belongs to app WebAssembly qualification')
     assert reference, 'Catalogue WASM count parity requires the explicitly captured native work'
     fixture = written.admit(ROOT, case, Path(reference) / case)
-    _, _, source, _, _ = written.inputs(ROOT, case)
+    _, old, source, _, _ = written.inputs(ROOT, case)
+    historical_wasm(
+        cli_path,
+        fixture,
+        old,
+        source,
+        tmp_path / 'historical',
+        Path(reference) / (case + '-historical-wasm-machine'),
+    )
     project = tmp_path / 'project'
     shutil.copytree(source, project)
     before = written.files(project)

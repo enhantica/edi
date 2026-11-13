@@ -325,3 +325,32 @@ No historical count is substituted into a current Save, and reopen retains the w
 fit record. Physical values and uncertainties still face their independent original
 checks. The same-input catalogue WASM CLI uses the explicitly admitted native-written
 reference in addition to the existing standalone backend-parity vehicle.
+
+
+The catalogue prerequisite executes two solver configurations on separate fresh loads
+of the exact authenticated project. The historical configuration declares ladder and
+chi-square-change stopping, matching the captured SDK's stopping semantics; it retains
+the source's iteration budget, tolerances, free set, mode and uncertainty rule. Every
+original raw value, uncertainty and global fit anchor, including the historical count,
+must pass at its original bound. The captured callback/FULL-report history confirms
+the actual conditions and zero multistart probe work. It is a live regression check,
+not merely authentication of old files. Historical observations are mandatory retained
+capture files, and admission replays them before accepting a current reference.
+
+The second load retains today's defaults without setters. It checks the existing CLI
+project reference quantities without changing their values or bounds, the original
+initial chi-square, every named raw parameter and uncertainty against the FULL report,
+and the declared current continuation/probe accounting. Ordinary Save, arrays and
+reopen compare against this current fit. The producer binds the historical files,
+current reference/provenance files, recorder and solver-checker hashes before fitting.
+These current observations never become new committed numerical goldens.
+
+The compiled multithread WASM CLI also runs both configurations: its historical copy
+adds only the two declared solver fields and compares every observable original
+parameter, uncertainty, final statistic and count directly to the frozen captures.
+It does not invent a pre-fit observation that the CLI does not emit. The untouched
+current copy compares its complete FULL-report parameter/uncertainty population,
+history and work with the admitted current native run. The GUI still fits its ordinary
+current defaults and proves Save/reopen; no raw GUI vector observation is claimed.
+A failure in either configuration refuses browser qualification. Solver settings are
+never searched or tuned to obtain a desired count or a passing result.
