@@ -6,6 +6,10 @@ import argparse
 import importlib.util
 import tomllib
 from pathlib import Path
+from types import SimpleNamespace
+
+import edi
+import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 CHECKER = ROOT / 'tools/checks/cli_vocabulary.py'
@@ -174,8 +178,79 @@ def test_calc_exception_is_retired_without_wildcarding_child_options() -> None:
     )
 
 
-def test_descent_listing_checker_rejects_non_byte_equal_output() -> None:
+def test_descent_listing_checker_rejects_non_byte_equal_output(monkeypatch) -> None:
     checker = _checker()
     assert checker.listing_byte_findings(b'{"schema":1}\n', b'{"schema":2}\n') == [
         'descent-listing: edi output differs from pinned crysta'
     ], ' control: any byte-level registry divergence must make the checker red'
+
+    source = 'schema=41\nrecord=error\nstatus=error\n'
+    reference = b'schema=41\nrecord=descents\ndefault=second\ndescents=second,first\n'
+    monkeypatch.setattr(edi, 'error_report', lambda _verbosity: source)
+    monkeypatch.setattr(edi, '_default_descent', lambda: 'second')
+    monkeypatch.setattr(edi, '_descent_ids', lambda: ['second', 'first'])
+    assert checker.edi_descents_record() == reference, (
+        'The checker must follow the linked emitter schema without changing registry bytes'
+    )
+    monkeypatch.setattr(
+        checker.subprocess,
+        'run',
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=reference, stderr=b''),
+    )
+    binary = Path('independent-registry-oracle')
+    assert checker.descent_listing_findings(binary) == [], (
+        'Identical independently supplied registry bytes must pass the complete gate'
+    )
+    mismatch = ['descent-listing: edi output differs from pinned crysta']
+    with monkeypatch.context() as altered:
+        altered.setattr(edi, 'error_report', lambda _verbosity: source.replace('41', '42'))
+        assert checker.descent_listing_findings(binary) == mismatch, 'Schema drift must be red'
+    with monkeypatch.context() as altered:
+        altered.setattr(edi, '_default_descent', lambda: 'first')
+        assert checker.descent_listing_findings(binary) == mismatch, 'Default drift must be red'
+    for ids in (['second', 'foreign'], ['first', 'second'], ['second']):
+        with monkeypatch.context() as altered:
+            altered.setattr(edi, '_descent_ids', lambda ids=ids: ids)
+            assert checker.descent_listing_findings(binary) == mismatch, (
+                'Registry ID, order and truncation drift must each be red'
+            )
+    with monkeypatch.context() as altered:
+        altered.setattr(checker, 'edi_descents_record', lambda: reference[:-1])
+        assert checker.descent_listing_findings(binary) == mismatch, (
+            'A truncated candidate record must remain a byte mismatch'
+        )
+    with monkeypatch.context() as altered:
+        altered.setattr(
+            checker.subprocess,
+            'run',
+            lambda *_args, **_kwargs: SimpleNamespace(
+                returncode=0, stdout=reference[:-1], stderr=b''
+            ),
+        )
+        assert checker.descent_listing_findings(binary) == mismatch, (
+            'A truncated independent oracle must remain a byte mismatch'
+        )
+    for malformed in (
+        '',
+        'schema=41',
+        'schema=41\n',
+        'schema=41\nrecord=calc\n',
+        'schema=0\nrecord=error\n',
+        'schema=-1\nrecord=error\n',
+        'schema=+41\nrecord=error\n',
+        'schema=041\nrecord=error\n',
+        'schema=4.1\nrecord=error\n',
+        'schema=foreign\nrecord=error\n',
+        'record=error\nschema=41\n',
+        'schema=41\r\nrecord=error\n',
+        'schema=41\nrecord=error\nschema=42\n',
+        'schema=41\nrecord=error\nstatus=error',
+        None,
+    ):
+        with monkeypatch.context() as altered:
+            altered.setattr(edi, 'error_report', lambda _verbosity, wire=malformed: wire)
+            with pytest.raises(ValueError, match='linked edi report schema'):
+                checker.edi_descents_record()
+            assert checker.descent_listing_findings(binary) == [
+                'descent-listing: linked edi report schema is malformed'
+            ], 'An unreadable schema authority must refuse without comparing a guessed version'
