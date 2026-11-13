@@ -439,6 +439,13 @@ qt_add_executable(edi_app main.cpp)
 target_link_libraries(edi_app PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Svg)
 set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE TRUE)
 if(NOT EMSCRIPTEN)
+    qt_add_executable(edi_scan_refresh_tests EXCLUDE_FROM_ALL tests/scan_refresh_tests.cpp
+        src/scan_view_model.hpp src/scan_view_model.cpp src/scan_session.hpp src/scan_session.cpp)
+    target_link_libraries(edi_scan_refresh_tests PRIVATE edi_core Qt6::Core Qt6::Gui Qt6::Qml Qt6::Concurrent Qt6::Test)
+    target_include_directories(edi_scan_refresh_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_compile_definitions(edi_scan_refresh_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    set_target_properties(edi_scan_refresh_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE
+        QT_QML_MODULE_NO_IMPORT_SCAN TRUE)
     qt_add_executable(edi_scan_save_tests EXCLUDE_FROM_ALL tests/scan_save_tests.cpp)
     target_link_libraries(edi_scan_save_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
     target_include_directories(edi_scan_save_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)

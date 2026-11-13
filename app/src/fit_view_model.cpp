@@ -905,9 +905,8 @@ void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
     setScanCounts(counts, QString::fromStdString(record.file_name));
     setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
     latest_file_ = record.file_name;
-    if (following() && pattern_updates_ != kCatchUp) {
-        // The cheap indicators follow every finished file; only the pattern waits for the view (edi ADR-0029). A
-        // display catching up shows them with the file it draws.
+    if (following() && pattern_updates_ != kCatchUp && (owner_.patternShown() || !owner_.scanViewShown())) {
+        // Stacked and Map selection follows scanFrame at the chosen cadence: changing it here bypasses that throttle.
         owner_.markScanFile(latest_file_);
     }
     followLatest();

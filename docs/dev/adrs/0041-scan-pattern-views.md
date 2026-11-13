@@ -269,3 +269,19 @@ Zoom selects Stacked curves by baselines inside the visible vertical range, rath
 Otherwise the Wide spacing's tall off-screen curves occupy nearly every display slot and leave only a few baselines
 in the zoomed plot. The selected curve alone may enter from below the viewport, in addition to the visible-row set.
 The caption states the shown and total curve counts; it does not promise that zooming increases the curve count.
+
+
+Refreshing scan results, including the fresh-run preparation before Fit starts, retains the loaded view data and
+its generations when the file list, directory, extract title and axis/background/exclusion conversion are unchanged.
+Previously this path always re-placed every loaded pattern, which copies its axis and re-interpolates its background
+on the GUI thread before any fit progress. A changed conversion still re-places the patterns and invalidates the
+reductions. The two-file native scan-refresh test reaches both paths without fitting or a scale run.
+
+
+While fitting with Stacked or Map visible, the current dataset moves only through the existing scanFrame cadence
+(Adaptive, timed, every-pattern or catch-up); completion counts and per-file result rows still arrive for each file.
+The old direct per-file selection notification bypassed that cadence, and rebuilding chart labels could starve
+progress presentation even though the worker was already completing files. Pattern/Evolution indicator behavior
+is retained. Label bindings now consume only sparse dataset indices, never a boolean array as long as the scan.
+A numeric Repeater retains its label items while the list changes at the same length; its indexed dataset binding
+updates the existing items. Text measurement also visits only those sparse indices.

@@ -46,6 +46,25 @@ private slots:
             auto* labels = chart->findChild<QObject*>(QString("scanView.%1.labels").arg(mode));
             QVERIFY(labels);
             QCOMPARE(labels->property("count").toInt(), 0);
+            chart->setProperty("shown", true);
+            auto* layer = chart->findChild<edi_app::ScanLayer*>(QString("scanView.%1.layer").arg(mode));
+            QVERIFY(layer);
+            bool retained = false;
+            for (int dataset = 16; dataset < 32; ++dataset) {
+                const int before = labels->property("count").toInt();
+                QQuickItem* first = nullptr;
+                QVERIFY(QMetaObject::invokeMethod(labels, "itemAt", Q_RETURN_ARG(QQuickItem*, first), Q_ARG(int, 0)));
+                QPointer<QQuickItem> original(first);
+                layer->setCurrent(dataset);
+                if (before > 0 && labels->property("count").toInt() == before) {
+                    QVERIFY(original);
+                    QQuickItem* after = nullptr;
+                    QVERIFY(QMetaObject::invokeMethod(labels, "itemAt", Q_RETURN_ARG(QQuickItem*, after), Q_ARG(int, 0)));
+                    QCOMPARE(after, original.data());
+                    retained = true;
+                }
+            }
+            QVERIFY(retained);
         }
         edi_app::ScanLayer layer;
         layer.setMode("map");

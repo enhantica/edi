@@ -119,13 +119,15 @@ void ScanViewModel::clear() {
 }
 
 void ScanViewModel::setScan(const ScanSession* session, const edi::Project* project, const QString& extracted_title) {
-    readConversion(project);
+    const bool conversion_changed = readConversion(project);
     // Results read again over the same files (after a run or an undo) leave what was read: the patterns are the same.
     if (!joint_ && session != nullptr && project != nullptr && session->datasets().files == files_ &&
         session->datasets().directory == directory_ && extracted_title == extracted_title_ && !files_.empty()) {
-        placeAxis();
-        ++revision_;
-        emit revisionChanged();
+        if (conversion_changed) {
+            placeAxis();
+            ++revision_;
+            emit revisionChanged();
+        }
         return;
     }
     clear();
@@ -500,12 +502,12 @@ void ScanViewModel::setIncludedOnly(bool on) {
     }
 }
 
-double ScanViewModel::widestRowText(const QList<bool>& shown, const QFont& font) const {
+double ScanViewModel::widestRowText(const QList<int>& shown, const QFont& font) const {
     const QFontMetricsF metrics(font);
     double widest = 0.0;
-    for (qsizetype i = 0; i < shown.size() && i < row_texts_.size(); ++i) {
-        if (shown.at(i)) {
-            widest = std::max(widest, metrics.horizontalAdvance(row_texts_.at(i)));
+    for (const int dataset : shown) {
+        if (dataset >= 0 && dataset < row_texts_.size()) {
+            widest = std::max(widest, metrics.horizontalAdvance(row_texts_.at(dataset)));
         }
     }
     return widest;
