@@ -107,12 +107,18 @@
         if (requested && requested !== "multithread") {
           throw new Error("Only the multithreaded build is available. Remove the build parameter from the address.");
         }
-        const session = sessionStore();
-        const reloaded = session && session.getItem("edi.coi-reloaded");
+        let session = sessionStore();
+        let reloaded = null;
         if (session) {
-          session.removeItem("edi.coi-reloaded");
-          session.removeItem("edi.coi-reload");
-          session.removeItem("edi.fallback-reason");
+          try {
+            reloaded = session.getItem("edi.coi-reloaded");
+            session.removeItem("edi.coi-reloaded");
+            session.removeItem("edi.coi-reload");
+            session.removeItem("edi.fallback-reason");
+          } catch (e) {
+            // Server-provided isolation does not require working browser storage.
+            session = null;
+          }
         }
         if (self.crossOriginIsolated && typeof SharedArrayBuffer === "function") {
           return { build: "multithread", reason: "the page is cross-origin isolated and has SharedArrayBuffer" };
@@ -134,10 +140,12 @@
         }
         let timer;
         try {
-          await navigator.serviceWorker.register("coi-serviceworker.js");
           await Promise.race([
-            navigator.serviceWorker.ready,
-            new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("service worker activation timed out")), 15000); }),
+            (async () => {
+              await navigator.serviceWorker.register("coi-serviceworker.js");
+              await navigator.serviceWorker.ready;
+            })(),
+            new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("service worker setup timed out")), 15000); }),
           ]);
           session.setItem("edi.coi-reloaded", deploy);
           location.reload();
