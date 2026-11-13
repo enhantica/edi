@@ -15,7 +15,14 @@ WorkflowPage {
     id: page
 
     readonly property ProjectViewModel project: Session.project
-    readonly property StructureViewModel structure: project ? project.currentStructure : null
+    property StructureViewModel structure: null
+    Binding {
+        target: page
+        property: "structure"
+        value: page.project ? page.project.currentStructure : null
+        when: page.current
+        restoreMode: Binding.RestoreNone
+    }
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({

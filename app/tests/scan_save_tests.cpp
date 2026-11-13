@@ -20,6 +20,38 @@ Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 class ScanSaveTests : public QObject {
     Q_OBJECT
 private slots:
+    void hiddenWorkflowPagesDeferSelection() {
+        QQmlApplicationEngine engine;
+        edi_app::configure_engine(engine);
+        auto* session = engine.singletonInstance<edi_app::Session*>("edi.app", "Session");
+        QVERIFY(session);
+        QVERIFY2(session->openProject(QUrl::fromLocalFile(QStringLiteral(EDI_SOURCE_DIR "/app/examples/pd-xray-cwl_lif/project"))),
+            qPrintable(session->lastError()));
+        auto* project = session->project();
+        QVERIFY(project->duplicateExperiment());
+        QVERIFY(project->duplicateStructure());
+        for (const auto& kind : {QString("Experiment"), QString("Structure")}) {
+            const bool experiment = kind == "Experiment";
+            project->setCurrentExperimentIndex(0);
+            project->setCurrentStructureIndex(0);
+            QQmlComponent component(&engine);
+            component.setData(("import edi.app; " + kind + "Page { width: 800; height: 600; current: true }").toUtf8(), QUrl());
+            QScopedPointer<QObject> page(component.create());
+            QVERIFY2(page, qPrintable(component.errorString()));
+            const auto field = kind.toLower().toUtf8();
+            QObject* first = page->property(field).value<QObject*>();
+            QVERIFY(first);
+            page->setProperty("current", false);
+            if (experiment) project->setCurrentExperimentIndex(1);
+            else project->setCurrentStructureIndex(1);
+            QCOMPARE(page->property(field).value<QObject*>(), first);
+            page->setProperty("current", true);
+            QObject* selected = experiment ? static_cast<QObject*>(project->currentExperiment())
+                                          : static_cast<QObject*>(project->currentStructure());
+            QVERIFY(selected != first);
+            QCOMPARE(page->property(field).value<QObject*>(), selected);
+        }
+    }
     void numericPatternAxisProjection() {
         QQmlApplicationEngine engine;
         edi_app::configure_engine(engine);
