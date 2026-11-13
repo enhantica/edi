@@ -28,3 +28,11 @@ vocabulary for its parameter reference, and its experiment tags should look like
 
 - A new dictionary item gets a documentation link without app changes.
 - Tag colours change in one file for both the app and the docs.
+
+
+The native Analysis parameter-icon prefixes now live in app/src/app_info.cpp rather than
+a JavaScript constant in ParameterNames.qml. The metadata importer reads that same declared
+C++ prefix table, refuses an unrecognized shape, and records that file's hash in its provenance.
+The dictionary exporter still reads the actually linked SDK, and Python paths come from the
+actual binding and committed category census. Regeneration removes retired native fields from
+current reference tables; legacy input fixtures retain their historical vocabulary.

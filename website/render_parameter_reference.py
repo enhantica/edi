@@ -670,6 +670,26 @@ def render() -> None:
     )
 
 
+def native_icon_rules(source: Path) -> tuple[list[list[str]], Path]:
+    """Read the prefix table used by the native Analysis name renderer."""
+    path = source / 'app/src/app_info.cpp'
+    function = re.search(
+        r'QJSValue ApplicationInfo::nameParameterIcon\([^)]*\) const \{(.*?)\n\}',
+        path.read_text(),
+        re.DOTALL,
+    )
+    if not function:
+        raise ValueError('Native parameter-icon renderer was not found')
+    table = re.search(r'icons\[\] = \{(.*?)\};', function[1], re.DOTALL)
+    if not table:
+        raise ValueError('Native parameter-icon prefix table was not found')
+    pair = r'\{\s*"([a-z_]+)"\s*,\s*"([a-z-]+)"\s*\}'
+    rules = re.findall(pair, table[1])
+    if not rules or re.sub(pair, '', table[1]).strip(' ,\n\t'):
+        raise ValueError('Unrecognized native parameter-icon prefix table')
+    return [list(rule) for rule in rules], path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--import-native', type=Path)
@@ -685,12 +705,8 @@ def main() -> None:
         dictionary = without_task_labels(json.loads(args.dictionary.read_text()))
         (ASSETS / 'dictionary.json').write_text(json.dumps(dictionary, indent=4) + '\n')
         shutil.copyfile(args.python_paths, ASSETS / 'python-paths.json')
-        # Reuse the exact prefix rules of the native Analysis name renderer.
-        qml = source / 'app/qml/Globals/ParameterNames.qml'
-        rules = re.search(r'const icons = (\[.*?\]);', qml.read_text()).group(1)
-        (ASSETS / 'gui-parameter-icons.json').write_text(
-            json.dumps(json.loads(rules), indent=2) + '\n'
-        )
+        rules, icon_source = native_icon_rules(source)
+        (ASSETS / 'gui-parameter-icons.json').write_text(json.dumps(rules, indent=2) + '\n')
         provenance = {
             'edi_commit': subprocess.check_output(
                 ['git', 'rev-parse', 'HEAD'], cwd=source, text=True
@@ -698,7 +714,7 @@ def main() -> None:
             'source_sha256': {
                 str(path.relative_to(source)): hashlib.sha256(path.read_bytes()).hexdigest()
                 for path in [
-                    qml,
+                    icon_source,
                     source / 'tools/docs/reference-metadata.cpp',
                     source / 'tools/docs/python-reference.py',
                     source / 'data/category-census.json',
