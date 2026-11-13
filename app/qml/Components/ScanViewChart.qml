@@ -840,7 +840,7 @@ Item {
             visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.loaded < chart.scan.count) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
             anchors.right: parent.right
             color: chart.colors.chartLabels
-            text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 curves; zoom for more").arg(layer.drawnDatasetCount) : "")) : ""
+            text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
             width: Math.min(implicitWidth, chart.width - 2 * chart.sideMargin)
             elide: Text.ElideRight
         }

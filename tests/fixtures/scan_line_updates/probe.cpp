@@ -38,6 +38,16 @@ private slots:
         QCOMPARE(edi_app::stacked_draw_rows(std::vector<double>{nan, 0, 1}, 1, 0, 1, 600, 0, {}),
                  (std::vector<std::size_t>{2, 1}));
     }
+    void zoomUsesVisibleBaselines() {
+        std::vector<double> rows(101);
+        std::iota(rows.begin(), rows.end(), 0.0);
+        const auto zoom = edi_app::stacked_draw_rows(rows, 100, 80, 90, 60, 85, {});
+        QCOMPARE(zoom, (std::vector<std::size_t>{90, 88, 85, 83, 80}));
+        const auto entering = edi_app::stacked_draw_rows(rows, 100, 80, 90, 60, 5, {});
+        QCOMPARE(entering, (std::vector<std::size_t>{90, 88, 85, 83, 80, 5}));
+        const auto hidden = edi_app::stacked_draw_rows(rows, 100, 80, 90, 60, 5, std::vector<int>{5});
+        QCOMPARE(hidden, zoom);
+    }
     void mapUsesOriginalPixelBands() {
         const std::vector<double> rows{0, 1};
         const std::vector<edi::ScanRowSpan> spans{{-0.5, 0.5}, {0.5, 1.5}};

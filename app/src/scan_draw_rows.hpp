@@ -6,12 +6,13 @@
 #include <limits>
 #include <span>
 #include <vector>
+#include <utility>
 #include "edi/scan_views.hpp"
 
 namespace edi_app {
 
 /// The Stacked rows that fit a screen: top down, evenly spread through visible rows, plus the selected row.
-/// Curves crossing into the view remain eligible; hidden rows and non-finite placements are excluded.
+/// The selected curve may also enter from below; other off-screen baselines consume no display slots.
 inline std::vector<std::size_t> stacked_draw_rows(std::span<const double> baselines, double pattern_height,
                                                  double low, double high, double pixels, int selected,
                                                  std::span<const int> hidden) {
@@ -20,7 +21,7 @@ inline std::vector<std::size_t> stacked_draw_rows(std::span<const double> baseli
         !std::isfinite(high) || !std::isfinite(pattern_height)) return order;
     for (std::size_t d = 0; d < baselines.size(); ++d) {
         const double row = baselines[d];
-        if (std::isfinite(row) && row <= high && row + pattern_height >= low &&
+        if (std::isfinite(row) && row >= low && row <= high &&
             std::find(hidden.begin(), hidden.end(), static_cast<int>(d)) == hidden.end()) order.push_back(d);
     }
     const auto above = [&baselines](std::size_t a, std::size_t b) {
@@ -28,11 +29,17 @@ inline std::vector<std::size_t> stacked_draw_rows(std::span<const double> baseli
     };
     std::sort(order.begin(), order.end(), above);
     const auto limit = static_cast<std::size_t>(std::clamp(std::floor(pixels / 12.0), 2.0, 256.0));
-    if (order.size() <= limit) return order;
     std::vector<std::size_t> drawn;
-    drawn.reserve(limit + 1);
-    for (std::size_t i = 0; i < limit; ++i) drawn.push_back(order[i * (order.size() - 1) / (limit - 1)]);
-    if (selected >= 0 && std::find(order.begin(), order.end(), static_cast<std::size_t>(selected)) != order.end() &&
+    if (order.size() <= limit) drawn = std::move(order);
+    else {
+        drawn.reserve(limit + 1);
+        for (std::size_t i = 0; i < limit; ++i) drawn.push_back(order[i * (order.size() - 1) / (limit - 1)]);
+    }
+    if (selected >= 0 && static_cast<std::size_t>(selected) < baselines.size() &&
+        std::isfinite(baselines[static_cast<std::size_t>(selected)]) &&
+        baselines[static_cast<std::size_t>(selected)] <= high &&
+        baselines[static_cast<std::size_t>(selected)] + pattern_height >= low &&
+        std::find(hidden.begin(), hidden.end(), selected) == hidden.end() &&
         std::find(drawn.begin(), drawn.end(), static_cast<std::size_t>(selected)) == drawn.end()) {
         drawn.push_back(static_cast<std::size_t>(selected));
         std::sort(drawn.begin(), drawn.end(), above);

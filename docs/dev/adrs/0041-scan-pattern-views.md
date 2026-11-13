@@ -246,7 +246,7 @@ node recreation directly against real scene-graph geometry.
 ## Screen-limited dense views
 
 The owner approved drawing fewer Stacked curves after a dense scan became a solid band and loading still slowed
-as more geometry accumulated. The Stacked picture now uses an evenly spread selection of curves intersecting
+as more geometry accumulated. The Stacked picture now uses an evenly spread selection of curves whose baselines lie inside
 the vertical range, with roughly one curve per 12 logical pixels of plot height (at least two, at most 256), plus
 the selected curve when it intersects the view. Small visible sets keep every curve. End rows are retained, and
 zooming narrows the eligible set. All original files, fits, row positions and results remain available. This
@@ -263,3 +263,9 @@ same plan, so no skipped dataset's values are substituted for a visible band. Gl
 loaded datasets. A new viewport prepares its needed rows. Coincident opaque row ticks coalesce to one rectangle
 per logical pixel row, preserving the last tick's colour in Map. Neither view performs fitting or a new load pass
 as part of this display choice.
+
+
+Zoom selects Stacked curves by baselines inside the visible vertical range, rather than by their full peak extents.
+Otherwise the Wide spacing's tall off-screen curves occupy nearly every display slot and leave only a few baselines
+in the zoomed plot. The selected curve alone may enter from below the viewport, in addition to the visible-row set.
+The caption states the shown and total curve counts; it does not promise that zooming increases the curve count.
