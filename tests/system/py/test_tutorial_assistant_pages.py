@@ -271,8 +271,8 @@ def test_each_prompt_has_fresh_committed_authoring_trial_evidence(
     evidence = json.loads(
         (ROOT / 'tests/fixtures/tutorial_cases/assistant_trials.json').read_text()
     )
-    summary = 'knowledge/analysis/e04-t45-assistant-prompt-trials.md'
-    assert evidence['source'] and evidence['source']['path'] == summary, (
+    summary = 'assistant-prompt-trials'
+    assert evidence['source'] and evidence['source']['document'] == summary, (
         'Gate 3/5: export the committed preview rerun summary, preserving first-trial history'
     )
     rows = [
@@ -292,7 +292,7 @@ def test_each_prompt_has_fresh_committed_authoring_trial_evidence(
         assert_preview_trial(row, interface, digest)
     soup = BeautifulSoup(page.read_text(), 'html.parser')
     assert any(
-        unquote(urlparse(link['href']).path).endswith('/' + summary)
+        unquote(urlparse(link['href']).path).rstrip('/').endswith('/' + summary)
         for link in soup.select('main a[href]')
     ), 'Gate 3/5: the prompt page cites the published preview rerun summary used by the gate'
 
