@@ -21,6 +21,7 @@ environment:
 ```
 python tests/fixtures/onboarding/build_native.py log_probe
 python tests/fixtures/onboarding/build_native.py payload_probe
+python tests/fixtures/onboarding/build_native.py geometry_probe
 ```
 
 Builds are prerequisites, as the production Qt test host is. Their compile time is not
@@ -132,3 +133,11 @@ normal module cadence classify the complete producer. Local collection URLs
 replace both remote catalogues. A writable copy of the committed line-segment
 project supplies the existing user project; the tutorial's real creation,
 ownership, unsaved-edit, restoration and completion actions remain exercised.
+
+
+The geometry probe compiles the exact read-only browser control hook against locked
+native Qt. It checks editor extents independently of their text/cursor ink, scene
+transforms, clipping, visibility, focus and duplicate-control refusal. Its receipt
+binds provider, fixture and binary hashes. It establishes provider behavior; packed
+browser input and OS picker qualification remain separate. The existing
+`onboarding-probes` prerequisite builds it before the app integration group.

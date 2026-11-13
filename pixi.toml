@@ -256,9 +256,10 @@ app-run = { cmd = ["bash", "tools/ci/app-run.sh"] }
 # Development only: build crysta from a local checkout, link the app to it and start it
 # (`pixi run -e app app-with-crysta ../crysta`; docs/dev/local-crysta.md).
 app-with-crysta = { cmd = ["bash", "tools/dev/app-with-crysta.sh"] }
-# The onboarding tests' prerequisites, made outside each test's timing (tests/fixtures/onboarding/README.md): the two
-# standalone probes the logging and feedback tests launch, and a native documentation capture from the built app.
-onboarding-probes = "python tests/fixtures/onboarding/build_native.py log_probe && python tests/fixtures/onboarding/build_native.py payload_probe"
+# The Qt test prerequisites, made outside each test's timing (tests/fixtures/onboarding/README.md):
+# standalone log, feedback and browser-geometry probes, and a native documentation capture from the built app.
+
+onboarding-probes = "python tests/fixtures/onboarding/build_native.py log_probe && python tests/fixtures/onboarding/build_native.py payload_probe && python tests/fixtures/onboarding/build_native.py geometry_probe"
 # The capture tool refuses a folder holding an earlier capture, so each run starts from an empty one.
 onboarding-capture = { cmd = "rm -rf build/onboarding-capture && python tests/fixtures/onboarding/capture_bundle.py", depends-on = ["app-build"] }
 # The observer the system tier's tutorial tests read project storage through, linked from the app build, and the app

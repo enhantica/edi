@@ -11,7 +11,7 @@ namespace edi_app {
 //  - window.ediDevelopDiagnostics(action): "open" opens Preferences, selects Develop and opens Diagnostics through
 //    their own controls; "read" returns the dialogs' state, the text Diagnostics shows and the text ApplicationInfo
 //    provides; "close" closes both and resolves once they have closed.
-//  - window.ediControlGeometry(name): the one visible item of that name's scene rectangle and state, read only: its
+//  - window.ediControlGeometry(name): the one visible item's declared control extent mapped to the scene, read only:
 //    visible/enabled and actual Qt activeFocus, text (its own, else its visible descendants'), and for a checkable
 //    item whether it is checked. Focus is observed with QQuickItem::hasActiveFocus(), never requested.
 //  - window.ediFitProgress(): the status bar's fit progress text, its visibility and whether the fit is running;

@@ -725,8 +725,8 @@ jobs:
       - name: qmlformat changes nothing
         if: steps.inputs.outputs.run == 'true'
         run: pixi run -e app --skip-deps app-format-check
-      # The onboarding tests' prerequisites, made before the tests that use them and outside their timing: the two
-      # standalone probes (the app group, the Qt Quick tier) and a documentation capture from the app just built.
+      # The Qt test prerequisites, made before the tests that use them and outside their timing: standalone
+      # log, feedback and browser-geometry probes, plus a documentation capture from the app just built.
       - name: Prepare the onboarding test prerequisites
         if: (github.event_name != 'pull_request') && steps.inputs.outputs.run == 'true'
         run: pixi run -e app --skip-deps onboarding-probes && pixi run -e app --skip-deps onboarding-capture

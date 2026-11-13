@@ -301,3 +301,15 @@ the actual imported native-module hash and current source commit before capture,
 retains the independent raw anchors. Each run owns a fresh reference directory and
 passes it explicitly to the browser driver; a missing or invalid prerequisite refuses
 qualification instead of replacing the scientific reference.
+
+
+The browser's read-only control geometry hook maps the named item's declared width
+and height into the scene. TextInput overrides boundingRect with its text extent,
+which can be empty before typing; that content rectangle cannot describe the editor's
+pointer target. Existing visibility, uniqueness, enabled-state and viewport checks
+remain required before trusted input. No editor or chart layout is changed.
+
+The existing standalone Qt probe prerequisite also builds the source-qualified control
+geometry carrier before the app integration group. Native Qt verifies the provider's
+extent/refusal semantics; the packed browser checks still prove actual trusted input.
+Duplicate-control diagnostics preserve both the control name and the visible count.

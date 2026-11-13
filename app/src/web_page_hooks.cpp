@@ -122,8 +122,10 @@ extern "C" EMSCRIPTEN_KEEPALIVE const char* edi_control_geometry(const char* obj
     }
     QJsonObject state;
     if (shown.size() == 1) {
-        const QRectF rect = shown.constFirst()->mapRectToScene(shown.constFirst()->boundingRect());
         QQuickItem* item = shown.constFirst();
+        // TextInput's boundingRect describes its text, which is empty before typing.
+        // Trusted input targets the declared control extent, including padding and background.
+        const QRectF rect = item->mapRectToScene(QRectF(0, 0, item->width(), item->height()));
         state = {{QStringLiteral("objectName"), item->objectName()},
                  {QStringLiteral("x"), rect.x()},
                  {QStringLiteral("y"), rect.y()},
@@ -160,7 +162,7 @@ extern "C" EMSCRIPTEN_KEEPALIVE const char* edi_control_geometry(const char* obj
     } else {
         const QString why = matches.isEmpty() ? QStringLiteral("no item is named '%1'")
                             : shown.isEmpty() ? QStringLiteral("no visible item is named '%1'")
-                                              : QStringLiteral("%2 visible items are named '%1'").arg(shown.size());
+                                              : QStringLiteral("%1 visible items are named '%2'").arg(shown.size());
         state = {{QStringLiteral("error"), why.arg(name)}};
     }
     result = QJsonDocument(state).toJson(QJsonDocument::Compact).toStdString();
