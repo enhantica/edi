@@ -6317,10 +6317,18 @@ std::optional<ScanFileRecord> scan_record_from_row(const std::string& line) {
 
 // Every currently committed data row (header skipped). A missing or unreadable file reads as zero rows (the same
 // view crysta's driver takes of a fresh scan) and a path that is not a regular file throws; a torn or foreign file
-// is the driver's own fail-closed refusal, which edi does not preempt here.
-std::vector<ScanFileRecord> read_scan_rows(const std::filesystem::path& csv_path) {
+// is the driver's own fail-closed refusal, which edi does not preempt here. A legacy header also
+// admits its sidecar before a preamble is published. On a dry run the driver copies that sidecar
+// into the output tree, so both the source and destination must have a supported kind.
+std::vector<ScanFileRecord> read_scan_rows(const std::filesystem::path& csv_path,
+                                          const std::filesystem::path& output_csv) {
     std::vector<ScanFileRecord> rows;
+    const auto admit_sidecar = [](const std::filesystem::path& csv) {
+        scan_state_present(csv.parent_path() / "results-provenance.csv", "analysis/results-provenance.csv");
+    };
     if (!scan_state_present(csv_path, "analysis/results.csv")) {
+        // With no retained results the driver still checks its output-side legacy path.
+        admit_sidecar(output_csv);
         return rows;
     }
     std::ifstream in(csv_path);
@@ -6333,6 +6341,10 @@ std::vector<ScanFileRecord> read_scan_rows(const std::filesystem::path& csv_path
     while (std::getline(in, line)) {
         if (header) {
             const auto columns = split_scan_row(line);
+            if (!has_scan_conditions(columns)) {
+                admit_sidecar(csv_path);
+                if (output_csv != csv_path) admit_sidecar(output_csv);
+            }
             const auto found = std::find(columns.begin(), columns.end(), kScanConditionColumns[3]);
             if (found != columns.end()) termination = static_cast<std::size_t>(found - columns.begin());
             header = false;
@@ -6521,7 +6533,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                     scan_state_present(csv_path, "analysis/results.csv") || scan_data_root.empty()
                         ? csv_path
                         : data_root / "analysis" / "results.csv";
-                scan_preamble.completed_rows = read_scan_rows(resume_csv);
+                scan_preamble.completed_rows = read_scan_rows(resume_csv, csv_path);
                 on_scan_start(scan_preamble);
                 preamble_delivered = true;
             }
