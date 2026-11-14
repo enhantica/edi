@@ -59,7 +59,9 @@ public:
     Q_INVOKABLE void injectChangelog(const QString& json) {
         qputenv("EDI_CHANGELOG_JSON", json.toUtf8());
     }
+    Q_INVOKABLE qint64 clockElapsed() const { return clock_ ? clock_->elapsed() : -1; }
     Q_INVOKABLE void startClock() {
+        if (clock_) return;
         clock_ = std::make_unique<OnboardingClock>();
         clock_->install();
     }

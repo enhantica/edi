@@ -203,6 +203,7 @@ def observe_states(tmp_path_factory, wanted):
         '0',
     ]
     command += [
+        'TutorialNavigation::test_required_clock_remains_monotonic_within_the_original_window',
         'TutorialNavigation::test_required_menu_observer_tracks_actual_popup_visibility',
         'TutorialNavigation::test_required_recipe_observer_positive_control',
     ]
@@ -254,6 +255,7 @@ def observe_states(tmp_path_factory, wanted):
         'run': run,
         'records': native_records(raw, 'TUTORIAL_RECIPE_BOUNDARY'),
         'menu_controls': native_records(raw, 'TUTORIAL_MENU_OBSERVER_CONTROL'),
+        'clock_controls': native_records(raw, 'TUTORIAL_CLOCK_CONTROL'),
         'folder': str(artifacts),
     }
 
@@ -281,6 +283,10 @@ def test_builtin_pre_fit_state_equals_the_declared_docs_recipe(case, states):
 
 
 def test_recipe_observer_has_a_real_positive_control(states):
+    assert states['clock_controls'] == [{'delta': 156, 'monotonic': True}], (
+        'Native boundary observations require the independently exercised '
+        'monotonic animation clock'
+    )
     assert states['menu_controls'] == [{'closed': 0, 'opened': 1, 'closed_after': 0}], (
         'The original-menu observer must pass its genuine closed/opened/Escape control '
         'before its native state observations are qualified'

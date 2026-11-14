@@ -13,6 +13,7 @@ import pytest
 from tests.fixtures.tutorial_cases.command_line import (
     actions,
     edit_project,
+    loop_schemas,
     setup_action,
     visible_flag_edits,
     write_project,
@@ -31,7 +32,7 @@ def collection(tmp_path_factory):
 
 
 @pytest.mark.parametrize('case', [case for case in FITTING if 'cli' in interfaces_for(case)])
-def test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin(  # noqa: PLR0914 - whole visible workflow
+def test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin(  # noqa: PLR0912, PLR0914, PLR0915 - whole visible workflow
     case, tmp_path, collection
 ):
     page = ROOT / 'website/surfaces/docs/cli/tutorials/cases' / (case + '.md')
@@ -65,6 +66,7 @@ def test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin( 
     totals = list(accumulate(cycle['constraints'] for cycle in expected)) if expected else None
     actual = []
     final = None
+    schemas = {}
     for operation, argument, body in steps:
         if operation in {'mkdir', 'move', 'unpack'}:
             setup_action(tmp_path, operation, argument)
@@ -85,10 +87,21 @@ def test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin( 
                 + run.stderr
             )
         elif operation == 'edit':
-            edit_project(project, argument, body)
+            schemas.setdefault(argument, loop_schemas((project / argument).read_text()))
+            edit_project(project, argument, body, schemas=schemas[argument])
         elif operation in {'clear-free', 'free-rows'}:
-            visible_flag_edits(project, argument, body if operation == 'free-rows' else None)
+            schemas.setdefault(argument, loop_schemas((project / argument).read_text()))
+            visible_flag_edits(
+                project,
+                argument,
+                body if operation == 'free-rows' else None,
+                schemas=schemas[argument],
+            )
         elif operation in {'fit', 'calc'}:
+            for path in sorted(project.rglob('*.edi')):
+                schemas.setdefault(
+                    path.relative_to(project).as_posix(), loop_schemas(path.read_text())
+                )
             if operation == 'fit':
                 loaded = api().Project.load(project)
                 parameters = json.loads(

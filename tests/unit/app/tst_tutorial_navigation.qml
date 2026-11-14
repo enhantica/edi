@@ -218,6 +218,7 @@ TestCase {
         return steps[index];
     }
     function finishPages() {
+        OnboardingProbe.advanceClock(1000);
         tryVerify(() => {
             // Spend each readiness poll incubating real pages, rather than adding
             // a timer gap after every small incubation slice.
@@ -1376,8 +1377,10 @@ TestCase {
         compare(Array.from(seen).sort().join(","), "down,left,right,up", "The real layout witness exercises every pointer direction");
     }
     function createLessonProject(name) {
+        finishPages();
         compare(Session.project, null, "A scientific lesson waits for user creation instead of silently creating a project");
         Ui.click(test, Probe, app, "project.create");
+        settleTour();
         const dialog = SettingsProof.creationDialog(app);
         verify(dialog !== null, "The learner opens the real Create project dialog");
         tryCompare(dialog, "opened", true, 2000, "The project name is entered after the real dialog opens");
@@ -2392,6 +2395,18 @@ TestCase {
         }
         const experiment = project.currentExperiment;
         return experiment !== null && [experiment.pattern, experiment.singleCrystalReflections].some(model => Probe.rows(model).some(row => Number.isFinite(row.intensityMeas)));
+    }
+
+    function test_required_clock_remains_monotonic_within_the_original_window() {
+        OnboardingProbe.startClock();
+        const before = OnboardingProbe.clockElapsed();
+        OnboardingProbe.advanceClock(137);
+        compare(OnboardingProbe.clockElapsed(), before + 137, "The actual injected driver advances by the requested nonzero interval");
+        OnboardingProbe.startClock();
+        compare(OnboardingProbe.clockElapsed(), before + 137, "Starting the same window's clock again cannot move original animations backwards");
+        OnboardingProbe.advanceClock(19);
+        compare(OnboardingProbe.clockElapsed(), before + 156, "Repeated readiness setup preserves one monotonic animation timeline");
+        console.info('TUTORIAL_CLOCK_CONTROL ' + JSON.stringify({delta: 156, monotonic: true}));
     }
 
     function test_required_menu_observer_tracks_actual_popup_visibility() {

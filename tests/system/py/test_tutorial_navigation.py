@@ -169,7 +169,12 @@ CASES = [
 
 @pytest.mark.parametrize('case', CASES)
 def test_written_tutorial_navigation(case):
-    runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
+    runner = Path(
+        os.environ.get(
+            'EDI_APP_TEST_RUNNER',
+            ROOT / 'build/app/app' / ('edi_app_tests' + ('.exe' if os.name == 'nt' else '')),
+        )
+    )
     assert runner.is_file(), 'Tutorial navigation requires the actual production Qt host'
     result = subprocess.run(
         [
@@ -182,6 +187,8 @@ def test_written_tutorial_navigation(case):
         ],
         capture_output=True,
         text=True,
+        encoding='utf-8',
+        errors='backslashreplace',
         check=False,
         timeout=180 if case.startswith(('next_alone_', 'live_lesson_')) else 45,
         env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},

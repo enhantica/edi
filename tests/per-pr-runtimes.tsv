@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T21:54:21Z
+# measured_utc = 2026-11-14T22:33:58Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 176369 banked, 0 stale row(s) dropped)
-# Collected tests: 245169; with a reported duration: 77172
+# Recorded from: measured test run (7 node(s) measured once, 176370 banked, 0 stale row(s) dropped)
+# Collected tests: 245176; with a reported duration: 77172
 # Module-scoped fixture costs recorded: 194
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245169
+# inventory_python = 245176
 # inventory_cpp = 402
-# inventory_measured = 176370
+# inventory_measured = 176377
 # inventory_unmeasured = 69201
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85902
+# inventory_pr_python = 85909
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -170324,11 +170324,18 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_notebook_contra
 0.000	tests/integration/py/test_tutorial_notebook_contract.py::test_vector_tag_observer_refuses_each_visible_identity_escape[wrong-alt]
 0.000	tests/integration/py/test_tutorial_notebook_contract.py::test_vector_tag_observer_refuses_each_visible_identity_escape[wrong-glyph]
 0.000	tests/integration/py/test_tutorial_notebook_contract.py::test_vector_tag_observer_refuses_each_visible_identity_escape[wrong-label]
+0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_atomic_remainder_observes_independent_members_and_new_markers
+0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_first_terms_scope_keeps_higher_coefficients_fixed_and_count_exact
+0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_historical_columns_keep_free_marks_on_their_original_named_member
+0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_magnetic_remainder_preserves_each_sites_independent_components
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_origin_is_the_actual_operand_relative_to_the_launch_directory[folder with spaces]
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_origin_is_the_actual_operand_relative_to_the_launch_directory[sample]
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_origin_is_the_actual_operand_relative_to_the_launch_directory[temperature-55K]
+0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_remainder_owns_its_last_loop_and_preserves_named_bank_endpoints
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_current_recipe_row_actions_are_scientific_and_misspellings_refuse[tick:experiment.scale]
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_current_recipe_row_actions_are_scientific_and_misspellings_refuse[untick:structure.atom_sites.A.adp_iso]
+0.000	tests/integration/py/test_tutorial_observer_controls.py::test_explicit_headerless_reset_changes_only_its_unique_complete_row
+0.000	tests/integration/py/test_tutorial_observer_controls.py::test_named_relation_prose_completes_only_its_explicit_alias_endpoints
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_visible_setup_is_executable_once_and_keeps_its_new_file_bytes
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_written_member_subgroups_keep_repeated_category_releases_and_block_scope
 0.030	tests/integration/py/test_tutorial_observer_controls.py::test_written_table_context_disambiguates_identical_keys_without_changing_other_loops
