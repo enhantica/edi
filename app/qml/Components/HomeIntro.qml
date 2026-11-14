@@ -54,11 +54,9 @@ Item {
     readonly property real lineWidth: making.implicitWidth + lightDiffraction.advanceWidth + middle.implicitWidth + easy.implicitWidth
     TextMetrics {
         id: lightDiffraction
-        font.family: EaStyle.Fonts.baloo2Variable.name
+        font.family: EaStyle.Fonts.baloo2Regular.name
+        font.styleName: "Regular"
         font.pixelSize: intro.pixelSize
-        font.variableAxes: ({
-                "wght": 400
-            })
         text: diffraction.text
     }
     readonly property real lineX: (width - lineWidth) / 2
@@ -107,14 +105,19 @@ Item {
 
     // The words in Baloo 2's lightest weight, 400, as the logo's "easy"; "diffraction" grows to the logo's 600 while the
     // other words fade out, then keeps it through the move (the owner, 2026-11-14).
+    // At either end of its weight change a word is drawn in the very face the Home logo uses (Wordmark: Baloo 2
+    // Regular, SemiBold), so the hand-over to the logo cannot be seen; only in between in the variable face.
     component Word: EaElements.Label {
         property real weight: 400
+        readonly property bool regular: weight <= 400
+        readonly property bool semiBold: weight >= 600
 
-        font.family: EaStyle.Fonts.baloo2Variable.name
+        font.family: regular ? EaStyle.Fonts.baloo2Regular.name : semiBold ? EaStyle.Fonts.baloo2SemiBold.name : EaStyle.Fonts.baloo2Variable.name
+        font.styleName: regular ? "Regular" : semiBold ? "SemiBold" : ""
         font.pixelSize: intro.pixelSize
-        font.variableAxes: ({
-                "wght": weight
-            })
+        font.variableAxes: regular || semiBold ? ({}) : ({
+                    "wght": weight
+                })
     }
 
     Word {
