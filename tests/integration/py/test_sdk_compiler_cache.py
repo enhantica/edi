@@ -279,3 +279,41 @@ def test_installer_preserves_objects_after_failure_with_the_same_explicit_cache_
             damaged['steps'].insert(0, save)
         with pytest.raises(AssertionError):
             installer_cache_boundary(damaged)
+
+
+def test_failed_sdk_pack_reports_cache_stats_then_keeps_its_failure(tmp_path):
+    build = next(step for step in producer()['steps'] if 'cpp-ci sdk-pack' in step.get('run', ''))
+    (tmp_path / 'crysta').mkdir()
+    tools = tmp_path / 'bin'
+    tools.mkdir()
+    pixi = tools / 'pixi'
+    pixi.write_text(
+        '#!/usr/bin/env bash\n'
+        'echo "$*" >> "$CACHE_WITNESS"\n'
+        'case "$*" in *sdk-pack*) exit 23;; esac\n',
+        encoding='utf-8',
+    )
+    pixi.chmod(0o755)
+    witness = tmp_path / 'calls'
+    result = subprocess.run(
+        ['bash', '-e', '-c', build['run'].replace('${{ matrix.platform }}', 'linux-64')],
+        cwd=tmp_path,
+        env={
+            **os.environ,
+            'PATH': str(tools) + os.pathsep + os.environ['PATH'],
+            'RUNNER_TEMP': str(tmp_path),
+            'GITHUB_WORKSPACE': str(tmp_path),
+            'SHA': 'a7' * 20,
+            'CACHE_WITNESS': str(witness),
+        },
+        capture_output=True,
+        text=True,
+        encoding='utf-8',
+        timeout=5,
+        check=False,
+    )
+    assert result.returncode == 23, 'Cache reporting must preserve the failed qualification status'
+    calls = witness.read_text(encoding='utf-8').splitlines()
+    assert len(calls) == 3 and '--zero-stats' in calls[0] and 'sdk-pack' in calls[1]
+    assert '--show-stats' in calls[2], 'The failed real pack step must report its cache statistics'
+    assert not list(tmp_path.glob('*.tar*')), 'A failed pack must stop before source archiving'

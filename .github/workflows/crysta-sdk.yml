@@ -176,7 +176,11 @@ jobs:
         run: |
           out="$GITHUB_WORKSPACE/crysta-sdk-archives"
           mkdir -p "$out"
-          (cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci sdk-pack "$SHA" "${{ matrix.platform }}" "$out")
+          (cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps ccache --zero-stats)
+          sdk_status=0
+          (cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci sdk-pack "$SHA" "${{ matrix.platform }}" "$out") || sdk_status=$?
+          (cd "$RUNNER_TEMP/crysta" && pixi run -e cpp-ci --skip-deps ccache --show-stats)
+          [ "$sdk_status" -eq 0 ] || exit "$sdk_status"
           # The source with the receipt of its Git objects, which crysta's web observer builders read from an
           # export that has no .git.
           git -C "$RUNNER_TEMP/crysta" archive --format=tar -o "$RUNNER_TEMP/crysta-src.tar" "$SHA"

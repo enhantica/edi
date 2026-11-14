@@ -329,3 +329,9 @@ paired-world fixture leave the active suite; their history remains in Git.
 Existing native transport, source-receipt, Windows DLL/ABI and producer workflow
 controls continue to prove the corresponding current boundaries. No compatibility
 stub is added to production to satisfy the retired acquisition API.
+
+The SDK producer prints its actual compiler-cache statistics around each pack
+attempt, including a failed qualification. The original pack exit status still
+refuses source archiving and artifact promotion. Crysta normalizes only its own
+isolated scratch paths for compiler caching; every platform runs the same real
+CMake hit/invalidation preflight before the normal C++ and corpus qualification.
