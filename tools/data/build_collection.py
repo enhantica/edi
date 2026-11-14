@@ -275,6 +275,23 @@ def export_measured_data(experiment: Path, output: Path, case: str, common: dict
     return 1
 
 
+def export_scan(project: Path, output: Path, case: str, common: dict) -> int:
+    """Publish a scan's data files, zipped flat, so a tutorial can declare its own scan folder."""
+    analysis = '\n'.join(
+        path.read_text(encoding='utf-8') for path in sorted((project / 'analysis').glob('*.edi'))
+    )
+    declared = re.search(r'^_sequential_fit\.data_dir\s+(\S+)', analysis, flags=re.MULTILINE)
+    if not declared or not (project / declared.group(1)).is_dir():
+        return 0
+    target = output / 'data' / f'{case}-scan.zip'
+    with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as zipped:
+        for file in sorted((project / declared.group(1)).iterdir()):
+            if file.is_file():
+                zipped.write(file, file.name)
+    write_sidecar(target, {'id': f'{case}-scan', **common})
+    return 1
+
+
 def write_sidecar(path: Path, meta: dict) -> None:
     meta = {k: v for k, v in meta.items() if v not in ('', None, [])}
     path.with_name(path.name + '.meta.json').write_text(
@@ -401,6 +418,7 @@ def populate(output: Path) -> int:
             )
             count += 1
             count += export_measured_data(experiment, output, example, common)
+        count += export_scan(project, output, example, common)
     # The tutorials' inputs: a structure CIF and a measured pattern, both of the CIF's sample.
     tutorial_sample = sample_facts([
         f.read_text(errors='replace') for f in sorted(TUTORIAL_FILES.glob('*.cif'))
