@@ -441,3 +441,15 @@ stability alone can precede the start of a page transition. Trusted pointers sti
 use the unchanged fresh geometry, container and viewport refusal checks. Runtime
 exceptions retain the current action in their evidence; no exception is filtered
 or cleared when a scenario advances.
+
+
+Load-menu section titles own a named, nonfocusable accessible Heading; their
+painted label is ignored to avoid duplicating that name. The shared component
+covers all Load menus. Qt 6.11's WebAssembly menu-accessibility handler focuses
+its first accessible child on PopupMenuStart, so an unnamed generic heading can
+leave that child without an HTML element. The title remains noninteractive and
+real menu items retain their ordinary keyboard/chooser behavior. Actual browser
+qualification continues to reject every runtime exception.
+
+Pinned upstream source:
+[Qt 6.11.2 QWasmAccessibility](https://github.com/qt/qtbase/blob/v6.11.2/src/plugins/platforms/wasm/qwasmaccessibility.cpp).
