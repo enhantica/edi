@@ -578,3 +578,30 @@ and Experiment menus alike. The hint therefore starts at the same position for f
 folder and web choices. Both columns elide within the menu width; longer guidance uses
 the existing tooltip rather than widening or overflowing the menu. No model-wide width
 scan or imperative QML measurement is involved.
+
+### Image and source-tag boundary repair
+
+Save-image and download-image invokables accept the actual `QImage` carried by
+Qt's grab result. They do not expose an untyped QVariant wrapper. Online-source
+kind chips reuse the existing Examples `TagChip` record as a registered QML value
+with label, glyph and theme colours; its invokable returns a typed list. Examples
+and Preferences therefore share the tag shape instead of adding a dictionary
+exception to the typed boundary. The existing icon values and tones are preserved.
+
+The scan-refresh standalone test depends on the same explicitly app-qualified
+app build as other app tests. A clean full verification must configure/build
+before invoking that target, and a failed build must prevent it. The existing
+no-build task dispatcher substitutes these scan executables after resolving their
+real dependencies; it never invokes CMake from an orchestration-only witness.
+
+Catalogue facet choices also expose a typed `FacetOption` list with value and
+title, retaining count text, sorting and filtering. ComboBoxMetrics observes its
+typed QObject control's model notification internally rather than exporting a
+QVariant model property. Its bounded native model sampling and role-change
+filter remain the same; changing controls disconnects the old model observer.
+Actual Qt controls exercise data changes, model replacement and disconnection.
+
+The parameter table compares its two numeric width lists through a typed native
+helper rather than serializing both as JSON. List order/length, zero and each
+finite width remain exact; the previous JSON-null treatment of nonfinite interim
+widths is preserved. The existing queued application of new widths is unchanged.

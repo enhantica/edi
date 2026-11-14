@@ -338,7 +338,7 @@ SideBarGroup {
             // Applied a moment later: new widths remake rows and measure them again, which would otherwise feed back
             // into the widths while they are being worked out.
             function applyColumns() {
-                if (JSON.stringify(columns) !== JSON.stringify(wantedColumns))
+                if (!ApplicationInfo.sameColumnWidths(columns, wantedColumns))
                     columns = wantedColumns;
             }
             onWantedColumnsChanged: Qt.callLater(applyColumns)

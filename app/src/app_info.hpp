@@ -5,6 +5,7 @@
 #include <QColor>
 #include <QDir>
 #include <QFileInfo>
+#include <QImage>
 #include <QJSValue>
 #include <QVariantMap>
 #include <QObject>
@@ -263,8 +264,8 @@ class ApplicationInfo : public QObject {
     // Save image on a chart or the structure view: the grabbed image (ItemGrabResult.image) as a PNG file on the
     // desktop, or handed to the browser to download as `name`.
     // A grabbed image saved as PNG, less the top `cut` of its height (the toolbar's band, as a fraction).
-    Q_INVOKABLE bool saveImage(const QVariant& image, const QUrl& file, double cut = 0) const;
-    Q_INVOKABLE bool downloadImage(const QVariant& image, const QString& name, double cut = 0) const;
+    Q_INVOKABLE bool saveImage(const QImage& image, const QUrl& file, double cut = 0) const;
+    Q_INVOKABLE bool downloadImage(const QImage& image, const QString& name, double cut = 0) const;
     // Where Save image starts: the folder last saved to while it exists; else the project's reports folder, made
     // when missing, for a project with a place of its own; else the pictures folder.
     Q_INVOKABLE QUrl imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const;
@@ -992,9 +993,11 @@ class ApplicationInfo : public QObject {
         const QString home = QDir::toNativeSeparators(QDir::homePath());
         return path.startsWith(home + QDir::separator()) ? QStringLiteral("~") + path.mid(home.size()) : path;
     }
-    // An online source's kinds as tags (Preferences' online sources): one {label, icon, light, dark} per kind, in the
+    // Exact numeric width-list comparison, preserving nonfinite interim layout values.
+    Q_INVOKABLE bool sameColumnWidths(const QList<double>& current, const QList<double>& wanted) const;
+    // An online source's kinds as tags (Preferences' online sources): one typed TagChip per kind, in the
     // order given, with the icon the app uses for that kind and a tone of app/examples/tags.json.
-    Q_INVOKABLE QVariantList sourceKindTags(const QStringList& kinds) const;
+    Q_INVOKABLE QList<edi_app::TagChip> sourceKindTags(const QStringList& kinds) const;
     // A local path given as text, shown as shownPath shows it.
     Q_INVOKABLE QString shownLocalPath(const QString& path) const { return shownPath(QUrl::fromLocalFile(path)); }
     Q_INVOKABLE QUrl folderOf(const QUrl& file) const {

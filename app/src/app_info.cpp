@@ -794,8 +794,7 @@ void ApplicationInfo::setMessageLevel(const QString& level) const {
 
 namespace {
 
-QImage croppedImage(const QVariant& image, double cut) {
-    const QImage picture = image.value<QImage>();
+QImage croppedImage(const QImage& picture, double cut) {
     if (picture.isNull() || cut <= 0 || cut >= 1) return picture;
     const int top = static_cast<int>(std::lround(cut * picture.height()));
     return picture.copy(0, top, picture.width(), picture.height() - top);
@@ -803,12 +802,12 @@ QImage croppedImage(const QVariant& image, double cut) {
 
 }  // namespace
 
-bool ApplicationInfo::saveImage(const QVariant& image, const QUrl& file, double cut) const {
+bool ApplicationInfo::saveImage(const QImage& image, const QUrl& file, double cut) const {
     const QImage picture = croppedImage(image, cut);
     return !picture.isNull() && picture.save(file.toLocalFile(), "PNG");
 }
 
-bool ApplicationInfo::downloadImage(const QVariant& image, const QString& name, double cut) const {
+bool ApplicationInfo::downloadImage(const QImage& image, const QString& name, double cut) const {
     const QImage picture = croppedImage(image, cut);
     QByteArray data;
     QBuffer buffer(&data);
@@ -816,7 +815,15 @@ bool ApplicationInfo::downloadImage(const QVariant& image, const QString& name, 
     return edi_app::WebFiles::download(data, name);
 }
 
-QVariantList ApplicationInfo::sourceKindTags(const QStringList& kinds) const {
+bool ApplicationInfo::sameColumnWidths(const QList<double>& current, const QList<double>& wanted) const {
+    return current.size() == wanted.size() &&
+           std::equal(current.cbegin(), current.cend(), wanted.cbegin(), [](double a, double b) {
+               // The previous JSON comparison represented every nonfinite width as null.
+               return a == b || (!std::isfinite(a) && !std::isfinite(b));
+           });
+}
+
+QList<edi_app::TagChip> ApplicationInfo::sourceKindTags(const QStringList& kinds) const {
     // The tones of the Examples list's tags.
     static const QJsonObject tones = [] {
         QFile file(QStringLiteral(":/edi/examples/tags.json"));
@@ -833,13 +840,12 @@ QVariantList ApplicationInfo::sourceKindTags(const QStringList& kinds) const {
                           {"experiment", tr("Experiments"), QStringLiteral("microscope"), "technique"},
                           {"data", tr("Measured data"), QString::fromStdString(edi::category_icon("data")), "neutral"},
                           {"project", tr("Projects"), QStringLiteral("archive"), "mode"}};
-    QVariantList tags;
+    QList<edi_app::TagChip> tags;
     for (const QString& kind : kinds) {
         for (const Kind& k : known) {
             if (kind != QLatin1String(k.token)) continue;
             const QJsonObject tone = tones.value(QLatin1String(k.tone)).toObject();
-            tags.append(QVariantMap{{"label", k.label}, {"icon", k.icon}, {"light", tone.value("light").toString()},
-                                    {"dark", tone.value("dark").toString()}});
+            tags.append({k.label, k.icon, tone.value("light").toString(), tone.value("dark").toString()});
         }
     }
     return tags;

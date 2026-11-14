@@ -608,7 +608,7 @@ AppDialog {
                                     delegate: TagChip {
                                         required property var modelData
                                         label: modelData.label
-                                        icon: modelData.icon
+                                        icon: modelData.glyph
                                         ink: EaStyle.Colors.isDarkPalette ? modelData.dark : modelData.light
                                     }
                                 }
