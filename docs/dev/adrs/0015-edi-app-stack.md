@@ -569,3 +569,12 @@ short.
 The pin then advances to e7e096ff. A click on a spin box's plus or minus button reports the change as the user's, as
 Qt's own buttons do, so a caller that keeps the value on `valueModified` keeps it; and tooltips open after 1000 ms by
 default.
+
+
+#### Load-menu action and hint columns
+
+`LoadMenuItem` reserves one shared action-label width before the grey hint, for Structure
+and Experiment menus alike. The hint therefore starts at the same position for file,
+folder and web choices. Both columns elide within the menu width; longer guidance uses
+the existing tooltip rather than widening or overflowing the menu. No model-wide width
+scan or imperative QML measurement is involved.

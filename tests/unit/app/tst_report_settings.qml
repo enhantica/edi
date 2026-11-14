@@ -250,7 +250,7 @@ Item {
                            "Parallel scan fits disclose their single-thread calculation policy");
             } else {
                 verify(!workers.enabled && !threads.enabled,
-                       "The single-thread browser disables both machine-local counts");
+                       "An unavailable engine thread backend disables both machine-local counts");
             }
             Preferences.scanWorkers = oldWorkers;
             Preferences.engineThreads = oldThreads;

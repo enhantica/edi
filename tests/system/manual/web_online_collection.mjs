@@ -13,6 +13,7 @@ const toolchain = process.env.EDI_WASM_TOOLCHAIN || join(process.env.HOME, '.cac
 const {chromium} = await import(join(toolchain, 'playwright/node_modules/playwright-core/index.mjs'));
 await mkdir(output, {recursive:true});
 const receipts = [];
+assert(mode==='multithread','Online collection uses a supported directly isolated multithread route');
 const headers = mode === 'multithread' ? {'Cross-Origin-Opener-Policy':'same-origin',
   'Cross-Origin-Embedder-Policy':'require-corp'} : {};
 const server = createServer(async (req,res) => {

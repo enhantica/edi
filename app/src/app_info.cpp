@@ -4339,6 +4339,7 @@ void ApplicationInfo::loadFormFiles(bool experiments) const {
     if (panelUsageTruth(assistantContextField(f, "WebFiles", "available"))) {
         const auto group = panelUsageContextRead(f, "group");
         const auto project = assistantContextField(f, "group", "project");
+        assistantMemberWrite(f, group, "webRequest", QJSValue(0));
         assistantMemberWrite(f, group, "webRequestProject", project);
         if (experiments) projectWrite(f, "group", "webDataExperiment", consentNull());
         const auto requestOwner = panelUsageContextRead(f, "group");
@@ -4401,6 +4402,18 @@ void ApplicationInfo::chooseDatasetFolder(QObject* picker, QObject* project, QOb
     auto* owner = qobject_cast<edi_app::ProjectViewModel*>(project);
     auto* target = qobject_cast<edi_app::ExperimentViewModel*>(experiment);
     if (!picker || !owner || !target || owner->listingDatasetFolder()) return;
+    if (edi_app::WebFiles::available()) {
+        const auto f = panelUsageEngine(this);
+        const auto currentProject = assistantContextField(f, "group", "project");
+        const auto selected = panelUsageRead(f, currentProject, "currentExperiment");
+        if (currentProject.toQObject() != owner || selected.toQObject() != target) return;
+        projectWrite(f, "group", "webRequest", QJSValue(0));
+        projectWrite(f, "group", "webRequestProject", currentProject);
+        projectWrite(f, "group", "webDataExperiment", selected);
+        const auto request = projectInvoke(f, "WebFiles", "openDatasetFolder");
+        projectWrite(f, "group", "webRequest", request);
+        return;
+    }
     dataset_folder_picker_ = picker;
     dataset_folder_project_ = owner;
     dataset_folder_experiment_ = target;
@@ -4419,6 +4432,7 @@ void ApplicationInfo::acceptDatasetFolder(QObject* picker, QObject* currentProje
 void ApplicationInfo::chooseExperimentData(const QJSValue& experiment) const {
     const auto f = panelUsageEngine(this);
     if (panelUsageTruth(assistantContextField(f, "WebFiles", "available"))) {
+        projectWrite(f, "group", "webRequest", QJSValue(0));
         projectWrite(f, "group", "webRequestProject", assistantContextField(f, "group", "project"));
         projectWrite(f, "group", "webDataExperiment", experiment);
         const auto group = panelUsageContextRead(f, "group");
@@ -4435,6 +4449,18 @@ void ApplicationInfo::chooseExperimentData(const QJSValue& experiment) const {
         projectWrite(f, "dataDialog", "project", assistantContextField(f, "group", "project"));
         projectInvoke(f, "dataDialog", "open");
     }
+}
+void ApplicationInfo::formDatasetFolderOpened(const QJSValue& request, const QJSValue& folder) const {
+    const auto f = panelUsageEngine(this);
+    if (!projectFieldIs(f, "group", "webRequest", request)) return;
+    const auto target = assistantContextField(f, "group", "webDataExperiment");
+    const auto owner = assistantContextField(f, "group", "webRequestProject");
+    projectWrite(f, "group", "webRequest", QJSValue(0));
+    projectWrite(f, "group", "webDataExperiment", consentNull());
+    const auto current = assistantContextField(f, "group", "project");
+    if (current.isNull() || target.isNull() || !current.strictlyEquals(owner)
+        || !current.strictlyEquals(assistantContextField(f, "Session", "project"))) return;
+    panelUsageMemberCall(f, current, "loadDatasetFolder", {target, folder, QJSValue(true)});
 }
 void ApplicationInfo::formFilesOpened(const QJSValue& request, const QJSValue& files, bool experiments) const {
     const auto f = panelUsageEngine(this);

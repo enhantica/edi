@@ -19,7 +19,7 @@ def test_windows_clipping_job_is_installed_with_a_real_producer():
     )
     job = jobs['windows-web-clipping']
     assert job.get('runs-on') == 'windows-2025' and 'app-wasm' in job['needs'], (
-        'A hosted Windows browser consumes both web kits from the same workflow run'
+        'A hosted Windows browser consumes the sole multithread web kit from the same workflow run'
     )
     commands = '\n'.join(step.get('run', '') for step in job['steps'])
     assert 'windows_clipping.mjs' in commands and 'check_receipt.py' in commands, (
@@ -47,6 +47,7 @@ def witness():
             'status': 'passed',
             'build': {
                 'ediCommit': 'a' * 40,
+                'kits': ['multithread'],
                 'sources': {'fixture.qml': 'b' * 64, 'observer.cpp': 'c' * 64},
             },
             'state': {'completed': True},
@@ -122,3 +123,12 @@ def test_windows_receipt_refuses_missing_skipped_and_false_green_controls(escape
         ValueError, match=r'witness|execute|artifact|action|browser|pixels|escape|sources'
     ):
         validate(bad, 'a' * 40)
+
+
+@pytest.mark.parametrize('kits', [[], ['singlethread'], ['multithread', 'singlethread']])
+def test_windows_receipt_refuses_retired_or_missing_kit_identity(kits):
+    document = witness()
+    validate(document, 'a' * 40)
+    document['receipts'][0]['build']['kits'] = kits
+    with pytest.raises(ValueError, match='supported multithread kit'):
+        validate(document, 'a' * 40)
