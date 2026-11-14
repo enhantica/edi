@@ -14837,6 +14837,20 @@
           "text": "Press **Fit** in the status bar.",
           "page": "analysis",
           "target": "statusBar.fit.button",
+          "check": "fit-running"
+        },
+        {
+          "title": "Stop the scan",
+          "text": "After a few patterns, press **Stop** in the status bar. The rows already fitted stay.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
+          "check": "fit-stopped"
+        },
+        {
+          "title": "Resume the scan",
+          "text": "Press **Continue** in the status bar: the scan goes on with the first pattern that has no row yet, from the last fitted values.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
           "check": "fit-done"
         },
         {

@@ -668,7 +668,35 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
             stage = title.removeprefix('Fit: ')
             title = f'Fit stage {number.group(1)}' if number else 'Fit the scan'
             text = f'Press **Fit** in the status bar to fit **{stage}**.'
+        # A scan the Python tutorial stops after a few patterns and resumes is stopped and resumed
+        # here too: Stop keeps the rows already fitted, and Continue goes on from the first pattern
+        # without one.
+        stopped = (
+            []
+            if number
+            or 'should_cancel=' not in (TUTORIALS / f'{case}.py').read_text(encoding='utf-8')
+            else [
+                step(title, text, 'analysis', 'statusBar.fit.button', 'fit-running'),
+                step(
+                    'Stop the scan',
+                    'After a few patterns, press **Stop** in the status bar. The rows already '
+                    'fitted stay.',
+                    'analysis',
+                    'statusBar.fit.button',
+                    'fit-stopped',
+                ),
+            ]
+        )
+        if stopped:
+            title, text = (
+                'Resume the scan',
+                (
+                    'Press **Continue** in the status bar: the scan goes on with the first '
+                    'pattern that has no row yet, from the last fitted values.'
+                ),
+            )
         return [
+            *stopped,
             step(
                 title,
                 text,

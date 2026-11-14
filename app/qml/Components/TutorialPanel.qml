@@ -73,6 +73,9 @@ Popup {
     property int estimatesAtStep: 0
     // The fits finished since the tutorial started, for the steps that ask for a fit.
     property int fitsDone: 0
+    // Fits the user stopped (a scan stopped part way, whose rows stay), and their count when the step showed.
+    property int fitsStopped: 0
+    property int fitsStoppedAtStep: 0
     // Where the callout sits against its control: "right", "left", "below" or "above" it with the pointer toward it,
     // "inside" a control too large to sit beside, or "" when the control is not on screen (the window's corner).
     property string side: ""
@@ -152,6 +155,7 @@ Popup {
         panel.step = 0;
         panel.shownStep = 0;
         panel.fitsDone = 0;
+        panel.fitsStopped = 0;
         panel.filesSaved = false;
         panel.backgroundEstimates = 0;
         panel.loadedEntries = [];
@@ -560,6 +564,14 @@ Popup {
         case "filters-clear":
             (panel.locate("parameters.clearFilters") as T.AbstractButton)?.click();
             return;
+        case "fit-running":
+            if (project !== null && !project.fit.running && project.readyForEdit())
+                project.fit.start();
+            return;
+        case "fit-stopped":
+            if (project !== null && project.fit.running)
+                project.fit.cancel();
+            return;
         case "fit-done":
         case "fitted":
             // Fitted already: a step that wants the results closed has Next close them; one that leaves them open for
@@ -963,6 +975,10 @@ Popup {
             return experiment !== null && panel.pointsNamedByPosition(experiment.background);
         case "free":
             return project !== null && argument.split(",").every(spec => panel.allFree(project.parameters, spec));
+        case "fit-running":
+            return project !== null && project.fit.running;
+        case "fit-stopped":
+            return panel.fitsStopped > panel.fitsStoppedAtStep;
         case "fit-done":
             // Fitted, its results window open when the preferences show it.
             return panel.fitsDone > panel.fitsAtStep && (!Preferences.showFitResults || AppState.fitResultsShown > panel.resultsAtStep);
@@ -1322,6 +1338,7 @@ Popup {
         panel.revealTries = 0;
         // What the step counts from, read as it becomes the step: Next may be pressed before its callout has faded in.
         panel.fitsAtStep = panel.fitsDone;
+        panel.fitsStoppedAtStep = panel.fitsStopped;
         panel.resultsAtStep = AppState.fitResultsShown;
         const changing = panel.current && panel.current.check && panel.current.check.startsWith("changed:") ? panel.parameterNamed(panel.current.check.slice(8).split("=")[0]) : null;
         panel.valueAtStep = changing !== null ? changing.value : null;
@@ -1994,6 +2011,8 @@ Popup {
             RunLog.note(`tutorial fit ended: ${fit.outcome}`);
             if (fit.outcome === "success")
                 ++panel.fitsDone;
+            else if (fit.outcome === "stopped")
+                ++panel.fitsStopped;
         }
     }
     Connections {
