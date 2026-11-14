@@ -71,7 +71,7 @@
         {
           "id": "structure-cell",
           "page": "structure",
-          "description": "Set the space group and the cell",
+          "description": "Space group and cell",
           "actions": [
             "reveal:group.space_group",
             "expand:group.space_group",
@@ -98,7 +98,6 @@
           "actions": [
             "reveal:group.atom_site",
             "expand:group.atom_site",
-            "atomSites.append",
             "fill:atomSite.label.0=La",
             "key:Return",
             "atomSite.typeSymbol.0",
@@ -176,7 +175,7 @@
         {
           "id": "experiment-created",
           "page": "experiment",
-          "description": "Create the experiment and choose its type",
+          "description": "Create the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -200,7 +199,7 @@
         {
           "id": "data-web",
           "page": "experiment",
-          "description": "Find the measured data in the EasyDiffraction collection",
+          "description": "Find the measured data",
           "actions": [
             "experiments.load",
             "experiments.load.dataWeb",
@@ -232,7 +231,7 @@
         {
           "id": "experiment-instrument",
           "page": "experiment",
-          "description": "Set the wavelength, 2θ zero and peak widths",
+          "description": "Instrument and peak widths",
           "actions": [
             "reveal:group.instrument",
             "expand:group.instrument",
@@ -267,7 +266,7 @@
         {
           "id": "experiment-background",
           "page": "experiment",
-          "description": "Add the background points and excluded regions",
+          "description": "Background and excluded regions",
           "actions": [
             "reveal:group.background",
             "expand:group.background",
@@ -332,7 +331,7 @@
         {
           "id": "experiment-linked",
           "page": "experiment",
-          "description": "Link the structure to the experiment",
+          "description": "Link the structure",
           "actions": [
             "reveal:group.linked_structure",
             "expand:group.linked_structure",
@@ -346,25 +345,6 @@
           ],
           "sidebar": "",
           "capture": true
-        },
-        {
-          "id": "minimizer",
-          "page": "analysis",
-          "description": "Set the minimizer as the project does",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.extras",
-            "reveal:group.minimizer",
-            "expand:group.minimizer",
-            "choose-token:minimizer.stopRule=shift_su",
-            "fill:minimizer.maxIterations=1000"
-          ],
-          "highlights": [
-            "group.minimizer"
-          ],
-          "sidebar": "Extra",
-          "capture": true,
-          "fitPhase": "setup"
         },
         {
           "id": "nothing-free",
@@ -386,6 +366,24 @@
           "fitPhase": "setup"
         },
         {
+          "id": "minimizer",
+          "page": "analysis",
+          "description": "Set the minimizer as the project does",
+          "actions": [
+            "appBar.tab.analysis",
+            "sideBar.tab.extras",
+            "reveal:group.minimizer",
+            "expand:group.minimizer",
+            "fill:minimizer.maxIterations=1000"
+          ],
+          "highlights": [
+            "group.minimizer"
+          ],
+          "sidebar": "Extra",
+          "capture": true,
+          "fitPhase": "setup"
+        },
+        {
           "id": "stage-1-free",
           "page": "analysis",
           "description": "Scale, 2θ zero and cell",
@@ -395,23 +393,15 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Instrument",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=calib",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.instrument.calib_twotheta_offset",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Linked structures",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.linked_structures[lbco].scale",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Cell",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:structure.cell.length_a"
           ],
           "highlights": [
             "group.parameters"
@@ -457,7 +447,7 @@
         {
           "id": "group-free-all",
           "page": "analysis",
-          "description": "Free all from the Free column header",
+          "description": "Free all from the header",
           "actions": [
             "parameters.freeHeader"
           ],
@@ -509,13 +499,10 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Peak profile",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=lorentz_x",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed",
-            "parameters.clearFilters"
+            "tick:experiment.peak.broad_gauss_u",
+            "tick:experiment.peak.broad_gauss_v",
+            "tick:experiment.peak.broad_gauss_w",
+            "tick:experiment.peak.broad_lorentz_y"
           ],
           "highlights": [
             "group.parameters"
@@ -550,9 +537,10 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic displacement",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:structure.atom_sites[Ba].adp_iso",
+            "tick:structure.atom_sites[Co].adp_iso",
+            "tick:structure.atom_sites[La].adp_iso",
+            "tick:structure.atom_sites[O].adp_iso"
           ],
           "highlights": [
             "group.parameters"
@@ -587,11 +575,7 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic displacement",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=[Ba]",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed",
-            "parameters.clearFilters",
+            "untick:structure.atom_sites[Ba].adp_iso",
             "appBar.tab.analysis",
             "sideBar.tab.extras",
             "reveal:group.alias",
@@ -650,7 +634,7 @@
           "page": "analysis",
           "description": "Inspect the correlations",
           "actions": [
-            "mainArea.analysis.tab.correlations"
+            "mainArea.tab.correlations"
           ],
           "highlights": [
             "workflow.analysis.mainContent"
@@ -663,7 +647,7 @@
           "page": "report",
           "description": "Review the report",
           "actions": [
-            "mainArea.analysis.tab.fitting",
+            "mainArea.tab.pattern",
             "appBar.tab.report",
             "sideBar.tab.basic"
           ],
@@ -757,10 +741,10 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "5f1bfe8cf938e4d6cb3a072a087a539877d8f00464e2fa73b0aaa058860fd4f4",
-      "docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py": "597140b71088ed6625c28d2ca81e6e0cccddb7de964edeaf332ba036dc9681b7",
-      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_lbco-hrpt.md": "2f7d16bf66c2ec30fca8e19445dfd3e1ba5fc907b7dd825fcc442d9668b62e8d",
-      "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/analysis/analysis.edi": "cee189838e88e20b90aac3e85df9bedc1bb096b54debf5c21d3c407cd9b186c7"
+      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py": "37db37d1c03b7ef1d932681c227cbe736224063463f677a9f45fbd9bf5d8737c",
+      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_lbco-hrpt.md": "d3234035fe8de4e07401d02117415d64615ac4b74f11b07b90a5c55d7cf00deb",
+      "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/analysis/analysis.edi": "a4d2395b2606f9ba4730de91f87aa0cb92167c5b5d0680c0a8d8bb32f5dd8959"
     },
     "boundaries": [
       {
@@ -1093,7 +1077,7 @@
         {
           "id": "structure-web-0",
           "page": "structure",
-          "description": "Find the structure cosio in the EasyDiffraction collection",
+          "description": "Find the structure",
           "actions": [
             "appBar.tab.structure",
             "sideBar.tab.basic",
@@ -1131,7 +1115,7 @@
         {
           "id": "experiment-web-0",
           "page": "experiment",
-          "description": "Find the experiment d20 in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -1165,26 +1149,6 @@
           "capture": true
         },
         {
-          "id": "minimizer",
-          "page": "analysis",
-          "description": "Set the minimizer as the project does",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.extras",
-            "reveal:group.minimizer",
-            "expand:group.minimizer",
-            "choose-token:minimizer.descent=fast_descent",
-            "choose-token:minimizer.stopRule=shift_su",
-            "fill:minimizer.maxIterations=1000"
-          ],
-          "highlights": [
-            "group.minimizer"
-          ],
-          "sidebar": "Extra",
-          "capture": true,
-          "fitPhase": "setup"
-        },
-        {
           "id": "nothing-free",
           "page": "analysis",
           "description": "Start with every parameter fixed",
@@ -1204,6 +1168,25 @@
           "fitPhase": "setup"
         },
         {
+          "id": "minimizer",
+          "page": "analysis",
+          "description": "Set the minimizer as the project does",
+          "actions": [
+            "appBar.tab.analysis",
+            "sideBar.tab.extras",
+            "reveal:group.minimizer",
+            "expand:group.minimizer",
+            "choose-token:minimizer.descent=fast_descent",
+            "fill:minimizer.maxIterations=1000"
+          ],
+          "highlights": [
+            "group.minimizer"
+          ],
+          "sidebar": "Extra",
+          "capture": true,
+          "fitPhase": "setup"
+        },
+        {
           "id": "stage-1-free",
           "page": "analysis",
           "description": "Scale, 2θ zero and cell",
@@ -1213,17 +1196,11 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Instrument",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=calib",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.instrument.calib_twotheta_offset",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Linked structures",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.linked_structures[cosio].scale",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Cell",
@@ -1301,13 +1278,10 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Peak profile",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=lorentz_x",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed",
-            "parameters.clearFilters"
+            "tick:experiment.peak.broad_gauss_u",
+            "tick:experiment.peak.broad_gauss_v",
+            "tick:experiment.peak.broad_gauss_w",
+            "tick:experiment.peak.broad_lorentz_y"
           ],
           "highlights": [
             "group.parameters"
@@ -1379,9 +1353,12 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic displacement",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:structure.atom_sites[Co1].adp_iso",
+            "tick:structure.atom_sites[Co2].adp_iso",
+            "tick:structure.atom_sites[O1].adp_iso",
+            "tick:structure.atom_sites[O2].adp_iso",
+            "tick:structure.atom_sites[O3].adp_iso",
+            "tick:structure.atom_sites[Si].adp_iso"
           ],
           "highlights": [
             "group.parameters"
@@ -1421,11 +1398,7 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic displacement",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=[Co2]",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed",
-            "parameters.clearFilters",
+            "untick:structure.atom_sites[Co2].adp_iso",
             "appBar.tab.analysis",
             "sideBar.tab.extras",
             "reveal:group.alias",
@@ -1489,11 +1462,9 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic occupancies",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=[O",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:structure.atom_sites[O1].occupancy",
+            "tick:structure.atom_sites[O2].occupancy",
+            "tick:structure.atom_sites[O3].occupancy"
           ],
           "highlights": [
             "group.parameters"
@@ -1523,7 +1494,7 @@
           "page": "analysis",
           "description": "Inspect the correlations",
           "actions": [
-            "mainArea.analysis.tab.correlations"
+            "mainArea.tab.correlations"
           ],
           "highlights": [
             "workflow.analysis.mainContent"
@@ -1536,7 +1507,7 @@
           "page": "report",
           "description": "Review the report",
           "actions": [
-            "mainArea.analysis.tab.fitting",
+            "mainArea.tab.pattern",
             "appBar.tab.report",
             "sideBar.tab.basic"
           ],
@@ -1788,10 +1759,10 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "5f1bfe8cf938e4d6cb3a072a087a539877d8f00464e2fa73b0aaa058860fd4f4",
-      "docs/user/tutorials/pd-neut-cwl_cosio-d20.py": "15cea7383548d153ab53543b5a1f65d3bc6ebc76fe01ebc9003f96a443481ff6",
-      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_cosio-d20.md": "d818e7845a72ce0a799b9db9450e405b053304687cbc1f8f599a3702da545b86",
-      "docs/user/cli/pd-neut-cwl_cosio-d20/project/analysis/analysis.edi": "bd3a86b7d71d1b47ae3adf951bd62136bb93a1e99745071314d5e08a626a117d"
+      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "docs/user/tutorials/pd-neut-cwl_cosio-d20.py": "955616cb7ae13dad87bcb844ad5a4f145733b88076f3621cddacf9ddf1e40b90",
+      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_cosio-d20.md": "110e1a1fe09821734d5eb52d2b724a33cd54d22fc70d48c06de5b62b36c3caa3",
+      "docs/user/cli/pd-neut-cwl_cosio-d20/project/analysis/analysis.edi": "eb25ddb4323f27b49ee37478d30a7910428f4d00a7d0003a744a36f680679ace"
     },
     "boundaries": [
       {
@@ -2162,7 +2133,7 @@
         {
           "id": "structure-web-0",
           "page": "structure",
-          "description": "Find the structure cosio in the EasyDiffraction collection",
+          "description": "Find the structure",
           "actions": [
             "appBar.tab.structure",
             "sideBar.tab.basic",
@@ -2200,7 +2171,7 @@
         {
           "id": "experiment-web-0",
           "page": "experiment",
-          "description": "Find the experiment d20 in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -2234,9 +2205,28 @@
           "capture": true
         },
         {
+          "id": "nothing-free",
+          "page": "analysis",
+          "description": "Start with every parameter fixed",
+          "actions": [
+            "appBar.tab.analysis",
+            "sideBar.tab.basic",
+            "parameters.clearFilters",
+            "parameters.freeHeader",
+            "parameters.freeHeader.fixed"
+          ],
+          "highlights": [
+            "group.parameters",
+            "parameters.freeHeader"
+          ],
+          "sidebar": "Main",
+          "capture": true,
+          "fitPhase": "setup"
+        },
+        {
           "id": "relations-start",
           "page": "analysis",
-          "description": "Add the relations the project starts with",
+          "description": "Add the relations",
           "actions": [
             "appBar.tab.analysis",
             "sideBar.tab.extras",
@@ -2305,7 +2295,6 @@
             "sideBar.tab.extras",
             "reveal:group.minimizer",
             "expand:group.minimizer",
-            "choose-token:minimizer.stopRule=shift_su",
             "fill:minimizer.maxIterations=1000"
           ],
           "highlights": [
@@ -2316,42 +2305,23 @@
           "fitPhase": "setup"
         },
         {
-          "id": "nothing-free",
-          "page": "analysis",
-          "description": "Start with every parameter fixed",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.basic",
-            "parameters.clearFilters",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed"
-          ],
-          "highlights": [
-            "group.parameters",
-            "parameters.freeHeader"
-          ],
-          "sidebar": "Main",
-          "capture": true,
-          "fitPhase": "setup"
-        },
-        {
           "id": "stage-1-free",
           "page": "analysis",
-          "description": "Scale, 2θ zero and cell",
+          "description": "Scale, 2θ zero, cell and magnetic moments",
           "actions": [
             "appBar.tab.analysis",
             "sideBar.tab.basic",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Instrument",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=calib",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.instrument.calib_twotheta_offset",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Linked structures",
+            "tick:experiment.linked_structures[cosio].scale",
+            "reveal:parameters.category",
+            "parameters.category",
+            "choose:Magnetic moments",
             "parameters.freeHeader",
             "parameters.freeHeader.free",
             "parameters.clearFilters",
@@ -2360,7 +2330,11 @@
             "choose:Cell",
             "parameters.freeHeader",
             "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "parameters.clearFilters",
+            "reveal:parameters.category",
+            "parameters.category",
+            "choose:Magnetic form factors",
+            "tick:structure.magnetic_form_factor[Co].j2_coefficient"
           ],
           "highlights": [
             "group.parameters"
@@ -2372,7 +2346,7 @@
         {
           "id": "stage-1-fit",
           "page": "analysis",
-          "description": "Fit: Scale, 2θ zero and cell",
+          "description": "Fit: Scale, 2θ zero, cell and magnetic moments",
           "actions": [
             "statusBar.fit.button",
             "wait-fit",
@@ -2425,88 +2399,16 @@
         {
           "id": "stage-3-free",
           "page": "analysis",
-          "description": "Peak widths",
+          "description": "Atomic displacements and positions",
           "actions": [
             "appBar.tab.analysis",
             "sideBar.tab.basic",
             "reveal:parameters.category",
             "parameters.category",
-            "choose:Peak broadening",
+            "choose:Atomic displacement",
             "parameters.freeHeader",
             "parameters.freeHeader.free",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=lorentz_x",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed",
-            "parameters.clearFilters"
-          ],
-          "highlights": [
-            "group.parameters"
-          ],
-          "sidebar": "Main",
-          "capture": false,
-          "fitPhase": "setup"
-        },
-        {
-          "id": "stage-3-fit",
-          "page": "analysis",
-          "description": "Fit: Peak widths",
-          "actions": [
-            "statusBar.fit.button",
-            "wait-fit",
-            "close-fit-results"
-          ],
-          "highlights": [
-            "workflow.analysis.mainContent",
-            "group.parameters"
-          ],
-          "sidebar": "Main",
-          "capture": true
-        },
-        {
-          "id": "stage-4-free",
-          "page": "analysis",
-          "description": "Peak asymmetry",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.basic",
-            "reveal:parameters.category",
-            "parameters.category",
-            "choose:Peak asymmetry",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
-          ],
-          "highlights": [
-            "group.parameters"
-          ],
-          "sidebar": "Main",
-          "capture": false,
-          "fitPhase": "setup"
-        },
-        {
-          "id": "stage-4-fit",
-          "page": "analysis",
-          "description": "Fit: Peak asymmetry",
-          "actions": [
-            "statusBar.fit.button",
-            "wait-fit",
-            "close-fit-results"
-          ],
-          "highlights": [
-            "workflow.analysis.mainContent",
-            "group.parameters"
-          ],
-          "sidebar": "Main",
-          "capture": true
-        },
-        {
-          "id": "stage-5-free",
-          "page": "analysis",
-          "description": "Atom positions",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.basic",
+            "parameters.clearFilters",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic coordinates",
@@ -2522,83 +2424,82 @@
           "fitPhase": "setup"
         },
         {
+          "id": "stage-3-fit",
+          "page": "analysis",
+          "description": "Fit: Atomic displacements and positions",
+          "actions": [
+            "statusBar.fit.button",
+            "wait-fit",
+            "close-fit-results"
+          ],
+          "highlights": [
+            "workflow.analysis.mainContent",
+            "group.parameters"
+          ],
+          "sidebar": "Main",
+          "capture": true
+        },
+        {
+          "id": "stage-4-free",
+          "page": "analysis",
+          "description": "Peak widths",
+          "actions": [
+            "appBar.tab.analysis",
+            "sideBar.tab.basic",
+            "reveal:parameters.category",
+            "parameters.category",
+            "choose:Peak broadening",
+            "tick:experiment.peak.broad_gauss_u",
+            "tick:experiment.peak.broad_gauss_v",
+            "tick:experiment.peak.broad_gauss_w",
+            "tick:experiment.peak.broad_lorentz_y"
+          ],
+          "highlights": [
+            "group.parameters"
+          ],
+          "sidebar": "Main",
+          "capture": false,
+          "fitPhase": "setup"
+        },
+        {
+          "id": "stage-4-fit",
+          "page": "analysis",
+          "description": "Fit: Peak widths",
+          "actions": [
+            "statusBar.fit.button",
+            "wait-fit",
+            "close-fit-results"
+          ],
+          "highlights": [
+            "workflow.analysis.mainContent",
+            "group.parameters"
+          ],
+          "sidebar": "Main",
+          "capture": true
+        },
+        {
+          "id": "stage-5-free",
+          "page": "analysis",
+          "description": "Peak asymmetry",
+          "actions": [
+            "appBar.tab.analysis",
+            "sideBar.tab.basic",
+            "reveal:parameters.category",
+            "parameters.category",
+            "choose:Peak asymmetry",
+            "tick:experiment.peak.asym_fcj_1"
+          ],
+          "highlights": [
+            "group.parameters"
+          ],
+          "sidebar": "Main",
+          "capture": false,
+          "fitPhase": "setup"
+        },
+        {
           "id": "stage-5-fit",
           "page": "analysis",
-          "description": "Fit: Atom positions",
-          "actions": [
-            "statusBar.fit.button",
-            "wait-fit",
-            "close-fit-results"
-          ],
-          "highlights": [
-            "workflow.analysis.mainContent",
-            "group.parameters"
-          ],
-          "sidebar": "Main",
-          "capture": true
-        },
-        {
-          "id": "stage-6-free",
-          "page": "analysis",
-          "description": "Magnetic moments",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.basic",
-            "reveal:parameters.category",
-            "parameters.category",
-            "choose:Magnetic moments",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
-          ],
-          "highlights": [
-            "group.parameters"
-          ],
-          "sidebar": "Main",
-          "capture": false,
-          "fitPhase": "setup"
-        },
-        {
-          "id": "stage-6-fit",
-          "page": "analysis",
-          "description": "Fit: Magnetic moments",
-          "actions": [
-            "statusBar.fit.button",
-            "wait-fit",
-            "close-fit-results"
-          ],
-          "highlights": [
-            "workflow.analysis.mainContent",
-            "group.parameters"
-          ],
-          "sidebar": "Main",
-          "capture": true
-        },
-        {
-          "id": "stage-7-free",
-          "page": "analysis",
-          "description": "Magnetic form factor",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.basic",
-            "reveal:parameters.category",
-            "parameters.category",
-            "choose:Magnetic form factors",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
-          ],
-          "highlights": [
-            "group.parameters"
-          ],
-          "sidebar": "Main",
-          "capture": false,
-          "fitPhase": "setup"
-        },
-        {
-          "id": "stage-7-fit",
-          "page": "analysis",
-          "description": "Fit: Magnetic form factor",
+          "description": "Fit: Peak asymmetry",
           "actions": [
             "statusBar.fit.button",
             "wait-fit",
@@ -2616,7 +2517,7 @@
           "page": "analysis",
           "description": "Inspect the correlations",
           "actions": [
-            "mainArea.analysis.tab.correlations"
+            "mainArea.tab.correlations"
           ],
           "highlights": [
             "workflow.analysis.mainContent"
@@ -2629,7 +2530,7 @@
           "page": "report",
           "description": "Review the report",
           "actions": [
-            "mainArea.analysis.tab.fitting",
+            "mainArea.tab.pattern",
             "appBar.tab.report",
             "sideBar.tab.basic"
           ],
@@ -2643,13 +2544,18 @@
     },
     "fits": [
       [
-        "Scale, 2θ zero and cell",
+        "Scale, 2θ zero, cell and magnetic moments",
         [
           "experiment.instrument.calib_twotheta_offset",
           "experiment.linked_structures[cosio].scale",
+          "structure.atom_site_moment[Co1].crystalaxis_x",
+          "structure.atom_site_moment[Co1].crystalaxis_y",
+          "structure.atom_site_moment[Co1].crystalaxis_z",
+          "structure.atom_site_moment[Co2].crystalaxis_y",
           "structure.cell.length_a",
           "structure.cell.length_b",
-          "structure.cell.length_c"
+          "structure.cell.length_c",
+          "structure.magnetic_form_factor[Co].j2_coefficient"
         ]
       ],
       [
@@ -2673,9 +2579,61 @@
           "experiment.background[9].intensity",
           "experiment.instrument.calib_twotheta_offset",
           "experiment.linked_structures[cosio].scale",
+          "structure.atom_site_moment[Co1].crystalaxis_x",
+          "structure.atom_site_moment[Co1].crystalaxis_y",
+          "structure.atom_site_moment[Co1].crystalaxis_z",
+          "structure.atom_site_moment[Co2].crystalaxis_y",
           "structure.cell.length_a",
           "structure.cell.length_b",
-          "structure.cell.length_c"
+          "structure.cell.length_c",
+          "structure.magnetic_form_factor[Co].j2_coefficient"
+        ]
+      ],
+      [
+        "Atomic displacements and positions",
+        [
+          "experiment.background[10].intensity",
+          "experiment.background[11].intensity",
+          "experiment.background[12].intensity",
+          "experiment.background[13].intensity",
+          "experiment.background[14].intensity",
+          "experiment.background[15].intensity",
+          "experiment.background[16].intensity",
+          "experiment.background[1].intensity",
+          "experiment.background[2].intensity",
+          "experiment.background[3].intensity",
+          "experiment.background[4].intensity",
+          "experiment.background[5].intensity",
+          "experiment.background[6].intensity",
+          "experiment.background[7].intensity",
+          "experiment.background[8].intensity",
+          "experiment.background[9].intensity",
+          "experiment.instrument.calib_twotheta_offset",
+          "experiment.linked_structures[cosio].scale",
+          "structure.atom_site_moment[Co1].crystalaxis_x",
+          "structure.atom_site_moment[Co1].crystalaxis_y",
+          "structure.atom_site_moment[Co1].crystalaxis_z",
+          "structure.atom_site_moment[Co2].crystalaxis_y",
+          "structure.atom_sites[Co1].adp_iso",
+          "structure.atom_sites[Co2].fract_x",
+          "structure.atom_sites[Co2].fract_z",
+          "structure.atom_sites[O1].adp_iso",
+          "structure.atom_sites[O1].fract_x",
+          "structure.atom_sites[O1].fract_z",
+          "structure.atom_sites[O2].adp_iso",
+          "structure.atom_sites[O2].fract_x",
+          "structure.atom_sites[O2].fract_z",
+          "structure.atom_sites[O3].adp_iso",
+          "structure.atom_sites[O3].fract_x",
+          "structure.atom_sites[O3].fract_y",
+          "structure.atom_sites[O3].fract_z",
+          "structure.atom_sites[Si].adp_iso",
+          "structure.atom_sites[Si].fract_x",
+          "structure.atom_sites[Si].fract_z",
+          "structure.cell.length_a",
+          "structure.cell.length_b",
+          "structure.cell.length_c",
+          "structure.magnetic_form_factor[Co].j2_coefficient"
         ]
       ],
       [
@@ -2703,9 +2661,30 @@
           "experiment.peak.broad_gauss_v",
           "experiment.peak.broad_gauss_w",
           "experiment.peak.broad_lorentz_y",
+          "structure.atom_site_moment[Co1].crystalaxis_x",
+          "structure.atom_site_moment[Co1].crystalaxis_y",
+          "structure.atom_site_moment[Co1].crystalaxis_z",
+          "structure.atom_site_moment[Co2].crystalaxis_y",
+          "structure.atom_sites[Co1].adp_iso",
+          "structure.atom_sites[Co2].fract_x",
+          "structure.atom_sites[Co2].fract_z",
+          "structure.atom_sites[O1].adp_iso",
+          "structure.atom_sites[O1].fract_x",
+          "structure.atom_sites[O1].fract_z",
+          "structure.atom_sites[O2].adp_iso",
+          "structure.atom_sites[O2].fract_x",
+          "structure.atom_sites[O2].fract_z",
+          "structure.atom_sites[O3].adp_iso",
+          "structure.atom_sites[O3].fract_x",
+          "structure.atom_sites[O3].fract_y",
+          "structure.atom_sites[O3].fract_z",
+          "structure.atom_sites[Si].adp_iso",
+          "structure.atom_sites[Si].fract_x",
+          "structure.atom_sites[Si].fract_z",
           "structure.cell.length_a",
           "structure.cell.length_b",
-          "structure.cell.length_c"
+          "structure.cell.length_c",
+          "structure.magnetic_form_factor[Co].j2_coefficient"
         ]
       ],
       [
@@ -2734,138 +2713,24 @@
           "experiment.peak.broad_gauss_v",
           "experiment.peak.broad_gauss_w",
           "experiment.peak.broad_lorentz_y",
-          "structure.cell.length_a",
-          "structure.cell.length_b",
-          "structure.cell.length_c"
-        ]
-      ],
-      [
-        "Atom positions",
-        [
-          "experiment.background[10].intensity",
-          "experiment.background[11].intensity",
-          "experiment.background[12].intensity",
-          "experiment.background[13].intensity",
-          "experiment.background[14].intensity",
-          "experiment.background[15].intensity",
-          "experiment.background[16].intensity",
-          "experiment.background[1].intensity",
-          "experiment.background[2].intensity",
-          "experiment.background[3].intensity",
-          "experiment.background[4].intensity",
-          "experiment.background[5].intensity",
-          "experiment.background[6].intensity",
-          "experiment.background[7].intensity",
-          "experiment.background[8].intensity",
-          "experiment.background[9].intensity",
-          "experiment.instrument.calib_twotheta_offset",
-          "experiment.linked_structures[cosio].scale",
-          "experiment.peak.asym_fcj_1",
-          "experiment.peak.broad_gauss_u",
-          "experiment.peak.broad_gauss_v",
-          "experiment.peak.broad_gauss_w",
-          "experiment.peak.broad_lorentz_y",
-          "structure.atom_sites[Co2].fract_x",
-          "structure.atom_sites[Co2].fract_z",
-          "structure.atom_sites[O1].fract_x",
-          "structure.atom_sites[O1].fract_z",
-          "structure.atom_sites[O2].fract_x",
-          "structure.atom_sites[O2].fract_z",
-          "structure.atom_sites[O3].fract_x",
-          "structure.atom_sites[O3].fract_y",
-          "structure.atom_sites[O3].fract_z",
-          "structure.atom_sites[Si].fract_x",
-          "structure.atom_sites[Si].fract_z",
-          "structure.cell.length_a",
-          "structure.cell.length_b",
-          "structure.cell.length_c"
-        ]
-      ],
-      [
-        "Magnetic moments",
-        [
-          "experiment.background[10].intensity",
-          "experiment.background[11].intensity",
-          "experiment.background[12].intensity",
-          "experiment.background[13].intensity",
-          "experiment.background[14].intensity",
-          "experiment.background[15].intensity",
-          "experiment.background[16].intensity",
-          "experiment.background[1].intensity",
-          "experiment.background[2].intensity",
-          "experiment.background[3].intensity",
-          "experiment.background[4].intensity",
-          "experiment.background[5].intensity",
-          "experiment.background[6].intensity",
-          "experiment.background[7].intensity",
-          "experiment.background[8].intensity",
-          "experiment.background[9].intensity",
-          "experiment.instrument.calib_twotheta_offset",
-          "experiment.linked_structures[cosio].scale",
-          "experiment.peak.asym_fcj_1",
-          "experiment.peak.broad_gauss_u",
-          "experiment.peak.broad_gauss_v",
-          "experiment.peak.broad_gauss_w",
-          "experiment.peak.broad_lorentz_y",
           "structure.atom_site_moment[Co1].crystalaxis_x",
           "structure.atom_site_moment[Co1].crystalaxis_y",
           "structure.atom_site_moment[Co1].crystalaxis_z",
           "structure.atom_site_moment[Co2].crystalaxis_y",
+          "structure.atom_sites[Co1].adp_iso",
           "structure.atom_sites[Co2].fract_x",
           "structure.atom_sites[Co2].fract_z",
+          "structure.atom_sites[O1].adp_iso",
           "structure.atom_sites[O1].fract_x",
           "structure.atom_sites[O1].fract_z",
+          "structure.atom_sites[O2].adp_iso",
           "structure.atom_sites[O2].fract_x",
           "structure.atom_sites[O2].fract_z",
+          "structure.atom_sites[O3].adp_iso",
           "structure.atom_sites[O3].fract_x",
           "structure.atom_sites[O3].fract_y",
           "structure.atom_sites[O3].fract_z",
-          "structure.atom_sites[Si].fract_x",
-          "structure.atom_sites[Si].fract_z",
-          "structure.cell.length_a",
-          "structure.cell.length_b",
-          "structure.cell.length_c"
-        ]
-      ],
-      [
-        "Magnetic form factor",
-        [
-          "experiment.background[10].intensity",
-          "experiment.background[11].intensity",
-          "experiment.background[12].intensity",
-          "experiment.background[13].intensity",
-          "experiment.background[14].intensity",
-          "experiment.background[15].intensity",
-          "experiment.background[16].intensity",
-          "experiment.background[1].intensity",
-          "experiment.background[2].intensity",
-          "experiment.background[3].intensity",
-          "experiment.background[4].intensity",
-          "experiment.background[5].intensity",
-          "experiment.background[6].intensity",
-          "experiment.background[7].intensity",
-          "experiment.background[8].intensity",
-          "experiment.background[9].intensity",
-          "experiment.instrument.calib_twotheta_offset",
-          "experiment.linked_structures[cosio].scale",
-          "experiment.peak.asym_fcj_1",
-          "experiment.peak.broad_gauss_u",
-          "experiment.peak.broad_gauss_v",
-          "experiment.peak.broad_gauss_w",
-          "experiment.peak.broad_lorentz_y",
-          "structure.atom_site_moment[Co1].crystalaxis_x",
-          "structure.atom_site_moment[Co1].crystalaxis_y",
-          "structure.atom_site_moment[Co1].crystalaxis_z",
-          "structure.atom_site_moment[Co2].crystalaxis_y",
-          "structure.atom_sites[Co2].fract_x",
-          "structure.atom_sites[Co2].fract_z",
-          "structure.atom_sites[O1].fract_x",
-          "structure.atom_sites[O1].fract_z",
-          "structure.atom_sites[O2].fract_x",
-          "structure.atom_sites[O2].fract_z",
-          "structure.atom_sites[O3].fract_x",
-          "structure.atom_sites[O3].fract_y",
-          "structure.atom_sites[O3].fract_z",
+          "structure.atom_sites[Si].adp_iso",
           "structure.atom_sites[Si].fract_x",
           "structure.atom_sites[Si].fract_z",
           "structure.cell.length_a",
@@ -2876,21 +2741,26 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "5f1bfe8cf938e4d6cb3a072a087a539877d8f00464e2fa73b0aaa058860fd4f4",
-      "docs/user/tutorials/pd-neut-cwl_cosio-d20_2k.py": "002533998c369cf6f5bdda256f5d4c4e14f9e4e44574edf2d27b228fe4339441",
-      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_cosio-d20_2k.md": "112ae748ea437645af2dad07bd7ebd8f8ed560471d4e2d8bfe9a9fa4533a3ab1",
-      "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/analysis/analysis.edi": "87aed0d15aea1ac6ce289611341709557ca4ef11344a3bab5fcc9c152ea3b1a4"
+      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "docs/user/tutorials/pd-neut-cwl_cosio-d20_2k.py": "f37f01f1d3c982adc797867359f130a5138a4c79717658063368844ef1c1711c",
+      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_cosio-d20_2k.md": "6519c88ac021967ab22e414c9fbb31a997a0ac6c8f78245fd0aa491ce25329cf",
+      "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/analysis/analysis.edi": "fc3edb415512ca536353f603603646ad83eddedd88d50a81019b54e4e165a616"
     },
     "boundaries": [
       {
         "stage": 1,
-        "title": "Scale, 2θ zero and cell",
+        "title": "Scale, 2θ zero, cell and magnetic moments",
         "free": [
           "experiment.instrument.calib_twotheta_offset",
           "experiment.linked_structures.cosio.scale",
+          "structure.atom_site_moment.Co1.crystalaxis_x",
+          "structure.atom_site_moment.Co1.crystalaxis_y",
+          "structure.atom_site_moment.Co1.crystalaxis_z",
+          "structure.atom_site_moment.Co2.crystalaxis_y",
           "structure.cell.length_a",
           "structure.cell.length_b",
-          "structure.cell.length_c"
+          "structure.cell.length_c",
+          "structure.magnetic_form_factor.Co.j2_coefficient"
         ],
         "aliases": {
           "biso_Co1": "cosio.atom_site.Co1.adp_iso",
@@ -2931,9 +2801,14 @@
           "experiment.background.9.intensity",
           "experiment.instrument.calib_twotheta_offset",
           "experiment.linked_structures.cosio.scale",
+          "structure.atom_site_moment.Co1.crystalaxis_x",
+          "structure.atom_site_moment.Co1.crystalaxis_y",
+          "structure.atom_site_moment.Co1.crystalaxis_z",
+          "structure.atom_site_moment.Co2.crystalaxis_y",
           "structure.cell.length_a",
           "structure.cell.length_b",
-          "structure.cell.length_c"
+          "structure.cell.length_c",
+          "structure.magnetic_form_factor.Co.j2_coefficient"
         ],
         "aliases": {
           "biso_Co1": "cosio.atom_site.Co1.adp_iso",
@@ -2954,6 +2829,70 @@
       },
       {
         "stage": 3,
+        "title": "Atomic displacements and positions",
+        "free": [
+          "experiment.background.1.intensity",
+          "experiment.background.10.intensity",
+          "experiment.background.11.intensity",
+          "experiment.background.12.intensity",
+          "experiment.background.13.intensity",
+          "experiment.background.14.intensity",
+          "experiment.background.15.intensity",
+          "experiment.background.16.intensity",
+          "experiment.background.2.intensity",
+          "experiment.background.3.intensity",
+          "experiment.background.4.intensity",
+          "experiment.background.5.intensity",
+          "experiment.background.6.intensity",
+          "experiment.background.7.intensity",
+          "experiment.background.8.intensity",
+          "experiment.background.9.intensity",
+          "experiment.instrument.calib_twotheta_offset",
+          "experiment.linked_structures.cosio.scale",
+          "structure.atom_site_moment.Co1.crystalaxis_x",
+          "structure.atom_site_moment.Co1.crystalaxis_y",
+          "structure.atom_site_moment.Co1.crystalaxis_z",
+          "structure.atom_site_moment.Co2.crystalaxis_y",
+          "structure.atom_sites.Co1.adp_iso",
+          "structure.atom_sites.Co2.fract_x",
+          "structure.atom_sites.Co2.fract_z",
+          "structure.atom_sites.O1.adp_iso",
+          "structure.atom_sites.O1.fract_x",
+          "structure.atom_sites.O1.fract_z",
+          "structure.atom_sites.O2.adp_iso",
+          "structure.atom_sites.O2.fract_x",
+          "structure.atom_sites.O2.fract_z",
+          "structure.atom_sites.O3.adp_iso",
+          "structure.atom_sites.O3.fract_x",
+          "structure.atom_sites.O3.fract_y",
+          "structure.atom_sites.O3.fract_z",
+          "structure.atom_sites.Si.adp_iso",
+          "structure.atom_sites.Si.fract_x",
+          "structure.atom_sites.Si.fract_z",
+          "structure.cell.length_a",
+          "structure.cell.length_b",
+          "structure.cell.length_c",
+          "structure.magnetic_form_factor.Co.j2_coefficient"
+        ],
+        "aliases": {
+          "biso_Co1": "cosio.atom_site.Co1.adp_iso",
+          "biso_Co2": "cosio.atom_site.Co2.adp_iso",
+          "sl": "d20.peak.asym_fcj_1",
+          "dl": "d20.peak.asym_fcj_2"
+        },
+        "constraints": {
+          "biso_Co2": "biso_Co2=biso_Co1",
+          "dl": "dl=sl"
+        },
+        "values": {},
+        "regions": {},
+        "points": {},
+        "estimate": {},
+        "estimate_calls": 0,
+        "file_required": false
+      },
+      {
+        "stage": 4,
         "title": "Peak widths",
         "free": [
           "experiment.background.1.intensity",
@@ -2978,9 +2917,30 @@
           "experiment.peak.broad_gauss_v",
           "experiment.peak.broad_gauss_w",
           "experiment.peak.broad_lorentz_y",
+          "structure.atom_site_moment.Co1.crystalaxis_x",
+          "structure.atom_site_moment.Co1.crystalaxis_y",
+          "structure.atom_site_moment.Co1.crystalaxis_z",
+          "structure.atom_site_moment.Co2.crystalaxis_y",
+          "structure.atom_sites.Co1.adp_iso",
+          "structure.atom_sites.Co2.fract_x",
+          "structure.atom_sites.Co2.fract_z",
+          "structure.atom_sites.O1.adp_iso",
+          "structure.atom_sites.O1.fract_x",
+          "structure.atom_sites.O1.fract_z",
+          "structure.atom_sites.O2.adp_iso",
+          "structure.atom_sites.O2.fract_x",
+          "structure.atom_sites.O2.fract_z",
+          "structure.atom_sites.O3.adp_iso",
+          "structure.atom_sites.O3.fract_x",
+          "structure.atom_sites.O3.fract_y",
+          "structure.atom_sites.O3.fract_z",
+          "structure.atom_sites.Si.adp_iso",
+          "structure.atom_sites.Si.fract_x",
+          "structure.atom_sites.Si.fract_z",
           "structure.cell.length_a",
           "structure.cell.length_b",
-          "structure.cell.length_c"
+          "structure.cell.length_c",
+          "structure.magnetic_form_factor.Co.j2_coefficient"
         ],
         "aliases": {
           "biso_Co1": "cosio.atom_site.Co1.adp_iso",
@@ -3000,7 +2960,7 @@
         "file_required": false
       },
       {
-        "stage": 4,
+        "stage": 5,
         "title": "Peak asymmetry",
         "free": [
           "experiment.background.1.intensity",
@@ -3026,189 +2986,24 @@
           "experiment.peak.broad_gauss_v",
           "experiment.peak.broad_gauss_w",
           "experiment.peak.broad_lorentz_y",
-          "structure.cell.length_a",
-          "structure.cell.length_b",
-          "structure.cell.length_c"
-        ],
-        "aliases": {
-          "biso_Co1": "cosio.atom_site.Co1.adp_iso",
-          "biso_Co2": "cosio.atom_site.Co2.adp_iso",
-          "sl": "d20.peak.asym_fcj_1",
-          "dl": "d20.peak.asym_fcj_2"
-        },
-        "constraints": {
-          "biso_Co2": "biso_Co2=biso_Co1",
-          "dl": "dl=sl"
-        },
-        "values": {},
-        "regions": {},
-        "points": {},
-        "estimate": {},
-        "estimate_calls": 0,
-        "file_required": false
-      },
-      {
-        "stage": 5,
-        "title": "Atom positions",
-        "free": [
-          "experiment.background.1.intensity",
-          "experiment.background.10.intensity",
-          "experiment.background.11.intensity",
-          "experiment.background.12.intensity",
-          "experiment.background.13.intensity",
-          "experiment.background.14.intensity",
-          "experiment.background.15.intensity",
-          "experiment.background.16.intensity",
-          "experiment.background.2.intensity",
-          "experiment.background.3.intensity",
-          "experiment.background.4.intensity",
-          "experiment.background.5.intensity",
-          "experiment.background.6.intensity",
-          "experiment.background.7.intensity",
-          "experiment.background.8.intensity",
-          "experiment.background.9.intensity",
-          "experiment.instrument.calib_twotheta_offset",
-          "experiment.linked_structures.cosio.scale",
-          "experiment.peak.asym_fcj_1",
-          "experiment.peak.broad_gauss_u",
-          "experiment.peak.broad_gauss_v",
-          "experiment.peak.broad_gauss_w",
-          "experiment.peak.broad_lorentz_y",
-          "structure.atom_sites.Co2.fract_x",
-          "structure.atom_sites.Co2.fract_z",
-          "structure.atom_sites.O1.fract_x",
-          "structure.atom_sites.O1.fract_z",
-          "structure.atom_sites.O2.fract_x",
-          "structure.atom_sites.O2.fract_z",
-          "structure.atom_sites.O3.fract_x",
-          "structure.atom_sites.O3.fract_y",
-          "structure.atom_sites.O3.fract_z",
-          "structure.atom_sites.Si.fract_x",
-          "structure.atom_sites.Si.fract_z",
-          "structure.cell.length_a",
-          "structure.cell.length_b",
-          "structure.cell.length_c"
-        ],
-        "aliases": {
-          "biso_Co1": "cosio.atom_site.Co1.adp_iso",
-          "biso_Co2": "cosio.atom_site.Co2.adp_iso",
-          "sl": "d20.peak.asym_fcj_1",
-          "dl": "d20.peak.asym_fcj_2"
-        },
-        "constraints": {
-          "biso_Co2": "biso_Co2=biso_Co1",
-          "dl": "dl=sl"
-        },
-        "values": {},
-        "regions": {},
-        "points": {},
-        "estimate": {},
-        "estimate_calls": 0,
-        "file_required": false
-      },
-      {
-        "stage": 6,
-        "title": "Magnetic moments",
-        "free": [
-          "experiment.background.1.intensity",
-          "experiment.background.10.intensity",
-          "experiment.background.11.intensity",
-          "experiment.background.12.intensity",
-          "experiment.background.13.intensity",
-          "experiment.background.14.intensity",
-          "experiment.background.15.intensity",
-          "experiment.background.16.intensity",
-          "experiment.background.2.intensity",
-          "experiment.background.3.intensity",
-          "experiment.background.4.intensity",
-          "experiment.background.5.intensity",
-          "experiment.background.6.intensity",
-          "experiment.background.7.intensity",
-          "experiment.background.8.intensity",
-          "experiment.background.9.intensity",
-          "experiment.instrument.calib_twotheta_offset",
-          "experiment.linked_structures.cosio.scale",
-          "experiment.peak.asym_fcj_1",
-          "experiment.peak.broad_gauss_u",
-          "experiment.peak.broad_gauss_v",
-          "experiment.peak.broad_gauss_w",
-          "experiment.peak.broad_lorentz_y",
           "structure.atom_site_moment.Co1.crystalaxis_x",
           "structure.atom_site_moment.Co1.crystalaxis_y",
           "structure.atom_site_moment.Co1.crystalaxis_z",
           "structure.atom_site_moment.Co2.crystalaxis_y",
+          "structure.atom_sites.Co1.adp_iso",
           "structure.atom_sites.Co2.fract_x",
           "structure.atom_sites.Co2.fract_z",
+          "structure.atom_sites.O1.adp_iso",
           "structure.atom_sites.O1.fract_x",
           "structure.atom_sites.O1.fract_z",
+          "structure.atom_sites.O2.adp_iso",
           "structure.atom_sites.O2.fract_x",
           "structure.atom_sites.O2.fract_z",
+          "structure.atom_sites.O3.adp_iso",
           "structure.atom_sites.O3.fract_x",
           "structure.atom_sites.O3.fract_y",
           "structure.atom_sites.O3.fract_z",
-          "structure.atom_sites.Si.fract_x",
-          "structure.atom_sites.Si.fract_z",
-          "structure.cell.length_a",
-          "structure.cell.length_b",
-          "structure.cell.length_c"
-        ],
-        "aliases": {
-          "biso_Co1": "cosio.atom_site.Co1.adp_iso",
-          "biso_Co2": "cosio.atom_site.Co2.adp_iso",
-          "sl": "d20.peak.asym_fcj_1",
-          "dl": "d20.peak.asym_fcj_2"
-        },
-        "constraints": {
-          "biso_Co2": "biso_Co2=biso_Co1",
-          "dl": "dl=sl"
-        },
-        "values": {},
-        "regions": {},
-        "points": {},
-        "estimate": {},
-        "estimate_calls": 0,
-        "file_required": false
-      },
-      {
-        "stage": 7,
-        "title": "Magnetic form factor",
-        "free": [
-          "experiment.background.1.intensity",
-          "experiment.background.10.intensity",
-          "experiment.background.11.intensity",
-          "experiment.background.12.intensity",
-          "experiment.background.13.intensity",
-          "experiment.background.14.intensity",
-          "experiment.background.15.intensity",
-          "experiment.background.16.intensity",
-          "experiment.background.2.intensity",
-          "experiment.background.3.intensity",
-          "experiment.background.4.intensity",
-          "experiment.background.5.intensity",
-          "experiment.background.6.intensity",
-          "experiment.background.7.intensity",
-          "experiment.background.8.intensity",
-          "experiment.background.9.intensity",
-          "experiment.instrument.calib_twotheta_offset",
-          "experiment.linked_structures.cosio.scale",
-          "experiment.peak.asym_fcj_1",
-          "experiment.peak.broad_gauss_u",
-          "experiment.peak.broad_gauss_v",
-          "experiment.peak.broad_gauss_w",
-          "experiment.peak.broad_lorentz_y",
-          "structure.atom_site_moment.Co1.crystalaxis_x",
-          "structure.atom_site_moment.Co1.crystalaxis_y",
-          "structure.atom_site_moment.Co1.crystalaxis_z",
-          "structure.atom_site_moment.Co2.crystalaxis_y",
-          "structure.atom_sites.Co2.fract_x",
-          "structure.atom_sites.Co2.fract_z",
-          "structure.atom_sites.O1.fract_x",
-          "structure.atom_sites.O1.fract_z",
-          "structure.atom_sites.O2.fract_x",
-          "structure.atom_sites.O2.fract_z",
-          "structure.atom_sites.O3.fract_x",
-          "structure.atom_sites.O3.fract_y",
-          "structure.atom_sites.O3.fract_z",
+          "structure.atom_sites.Si.adp_iso",
           "structure.atom_sites.Si.fract_x",
           "structure.atom_sites.Si.fract_z",
           "structure.cell.length_a",
@@ -3289,7 +3084,7 @@
         {
           "id": "structure-web-0",
           "page": "structure",
-          "description": "Find the structure lmo in the EasyDiffraction collection",
+          "description": "Find the structure",
           "actions": [
             "appBar.tab.structure",
             "sideBar.tab.basic",
@@ -3327,7 +3122,7 @@
         {
           "id": "experiment-web-0",
           "page": "experiment",
-          "description": "Find the experiment echidna in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -3361,9 +3156,28 @@
           "capture": true
         },
         {
+          "id": "nothing-free",
+          "page": "analysis",
+          "description": "Start with every parameter fixed",
+          "actions": [
+            "appBar.tab.analysis",
+            "sideBar.tab.basic",
+            "parameters.clearFilters",
+            "parameters.freeHeader",
+            "parameters.freeHeader.fixed"
+          ],
+          "highlights": [
+            "group.parameters",
+            "parameters.freeHeader"
+          ],
+          "sidebar": "Main",
+          "capture": true,
+          "fitPhase": "setup"
+        },
+        {
           "id": "relations-start",
           "page": "analysis",
-          "description": "Add the relations the project starts with",
+          "description": "Add the relations",
           "actions": [
             "appBar.tab.analysis",
             "sideBar.tab.extras",
@@ -3485,32 +3299,12 @@
             "sideBar.tab.extras",
             "reveal:group.minimizer",
             "expand:group.minimizer",
-            "choose-token:minimizer.stopRule=shift_su",
             "fill:minimizer.maxIterations=1000"
           ],
           "highlights": [
             "group.minimizer"
           ],
           "sidebar": "Extra",
-          "capture": true,
-          "fitPhase": "setup"
-        },
-        {
-          "id": "nothing-free",
-          "page": "analysis",
-          "description": "Start with every parameter fixed",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.basic",
-            "parameters.clearFilters",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed"
-          ],
-          "highlights": [
-            "group.parameters",
-            "parameters.freeHeader"
-          ],
-          "sidebar": "Main",
           "capture": true,
           "fitPhase": "setup"
         },
@@ -3524,17 +3318,11 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Instrument",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=offset",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.instrument.calib_twotheta_offset",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Linked structures",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.linked_structures[lmo].scale",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Cell",
@@ -3575,11 +3363,8 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Instrument",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=calib",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:experiment.instrument.calib_sample_displacement",
+            "tick:experiment.instrument.calib_sample_transparency"
           ],
           "highlights": [
             "group.parameters"
@@ -3651,13 +3436,10 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Peak broadening",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=lorentz_x",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed",
-            "parameters.clearFilters"
+            "tick:experiment.peak.broad_gauss_u",
+            "tick:experiment.peak.broad_gauss_v",
+            "tick:experiment.peak.broad_gauss_w",
+            "tick:experiment.peak.broad_lorentz_y"
           ],
           "highlights": [
             "group.parameters"
@@ -3692,9 +3474,7 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic coordinates",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:structure.atom_sites[O].fract_z"
           ],
           "highlights": [
             "group.parameters"
@@ -3766,11 +3546,7 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic occupancies",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=[Li1]",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:structure.atom_sites[Li1].occupancy"
           ],
           "highlights": [
             "group.parameters"
@@ -3800,7 +3576,7 @@
           "page": "analysis",
           "description": "Inspect the correlations",
           "actions": [
-            "mainArea.analysis.tab.correlations"
+            "mainArea.tab.correlations"
           ],
           "highlights": [
             "workflow.analysis.mainContent"
@@ -3813,7 +3589,7 @@
           "page": "report",
           "description": "Review the report",
           "actions": [
-            "mainArea.analysis.tab.fitting",
+            "mainArea.tab.pattern",
             "appBar.tab.report",
             "sideBar.tab.basic"
           ],
@@ -3974,10 +3750,10 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "5f1bfe8cf938e4d6cb3a072a087a539877d8f00464e2fa73b0aaa058860fd4f4",
-      "docs/user/tutorials/pd-neut-cwl_lmo-echidna.py": "5090d9178fb552c369669a5bb4bd40133e703f0c584059049c57d19c931afb9a",
-      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_lmo-echidna.md": "439048c0596fa25637f34bf16ecad5209f998b3aa21ceccdb0a7306e1ea7fcaf",
-      "docs/user/cli/pd-neut-cwl_lmo-echidna/project/analysis/analysis.edi": "f6f290ff52bea1cccb761de7efefde0fdf1dcc31247b8e36451ede44211d3184"
+      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "docs/user/tutorials/pd-neut-cwl_lmo-echidna.py": "a3c385d801234e20bfbc84b1b92d698e8f832bbf15448400a346e697f3867e9d",
+      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_lmo-echidna.md": "ffaa1e7af0065b3d26cee820754977d2361c05596ae7ef23d0c3e5f7e14fdd82",
+      "docs/user/cli/pd-neut-cwl_lmo-echidna/project/analysis/analysis.edi": "15de9a58c3c93c2e535daeeefe2973c5ea43b7e6a2e389c356d82b4fa9a058a3"
     },
     "boundaries": [
       {
@@ -4350,7 +4126,7 @@
         {
           "id": "structure-web-0",
           "page": "structure",
-          "description": "Find the structure ferrite in the EasyDiffraction collection",
+          "description": "Find the structure",
           "actions": [
             "appBar.tab.structure",
             "sideBar.tab.basic",
@@ -4388,7 +4164,7 @@
         {
           "id": "structure-web-1",
           "page": "structure",
-          "description": "Find the structure austenite in the EasyDiffraction collection",
+          "description": "Find the structure",
           "actions": [
             "appBar.tab.structure",
             "sideBar.tab.basic",
@@ -4426,7 +4202,7 @@
         {
           "id": "experiment-web-0",
           "page": "experiment",
-          "description": "Find the experiment expt_s2 in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -4462,7 +4238,7 @@
         {
           "id": "experiment-web-1",
           "page": "experiment",
-          "description": "Find the experiment expt_n2 in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -4496,9 +4272,28 @@
           "capture": true
         },
         {
+          "id": "nothing-free",
+          "page": "analysis",
+          "description": "Start with every parameter fixed",
+          "actions": [
+            "appBar.tab.analysis",
+            "sideBar.tab.basic",
+            "parameters.clearFilters",
+            "parameters.freeHeader",
+            "parameters.freeHeader.fixed"
+          ],
+          "highlights": [
+            "group.parameters",
+            "parameters.freeHeader"
+          ],
+          "sidebar": "Main",
+          "capture": true,
+          "fitPhase": "setup"
+        },
+        {
           "id": "relations-start",
           "page": "analysis",
-          "description": "Add the relations the project starts with",
+          "description": "Add the relations",
           "actions": [
             "appBar.tab.analysis",
             "sideBar.tab.extras",
@@ -4582,6 +4377,25 @@
           "fitPhase": "setup"
         },
         {
+          "id": "joint-weights",
+          "page": "analysis",
+          "description": "Weigh the experiments",
+          "actions": [
+            "appBar.tab.analysis",
+            "sideBar.tab.extras",
+            "reveal:group.joint_fit",
+            "expand:group.joint_fit",
+            "fill:jointFit.weight.0=0.5",
+            "fill:jointFit.weight.1=0.5"
+          ],
+          "highlights": [
+            "group.joint_fit"
+          ],
+          "sidebar": "Extra",
+          "capture": true,
+          "fitPhase": "setup"
+        },
+        {
           "id": "minimizer",
           "page": "analysis",
           "description": "Set the minimizer as the project does",
@@ -4590,32 +4404,12 @@
             "sideBar.tab.extras",
             "reveal:group.minimizer",
             "expand:group.minimizer",
-            "choose-token:minimizer.stopRule=shift_su",
             "fill:minimizer.maxIterations=1000"
           ],
           "highlights": [
             "group.minimizer"
           ],
           "sidebar": "Extra",
-          "capture": true,
-          "fitPhase": "setup"
-        },
-        {
-          "id": "nothing-free",
-          "page": "analysis",
-          "description": "Start with every parameter fixed",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.basic",
-            "parameters.clearFilters",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed"
-          ],
-          "highlights": [
-            "group.parameters",
-            "parameters.freeHeader"
-          ],
-          "sidebar": "Main",
           "capture": true,
           "fitPhase": "setup"
         },
@@ -4632,10 +4426,7 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Instrument",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=offset",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
+            "tick:experiments[expt_n2].instrument.calib_d_to_tof_offset",
             "parameters.clearFilters",
             "reveal:parameters.datablock",
             "parameters.datablock",
@@ -4643,10 +4434,7 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Instrument",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=offset",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
+            "tick:experiments[expt_s2].instrument.calib_d_to_tof_offset",
             "parameters.clearFilters",
             "reveal:parameters.datablock",
             "parameters.datablock",
@@ -4743,21 +4531,10 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Peak profile",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=gamma_0",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
-            "reveal:parameters.datablock",
-            "parameters.datablock",
-            "choose:expt_n2",
-            "reveal:parameters.category",
-            "parameters.category",
-            "choose:Peak profile",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=sigma",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
+            "tick:experiments[expt_n2].peak.broad_gauss_sigma_0",
+            "tick:experiments[expt_n2].peak.broad_gauss_sigma_1",
+            "tick:experiments[expt_n2].peak.broad_gauss_sigma_2",
+            "tick:experiments[expt_n2].peak.broad_lorentz_gamma_0",
             "parameters.clearFilters",
             "reveal:parameters.datablock",
             "parameters.datablock",
@@ -4765,21 +4542,10 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Peak profile",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=gamma_0",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
-            "reveal:parameters.datablock",
-            "parameters.datablock",
-            "choose:expt_s2",
-            "reveal:parameters.category",
-            "parameters.category",
-            "choose:Peak profile",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=sigma",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
+            "tick:experiments[expt_s2].peak.broad_gauss_sigma_0",
+            "tick:experiments[expt_s2].peak.broad_gauss_sigma_1",
+            "tick:experiments[expt_s2].peak.broad_gauss_sigma_2",
+            "tick:experiments[expt_s2].peak.broad_lorentz_gamma_0",
             "parameters.clearFilters"
           ],
           "highlights": [
@@ -4818,8 +4584,7 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic displacement",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
+            "tick:structures[ferrite].atom_sites[Fe].adp_iso",
             "parameters.clearFilters"
           ],
           "highlights": [
@@ -4850,7 +4615,7 @@
           "page": "analysis",
           "description": "Inspect the correlations",
           "actions": [
-            "mainArea.analysis.tab.correlations"
+            "mainArea.tab.correlations"
           ],
           "highlights": [
             "workflow.analysis.mainContent"
@@ -4863,7 +4628,7 @@
           "page": "report",
           "description": "Review the report",
           "actions": [
-            "mainArea.analysis.tab.fitting",
+            "mainArea.tab.pattern",
             "appBar.tab.report",
             "sideBar.tab.basic"
           ],
@@ -5111,10 +4876,10 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "5f1bfe8cf938e4d6cb3a072a087a539877d8f00464e2fa73b0aaa058860fd4f4",
-      "docs/user/tutorials/pd-neut-tof_ferrite-austenite-beer.py": "c1c57db1ca50c5122f99278f58c0c110114eeeecb59042e91d5335c388a1dc4d",
-      "website/surfaces/docs/cli/tutorials/cases/pd-neut-tof_ferrite-austenite-beer.md": "0604206c235aec6f8d5c6bd2145fe808b29e9989d7845f4ea932492ec61bc7fc",
-      "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/analysis/analysis.edi": "ff0a4bbd939a2e98f06d37f78224f0c2afd2c759f2bc1f7be9b0ff0467fa47cd"
+      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "docs/user/tutorials/pd-neut-tof_ferrite-austenite-beer.py": "1aac20fa4f880c5b231ff2cb45343a88dcab289d71bb2e8f1e04ab55d0ddbb0c",
+      "website/surfaces/docs/cli/tutorials/cases/pd-neut-tof_ferrite-austenite-beer.md": "51a5330fb33c03596e6a1e5e0745812618b76174e86c669196cd0f02a83e29d5",
+      "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/analysis/analysis.edi": "1c24e1088d024dfe9edfd8784920133ad4476690edf8d925284411ef3c65700b"
     },
     "boundaries": [
       {
@@ -5486,7 +5251,7 @@
         {
           "id": "structure-web-0",
           "page": "structure",
-          "description": "Find the structure lam7o3 in the EasyDiffraction collection",
+          "description": "Find the structure",
           "actions": [
             "appBar.tab.structure",
             "sideBar.tab.basic",
@@ -5524,7 +5289,7 @@
         {
           "id": "experiment-web-0",
           "page": "experiment",
-          "description": "Find the experiment p021 in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -5558,9 +5323,28 @@
           "capture": true
         },
         {
+          "id": "nothing-free",
+          "page": "analysis",
+          "description": "Start with every parameter fixed",
+          "actions": [
+            "appBar.tab.analysis",
+            "sideBar.tab.basic",
+            "parameters.clearFilters",
+            "parameters.freeHeader",
+            "parameters.freeHeader.fixed"
+          ],
+          "highlights": [
+            "group.parameters",
+            "parameters.freeHeader"
+          ],
+          "sidebar": "Main",
+          "capture": true,
+          "fitPhase": "setup"
+        },
+        {
           "id": "relations-start",
           "page": "analysis",
-          "description": "Add the relations the project starts with",
+          "description": "Add the relations",
           "actions": [
             "appBar.tab.analysis",
             "sideBar.tab.extras",
@@ -5705,32 +5489,12 @@
             "reveal:group.minimizer",
             "expand:group.minimizer",
             "choose-token:minimizer.descent=fast_descent",
-            "choose-token:minimizer.stopRule=shift_su",
             "fill:minimizer.maxIterations=1000"
           ],
           "highlights": [
             "group.minimizer"
           ],
           "sidebar": "Extra",
-          "capture": true,
-          "fitPhase": "setup"
-        },
-        {
-          "id": "nothing-free",
-          "page": "analysis",
-          "description": "Start with every parameter fixed",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.basic",
-            "parameters.clearFilters",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed"
-          ],
-          "highlights": [
-            "group.parameters",
-            "parameters.freeHeader"
-          ],
-          "sidebar": "Main",
           "capture": true,
           "fitPhase": "setup"
         },
@@ -5744,17 +5508,11 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Instrument",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=calib",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.instrument.calib_twotheta_offset",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Linked structures",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.linked_structures[lam7o3].scale",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Cell",
@@ -5832,13 +5590,10 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Peak profile",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=lorentz_y",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed",
-            "parameters.clearFilters"
+            "tick:experiment.peak.broad_gauss_u",
+            "tick:experiment.peak.broad_gauss_v",
+            "tick:experiment.peak.broad_gauss_w",
+            "tick:experiment.peak.broad_lorentz_x"
           ],
           "highlights": [
             "group.parameters"
@@ -5884,7 +5639,13 @@
             "reveal:background.estimate",
             "background.estimate",
             "appBar.tab.analysis",
-            "sideBar.tab.basic"
+            "sideBar.tab.basic",
+            "reveal:parameters.category",
+            "parameters.category",
+            "choose:Background",
+            "parameters.freeHeader",
+            "parameters.freeHeader.free",
+            "parameters.clearFilters"
           ],
           "highlights": [
             "group.parameters"
@@ -5988,7 +5749,7 @@
           "page": "analysis",
           "description": "Inspect the correlations",
           "actions": [
-            "mainArea.analysis.tab.correlations"
+            "mainArea.tab.correlations"
           ],
           "highlights": [
             "workflow.analysis.mainContent"
@@ -6001,7 +5762,7 @@
           "page": "report",
           "description": "Review the report",
           "actions": [
-            "mainArea.analysis.tab.fitting",
+            "mainArea.tab.pattern",
             "appBar.tab.report",
             "sideBar.tab.basic"
           ],
@@ -6209,10 +5970,10 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "5f1bfe8cf938e4d6cb3a072a087a539877d8f00464e2fa73b0aaa058860fd4f4",
-      "docs/user/tutorials/pd-xray-cwl_lam7o3-p021.py": "64e8b7de0b29129194e2ea336d816bd73549b01157c037676b25533dd838d01a",
-      "website/surfaces/docs/cli/tutorials/cases/pd-xray-cwl_lam7o3-p021.md": "eef7437be20288d49cad3467fbdd4a1addecf183fa6a25a14851a26cc5dbb4b6",
-      "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/analysis/analysis.edi": "8c43e240eb4f204ad16cd1e80669b719d982c76ba838f3bb29bc675fa960e75a"
+      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "docs/user/tutorials/pd-xray-cwl_lam7o3-p021.py": "49659882d29dcf8e1d0fa21846dd0ccd7a1b48996a3d87787d01005fb80e0e00",
+      "website/surfaces/docs/cli/tutorials/cases/pd-xray-cwl_lam7o3-p021.md": "c4fd4b13d90a19e10ab08fee1785c8c6064b152e3abba6f0c38432b7bdc9a41c",
+      "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/analysis/analysis.edi": "487e082c579f3bbc602f285738f6169844c7413774acc1d9b1df60030054bd36"
     },
     "boundaries": [
       {
@@ -6635,7 +6396,7 @@
         {
           "id": "structure-web-0",
           "page": "structure",
-          "description": "Find the structure taurine in the EasyDiffraction collection",
+          "description": "Find the structure",
           "actions": [
             "appBar.tab.structure",
             "sideBar.tab.basic",
@@ -6673,7 +6434,7 @@
         {
           "id": "experiment-web-0",
           "page": "experiment",
-          "description": "Find the experiment senju_1 in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -6709,7 +6470,7 @@
         {
           "id": "experiment-web-1",
           "page": "experiment",
-          "description": "Find the experiment senju_2 in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -6745,7 +6506,7 @@
         {
           "id": "experiment-web-2",
           "page": "experiment",
-          "description": "Find the experiment senju_3 in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -6781,7 +6542,7 @@
         {
           "id": "experiment-web-3",
           "page": "experiment",
-          "description": "Find the experiment senju_4 in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -6817,7 +6578,7 @@
         {
           "id": "experiment-web-4",
           "page": "experiment",
-          "description": "Find the experiment senju_5 in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -6853,7 +6614,7 @@
         {
           "id": "experiment-web-5",
           "page": "experiment",
-          "description": "Find the experiment senju_6 in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -6887,9 +6648,28 @@
           "capture": true
         },
         {
+          "id": "nothing-free",
+          "page": "analysis",
+          "description": "Start with every parameter fixed",
+          "actions": [
+            "appBar.tab.analysis",
+            "sideBar.tab.basic",
+            "parameters.clearFilters",
+            "parameters.freeHeader",
+            "parameters.freeHeader.fixed"
+          ],
+          "highlights": [
+            "group.parameters",
+            "parameters.freeHeader"
+          ],
+          "sidebar": "Main",
+          "capture": true,
+          "fitPhase": "setup"
+        },
+        {
           "id": "relations-start",
           "page": "analysis",
-          "description": "Add the relations the project starts with",
+          "description": "Add the relations",
           "actions": [
             "appBar.tab.analysis",
             "sideBar.tab.extras",
@@ -7153,39 +6933,20 @@
           "fitPhase": "setup"
         },
         {
-          "id": "minimizer",
+          "id": "reflection-cutoff",
           "page": "analysis",
-          "description": "Set the minimizer as the project does",
+          "description": "Reflection cutoff",
           "actions": [
             "appBar.tab.analysis",
             "sideBar.tab.extras",
-            "reveal:group.minimizer",
-            "expand:group.minimizer",
-            "choose-token:minimizer.stopRule=shift_su"
+            "reveal:group.refine_ls",
+            "expand:group.refine_ls",
+            "fill:refine_ls.thresholdSigma=3"
           ],
           "highlights": [
-            "group.minimizer"
+            "group.refine_ls"
           ],
           "sidebar": "Extra",
-          "capture": true,
-          "fitPhase": "setup"
-        },
-        {
-          "id": "nothing-free",
-          "page": "analysis",
-          "description": "Start with every parameter fixed",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.basic",
-            "parameters.clearFilters",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed"
-          ],
-          "highlights": [
-            "group.parameters",
-            "parameters.freeHeader"
-          ],
-          "sidebar": "Main",
           "capture": true,
           "fitPhase": "setup"
         },
@@ -7316,20 +7077,15 @@
           "actions": [
             "appBar.tab.analysis",
             "sideBar.tab.basic",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=experiments[senju_1].extinction.coefficient_11",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=experiments[senju_1].extinction.coefficient_22",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=experiments[senju_1].extinction.coefficient_33",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
+            "reveal:parameters.datablock",
+            "parameters.datablock",
+            "choose:senju_1",
+            "reveal:parameters.category",
+            "parameters.category",
+            "choose:Extinction",
+            "tick:experiments[senju_1].extinction.coefficient_11",
+            "tick:experiments[senju_1].extinction.coefficient_22",
+            "tick:experiments[senju_1].extinction.coefficient_33",
             "parameters.clearFilters"
           ],
           "highlights": [
@@ -7362,9 +7118,6 @@
           "actions": [
             "appBar.tab.analysis",
             "sideBar.tab.basic",
-            "reveal:parameters.datablock",
-            "parameters.datablock",
-            "choose:taurine",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic coordinates",
@@ -7453,15 +7206,6 @@
             "choose:Atomic displacement",
             "parameters.freeHeader",
             "parameters.freeHeader.free",
-            "parameters.clearFilters",
-            "reveal:parameters.datablock",
-            "parameters.datablock",
-            "choose:taurine",
-            "reveal:parameters.category",
-            "parameters.category",
-            "choose:Atomic displacement",
-            "parameters.freeHeader",
-            "parameters.freeHeader.fixed",
             "parameters.clearFilters"
           ],
           "highlights": [
@@ -7492,7 +7236,7 @@
           "page": "analysis",
           "description": "Inspect the correlations",
           "actions": [
-            "mainArea.analysis.tab.correlations"
+            "mainArea.tab.correlations"
           ],
           "highlights": [
             "workflow.analysis.mainContent"
@@ -7505,7 +7249,7 @@
           "page": "report",
           "description": "Review the report",
           "actions": [
-            "mainArea.analysis.tab.fitting",
+            "mainArea.tab.pattern",
             "appBar.tab.report",
             "sideBar.tab.basic"
           ],
@@ -7794,10 +7538,10 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "5f1bfe8cf938e4d6cb3a072a087a539877d8f00464e2fa73b0aaa058860fd4f4",
-      "docs/user/tutorials/sc-neut-tof_taurine-senju.py": "65aa3f96a61e711142c0635aea85b4b3c6fdfb7283b9fa413babf834fae29ca3",
-      "website/surfaces/docs/cli/tutorials/cases/sc-neut-tof_taurine-senju.md": "6c90c7b509488c497a7bb89a884171a1c055b3a065e1e6cc877148432960f56d",
-      "docs/user/cli/sc-neut-tof_taurine-senju/project/analysis/analysis.edi": "34ef90f339d1c733b5bbe2403f4f2600b42088c523cda1eef7bc922d57344c3b"
+      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "docs/user/tutorials/sc-neut-tof_taurine-senju.py": "bc43153c88e6485898b58c3b8773f7937fe7198412bf7547993e15fb6c6e03ef",
+      "website/surfaces/docs/cli/tutorials/cases/sc-neut-tof_taurine-senju.md": "3a6c58b7d7e818cc503922bb776e1e475b01468caf6416d47ddaca409bbd1d09",
+      "docs/user/cli/sc-neut-tof_taurine-senju/project/analysis/analysis.edi": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469"
     },
     "boundaries": [
       {
@@ -8350,7 +8094,7 @@
         {
           "id": "structure-web-0",
           "page": "structure",
-          "description": "Find the structure y2o3 in the EasyDiffraction collection",
+          "description": "Find the structure",
           "actions": [
             "appBar.tab.structure",
             "sideBar.tab.basic",
@@ -8388,7 +8132,7 @@
         {
           "id": "experiment-web-0",
           "page": "experiment",
-          "description": "Find the experiment spodi in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -8447,25 +8191,6 @@
           "capture": true
         },
         {
-          "id": "minimizer",
-          "page": "analysis",
-          "description": "Set the minimizer as the project does",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.extras",
-            "reveal:group.minimizer",
-            "expand:group.minimizer",
-            "choose-token:minimizer.stopRule=shift_su",
-            "fill:minimizer.maxIterations=1000"
-          ],
-          "highlights": [
-            "group.minimizer"
-          ],
-          "sidebar": "Extra",
-          "capture": true,
-          "fitPhase": "setup"
-        },
-        {
           "id": "nothing-free",
           "page": "analysis",
           "description": "Start with every parameter fixed",
@@ -8485,6 +8210,24 @@
           "fitPhase": "setup"
         },
         {
+          "id": "minimizer",
+          "page": "analysis",
+          "description": "Set the minimizer as the project does",
+          "actions": [
+            "appBar.tab.analysis",
+            "sideBar.tab.extras",
+            "reveal:group.minimizer",
+            "expand:group.minimizer",
+            "fill:minimizer.maxIterations=1000"
+          ],
+          "highlights": [
+            "group.minimizer"
+          ],
+          "sidebar": "Extra",
+          "capture": true,
+          "fitPhase": "setup"
+        },
+        {
           "id": "stage-1-free",
           "page": "analysis",
           "description": "Scale, 2θ zero and cell",
@@ -8494,23 +8237,15 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Instrument",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=calib",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.instrument.calib_twotheta_offset",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Linked structures",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.linked_structures[y2o3].scale",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Cell",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:structure.cell.length_a"
           ],
           "highlights": [
             "group.parameters"
@@ -8582,11 +8317,9 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Peak profile",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=gauss",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:experiment.peak.broad_gauss_u",
+            "tick:experiment.peak.broad_gauss_v",
+            "tick:experiment.peak.broad_gauss_w"
           ],
           "highlights": [
             "group.parameters"
@@ -8690,7 +8423,7 @@
           "page": "analysis",
           "description": "Inspect the correlations",
           "actions": [
-            "mainArea.analysis.tab.correlations"
+            "mainArea.tab.correlations"
           ],
           "highlights": [
             "workflow.analysis.mainContent"
@@ -8703,7 +8436,7 @@
           "page": "report",
           "description": "Review the report",
           "actions": [
-            "mainArea.analysis.tab.fitting",
+            "mainArea.tab.pattern",
             "appBar.tab.report",
             "sideBar.tab.basic"
           ],
@@ -8871,10 +8604,10 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "5f1bfe8cf938e4d6cb3a072a087a539877d8f00464e2fa73b0aaa058860fd4f4",
-      "docs/user/tutorials/pd-neut-cwl_y2o3-spodi.py": "fd39e6c2ca77e162fc6049cf1dfadcd253817b4f9135bbf6a951d92ecdf78d1d",
-      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_y2o3-spodi.md": "b19cdc5256af28f39ded7fbc2be52f7d6db7bb1804f2e2ab21bff7125987409b",
-      "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/analysis/analysis.edi": "17fe1208c16ef917e0754bd3d524cde0a1af7ea27f78e7e2660e3425459282e1"
+      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "docs/user/tutorials/pd-neut-cwl_y2o3-spodi.py": "83c56831547c1acd42e98352d4db49b86b87d0bf4b8b9234ccae14a39364446f",
+      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_y2o3-spodi.md": "1924a61a69b22f9cf783ec2c5c8b10c900bfc610e5caff73313d555ce20f1697",
+      "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e"
     },
     "boundaries": [
       {
@@ -9141,7 +8874,7 @@
         {
           "id": "structure-web-0",
           "page": "structure",
-          "description": "Find the structure si in the EasyDiffraction collection",
+          "description": "Find the structure",
           "actions": [
             "appBar.tab.structure",
             "sideBar.tab.basic",
@@ -9179,7 +8912,7 @@
         {
           "id": "experiment-web-0",
           "page": "experiment",
-          "description": "Find the experiment sepd in the EasyDiffraction collection",
+          "description": "Find the experiment",
           "actions": [
             "appBar.tab.experiment",
             "sideBar.tab.basic",
@@ -9265,25 +8998,6 @@
           "capture": true
         },
         {
-          "id": "minimizer",
-          "page": "analysis",
-          "description": "Set the minimizer as the project does",
-          "actions": [
-            "appBar.tab.analysis",
-            "sideBar.tab.extras",
-            "reveal:group.minimizer",
-            "expand:group.minimizer",
-            "choose-token:minimizer.stopRule=shift_su",
-            "fill:minimizer.maxIterations=1000"
-          ],
-          "highlights": [
-            "group.minimizer"
-          ],
-          "sidebar": "Extra",
-          "capture": true,
-          "fitPhase": "setup"
-        },
-        {
           "id": "nothing-free",
           "page": "analysis",
           "description": "Start with every parameter fixed",
@@ -9303,6 +9017,24 @@
           "fitPhase": "setup"
         },
         {
+          "id": "minimizer",
+          "page": "analysis",
+          "description": "Set the minimizer as the project does",
+          "actions": [
+            "appBar.tab.analysis",
+            "sideBar.tab.extras",
+            "reveal:group.minimizer",
+            "expand:group.minimizer",
+            "fill:minimizer.maxIterations=1000"
+          ],
+          "highlights": [
+            "group.minimizer"
+          ],
+          "sidebar": "Extra",
+          "capture": true,
+          "fitPhase": "setup"
+        },
+        {
           "id": "stage-1-free",
           "page": "analysis",
           "description": "Cell, scale and time-of-flight calibration",
@@ -9312,23 +9044,15 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Instrument",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=offset",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.instrument.calib_d_to_tof_offset",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Linked structures",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
+            "tick:experiment.linked_structures[si].scale",
             "reveal:parameters.category",
             "parameters.category",
             "choose:Cell",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:structure.cell.length_a"
           ],
           "highlights": [
             "group.parameters"
@@ -9400,19 +9124,8 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Peak broadening",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=sigma_0",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters",
-            "reveal:parameters.category",
-            "parameters.category",
-            "choose:Peak broadening",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=sigma_1",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:experiment.peak.broad_gauss_sigma_0",
+            "tick:experiment.peak.broad_gauss_sigma_1"
           ],
           "highlights": [
             "group.parameters"
@@ -9447,11 +9160,7 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Peak broadening",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=gamma_1",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:experiment.peak.broad_lorentz_gamma_1"
           ],
           "highlights": [
             "group.parameters"
@@ -9486,9 +9195,7 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic displacement",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:structure.atom_sites[Si].adp_iso"
           ],
           "highlights": [
             "group.parameters"
@@ -9523,11 +9230,8 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Peak asymmetry",
-            "reveal:parameters.nameFilter",
-            "fill:parameters.nameFilter=beta",
-            "parameters.freeHeader",
-            "parameters.freeHeader.free",
-            "parameters.clearFilters"
+            "tick:experiment.peak.decay_beta_0",
+            "tick:experiment.peak.decay_beta_1"
           ],
           "highlights": [
             "group.parameters"
@@ -9557,7 +9261,7 @@
           "page": "analysis",
           "description": "Inspect the correlations",
           "actions": [
-            "mainArea.analysis.tab.correlations"
+            "mainArea.tab.correlations"
           ],
           "highlights": [
             "workflow.analysis.mainContent"
@@ -9570,7 +9274,7 @@
           "page": "report",
           "description": "Review the report",
           "actions": [
-            "mainArea.analysis.tab.fitting",
+            "mainArea.tab.pattern",
             "appBar.tab.report",
             "sideBar.tab.basic"
           ],
@@ -9718,10 +9422,10 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "5f1bfe8cf938e4d6cb3a072a087a539877d8f00464e2fa73b0aaa058860fd4f4",
-      "docs/user/tutorials/pd-neut-tof_si-sepd.py": "b5605083555c117987be38990dd5ed54f275e35b462067cc277a4eca6cdb43cf",
-      "website/surfaces/docs/cli/tutorials/cases/pd-neut-tof_si-sepd.md": "06c89ef4b87898aa404298612351a0a4ee5fa2808cd439df5c1275a9eec8086f",
-      "docs/user/cli/pd-neut-tof_si-sepd/project/analysis/analysis.edi": "17fe1208c16ef917e0754bd3d524cde0a1af7ea27f78e7e2660e3425459282e1"
+      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "docs/user/tutorials/pd-neut-tof_si-sepd.py": "a3c2cf12bc72f14af65bfbec168bdc55d9f784943eb095370310e87b8db01783",
+      "website/surfaces/docs/cli/tutorials/cases/pd-neut-tof_si-sepd.md": "6ff08836a47aadc07b90a070aed3a9197566a8884bf9dabf3d3ec68f4e86d2e6",
+      "docs/user/cli/pd-neut-tof_si-sepd/project/analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e"
     },
     "boundaries": [
       {

@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 
 import pytest
@@ -28,62 +29,64 @@ def load_translator():
     return module
 
 
-def load_captions(translator):
-    return {
-        case: (source, translator.stage_texts(case, source))
-        for case in RECIPES
-        for source in [(ROOT / 'docs/user/tutorials' / (case + '.py')).read_text()]
+@pytest.fixture(scope='module')
+def translator():
+    module = load_translator()
+    # Loading each complete source/caption plan is a shared precondition for all
+    # translation and mutation probes. Keep failures per case so one published
+    # recipe cannot disable controls for every other tutorial.
+    module.published_recipe_baselines = {}
+    for case in RECIPES:
+        try:
+            module.published_recipe_baselines[case] = module.tutorial_steps(case)
+        except (ValueError, RuntimeError, SystemExit) as error:
+            module.published_recipe_baselines[case] = error
+    return module
+
+
+@pytest.fixture
+def captions(translator, case):
+    source = (ROOT / 'docs/user/tutorials' / (case + '.py')).read_text()
+    # Action mutation tests hold presentation constant. Captions are independent
+    # fixed fixture input, not a second invocation of the production prose parser.
+    declared = {
+        index: (title, 'Apply the declared recipe actions.')
+        for index, (title, _paths) in enumerate(RECIPES[case]['fits'], 1)
     }
+    # This identity guard follows the producer's syntax transport only; scientific
+    # populations and mutation expectations remain the independently frozen recipe.
+    return {case: (translator.unrolled(source), declared)}
 
 
 @pytest.fixture(scope='module')
-def recipe_context(tmp_path_factory, request):
-    selected = {item.originalname for item in request.session.items}
-    needs_translation = bool(
-        selected
-        & {
-            'test_every_declared_scientific_action_affects_translation_or_is_refused',
-            'test_unknown_recipe_action_is_refused_before_generation',
-        }
-    )
+def states(tmp_path_factory, request):
     wanted = {
         item.callspec.params['case']
         for item in request.session.items
         if item.originalname == 'test_builtin_pre_fit_state_equals_the_declared_docs_recipe'
     }
-    module = load_translator() if needs_translation else None
-    return {
-        'translator': module,
-        'captions': load_captions(module) if needs_translation else None,
-        'states': observe_states(tmp_path_factory, wanted)
-        if wanted or 'test_recipe_observer_has_a_real_positive_control' in selected
-        else None,
-    }
-
-
-@pytest.fixture
-def translator(recipe_context):
-    return recipe_context['translator']
-
-
-@pytest.fixture
-def captions(recipe_context):
-    return recipe_context['captions']
-
-
-@pytest.fixture
-def states(recipe_context):
-    return recipe_context['states']
+    return observe_states(tmp_path_factory, wanted)
 
 
 def unchanged_captions(captions):
     def read(case, source):
         assert source == captions[case][0], (
-            'Only unchanged stage prose is reused while action inputs change'
+            'Only identical normalized source is reused while independent recipe actions change'
         )
         return copy.deepcopy(captions[case][1])
 
     return read
+
+
+@pytest.mark.parametrize('case', RECIPES)
+def test_current_published_recipe_translates_without_a_caption_substitute(case, translator):
+    baseline = translator.published_recipe_baselines[case]
+    if isinstance(baseline, BaseException):
+        raise baseline
+    assert baseline, (
+        'The complete current published recipe must translate with its actual source captions; '
+        'the independent action-mutation fixture cannot conceal a production caption failure'
+    )
 
 
 @pytest.mark.parametrize('case', RECIPES)
@@ -107,9 +110,18 @@ def test_every_declared_scientific_action_affects_translation_or_is_refused(
             try:
                 observed = translator.tutorial_steps(case)
             except (ValueError, RuntimeError, SystemExit) as error:
-                if any(
-                    word in str(error).casefold()
-                    for word in ['action', 'recipe', 'plan', 'translate']
+                named_output = any(
+                    'step ' + repr(row['check']) in str(error)
+                    for row in baseline
+                    if row.get('check')
+                )
+                if (
+                    named_output
+                    or item['id'] in str(error)
+                    or any(
+                        word in str(error).casefold()
+                        for word in ['action', 'recipe', 'plan', 'translate']
+                    )
                 ):
                     continue
                 ignored.append((item['id'], action, 'unnamed refusal'))
@@ -130,7 +142,12 @@ def test_unknown_recipe_action_is_refused_before_generation(
     case, translator, captions, monkeypatch
 ):
     monkeypatch.setattr(translator, 'stage_texts', unchanged_captions(captions))
-    damaged = copy.deepcopy(RECIPES[case]['plan'])
+    recipe = copy.deepcopy(RECIPES[case]['plan'])
+    monkeypatch.setattr(translator, 'plan', lambda _case: copy.deepcopy(recipe))
+    assert translator.tutorial_steps(case), (
+        'The valid recipe must translate before its injected unknown action is exercised'
+    )
+    damaged = copy.deepcopy(recipe)
     damaged['steps'][-1]['actions'].append('unsupported:recipe_action_probe')
     monkeypatch.setattr(translator, 'plan', lambda _case: damaged)
     with pytest.raises(
@@ -140,7 +157,12 @@ def test_unknown_recipe_action_is_refused_before_generation(
 
 
 def observe_states(tmp_path_factory, wanted):
-    runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
+    runner = Path(
+        os.environ.get(
+            'EDI_APP_TEST_RUNNER',
+            ROOT / 'build/app/app' / ('edi_app_tests' + ('.exe' if os.name == 'nt' else '')),
+        )
+    )
     assert runner.is_file(), 'Recipe boundary observation requires the actual Qt app test host'
     folder = tmp_path_factory.mktemp('tutorial-recipe-state')
     collection = local_collection(folder / 'collection')
@@ -162,13 +184,43 @@ def observe_states(tmp_path_factory, wanted):
         '-maxwarnings',
         '0',
     ]
-    command += ['TutorialNavigation::test_required_recipe_observer_positive_control']
+    command += [
+        'TutorialNavigation::test_required_menu_observer_tracks_actual_popup_visibility',
+        'TutorialNavigation::test_required_recipe_observer_positive_control',
+    ]
     command += [
         'TutorialNavigation::test_required_recipe_boundary_state:' + case
         for case in RECIPES
         if case in wanted
     ]
-    with (folder / 'native.log').open('w') as output:
+    artifacts = (
+        Path(
+            os.environ.get('EDI_TUTORIAL_ARTIFACTS', ROOT / 'build/test-artifacts/tutorial-recipe')
+        )
+        / uuid.uuid4().hex
+    )
+    artifacts.mkdir(parents=True)
+    (artifacts / 'source.json').write_text(
+        json.dumps(
+            {
+                'root': str(ROOT),
+                'input_folder': str(folder),
+                'runner': str(runner),
+                'runner_sha256': hashlib.sha256(runner.read_bytes()).hexdigest(),
+                'script_sha256': hashlib.sha256(
+                    (ROOT / 'tests/unit/app/tst_tutorial_navigation.qml').read_bytes()
+                ).hexdigest(),
+                'recipes_sha256': hashlib.sha256(
+                    (ROOT / 'tests/fixtures/tutorial_recipe/recipes.json').read_bytes()
+                ).hexdigest(),
+            },
+            indent=2,
+        )
+        + '\n'
+    )
+    with (artifacts / 'native.log').open('w') as output:
+        output.write('Current Qt recipe host; source and runner identities in source.json\n')
+        output.flush()
         run = subprocess.run(
             command,
             cwd=ROOT,
@@ -178,7 +230,8 @@ def observe_states(tmp_path_factory, wanted):
             timeout=7200,
             check=False,
         )
-    text = (folder / 'native.log').read_text()
+    (artifacts / 'native.exit').write_text(str(run.returncode) + '\n')
+    text = (artifacts / 'native.log').read_text()
     return {
         'run': run,
         'records': [
@@ -186,7 +239,7 @@ def observe_states(tmp_path_factory, wanted):
             for line in text.splitlines()
             if 'TUTORIAL_RECIPE_BOUNDARY ' in line
         ],
-        'folder': str(folder),
+        'folder': str(artifacts),
     }
 
 

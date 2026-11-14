@@ -10,16 +10,30 @@ from itertools import accumulate
 
 import pytest
 
-from tests.fixtures.tutorial_cases.command_line import actions, edit_project, visible_flag_edits
+from tests.fixtures.tutorial_cases.command_line import (
+    actions,
+    edit_project,
+    setup_action,
+    visible_flag_edits,
+    write_project,
+)
 from tests.fixtures.tutorial_cases.contract import ROOT, interfaces_for
+from tests.fixtures.tutorial_cases.notebook_fit import local_collection
 from tests.fixtures.tutorial_cases.pins import compare_regression_pin, machine_values, pinned_start
 from tests.fixtures.tutorial_cases.stages import group, observe
 from tests.integration.py.test_tutorial_empty_project import api
 from tests.integration.py.test_tutorial_fit_stages import FITTING, source
 
 
+@pytest.fixture(scope='module')
+def collection(tmp_path_factory):
+    return local_collection(tmp_path_factory.mktemp('visible-cli-collection'))
+
+
 @pytest.mark.parametrize('case', [case for case in FITTING if 'cli' in interfaces_for(case)])
-def test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin(case, tmp_path):  # noqa: PLR0914 - observable whole workflow, no hidden fit helper
+def test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin(  # noqa: PLR0914 - whole visible workflow
+    case, tmp_path, collection
+):
     page = ROOT / 'website/surfaces/docs/cli/tutorials/cases' / (case + '.md')
     assert page.is_file(), (
         'Gate 5: the executable Command line lesson is a local user page: ' + case
@@ -33,15 +47,9 @@ def test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin(c
     assert any(step[0] in {'edit', 'free-rows'} and '()' in step[2] for step in steps), (
         'Gate 5: the Command line lesson teaches selecting free parameters with empty brackets'
     )
-    if case == 'pd-neut-cwl_lbco-hrpt':
-        explanation = re.sub(r'\s+', ' ', text.casefold())
-        assert 'starting project' in explanation and re.search(
-            r'\bbuilding (?:a |the )?project by hand (?:on|from) the command line is planned\b',
-            explanation,
-        ), (
-            'Gate 5: LBCO explains that it loads a starting project and that building the '
-            'project by hand on the command line is planned'
-        )
+    assert {'mkdir', 'write', 'move', 'download'} <= {
+        step[0] for step in steps[: steps.index(fits[0])]
+    }, 'Gate 5: the lesson constructs its project from visible files and downloaded blocks'
     quantities = pinned_start(case)
     first_arguments = fits[0][1]
     assert first_arguments and not first_arguments[0].startswith('-'), (
@@ -51,7 +59,6 @@ def test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin(c
     assert project.resolve().is_relative_to(tmp_path), (
         'Gate 5: tutorial commands stay in their fresh work folder'
     )
-    shutil.copytree(ROOT / 'docs/user/cli' / case / 'project', project)
     expected = (
         observe(source(case, 'script'))['cycles'] if 'python' in interfaces_for(case) else None
     )
@@ -59,7 +66,25 @@ def test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin(c
     actual = []
     final = None
     for operation, argument, body in steps:
-        if operation == 'edit':
+        if operation in {'mkdir', 'move', 'unpack'}:
+            setup_action(tmp_path, operation, argument)
+        elif operation == 'write':
+            write_project(project, argument, body)
+        elif operation == 'download':
+            run = subprocess.run(
+                [sys.executable, '-m', 'edi', *argument],
+                cwd=tmp_path,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=120,
+                env={**os.environ, 'EDI_COLLECTION': str(collection)},
+            )
+            assert run.returncode == 0, (
+                'Gate 5: the displayed download obtains its actual collection member: '
+                + run.stderr
+            )
+        elif operation == 'edit':
             edit_project(project, argument, body)
         elif operation in {'clear-free', 'free-rows'}:
             visible_flag_edits(project, argument, body if operation == 'free-rows' else None)

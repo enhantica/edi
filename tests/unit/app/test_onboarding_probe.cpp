@@ -107,6 +107,10 @@ public:
     Q_INVOKABLE QVariant citation() const {
         return QJsonDocument::fromJson(qgetenv("EDI_ONBOARDING_CITATION_JSON")).toVariant();
     }
+    Q_INVOKABLE QString bundledTutorialManifest() const {
+        QFile file(QStringLiteral(":/edi/tutorials/manifest.json"));
+        return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString{};
+    }
     Q_INVOKABLE QString sourceText(const QString& relative) const {
         const auto root = QDir(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath()).absoluteFilePath("../../..");
         QFile file(QDir(root).filePath(relative));

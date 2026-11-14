@@ -71,6 +71,13 @@ class MainActor:
         self.last = self.command('show_actions', enabled=show_actions)
         qml(self, '(function(){raise();requestActivate();return true;})()')
         self.until(lambda _row: qml(self, 'active'))
+        self.until(
+            lambda row: (
+                not any(
+                    c['name'] == 'home.intro.skip' and c['visible'] for c in row['ui']['controls']
+                )
+            )
+        )
         (folder / 'environment.json').write_text(
             json.dumps(self.last['ui'].get('environment', {}), indent=2) + '\n'
         )
@@ -507,7 +514,13 @@ def main_actor(tmp_path):
 
     def create(turns, *, show_actions=False, hold_final=False):
         supplied = os.environ.get('EDI_ASSISTANT_UI_PROBE')
-        binary = Path(supplied) if supplied else ROOT / 'build/app/assistant_real_owner_probe'
+        binary = (
+            Path(supplied)
+            if supplied
+            else ROOT
+            / 'build/app/assistant-ui-probe'
+            / ('assistant_real_owner_probe' + ('.exe' if os.name == 'nt' else ''))
+        )
         assert binary.is_file(), (
             'Build assistant_real_owner_probe in the single implementation-owned kit, '
             'then set EDI_ASSISTANT_UI_PROBE to that exact binary'
@@ -2794,6 +2807,72 @@ def test_on_native_parameter_target_is_revealed_from_real_virtualized_or_clipped
         ), 'The revealed whole row fits its actual window/ancestor clips without header overlap'
 
 
+@pytest.fixture(scope='module')
+def focused_editor_input_observation(tmp_path_factory):
+    folder = tmp_path_factory.mktemp('focused-editor-input')
+    supplied = os.environ.get('EDI_ASSISTANT_UI_PROBE')
+    binary = (
+        Path(supplied)
+        if supplied
+        else ROOT
+        / 'build/app/assistant-ui-probe'
+        / ('assistant_real_owner_probe' + ('.exe' if os.name == 'nt' else ''))
+    )
+    binary, identity = _frozen_main_probe(binary, folder)
+    (folder / 'selected-probe.json').write_text(json.dumps(identity, indent=2) + '\n')
+    actor = MainActor(binary, folder, {'turns': [[]]}, False)
+    try:
+        actor.command('click', name='appBar.tab.project')
+        actor.connect()
+        if qml(actor, 'assistantPanelVisible'):
+            actor.command('click', name='assistant.toggle')
+            actor.until(lambda _row: not qml(actor, 'assistantPanelVisible'))
+        actor.command('click', name='project.create')
+        actor.until(
+            lambda row: any(
+                c['name'] == 'createProject.name' and c['visible'] for c in row['ui']['controls']
+            )
+        )
+        actor.command('click', name='createProject.name')
+        actor.command('manual_key', key='select_all')
+        actor.command('clear_ui_sequence')
+        actor.command('manual_ime', preedit='', commit='observer_input')
+        genuine = actor.last['ui']['ui_sequence']
+        actor.command('clear_ui_sequence')
+        qml(actor, '(' + control_expression('createProject.name') + ').text="property_control"')
+        property_only = actor.last['ui']['ui_sequence']
+        actor.command('manual_key', key='escape')
+        actor.until(
+            lambda row: (
+                not any(
+                    c['name'] == 'createProject.name' and c['visible']
+                    for c in row['ui']['controls']
+                )
+            )
+        )
+        return {'genuine': genuine, 'property_only': property_only}
+    finally:
+        actor.close()
+
+
+def test_original_focused_editor_input_observer_rejects_property_only_edits(
+    focused_editor_input_observation,
+):
+    observation = focused_editor_input_observation
+    assert any(
+        e['kind'] == 'input_method'
+        and e.get('focus') == 'createProject.name'
+        and e.get('dialog_visible')
+        for e in observation['genuine']
+    ), (
+        'The passive original-owner observer receives actual focused-editor IME input '
+        'inside the ordinary Create dialog'
+    )
+    assert not any(
+        e['kind'] in {'key_press', 'input_method'} for e in observation['property_only']
+    ), 'A direct property-only change cannot impersonate genuine key or IME input receipts'
+
+
 @pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
 def test_empty_current_session_uses_normal_create_load_and_current_save(  # noqa: PLR0914, PLR0915
     main_actor, tmp_path, show_actions
@@ -3049,7 +3128,7 @@ def test_fresh_actual_main_has_no_startup_report_capacity_failure(main_actor):
 
 
 @pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
-def test_ordinary_empty_to_created_transition_retains_original_task_and_approved_inputs(
+def test_ordinary_empty_to_created_transition_retains_original_task_and_approved_inputs(  # noqa: PLR0914 - preserve complete lifecycle witness
     main_actor, tmp_path, show_actions
 ):
     actor = main_actor([[]], show_actions=show_actions)
@@ -3090,11 +3169,19 @@ def test_ordinary_empty_to_created_transition_retains_original_task_and_approved
     actor.until(
         lambda row: row['ui']['state'] == 'idle' and FINAL in json.dumps(row['ui']['messages'])
     )
+    # Accepted Send consumes composer presentation, while retaining each admitted file.
+    # Record that actual post-Send manifest before ordinary Create (2026-10-28 record).
+    sent_manifest = actor.last['ui']['selected_files']
+    assert sent_manifest == [{**row, 'pending': False} for row in manifest], (
+        'Accepted Send consumes the exact admitted files, retaining every identity and byte'
+    )
+    manifest = sent_manifest
     before = actor.last['ui']['messages']
     assert original in json.dumps(before, ensure_ascii=False), (
         'The original complete scientific objective is retained before the ordinary Create action'
     )
     actor.command('click', name='assistant.toggle')
+    actor.until(lambda _row: not qml(actor, 'assistantPanelVisible'))
     actor.command('click', name='project.create')
     actor.until(
         lambda row: any(
@@ -11556,7 +11643,9 @@ def _start_exact_original_fixture_restart(
     binary = (
         Path(os.environ['EDI_ASSISTANT_UI_PROBE'])
         if os.environ.get('EDI_ASSISTANT_UI_PROBE')
-        else ROOT / 'build/app/assistant_real_owner_probe'
+        else ROOT
+        / 'build/app/assistant-ui-probe'
+        / ('assistant_real_owner_probe' + ('.exe' if os.name == 'nt' else ''))
     )
     folder = tmp_path / 'original-fixture-restart'
     folder.mkdir()
@@ -12687,10 +12776,26 @@ def test_explicit_new_project_never_reuses_current_and_preserves_original_choice
     name = 'new_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
     title = 'Explicitly requested distinct new project'
     new_description = 'Independent original-current-project preservation gate.'
-    documents = Path(actor.last['ui']['environment']['documents_root'])
-    destination = documents / name
+    # The ordinary form remembers its selected parent; OS Documents is only its
+    # empty-profile default. Observe the real original form before requesting New.
+    defaults = qml(
+        actor,
+        '('
+        + _scene_control_expression('group.getStarted')
+        + ').nativeCreateDefaults('
+        + json.dumps(name)
+        + ', '
+        + json.dumps(new_description)
+        + ', '
+        + json.dumps(title)
+        + ')',
+    )
+    assert defaults.get('name') == name and defaults.get('location'), (
+        'Explicit New has one valid ordinary Create destination before any write is requested'
+    )
+    destination = Path(defaults['location'])
     assert not destination.exists() and destination != current_old_root, (
-        'The native new-project action owns an absent ordinary Documents destination distinct '
+        'The native new-project action owns its absent ordinary form destination distinct '
         'from the original project'
     )
     actor.configure_turns([

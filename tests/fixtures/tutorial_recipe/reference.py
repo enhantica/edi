@@ -10,13 +10,17 @@ def canonical(path):
     return re.sub(r'[\]"\']', '', path.replace('[', '.'))
 
 
-def significant(item, action):
+def significant(item, action):  # noqa: PLR0911 - finite action vocabulary fails closed
     if action.startswith((
         'fill:createProject.name=',
         'fill:createProject.title=',
         'fill:createProject.location=',
     )):
         return False  # Workspace naming/location are supplied by the learner or capture host.
+    if re.fullmatch(
+        r'(?:tick|untick):(?:structures?|experiments?)(?:\[[\w.-]+\])?\.[\w.\[\]\'-]+', action
+    ):
+        return True
     if action.startswith(('fill:', 'type:', 'choose:', 'choose-token:')):
         return True
     if action in {
@@ -79,6 +83,8 @@ def significant(item, action):
         'appBar.tab.structure',
         'sideBar.tab.basic',
         'sideBar.tab.extras',
+        'mainArea.tab.correlations',
+        'mainArea.tab.pattern',
         'mainArea.analysis.tab.correlations',
         'mainArea.analysis.tab.fitting',
     }

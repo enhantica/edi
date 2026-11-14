@@ -3,10 +3,11 @@
 import re
 import shlex
 import textwrap
+import zipfile
 from pathlib import Path
 
 
-def actions(markdown):
+def actions(markdown):  # noqa: PLR0912 - finite displayed shell and file instruction grammar
     result = []
     previous = 0
     for fence in re.finditer(
@@ -34,9 +35,20 @@ def actions(markdown):
             if 'remove' in instruction and 'every value' in instruction:
                 result.append(('clear-free', names[-1], ''))
             elif 'add' in instruction and '()' in instruction and 'free' in instruction:
+                headings = re.findall(r'^##+ (.+)$', markdown[: fence.start()], re.MULTILINE)
+                if headings:
+                    code = '# tutorial-heading: ' + headings[-1] + '\n' + code
+                following = markdown[fence.end() :].split('```', 1)[0]
+                remainder = re.search(r'The same for every other row \((\d+) more\)', following)
+                if remainder:
+                    code += '\n… and ' + remainder[1] + ' more lines\n'
                 result.append(('free-rows', names[-1], code))
             else:
-                result.append(('edit', names[-1], code))
+                result.append((
+                    'write' if re.search(r'\bwrite\b', instruction) else 'edit',
+                    names[-1],
+                    code,
+                ))
         elif info.split(' ', 1)[0] in {'sh', 'shell', 'bash', 'console'}:
             for written in code.splitlines():
                 line = re.sub(r'^\s*\$\s*', '', written).strip()
@@ -46,13 +58,23 @@ def actions(markdown):
                     arguments = arguments[offset + 1 :]
                     if arguments and arguments[0] in {'fit', 'calc'}:
                         result.append((arguments[0], arguments[1:], ''))
-                    elif arguments and arguments[0].startswith('download'):
-                        result.append(('download', arguments[1:], ''))
+                    elif arguments and arguments[0] == 'download-data':
+                        result.append(('download', arguments, ''))
+                elif line.startswith('mkdir -p '):
+                    result.append(('mkdir', shlex.split(line)[2:], ''))
+                elif line.startswith('mv '):
+                    result.append(('move', shlex.split(line)[1:], ''))
+                elif line.startswith('tar -xf '):
+                    tokens = shlex.split(line)
+                    assert len(tokens) == 5 and tokens[3] == '-C', (
+                        'Gate 5: an archive setup instruction names its input and destination'
+                    )
+                    result.append(('unpack', [tokens[2], tokens[4]], ''))
         previous = fence.end()
     return result
 
 
-def visible_flag_edits(project, filename, excerpt=None):
+def visible_flag_edits(project, filename, excerpt=None):  # noqa: PLR0914, PLR0915 - literal finite row edits
     """Apply the stated remove-every-marker/add-marker operation, preserving fitted values.
 
     Headerless row examples resolve against their named file, never a second stage plan.
@@ -69,12 +91,30 @@ def visible_flag_edits(project, filename, excerpt=None):
     if excerpt is None:
         path.write_text('\n'.join(re.sub(r'(?<=[\d.])\(\d*\)', '', line) for line in lines) + '\n')
         return
+    heading = re.search(r'^# tutorial-heading: (.+)$', excerpt, re.MULTILINE)
+    table = (
+        '_background.'
+        if heading and re.fullmatch(r'backgrounds?', heading[1], re.IGNORECASE)
+        else None
+    )
+
+    def table_row(index):
+        if table is None:
+            return True
+        starts = [i for i in range(index) if lines[i].strip() == 'loop_']
+        if not starts:
+            return False
+        headers = [
+            line.strip() for line in lines[starts[-1] + 1 : index] if line.strip().startswith('_')
+        ]
+        return bool(headers) and all(name.startswith(table) for name in headers)
+
     changed = []
     columns = []
     for line in excerpt.splitlines():
         if (
             not line.strip()
-            or line.lstrip().startswith(('…', '...', 'data_'))
+            or line.lstrip().startswith(('#', '…', '...', 'data_'))
             or line.strip() == 'loop_'
             or (line.strip().startswith('_') and len(shlex.split(line)) == 1)
         ):
@@ -90,11 +130,30 @@ def visible_flag_edits(project, filename, excerpt=None):
             index
             for index, raw in enumerate(lines)
             if (tokens := shlex.split(raw, comments=True))
-            and len(tokens) == len(shown)
+            and len(tokens) > max(flags)
             and tokens[0] == shown[0]
+            and table_row(index)
         ]
+        exact = [
+            index
+            for index in matches
+            if len(shlex.split(lines[index], comments=True)) == len(shown)
+        ]
+        if exact:
+            matches = exact
+        if len(matches) > 1:
+            matches = [
+                index
+                for index in matches
+                if shlex.split(lines[index], comments=True)[: min(flags)] == shown[: min(flags)]
+            ]
         assert len(matches) == 1, (
-            'Gate 5: each headerless value-edit row identifies one actual row'
+            'Gate 5: each headerless value-edit row identifies one actual row: '
+            + filename
+            + ' / '
+            + repr(shown)
+            + ' / matches='
+            + repr(matches)
         )
         row = matches[0]
         tokens = shlex.split(lines[row], comments=True)
@@ -110,7 +169,10 @@ def visible_flag_edits(project, filename, excerpt=None):
     omitted = re.findall(r'(?:…|\.\.\.)\s+and\s+(\d+)\s+more lines', excerpt)
     if omitted:
         assert len(omitted) == 1 and changed and all(value == columns[0] for value in columns), (
-            'Gate 5: an abbreviated value edit has one explicitly counted uniform remainder'
+            'Gate 5: an abbreviated value edit has one explicitly counted uniform remainder: '
+            + filename
+            + ' / columns='
+            + repr(columns)
         )
         begin = max(index for index in range(min(changed)) if lines[index].strip() == 'loop_')
         end = next(
@@ -127,7 +189,14 @@ def visible_flag_edits(project, filename, excerpt=None):
             if lines[index].strip() and not lines[index].lstrip().startswith(('_', '#'))
         ]
         assert len(rows) == len(changed) + int(omitted[0]), (
-            'Gate 5: the stated omitted-line count equals the rest of the identified loop'
+            'Gate 5: the stated omitted-line count equals the rest of the identified loop: '
+            + filename
+            + ' / shown='
+            + str(len(changed))
+            + ' omitted='
+            + repr(omitted)
+            + ' actual='
+            + str(len(rows))
         )
         for row in rows:
             tokens = shlex.split(lines[row], comments=True)
@@ -185,7 +254,16 @@ def edit_project(project, filename, excerpt):  # noqa: PLR0912, PLR0914, PLR0915
             block = matches[0]
             full_headers = block[1].splitlines()
             keys = [
-                column for column in headers if column.endswith(('.id', '.label', '.number', '.x'))
+                column
+                for column in headers
+                if column.endswith((
+                    '.id',
+                    '.label',
+                    '.number',
+                    '.x',
+                    '.structure_id',
+                    '.position',
+                ))
             ]
             assert keys, 'Gate 5: a loop excerpt includes a stable row key'
             key = keys[0]
@@ -275,3 +353,47 @@ def edit_project(project, filename, excerpt):  # noqa: PLR0912, PLR0914, PLR0915
                 )
         index += 1
     target.write_text(original)
+
+
+def workspace_path(workspace, filename):
+    name = Path(filename)
+    assert not name.is_absolute() and '..' not in name.parts, (
+        'Gate 5: visible setup paths stay relative to their fresh workspace'
+    )
+    path = workspace / name
+    assert path.resolve().is_relative_to(workspace.resolve()), (
+        'Gate 5: visible setup paths cannot follow symlinks outside their workspace'
+    )
+    return path
+
+
+def setup_action(workspace, operation, arguments):
+    """Replay only the finite displayed mkdir/mv/archive vocabulary, without a shell."""
+    paths = [workspace_path(workspace, name) for name in arguments]
+    if operation == 'mkdir':
+        for path in paths:
+            path.mkdir(parents=True, exist_ok=True)
+    elif operation == 'move':
+        assert len(paths) == 2 and paths[0].is_file() and not paths[1].exists(), (
+            'Gate 5: a visible move consumes one actual download into a new declared file'
+        )
+        paths[0].rename(paths[1])
+    elif operation == 'unpack':
+        assert len(paths) == 2 and paths[0].is_file() and paths[1].is_dir(), (
+            'Gate 5: a visible scan extraction uses its actual downloaded archive'
+        )
+        with zipfile.ZipFile(paths[0]) as archive:
+            for name in archive.namelist():
+                workspace_path(paths[1], name)
+            archive.extractall(paths[1])
+    else:
+        raise ValueError('Gate 5: unknown visible setup operation: ' + operation)
+
+
+def write_project(project, filename, content):
+    """A visible Write instruction supplies the complete new file, including headerless CIF."""
+    target = workspace_path(project, filename)
+    assert target.parent.is_dir() and not target.exists(), (
+        'Gate 5: Write creates one new file in a directory taught by the setup instructions'
+    )
+    target.write_text(content)

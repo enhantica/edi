@@ -53,12 +53,16 @@ TestCase {
         Main {}
     }
     function objects(root) {
-        const owned = Probe.objectsWithProperty(root, "objectName");
-        // List delegates belong to the visual tree, not necessarily the popup's
-        // QObject ownership tree after the Examples-row reuse.
-        for (const item of Render.descendants(root.contentItem || root))
-            if (!owned.includes(item))
+        const owned = Array.from(Probe.objectsWithProperty(root, "objectName"));
+        const seen = new Set(owned);
+        // Preserve both original ownership trees, deduplicating identical native
+        // objects once. A repeated full-array search starves popup input polling.
+        for (const item of Render.descendants(root.contentItem || root)) {
+            if (!seen.has(item)) {
+                seen.add(item);
                 owned.push(item);
+            }
+        }
         return owned;
     }
     function one(root, name) {
@@ -75,9 +79,15 @@ TestCase {
         verify(app !== null, "Tutorial navigation uses the real application window");
         app.width = 1200;
         app.height = 800;
+        app.raise();
+        app.requestActivate();
+        tryVerify(() => app.active, 2000, "The original tutorial window is active before user input");
         AppState.open(AppState.Page.Home);
         verify(waitForRendering(app.contentItem), "The Home entry point is rendered before tutorial input");
-        panel = one(app, "tutorial");
+        const homes = Probe.objectsWithProperty(app, "introRunning");
+        compare(homes.length, 1, "Startup readiness observes the original Home animation owner");
+        tryCompare(homes[0], "introRunning", false, 15000, "The startup intro visibly finishes before any tutorial input; it is neither skipped nor disabled");
+        panel = one(app, "tutorialPanel");
         chooser = one(app, "tutorials");
     }
     function cleanup() {
@@ -90,6 +100,15 @@ TestCase {
         clicked.target = null;
         if (panel && panel.visible)
             panel.stop();
+        if (app) {
+            // A failed setup still owns its original popups. Reject them through
+            // genuine Escape input so singleton dialog visibility cannot poison
+            // the next independently created window.
+            for (const dialog of Probe.visibleDialogs(app))
+                if (dialog.contentItem)
+                    SettingsProof.key(dialog.contentItem, Qt.Key_Escape);
+            OnboardingProbe.incubate(app);
+        }
         Session.closeProject();
         if (app)
             app.destroy();
@@ -659,7 +678,7 @@ TestCase {
         if (Session.project === null) {
             Ui.click(test, Probe, app, "home.start");
             tryCompare(app.appBarCentralTabs, "currentIndex", AppState.Page.Project, 2000, "The geometry setup follows the learner's Home Start action");
-            createLessonProject("placement_" + id);
+            createLessonProject("placement_" + Qt.md5(id).slice(0, 12));
         }
         if (Probe.rows(Session.project.structures).length === 0)
             verify(Session.project.loadStructure(Probe.repoUrl("tests/fixtures/onboarding/simulation-structure.edi")), "Placement setup supplies the independently authored LBCO structure");
@@ -1364,7 +1383,11 @@ TestCase {
         tryCompare(dialog, "opened", true, 2000, "The project name is entered after the real dialog opens");
         dialog.projectParentDirectory = String(SettingsProof.emptyDirectory());
         const field = findChild(dialog, "createProject.name");
-        verify(field !== null && SettingsProof.type(field, name), "The learner types the tutorial project's name into the real form");
+        verify(field !== null, "The real creation form owns its original Name editor");
+        verify(field.enabled && Ui.exposed(field), "The original dialog Name editor is exposed before pointer input");
+        mouseClick(field, field.width / 2, field.height / 2, Qt.LeftButton, Qt.NoModifier);
+        tryVerify(() => field.activeFocus, 2000, "Real user input focuses Name before the tutorial actor types");
+        verify(SettingsProof.type(field, name), "The learner types the tutorial project's name into the real form");
         press(dialog.standardButton(Dialog.Ok), "Create the learner-named project");
         tryVerify(() => Session.project !== null && Session.project.name === name, 3000, "The actual Create action opens the project the learner named");
     }
@@ -1394,7 +1417,7 @@ TestCase {
         verify(create === 1 && steps[0].target === "home.start" && steps[0].page === "home" && structure > create, "Home Start precedes Project Create, before any Structure step");
         Ui.click(test, Probe, app, "home.start");
         tryCompare(panel, "step", create, 2000, "The Start action advances the lesson to project creation");
-        createLessonProject("learner_named_" + data.lesson);
+        createLessonProject("learner_" + Qt.md5(data.lesson).slice(0, 12));
         verify(!OnboardingProbe.isRemembered(Session.project), "User creation makes a separate tutorial project");
         if (data.ending === "last") {
             // Completion ownership is orthogonal to scientific fitting; the
@@ -1472,7 +1495,7 @@ TestCase {
         const steps = scripts().find(entry => entry.id === data.lesson).steps;
         if (data.lesson !== "interface") {
             Ui.click(test, Probe, app, "home.start");
-            createLessonProject("strip_" + data.lesson);
+            createLessonProject("strip_" + Qt.md5(data.lesson).slice(0, 12));
         }
         const explain = steps.findIndex(step => !step.check);
         verify(explain >= 0 && explain + 1 < steps.length, "Every tutorial supplies an explanation for the strip's actual Next/Back witness");
@@ -2314,7 +2337,18 @@ TestCase {
         return canonical === suffix || canonical.endsWith("." + suffix);
     }
     function requiredTargetItems(spec) {
+        // Inspect visual controls, including the original open Popup roots, rather
+        // than materializing every QObject in the application/model ownership tree.
         const scene = Render.descendants(Ui.windowRoot(app));
+        const seen = new Set(scene);
+        for (const popup of Array.from(Probe.visiblePopups(app))) {
+            for (const item of Render.descendants(popup.contentItem)) {
+                if (!seen.has(item)) {
+                    seen.add(item);
+                    scene.push(item);
+                }
+            }
+        }
         if (!spec.includes("@"))
             return scene.filter(item => item.objectName === spec && Ui.rendered(item));
         const parts = spec.split("@");
@@ -2360,6 +2394,61 @@ TestCase {
         return experiment !== null && [experiment.pattern, experiment.singleCrystalReflections].some(model => Probe.rows(model).some(row => Number.isFinite(row.intensityMeas)));
     }
 
+    function test_required_menu_observer_tracks_actual_popup_visibility() {
+        prepareLessonProject("pd-neut-cwl_lbco-hrpt");
+        AppState.open(AppState.Page.Analysis);
+        finishPages();
+        Ui.expandGroup(test, Probe, app, "group.parameters");
+        compare(requiredTargetItems("parameters.freeHeader.fixed").length, 0, "A closed owned menu never impersonates a rendered tutorial action");
+        const header = Ui.control(Probe, app, "parameters.freeHeader");
+        const menu = header.menu;
+        const areas = Array.from(Probe.objectsWithProperty(header, "cursorShape")).filter(item => OnboardingProbe.inheritsType(item, "QQuickMouseArea") && item.parent === header.parent.parent && item.enabled && Ui.rendered(item));
+        compare(areas.length, 1, "The declared header owns one original enabled input receiver despite visual reparenting");
+        const receiver = areas[0];
+        let observed = false;
+        let facts = {};
+        const painter = Qt.createQmlObject('import QtQuick; Timer { interval: 16; repeat: true }', app);
+        const guard = Qt.createQmlObject('import QtQuick; Timer { interval: 2000; repeat: false }', app);
+        function inspect() {
+            OnboardingProbe.advanceClock(16);
+            if (!menu.opened)
+                return;
+            const named = Render.descendants(menu.contentItem).filter(item => item.objectName === "parameters.freeHeader.fixed");
+            const items = named.filter(item => Ui.rendered(item));
+            facts = {opened: menu.opened, visible: menu.visible, named: named.length, painted: items.length,
+                bounds: named.map(item => ({visible:item.visible, width:item.width, height:item.height}))};
+            if (items.length !== 1)
+                return;
+            facts.scoped = requiredTargetItems("parameters.freeHeader.fixed").length;
+            observed = facts.scoped === 1;
+            painter.stop();
+            SettingsProof.key(menu.contentItem, Qt.Key_Escape);
+        }
+        painter.triggered.connect(inspect);
+        guard.triggered.connect(() => SettingsProof.key(menu.contentItem, Qt.Key_Escape));
+        painter.start();
+        guard.start();
+        try {
+            verify(header.interactionEnabled && Ui.exposed(receiver), "The original Free header input owner is enabled and exposed");
+            verify(waitForPolish(receiver), "The original Free header has finished layout before input");
+            clicked.target = receiver;
+            clicked.clear();
+            const point = Ui.clickPoint(receiver);
+            mouseClick(receiver, point.x, point.y, Qt.LeftButton, Qt.NoModifier);
+            compare(clicked.count, 1, "One genuine click reaches the original reparented header input receiver");
+            tryVerify(() => {
+                inspect();
+                return observed;
+            }, 2000, "The actual open Free header menu exposes its original Fixed action: " + JSON.stringify(facts));
+            tryVerify(() => requiredTargetItems("parameters.freeHeader.fixed").length === 0, 2000, "The observer retires the original menu action after genuine Escape input");
+        } finally {
+            painter.stop();
+            painter.destroy();
+            guard.stop();
+            guard.destroy();
+        }
+    }
+
     function requiredFitWaitMs(datasets) {
         return Math.max(60000, datasets * 5000);
     }
@@ -2380,6 +2469,9 @@ TestCase {
         verify(steps.length > 1, "Every required tutorial has a nonempty written journey");
         const authored = scripts().find(entry => entry.id === data.tutorial);
         verify(authored !== undefined && authored.steps.length === steps.length, "The running bundled tutorial has every currently authored step");
+        const bundled = OnboardingProbe.bundledTutorialManifest();
+        verify(bundled.length > 0, "The actual test host exposes its compiled tutorial resource without a substitute");
+        compare(bundled, OnboardingProbe.sourceText("app/tutorials/manifest.json"), "Native recipe observations require the complete current authored manifest bytes in the compiled host");
         for (let index = 0; index <= last && index < steps.length; ++index) {
             progress(index + 1, steps.length);
             finishPages();

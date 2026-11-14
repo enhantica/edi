@@ -590,91 +590,174 @@ def app_cycles(steps, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - ord
     return cycles
 
 
-def prose_cycles(source, population=None):  # noqa: PLR0912 - finite written instruction grammar
-    """Read stage instructions and declared relations; visual markup contributes no actions."""
+def prose_cycles(source, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - finite written instruction grammar
+    """Observe literal instructions on eligible members; markup never supplies actions."""
     source = re.sub(r'<(?:figure|svg)\b.*?</(?:figure|svg)>', '', source, flags=re.DOTALL)
     source = re.sub(r'<[^>]+>', '', source)
-    source = re.sub(r'[*`_]', '', source)
+    source = re.sub(r'[*`]', '', source)
     phrases = [
-        ('isotropic displacement', r'\b(?:isotropic|adp.iso|b\s*iso|atomic displacements?)\b'),
+        ('isotropic displacement', r'\b(?:isotropic|adp.iso|b\s*iso)\b'),
         ('anisotropic displacement', r'\b(?:anisotropic|adp.11|bij)\b'),
         ('positions', r'\b(?:positions?|coordinates|fract.[xyz])\b'),
         ('occupancies', r'\boccupanc'),
         ('magnetic moments', r'\b(?:moments?|magnetic model)\b'),
         ('magnetic form factor', r'\b(?:j2|form factor)\b'),
         ('extinction', r'\bextinction\b'),
+        ('absorption', r'\babsorption\b'),
         ('background', r'\bbackground\b'),
         ('zero shift', r'\b(?:zero|offset)\b'),
         ('calibration', r'\bcalibration\b'),
-        ('peak widths', r'\b(?:widths?|peak profile|peak broadening)\b'),
+        ('peak widths', r'\b(?:widths?|peak profile|peak broadening|peak mixing)\b'),
         ('peak asymmetry', r'\b(?:peak asymmetry|asymmetry)\b'),
         ('cell', r'\bcell\b'),
         ('scale', r'\b(?:scales?|linked structures)\b'),
     ]
-    active, previous, fixed = set(), set(), set()
-    pending_constraints = 0
     model = getattr(population, 'project', None)
-    context = ''
+    members = dict(population or {})
+    active, previous, explicitly_fixed = set(), set(), set()
+    pending_constraints = 0
+    context = heading = ''
     cycles = []
+
+    def categories(paths):
+        return sorted({members[path][0] for path in paths})
+
     for paragraph in source.split('\n\n'):
         lower = paragraph.casefold().strip()
         if lower.startswith('#'):
-            context = lower.lstrip('# ')
+            context = heading = lower.lstrip('# ')
             if context == 'add the relations' and model is not None:
                 pending_constraints = len({
                     str(row.expression) for row in model.analysis.constraints
                 })
             continue
         if re.search(r'\bfix\s+(?:all|every)\s+param', lower):
-            fixed.update(active)
             active.clear()
-        relation = re.search(r'\bconstrain\s+.+?\bfollow\b', lower, re.DOTALL)
-        if relation:
+        if re.search(r'\bconstrain\s+.+?\bfollow\b', lower, re.DOTALL):
             pending_constraints += 1
             if 'displacement' in lower:
-                fixed.add('isotropic displacement')
+                explicitly_fixed.add('isotropic displacement')
         setting_type = re.search(r'choose\s+(biso|uiso|beta|bani)\s+as every site', lower)
-        if (
-            setting_type
-            and setting_type[1] in {'beta', 'bani'}
-            and 'isotropic displacement' in active
-        ):
-            active.remove('isotropic displacement')
-            fixed.add('isotropic displacement')
-        instruction = re.search(
-            r'\b(?:tick|clear|untick)\s+free\s+for\b|\bfree\s*[·:]?\s*all\b'
-            r'|^(?:[-•]\s*)?(?:free|fix)\s+'
-            r'|\b(?:first|second|third|fourth|last|this) stage frees\b',
-            lower,
-        )
-        if instruction:
-            command = re.sub(
-                r'on structure, choose .+?as every site.s type in the atomic displacement table;?',
-                '',
-                lower,
+        if setting_type and model is not None:
+            for structure in model.structures:
+                for site in structure.atom_sites:
+                    site.adp_type = {
+                        'biso': 'Biso',
+                        'uiso': 'Uiso',
+                        'beta': 'beta',
+                        'bani': 'Bani',
+                    }[setting_type[1]]
+            members = dict(app_population(project=model))
+            active.intersection_update(members)
+        context += '\n' + lower
+        # Separate explicit instructions so each datablock/category selector retains its scope.
+        selected_block = None
+        for command in re.split(r';\s*(?:then\s+)?', lower):
+            selector = re.search(r'choose\s+(\w+)\s+in the datablock filter', command)
+            if selector:
+                selected_block = selector[1]
+            instruction = re.search(
+                r'\b(?:tick|clear|untick)\s+free\s+for\b|\bfree\s*[·:]?\s*all\b'
+                r'|^(?:[-•]\s*)?(?:free|fix)\s+'
+                r'|\b(?:first|second|third|fourth|last|this) stage frees\b',
+                command,
             )
+            if not instruction:
+                continue
             groups = {name for name, pattern in phrases if re.search(pattern, command)}
             if 'instrument' in command:
-                groups.add('zero shift' if re.search(r'zero|offset', context) else 'calibration')
-            if 'atomic displacement' in command and 'anisotropic' in context:
-                groups.discard('isotropic displacement')
-                groups.add('anisotropic displacement')
-            if 'peak profile' in command and 'asymmetry' in context:
+                groups.add(
+                    'zero shift' if re.search(r'zero|2θ.*offset', heading) else 'calibration'
+                )
+            if re.search(r'atomic displacements?', command):
+                groups.update(g for g, _ in members.values() if 'displacement' in g)
+                if not members:
+                    groups.add(
+                        'anisotropic displacement'
+                        if 'anisotropic' in context
+                        else 'isotropic displacement'
+                    )
+            if 'peak profile' in command and 'asymmetry' in heading:
                 groups.discard('peak widths')
                 groups.add('peak asymmetry')
+            # Population comes from the saved model, never from Python's expected free list.
+            candidates = set()
+            blocks = {str(b).casefold() for _, b in members.values() if b}
+            for category in groups:
+                offered = {p for p, (g, _) in members.items() if g == category}
+                # A category owns its following selector, not an earlier category's block.
+                pattern = next((pattern for name, pattern in phrases if name == category), '')
+                position = re.search(pattern, command) if pattern else None
+                segment = command[position.end() :] if position else command
+                next_category = [
+                    m.start()
+                    for name, pattern in phrases
+                    if name != category
+                    for m in [re.search(pattern, segment)]
+                    if m
+                ]
+                if next_category:
+                    segment = segment[: min(next_category)]
+                named_blocks = {
+                    b
+                    for b in blocks
+                    if re.search(r'(?<![\w])' + re.escape(b) + r'(?![\w])', segment)
+                }
+                if named_blocks or selected_block:
+                    offered = {
+                        p
+                        for p in offered
+                        if members[p][1].casefold() in (named_blocks or {selected_block})
+                    }
+                if 'rows the stage names' in command and category.endswith('displacement'):
+                    if re.search(r'\bisotropic\b', context + ' ' + lower):
+                        offered = {p for p in offered if category == 'isotropic displacement'}
+                    elif 'anisotropic' in context:
+                        offered = {p for p in offered if category == 'anisotropic displacement'}
+                candidates.update(offered)
+            # A named Gaussian/Lorentzian/rise/decay stage selects only those members.
+            if 'rows the stage names' in command:
+                tokens = []
+                if 'gaussian' in heading:
+                    tokens = ['broad_gauss', 'sigma_']
+                elif 'lorentzian' in heading:
+                    tokens = ['broad_lorentz', 'gamma_']
+                elif 'decay' in heading and 'rise' not in heading:
+                    tokens = ['decay_beta']
+                if tokens:
+                    candidates = {
+                        p
+                        for p in candidates
+                        if members[p][0] not in {'peak widths', 'peak asymmetry'}
+                        or any(t in p for t in tokens)
+                    }
+            first = re.search(r'first (\d+) background coefficients', command)
+            if first:
+                candidates = {p for p in candidates if int(p.split('.')[-2]) < int(first[1])}
+            if not population:
+                # Standalone synthetic controls have no model; distinct named subgroups
+                # still need distinct identities before reducing them to category names.
+                for name in groups:
+                    key = name + (
+                        ':' + context if name in {'peak widths', 'peak asymmetry'} else ''
+                    )
+                    members[key] = (name, '')
+                    candidates.add(key)
             if re.search(r'^(?:[-•]\s*)?fix\s+|\b(?:clear|untick)\s+free\s+for', command):
-                fixed.update(groups & active)
-                active.difference_update(groups)
+                active.difference_update(candidates)
             else:
-                active.update(groups)
+                active.update(candidates)
         if re.search(r'\b(?:click|press|run|perform)\s+(?:the\s+)?fit\b(?!\s+results)', lower):
             cycles.append({
-                'freed': sorted(active - previous),
-                'fixed': sorted(fixed | (previous - active)),
-                'active': sorted(active),
+                'freed': categories(active - previous),
+                'fixed': sorted(
+                    explicitly_fixed
+                    | {group(p) if p not in members else members[p][0] for p in previous - active}
+                ),
+                'active': categories(active),
                 'constraints': pending_constraints,
             })
             previous = active.copy()
-            fixed.clear()
+            explicitly_fixed.clear()
             pending_constraints = 0
     return cycles
