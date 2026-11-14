@@ -67,6 +67,11 @@
   },
   {
    "file": "core/src/report.cpp",
+   "match": "percent << std::fixed << std::setprecision(1) << 100.0 * completed / *total_files",
+   "reason": "CLI scan completion is a derived count ratio, not a dictionary item; the chi-square cell uses the dictionary display bridge"
+  },
+  {
+   "file": "core/src/report.cpp",
    "match": "out << std::fixed << std::setprecision(precision) << value;",
    "reason": "the CLI fit table's time and change columns, which have no dictionary item, and a parameter path the dictionary has no item for; Rwp and the reduced chi-square take their items' formats"
   },

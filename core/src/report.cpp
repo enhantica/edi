@@ -636,16 +636,16 @@ std::string scan_progress_row(int completed, std::optional<int> total_files,
                               int fail_count, double reduced_chi_square, std::size_t columns) {
     const bool known = total_files && *total_files > 0;
     const bool finished = known && completed >= *total_files;
-    std::ostringstream percent, chi;
+    std::ostringstream percent;
     percent.imbue(std::locale::classic());
-    chi.imbue(std::locale::classic());
     if (known) percent << std::fixed << std::setprecision(1) << 100.0 * completed / *total_files << '%';
-    if (!finished && std::isfinite(reduced_chi_square)) chi << std::setprecision(3) << reduced_chi_square;
+    const auto chi = !finished && std::isfinite(reduced_chi_square)
+        ? display_text("fit_result.reduced_chi_square", reduced_chi_square) : "";
     const auto eta = scan_eta(completed, total_files, elapsed_seconds, measured_completed);
     return scan_table(total_files, {
         std::to_string(completed) + (known ? "/" + std::to_string(*total_files) : ""),
         percent.str(), scan_duration(elapsed_seconds),
-        eta ? scan_duration(*eta) : "", std::to_string(ok_count), std::to_string(fail_count), chi.str()
+        eta ? scan_duration(*eta) : "", std::to_string(ok_count), std::to_string(fail_count), chi
     }, columns);
 }
 

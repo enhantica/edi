@@ -682,17 +682,24 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   // The live status-bar stripe shows the running fit's current iteration: "fitting · it N".
   const runningProgress = (values,states,final) => values.some(value => fittingObservationKind(value) === 'control') &&
     advancesLiveFitProgress(states,final);
-  assert(hasRunningProgress(['Stop', 'fitting · it 2']),
+  // Authored protocol control; actual browser evidence remains in progress above.
+  const ownedStop = {text:'Stop',control:'statusBar.fit.button',
+    action:'statusBar.fit.button.accessibleAction',role:'button',running:true,
+    visible:true,enabled:true,actionVisible:true,actionEnabled:true,connected:true,domVisible:true,
+    nativeRect:{x:10,y:20,width:30,height:10},
+    actionRect:{x:10,y:20,width:30,height:10},
+    domRect:{x:10,y:20,width:30,height:10}};
+  assert(hasRunningProgress([ownedStop, 'fitting · it 2']),
     'the current named Stop control and live iteration grammar must satisfy the progress oracle');
   assert(!hasRunningProgress(['Maximum iterations 400','Success','Iterations', 'it 20 · 2 s']) &&
-    !hasRunningProgress(['Stop', 'Success', 'Iterations 20']) &&
+    !hasRunningProgress([ownedStop, 'Success', 'Iterations 20']) &&
     !hasRunningProgress(['Fit', 'fitting · it 2']),
     'settings, completed results and either running observation alone cannot impersonate live fitting progress');
-  assert(runningProgress(['Stop'],[1,3].map(iteration =>
+  assert(runningProgress([ownedStop],[1,3].map(iteration =>
     ({running:true,visible:true,text:`fitting · it ${iteration}`})),5),
     'The shipped running control and live status-bar iteration label must satisfy the progress witness');
-  assert(!runningProgress(['Stop'],[{running:false,visible:true,text:'fitting · it 3'}],5) &&
-    !runningProgress(['Stop'],[{running:true,visible:true,text:'Success · it 3'}],5),
+  assert(!runningProgress([ownedStop],[{running:false,visible:true,text:'fitting · it 3'}],5) &&
+    !runningProgress([ownedStop],[{running:true,visible:true,text:'Success · it 3'}],5),
     'completed report text and minimizer settings cannot impersonate live fitting progress');
   if (true) {
     assert(progress.some(value => fittingObservationKind(value) === 'control') &&
