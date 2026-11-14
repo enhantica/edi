@@ -22,6 +22,35 @@ EaComponents.ApplicationWindow {
     appBar.objectName: "appBar"
     appBarCentralTabs.objectName: "appBar.workflow"
 
+    // Experiment: draw the app bar under the system title bar on macOS and Windows (Qt 6.9 expanded client
+    // area). The system window buttons stay; the app bar's own buttons move clear of them by the safe-area margins.
+    readonly property bool mergedTitleBar: Qt.platform.os === "osx" || Qt.platform.os === "windows"
+    flags: mergedTitleBar ? (Qt.Window | Qt.ExpandedClientAreaHint | Qt.NoTitleBarBackgroundHint) : Qt.Window
+    function setUpMergedTitleBar() {
+        if (!mergedTitleBar)
+            return;
+        const rows = appBar.children;
+        const left = rows[0], right = rows[2];
+        const leftBase = left.anchors.leftMargin, rightBase = right.anchors.rightMargin;
+        left.anchors.leftMargin = Qt.binding(() => leftBase + appBar.SafeArea.margins.left);
+        right.anchors.rightMargin = Qt.binding(() => rightBase + appBar.SafeArea.margins.right);
+        console.info("merged title bar: safe-area margins", appBar.SafeArea.margins.left, appBar.SafeArea.margins.top,
+                     appBar.SafeArea.margins.right);
+    }
+    // Dragging the empty app bar moves the window, and a double click maximizes or restores it, as a title bar does.
+    DragHandler {
+        parent: window.appBar
+        enabled: window.mergedTitleBar
+        target: null
+        onActiveChanged: if (active) window.startSystemMove()
+    }
+    TapHandler {
+        parent: window.appBar
+        enabled: window.mergedTitleBar
+        acceptedButtons: Qt.LeftButton
+        onDoubleTapped: window.visibility === Window.Maximized ? window.showNormal() : window.showMaximized()
+    }
+
     // Same Create API/preferences as the ordinary current-window form. Native
     // callers pass an original Session-bound intent, never another app/window.
     property var assistantCreateGuard: null
@@ -1281,5 +1310,8 @@ EaComponents.ApplicationWindow {
     // The window takes its kept geometry as it is created, after the base's own settings have loaded; edi's
     // preferences go to the base once everything, the base's hidden dialog and its settings included, is complete
     // (Preferences.apply).
-    Component.onCompleted: ApplicationInfo.windowCompleted()
+    Component.onCompleted: {
+        setUpMergedTitleBar();
+        ApplicationInfo.windowCompleted();
+    }
 }
