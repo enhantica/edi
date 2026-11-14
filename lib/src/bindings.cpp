@@ -3679,6 +3679,43 @@ NB_MODULE(_edi, m) {
             },
             nb::keep_alive<0, 1>(), "The linked structures (phases), keyed by structure_id.")
         .def_rw("dataset_weight", &edi::ExperimentBase::dataset_weight);
+    // The scattering tables (`_scattering_source`), as the app's Experiment page chooses them: each
+    // reads the table the calculation uses, None when the item is of the other probe; setting None
+    // goes back to the default.
+    struct ScatteringSourceAttribute {
+        const char* name;
+        edi::ScatteringSourceItem item;
+        const char* doc;
+    };
+    for (const ScatteringSourceAttribute& source : {
+             ScatteringSourceAttribute{"neutron_scattering_length", edi::ScatteringSourceItem::NEUTRON_SCATTERING_LENGTH,
+                                       "The neutron scattering lengths: rauch2003ext (the default) or sears1992; "
+                                       "None on an X-ray experiment."},
+             ScatteringSourceAttribute{"xray_form_factor", edi::ScatteringSourceItem::XRAY_FORM_FACTOR,
+                                       "The X-ray form factors: wk1995 (the default) or it1992; None on a neutron "
+                                       "experiment."},
+             ScatteringSourceAttribute{"xray_dispersion", edi::ScatteringSourceItem::XRAY_DISPERSION,
+                                       "The X-ray anomalous dispersion: cromer-liberman (the default), sasaki1989, "
+                                       "it1992 or none; None on a neutron experiment."}}) {
+        const edi::ScatteringSourceItem item = source.item;
+        experiment.def_prop_rw(
+            source.name,
+            [item](const edi::ExperimentBase& self) -> std::optional<std::string> {
+                const auto applies = edi::scattering_source_items(self.experiment_type.effective_radiation_probe());
+                if (std::find(applies.begin(), applies.end(), item) == applies.end()) {
+                    return std::nullopt;
+                }
+                const std::optional<std::string>& field =
+                    item == edi::ScatteringSourceItem::XRAY_FORM_FACTOR  ? self.xray_form_factor
+                    : item == edi::ScatteringSourceItem::XRAY_DISPERSION ? self.xray_dispersion
+                                                                         : self.neutron_scattering_length;
+                return field ? *field : edi::supported_scattering_sources(item).front();
+            },
+            [item](edi::ExperimentBase& self, const std::optional<std::string>& token) {
+                edi::select_scattering_source(self, item, token.value_or(std::string{}));
+            },
+            nb::arg("value").none(), source.doc);
+    }
 
     // The abstract intermediates: the powder base homes the pd-shared members exactly where upstream
     // places them; the single-crystal base exists and refuses construction until its physics arrives.

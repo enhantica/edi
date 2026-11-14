@@ -935,6 +935,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "neutron_scattering_length": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -966,6 +975,24 @@
      "need": {
       "by": "counterpart",
       "ref": "BraggPdExperiment.refln",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_dispersion": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_form_factor": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2349,10 +2376,37 @@
      "reason": "C",
      "verdict": "public"
     },
+    "neutron_scattering_length": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
       "ref": "CategoryOwner.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_dispersion": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_form_factor": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
       "verdict": "keep"
      },
      "reason": "C",
@@ -3915,6 +3969,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "neutron_scattering_length": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -3937,6 +4000,24 @@
      "need": {
       "by": "counterpart",
       "ref": "BraggPdExperiment.refln",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_dispersion": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_form_factor": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5297,10 +5378,37 @@
      "reason": "C",
      "verdict": "public"
     },
+    "neutron_scattering_length": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
       "ref": "CategoryOwner.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_dispersion": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_form_factor": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
       "verdict": "keep"
      },
      "reason": "C",
@@ -7505,7 +7613,7 @@
    }
   }
  },
- "directionality": "crysta-py \u2286 edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration \u2014 crysta cannot add a public name without edi following",
+ "directionality": "crysta-py ⊆ edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration — crysta cannot add a public name without edi following",
  "public": {
   "AbsorptionBase": {
    "kind": "class",
@@ -7676,10 +7784,13 @@
     "linked_structure",
     "linked_structures",
     "name",
+    "neutron_scattering_length",
     "parameters",
     "peak",
     "preferred_orientation",
-    "refln"
+    "refln",
+    "xray_dispersion",
+    "xray_form_factor"
    ]
   },
   "Cell": {
@@ -7929,7 +8040,10 @@
     "linked_structure",
     "linked_structures",
     "name",
-    "parameters"
+    "neutron_scattering_length",
+    "parameters",
+    "xray_dispersion",
+    "xray_form_factor"
    ]
   },
   "ExperimentFactory": {
@@ -8214,9 +8328,12 @@
     "linked_structure",
     "linked_structures",
     "name",
+    "neutron_scattering_length",
     "parameters",
     "peak",
-    "refln"
+    "refln",
+    "xray_dispersion",
+    "xray_form_factor"
    ]
   },
   "PdTofData": {
@@ -8455,7 +8572,10 @@
     "linked_structure",
     "linked_structures",
     "name",
-    "parameters"
+    "neutron_scattering_length",
+    "parameters",
+    "xray_dispersion",
+    "xray_form_factor"
    ]
   },
   "ScanFileRecord": {
