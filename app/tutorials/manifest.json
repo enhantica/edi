@@ -956,6 +956,62 @@
           "check": "project"
         },
         {
+          "title": "Open the Load menu",
+          "text": "Click **Load ▾**.",
+          "page": "structure",
+          "target": "structures.load",
+          "check": "menu:structures.load.web"
+        },
+        {
+          "title": "From web",
+          "text": "Choose **From web…**.",
+          "page": "structure",
+          "target": "structures.load.web",
+          "check": "web-dialog:structure"
+        },
+        {
+          "title": "Find the structure",
+          "text": "With **EasyDiffraction Database** as the **Source**, enter **pd-neut-cwl_lbco_simulation-lbco** as the **ID** and press **Search**.",
+          "page": "structure",
+          "target": "onlineLoad.search",
+          "check": "web-search:structure:pd-neut-cwl_lbco_simulation-lbco"
+        },
+        {
+          "title": "Load the structure lbco",
+          "text": "Click the row of **pd-neut-cwl_lbco_simulation-lbco** to load it.",
+          "page": "structure",
+          "target": "onlineLoad.row.0",
+          "check": "web-row:structure:pd-neut-cwl_lbco_simulation-lbco=lbco"
+        },
+        {
+          "title": "Open the Load menu",
+          "text": "Click **Load ▾**.",
+          "page": "experiment",
+          "target": "experiments.load",
+          "check": "menu:experiments.load.experimentWeb"
+        },
+        {
+          "title": "From web",
+          "text": "Choose **From web…**.",
+          "page": "experiment",
+          "target": "experiments.load.experimentWeb",
+          "check": "web-dialog:experiment"
+        },
+        {
+          "title": "Find the experiment",
+          "text": "With **EasyDiffraction** as the **Source**, enter **pd-neut-cwl_lbco_simulation-hrpt** as the **ID** and press **Search**.",
+          "page": "experiment",
+          "target": "onlineLoad.search",
+          "check": "web-search:experiment:pd-neut-cwl_lbco_simulation-hrpt"
+        },
+        {
+          "title": "Load the experiment hrpt",
+          "text": "Click the row of **pd-neut-cwl_lbco_simulation-hrpt** to load it.",
+          "page": "experiment",
+          "target": "onlineLoad.row.0",
+          "check": "web-row:experiment:pd-neut-cwl_lbco_simulation-hrpt=hrpt"
+        },
+        {
           "title": "Open Report",
           "text": "The **Report** page collects the structure and the experiment.",
           "page": "report",
