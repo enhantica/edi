@@ -11,8 +11,8 @@ import edi.app
 // and those two move to their places in the Home wordmark, "easy" cross-fading to its logo face on the way. The
 // round mark then rolls in from beyond the left edge, very fast at first and braking hard like a sports car, its inner circles
 // shown as a 24 fps film shows a wheel, so they seem to turn backwards while it clearly rolls forwards. Last,
-// the backdrop fades, so the rest of the window fades in around the landed wordmark. Skip jumps to the end; Disable
-// also turns Preferences' Home page animations off.
+// the backdrop fades, so the rest of the window fades in around the landed wordmark. Skip fades the intro out over
+// the finished window in about a second; Disable does the same after turning Preferences' Home page animations off.
 Item {
     id: intro
 
@@ -80,11 +80,29 @@ Item {
     }
     function finish() {
         running = false;
+        skipping = false;
+        opacity = 1;
         wordmark.opacity = 1;
     }
+    // Skip and Disable fade the intro out over about a second while the finished Home page and the rest of the window
+    // show through; clicks meanwhile change nothing (the owner, 2026-11-14).
+    property bool skipping: false
     function skip() {
+        if (skipping)
+            return;
+        skipping = true;
         play.stop();
-        finish();
+        wordmark.opacity = 1;
+        fadeOut.start();
+    }
+    NumberAnimation {
+        id: fadeOut
+        target: intro
+        property: "opacity"
+        to: 0
+        duration: 1000
+        easing.type: Easing.InOutQuad
+        onFinished: intro.finish()
     }
 
     visible: running
@@ -203,14 +221,23 @@ Item {
     }
 
     // Skip and Disable, at the bottom.
+    // Their gap to the window's bottom edge, measured to the lowest ink of "Skip", equals the space between the two words.
     Row {
+        id: buttons
+
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: EaStyle.Sizes.fontPixelSize * 2
+        anchors.bottomMargin: spacing - (height - skipButton.baselineOffset - buttonInk.descent)
         spacing: EaStyle.Sizes.fontPixelSize * 2
         opacity: 1 - intro.reveal
 
+        FontMetrics {
+            id: buttonInk
+            font: skipButton.font
+        }
+
         TextButton {
+            id: skipButton
             objectName: "home.intro.skip"
             text: qsTr("Skip")
             onClicked: intro.skip()
@@ -219,14 +246,17 @@ Item {
             objectName: "home.intro.disable"
             text: qsTr("Disable")
             onClicked: {
+                if (intro.skipping)
+                    return;
                 Preferences.homeAnimations = false;
                 intro.skip();
             }
         }
     }
 
-    // The 2020 app's timing: a 1 s pause, the line fading in over 4 s, the other words fading out over 2 s, and the
-    // move over 1 s; then the mark's 1.2 s roll and the 1 s fade of the rest.
+    // After the 2020 app's timing, with the line's fade-in shortened and the time given to holding it (the owner,
+    // 2026-11-14): a 1 s pause, the line fading in over 1.5 s and held for 2.5 s, the other words fading out over 2 s,
+    // and the move over 1 s; then the mark's 1.2 s roll and the 1 s fade of the rest.
     SequentialAnimation {
         id: play
 
@@ -237,7 +267,10 @@ Item {
             target: intro
             property: "wordsIn"
             to: 1
-            duration: 4000
+            duration: 1500
+        }
+        PauseAnimation {
+            duration: 2500
         }
         NumberAnimation {
             target: intro
