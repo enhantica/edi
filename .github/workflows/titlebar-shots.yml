@@ -199,7 +199,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $exe = Get-ChildItem build/installer -Recurse -Include EasyDiffraction*.exe,edi_app.exe | Where-Object { $_.FullName -notmatch 'maintenance|installer\\tools' } | Select-Object -First 1
+          # The deployed copy (Qt and the runtime beside it), not the bare build output, which cannot start.
+          $exe = Get-ChildItem build/installer/stage -Recurse -Include EasyDiffraction*.exe,edi_app.exe | Where-Object { $_.FullName -notmatch 'maintenance' } | Select-Object -First 1
           Write-Host "app: $($exe.FullName)"
           $env:QT_LOGGING_RULES = "qml.info=true"
           $p = Start-Process $exe.FullName -PassThru -RedirectStandardError app-stderr.txt -RedirectStandardOutput app-stdout.txt
@@ -208,7 +209,7 @@ jobs:
           $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
           $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
           $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
-          $bmp.Save("titlebar-windows.png"); Stop-Process -Id $p.Id -Force
+          $bmp.Save("titlebar-windows.png"); Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
           # The same with Windows in dark mode (edi's Theme is System by default, so it follows).
           Set-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0 -Type DWord
           Set-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name SystemUsesLightTheme -Value 0 -Type DWord
@@ -217,7 +218,7 @@ jobs:
           Start-Sleep -Seconds 40
           $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
           $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
-          $bmp.Save("titlebar-windows-dark.png"); Stop-Process -Id $p.Id -Force
+          $bmp.Save("titlebar-windows-dark.png"); Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
       - name: Start the app and capture the window
         if: runner.os == 'macOS'
         run: |
