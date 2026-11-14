@@ -374,7 +374,7 @@ EaComponents.ApplicationWindow {
         parent: Overlay.overlay
         anchors.fill: parent
         wordmark: homePage.wordmark
-        Component.onCompleted: if (Preferences.homeAnimationsOn)
+        Component.onCompleted: if (Preferences.introAnimationOn)
             Qt.callLater(homeIntro.start)
     }
 

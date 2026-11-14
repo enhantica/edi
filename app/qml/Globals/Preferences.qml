@@ -129,10 +129,10 @@ QtObject {
     property string colourScheme: "main"
     // How the structure view colours the magnetic moment arrows: "atom", "greyed" (the default) or "single" (edi ADR-0078).
     property string momentColours: "greyed"
-    // The Home page's intro at start and its idle logo spin (Appearance, General; the owner, 2026-11-14). Never in a
-    // demo or test run (ApplicationInfo.homeIntroAllowed), so their images stay still.
-    property bool homeAnimations: true
-    readonly property bool homeAnimationsOn: homeAnimations && ApplicationInfo.homeIntroAllowed
+    // The Home page's intro at start (Appearance, General, "Intro animation"; the owner, 2026-11-14). Never in a demo
+    // or test run (ApplicationInfo.homeIntroAllowed), so their images stay still.
+    property bool introAnimation: true
+    readonly property bool introAnimationOn: introAnimation && ApplicationInfo.homeIntroAllowed
     // The patterns' palette stored before the one palette (the owner, 2026-10-22, until 2026-10-26): read once into
     // colourScheme, then cleared, so a choice made there carries over.
     property string patternColourScheme: ""
@@ -185,7 +185,7 @@ QtObject {
         // After colourScheme: the settings load in this order, so the earlier patterns' choice wins once.
         property alias patternColourScheme: preferences.patternColourScheme
         property alias momentColours: preferences.momentColours
-        property alias homeAnimations: preferences.homeAnimations
+        property alias introAnimation: preferences.introAnimation
     }
 
     property Settings assistantSettings: Settings {

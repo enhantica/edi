@@ -16,22 +16,15 @@ Item {
     readonly property Wordmark wordmark: wordmarkBlock.wordmark
     property bool introRunning: false
 
-    // The idle spin: after one to two minutes on Home without input, the logo spins for about 5 s, and again after the
-    // next wait (the owner, 2026-11-14).
+    // The idle spin: after 30 s on Home without input, the logo turns twice, and again after each further 30 s
+    // (the owner, 2026-11-14). Always on, apart from demo and test runs, whose images stay still.
     Timer {
         id: idleWait
 
-        function nextWait() {
-            interval = 60000 + Math.round(Math.random() * 60000);
-        }
-
-        running: Preferences.homeAnimationsOn && !home.introRunning && EaGlobals.Vars.appBarCurrentIndex === 0 && Qt.application.state === Qt.ApplicationActive
+        interval: 30000
+        running: ApplicationInfo.homeIntroAllowed && !home.introRunning && EaGlobals.Vars.appBarCurrentIndex === 0 && Qt.application.state === Qt.ApplicationActive
         repeat: true
-        Component.onCompleted: nextWait()
-        onTriggered: {
-            home.wordmark.spin();
-            nextWait();
-        }
+        onTriggered: home.wordmark.spin()
     }
     Connections {
         target: ApplicationInfo

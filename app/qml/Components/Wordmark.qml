@@ -26,8 +26,8 @@ Item {
     readonly property Item prefixItem: prefix
     readonly property Item suffixItem: suffix
 
-    // The web app's loading spin (app/web/make_logo.py: six turns, Qt's OutInElastic, amplitude 1, period 0.3), run
-    // twice at 2.5 s: the Home page's idle spin.
+    // The Home page's idle spin: exactly two turns, easing in and out, ending where it started (the owner,
+    // 2026-11-14).
     function spin() {
         idleSpin.restart();
     }
@@ -80,11 +80,8 @@ Item {
         id: idleSpin
         target: mark
         from: 0
-        to: 360 * 6
-        duration: 2500
-        loops: 2
-        easing.type: Easing.OutInElastic
-        easing.amplitude: 1
-        easing.period: 0.3
+        to: 720
+        duration: 2400
+        easing.type: Easing.InOutCubic
     }
 }

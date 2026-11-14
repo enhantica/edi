@@ -308,13 +308,13 @@ AppDialog {
                         }
                     }
                     Field {
-                        label: qsTr("Home page animations")
+                        label: qsTr("Intro animation")
                         FieldBox {
-                            objectName: "preferences.homeAnimations"
+                            objectName: "preferences.introAnimation"
                             model: [qsTr("On"), qsTr("Off")]
-                            currentIndex: Preferences.homeAnimations ? 0 : 1
-                            onActivated: index => Preferences.homeAnimations = index === 0
-                            ToolTip.text: qsTr("The intro when the app starts, and the logo's spin after a while without input on Home")
+                            currentIndex: Preferences.introAnimation ? 0 : 1
+                            onActivated: index => Preferences.introAnimation = index === 0
+                            ToolTip.text: qsTr("The animation that shows the logo when the app starts")
                         }
                     }
                 }
