@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.node_runtime import environment_node
+
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 
@@ -45,7 +47,7 @@ def require_runner(runner: Path) -> None:
 
 
 def run_javascript(program: str, *, timeout: float = 5) -> subprocess.CompletedProcess[str]:
-    node = Path(sys.prefix) / 'bin/node'
+    node = environment_node()
     if not node.is_file():
         raise AssertionError('The declared test interpreter must provide its pinned Node parser')
     prepared = subprocess.run(
