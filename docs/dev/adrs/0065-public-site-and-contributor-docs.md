@@ -44,3 +44,9 @@ CI checks the recorded provenance, citation and comparisons; it does not run an 
 Staged tutorial/scientific-reference matches and separate single-fit regression mismatches stay
 separate, with original numerical references and tolerances unchanged. Diagnostic executables
 are identified as such and do not establish release or current-candidate qualification.
+
+
+Retired walkthrough redirects terminate at the corresponding case tutorial on the
+same interface. The former Python and Command line example-fit URLs both lead to
+the LBCO HRPT tutorial; redirecting only to a tutorial index loses that destination.
+The app's first-fit and scan walkthroughs retain their declared case targets.
