@@ -209,6 +209,15 @@ jobs:
           $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
           $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
           $bmp.Save("titlebar-windows.png"); Stop-Process -Id $p.Id -Force
+          # The same with Windows in dark mode (edi's Theme is System by default, so it follows).
+          Set-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0 -Type DWord
+          Set-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name SystemUsesLightTheme -Value 0 -Type DWord
+          Start-Sleep -Seconds 5
+          $p = Start-Process $exe.FullName -PassThru -RedirectStandardError app-stderr-dark.txt -RedirectStandardOutput app-stdout-dark.txt
+          Start-Sleep -Seconds 40
+          $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+          $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+          $bmp.Save("titlebar-windows-dark.png"); Stop-Process -Id $p.Id -Force
       - name: Start the app and capture the window
         if: runner.os == 'macOS'
         run: |
@@ -216,6 +225,11 @@ jobs:
           echo "app: $app"
           open "$app"; sleep 40
           screencapture -x titlebar-macos.png || true
+          pkill -f EasyDiffraction || true
+          # The same in dark mode, if the runner allows switching it.
+          osascript -e 'tell application "System Events" to tell appearance preferences to set dark mode to true' || true
+          sleep 3; open "$app"; sleep 40
+          screencapture -x titlebar-macos-dark.png || true
           pkill -f EasyDiffraction || true
       - uses: actions/upload-artifact@v4
         if: always()
