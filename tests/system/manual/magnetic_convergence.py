@@ -135,9 +135,10 @@ def check_file_convergence(directory, rows):
     stalled = [
         (Path(row['file_path']).name, row['fit_result.termination'])
         for row in provenance
-        if row['fit_result.termination'] != 'chi_converged'
+        if row['fit_result.termination'] not in {'chi_converged', 'step_small'}
+        or row['fit_result.success'].lower() != 'true'
     ]
-    assert not stalled, f'Every file reaches chi_converged, observed {stalled}'
+    assert not stalled, f'Every file reaches a converged stop under ADR-0124, observed {stalled}'
 
 
 def fit_scan(cold_first):
@@ -260,7 +261,7 @@ def check_stall(frame_only):
         assert result.success, 'The stalled-path replay reaches a successful terminal state'
         print(
             f'Stalled-path {"frame" if frame_only else "scan"}: '
-            f'{len(rows) - len(seeded)} new files, {len(rows)}/{expected} chi_converged; '
+            f'{len(rows) - len(seeded)} new files, {len(rows)}/{expected} converged; '
             f'last fit {result.iterations} iterations, chi2 {result.reduced_chi_square:.12g}'
         )
 
