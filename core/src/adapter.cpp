@@ -5838,6 +5838,7 @@ std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& ta
 std::vector<std::string> descent_ids() { return crysta::descent_ids(); }
 
 std::string default_descent() { return crysta::kDefaultDescent; }
+std::string current_descent_id(const std::string& id) { return crysta::current_descent_id(id); }
 double default_chi_square_tolerance() { return crysta::kDefaultChiSquareTolerance; }
 double default_shift_tolerance() { return crysta::kDefaultShiftTolerance; }
 
@@ -5872,7 +5873,7 @@ namespace {
 crysta::DescentRequest declared_request(const Project& project) {
     crysta::DescentRequest request;
     if (!project.descent.empty()) {
-        request.descent = project.descent;
+        request.descent = current_descent_id(project.descent);
     }
     request.max_iterations = detail::bounded_max_iterations(project.minimizer_max_iterations);
     if (project.minimizer_chi_square_tolerance > 0.0) {
@@ -6019,8 +6020,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // (absent: the historical 50 cap), the descent and the chi-square stop. A declared
             // descent, tolerance or stop rule goes through crysta's registry entry point
             // (DescentRequest, id validated above), and so does a project declaring none: the request
-            // then carries crysta's defaults (fast descent, the default stop rules), the same fit the
-            // project-analysis path and the CLI run. The request's seed/polish pair mirrors
+            // then carries crysta's defaults (fast descent and ladder, the default stop rules), the
+            // same fit the project-analysis path and the CLI run. The request's seed/polish pair mirrors
             // `separable_linear=true` exactly (crysta descent.hpp).
             crysta::DescentRequest request =
                 declared_request(*this);
@@ -6066,6 +6067,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             outcome.multistart_probes_pruned = result.multistart_probes_pruned;
             outcome.multistart_probe_iterations = result.multistart_probe_iterations;
             outcome.multistart_survivor = result.multistart_survivor;
+            outcome.fast_descent = result.fast_descent;
             outcome.n_points_loaded = n_points_loaded;
             outcome.n_points_fitted = provider.n_data();
             outcome.iterations_history = to_edi(collector.history());
@@ -6666,6 +6668,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         outcome.multistart_probes_pruned = result.multistart_probes_pruned;
         outcome.multistart_probe_iterations = result.multistart_probe_iterations;
         outcome.multistart_survivor = result.multistart_survivor;
+        outcome.fast_descent = result.fast_descent;
         outcome.elapsed_ms = solved ? elapsed_ms : 0.0;
         outcome.status = to_edi(crysta::classify_fit_status(result));
         outcome.unevaluable_trials = result.unevaluable_trials;
@@ -6905,6 +6908,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             outcome.multistart_probes_pruned = result.multistart_probes_pruned;
             outcome.multistart_probe_iterations = result.multistart_probe_iterations;
             outcome.multistart_survivor = result.multistart_survivor;
+            outcome.fast_descent = result.fast_descent;
             outcome.banks = std::move(bank_metrics);
             outcome.n_points_loaded = n_points_loaded;
             outcome.n_points_fitted = provider.n_data();

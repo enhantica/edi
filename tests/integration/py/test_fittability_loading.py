@@ -213,7 +213,9 @@ def test_dispersion_load_refuses_only_the_primary_wavelength(api, tmp_path):
 
 
 @pytest.mark.parametrize('field', ['abscor2', 'calib_d_to_tof_reciprocal'])
-def test_tof_capability_load_keeps_value_and_uncertainty(api, tmp_path, field):
+def test_tof_capability_load_preserves_live_pairs_and_ignores_retired_member(
+    api, tmp_path, capfd, field
+):
     root = Path(__file__).resolve().parents[3]
     relative = (
         'tests/fitting/si-sepd-s2/project'
@@ -231,7 +233,23 @@ def test_tof_capability_load_keeps_value_and_uncertainty(api, tmp_path, field):
         if '_absorption.abscor1' not in text:
             text += '\n_absorption.abscor1 0\n'
     experiment_file.write_text(text + '\n' + tag + ' 0.037(2)\n')
+    capfd.readouterr()
     project, notes = load(api, source)
+    if field == 'abscor2':
+        assert not hasattr(project.experiments[0].absorption, field), (
+            'ADR-0123 ignores the retired free input instead of making a model parameter'
+        )
+        notes += capfd.readouterr().err.splitlines()
+        selected = [note for note in notes if '_absorption.abscor2' in note and 'ignored' in note]
+        assert len(selected) == 1, 'The retired TOF input emits its one named migration warning'
+        saved = tmp_path / 'saved-retired'
+        project.save_as(saved)
+        experiments = list((saved / 'experiments').glob('*.edi'))
+        assert experiments, 'The retired-input save witness must actually write its experiments'
+        assert all('_absorption.abscor2' not in file.read_text() for file in experiments), (
+            'Saving cannot recreate a retired parameter or its free flag'
+        )
+        return
     parameter = getattr(getattr(project.experiments[0], category), field)
     assert not parameter.free, 'Unsupported TOF derivatives load as fixed parameters'
     assert parameter.value == pytest.approx(0.037), (

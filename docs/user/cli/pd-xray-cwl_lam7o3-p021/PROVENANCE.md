@@ -57,3 +57,5 @@ against crysta `4643af79`, `OMP_NUM_THREADS=1`: iterations 40 → 38.
 after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone. Measured with `python
 -m edi fit --report machine --verbosity full` linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: iterations 38 → 39.
 No `reference` value moved.
+
+**Re-pinned 2026-11-14.** Two crysta damping changes move the iteration count at the same minimum: a refused step now raises the damping to at least 1e-4 (crysta `763e1f16`, 39 → 42), and an accepted undamped step drops it back to its starting value (crysta `6cbe0e60`, 42 → 40). Measured with `python -m edi fit --report machine` linked against crysta `81b4f6db`, `OMP_NUM_THREADS=4`: iterations 39 → 40.

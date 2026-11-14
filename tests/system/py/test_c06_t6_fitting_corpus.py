@@ -295,6 +295,23 @@ _PARAMS = [
 ] or [pytest.param(None, None, id=_EMPTY_SUBJECT_ID)]
 
 
+def _apply_variant_settings(project_dir, variant):
+    if variant is not None:
+        args = variant.get('fit_args', [])
+        assert len(args) % 2 == 0, 'Corpus variants must declare complete option-value pairs'
+        fields = {'--descent': 'descent', '--chi-square-tolerance': 'chi_square_tolerance'}
+        assert set(args[::2]) <= fields.keys(), (
+            'Every corpus variant option must be explicitly applied by the edi runner'
+        )
+        analysis = project_dir / 'analysis/analysis.edi'
+        text = analysis.read_text()
+        for flag, value in zip(args[::2], args[1::2], strict=True):
+            field = '_minimizer.' + fields[flag]
+            text = re.sub(r'(?m)^' + re.escape(field) + r' .+\n?', '', text)
+            text += f'\n{field} {value}\n'
+        analysis.write_text(text)
+
+
 @pytest.mark.parametrize(('case', 'variant'), _PARAMS)
 def test_fitting_case_matches_expected_through_edi(  # noqa: PLR0915 - one corpus quantity boundary
     case: dict | None, variant: dict | None, tmp_path: Path
@@ -319,6 +336,7 @@ def test_fitting_case_matches_expected_through_edi(  # noqa: PLR0915 - one corpu
     #  (the sides flips): realize through the analysis facade, which dispatches by the
     # project's declared fitting mode — a joint case realized down the single path would
     # silently fit one bank (measured: chi2r 3.92 vs the joint 14.12 on ncaf-wish-3bank-s5).
+    _apply_variant_settings(project_dir, variant)
     project = edi.Project.load(project_dir)
     outcome = project.analysis.fit()
     if not outcome.converged:

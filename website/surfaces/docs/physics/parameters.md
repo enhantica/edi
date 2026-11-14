@@ -2129,18 +2129,6 @@ TOF sample absorption coefficient ABSCOR1 (muR = ABSCOR1 * lambda; refinable).
 
 </section>
 
-<section class="ed-parameter-entry" markdown="1" aria-labelledby="absorption-abscor2">
-
-### ABSCOR2 {#absorption-abscor2}
-
-TOF sample absorption lambda-power ABSCOR2 (round-tripped, held fixed; freeing it is a hard error).
-
-Read and saved, but not used in the calculation.
-
-[Equation and conventions](corrections/absorption.md#eq-hewat) · [Names across interfaces](../user-guide/parameters.md#names-absorption)
-
-</section>
-
 <section class="ed-parameter-entry" markdown="1" aria-labelledby="absorption-mu-r">
 
 ### ΜR {#absorption-mu-r}

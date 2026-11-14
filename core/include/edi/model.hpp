@@ -4668,6 +4668,9 @@ struct FitResultBase {
     int multistart_probes_pruned = 0;
     int multistart_probe_iterations = 0;
     std::string multistart_survivor;
+    // Whether the descent that finished used the gain-ratio damping: true for fast descent, and for the default
+    // descent when its fast-descent probe continued, as crysta's own record says.
+    bool fast_descent = false;
     // . Both point counts, named — reporting only one of them under a `pts` heading is: `loaded`
     // is what the project carried, `fitted` is what entered the residual (after each bank's
     // excluded regions), and reduced chi-square is normalised by the FITTED count. On the
@@ -4732,6 +4735,9 @@ struct LeastSquaresFitResult final : FitResultBase {
 // diverge by construction).
 std::vector<std::string> descent_ids();
 std::string default_descent();
+// The current id for a descent id: the default's former id maps to its current one, any other
+// id comes back unchanged.
+std::string current_descent_id(const std::string& id);
 // The absorption vocabulary and its two spellings are crysta's own table, asked through the
 // adapter. edi keeps no list and no mapping of its own.
 //   - the spellings a file of this beam mode may declare;

@@ -38,15 +38,18 @@ def decode(token):
     return float(value), float(uncertainty)
 
 
-def with_default_rule(record):
-    """Insert the absent default after the existing metadata, preserving all other bytes."""
+def with_default_rule(record, *, rule='iucr_19'):
+    """Insert an exact declared rule; the default retains the historical archive spelling."""
     assert not re.search(rb'(?m)^_su_format\.', record), (
         'The historical record must have no uncertainty setting before adding its exact default'
     )
     lines = record.splitlines(keepends=True)
     positions = [index for index, line in enumerate(lines) if line.startswith(b'_metadata.')]
     assert positions, 'The historical project record carries the existing owned metadata block'
-    lines.insert(positions[-1] + 1, RULE)
+    assert rule in {'iucr_19', 'iucr_99'}, (
+        'The reference inserts only one of the two independently specified IUCr rules'
+    )
+    lines.insert(positions[-1] + 1, f'_su_format.rule {rule}\n'.encode())
     return b''.join(lines)
 
 

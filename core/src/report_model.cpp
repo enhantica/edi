@@ -830,7 +830,7 @@ std::vector<ReportCategory> analysis_of(const Project& project, const std::optio
     ReportCategory software{"software", "Software", {}, {}};
     software.rows = {{"Framework", "edi " + core_version(), ""}, {category_label("calculator"), "crysta", ""}};
     ReportCategory minimizer = category("minimizer");
-    const std::string& descent = project.descent;
+    const std::string descent = current_descent_id(project.descent);
     minimizer.rows = {{label("minimizer.type"), descent.empty() ? "crysta" : "crysta (" + descent + ")", ""},
                       {label("minimizer.max_iterations"),
                        std::to_string(project.minimizer_max_iterations > 0 ? project.minimizer_max_iterations : 50), ""}};

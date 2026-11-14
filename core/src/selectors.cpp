@@ -460,8 +460,10 @@ void set_fitting_mode(Project& project, const std::string& mode) {
 std::vector<std::string> supported_descents() { return descent_ids(); }
 
 void set_descent(Project& project, const std::string& id) {
-    validate_descent(id, "edi descent");
-    project.descent = id;
+    // The default's former id is stored under its current one.
+    const std::string current = current_descent_id(id);
+    validate_descent(current, "edi descent");
+    project.descent = current;
 }
 
 }  // namespace edi

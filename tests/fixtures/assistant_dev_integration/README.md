@@ -25,6 +25,18 @@ alias reference rejects unsupported non-cell targets rather than silently
 omitting them; it does not claim a complete independent name catalogue. Current
 native model field types and the opaque editor-record API remain shared inputs.
 
+ADR-0123 removes the ABSCOR2 model member and its stamp slot. The visible freezer
+projects only that one statement out of the original reference; it does not read
+the current codec. `stamp_codec_retirement.json` records both generated digests
+and the exact retired statement. The original source/slot-table hashes, all other
+byte traversal, peak order, aliases, finite budgets and allocation controls stay
+unchanged. No empty placeholder is inserted for a member that no longer exists.
+Run `python tests/fixtures/assistant_dev_integration/freeze_stamp_codec.py --retire-abscor2`.
+The receipt also retains the complete original frozen text, checked against its
+fixed digest, so this projection remains reproducible without the unavailable
+pre-port dev commit. Its provenance is the committed fixture at `a0a116e`; the
+current production codec is never an input to the projection.
+
 The pre-growth witness uses the unit carrier's existing ordinary new/new[]
 instrumentation to observe input-sized row containers, source strings and alias
 naming scratch, with an actual allocating positive control for each. It does not

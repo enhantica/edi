@@ -10,12 +10,13 @@ const chrome = process.env.EDI_CHROME || join(toolchain,'chrome-146.0.7680.153/c
 const document = JSON.parse(await readFile(eventPath,'utf8'));
 const original = Array.isArray(document) ? document : document.events;
 assert(Array.isArray(original),'The single events file must declare an event list');
-const sample = original[0] || {name:'Example',start:'2030-05-10',end:'2030-05-12'};
+const sample = original.find(event => event.start && event.end);
+assert(sample, 'The event fixture must include a dated event alongside General');
 const key = pattern => Object.keys(sample).find(name => pattern.test(name));
 const nameKey = key(/^(name|title)$/i), startKey = key(/^start/i), endKey = key(/^end/i);
 assert(nameKey && startKey && endKey,'Each event must declare its name and date window');
-const entry = (name,start,end) => ({...sample,[nameKey]:name,[startKey]:start,[endKey]:end});
-const entries = [entry('Past witness','2030-05-01','2030-05-09'),entry('Window witness','2030-05-10','2030-05-12'),entry('Future witness','2030-05-13','2030-05-20')];
+const entry = (name,start,end) => ({...sample,name,title:name,[nameKey]:name,[startKey]:start,[endKey]:end});
+const entries = [...original.filter(event => event.name === 'general'),entry('Past witness','2030-05-01','2030-05-09'),entry('Window witness','2030-05-10','2030-05-12'),entry('Future witness','2030-05-13','2030-05-20')];
 const events = Array.isArray(document) ? entries : {...document,events:entries};
 let fetched = false;
 const server = createServer(async (request,response) => {
@@ -38,7 +39,9 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}/${pagePath}`);
   const config = await readFile(join(root,'../mkdocs.yml'),'utf8');
   const scripts = config.split('extra_javascript:')[1]?.split(/^\S/m)[0] || '';
-  for (const match of scripts.matchAll(/^\s+-\s+(assets\/[^\s]+\.js(?:\?[^\s]+)?)/gm))
+  const surveyScripts = [...scripts.matchAll(/^\s+-\s+(assets\/survey\/[^\s]+\.js(?:\?[^\s]+)?)/gm)];
+  assert.equal(surveyScripts.length, 1, 'The site must load the real survey script once');
+  for (const match of surveyScripts)
     await page.addScriptTag({url:`http://127.0.0.1:${server.address().port}/${match[1]}`});
   const event = page.getByRole('combobox',{name:/event/i});
   await event.waitFor({timeout:3000});

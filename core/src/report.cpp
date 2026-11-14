@@ -450,11 +450,12 @@ std::string machine_report(const Project& project, const FitResultBase& outcome,
     report.stopping_value = outcome.stopping_value;
     report.last_shift_su = outcome.last_shift_su;
     // The default descent's probe accounting, as crysta emits it for the same fit.
-    report.multistart_prune = outcome.descent == "multistart_prune";
+    report.multistart_prune = outcome.descent == default_descent();
     report.multistart_probes_started = outcome.multistart_probes_started;
     report.multistart_probes_pruned = outcome.multistart_probes_pruned;
     report.multistart_probe_iterations = outcome.multistart_probe_iterations;
     report.multistart_survivor = outcome.multistart_survivor.empty() ? "none" : outcome.multistart_survivor;
+    report.fast_descent = outcome.fast_descent;
     // `cutoff_policy` is LEFT EMPTY on purpose, which omits the row: edi exposes no cutoff-policy
     // control, and a surface that cannot vary a field must not emit a constant for it. It shows up
     // as a plain added line when diffing against crysta — the honest representation of a capability

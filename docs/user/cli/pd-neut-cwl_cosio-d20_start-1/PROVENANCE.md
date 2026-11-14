@@ -54,3 +54,5 @@ magnetic moment is retried at the length a quadratic model of the residual predi
 --report machine --verbosity full` linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: fast-descent
 reduced_chi_square 4.387840717 → 4.387839645; fast-descent iterations 45 → 46; fast-descent rwp 0.03937389334 →
 0.03937388853; multistart-prune iterations 1 → 53. No `reference` value moved.
+
+**Re-pinned 2026-11-14.** When a fit accepts the undamped Gauss-Newton step on a chi-square plateau, crysta now drops the damping back to its starting value (crysta `6cbe0e60`); before, the damping raised during the plateau fell by a third per iteration and the next steps stayed tiny. Same minimum, chi-square and Rwp within their bounds. Measured with `python -m edi fit --report machine` linked against crysta `81b4f6db`, `OMP_NUM_THREADS=4`: fast-descent iterations 46 → 30; multistart-prune iterations 53 → 37.
