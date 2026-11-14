@@ -5,60 +5,105 @@ The same staged fit as the Python tutorial, on the command line. The command lin
 Calibrate the BEER instrument at ESS with two McStas-simulated banks of a ferrite and austenite
 duplex steel, fitted together: each bank has its own zero and resolution.
 
-The project is the catalogue case `pd-neut-tof_ferrite-austenite-beer`, the one the command line
-and the app's Examples open. Austenite's displacement follows ferrite's, and each phase's scale
-in bank n2 follows bank s2, from the start.
+It builds the catalogue case `pd-neut-tof_ferrite-austenite-beer` step by step: the same project
+the command line fits and the app's Examples open. Austenite's displacement follows ferrite's,
+and each phase's scale in bank n2 follows bank s2.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-tof_ferrite-austenite-beer/structures pd-neut-tof_ferrite-austenite-beer/experiments pd-neut-tof_ferrite-austenite-beer/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-tof_ferrite-austenite-beer
+_metadata.title "Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS"
+_metadata.description "Instrument calibration · 2 McStas-simulated banks fitted jointly · Per-bank zero and resolution"
+_metadata.authors .
+```
+
+## Define the structures
+
+Download the structures from EasyDiffraction's collection into `structures`. Each CIF gives its space group, cell and atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-tof_ferrite-austenite-beer
+    edi download-data pd-neut-tof_ferrite-austenite-beer-austenite
+    mv data/pd-neut-tof_ferrite-austenite-beer-austenite.edi pd-neut-tof_ferrite-austenite-beer/structures/austenite.edi
+    edi download-data pd-neut-tof_ferrite-austenite-beer-ferrite
+    mv data/pd-neut-tof_ferrite-austenite-beer-ferrite.edi pd-neut-tof_ferrite-austenite-beer/structures/ferrite.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-tof_ferrite-austenite-beer
+    python -m edi download-data pd-neut-tof_ferrite-austenite-beer-austenite
+    mv data/pd-neut-tof_ferrite-austenite-beer-austenite.edi pd-neut-tof_ferrite-austenite-beer/structures/austenite.edi
+    python -m edi download-data pd-neut-tof_ferrite-austenite-beer-ferrite
+    mv data/pd-neut-tof_ferrite-austenite-beer-ferrite.edi pd-neut-tof_ferrite-austenite-beer/structures/ferrite.edi
     ```
 
-## Start with nothing free
+## Define the experiments
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiments into `experiments`: each file declares its instrument, peak profile, background, the structures it links and its measured data.
 
-In `experiments/expt_n2.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_instrument.calib_d_to_tof_offset 0
-_peak.broad_gauss_sigma_0 900
-_peak.broad_gauss_sigma_1 1000
-_peak.broad_gauss_sigma_2 300
-_peak.broad_lorentz_gamma_0 5
-1 40111.8789 0.19
-2 41193.5664 0.19
-```
+    ```console
+    edi download-data pd-neut-tof_ferrite-austenite-beer-expt_n2
+    mv data/pd-neut-tof_ferrite-austenite-beer-expt_n2.edi pd-neut-tof_ferrite-austenite-beer/experiments/expt_n2.edi
+    edi download-data pd-neut-tof_ferrite-austenite-beer-expt_s2
+    mv data/pd-neut-tof_ferrite-austenite-beer-expt_s2.edi pd-neut-tof_ferrite-austenite-beer/experiments/expt_s2.edi
+    ```
 
-The same for every other row (28 more).
+=== "Python package"
 
-In `experiments/expt_s2.edi`, remove the `()` from every value; they now read:
+    ```console
+    python -m edi download-data pd-neut-tof_ferrite-austenite-beer-expt_n2
+    mv data/pd-neut-tof_ferrite-austenite-beer-expt_n2.edi pd-neut-tof_ferrite-austenite-beer/experiments/expt_n2.edi
+    python -m edi download-data pd-neut-tof_ferrite-austenite-beer-expt_s2
+    mv data/pd-neut-tof_ferrite-austenite-beer-expt_s2.edi pd-neut-tof_ferrite-austenite-beer/experiments/expt_s2.edi
+    ```
 
-```edi
-_instrument.calib_d_to_tof_offset 0
-_peak.broad_gauss_sigma_0 900
-_peak.broad_gauss_sigma_1 1000
-_peak.broad_gauss_sigma_2 300
-_peak.broad_lorentz_gamma_0 5
-1 40111.8789 0.18
-2 41193.5664 0.18
-```
-
-The same for every other row (30 more).
-
-In `structures/ferrite.edi`, remove the `()` from every value; they now read:
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-Fe Fe 0 0 0 a 2 1 0.5 Biso
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+_fitting_mode.type joint
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_ferrite ferrite.atom_site.Fe.adp_iso
+biso_austenite austenite.atom_site.Fe.adp_iso
+s2_ferrite_scale expt_s2.linked_structure.ferrite.scale
+s2_austenite_scale expt_s2.linked_structure.austenite.scale
+n2_ferrite_scale expt_n2.linked_structure.ferrite.scale
+n2_austenite_scale expt_n2.linked_structure.austenite.scale
+
+loop_
+_constraint.id
+_constraint.expression
+1 "biso_austenite = biso_ferrite"
+2 "n2_ferrite_scale = s2_ferrite_scale"
+3 "n2_austenite_scale = s2_austenite_scale"
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+expt_n2 0.5
+expt_s2 0.5
+
+_edi.schema_version 3
 ```
 
 ## Scales and time-of-flight calibration

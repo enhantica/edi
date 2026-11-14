@@ -7,49 +7,72 @@ D20 at the ILL. Its structure and its measured pattern come from EasyDiffraction
 the tutorial describes the experiment, links the two and fits the coordinates, the
 displacements and the oxygen occupancies.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_cosio-d20/structures pd-neut-cwl_cosio-d20/experiments pd-neut-cwl_cosio-d20/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_cosio-d20
+_metadata.title "Co₂SiO₄ [Pnma] · D20 @ ILL"
+_metadata.description "Olivine · Coordinates, displacements and oxygen occupancies"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_cosio-d20
+    edi download-data pd-neut-cwl_cosio-d20-cosio
+    mv data/pd-neut-cwl_cosio-d20-cosio.edi pd-neut-cwl_cosio-d20/structures/cosio.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_cosio-d20
+    python -m edi download-data pd-neut-cwl_cosio-d20-cosio
+    mv data/pd-neut-cwl_cosio-d20-cosio.edi pd-neut-cwl_cosio-d20/structures/cosio.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/d20.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-cwl_cosio-d20-d20
+    mv data/pd-neut-cwl_cosio-d20-d20.edi pd-neut-cwl_cosio-d20/experiments/d20.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-cwl_cosio-d20-d20
+    mv data/pd-neut-cwl_cosio-d20-d20.edi pd-neut-cwl_cosio-d20/experiments/d20.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.2
-_peak.broad_gauss_v -0.5
-_peak.broad_gauss_w 0.4
-_peak.broad_lorentz_y 0.01
-1 8 340
-2 9 340
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.descent fast_descent
+
+_fitting_mode.type single
+
+_edi.schema_version 3
 ```
-
-The same for every other row (13 more).
-
-In `structures/cosio.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 10.3
-_cell.length_b 6
-_cell.length_c 4.8
-Co1 Co 0 0 0 a 4 1 0.5 Biso
-Co2 Co 0.28 0.25 0.98 c 4 1 0.5 Biso
-```
-
-The same for every other row (4 more).
 
 ## Scale, 2θ zero and cell
 

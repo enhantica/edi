@@ -5,74 +5,148 @@ The same staged fit as the Python tutorial, on the command line. The command lin
 Fit the amino-sulfonic acid taurine to six time-of-flight neutron single-crystal datasets from
 SENJU at J-PARC together, each reflection measured at its own wavelength.
 
-The project is the catalogue case `sc-neut-tof_taurine-senju`, the one the command line and the
-app's Examples open. Banks 2 to 6 share bank 1's three extinction terms, from the start.
+It builds the catalogue case `sc-neut-tof_taurine-senju` step by step: the same project the
+command line fits and the app's Examples open. Banks 2 to 6 share bank 1's three extinction
+terms.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p sc-neut-tof_taurine-senju/structures sc-neut-tof_taurine-senju/experiments sc-neut-tof_taurine-senju/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name             sc-neut-tof_taurine-senju
+_metadata.title "Taurine [P2₁/c] · SENJU @ J-PARC"
+_metadata.description "Single crystal · Time of flight · Six datasets · Anisotropic displacements"
+_metadata.authors .
+_metadata.created          "22 Oct 2026 18:00:00"
+_metadata.last_modified    "22 Oct 2026 18:00:00"
+_metadata.timestamp        ?
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data sc-neut-tof_taurine-senju
+    edi download-data sc-neut-tof_taurine-senju-taurine
+    mv data/sc-neut-tof_taurine-senju-taurine.edi sc-neut-tof_taurine-senju/structures/taurine.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data sc-neut-tof_taurine-senju
+    python -m edi download-data sc-neut-tof_taurine-senju-taurine
+    mv data/sc-neut-tof_taurine-senju-taurine.edi sc-neut-tof_taurine-senju/structures/taurine.edi
     ```
 
-## Start with nothing free
+## Define the experiments
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiments into `experiments`: each file declares its instrument, peak profile, background, the structures it links and its measured data.
 
-In `experiments/senju_1.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_extinction.coefficient_11 0
-_extinction.coefficient_22 0
-_extinction.coefficient_33 0
-taurine 2.762
-```
+    ```console
+    edi download-data sc-neut-tof_taurine-senju-senju_1
+    mv data/sc-neut-tof_taurine-senju-senju_1.edi sc-neut-tof_taurine-senju/experiments/senju_1.edi
+    edi download-data sc-neut-tof_taurine-senju-senju_2
+    mv data/sc-neut-tof_taurine-senju-senju_2.edi sc-neut-tof_taurine-senju/experiments/senju_2.edi
+    edi download-data sc-neut-tof_taurine-senju-senju_3
+    mv data/sc-neut-tof_taurine-senju-senju_3.edi sc-neut-tof_taurine-senju/experiments/senju_3.edi
+    edi download-data sc-neut-tof_taurine-senju-senju_4
+    mv data/sc-neut-tof_taurine-senju-senju_4.edi sc-neut-tof_taurine-senju/experiments/senju_4.edi
+    edi download-data sc-neut-tof_taurine-senju-senju_5
+    mv data/sc-neut-tof_taurine-senju-senju_5.edi sc-neut-tof_taurine-senju/experiments/senju_5.edi
+    edi download-data sc-neut-tof_taurine-senju-senju_6
+    mv data/sc-neut-tof_taurine-senju-senju_6.edi sc-neut-tof_taurine-senju/experiments/senju_6.edi
+    ```
 
-In `experiments/senju_2.edi`, remove the `()` from every value; they now read:
+=== "Python package"
 
-```edi
-taurine 3.829
-```
+    ```console
+    python -m edi download-data sc-neut-tof_taurine-senju-senju_1
+    mv data/sc-neut-tof_taurine-senju-senju_1.edi sc-neut-tof_taurine-senju/experiments/senju_1.edi
+    python -m edi download-data sc-neut-tof_taurine-senju-senju_2
+    mv data/sc-neut-tof_taurine-senju-senju_2.edi sc-neut-tof_taurine-senju/experiments/senju_2.edi
+    python -m edi download-data sc-neut-tof_taurine-senju-senju_3
+    mv data/sc-neut-tof_taurine-senju-senju_3.edi sc-neut-tof_taurine-senju/experiments/senju_3.edi
+    python -m edi download-data sc-neut-tof_taurine-senju-senju_4
+    mv data/sc-neut-tof_taurine-senju-senju_4.edi sc-neut-tof_taurine-senju/experiments/senju_4.edi
+    python -m edi download-data sc-neut-tof_taurine-senju-senju_5
+    mv data/sc-neut-tof_taurine-senju-senju_5.edi sc-neut-tof_taurine-senju/experiments/senju_5.edi
+    python -m edi download-data sc-neut-tof_taurine-senju-senju_6
+    mv data/sc-neut-tof_taurine-senju-senju_6.edi sc-neut-tof_taurine-senju/experiments/senju_6.edi
+    ```
 
-In `experiments/senju_3.edi`, remove the `()` from every value; they now read:
-
-```edi
-taurine 3.211
-```
-
-In `experiments/senju_4.edi`, remove the `()` from every value; they now read:
-
-```edi
-taurine 2.809
-```
-
-In `experiments/senju_5.edi`, remove the `()` from every value; they now read:
-
-```edi
-taurine 2.739
-```
-
-In `experiments/senju_6.edi`, remove the `()` from every value; they now read:
-
-```edi
-taurine 2.936
-```
-
-In `structures/taurine.edi`, remove the `()` from every value; they now read:
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-S1 S 0.208 0.34676 0.35118 e 4 1 0 beta
-O1 O 0.33902 0.23701 0.35341 e 4 1 0 beta
-```
+_fitting_mode.type joint
 
-The same for every other row (26 more).
+_refine_ls.threshold_sigma 3
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+x11_1 senju_1.extinction.coefficient_11
+x22_1 senju_1.extinction.coefficient_22
+x33_1 senju_1.extinction.coefficient_33
+x11_2 senju_2.extinction.coefficient_11
+x22_2 senju_2.extinction.coefficient_22
+x33_2 senju_2.extinction.coefficient_33
+x11_3 senju_3.extinction.coefficient_11
+x22_3 senju_3.extinction.coefficient_22
+x33_3 senju_3.extinction.coefficient_33
+x11_4 senju_4.extinction.coefficient_11
+x22_4 senju_4.extinction.coefficient_22
+x33_4 senju_4.extinction.coefficient_33
+x11_5 senju_5.extinction.coefficient_11
+x22_5 senju_5.extinction.coefficient_22
+x33_5 senju_5.extinction.coefficient_33
+x11_6 senju_6.extinction.coefficient_11
+x22_6 senju_6.extinction.coefficient_22
+x33_6 senju_6.extinction.coefficient_33
+
+loop_
+_constraint.id
+_constraint.expression
+x11_2 "x11_2 = x11_1"
+x22_2 "x22_2 = x22_1"
+x33_2 "x33_2 = x33_1"
+x11_3 "x11_3 = x11_1"
+x22_3 "x22_3 = x22_1"
+x33_3 "x33_3 = x33_1"
+x11_4 "x11_4 = x11_1"
+x22_4 "x22_4 = x22_1"
+x33_4 "x33_4 = x33_1"
+x11_5 "x11_5 = x11_1"
+x22_5 "x22_5 = x22_1"
+x33_5 "x33_5 = x33_1"
+x11_6 "x11_6 = x11_1"
+x22_6 "x22_6 = x22_1"
+x33_6 "x33_6 = x33_1"
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+senju_1 1
+senju_2 1
+senju_3 1
+senju_4 1
+senju_5 1
+senju_6 1
+
+_edi.schema_version 3
+```
 
 ## Scales, every site isotropic
 

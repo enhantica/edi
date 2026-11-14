@@ -1,53 +1,77 @@
 # La₀.₅Ba₀.₅CoO₃ on HRPT
 
-The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage. The Python tutorial builds this project by hand; here the command line starts from its starting project instead, since building a project by hand on the command line is planned for a later release.
+The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage. The Python tutorial builds the structure atom by atom; here its file comes from the collection, with the same space group, cell and sites.
 
 This tutorial fits the cubic perovskite La₀.₅Ba₀.₅CoO₃ to constant-wavelength neutron powder data
 measured on HRPT at PSI. It builds the structure by hand, loads the measured pattern from
 EasyDiffraction's collection, describes the experiment, links the two and fits them, showing the
 pattern and the parameters after each step. The other tutorials load their structures from a CIF.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_lbco-hrpt/structures pd-neut-cwl_lbco-hrpt/experiments pd-neut-cwl_lbco-hrpt/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_lbco-hrpt
+_metadata.title "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI"
+_metadata.description "Cubic perovskite · La and Ba sharing one site · Profile, background, displacements"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_lbco-hrpt
+    edi download-data pd-neut-cwl_lbco-hrpt-lbco
+    mv data/pd-neut-cwl_lbco-hrpt-lbco.edi pd-neut-cwl_lbco-hrpt/structures/lbco.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_lbco-hrpt
+    python -m edi download-data pd-neut-cwl_lbco-hrpt-lbco
+    mv data/pd-neut-cwl_lbco-hrpt-lbco.edi pd-neut-cwl_lbco-hrpt/structures/lbco.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/hrpt.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-cwl_lbco-hrpt-hrpt
+    mv data/pd-neut-cwl_lbco-hrpt-hrpt.edi pd-neut-cwl_lbco-hrpt/experiments/hrpt.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-cwl_lbco-hrpt-hrpt
+    mv data/pd-neut-cwl_lbco-hrpt-hrpt.edi pd-neut-cwl_lbco-hrpt/experiments/hrpt.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_twotheta_offset 0.3
-_peak.broad_gauss_u 0.08
-_peak.broad_gauss_v -0.1
-_peak.broad_gauss_w 0.1
-_peak.broad_lorentz_y 0.08
-1 10 160
-2 30 160
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+_fitting_mode.type single
+
+_edi.schema_version 3
 ```
-
-The same for every other row (4 more).
-
-In `structures/lbco.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 3.88
-La La 0 0 0 a 1 0.5 0.5 Biso
-Co Co 0.5 0.5 0.5 b 1 1 0.5 Biso
-```
-
-The same for every other row (1 more).
 
 ## Scale, 2θ zero and cell
 

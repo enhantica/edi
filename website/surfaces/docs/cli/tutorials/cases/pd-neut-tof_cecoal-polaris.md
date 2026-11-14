@@ -5,52 +5,75 @@ The same staged fit as the Python tutorial, on the command line. The command lin
 Fit CeCoAl₃ to time-of-flight neutron powder data from POLARIS at ISIS: structure and profile,
 with a 24-term Chebyshev background.
 
-The project is the catalogue case `pd-neut-tof_cecoal-polaris`, the one the command line and the
-app's Examples open.
+It builds the catalogue case `pd-neut-tof_cecoal-polaris` step by step: the same project the
+command line fits and the app's Examples open.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-tof_cecoal-polaris/structures pd-neut-tof_cecoal-polaris/experiments pd-neut-tof_cecoal-polaris/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-tof_cecoal-polaris
+_metadata.title "CeCoAl₃ [Pmma] · POLARIS @ ISIS"
+_metadata.description "Structure and time-of-flight profile fit · 24-term Chebyshev background"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-tof_cecoal-polaris
+    edi download-data pd-neut-tof_cecoal-polaris-cecoal
+    mv data/pd-neut-tof_cecoal-polaris-cecoal.edi pd-neut-tof_cecoal-polaris/structures/cecoal.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-tof_cecoal-polaris
+    python -m edi download-data pd-neut-tof_cecoal-polaris-cecoal
+    mv data/pd-neut-tof_cecoal-polaris-cecoal.edi pd-neut-tof_cecoal-polaris/structures/cecoal.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/polaris.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-tof_cecoal-polaris-polaris
+    mv data/pd-neut-tof_cecoal-polaris-polaris.edi pd-neut-tof_cecoal-polaris/experiments/polaris.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-tof_cecoal-polaris-polaris
+    mv data/pd-neut-tof_cecoal-polaris-polaris.edi pd-neut-tof_cecoal-polaris/experiments/polaris.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_d_to_tof_offset 0
-_instrument.calib_d_to_tof_quadratic -1.92194
-_peak.broad_gauss_sigma_1 40
-_peak.broad_lorentz_gamma_1 5
-_absorption.abscor1 0
-1 0 25000
-2 1 0
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.chi_square_tolerance 0.0001
+
+_fitting_mode.type single
+
+_edi.schema_version 3
 ```
-
-The same for every other row (11 more).
-
-In `structures/cecoal.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 7.65
-_cell.length_b 4.05
-_cell.length_c 6.91
-Ce Ce 0.25 0 0.38 e 2 1 0.5 Biso
-Co Co 0.25 0 0.81 e 2 1 0.5 Biso
-```
-
-The same for every other row (3 more).
 
 ## Scale, time-of-flight calibration and cell
 

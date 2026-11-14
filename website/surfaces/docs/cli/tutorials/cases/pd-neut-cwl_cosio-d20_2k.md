@@ -6,54 +6,89 @@ Fit the magnetic structure of the olivine Co₂SiO₄ to constant-wavelength neu
 from D20 at ILL, measured at 2.3 K, below its ordering temperature. The cobalt moments order with
 k = 0 in the magnetic space group Pnma.1: Co1 may point in any direction, Co2 only along b.
 
-The project is the catalogue case `pd-neut-cwl_cosio-d20_2k`, the one the command line and the
-app's Examples open. Its two Co sites share one displacement, and the two FCJ asymmetry terms are
-tied, from the start.
+It builds the catalogue case `pd-neut-cwl_cosio-d20_2k` step by step: the same project the
+command line fits and the app's Examples open. Its two Co sites share one displacement, and the
+two FCJ asymmetry terms are tied.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_cosio-d20_2k/structures pd-neut-cwl_cosio-d20_2k/experiments pd-neut-cwl_cosio-d20_2k/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_cosio-d20_2k
+_metadata.title "Co₂SiO₄ [Pnma.1] · D20 @ ILL"
+_metadata.description "Olivine at 2.3 K · Magnetic structure, k = 0"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_cosio-d20_2k
+    edi download-data pd-neut-cwl_cosio-d20_2k-cosio
+    mv data/pd-neut-cwl_cosio-d20_2k-cosio.edi pd-neut-cwl_cosio-d20_2k/structures/cosio.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_cosio-d20_2k
+    python -m edi download-data pd-neut-cwl_cosio-d20_2k-cosio
+    mv data/pd-neut-cwl_cosio-d20_2k-cosio.edi pd-neut-cwl_cosio-d20_2k/structures/cosio.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/d20.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-cwl_cosio-d20_2k-d20
+    mv data/pd-neut-cwl_cosio-d20_2k-d20.edi pd-neut-cwl_cosio-d20_2k/experiments/d20.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-cwl_cosio-d20_2k-d20
+    mv data/pd-neut-cwl_cosio-d20_2k-d20.edi pd-neut-cwl_cosio-d20_2k/experiments/d20.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_twotheta_offset 0.29433
-_peak.broad_gauss_u 0.273527
-_peak.broad_gauss_v -0.589718
-_peak.broad_gauss_w 0.413007
-_peak.broad_lorentz_y 0.017548
-_peak.asym_fcj_1 0
-1 6 603.5
-2 6.5 585
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+_fitting_mode.type single
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Co1 cosio.atom_site.Co1.adp_iso
+biso_Co2 cosio.atom_site.Co2.adp_iso
+sl d20.peak.asym_fcj_1
+dl d20.peak.asym_fcj_2
+
+loop_
+_constraint.id
+_constraint.expression
+biso_Co2 "biso_Co2 = biso_Co1"
+dl "dl = sl"
+
+_edi.schema_version 3
 ```
-
-The same for every other row (15 more).
-
-In `structures/cosio.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 10.3081
-_cell.length_b 6.00219
-_cell.length_c 4.78739
-Co1 Co 0 0 0 a 4 1 0.269 Biso
-Co2 Co 0.2809 0.25 0.9836 c 4 1 0.269 Biso
-```
-
-The same for every other row (7 more).
 
 ## Scale, 2θ zero, cell and magnetic moments
 

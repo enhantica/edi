@@ -5,72 +5,84 @@ The same staged fit as the Python tutorial, on the command line. The command lin
 Fit PbSO₄ to two patterns at once, the Rietveld round robin's neutron pattern from D1A at ILL
 and its laboratory X-ray pattern: one structure, two experiments.
 
-The project is the catalogue case `pd-neut-xray-cwl_pbso4-d1a-lab`, the one the command line and
-the app's Examples open.
+It builds the catalogue case `pd-neut-xray-cwl_pbso4-d1a-lab` step by step: the same project the
+command line fits and the app's Examples open.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-xray-cwl_pbso4-d1a-lab/structures pd-neut-xray-cwl_pbso4-d1a-lab/experiments pd-neut-xray-cwl_pbso4-d1a-lab/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-xray-cwl_pbso4-d1a-lab
+_metadata.title "PbSO₄ [Pnma] · D1A @ ILL and laboratory X-ray"
+_metadata.description "Rietveld round-robin data · Neutron and X-ray patterns fitted jointly"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-xray-cwl_pbso4-d1a-lab
+    edi download-data pd-neut-xray-cwl_pbso4-d1a-lab-pbso4
+    mv data/pd-neut-xray-cwl_pbso4-d1a-lab-pbso4.edi pd-neut-xray-cwl_pbso4-d1a-lab/structures/pbso4.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-xray-cwl_pbso4-d1a-lab
+    python -m edi download-data pd-neut-xray-cwl_pbso4-d1a-lab-pbso4
+    mv data/pd-neut-xray-cwl_pbso4-d1a-lab-pbso4.edi pd-neut-xray-cwl_pbso4-d1a-lab/structures/pbso4.edi
     ```
 
-## Start with nothing free
+## Define the experiments
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiments into `experiments`: each file declares its instrument, peak profile, background, the structures it links and its measured data.
 
-In `experiments/d1a.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.2
-_peak.broad_gauss_v -0.5
-_peak.broad_gauss_w 0.4
-_peak.mixing_eta_0 0.5
-_peak.asym_beba_a0 0
-_peak.asym_beba_b0 0
-_peak.asym_beba_a1 0
-_peak.asym_beba_b1 0
-1 11 200
-2 15 200
-```
+    ```console
+    edi download-data pd-neut-xray-cwl_pbso4-d1a-lab-d1a
+    mv data/pd-neut-xray-cwl_pbso4-d1a-lab-d1a.edi pd-neut-xray-cwl_pbso4-d1a-lab/experiments/d1a.edi
+    edi download-data pd-neut-xray-cwl_pbso4-d1a-lab-lab
+    mv data/pd-neut-xray-cwl_pbso4-d1a-lab-lab.edi pd-neut-xray-cwl_pbso4-d1a-lab/experiments/lab.edi
+    ```
 
-The same for every other row (7 more).
+=== "Python package"
 
-In `experiments/lab.edi`, remove the `()` from every value; they now read:
+    ```console
+    python -m edi download-data pd-neut-xray-cwl_pbso4-d1a-lab-d1a
+    mv data/pd-neut-xray-cwl_pbso4-d1a-lab-d1a.edi pd-neut-xray-cwl_pbso4-d1a-lab/experiments/d1a.edi
+    python -m edi download-data pd-neut-xray-cwl_pbso4-d1a-lab-lab
+    mv data/pd-neut-xray-cwl_pbso4-d1a-lab-lab.edi pd-neut-xray-cwl_pbso4-d1a-lab/experiments/lab.edi
+    ```
 
-```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.02
-_peak.broad_gauss_v -0.02
-_peak.broad_gauss_w 0.008
-_peak.mixing_eta_0 0.5
-_peak.asym_beba_a0 0
-_peak.asym_beba_b0 0
-1 0 140
-2 1 0
-```
-
-The same for every other row (5 more).
-
-In `structures/pbso4.edi`, remove the `()` from every value; they now read:
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_cell.length_a 8.47
-_cell.length_b 5.39
-_cell.length_c 6.95
-Pb Pb 0.19 0.25 0.17 c 4 1 0.5 Biso
-S S 0.07 0.25 0.68 c 4 1 0.5 Biso
-```
+_minimizer.type crysta
+_minimizer.max_iterations 1000
 
-The same for every other row (3 more).
+_fitting_mode.type joint
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+d1a 0.5
+lab 0.5
+
+_edi.schema_version 3
+```
 
 ## Scales, 2θ zeros and cell
 

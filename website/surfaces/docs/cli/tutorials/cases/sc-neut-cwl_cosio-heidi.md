@@ -11,86 +11,87 @@ The data are those of Sazonov et al., Acta Cryst. B 64 (2008) 661-668. The 2.5 K
 usable uncertainties, so they are estimated from the 55 K data of the same crystal (see the
 case's provenance); the fitted 2.5 K uncertainties depend on that estimate.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p sc-neut-cwl_cosio-heidi/structures sc-neut-cwl_cosio-heidi/experiments sc-neut-cwl_cosio-heidi/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name             sc-neut-cwl_cosio-heidi
+_metadata.title "Co₂SiO₄ [Pnma] at 300 K, 55 K and 2.5 K · HEiDi @ MLZ (FRM II)"
+_metadata.description "Single crystal · Three temperatures fitted independently, moments at 2.5 K"
+_metadata.authors .
+_metadata.created          "09 Nov 2026 18:00:00"
+_metadata.last_modified    "09 Nov 2026 18:00:00"
+_metadata.timestamp        ?
+```
+
+## Define the structures
+
+Download the structures from EasyDiffraction's collection into `structures`. Each CIF gives its space group, cell and atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data sc-neut-cwl_cosio-heidi
+    edi download-data sc-neut-cwl_cosio-heidi-cosio_2k5
+    mv data/sc-neut-cwl_cosio-heidi-cosio_2k5.edi sc-neut-cwl_cosio-heidi/structures/cosio_2k5.edi
+    edi download-data sc-neut-cwl_cosio-heidi-cosio_300k
+    mv data/sc-neut-cwl_cosio-heidi-cosio_300k.edi sc-neut-cwl_cosio-heidi/structures/cosio_300k.edi
+    edi download-data sc-neut-cwl_cosio-heidi-cosio_55k
+    mv data/sc-neut-cwl_cosio-heidi-cosio_55k.edi sc-neut-cwl_cosio-heidi/structures/cosio_55k.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data sc-neut-cwl_cosio-heidi
+    python -m edi download-data sc-neut-cwl_cosio-heidi-cosio_2k5
+    mv data/sc-neut-cwl_cosio-heidi-cosio_2k5.edi sc-neut-cwl_cosio-heidi/structures/cosio_2k5.edi
+    python -m edi download-data sc-neut-cwl_cosio-heidi-cosio_300k
+    mv data/sc-neut-cwl_cosio-heidi-cosio_300k.edi sc-neut-cwl_cosio-heidi/structures/cosio_300k.edi
+    python -m edi download-data sc-neut-cwl_cosio-heidi-cosio_55k
+    mv data/sc-neut-cwl_cosio-heidi-cosio_55k.edi sc-neut-cwl_cosio-heidi/structures/cosio_55k.edi
     ```
 
-## Start with nothing free
+## Define the experiments
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiments into `experiments`: each file declares its instrument, peak profile, background, the structures it links and its measured data.
 
-In `experiments/heidi_2k5.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_extinction.coefficient_11 0
-_extinction.coefficient_22 0
-_extinction.coefficient_33 0
-_extinction.coefficient_12 0
-_extinction.coefficient_13 0
-_extinction.coefficient_23 0
-cosio_2k5 10
-```
+    ```console
+    edi download-data sc-neut-cwl_cosio-heidi-heidi_2k5
+    mv data/sc-neut-cwl_cosio-heidi-heidi_2k5.edi sc-neut-cwl_cosio-heidi/experiments/heidi_2k5.edi
+    edi download-data sc-neut-cwl_cosio-heidi-heidi_300k
+    mv data/sc-neut-cwl_cosio-heidi-heidi_300k.edi sc-neut-cwl_cosio-heidi/experiments/heidi_300k.edi
+    edi download-data sc-neut-cwl_cosio-heidi-heidi_55k
+    mv data/sc-neut-cwl_cosio-heidi-heidi_55k.edi sc-neut-cwl_cosio-heidi/experiments/heidi_55k.edi
+    ```
 
-In `experiments/heidi_300k.edi`, remove the `()` from every value; they now read:
+=== "Python package"
 
-```edi
-_extinction.coefficient_11 0
-_extinction.coefficient_22 0
-_extinction.coefficient_33 0
-_extinction.coefficient_12 0
-_extinction.coefficient_13 0
-_extinction.coefficient_23 0
-cosio_300k 10
-```
+    ```console
+    python -m edi download-data sc-neut-cwl_cosio-heidi-heidi_2k5
+    mv data/sc-neut-cwl_cosio-heidi-heidi_2k5.edi sc-neut-cwl_cosio-heidi/experiments/heidi_2k5.edi
+    python -m edi download-data sc-neut-cwl_cosio-heidi-heidi_300k
+    mv data/sc-neut-cwl_cosio-heidi-heidi_300k.edi sc-neut-cwl_cosio-heidi/experiments/heidi_300k.edi
+    python -m edi download-data sc-neut-cwl_cosio-heidi-heidi_55k
+    mv data/sc-neut-cwl_cosio-heidi-heidi_55k.edi sc-neut-cwl_cosio-heidi/experiments/heidi_55k.edi
+    ```
 
-In `experiments/heidi_55k.edi`, remove the `()` from every value; they now read:
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_extinction.coefficient_11 0
-_extinction.coefficient_22 0
-_extinction.coefficient_33 0
-_extinction.coefficient_12 0
-_extinction.coefficient_13 0
-_extinction.coefficient_23 0
-cosio_55k 10
+_fitting_mode.type independent
+
+_edi.schema_version 3
 ```
-
-In `structures/cosio_2k5.edi`, remove the `()` from every value; they now read:
-
-```edi
-Co2 Co 0.27597 0.25 0.99115 c 4 1 0.003 Uani
-Si Si 0.09479 0.25 0.42838 c 4 1 0.003 Uani
-```
-
-The same for every other row (11 more).
-
-In `structures/cosio_300k.edi`, remove the `()` from every value; they now read:
-
-```edi
-Co2 Co 0.27645 0.25 0.99143 c 4 1 0.003 Uani
-Si Si 0.09491 0.25 0.42821 c 4 1 0.003 Uani
-```
-
-The same for every other row (9 more).
-
-In `structures/cosio_55k.edi`, remove the `()` from every value; they now read:
-
-```edi
-Co2 Co 0.27603 0.25 0.99136 c 4 1 0.003 Uani
-Si Si 0.09489 0.25 0.42824 c 4 1 0.003 Uani
-```
-
-The same for every other row (9 more).
 
 ## 300 K: scale
 

@@ -5,51 +5,74 @@ The same staged fit as the Python tutorial, on the command line. The command lin
 Fit the CeO₂ standard to time-of-flight neutron powder data from PEARL at ISIS: the calibration
 and the profile, with a polynomial background.
 
-The project is the catalogue case `pd-neut-tof_ceo2-pearl`, the one the command line and the
-app's Examples open.
+It builds the catalogue case `pd-neut-tof_ceo2-pearl` step by step: the same project the command
+line fits and the app's Examples open.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-tof_ceo2-pearl/structures pd-neut-tof_ceo2-pearl/experiments pd-neut-tof_ceo2-pearl/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-tof_ceo2-pearl
+_metadata.title "CeO₂ [Fm-3m] · PEARL @ ISIS"
+_metadata.description "NBS SRM 674a standard · Calibration and profile fit · 6-term polynomial background"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-tof_ceo2-pearl
+    edi download-data pd-neut-tof_ceo2-pearl-ceo2
+    mv data/pd-neut-tof_ceo2-pearl-ceo2.edi pd-neut-tof_ceo2-pearl/structures/ceo2.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-tof_ceo2-pearl
+    python -m edi download-data pd-neut-tof_ceo2-pearl-ceo2
+    mv data/pd-neut-tof_ceo2-pearl-ceo2.edi pd-neut-tof_ceo2-pearl/structures/ceo2.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/pearl.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_instrument.calib_d_to_tof_offset 0
-_instrument.calib_d_to_tof_linear 4680
-_instrument.calib_d_to_tof_quadratic 1.7621
-_peak.rise_alpha_1 0.3
-_peak.decay_beta_0 0.03
-_peak.decay_beta_1 0.03
-_peak.broad_gauss_sigma_1 80
-_peak.broad_gauss_sigma_2 4
-_peak.broad_lorentz_gamma_1 5
-_absorption.abscor1 0
-1 0 2200
-2 1 0
-```
+    ```console
+    edi download-data pd-neut-tof_ceo2-pearl-pearl
+    mv data/pd-neut-tof_ceo2-pearl-pearl.edi pd-neut-tof_ceo2-pearl/experiments/pearl.edi
+    ```
 
-The same for every other row (5 more).
+=== "Python package"
 
-In `structures/ceo2.edi`, remove the `()` from every value; they now read:
+    ```console
+    python -m edi download-data pd-neut-tof_ceo2-pearl-pearl
+    mv data/pd-neut-tof_ceo2-pearl-pearl.edi pd-neut-tof_ceo2-pearl/experiments/pearl.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-Ce Ce 0 0 0 a 4 1 0.5 Biso
-O O 0.25 0.25 0.25 c 8 1 0.5 Biso
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.chi_square_tolerance 0.0001
+
+_fitting_mode.type single
+
+_edi.schema_version 3
 ```
 
 ## Scale and time-of-flight calibration

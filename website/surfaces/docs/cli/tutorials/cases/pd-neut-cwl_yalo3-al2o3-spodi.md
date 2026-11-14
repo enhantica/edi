@@ -5,65 +5,79 @@ The same staged fit as the Python tutorial, on the command line. The command lin
 Fit two phases, YAlO₃ and corundum Al₂O₃, in one constant-wavelength neutron pattern from SPODI
 at FRM II, measured at 3 K, with a shared Bérar-Baldinozzi profile and cylinder absorption.
 
-The project is the catalogue case `pd-neut-cwl_yalo3-al2o3-spodi`, the one the command line and
-the app's Examples open.
+It builds the catalogue case `pd-neut-cwl_yalo3-al2o3-spodi` step by step: the same project the
+command line fits and the app's Examples open.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_yalo3-al2o3-spodi/structures pd-neut-cwl_yalo3-al2o3-spodi/experiments pd-neut-cwl_yalo3-al2o3-spodi/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_yalo3-al2o3-spodi
+_metadata.title "YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II"
+_metadata.description "2 phases at 3 K · Shared Bérar-Baldinozzi profile · Cylinder absorption"
+_metadata.authors .
+```
+
+## Define the structures
+
+Download the structures from EasyDiffraction's collection into `structures`. Each CIF gives its space group, cell and atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_yalo3-al2o3-spodi
+    edi download-data pd-neut-cwl_yalo3-al2o3-spodi-Al2O3
+    mv data/pd-neut-cwl_yalo3-al2o3-spodi-Al2O3.edi pd-neut-cwl_yalo3-al2o3-spodi/structures/Al2O3.edi
+    edi download-data pd-neut-cwl_yalo3-al2o3-spodi-YAlO3
+    mv data/pd-neut-cwl_yalo3-al2o3-spodi-YAlO3.edi pd-neut-cwl_yalo3-al2o3-spodi/structures/YAlO3.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_yalo3-al2o3-spodi
+    python -m edi download-data pd-neut-cwl_yalo3-al2o3-spodi-Al2O3
+    mv data/pd-neut-cwl_yalo3-al2o3-spodi-Al2O3.edi pd-neut-cwl_yalo3-al2o3-spodi/structures/Al2O3.edi
+    python -m edi download-data pd-neut-cwl_yalo3-al2o3-spodi-YAlO3
+    mv data/pd-neut-cwl_yalo3-al2o3-spodi-YAlO3.edi pd-neut-cwl_yalo3-al2o3-spodi/structures/YAlO3.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/spodi.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.04
-_peak.broad_gauss_v -0.05
-_peak.broad_gauss_w 0.1
-_peak.mixing_eta_0 0.1
-_peak.asym_beba_a0 0
-_peak.asym_beba_b0 0
-_peak.asym_beba_a1 0
-_peak.asym_beba_b1 0
-1 4.05 2100
-2 4.777 2100
-```
+    ```console
+    edi download-data pd-neut-cwl_yalo3-al2o3-spodi-spodi
+    mv data/pd-neut-cwl_yalo3-al2o3-spodi-spodi.edi pd-neut-cwl_yalo3-al2o3-spodi/experiments/spodi.edi
+    ```
 
-The same for every other row (25 more).
+=== "Python package"
 
-In `structures/Al2O3.edi`, remove the `()` from every value; they now read:
+    ```console
+    python -m edi download-data pd-neut-cwl_yalo3-al2o3-spodi-spodi
+    mv data/pd-neut-cwl_yalo3-al2o3-spodi-spodi.edi pd-neut-cwl_yalo3-al2o3-spodi/experiments/spodi.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_cell.length_a 4.76
-_cell.length_c 12.97
-Al1 Al 0 0 0.33 c 12 1 0.5 Biso
-O1 O 0.35 0 0.25 e 18 1 0.5 Biso
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.stop_rules "chi_square_change"
+
+_fitting_mode.type single
+
+_edi.schema_version 3
 ```
-
-In `structures/YAlO3.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 5.17
-_cell.length_b 5.33
-_cell.length_c 7.36
-Y Y 0.01 0.55 0.25 c 4 1 0.5 Biso
-Al Al 0 0 0 a 4 1 0.5 Biso
-```
-
-The same for every other row (2 more).
 
 ## Cells, scales and 2θ zero
 

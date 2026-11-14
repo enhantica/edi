@@ -5,41 +5,74 @@ The same staged fit as the Python tutorial, on the command line. The command lin
 Fit the layered nickelate Pr₂NiO₄ to constant-wavelength neutron single-crystal data from 5C2 at
 LLB, with anisotropic displacements.
 
-The project is the catalogue case `sc-neut-cwl_pr2nio4-5c2`, the one the command line and the
-app's Examples open.
+It builds the catalogue case `sc-neut-cwl_pr2nio4-5c2` step by step: the same project the command
+line fits and the app's Examples open.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p sc-neut-cwl_pr2nio4-5c2/structures sc-neut-cwl_pr2nio4-5c2/experiments sc-neut-cwl_pr2nio4-5c2/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name             sc-neut-cwl_pr2nio4-5c2
+_metadata.title "Pr₂NiO₄ [Fmmm] · 5C2 @ LLB"
+_metadata.description "Single crystal · Anisotropic displacements and coordinates from a rough start"
+_metadata.authors .
+_metadata.created          "22 Oct 2026 18:00:00"
+_metadata.last_modified    "22 Oct 2026 18:00:00"
+_metadata.timestamp        ?
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data sc-neut-cwl_pr2nio4-5c2
+    edi download-data sc-neut-cwl_pr2nio4-5c2-pr2nio4
+    mv data/sc-neut-cwl_pr2nio4-5c2-pr2nio4.edi sc-neut-cwl_pr2nio4-5c2/structures/pr2nio4.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data sc-neut-cwl_pr2nio4-5c2
+    python -m edi download-data sc-neut-cwl_pr2nio4-5c2-pr2nio4
+    mv data/sc-neut-cwl_pr2nio4-5c2-pr2nio4.edi sc-neut-cwl_pr2nio4-5c2/structures/pr2nio4.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/llb_5c2.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data sc-neut-cwl_pr2nio4-5c2-llb_5c2
+    mv data/sc-neut-cwl_pr2nio4-5c2-llb_5c2.edi sc-neut-cwl_pr2nio4-5c2/experiments/llb_5c2.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data sc-neut-cwl_pr2nio4-5c2-llb_5c2
+    mv data/sc-neut-cwl_pr2nio4-5c2-llb_5c2.edi sc-neut-cwl_pr2nio4-5c2/experiments/llb_5c2.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-pr2nio4 4
+_fitting_mode.type single
+
+_edi.schema_version 3
 ```
-
-In `structures/pr2nio4.edi`, remove the `()` from every value; they now read:
-
-```edi
-Pr Pr 0 0 0.362 i 8 1 0 Bani
-O2 O 0 0 0.176 i 8 0.722965 0 Bani
-```
-
-The same for every other row (6 more).
 
 ## Scale
 

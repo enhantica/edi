@@ -25,12 +25,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PAGES = ROOT / 'website/surfaces/docs/cli/tutorials/cases'
 SHOWN_LINES = 12
-# A case whose Python tutorial builds its structure and experiment by hand starts here from its
-# starting project, as building a project by hand on the command line is still to come.
+# A case whose Python tutorial builds its structure atom by atom takes the structure's file
+# from the collection here, as a structure file is rarely typed by hand.
 BY_HAND = (
-    ' The Python tutorial builds this project by hand; here the command line starts from its '
-    'starting project instead, since building a project by hand on the command line is planned '
-    'for a later release.'
+    ' The Python tutorial builds the structure atom by atom; here its file comes from the '
+    'collection, with the same space group, cell and sites.'
 )
 # The lines of a stage that change the project: what it frees or fixes, a value it resets, and
 # its aliases and constraints.
@@ -238,6 +237,69 @@ def edited(edits: list[tuple[str, str, list[str]]], words: dict[str, str] = WORD
     return '\n'.join(out)
 
 
+def downloads(case: str, kind: str, names: list[str]) -> str:
+    """Download each entry and move it into the project's folder under its own name."""
+    lines = []
+    for name in names:
+        lines += [
+            f'{{edi}} download-data {case}-{name}',
+            f'mv data/{case}-{name}.edi {case}/{kind}/{name}.edi',
+        ]
+    return (
+        '=== "Standalone executable"\n\n    ```console\n'
+        + ''.join(f'    {line.format(edi="edi")}\n' for line in lines)
+        + '    ```\n\n=== "Python package"\n\n    ```console\n'
+        + ''.join(f'    {line.format(edi="python -m edi")}\n' for line in lines)
+        + '    ```\n'
+    )
+
+
+def build(case: str, files: dict[str, list[str]]) -> list[str]:
+    """The project built step by step, as the Python tutorial and the app build it.
+
+    `files` holds the project's files as the steps leave them: `project.edi` and the analysis
+    file are written in a text editor, the structures and experiments downloaded.
+    """
+    project = ROOT / f'docs/user/cli/{case}/project'
+    structures = sorted(path.stem for path in (project / 'structures').glob('*.edi'))
+    experiments = sorted(path.stem for path in (project / 'experiments').glob('*.edi'))
+    analysis = '\n'.join(files.get('analysis/analysis.edi', [])).strip()
+    parts = [
+        '## Define the project\n',
+        (
+            'Make a folder for the project, with a folder each for its structures, experiments '
+            'and analysis.\n'
+        ),
+        f'```console\nmkdir -p {case}/structures {case}/experiments {case}/analysis\n```\n',
+        'Write `project.edi` in it with a text editor such as VS Code:\n',
+        '```edi\n' + (project / 'project.edi').read_text(encoding='utf-8').strip() + '\n```\n',
+        f'## Define the {"structure" if len(structures) == 1 else "structures"}\n',
+        (
+            "Download the structure from EasyDiffraction's collection into `structures`. "
+            'Its CIF gives the space group, the cell and the atom sites.\n'
+            if len(structures) == 1
+            else "Download the structures from EasyDiffraction's collection into `structures`. "
+            'Each CIF gives its space group, cell and atom sites.\n'
+        ),
+        downloads(case, 'structures', structures),
+        f'## Define the {"experiment" if len(experiments) == 1 else "experiments"}\n',
+        (
+            'Download the experiment into `experiments`: the file declares the instrument, the '
+            'peak profile, the background, the structures it links and the measured data.\n'
+            if len(experiments) == 1
+            else 'Download the experiments into `experiments`: each file declares its instrument, '
+            'peak profile, background, the structures it links and its measured data.\n'
+        ),
+        downloads(case, 'experiments', experiments),
+    ]
+    if analysis:
+        parts += [
+            'Then write how the project is fitted in `analysis/analysis.edi`:\n',
+            '```edi\n' + analysis + '\n```\n',
+        ]
+    return parts
+
+
 def render_calculation(case: str, title: str) -> Path:
     """A case with nothing to fit: get the project, calculate it and write its report.
 
@@ -264,8 +326,7 @@ def render_calculation(case: str, title: str) -> Path:
             'Nothing to fit: edi calculates from the model as the project holds it, as the Python '
             'tutorial does.\n'
         ),
-        '## Get the project\n',
-        tabs(f'download-data {case}'),
+        *build(case, snapshot(ROOT / f'docs/user/cli/{case}/project')),
         '## Calculate\n',
         (
             'Calculate the project without writing the result back (drop `--dry` to save it into '
@@ -304,7 +365,13 @@ def render(case: str, binary: Path) -> Path:  # noqa: PLR0914, PLR0915 - one pag
         project = edi.Project.load(str(work))
         # One save first, so every snapshot below is in edi's own layout and only the edits differ.
         project.save_as(str(work))
-        created = set(re.findall(r"\.(?:aliases|constraints)\.create\(id='([^']+)'", source))
+        # A relation the tutorial adds in a stage is added there; the setup's are in the files.
+        created = set(
+            re.findall(
+                r"\.(?:aliases|constraints)\.create\(id='([^']+)'",
+                source[source.index('## Perform the analysis') :],
+            )
+        )
         for collection in (project.analysis.constraints, project.analysis.aliases):
             for item_id in [item.id for item in collection if item.id in created]:
                 collection.remove(item_id)
@@ -321,17 +388,7 @@ def render(case: str, binary: Path) -> Path:  # noqa: PLR0914, PLR0915 - one pag
                 '`edi fit`, which writes the fitted values back into the project for the next '
                 'stage.' + (BY_HAND if 'project.structures.create(' in source else '') + '\n'
             ),
-            '## Get the project\n',
-            tabs(f'download-data {case}'),
-            '## Start with nothing free\n',
-            (
-                'The project marks what its finished fit frees. Remove every `()`, so the stages '
-                'below free one group at a time.\n'
-            ),
-            edited(
-                changes(before, snapshot(work), set()),
-                {'fixed': 'remove the `()` from every value; they now read'},
-            ),
+            *build(case, before),
         ]
         namespace = {'project': project}
         exec(names(source), namespace)  # noqa: S102 - the tutorial's own name lines
