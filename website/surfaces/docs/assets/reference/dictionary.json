@@ -2186,26 +2186,6 @@
         {
             "category": "absorption",
             "cif_names": [
-                "_edi_absorption.abscor2"
-            ],
-            "description": "TOF sample absorption lambda-power ABSCOR2 (round-tripped, held fixed; freeing it is a hard error).",
-            "dtype": "float",
-            "edi_aliases": [
-            ],
-            "edi_tag": "_absorption.abscor2",
-            "label": "ABSCOR2",
-            "name": "abscor2",
-            "options": [
-            ],
-            "parameter": true,
-            "uid": "absorption.abscor2",
-            "units": "",
-            "variants": [
-            ]
-        },
-        {
-            "category": "absorption",
-            "cif_names": [
                 "_edi_absorption.mu_r",
                 "_easydiffraction_absorption.mu_r"
             ],
