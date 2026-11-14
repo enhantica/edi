@@ -16,11 +16,13 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.fixtures.example_catalogue.tutorial_identity import load_paths
+from tests.fixtures.example_catalogue.tutorial_assets import assets
+from tests.fixtures.example_catalogue.tutorial_identity import assert_case_downloads
 from tests.fixtures.example_catalogue.tutorial_identity_cases import (
     INVALID_DOWNLOADS,
     VALID_DOWNLOADS,
 )
+from tests.fixtures.tutorial_cases.install_cell import INSTALL_CELL
 
 ROOT = Path(__file__).resolve().parents[3]
 TUTORIALS = ROOT / 'docs/user/tutorials'
@@ -28,6 +30,7 @@ DECLARATION = TUTORIALS / 'execution-exclusions.yml'
 CHECKER = ROOT / 'tools/checks/tutorial_execution_exclusions.py'
 EXPECTED = {
     'pd-neut-cwl_lbco_simulation': 'tutorial-runner',
+    'sc-neut-cwl_tb2ti2o7-heidi_simulation': 'tutorial-runner',
     'pd-neut-cwl_lbco-hrpt': 'tutorial-runner',
     'pd-neut-cwl_hs-hrpt': 'tutorial-runner',
     'pd-neut-cwl_cosio-d20': 'tutorial-runner',
@@ -49,6 +52,7 @@ EXPECTED = {
     'sc-neut-cwl_tb2ti2o7-heidi': 'tutorial-runner',
     'sc-neut-cwl_pr2nio4-5c2': 'tutorial-runner',
     'sc-neut-tof_taurine-senju': 'tutorial-runner',
+    'sc-neut-cwl_cosio-heidi': 'tutorial-runner',
 }
 
 
@@ -59,9 +63,7 @@ def assert_downloaded_notebook(stem, text):
     code = '\n'.join(
         ''.join(cell['source']) for cell in document['cells'] if cell['cell_type'] == 'code'
     )
-    assert 'edi.download_data(' in code and load_paths(code) == [f'../cli/{stem}/project'], (
-        'Each portable notebook must load the result of its own named collection download'
-    )
+    assert_case_downloads(stem, code, ROOT)
     assert 'This tutorial is not run' not in text, (
         'A portable downloaded notebook must not retain the obsolete local-project warning'
     )
@@ -69,15 +71,65 @@ def assert_downloaded_notebook(stem, text):
 
 @pytest.mark.parametrize('source', INVALID_DOWNLOADS.values(), ids=INVALID_DOWNLOADS)
 def test_portable_notebook_refuses_a_download_that_does_not_supply_the_load(source):
-    notebook = json.dumps({'cells': [{'cell_type': 'code', 'source': [source]}]})
-    with pytest.raises(AssertionError, match=r'download|assignment'):
-        assert_downloaded_notebook('right', notebook)
+    for prefix in ('', INSTALL_CELL):
+        notebook = json.dumps({'cells': [{'cell_type': 'code', 'source': [prefix + source]}]})
+        with pytest.raises(AssertionError, match=r'download|assignment'):
+            assert_downloaded_notebook('right', notebook)
 
 
 @pytest.mark.parametrize('source', VALID_DOWNLOADS.values(), ids=VALID_DOWNLOADS)
 def test_portable_notebook_accepts_its_adjacent_unmodified_download(source):
-    notebook = json.dumps({'cells': [{'cell_type': 'code', 'source': [source]}]})
-    assert_downloaded_notebook('right', notebook)
+    for prefix in ('', INSTALL_CELL):
+        notebook = json.dumps({'cells': [{'cell_type': 'code', 'source': [prefix + source]}]})
+        assert_downloaded_notebook('right', notebook)
+
+
+ASSET_BUILD = """project = edi.Project(name='right')
+path = edi.download_data('right-structure', destination='data')
+project.structures.add_from_cif_path(path)
+data_paths = {'300k': edi.download_data('right-data', destination='data')}
+for temperature, datum in data_paths.items():
+    project.experiments.add_from_data_path(name=temperature, data_path=datum)
+"""
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'wrong-path',
+        'reassignment',
+        'unused',
+        'detached-dict',
+        'dict-write',
+        'duplicate-key',
+        'unreached',
+        'wrong-loop',
+        'keyword-unpack',
+        'late-project',
+    ],
+)
+def test_model_building_asset_observer_refuses_disconnected_downloads(damage):
+    assert assets(INSTALL_CELL + ASSET_BUILD) == ['right-structure', 'right-data']
+    changes = {
+        'wrong-path': ('add_from_cif_path(path)', 'add_from_cif_path(other)'),
+        'reassignment': ('project.structures', "path = 'wrong'\nproject.structures"),
+        'unused': ('project.structures.add_from_cif_path(path)', 'print(path)'),
+        'detached-dict': ('for temperature', 'print(data_paths)\nfor temperature'),
+        'dict-write': ('for temperature', "data_paths['300k'] = 'wrong'\nfor temperature"),
+        'duplicate-key': ("{'300k':", "{'300k': 'wrong', '300k':"),
+        'unreached': ('name=temperature', 'name=temperature'),
+        'wrong-loop': ('in data_paths.items()', 'in other.items()'),
+        'keyword-unpack': ('data_path=datum)', 'data_path=datum, **options)'),
+        'late-project': ("project = edi.Project(name='right')\n", ''),
+    }
+    before, after = changes[damage]
+    broken = ASSET_BUILD.replace(before, after)
+    if damage == 'unreached':
+        broken += "def unused():\n    return edi.download_data('wrong')\n"
+    if damage == 'late-project':
+        broken += "project = edi.Project(name='right')\n"
+    with pytest.raises(AssertionError):
+        assets(INSTALL_CELL + broken)
 
 
 def _walk(value: object) -> Iterator[object]:
@@ -169,8 +221,8 @@ def test_c34_t1a_exclusion_declaration_is_exact_and_each_notebook_names_its_unbl
         )
         source = (TUTORIALS / f'{stem}.py').read_text(encoding='utf-8')
         notebook = (TUTORIALS / f'{stem}.ipynb').read_text(encoding='utf-8')
-        assert 'execution-exclusions.yml' in source, (
-            f'Tutorial source {stem} must retain its authoritative CI execution exclusion'
+        assert_downloaded_notebook(
+            stem, json.dumps({'cells': [{'cell_type': 'code', 'source': [source]}]})
         )
         assert_downloaded_notebook(stem, notebook)
 
@@ -181,11 +233,8 @@ def test_c34_t1a_ports_replace_deferred_switches_and_delete_only_max_workers() -
         notebook_path = TUTORIALS / f'{stem}.ipynb'
         source = source_path.read_text(encoding='utf-8')
         notebook_text = notebook_path.read_text(encoding='utf-8')
-        assert 'edi.Project.load(' in source, (
-            'Every catalogue tutorial must load its shared project'
-        )
-        assert 'execution-exclusions.yml' in source, (
-            'The editable tutorial source keeps its explicit CI execution exclusion'
+        assert_downloaded_notebook(
+            stem, json.dumps({'cells': [{'cell_type': 'code', 'source': [source]}]})
         )
         assert_downloaded_notebook(stem, notebook_text)
         assert 'max_workers' not in source and 'max_workers' not in notebook_text, (

@@ -1,6 +1,5 @@
 """The owner-selected cases retain their identity across each public form."""
 
-import ast
 import hashlib
 import json
 import operator
@@ -11,14 +10,16 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.example_catalogue.current_selection import current_cases
 from tests.fixtures.example_catalogue.retained_bytes import retained_bytes
+from tests.fixtures.example_catalogue.tutorial_identity import assert_case_downloads
 from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
 CLI = ROOT / 'docs/user/cli'
 TUTORIALS = ROOT / 'docs/user/tutorials'
 FIXTURE = ROOT / 'tests/fixtures/example_catalogue'
-SELECTION = json.loads((FIXTURE / 'catalogue-selection.json').read_text())['cases']
+SELECTION = current_cases()
 SELECTED = [row['id'] for row in SELECTION]
 REFERENCE_SELECTED = json.loads((FIXTURE / 'catalogue-selection.json').read_text())[
     'fullprof_cases'
@@ -57,20 +58,6 @@ def page_cases(path):
     return cases
 
 
-def load_paths(source):
-    tree = ast.parse(source)
-    paths = []
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
-            continue
-        if node.func.attr == 'load' and ast.unparse(node.func.value).endswith('Project'):
-            assert len(node.args) == 1 and isinstance(node.args[0], ast.Constant), (
-                'A tutorial must load one explicit project path, checkable before execution'
-            )
-            paths.append(node.args[0].value)
-    return paths
-
-
 @pytest.mark.parametrize('surface', ['registry', 'metadata', 'cli-page', 'tutorial-page'])
 def test_selected_cases_and_order_match_the_independent_owner_selection(surface):
     if surface == 'registry':
@@ -102,13 +89,10 @@ def test_each_case_has_one_project_and_matching_tutorial_sources(case):
     assert source.is_file() and notebook.is_file(), (
         'Every selected case must have both tutorial forms'
     )
-    expected = [f'../cli/{case}/project']
-    assert load_paths(source.read_text()) == expected, (
-        'The tutorial must load its own catalogue project'
-    )
+    assert_case_downloads(case, source.read_text(), ROOT)
     cells = json.loads(notebook.read_text())['cells']
     code = '\n'.join(''.join(cell['source']) for cell in cells if cell['cell_type'] == 'code')
-    assert load_paths(code) == expected, 'Notebook and source must load the same catalogue project'
+    assert_case_downloads(case, code, ROOT)
     assert all(not cell.get('outputs') for cell in cells), (
         'Disabled tutorials must have no saved outputs'
     )

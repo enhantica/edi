@@ -101,3 +101,13 @@ prevent.
   this boundary.
 - **Index tutorials in `edi-data`.** Rejected: notebooks change with the code and the docs; the data collection is
   versioned separately.
+
+
+The passive tutorial input observer covers both whole-project downloads and the
+existing model-building tutorials that consume collection CIFs and measurements.
+It validates adjacent download/consumer assignments and literal temperature maps,
+with the same guarded-install syntax handling. Declared native input files determine
+the required asset identities; unused downloads, changed variables, duplicate map
+keys, indirect paths and unreachable download calls refuse. Execution exclusions
+remain governed by their explicit shared declaration rather than obsolete embedded
+warnings in portable notebooks.
