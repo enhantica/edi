@@ -13,7 +13,19 @@ import yaml
 ROOT = Path(__file__).resolve().parents[3]
 INPUTS = {
     'app/**',
-    'tests/system/manual/e04_t11_browser.mjs',
+    'tests/system/manual/*.mjs',
+    'tests/fixtures/e04_t11_wasm/**',
+    'tests/fixtures/survey/**',
+    'tests/system/py/test_survey_events.py',
+    'tests/integration/py/test_preferences_and_survey.py',
+    'website/surfaces/docs/assets/survey/**',
+    'website/surfaces/docs/about/survey.md',
+    'website/surfaces/mkdocs.yml',
+    'website/build.py',
+    'pixi.toml',
+    'pixi.lock',
+    'tools/ci/crysta*',
+    'tools/ci/compiler_cache.py',
     '.github/actions/wasm-cache/**',
     '.github/workflows/ci.yml',
     '.github/workflows/pages.yml',
@@ -274,3 +286,15 @@ def test_shared_cache_rejects_missing_save_wrong_identity_and_bypassed_validatio
             key['run'] = key['run'].replace('${{ github.job }}', 'shared-job')
         with pytest.raises(AssertionError):
             cache_action_boundary(changed)
+
+
+def test_survey_browser_checks_run_after_the_shared_chrome_toolchain_is_installed():
+    steps = workflow()['app-wasm']['steps']
+    toolchain = next(step for step in steps if step.get('run') == 'pixi run -e app wasm-toolchain')
+    surveys = [step for step in steps if 'test_survey_events.py' in step.get('run', '')]
+    assert len(surveys) == 1 and steps.index(toolchain) < steps.index(surveys[0])
+    assert not surveys[0].get('if') and not surveys[0].get('continue-on-error'), (
+        'The browser qualification job cannot silently skip or forgive the survey checks'
+    )
+    core = workflow()['core']
+    assert not any('test_survey_events.py' in step.get('run', '') for step in core['steps'])

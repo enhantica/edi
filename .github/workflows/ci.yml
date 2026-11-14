@@ -59,7 +59,7 @@ jobs:
           filters: |
             app_build: ['tools/ci/app-build.sh']
             # Qualify app, browser transport and publication infrastructure changes.
-            wasm_build: ['app/**', 'tools/ci/wasm*', '.github/workflows/ci.yml', '.github/workflows/pages.yml', '.github/actions/wasm-cache/**', 'tests/system/manual/e04_t11_browser.mjs']
+            wasm_build: ['app/**', 'tools/ci/wasm*', '.github/workflows/ci.yml', '.github/workflows/pages.yml', '.github/actions/wasm-cache/**', 'tests/system/manual/*.mjs', 'tests/fixtures/e04_t11_wasm/**', 'tests/fixtures/survey/**', 'tests/system/py/test_survey_events.py', 'tests/integration/py/test_preferences_and_survey.py', 'website/surfaces/docs/assets/survey/**', 'website/surfaces/docs/about/survey.md', 'website/surfaces/mkdocs.yml', 'website/build.py', 'pixi.toml', 'pixi.lock', 'tools/ci/crysta*', 'tools/ci/compiler_cache.py']
 
   # The crysta SDK this run builds against, once per crysta commit (edi ADR-0083).
   crysta-sdk:
@@ -870,6 +870,8 @@ jobs:
         run: pixi run core-build
       - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
         run: pixi run -e app wasm-toolchain
+      - name: Survey event windows in the browser
+        run: pixi run --skip-deps python -m pytest tests/system/py/test_survey_events.py
       - name: Reset browser compiler-cache statistics
         run: pixi run --skip-deps ccache --zero-stats
       - name: Build the multithread kit and pack the site

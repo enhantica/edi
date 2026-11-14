@@ -335,3 +335,11 @@ attempt, including a failed qualification. The original pack exit status still
 refuses source archiving and artifact promotion. Crysta normalizes only its own
 isolated scratch paths for compiler caching; every platform runs the same real
 CMake hit/invalidation preflight before the normal C++ and corpus qualification.
+
+Survey date-window controls run in the browser job immediately after the shared
+Chrome toolchain is installed. They stage authored assets plus the actual generated
+feedback settings and execute the survey, including its permanent General choice
+and inclusive dated-event windows. Core's in-process test tier has no browser
+prerequisite. Changes to these controls/assets, browser observers, source-receipt
+helpers, the engine pin or package locks require browser qualification through the
+same changed-input filter; explicit omission controls guard that declaration.

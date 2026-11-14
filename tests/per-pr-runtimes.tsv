@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T04:26:19Z
+# measured_utc = 2026-11-14T04:36:07Z
 #
-# Recorded from: measured test run (72 node(s) measured once, 175832 banked, 129 stale row(s) dropped)
-# Collected tests: 244763; with a reported duration: 77047
+# Recorded from: measured test run (6 node(s) measured once, 175904 banked, 5 stale row(s) dropped)
+# Collected tests: 244764; with a reported duration: 77053
 # Module-scoped fixture costs recorded: 190
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 244763
+# inventory_python = 244764
 # inventory_cpp = 402
-# inventory_measured = 175904
-# inventory_unmeasured = 69261
+# inventory_measured = 175910
+# inventory_unmeasured = 69256
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85496
+# inventory_pr_python = 85497
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -167765,11 +167765,6 @@ UNMEASURED:awaiting working feature and runner qualification	tests/integration/p
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_preferences_tab_order_and_removed_controls
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_stacked_uses_palette_while_map_retains_its_selector
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_ai_questions_are_separate
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-09T23:59:59Z]
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-10T00:00:00Z]
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-11T12:00:00Z]
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-12T23:59:59Z]
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-13T00:00:00Z]
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_navigation_and_question_groups
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[Clang]
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[New design helper]
@@ -170303,6 +170298,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_webp.py::test_t
 0.010	tests/integration/py/test_wasm_ci_inputs.py::test_shared_cache_action_refuses_unknown_operations_before_any_cache_side_effect[save]
 0.010	tests/integration/py/test_wasm_ci_inputs.py::test_shared_cache_action_refuses_unknown_operations_before_any_cache_side_effect[upload]
 0.000	tests/integration/py/test_wasm_ci_inputs.py::test_shared_cache_rejects_missing_save_wrong_identity_and_bypassed_validation
+0.100	tests/integration/py/test_wasm_ci_inputs.py::test_survey_browser_checks_run_after_the_shared_chrome_toolchain_is_installed
 0.060	tests/integration/py/test_wasm_ci_inputs.py::test_wasm_change_filter_covers_every_shared_build_input_and_rejects_omissions
 0.018	tests/integration/py/test_weight_fraction_app.py::test_linked_structure_table_displays_weight_fraction_without_an_editor
 0.210	tests/integration/py/test_weight_fraction_app.py::test_single_fraction_cell_renders_unity_and_preserves_multiphase_formatting
@@ -237384,6 +237380,11 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_
 0.240	tests/system/py/test_structure_cif_refusal_cli.py::test_cli_discovers_structure_cif_members[upper-suffix-upper]
 UNMEASURED:failed-in-this-run	tests/system/py/test_structure_component_curves.py::test_two_structure_curves_match_independent_scale_zero_controls[expt_n2]
 UNMEASURED:failed-in-this-run	tests/system/py/test_structure_component_curves.py::test_two_structure_curves_match_independent_scale_zero_controls[expt_s2]
+1.470	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[2030-05-09T23:59:59Z]
+1.230	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[2030-05-10T00:00:00Z]
+1.110	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[2030-05-11T12:00:00Z]
+0.970	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[2030-05-12T23:59:59Z]
+0.920	tests/system/py/test_survey_events.py::test_survey_event_windows_in_browser[2030-05-13T00:00:00Z]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-browser]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[environment-desktop]
 0.000	tests/system/py/test_thread_selector.py::test_auto_contract_refuses_wrong_admission_without_requiring_full_participation[overfull-fill-browser]
