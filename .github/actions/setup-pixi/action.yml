@@ -38,3 +38,7 @@ runs:
         cache: ${{ inputs.cache }}
         frozen: true
         post-cleanup: false
+
+    - name: Keep the selected Bash available to child processes
+      shell: bash
+      run: python tools/ci/native_shell.py "$BASH"

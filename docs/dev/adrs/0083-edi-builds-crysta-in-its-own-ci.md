@@ -394,3 +394,11 @@ and every scientific hash. Later saved stop diagnostics must match the live
 fit, with unique finite nonnegative values at serialization precision, before
 only those fields and the explicit historical selectors leave the old-format
 comparison. Ordinary saves and current-default solver qualification are unchanged.
+
+
+The common Pixi setup also exposes the actual Bash selected by Actions to Python
+children. It passes that running executable directly to one Python helper and
+prepends its validated directory through GITHUB_PATH, without rediscovering a
+shell by name. This prevents Windows' unrelated WSL launcher from intercepting
+nested Bash commands. The same entry point and validation run on every host;
+missing executables or multiline environment entries refuse before mutation.
