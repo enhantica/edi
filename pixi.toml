@@ -384,6 +384,14 @@ native-wiring = { cmd = ["bash", "tools/ci/native-wiring-tests.sh"], depends-on 
 # in a consumer job, where core-build only restores the native build.
 crysta-sdk = "bash tools/ci/build-crysta.sh && bash tools/ci/crysta-src.sh"
 core-build = { cmd = ["bash", "tools/ci/core-build.sh"] }  # acquires the SDK inside its producer lock
+# The command line's build and run tasks, the same as the app's (docs/dev/local-crysta.md): build it into
+# build/cli against the pinned crysta SDK; build, then run it (`pixi run cli fit docs/user/cli/<case>/project`);
+# run the built CLI without building; and, for development only, build crysta from a local checkout, build the
+# CLI against it and run it (`pixi run cli-with-crysta ../crysta fit ...`).
+cli-build = { cmd = ["bash", "tools/ci/cli-build.sh"] }
+cli = { cmd = "bash tools/ci/cli-build.sh && bash tools/ci/cli-run.sh" }
+cli-run = { cmd = ["bash", "tools/ci/cli-run.sh"] }
+cli-with-crysta = { cmd = ["bash", "tools/dev/cli-with-crysta.sh"] }
 # Pin the crysta commit edi builds (`pixi run crysta-sdk-pin <sha>`, edi ADR-0083).
 crysta-sdk-pin = { cmd = ["python", "tools/ci/crysta_sdk_pin.py"] }
 crysta-consumer = { cmd = ["bash", "tools/ci/crysta-consumer.sh"], depends-on = ["core-build"] }
