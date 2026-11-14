@@ -3,7 +3,7 @@
 import hashlib
 import json
 import subprocess
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from types import SimpleNamespace
 
 import pytest
@@ -318,3 +318,23 @@ def check_delivered_snapshot(receipt, root):
         and snapshot.read_bytes() == delivered.read_bytes()
         and receipt['binary'] == hashlib.sha256(delivered.read_bytes()).hexdigest()
     ), 'the desktop screen dispatch binds a checked snapshot of the delivered normal app'
+
+
+@pytest.mark.parametrize('path_type', [PurePosixPath, PureWindowsPath])
+def test_real_receipt_inputs_keep_portable_source_keys_on_both_path_styles(
+    namespace, monkeypatch, path_type
+):
+    root, sdk, source, fixture = namespace
+    expected = builds.inputs('scan', 'native', root, sdk, source, fixture)
+    native = type(root)
+    relative_to = native.relative_to
+
+    def relative_path(self, *args, **kwargs):
+        return path_type(*relative_to(self, *args, **kwargs).parts)
+
+    monkeypatch.setattr(native, 'relative_to', relative_path)
+    actual = builds.inputs('scan', 'native', root, sdk, source, fixture)
+    assert actual == expected, (
+        'Every compiled source/header/recipe key is independent of host separators'
+    )
+    assert 'src/value.cpp' in actual['sdk']['sources']

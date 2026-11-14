@@ -36,7 +36,7 @@ def inputs(owner, backend, root, sdk, source, fixture):
         'production': fingerprint(root),
         'sdk': sdk_inputs(sdk, source),
         'sdk_files': {
-            str(path.relative_to(sdk)): hashlib.sha256(path.read_bytes()).hexdigest()
+            path.relative_to(sdk).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
             for base in (sdk / 'include', sdk / 'lib', sdk / 'share/crysta-sdk')
             for path in base.rglob('*')
             if path.is_file()

@@ -13,7 +13,7 @@ def files(directory):
                 'Qualified GUI/browser trees refuse linked directories or broken links'
             )
         if path.is_file():
-            result[str(path.relative_to(directory))] = hashlib.sha256(
+            result[path.relative_to(directory).as_posix()] = hashlib.sha256(
                 path.read_bytes()
             ).hexdigest()
     return result
@@ -48,7 +48,7 @@ def dependencies(owner, root):
     return {
         'gui': identity,
         'recipes': {
-            str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+            path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
             if path.is_file()
             else None
             for path in sorted(recipes)

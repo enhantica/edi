@@ -4,7 +4,9 @@ import argparse
 import hashlib
 import importlib
 import json
+import math
 import re
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -13,7 +15,7 @@ from pathlib import Path
 
 from tests.fixtures.metadata_transition.retired_source_fields import saved_absorption
 from tests.fixtures.metadata_transition.task_inputs import saved_analysis, saved_experiment
-from tests.fixtures.project_categories.historical_bytes import prior_digest
+from tests.fixtures.project_categories.historical_bytes import native_edi_bytes, prior_digest
 
 
 def staged(source, target, rule, *, link_data=False):
@@ -36,7 +38,9 @@ def staged(source, target, rule, *, link_data=False):
         else '_edi.schema_version 3\n'
     )
     record = re.sub(r'(?m)^_su_format.rule\s+[^\n]*\n?', '', record)
-    (target / 'project.edi').write_text(record + '\n_su_format.rule ' + rule + '\n')
+    (target / 'project.edi').write_text(
+        record + '\n_su_format.rule ' + rule + '\n', encoding='utf-8', newline='\n'
+    )
     return target
 
 
@@ -47,6 +51,8 @@ def fingerprints(root, *, order_reference=None, source=None):
             continue
         relative = path.relative_to(root).as_posix()
         content = path.read_bytes()
+        if relative.endswith('.edi'):
+            content = native_edi_bytes(content)
         if relative == 'project.edi':
             content = re.sub(
                 rb'(?m)^(_metadata\.(?:created|last_modified)[ \t]+)[^\r\n]+',
@@ -110,15 +116,64 @@ def snapshot(api, source, scratch, rule, *, order_reference=None):
     return fingerprints(scratch / 'saved', order_reference=order_reference, source=source)
 
 
-def fit_snapshot(api, source, scratch, rule, *, order_reference=None):
+def fit_snapshot(api, source, scratch, rule, *, order_reference=None, observed=None):
     project = api.Project.load(staged(source, scratch / 'input', rule, link_data=True))
-    project.analysis.fit()
+    project.analysis.descent = 'ladder'
+    project.analysis.stop_rules = 'chi_square_change'
+    result = project.analysis.fit()
+    if observed is not None:
+        observed.update(
+            descent=project.analysis.descent,
+            stop_rules=project.analysis.stop_rules,
+            iterations=result.iterations,
+            stopping_rule=result.stopping_rule,
+            stopping_value=result.stopping_value,
+            last_shift_su=result.last_shift_su,
+        )
     radius = project.experiments[0].extinction.crystal_radius
     if not radius.user_constrained or radius.uncertainty <= 0:
         message = 'The fitted dependent crystal radius must carry a propagated uncertainty'
         raise ValueError(message)
     project.save_as(scratch / 'saved')
     return fingerprints(scratch / 'saved', order_reference=order_reference, source=source)
+
+
+def historical_solver_record(data, observed):
+    """Check newer solver diagnostics before comparing every older saved-record byte."""
+    assert observed['descent'] == 'ladder' and observed['stop_rules'] == 'chi_square_change'
+    assert observed['stopping_rule'] == 'chi_square_change'
+
+    def scalar(field):
+        pattern = rb'(?m)^' + re.escape(field.encode()) + rb'[ \t]+([^\r\n]+)\r?\n'
+        values = re.findall(pattern, data)
+        assert len(values) == 1, 'The historical solver record requires one scalar: ' + field
+        tokens = shlex.split(values[0].decode('utf-8'))
+        assert len(tokens) == 1
+        return pattern, tokens[0]
+
+    assert scalar('_fit_result.descent')[1] == observed['descent']
+    assert scalar('_fit_result.iterations')[1] == str(observed['iterations'])
+    removed = []
+    for field, expected in (
+        ('_minimizer.descent', 'ladder'),
+        ('_minimizer.stop_rules', 'chi_square_change'),
+        ('_fit_result.stopping_rule', observed['stopping_rule']),
+    ):
+        pattern, value = scalar(field)
+        assert value == expected, 'The saved historical solver conditions must match the real fit'
+        removed.append(pattern)
+    for name in ('stopping_value', 'last_shift_su'):
+        pattern, value = scalar('_fit_result.' + name)
+        actual, expected = float(value), observed[name]
+        assert math.isfinite(actual) and math.isfinite(expected)
+        assert actual >= 0 and expected >= 0
+        assert math.isclose(actual, expected, rel_tol=5e-5, abs_tol=0), (
+            'The saved stop diagnostic retains its actual live value at serialization precision'
+        )
+        removed.append(pattern)
+    for pattern in removed:
+        data = re.sub(pattern, b'', data)
+    return data
 
 
 def main():

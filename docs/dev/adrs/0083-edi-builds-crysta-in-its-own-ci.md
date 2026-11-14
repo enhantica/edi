@@ -376,3 +376,21 @@ and core producers. Collection imports immutable published-source references
 through Git object identities; a shallow checkout cannot prove those references.
 The audit retains the same archived hashes and refuses missing objects rather
 than replacing them with current product output.
+
+
+Native regression readers account explicitly for the Windows text-mode newline
+transport of EDI output. They map CRLF to LF only for that host's EDI comparison;
+opaque files, values, comments, row order and every original hash remain checked.
+Scratch project records are written with declared UTF-8/LF so fixture construction
+does not introduce an unrelated native newline into the captured input. Receipt
+source/header/recipe keys also use portable relative identifiers on every host;
+absolute filesystem paths remain native while opening files.
+
+
+The fitted saved-byte witness explicitly replays its original ladder and
+chi-square-change conditions, as the browser's historical solver vehicle does.
+It retains the original iteration count, all fitted values and uncertainties,
+and every scientific hash. Later saved stop diagnostics must match the live
+fit, with unique finite nonnegative values at serialization precision, before
+only those fields and the explicit historical selectors leave the old-format
+comparison. Ordinary saves and current-default solver qualification are unchanged.
