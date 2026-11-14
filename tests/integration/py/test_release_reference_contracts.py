@@ -225,7 +225,9 @@ def test_python_index_exposes_only_public_hash_bound_wheels(tmp_path):
 
 def test_distribution_uses_the_official_primary_and_independent_pages_mirror():
     policy = json.loads((ROOT / 'data/distribution.json').read_text())
-    assert policy['primary_base'] == 'https://download.easydiffraction.org/'
+    assert policy['primary_base'] == 'https://download.easydiffraction.org/', (
+        'Distribution uses the official primary and independent pages mirror.'
+    )
     assert policy['mirror_bases'] == ['https://enhantica.github.io/edi-download/'], (
         'The internal fallback must remain independent of the official primary host'
     )

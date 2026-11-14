@@ -29,13 +29,17 @@ def test_actual_measured_asset_writer_retains_the_project_observations(case, tmp
         original = gemmi.cif.read_file(str(experiment)).sole_block()
         identity = case + '-' + experiment.stem
         if case.endswith('_simulation'):
-            assert count == 0
-            assert not list((tmp_path / 'data').iterdir())
+            assert count == 0, 'Actual measured asset writer retains the project observations.'
+            assert not list((tmp_path / 'data').iterdir()), (
+                'Actual measured asset writer retains the project observations.'
+            )
             continue
-        assert count == 1
+        assert count == 1, 'Actual measured asset writer retains the project observations.'
         if supplied.is_file():
             target = tmp_path / 'data' / (identity + '.hkl')
-            assert target.read_bytes() == supplied.read_bytes()
+            assert target.read_bytes() == supplied.read_bytes(), (
+                'Actual measured asset writer retains the project observations.'
+            )
         elif case.startswith('sc-'):
             target = tmp_path / 'data' / (identity + '.hkl')
             written = gemmi.cif.read_file(str(target)).sole_block()
@@ -48,18 +52,22 @@ def test_actual_measured_asset_writer_retains_the_project_observations(case, tmp
             ]
             assert [list(row) for row in written.find(columns)] == [
                 list(row) for row in original.find(columns)
-            ]
-            assert not written.find_values('_refln.intensity_calc')
+            ], 'Actual measured asset writer retains the project observations.'
+            assert not written.find_values('_refln.intensity_calc'), (
+                'Actual measured asset writer retains the project observations.'
+            )
         else:
             target = tmp_path / 'data' / (identity + '.xye')
             columns = ['_data.two_theta', '_data.intensity_meas', '_data.intensity_meas_su']
             assert [line.split() for line in target.read_text(encoding='utf-8').splitlines()] == [
                 list(row) for row in original.find(columns)
-            ]
+            ], 'Actual measured asset writer retains the project observations.'
         sidecar = json.loads(
             target.with_name(target.name + '.meta.json').read_text(encoding='utf-8')
         )
-        assert sidecar == {'id': identity + '-data', 'name': 'Measured β'}
+        assert sidecar == {'id': identity + '-data', 'name': 'Measured β'}, (
+            'Actual measured asset writer retains the project observations.'
+        )
 
 
 def test_reflection_export_refuses_incomplete_or_malformed_measurement_rows():
@@ -68,8 +76,12 @@ def test_reflection_export_refuses_incomplete_or_malformed_measurement_rows():
         + '\n'.join(writer.REFLECTION_COLUMNS)
         + '\n1 2 -3 4.500 0.200\n'
     )
-    assert '1 2 -3 4.500 0.200' in writer.measured_reflections(text)
+    assert '1 2 -3 4.500 0.200' in writer.measured_reflections(text), (
+        'Reflection export refuses incomplete or malformed measurement rows.'
+    )
     missing = text.replace('_refln.intensity_meas_su\n', '').replace(' 0.200', '')
-    assert not writer.measured_reflections(missing)
+    assert not writer.measured_reflections(missing), (
+        'Reflection export refuses incomplete or malformed measurement rows.'
+    )
     with pytest.raises(ValueError, match=r'(?i)number of values'):
         writer.measured_reflections(text.replace(' 0.200', ''))

@@ -850,10 +850,14 @@ def test_authenticated_digest_reuse_still_reads_copies_and_detects_changed_bytes
     original = (historical.source / 'analysis/analysis.edi').read_bytes()
     copy_path = tmp_path / 'same-input.edi'
     copy_path.write_bytes(original)
-    assert written.sha(copy_path) == hashlib.sha256(original).hexdigest()
+    assert written.sha(copy_path) == hashlib.sha256(original).hexdigest(), (
+        'Authenticated digest reuse still reads copies and detects changed bytes.'
+    )
     changed = original + b'\n# independently changed content\n'
     copy_path.write_bytes(changed)
-    assert written.sha(copy_path) == hashlib.sha256(changed).hexdigest()
+    assert written.sha(copy_path) == hashlib.sha256(changed).hexdigest(), (
+        'Authenticated digest reuse still reads copies and detects changed bytes.'
+    )
     assert written.sha(copy_path) != hashlib.sha256(original).hexdigest(), (
         'Cached immutable content cannot authorize a changed copied input by pathname'
     )

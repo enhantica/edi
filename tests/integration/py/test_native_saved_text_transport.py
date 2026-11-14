@@ -21,7 +21,7 @@ def test_saved_byte_caller_only_projects_native_edi_newlines(
     data = b'data_example\n_cell.length_a 4.125\n\n# retained comment\n_atom_site.label Ca\n'
     source = data.replace(b'\n', separator.encode())
     monkeypatch.setattr(os, 'linesep', separator)
-    assert native_edi_bytes(source) == data
+    assert native_edi_bytes(source) == data, 'Saved byte caller only projects native edi newlines.'
     directory = tmp_path / 'saved'
     directory.mkdir()
     (directory / 'project.edi').write_bytes(source)
@@ -30,7 +30,9 @@ def test_saved_byte_caller_only_projects_native_edi_newlines(
         'project.edi': hashlib.sha256(data).hexdigest(),
         'opaque.dat': hashlib.sha256(b'1\r\n2\n').hexdigest(),
     }
-    assert fingerprints(directory, order_reference=expected) == expected
+    assert fingerprints(directory, order_reference=expected) == expected, (
+        'Saved byte caller only projects native edi newlines.'
+    )
     if damage == 'none':
         return
     if damage == 'opaque':
@@ -44,7 +46,9 @@ def test_saved_byte_caller_only_projects_native_edi_newlines(
             }[damage]
         )
         (directory / 'project.edi').write_bytes(source)
-    assert fingerprints(directory, order_reference=expected) != expected
+    assert fingerprints(directory, order_reference=expected) != expected, (
+        'Saved byte caller only projects native edi newlines.'
+    )
     if damage == 'extra-blank':
         with pytest.raises(AssertionError, match='no blank inside scalar categories'):
             require_saved_spacing(source)
@@ -73,7 +77,9 @@ def test_historical_fit_record_checks_live_diagnostics_without_replacing_origina
         'last_shift_su': 2.6342026378706392e-5,
     }
     data = old + additions
-    assert historical_solver_record(data, observed) == old
+    assert historical_solver_record(data, observed) == old, (
+        'Historical fit record checks live diagnostics without replacing original values.'
+    )
     if damage == 'none':
         return
     if damage in {'descent', 'rule'}:
@@ -91,7 +97,9 @@ def test_historical_fit_record_checks_live_diagnostics_without_replacing_origina
         data += b'_fit_result.stopping_rule chi_square_change\n'
     else:
         data = data.replace(b'objective_value 16751', b'objective_value 16752')
-        assert historical_solver_record(data, observed) != old
+        assert historical_solver_record(data, observed) != old, (
+            'Historical fit record checks live diagnostics without replacing original values.'
+        )
         return
     with pytest.raises(AssertionError):
         historical_solver_record(data, observed)

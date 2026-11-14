@@ -63,13 +63,23 @@ def configure(root, platform='Linux'):
 @pytest.mark.parametrize('platform', ['Linux', 'macOS', 'Windows'])
 def test_working_lock_rewrite_cannot_change_the_restore_save_family(checkout, platform):
     result, environment, output = configure(checkout, platform)
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 0, (
+        'Working lock rewrite cannot change the restore save family. Observed: '
+        + str(result.stderr)
+    )
     digest = hashlib.sha256((checkout / 'pixi.lock').read_bytes()).hexdigest()[:12]
-    assert f'prefix={platform}-X64-crysta-{PIN[:12]}-lock-{digest}-\n' in output
-    assert 'CCACHE_COMPILERCHECK=content\n' in environment
+    assert f'prefix={platform}-X64-crysta-{PIN[:12]}-lock-{digest}-\n' in output, (
+        'Working lock rewrite cannot change the restore save family.'
+    )
+    assert 'CCACHE_COMPILERCHECK=content\n' in environment, (
+        'Working lock rewrite cannot change the restore save family.'
+    )
     (checkout / 'pixi.lock').write_bytes(b'locally realized editable package metadata\n')
     repeated, _, saved = configure(checkout, platform)
-    assert repeated.returncode == 0, repeated.stderr
+    assert repeated.returncode == 0, (
+        'Working lock rewrite cannot change the restore save family. Observed: '
+        + str(repeated.stderr)
+    )
     assert saved == output, 'Restore/save must retain one committed lock identity'
     git(checkout, 'add', 'pixi.lock')
     git(
@@ -83,7 +93,10 @@ def test_working_lock_rewrite_cannot_change_the_restore_save_family(checkout, pl
         'Change the actual lock',
     )
     changed, _, committed = configure(checkout, platform)
-    assert changed.returncode == 0, changed.stderr
+    assert changed.returncode == 0, (
+        'Working lock rewrite cannot change the restore save family. Observed: '
+        + str(changed.stderr)
+    )
     assert committed != output, 'A genuine committed lock change selects a new family'
 
 

@@ -37,11 +37,16 @@ def test_qualified_desk_sdk_needs_no_exported_or_cli_login(tmp_path, exported):
         check=False,
         timeout=10,
     )
-    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.returncode == 0, (
+        'Qualified desk sdk needs no exported or cli login. Observed: '
+        + str(result.stdout + result.stderr)
+    )
     assert not (tmp_path / 'commands').exists(), (
         'ADR-0083: a qualified local SDK never calls gh, curl, Git or a compiler'
     )
-    assert 'private-synthetic-token' not in result.stdout + result.stderr
+    assert 'private-synthetic-token' not in result.stdout + result.stderr, (
+        'Qualified desk sdk needs no exported or cli login.'
+    )
 
 
 @pytest.mark.parametrize('login', ['missing', 'failed', 'empty', 'timeout'])
@@ -65,7 +70,10 @@ def test_unusable_login_is_irrelevant_to_a_qualified_local_sdk(tmp_path, login):
         check=False,
         timeout=10,
     )
-    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.returncode == 0, (
+        'Unusable login is irrelevant to a qualified local sdk. Observed: '
+        + str(result.stdout + result.stderr)
+    )
     assert not (tmp_path / 'commands').exists(), 'SDK-only consumption must not try authentication'
 
 

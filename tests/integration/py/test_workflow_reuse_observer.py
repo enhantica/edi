@@ -18,7 +18,7 @@ def test_actual_shared_sdk_exposes_all_platform_runners_and_only_source_read_sco
         ('github-hosted', 'Linux', 'X64'),
         ('github-hosted', 'macOS', 'ARM64'),
         ('github-hosted', 'Windows', 'X64'),
-    }
+    }, 'Actual shared sdk exposes all platform runners and only source read scope.'
     expanded = expanded_jobs({'jobs': {'sdk': job}}, ROOT)
     tokens = [
         step
@@ -26,10 +26,14 @@ def test_actual_shared_sdk_exposes_all_platform_runners_and_only_source_read_sco
         for step in child.get('steps', [])
         if 'create-github-app-token' in step.get('uses', '')
     ]
-    assert len(tokens) == 1
+    assert len(tokens) == 1, (
+        'Actual shared sdk exposes all platform runners and only source read scope.'
+    )
     assert {
         key: value for key, value in tokens[0]['with'].items() if key.startswith('permission-')
-    } == {'permission-contents': 'read'}
+    } == {'permission-contents': 'read'}, (
+        'Actual shared sdk exposes all platform runners and only source read scope.'
+    )
 
 
 @pytest.mark.parametrize('damage', ['remote', 'missing', 'cycle', 'malformed'])

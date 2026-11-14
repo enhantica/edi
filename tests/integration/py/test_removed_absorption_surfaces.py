@@ -250,4 +250,6 @@ def test_clean_binary_files_remain_in_the_nonexempt_surface_census(tmp_path):
     scope = tmp_path / 'public'
     scope.mkdir()
     (scope / 'image.png').write_bytes(bytes(range(256)) * 10)
-    assert violations(tmp_path, ['public']) == []
+    assert violations(tmp_path, ['public']) == [], (
+        'Clean binary files remain in the nonexempt surface census.'
+    )

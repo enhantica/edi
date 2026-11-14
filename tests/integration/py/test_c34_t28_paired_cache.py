@@ -15,7 +15,9 @@ def test_warm_sdk_revalidates_qualified_content_without_history_queries(
 ):
     context = acquisition(tmp_path, platform)
     code, output = fetch(context)
-    assert code == 0, output
+    assert code == 0, (
+        'Warm sdk revalidates qualified content without history queries. Observed: ' + str(output)
+    )
     home = context['root'] / 'build/crysta-sdk' / f'{SHA}-{platform}'
     for archive in Path(context['env']['CRYSTA_SDK_ARCHIVES']).iterdir():
         archive.unlink()
@@ -34,5 +36,9 @@ def test_warm_sdk_revalidates_qualified_content_without_history_queries(
     manifest.write_text(json.dumps(row))
     before = (context['root'] / 'pixi.toml').read_bytes()
     code, output = fetch(context)
-    assert (code == 0) == (change == 'unchanged'), output
-    assert (context['root'] / 'pixi.toml').read_bytes() == before
+    assert (code == 0) == (change == 'unchanged'), (
+        'Warm sdk revalidates qualified content without history queries. Observed: ' + str(output)
+    )
+    assert (context['root'] / 'pixi.toml').read_bytes() == before, (
+        'Warm sdk revalidates qualified content without history queries.'
+    )

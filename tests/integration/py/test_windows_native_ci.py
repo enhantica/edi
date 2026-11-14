@@ -18,24 +18,46 @@ def boundary(jobs):
     for name in ('native', 'core', 'cli-python'):
         job = jobs[name]
         rows = job['strategy']['matrix']['include']
-        assert len(rows) == 3
-        assert {r['platform']: (r['runner'], r['sdk']) for r in rows} == PLATFORMS
-        assert job['defaults']['run']['shell'] == 'bash'
+        assert len(rows) == 3, 'Windows core uses its own SDK, native shell and completed build.'
+        assert {r['platform']: (r['runner'], r['sdk']) for r in rows} == PLATFORMS, (
+            'Windows core uses its own SDK, native shell and completed build.'
+        )
+        assert job['defaults']['run']['shell'] == 'bash', (
+            'Windows core uses its own SDK, native shell and completed build.'
+        )
         steps = job['steps']
         sdk = [s for s in steps if s.get('uses') == './.github/actions/crysta-sdk']
-        assert len(sdk) == 1 and sdk[0]['with']['platform'] == '${{ matrix.sdk }}'
+        assert len(sdk) == 1 and sdk[0]['with']['platform'] == '${{ matrix.sdk }}', (
+            'Windows core uses its own SDK, native shell and completed build.'
+        )
         if name != 'native':
             native = [s for s in steps if s.get('uses') == './.github/actions/edi-native']
-            assert len(native) == 1 and native[0]['with']['platform'] == '${{ matrix.sdk }}'
-        assert any(s.get('uses') == 'ilammy/msvc-dev-cmd@v1' for s in steps)
-        assert any(s.get('run') == 'pixi run core-build' for s in steps)
-        assert not any(s.get('continue-on-error') for s in steps)
+            assert len(native) == 1 and native[0]['with']['platform'] == '${{ matrix.sdk }}', (
+                'Windows core uses its own SDK, native shell and completed build.'
+            )
+        assert any(s.get('uses') == 'ilammy/msvc-dev-cmd@v1' for s in steps), (
+            'Windows core uses its own SDK, native shell and completed build.'
+        )
+        assert any(s.get('run') == 'pixi run core-build' for s in steps), (
+            'Windows core uses its own SDK, native shell and completed build.'
+        )
+        assert not any(s.get('continue-on-error') for s in steps), (
+            'Windows core uses its own SDK, native shell and completed build.'
+        )
     producer = jobs['native']
-    assert any(s.get('run') == 'pixi run --skip-deps cpp-test' for s in producer['steps'])
-    assert any(s.get('run') == 'pixi run --skip-deps cli-stream-parity' for s in producer['steps'])
+    assert any(s.get('run') == 'pixi run --skip-deps cpp-test' for s in producer['steps']), (
+        'Windows core uses its own SDK, native shell and completed build.'
+    )
+    assert any(
+        s.get('run') == 'pixi run --skip-deps cli-stream-parity' for s in producer['steps']
+    ), 'Windows core uses its own SDK, native shell and completed build.'
     saves = [s for s in producer['steps'] if s.get('uses') == 'actions/cache/save@v4']
-    assert len(saves) == 1 and '!cancelled()' in saves[0]['if']
-    assert 'success()' not in saves[0]['if']
+    assert len(saves) == 1 and '!cancelled()' in saves[0]['if'], (
+        'Windows core uses its own SDK, native shell and completed build.'
+    )
+    assert 'success()' not in saves[0]['if'], (
+        'Windows core uses its own SDK, native shell and completed build.'
+    )
 
 
 def jobs():
@@ -72,8 +94,12 @@ def test_windows_checkout_uses_the_existing_installer_reserved_path_policy():
     original = windows_checkout(installer['installers']['steps'])
     for name in ('native', 'core', 'cli-python'):
         actual = windows_checkout(jobs()[name]['steps'])
-        assert actual['with'] == original['with']
-        assert actual['if'] == original['if']
+        assert actual['with'] == original['with'], (
+            'Windows checkout uses the existing installer reserved path policy.'
+        )
+        assert actual['if'] == original['if'], (
+            'Windows checkout uses the existing installer reserved path policy.'
+        )
 
 
 def sdk_include_boundary(relative, source):

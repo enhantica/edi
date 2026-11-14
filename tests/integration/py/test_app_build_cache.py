@@ -337,4 +337,6 @@ def test_real_receipt_inputs_keep_portable_source_keys_on_both_path_styles(
     assert actual == expected, (
         'Every compiled source/header/recipe key is independent of host separators'
     )
-    assert 'src/value.cpp' in actual['sdk']['sources']
+    assert 'src/value.cpp' in actual['sdk']['sources'], (
+        'Real receipt inputs keep portable source keys on both path styles.'
+    )

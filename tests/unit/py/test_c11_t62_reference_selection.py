@@ -56,7 +56,9 @@ def test_exported_source_never_borrows_the_enclosing_repository_identity(tmp_pat
         crysta_source_identity(source)
     record = source / 'CRYSTA_SOURCE_SHA'
     record.write_text('a7' * 20 + '\n')
-    assert crysta_source_identity(source) == 'a7' * 20
+    assert crysta_source_identity(source) == 'a7' * 20, (
+        'Exported source never borrows the enclosing repository identity.'
+    )
     record.write_text('short-or-invalid')
     with pytest.raises(AssertionError, match='full commit'):
         crysta_source_identity(source)
@@ -90,5 +92,7 @@ def test_real_checkout_uses_git_and_refuses_a_broken_git_identity(tmp_path):
     head = subprocess.check_output(
         ['git', '-C', str(tmp_path), 'rev-parse', 'HEAD'], text=True
     ).strip()
-    assert crysta_source_identity(tmp_path) == head
-    assert head != 'a7' * 20
+    assert crysta_source_identity(tmp_path) == head, (
+        'Real checkout uses git and refuses a broken git identity.'
+    )
+    assert head != 'a7' * 20, 'Real checkout uses git and refuses a broken git identity.'

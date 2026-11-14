@@ -209,7 +209,9 @@ def test_failed_native_observations_are_retained_without_promoting_an_sdk():
         for step in steps
         if step.get('with', {}).get('name') == 'crysta-sdk-${{ matrix.platform }}'
     )
-    assert evidence['uses'] == 'actions/upload-artifact@v4'
+    assert evidence['uses'] == 'actions/upload-artifact@v4', (
+        'Failed native observations are retained without promoting an sdk.'
+    )
     assert evidence['with']['path'] == (
         '${{ runner.temp }}/crysta/build/sdk-pack-red/${{ needs.resolve.outputs.sha }}'
     ), 'The observer owns retained native logs after the packer removes its scratch checkout'
@@ -217,7 +219,7 @@ def test_failed_native_observations_are_retained_without_promoting_an_sdk():
         context = {'states': {'qualification': state}, 'cancelled': cancelled}
         assert active(evidence, 'workflow_dispatch', **context) == (
             state == 'failure' and not cancelled
-        )
+        ), 'Failed native observations are retained without promoting an sdk.'
         assert active(artifact, 'workflow_dispatch', **context) == (
             state == 'success' and not cancelled
         ), 'Failure evidence can never satisfy successful SDK transport'
@@ -232,10 +234,18 @@ def installer_cache_boundary(job):
         for step in steps
         if step.get('name') == 'Build desktop bundle and CLI with the qualified SDK'
     )
-    assert restore['uses'] == 'actions/cache/restore@v4'
-    assert save['uses'] == 'actions/cache/save@v4'
-    assert save['with'] == {key: restore['with'][key] for key in ('path', 'key')}
-    assert steps.index(restore) < steps.index(build) < steps.index(save)
+    assert restore['uses'] == 'actions/cache/restore@v4', (
+        'Installer cache identity and failure diagnostics remain unconditional.'
+    )
+    assert save['uses'] == 'actions/cache/save@v4', (
+        'Installer cache identity and failure diagnostics remain unconditional.'
+    )
+    assert save['with'] == {key: restore['with'][key] for key in ('path', 'key')}, (
+        'Installer cache identity and failure diagnostics remain unconditional.'
+    )
+    assert steps.index(restore) < steps.index(build) < steps.index(save), (
+        'Installer cache identity and failure diagnostics remain unconditional.'
+    )
     for outcome, cancelled in [
         ('success', False),
         ('failure', False),
@@ -248,7 +258,9 @@ def installer_cache_boundary(job):
             outputs={('compiler-cache', 'outcome'): outcome},
             states={'qualification': 'failure'},
             cancelled=cancelled,
-        ) == (outcome == 'success' and not cancelled)
+        ) == (outcome == 'success' and not cancelled), (
+            'Installer cache identity and failure diagnostics remain unconditional.'
+        )
 
 
 def test_installer_preserves_objects_after_failure_with_the_same_explicit_cache_boundary():
@@ -321,6 +333,8 @@ def test_failed_sdk_pack_reports_cache_stats_then_keeps_its_failure(tmp_path):
     )
     assert result.returncode == 23, 'Cache reporting must preserve the failed qualification status'
     calls = witness.read_text(encoding='utf-8').splitlines()
-    assert len(calls) == 3 and '--zero-stats' in calls[0] and 'sdk-pack' in calls[1]
+    assert len(calls) == 3 and '--zero-stats' in calls[0] and 'sdk-pack' in calls[1], (
+        'Failed sdk pack reports cache stats then keeps its failure.'
+    )
     assert '--show-stats' in calls[2], 'The failed real pack step must report its cache statistics'
     assert not list(tmp_path.glob('*.tar*')), 'A failed pack must stop before source archiving'

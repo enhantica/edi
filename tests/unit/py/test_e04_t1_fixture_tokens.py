@@ -75,18 +75,22 @@ def test_app_text_oracle_preserves_carriage_return_field_separators(tmp_path):
 def test_scan_source_oracle_uses_folder_declaration_in_every_fitting_mode(tmp_path):
     modes = ('single', 'joint', 'sequential', 'independent')
     for mode in modes:
-        assert GENERATOR['scan_inputs'](tmp_path, {'_fitting_mode.type': mode}) == []
+        assert GENERATOR['scan_inputs'](tmp_path, {'_fitting_mode.type': mode}) == [], (
+            'Scan source oracle uses folder declaration in every fitting mode.'
+        )
     folder = tmp_path / 'scan'
     folder.mkdir()
     (folder / '01.txt').write_text('12 31 2\n13 44 3\n')
     declaration = {'_sequential_fit.data_dir': 'scan', '_sequential_fit.file_pattern': '*.txt'}
     reference = GENERATOR['scan_inputs'](tmp_path, declaration)
-    assert len(reference) == 1 and reference[0]['samples'][0]['values'] == [12, 31, 2]
+    assert len(reference) == 1 and reference[0]['samples'][0]['values'] == [12, 31, 2], (
+        'Scan source oracle uses folder declaration in every fitting mode.'
+    )
     for mode in modes:
         assert (
             GENERATOR['scan_inputs'](tmp_path, {**declaration, '_fitting_mode.type': mode})
             == reference
-        )
+        ), 'Scan source oracle uses folder declaration in every fitting mode.'
     for key, value in declaration.items():
         with pytest.raises(ValueError, match='declared data directory and file pattern'):
             GENERATOR['scan_inputs'](tmp_path, {key: value})

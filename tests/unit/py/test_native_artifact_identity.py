@@ -34,7 +34,9 @@ def test_shipped_cli_version_forms_cross_the_complete_producer_check(native, mon
         lambda *a, **_kwargs: subprocess.CompletedProcess(a, 0, output, ''),
     )
     native.prove()
-    assert reached == ['import', 'runners']
+    assert reached == ['import', 'runners'], (
+        'Shipped cli version forms cross the complete producer check.'
+    )
 
 
 @pytest.mark.parametrize(
@@ -77,7 +79,7 @@ def test_failed_cli_refuses_even_when_output_looks_valid(native, monkeypatch, st
 @pytest.mark.parametrize('label', ['win-64', 'win-64-app', 'Windows-X64', 'Windows-AMD64'])
 def test_windows_native_identity_maps_to_its_own_sdk(native, monkeypatch, label):
     monkeypatch.setenv('PIXI_PLATFORM', label)
-    assert native.sdk_platform() == 'win-64'
+    assert native.sdk_platform() == 'win-64', 'Windows native identity maps to its own sdk.'
 
 
 def test_unknown_windows_architecture_is_not_an_x64_sdk(native, monkeypatch):

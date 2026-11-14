@@ -32,4 +32,6 @@ def test_real_example_description_matches_committed_metadata_on_both_path_styles
     monkeypatch.setattr(native, 'relative_to', relative_path)
     actual = example_metadata.describe(case)
     assert actual == expected, 'Host separators cannot change source ids or any descriptive field'
-    assert all('/' in item and '\\' not in item for item in actual['sources'])
+    assert all('/' in item and '\\' not in item for item in actual['sources']), (
+        'Real example description matches committed metadata on both path styles.'
+    )

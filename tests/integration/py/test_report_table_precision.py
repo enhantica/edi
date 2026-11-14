@@ -66,8 +66,12 @@ def test_reflection_notation_retains_the_original_phase_sum_precision(tmp_path):
         # everywhere. Physical phase sums retain the original .001 projection.
         for text, (number, power) in zip(cells, parsed, strict=True):
             if power is not None:
-                assert re.fullmatch(r'[+-]?[1-9]\.[0-9]{2}\u00d710[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]+', text)
-                assert not Decimal('.001') <= abs(number.scaleb(power)) < Decimal(1000)
+                assert re.fullmatch(r'[+-]?[1-9]\.[0-9]{2}\u00d710[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]+', text), (
+                    'Reflection notation retains the original phase sum precision.'
+                )
+                assert not Decimal('.001') <= abs(number.scaleb(power)) < Decimal(1000), (
+                    'Reflection notation retains the original phase sum precision.'
+                )
         precision = {
             len(text.partition('.')[2])
             for text, (number, power) in zip(cells, parsed, strict=True)

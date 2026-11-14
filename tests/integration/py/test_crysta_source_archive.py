@@ -41,7 +41,10 @@ def test_real_append_and_extract_keep_source_and_receipt_bytes_under_native_path
         check=False,
         timeout=10,
     )
-    assert run.returncode == 0, run.stderr
+    assert run.returncode == 0, (
+        'Real append and extract keep source and receipt bytes under native paths. Observed: '
+        + str(run.stderr)
+    )
     compressed = folder / 'source.tar.gz'
     with gzip.open(compressed, 'wb') as stream:
         stream.write(archive.read_bytes())
@@ -53,11 +56,20 @@ def test_real_append_and_extract_keep_source_and_receipt_bytes_under_native_path
         check=False,
         timeout=10,
     )
-    assert run.returncode == 0, run.stderr
-    assert (destination / 'src/payload.txt').read_bytes() == payload
-    assert (destination / crysta_source_archive.RECEIPT).read_bytes() == receipt.read_bytes()
+    assert run.returncode == 0, (
+        'Real append and extract keep source and receipt bytes under native paths. Observed: '
+        + str(run.stderr)
+    )
+    assert (destination / 'src/payload.txt').read_bytes() == payload, (
+        'Real append and extract keep source and receipt bytes under native paths.'
+    )
+    assert (destination / crysta_source_archive.RECEIPT).read_bytes() == receipt.read_bytes(), (
+        'Real append and extract keep source and receipt bytes under native paths.'
+    )
     with tarfile.open(archive) as source:
-        assert source.getnames() == ['src/payload.txt', crysta_source_archive.RECEIPT]
+        assert source.getnames() == ['src/payload.txt', crysta_source_archive.RECEIPT], (
+            'Real append and extract keep source and receipt bytes under native paths.'
+        )
     with pytest.raises(ValueError, match='already contains'):
         crysta_source_archive.append_receipt(archive, receipt)
 
@@ -79,7 +91,9 @@ def test_source_extraction_cannot_write_outside_its_destination(tmp_path, kind):
             output.addfile(member, io.BytesIO(b'changed'))
     with contextlib.suppress(tarfile.FilterError):
         crysta_source_archive.extract(archive, tmp_path / 'destination')
-    assert outside.read_bytes() == b'unrelated existing bytes'
+    assert outside.read_bytes() == b'unrelated existing bytes', (
+        'Source extraction cannot write outside its destination.'
+    )
 
 
 def test_source_producer_and_both_consumers_share_python_archive_operations():
@@ -96,8 +110,18 @@ def test_source_producer_and_both_consumers_share_python_archive_operations():
         if step.get('name') == 'Unpack the pinned crysta source'
     )
     core = (ROOT / 'tools/ci/crysta-src.sh').read_text()
-    assert 'python3 tools/ci/crysta_source_archive.py append' in pack
-    assert 'python tools/ci/crysta_source_archive.py extract' in unpack
-    assert 'python3 "$ROOT/tools/ci/crysta_source_archive.py" extract' in core
-    assert 'tar -rf' not in pack and 'tar -xzf' not in unpack + core
-    assert "'tools/ci/crysta_source_archive.py'" in producer['jobs']['resolve']['steps'][-1]['run']
+    assert 'python3 tools/ci/crysta_source_archive.py append' in pack, (
+        'Source producer and both consumers share python archive operations.'
+    )
+    assert 'python tools/ci/crysta_source_archive.py extract' in unpack, (
+        'Source producer and both consumers share python archive operations.'
+    )
+    assert 'python3 "$ROOT/tools/ci/crysta_source_archive.py" extract' in core, (
+        'Source producer and both consumers share python archive operations.'
+    )
+    assert 'tar -rf' not in pack and 'tar -xzf' not in unpack + core, (
+        'Source producer and both consumers share python archive operations.'
+    )
+    assert (
+        "'tools/ci/crysta_source_archive.py'" in producer['jobs']['resolve']['steps'][-1]['run']
+    ), 'Source producer and both consumers share python archive operations.'

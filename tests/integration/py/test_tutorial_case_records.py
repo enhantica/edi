@@ -46,7 +46,7 @@ def provenance_records():
 @pytest.mark.parametrize('case', CASES)
 def test_case_record_retains_its_complete_authored_provenance(case, provenance_records):
     document = ROOT / 'docs/user/cli' / case / 'PROVENANCE.md'
-    assert document.is_file()
+    assert document.is_file(), 'Case record retains its complete authored provenance.'
     assert provenance_records[case].get('provenance') == document.read_text(encoding='utf-8'), (
         'The portable case record must retain its source and uncertainty disclosures exactly'
     )
@@ -74,8 +74,12 @@ def test_case_checker_refuses_missing_authored_provenance(tmp_path, state):
     metadata = json.loads((vocabulary / 'metadata.json').read_text())
     metadata['examples'] = {case: metadata['examples'][case]}
     (vocabulary / 'metadata.json').write_text(json.dumps(metadata))
-    assert case_records.records(tmp_path)[0]['provenance'] in {None, ''}
-    assert f'{case}: has no authored PROVENANCE.md disclosure' in case_records.problems(tmp_path)
+    assert case_records.records(tmp_path)[0]['provenance'] in {None, ''}, (
+        'Case checker refuses missing authored provenance.'
+    )
+    assert f'{case}: has no authored PROVENANCE.md disclosure' in case_records.problems(
+        tmp_path
+    ), 'Case checker refuses missing authored provenance.'
 
 
 def test_tutorial_intro_retains_caveats_without_code_or_stage_content(monkeypatch):
@@ -96,7 +100,7 @@ raise RuntimeError('code must not execute')
     assert introduction(source) == (
         'The 2.5 K uncertainties are estimated from 55 K.\n'
         'Fitted moment uncertainties inherit that estimate.'
-    )
+    ), 'Tutorial intro retains caveats without code or stage content.'
 
 
 @pytest.mark.parametrize('case', CASES)

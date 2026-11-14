@@ -28,13 +28,21 @@ def test_current_and_historical_bragg_fixtures_reproduce_their_own_approved_sour
     monkeypatch.setattr(generator.sys, 'argv', ['generate_bragg.py', '--current'])
     generator.main()
     current = (tmp_path / 'bragg-current.hpp').read_bytes()
-    assert current == (HERE / 'bragg-current.hpp').read_bytes()
-    assert generator.PUBLISHED_SHA256.encode() in current
-    assert current.count(b'{"main",') == current.count(b'{"colourBlindSafe",') == 18
+    assert current == (HERE / 'bragg-current.hpp').read_bytes(), (
+        'Current and historical bragg fixtures reproduce their own approved sources.'
+    )
+    assert generator.PUBLISHED_SHA256.encode() in current, (
+        'Current and historical bragg fixtures reproduce their own approved sources.'
+    )
+    assert current.count(b'{"main",') == current.count(b'{"colourBlindSafe",') == 18, (
+        'Current and historical bragg fixtures reproduce their own approved sources.'
+    )
     (tmp_path / 'owner.json').write_bytes((HERE / 'owner.json').read_bytes())
     monkeypatch.setattr(generator.sys, 'argv', ['generate_bragg.py'])
     generator.main()
-    assert (tmp_path / 'bragg.hpp').read_bytes() == (HERE / 'bragg.hpp').read_bytes()
+    assert (tmp_path / 'bragg.hpp').read_bytes() == (HERE / 'bragg.hpp').read_bytes(), (
+        'Current and historical bragg fixtures reproduce their own approved sources.'
+    )
 
 
 @pytest.mark.parametrize('damage', ['colour', 'provenance'])
@@ -48,9 +56,11 @@ def test_changed_release_reference_cannot_silently_regenerate_expectations(
         'show',
         generator.PUBLISHED + ':' + generator.PUBLISHED_SOURCE,
     ])
-    assert hashlib.sha256(raw).hexdigest() == generator.PUBLISHED_SHA256
+    assert hashlib.sha256(raw).hexdigest() == generator.PUBLISHED_SHA256, (
+        'Changed release reference cannot silently regenerate expectations.'
+    )
     changed = raw.replace(b'#618EC8', b'#618EC9') if damage == 'colour' else raw + b'\n'
-    assert changed != raw
+    assert changed != raw, 'Changed release reference cannot silently regenerate expectations.'
     monkeypatch.setattr(generator.subprocess, 'check_output', lambda *_a, **_k: changed)
     with pytest.raises(ValueError, match='published palette reference changed'):
         generator.published_palettes()

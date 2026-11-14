@@ -16,24 +16,38 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def test_complete_release_source_pairs_retain_their_archived_byte_identities():
     rows = source.rows()
-    assert rows and source.LATER_INPUT_CASE not in rows
+    assert rows and source.LATER_INPUT_CASE not in rows, (
+        'Complete release source pairs retain their archived byte identities.'
+    )
     with zipfile.ZipFile(source.HERE / 'release-pins.zip') as archive:
         assert set(archive.namelist()) == {
             row[key] for row in rows.values() for key in ('before_sha256', 'after_sha256')
-        }
+        }, 'Complete release source pairs retain their archived byte identities.'
         for name, row in rows.items():
             before = archive.read(row['before_sha256'])
             after = archive.read(row['after_sha256'])
-            assert hashlib.sha256(before).hexdigest() == row['before_sha256']
-            assert hashlib.sha256(after).hexdigest() == row['after_sha256']
-            assert pin_sources.previous_bytes(name, (ROOT / name).read_bytes()) == after
-            assert source.previous_bytes(name, after) == before
-            assert source.previous_bytes(name, before) == before
+            assert hashlib.sha256(before).hexdigest() == row['before_sha256'], (
+                'Complete release source pairs retain their archived byte identities.'
+            )
+            assert hashlib.sha256(after).hexdigest() == row['after_sha256'], (
+                'Complete release source pairs retain their archived byte identities.'
+            )
+            assert pin_sources.previous_bytes(name, (ROOT / name).read_bytes()) == after, (
+                'Complete release source pairs retain their archived byte identities.'
+            )
+            assert source.previous_bytes(name, after) == before, (
+                'Complete release source pairs retain their archived byte identities.'
+            )
+            assert source.previous_bytes(name, before) == before, (
+                'Complete release source pairs retain their archived byte identities.'
+            )
             source.validate(json.loads(before), json.loads(after), name)
             for damaged in (after + b'\n', after[:-1], after.replace(b'"value"', b'"foreign"', 1)):
                 with pytest.raises(AssertionError, match='every committed source byte'):
                     source.previous_bytes(name, damaged)
-    assert source.previous_bytes('unmapped/expected.json', b'foreign') == b'foreign'
+    assert source.previous_bytes('unmapped/expected.json', b'foreign') == b'foreign', (
+        'Complete release source pairs retain their archived byte identities.'
+    )
 
 
 @pytest.mark.parametrize('name', sorted(source.rows()))

@@ -20,5 +20,10 @@ def test_intermediate_build_keeps_the_explicit_pin_despite_foreign_branch_contex
     )
     before = (context['root'] / 'pixi.toml').read_bytes()
     code, output = fetch(context)
-    assert code == 0 and 'build-' + SHA in output, output
-    assert (context['root'] / 'pixi.toml').read_bytes() == before
+    assert code == 0 and 'build-' + SHA in output, (
+        'Intermediate build keeps the explicit pin despite foreign branch context. Observed: '
+        + str(output)
+    )
+    assert (context['root'] / 'pixi.toml').read_bytes() == before, (
+        'Intermediate build keeps the explicit pin despite foreign branch context.'
+    )

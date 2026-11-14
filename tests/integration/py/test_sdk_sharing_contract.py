@@ -161,7 +161,9 @@ def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(
     assert guard['env']['SHA'] == '${{ needs.resolve.outputs.sha }}', (
         'Output validation uses the source identity resolved by this run'
     )
-    assert guard['env']['CRYSTA_SDK_PLATFORM'] == '${{ matrix.platform }}'
+    assert guard['env']['CRYSTA_SDK_PLATFORM'] == '${{ matrix.platform }}', (
+        'Sdk producer rejects missing empty changed and misdirected outputs.'
+    )
     pin = 'a7' * 20
     archive = f'crysta-sdk-{pin}-{platform}.tar.gz'
     checksum = archive + '.sha256'
@@ -662,6 +664,10 @@ def test_windows_sdk_workflows_refuse_case_ambiguous_platform_environment_routes
 def test_runtime_audit_fetches_the_immutable_source_history_its_collection_reads():
     workflow = document('.github/workflows/ci.yml')
     audit = workflow['jobs']['audit']
-    assert any('per-pr-audit' in step.get('run', '') for step in audit['steps'])
+    assert any('per-pr-audit' in step.get('run', '') for step in audit['steps']), (
+        'Runtime audit fetches the immutable source history its collection reads.'
+    )
     checkouts = [step for step in audit['steps'] if step.get('uses') == 'actions/checkout@v5']
-    assert len(checkouts) == 1 and checkouts[0].get('with', {}).get('fetch-depth') == 0
+    assert len(checkouts) == 1 and checkouts[0].get('with', {}).get('fetch-depth') == 0, (
+        'Runtime audit fetches the immutable source history its collection reads.'
+    )

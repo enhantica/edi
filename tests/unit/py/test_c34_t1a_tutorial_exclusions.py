@@ -109,7 +109,9 @@ for temperature, datum in data_paths.items():
     ],
 )
 def test_model_building_asset_observer_refuses_disconnected_downloads(damage):
-    assert assets(INSTALL_CELL + ASSET_BUILD) == ['right-structure', 'right-data']
+    assert assets(INSTALL_CELL + ASSET_BUILD) == ['right-structure', 'right-data'], (
+        'Model building asset observer refuses disconnected downloads.'
+    )
     changes = {
         'wrong-path': ('add_from_cif_path(path)', 'add_from_cif_path(other)'),
         'reassignment': ('project.structures', "path = 'wrong'\nproject.structures"),

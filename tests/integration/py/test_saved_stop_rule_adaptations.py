@@ -14,7 +14,9 @@ def test_saved_stop_set_projection_retains_every_other_byte(tmp_path, choice):
     line = f'_minimizer.stop_rules "{choice}"\n'.encode()
     (folder / 'analysis.edi').write_bytes(line)
     remaining = b'_edi.schema_version 3\n_minimizer.max_iterations 1000\n'
-    assert saved_analysis(line + remaining, tmp_path) == remaining
+    assert saved_analysis(line + remaining, tmp_path) == remaining, (
+        'Saved stop set projection retains every other byte.'
+    )
 
 
 @pytest.mark.parametrize(

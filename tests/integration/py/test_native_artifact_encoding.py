@@ -61,7 +61,9 @@ print(json.dumps(module.git(*args)))
         timeout=5,
         check=False,
     )
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 0, (
+        'Git source text is utf8 under a non utf8 process locale. Observed: ' + str(result.stderr)
+    )
     expected = payload.strip() if operation == 'manifest' else 'pixi.toml\0résuméϏ.txt\0'
     assert json.loads(result.stdout) == expected, (
         'Source text and Unicode names must retain every UTF8 byte'

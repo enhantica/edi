@@ -128,7 +128,9 @@ def test_citation_uses_zenodo_doi_and_consistent_title():
         assert label in source and 'copyText(dialog.citation.' + value in source, (
             'Both citation formats must copy their corresponding citation content'
         )
-    assert 'actions: [' in source and 'property alias actions: buttons.contentData' in common
+    assert 'actions: [' in source and 'property alias actions: buttons.contentData' in common, (
+        'Citation uses zenodo doi and consistent title.'
+    )
     assert 'footer: EaElements.DialogButtonBox' in common, (
         'Citation copy actions use the shared footer beside Close'
     )
@@ -152,10 +154,14 @@ def survey():
     assert len(pages) == 1, 'About must contain one persistent Survey page'
     config = yaml.compose((DOCS.parent / 'mkdocs.yml').read_text())
     scripts = [value for key, value in config.value if key.value == 'extra_javascript']
-    assert len(scripts) == 1 and isinstance(scripts[0], yaml.SequenceNode)
+    assert len(scripts) == 1 and isinstance(scripts[0], yaml.SequenceNode), (
+        'Survey fields, version and contact data follow the published contract.'
+    )
     assets = []
     for address in scripts[0].value:
-        assert isinstance(address, yaml.ScalarNode) and address.tag.endswith(':str')
+        assert isinstance(address, yaml.ScalarNode) and address.tag.endswith(':str'), (
+            'Survey fields, version and contact data follow the published contract.'
+        )
         relative = address.value.split('?', 1)[0]
         asset = DOCS / relative
         if asset.is_file():
@@ -255,7 +261,9 @@ def test_online_sources_documented_collection_passes_real_checker():
         'project',
     }, 'The documented example must include structure, experiment and project entries'
     # The page explicitly links the repository's downloadable worked collection.
-    assert 'docs/user/collection-example' in page.read_text()
+    assert 'docs/user/collection-example' in page.read_text(), (
+        'Online sources documented collection passes real checker.'
+    )
     files = [
         p
         for p in (ROOT / 'docs/user/collection-example').rglob('index.json')

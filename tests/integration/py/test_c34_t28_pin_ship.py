@@ -23,13 +23,24 @@ def test_explicit_commit_pin_is_checked_then_consumed_without_publication(tmp_pa
     pin = context['root'] / 'pixi.toml'
     pin.write_text(pin.read_text().replace(SHA, 'b8' * 20))
     module = pin_module(context)
-    assert SHA in module.pin([SHA], pin)
+    assert SHA in module.pin([SHA], pin), (
+        'Explicit commit pin is checked then consumed without publication.'
+    )
     before = pin.read_bytes()
-    assert SHA in module.pin(['--check'], pin)
-    assert pin.read_bytes() == before
+    assert SHA in module.pin(['--check'], pin), (
+        'Explicit commit pin is checked then consumed without publication.'
+    )
+    assert pin.read_bytes() == before, (
+        'Explicit commit pin is checked then consumed without publication.'
+    )
     code, output = fetch(context)
-    assert code == 0 and 'build-' + SHA in output, output
-    assert pin.read_bytes() == before
+    assert code == 0 and 'build-' + SHA in output, (
+        'Explicit commit pin is checked then consumed without publication. Observed: '
+        + str(output)
+    )
+    assert pin.read_bytes() == before, (
+        'Explicit commit pin is checked then consumed without publication.'
+    )
 
 
 @pytest.mark.parametrize(
@@ -41,4 +52,4 @@ def test_pin_refuses_legacy_or_malformed_inputs_without_rewriting(tmp_path, args
     before = pin.read_bytes()
     with pytest.raises(context['module'].RefusedError, match='usage:'):
         pin_module(context).pin(args, pin)
-    assert pin.read_bytes() == before
+    assert pin.read_bytes() == before, 'Pin refuses legacy or malformed inputs without rewriting.'

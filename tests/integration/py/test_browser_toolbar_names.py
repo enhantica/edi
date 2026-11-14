@@ -40,9 +40,15 @@ def test_browser_actor_inventory_keeps_the_published_toolbar_contract():
     actors = ROOT / 'tests/system/manual'
     require_current_actor_names(actors)
     main = (actors / 'e04_t11_browser.mjs').read_text()
-    assert all(caption in main for caption in CAPTIONS)
-    assert 'assert.equal(toolbar.length,4' in main
-    assert 'assert.deepEqual(toolbar.map(button=>button.name),toolbarNames' in main
+    assert all(caption in main for caption in CAPTIONS), (
+        'Browser actor inventory keeps the published toolbar contract.'
+    )
+    assert 'assert.equal(toolbar.length,4' in main, (
+        'Browser actor inventory keeps the published toolbar contract.'
+    )
+    assert 'assert.deepEqual(toolbar.map(button=>button.name),toolbarNames' in main, (
+        'Browser actor inventory keeps the published toolbar contract.'
+    )
 
 
 @pytest.mark.parametrize('caption', LEGACY)
@@ -67,7 +73,9 @@ def test_published_stale_actor_preimage_is_rejected(tmp_path, actor):
     previous = subprocess.check_output(
         ['git', 'show', PUBLISHED + ':tests/system/manual/' + actor], cwd=ROOT, text=True
     )
-    assert any(caption in previous for caption in LEGACY)
+    assert any(caption in previous for caption in LEGACY), (
+        'Published stale actor preimage is rejected.'
+    )
     (tmp_path / actor).write_text(previous)
     with pytest.raises(AssertionError, match='retired project toolbar caption'):
         require_current_actor_names(tmp_path)

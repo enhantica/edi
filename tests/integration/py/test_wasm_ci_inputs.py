@@ -105,8 +105,12 @@ def test_required_linux_wasm_compile_routes_through_sdk_build_and_exclusion_chec
     from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
 
     job = workflow()['app-wasm']
-    assert job['runs-on'] == 'ubuntu-24.04'
-    assert set(job['needs']) == {'changes', 'native', 'crysta-sdk'}
+    assert job['runs-on'] == 'ubuntu-24.04', (
+        'Required linux wasm compile routes through sdk build and exclusion check.'
+    )
+    assert set(job['needs']) == {'changes', 'native', 'crysta-sdk'}, (
+        'Required linux wasm compile routes through sdk build and exclusion check.'
+    )
     resolved = {**job, 'if': job['if'].replace('needs.changes.outputs.wasm_build', repr(owed))}
     selected = active(
         resolved,
@@ -125,15 +129,23 @@ def test_required_linux_wasm_compile_routes_through_sdk_build_and_exclusion_chec
         'pixi run -e app --skip-deps wasm-build',
     ]
     calls = [next(s for s in steps if s.get('run') == command) for command in commands]
-    assert steps.index(sdk) < steps.index(native) < steps.index(calls[0])
-    assert [steps.index(s) for s in calls] == sorted(steps.index(s) for s in calls)
-    assert not any(s.get('if') or s.get('continue-on-error') for s in [sdk, native, *calls])
+    assert steps.index(sdk) < steps.index(native) < steps.index(calls[0]), (
+        'Required linux wasm compile routes through sdk build and exclusion check.'
+    )
+    assert [steps.index(s) for s in calls] == sorted(steps.index(s) for s in calls), (
+        'Required linux wasm compile routes through sdk build and exclusion check.'
+    )
+    assert not any(s.get('if') or s.get('continue-on-error') for s in [sdk, native, *calls]), (
+        'Required linux wasm compile routes through sdk build and exclusion check.'
+    )
     build = (ROOT / 'tools/ci/wasm-build.sh').read_text()
     assert 'bash "$ROOT/tools/ci/wasm-assistant-check.sh" "$out/app"' in build, (
         'The common multithread builder retains the mandatory assistant-exclusion check'
     )
     expected = [command.split() for command in commands] if selected else []
-    assert dispatch(tmp_path, '\n'.join(commands) if selected else ':', owed) == expected
+    assert dispatch(tmp_path, '\n'.join(commands) if selected else ':', owed) == expected, (
+        'Required linux wasm compile routes through sdk build and exclusion check.'
+    )
 
 
 def shared_cache_routes(ci, pages):
@@ -292,9 +304,13 @@ def test_survey_browser_checks_run_after_the_shared_chrome_toolchain_is_installe
     steps = workflow()['app-wasm']['steps']
     toolchain = next(step for step in steps if step.get('run') == 'pixi run -e app wasm-toolchain')
     surveys = [step for step in steps if 'test_survey_events.py' in step.get('run', '')]
-    assert len(surveys) == 1 and steps.index(toolchain) < steps.index(surveys[0])
+    assert len(surveys) == 1 and steps.index(toolchain) < steps.index(surveys[0]), (
+        'Survey browser checks run after the shared chrome toolchain is installed.'
+    )
     assert not surveys[0].get('if') and not surveys[0].get('continue-on-error'), (
         'The browser qualification job cannot silently skip or forgive the survey checks'
     )
     core = workflow()['core']
-    assert not any('test_survey_events.py' in step.get('run', '') for step in core['steps'])
+    assert not any('test_survey_events.py' in step.get('run', '') for step in core['steps']), (
+        'Survey browser checks run after the shared chrome toolchain is installed.'
+    )

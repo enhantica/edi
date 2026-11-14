@@ -27,7 +27,9 @@ def test_saved_absorption_restores_only_the_fixed_zero_for_the_original_hash(
     input_file.write_bytes(original + b'_absorption.abscor2 ' + spelling.encode() + b'\n')
     output_file.write_bytes(original)
     expected = {'experiments/bank.edi': hashlib.sha256(before).hexdigest()}
-    assert fingerprints(saved, order_reference=expected, source=source) == expected
+    assert fingerprints(saved, order_reference=expected, source=source) == expected, (
+        'Saved absorption restores only the fixed zero for the original hash.'
+    )
     if damage == 'none':
         return
     if damage in {'nonzero', 'free', 'duplicate'}:
@@ -43,7 +45,9 @@ def test_saved_absorption_restores_only_the_fixed_zero_for_the_original_hash(
         output_file.write_bytes(original.replace(b'_absorption.abscor1 0.125\n', b''))
     else:
         output_file.write_bytes(original.replace(b'0.125', b'0.25'))
-        assert fingerprints(saved, order_reference=expected, source=source) != expected
+        assert fingerprints(saved, order_reference=expected, source=source) != expected, (
+            'Saved absorption restores only the fixed zero for the original hash.'
+        )
         return
     with pytest.raises(AssertionError, match=r'retired|cylinder'):
         fingerprints(saved, order_reference=expected, source=source)
@@ -59,6 +63,8 @@ def test_retired_source_projection_accepts_path_and_string_without_skipping_iden
     row = retired_source_fields.rows()[name]
     with zipfile.ZipFile(retired_source_fields.HERE / 'retired-source-fields.zip') as archive:
         expected = archive.read(row['before_sha256'])
-    assert retired_source_fields.previous_bytes(name_type(name), actual) == expected
+    assert retired_source_fields.previous_bytes(name_type(name), actual) == expected, (
+        'Retired source projection accepts path and string without skipping identity.'
+    )
     with pytest.raises(AssertionError, match='entire independently archived source'):
         retired_source_fields.previous_bytes(name_type(name), actual + b'\n# extra byte\n')

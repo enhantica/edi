@@ -47,13 +47,20 @@ def test_edi_owned_archive_installs_exact_qualified_bytes_without_network(tmp_pa
     context = acquisition(tmp_path, platform)
     before = (context['root'] / 'pixi.toml').read_bytes()
     code, output = fetch(context)
-    assert code == 0, output
+    assert code == 0, (
+        'Edi owned archive installs exact qualified bytes without network. Observed: '
+        + str(output)
+    )
     home = context['root'] / 'build/crysta-sdk' / f'{SHA}-{platform}'
     assert (home / 'lib/libcrysta_core.a').read_bytes() == (
         context['sdk'] / 'lib/libcrysta_core.a'
     ).read_bytes(), 'The consumer unpacks the independently qualified exact library'
-    assert (context['root'] / 'pixi.toml').read_bytes() == before
-    assert 'sha256 ' in output and 'platform ' + platform in output
+    assert (context['root'] / 'pixi.toml').read_bytes() == before, (
+        'Edi owned archive installs exact qualified bytes without network.'
+    )
+    assert 'sha256 ' in output and 'platform ' + platform in output, (
+        'Edi owned archive installs exact qualified bytes without network.'
+    )
 
 
 @pytest.mark.parametrize('platform', ['linux-64', 'osx-arm64'])
@@ -75,5 +82,9 @@ def test_qualified_archive_reader_refuses_substitution_without_fallback(
 ):
     context = acquisition(tmp_path, platform, defect)
     code, output = fetch(context)
-    assert code != 0 and 'REFUSED' in output, output
-    assert not (context['root'] / 'build/crysta-prefix').exists()
+    assert code != 0 and 'REFUSED' in output, (
+        'Qualified archive reader refuses substitution without fallback. Observed: ' + str(output)
+    )
+    assert not (context['root'] / 'build/crysta-prefix').exists(), (
+        'Qualified archive reader refuses substitution without fallback.'
+    )

@@ -22,13 +22,25 @@ def test_pin_annotation_retains_its_exact_committed_source_document(name, monkey
     data = (ROOT / name).read_bytes()
     with zipfile.ZipFile(source.HERE / 'pin-sources.zip') as archive:
         before = archive.read(row['before_sha256'])
-    assert source.previous_bytes(name, data) == before
+    assert source.previous_bytes(name, data) == before, (
+        'Pin annotation retains its exact committed source document.'
+    )
     metadata = json.loads(data)['source']['pins']
-    assert metadata == row['metadata']
-    assert metadata['kind'] == 'committed-document'
-    assert re.fullmatch(r'[0-9a-f]{40}', metadata['commit'])
-    assert metadata['record_sha256'] == hashlib.sha256(before).hexdigest()
-    assert metadata['reason'] and 'no fit rerun' in metadata['reason']
+    assert metadata == row['metadata'], (
+        'Pin annotation retains its exact committed source document.'
+    )
+    assert metadata['kind'] == 'committed-document', (
+        'Pin annotation retains its exact committed source document.'
+    )
+    assert re.fullmatch(r'[0-9a-f]{40}', metadata['commit']), (
+        'Pin annotation retains its exact committed source document.'
+    )
+    assert metadata['record_sha256'] == hashlib.sha256(before).hexdigest(), (
+        'Pin annotation retains its exact committed source document.'
+    )
+    assert metadata['reason'] and 'no fit rerun' in metadata['reason'], (
+        'Pin annotation retains its exact committed source document.'
+    )
     for damaged in (data[:-1], data + b'\n', data.replace(b'"commit"', b'"foreign"', 1)):
         with pytest.raises(AssertionError, match='every committed source byte'):
             source.previous_bytes(name, damaged)
@@ -62,7 +74,9 @@ def test_real_case_checker_refuses_incomplete_pin_provenance(tmp_path, damage):
     metadata = json.loads((vocabulary / 'metadata.json').read_text())
     metadata['examples'] = {case: metadata['examples'][case]}
     (vocabulary / 'metadata.json').write_text(json.dumps(metadata))
-    assert not any('regression pin provenance' in item for item in case_records.problems(tmp_path))
+    assert not any(
+        'regression pin provenance' in item for item in case_records.problems(tmp_path)
+    ), 'Real case checker refuses incomplete pin provenance.'
     path = folder / 'expected.json'
     expected = json.loads(path.read_text())
     if damage == 'missing':
@@ -76,4 +90,6 @@ def test_real_case_checker_refuses_incomplete_pin_provenance(tmp_path, damage):
             if quantity.get('kind') == 'regression-pin':
                 quantity['kind'] = 'reference'
     path.write_text(json.dumps(expected))
-    assert f'{case}: has no complete regression pin provenance' in case_records.problems(tmp_path)
+    assert f'{case}: has no complete regression pin provenance' in case_records.problems(
+        tmp_path
+    ), 'Real case checker refuses incomplete pin provenance.'

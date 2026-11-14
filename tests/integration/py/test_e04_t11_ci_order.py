@@ -339,6 +339,12 @@ def test_condition_observer_distinguishes_implicit_success_and_reporting(state):
 def test_browser_source_changes_are_qualified_on_trusted_pull_requests(changed):
     job = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']['app-wasm']
     states = {'changes': 'success', 'native': 'success', 'crysta-sdk': 'success'}
-    assert active(job, 'pull_request', states=states, wasm_build=changed) == changed
-    assert not active(job, 'pull_request', states=states, wasm_build=changed, fork=True)
-    assert not active(job, 'pull_request', states=states, wasm_build=changed, core_only=True)
+    assert active(job, 'pull_request', states=states, wasm_build=changed) == changed, (
+        'Browser source changes are qualified on trusted pull requests.'
+    )
+    assert not active(job, 'pull_request', states=states, wasm_build=changed, fork=True), (
+        'Browser source changes are qualified on trusted pull requests.'
+    )
+    assert not active(job, 'pull_request', states=states, wasm_build=changed, core_only=True), (
+        'Browser source changes are qualified on trusted pull requests.'
+    )

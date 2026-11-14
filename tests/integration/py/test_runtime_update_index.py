@@ -49,12 +49,20 @@ def test_indexed_update_preserves_measurements_holes_foreign_rows_and_stale_remo
     )
     monkeypatch.setattr(checker, 'MANIFEST', manifest)
     monkeypatch.setattr(checker, 'collect_nodeids', lambda: IndexedCollection([kept, added, hole]))
-    assert checker._update(log, costs, [kept] if remeasure else []) == 0
+    assert checker._update(log, costs, [kept] if remeasure else []) == 0, (
+        'Indexed update preserves measurements holes foreign rows and stale removal.'
+    )
     result = manifest.read_text(encoding='utf-8')
     values = checker._measured_values_in(result)
-    assert values == {kept: 0.03 if remeasure else 0.04, added: 0.02, foreign: 0.07}
-    assert checker._unmeasured_reasons(result) == {hole: 'prior-reason'}
-    assert stale not in result
+    assert values == {kept: 0.03 if remeasure else 0.04, added: 0.02, foreign: 0.07}, (
+        'Indexed update preserves measurements holes foreign rows and stale removal.'
+    )
+    assert checker._unmeasured_reasons(result) == {hole: 'prior-reason'}, (
+        'Indexed update preserves measurements holes foreign rows and stale removal.'
+    )
+    assert stale not in result, (
+        'Indexed update preserves measurements holes foreign rows and stale removal.'
+    )
 
 
 def test_unknown_remeasurement_still_refuses_before_writing(checker, tmp_path, monkeypatch):
@@ -64,7 +72,9 @@ def test_unknown_remeasurement_still_refuses_before_writing(checker, tmp_path, m
     monkeypatch.setattr(checker, 'collect_nodeids', lambda: IndexedCollection(['known.py::known']))
     with pytest.raises(checker.ManifestError, match='names nodes that are not collected'):
         checker._update(tmp_path / 'absent.log', tmp_path / 'absent.json', ['foreign.py::foreign'])
-    assert manifest.read_text(encoding='utf-8') == 'unchanged sentinel\n'
+    assert manifest.read_text(encoding='utf-8') == 'unchanged sentinel\n', (
+        'Unknown remeasurement still refuses before writing.'
+    )
 
 
 @pytest.mark.parametrize('phase', ['setup', 'call', 'teardown'])
@@ -80,12 +90,20 @@ def test_duration_without_completed_node_evidence_remains_unmeasured(
     costs.write_text(json.dumps({'module_costs': {}, 'completed': []}), encoding='utf-8')
     monkeypatch.setattr(checker, 'MANIFEST', manifest)
     monkeypatch.setattr(checker, 'collect_nodeids', lambda: [node])
-    assert checker._update(log, costs, []) == 0
+    assert checker._update(log, costs, []) == 0, (
+        'Duration without completed node evidence remains unmeasured.'
+    )
     text = manifest.read_text(encoding='utf-8')
     assert node not in checker._measured_values_in(text), (
         'A reported phase duration cannot prove that an interrupted test completed'
     )
-    assert checker._unmeasured_reasons(text) == {node: 'not-completed-in-this-run'}
+    assert checker._unmeasured_reasons(text) == {node: 'not-completed-in-this-run'}, (
+        'Duration without completed node evidence remains unmeasured.'
+    )
     costs.write_text(json.dumps({'module_costs': {}, 'completed': [node]}), encoding='utf-8')
-    assert checker._update(log, costs, [node]) == 0
-    assert checker._measured_values_in(manifest.read_text(encoding='utf-8')) == {node: 0.02}
+    assert checker._update(log, costs, [node]) == 0, (
+        'Duration without completed node evidence remains unmeasured.'
+    )
+    assert checker._measured_values_in(manifest.read_text(encoding='utf-8')) == {node: 0.02}, (
+        'Duration without completed node evidence remains unmeasured.'
+    )

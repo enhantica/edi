@@ -115,16 +115,30 @@ def test_background_teaching_observer_reaches_the_real_action_and_refuses_escape
         {'target': 'background.estimate', 'check': 'background-estimated:'},
         {'target': 'statusBar.fit.button'},
     ]
-    assert command_background_lesson(written) and app_background_lesson(steps)
+    assert command_background_lesson(written) and app_background_lesson(steps), (
+        'Background teaching observer reaches the real action and refuses escapes.'
+    )
     if damage == 'no-mode':
-        assert not command_background_lesson(written.replace('_background_estimate.mode auto', ''))
+        assert not command_background_lesson(
+            written.replace('_background_estimate.mode auto', '')
+        ), 'Background teaching observer reaches the real action and refuses escapes.'
     elif damage == 'unknown-method':
-        assert not command_background_lesson(written + '_background_estimate.method foreign\n')
+        assert not command_background_lesson(written + '_background_estimate.method foreign\n'), (
+            'Background teaching observer reaches the real action and refuses escapes.'
+        )
     elif damage == 'no-method-lesson':
-        assert not command_background_lesson(written.replace('arPLS', 'foreign'))
+        assert not command_background_lesson(written.replace('arPLS', 'foreign')), (
+            'Background teaching observer reaches the real action and refuses escapes.'
+        )
     elif damage == 'no-action':
-        assert not app_background_lesson([{'text': 'automatic background arPLS'}, steps[1]])
+        assert not app_background_lesson([{'text': 'automatic background arPLS'}, steps[1]]), (
+            'Background teaching observer reaches the real action and refuses escapes.'
+        )
     elif damage == 'no-check':
-        assert not app_background_lesson([{'target': 'background.estimate'}, steps[1]])
+        assert not app_background_lesson([{'target': 'background.estimate'}, steps[1]]), (
+            'Background teaching observer reaches the real action and refuses escapes.'
+        )
     else:
-        assert not app_background_lesson(list(reversed(steps)))
+        assert not app_background_lesson(list(reversed(steps))), (
+            'Background teaching observer reaches the real action and refuses escapes.'
+        )

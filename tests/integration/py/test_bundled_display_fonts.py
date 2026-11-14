@@ -341,5 +341,9 @@ def test_structure_legend_uses_the_atom_table_icon_pipeline():
 
 
 def test_cpp_adjacent_tokens_do_not_extend_hex_escapes_or_redecode_backslashes():
-    assert list(literals(r'"\xC3\x97" "10"', cpp=True)) == [(0, '"\u00d710"')]
-    assert list(literals(r'"\\x41" /* boundary */ "42"', cpp=True)) == [(0, '"\\x4142"')]
+    assert list(literals(r'"\xC3\x97" "10"', cpp=True)) == [(0, '"\u00d710"')], (
+        'Cpp adjacent tokens do not extend hex escapes or redecode backslashes.'
+    )
+    assert list(literals(r'"\\x41" /* boundary */ "42"', cpp=True)) == [(0, '"\\x4142"')], (
+        'Cpp adjacent tokens do not extend hex escapes or redecode backslashes.'
+    )
