@@ -3,9 +3,12 @@
 import json
 import re
 import shutil
+from decimal import Decimal
 from pathlib import Path
 
 import edi
+
+from tests.fixtures.parameter_notation.reference import parse
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -17,12 +20,14 @@ def check_phase_sum(rows, index, indices):
         # The phase sum of sites separated by (1/2,1/2,1/2) is 0 or 2b.
         amplitude = 0.0 if odd else 2 * 8.24 / 10
         expected = amplitude if index == indices['F calc'] else amplitude**2
-        assert row[index] == format(expected, '.3f'), (
+        mantissa, power = parse(row[index])
+        physical = mantissa.scaleb(power or 0).quantize(Decimal('.001'))
+        assert format(physical, '.3f') == format(expected, '.3f'), (
             'F and F squared match the independent two-site phase-sum closed form'
         )
 
 
-def test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_html(tmp_path):
+def test_reflection_notation_retains_the_original_phase_sum_precision(tmp_path):
     source = tmp_path / 'equal_sites'
     shutil.copytree(ROOT / 'tests/fixtures/loop_parameter_ids/line-segment', source)
     structure = source / 'structures/phase.edi'
@@ -52,24 +57,30 @@ def test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_ht
     html = loaded.report.as_html()
     indices = {name: table['columns'].index(name) for name in ('h', 'k', 'l', 'F calc', 'F² calc')}
     checked = 0
-    zero_seen = False
+    cancellation_seen = False
     for index in range(3, len(table['columns'])):
         cells = [row[index] for row in table['rows']]
-        if not all(re.fullmatch(r'[-+]?\d+(?:\.\d*)?(?:[eE][-+]?\d+)?', value) for value in cells):
-            continue
+        parsed = [parse(value) for value in cells]
         checked += 1
-        assert all('e' not in value.lower() for value in cells), (
-            'Computed reflection columns use fixed decimals without exponent notation'
-        )
-        precision = {len(value.partition('.')[2]) for value in cells if float(value) != 0}
+        # The later owner 2026-11-11 item 6 applies the shared magnitude notation
+        # everywhere. Physical phase sums retain the original .001 projection.
+        for text, (number, power) in zip(cells, parsed, strict=True):
+            if power is not None:
+                assert re.fullmatch(r'[+-]?[1-9]\.[0-9]{2}\u00d710[⁰¹²³⁴⁵⁶⁷⁸⁹⁻]+', text)
+                assert not Decimal('.001') <= abs(number.scaleb(power)) < Decimal(1000)
+        precision = {
+            len(text.partition('.')[2])
+            for text, (number, power) in zip(cells, parsed, strict=True)
+            if power is None and number != 0
+        }
         assert len(precision) <= 1, (
             'Every computed reflection column retains one decimal precision for all nonzero rows'
         )
         if index in {indices['F calc'], indices['F² calc']}:
             assert precision == {3}, 'F and F squared use the owner fixed-three report precision'
             check_phase_sum(table['rows'], index, indices)
-        zero_seen |= index in {indices['F calc'], indices['F² calc']} and any(
-            float(value) == 0 for value in cells
+        cancellation_seen |= index in {indices['F calc'], indices['F² calc']} and any(
+            sum(int(row[indices[key]]) for key in ('h', 'k', 'l')) % 2 for row in table['rows']
         )
         assert all(value in html for value in cells), (
             'The HTML writer retains the exact computed-column text used by the preview model'
@@ -77,6 +88,6 @@ def test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_ht
     assert checked >= 2, (
         'The precision gate reaches multiple computed reflection quantities beyond h, k and l'
     )
-    assert zero_seen, (
-        'Closed-form odd-index P1 cancellation is shown as zero rather than a tiny exponent'
+    assert cancellation_seen, (
+        'The physical closed form must actually exercise odd-index P1 cancellation'
     )
