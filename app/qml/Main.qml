@@ -28,25 +28,21 @@ EaComponents.ApplicationWindow {
     // Let the app bar reach the top edge (Qt keeps the content inside the safe area by default); the system
     // buttons then sit in a strip at the top of the app bar, and every group of the app bar moves down below it.
     topPadding: mergedTitleBar ? 0 : undefined
+    // macOS: the traffic lights' row at the top of the app bar and the left edge of its first button
+    // (mac_titlebar.mm places the red light there).
+    readonly property real trafficLightsRowHeight: 28
+    readonly property real trafficLightsLeft: appBar.children.length ? appBar.children[0].anchors.leftMargin : 0
     function setUpMergedTitleBar() {
         if (!mergedTitleBar)
             return;
         const rows = appBar.children;
-        const left = rows[0], tabs = rows[1], right = rows[2];
-        if (Qt.platform.os === "osx") {
-            // macOS: the traffic lights move into the app bar's row (mac_titlebar.mm); the left buttons start
-            // after them and the bar keeps its height.
-            const leftBase = left.anchors.leftMargin;
-            left.anchors.leftMargin = leftBase + 70;
-            return;
-        }
-        // Windows: the system buttons keep a strip at the top of the app bar and the groups sit below it.
-        const strip = () => appBar.SafeArea.margins.top;
-        const gap = 16;
+        // The system buttons keep a row at the top of the app bar (left on macOS, right on Windows); the bar grows
+        // a little and its groups move down, so the two rows are not too close.
+        const extra = 12;
         const baseHeight = appBar.height;
-        appBar.height = Qt.binding(() => baseHeight + strip() + gap);
-        for (const row of [left, tabs, right])
-            row.anchors.verticalCenterOffset = Qt.binding(() => (strip() + gap) / 2);
+        appBar.height = baseHeight + extra;
+        for (const row of [rows[0], rows[1], rows[2]])
+            row.anchors.verticalCenterOffset = extra / 2;
     }
     // Dragging the empty app bar moves the window, and a double click maximizes or restores it, as a title bar does.
     // Starts on press, before any button or tab can take the press, so a drag works anywhere on the empty bar.

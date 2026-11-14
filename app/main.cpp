@@ -28,7 +28,7 @@
 #ifndef __EMSCRIPTEN__
 void start_installer_smoke(QQuickWindow&, const QString&);
 #ifdef Q_OS_MACOS
-void merge_mac_title_bar(QWindow* window, double bar_height);
+void merge_mac_title_bar(QWindow* window, double row_height, double left_edge);
 #endif
 #endif
 
@@ -145,10 +145,9 @@ int main(int argc, char* argv[]) {
         merged->setFlag(Qt::ExpandedClientAreaHint, true);
         merged->setFlag(Qt::NoTitleBarBackgroundHint, true);
 #ifdef Q_OS_MACOS
-        // The traffic lights sit in the app bar, centred on its row (the bar's height is read from the QML).
-        const QVariant bar = merged->property("appBar");
-        if (auto* item = bar.value<QQuickItem*>())
-            merge_mac_title_bar(merged, item->height());
+        // The traffic lights sit in a row at the top of the app bar, the red one over the first button (Main.qml).
+        merge_mac_title_bar(merged, merged->property("trafficLightsRowHeight").toDouble(),
+                            merged->property("trafficLightsLeft").toDouble());
 #endif
         QTimer::singleShot(1500, merged, [merged] {
             const QMargins m = merged->safeAreaMargins();
