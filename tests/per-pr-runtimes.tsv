@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T08:17:02Z
+# measured_utc = 2026-11-14T08:42:49Z
 #
-# Recorded from: measured test run (30 node(s) measured once, 176250 banked, 0 stale row(s) dropped)
-# Collected tests: 245133; with a reported duration: 77110
+# Recorded from: measured test run (12 node(s) measured once, 176280 banked, 0 stale row(s) dropped)
+# Collected tests: 245145; with a reported duration: 77115
 # Module-scoped fixture costs recorded: 191
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245133
+# inventory_python = 245145
 # inventory_cpp = 402
-# inventory_measured = 176280
+# inventory_measured = 176292
 # inventory_unmeasured = 69255
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85866
+# inventory_pr_python = 85878
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -167467,7 +167467,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.p
 0.020	tests/integration/py/test_native_serialized_source_admission.py::test_native_linked_reflection_project_retains_file_dataset_identity[project-plural-tof]
 0.030	tests/integration/py/test_native_serialized_source_admission.py::test_native_linked_reflection_project_retains_file_dataset_identity[project-single-cwl]
 0.040	tests/integration/py/test_native_serialized_source_admission.py::test_native_linked_reflection_project_retains_file_dataset_identity[project-single-tof]
+0.000	tests/integration/py/test_native_shell_path.py::test_bash_without_suffix_resolves_its_existing_exe_without_a_path_search
 0.050	tests/integration/py/test_native_shell_path.py::test_every_core_platform_exposes_its_actual_running_bash
+0.000	tests/integration/py/test_native_shell_path.py::test_existing_unsuffixed_bash_wins_over_a_neighbouring_exe
+0.000	tests/integration/py/test_native_shell_path.py::test_selected_bash_retains_an_explicit_native_executable_suffix[.EXE]
+0.000	tests/integration/py/test_native_shell_path.py::test_selected_bash_retains_an_explicit_native_executable_suffix[.exe]
 0.000	tests/integration/py/test_native_shell_path.py::test_selected_shell_refuses_invalid_environment_file_entries[directory]
 0.000	tests/integration/py/test_native_shell_path.py::test_selected_shell_refuses_invalid_environment_file_entries[missing]
 0.000	tests/integration/py/test_native_shell_path.py::test_selected_shell_refuses_invalid_environment_file_entries[newline]
@@ -167910,6 +167914,9 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_fina
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_authoring_evidence_refuses_forged_or_incomplete_records[wrong-sdk-source]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_authoring_evidence_refuses_forged_or_incomplete_records[wrong-stage-display]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_authoring_evidence_refuses_forged_or_incomplete_records[wrong-url]
+0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_trial_refuses_changes_to_the_annotated_original_reference[pin-provenance]
+0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_trial_refuses_changes_to_the_annotated_original_reference[scientific-value]
+0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_trial_refuses_changes_to_the_annotated_original_reference[tolerance]
 0.040	tests/integration/py/test_release_pin_source_bytes.py::test_complete_release_source_pairs_retain_their_archived_byte_identities
 0.000	tests/integration/py/test_release_pin_source_bytes.py::test_iteration_classification_exception_is_bound_to_its_exact_source
 0.060	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_cosio-d20/expected.json]
@@ -169967,6 +169974,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_docs_presentati
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_docs_presentation.py::test_overview_has_one_sectioned_table_with_record_tags_and_accessible_links[cli]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_docs_presentation.py::test_overview_has_one_sectioned_table_with_record_tags_and_accessible_links[python]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_docs_presentation.py::test_overview_has_one_sectioned_table_with_record_tags_and_accessible_links[user-guide]
+0.160	tests/integration/py/test_tutorial_docs_presentation.py::test_overview_tag_observer_refuses_changed_content_or_accessibility[glyph]
+0.150	tests/integration/py/test_tutorial_docs_presentation.py::test_overview_tag_observer_refuses_changed_content_or_accessibility[label]
+0.130	tests/integration/py/test_tutorial_docs_presentation.py::test_overview_tag_observer_refuses_changed_content_or_accessibility[missing-icon]
+0.150	tests/integration/py/test_tutorial_docs_presentation.py::test_overview_tag_observer_refuses_changed_content_or_accessibility[token]
+0.130	tests/integration/py/test_tutorial_docs_presentation.py::test_overview_tag_observer_refuses_changed_content_or_accessibility[visible-icon]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_empty_project.py::test_explicit_experiment_starts_without_a_blank_structure_link
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_empty_project.py::test_named_project_starts_empty_and_reading_collections_does_not_create_objects
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_empty_project.py::test_public_import_resolves_this_checkout
