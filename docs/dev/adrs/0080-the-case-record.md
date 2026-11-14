@@ -171,3 +171,13 @@ through the same exact insertion-only provenance archive before checking its
 unchanged original reference hash. Its producer receipt still records the actual
 current file hash. Added documentary provenance cannot change quantities,
 tolerances or disclosures, nor conceal a changed or re-signed reference document.
+
+
+Overview observers validate the shared decorative glyph separately from the exact tag
+label and accessible text. The private-use font character must not become part of
+the label comparison. Both older qualified icon paths and current shared icon names
+retain the declared icon identity in navigation; the icon basename stays exact.
+The native catalogue snapshot is refreshed through the documented import command,
+including the existing single-crystal cases and full Crystal structure / Magnetic
+structure labels. Its receipt names the actual source commit and file hashes;
+no numerical or screenshot references are regenerated.

@@ -169,3 +169,26 @@ def assert_tag_cell(cell, record, root=ROOT):
                 for document in images
                 for item in ElementTree.fromstring(document).iter()
             ), 'Gate 3/4: a tag without an app glyph must not acquire a different symbol'
+
+
+def assert_overview_tag(chip, tag, root=ROOT):
+    """Observe the shared icon and visible tag label as distinct accessible content."""
+    registry = json.loads((root / 'app/examples/tags.json').read_text())
+    definition = registry['tags'][tag['facet']][tag['value']]
+    assert chip.get('data-ed-tag') == tag['facet'] and chip.get('data-ed-token') == tag['value'], (
+        'An overview tag retains its exact declared facet and token'
+    )
+    symbols = chip.select('.ed-reference-icon')
+    assert len(symbols) == bool(definition['glyph']), (
+        'An overview tag has exactly its shared app icon, when declared'
+    )
+    for symbol in symbols:
+        assert symbol.get('aria-hidden') == 'true' and symbol.get_text() == definition['glyph'], (
+            'The exact shared app glyph is decorative and separate from the tag label'
+        )
+    label = BeautifulSoup(str(chip), 'html.parser')
+    for symbol in label.select('.ed-reference-icon'):
+        symbol.decompose()
+    assert label.get_text(' ', strip=True) == tag['label'] == definition['label'], (
+        'The overview retains the exact visible and accessible declared tag label'
+    )

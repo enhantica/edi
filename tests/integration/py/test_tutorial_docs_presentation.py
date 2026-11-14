@@ -2,6 +2,7 @@
 
 import copy
 import importlib
+import json
 import re
 
 import pytest
@@ -17,6 +18,7 @@ from tests.fixtures.tutorial_cases.contract import (
 from tests.fixtures.tutorial_cases.interfaces import assert_catalogue_coverage, link_is_case
 from tests.fixtures.tutorial_cases.presentation import (
     RULES,
+    assert_overview_tag,
     assert_tag_cell,
     chips,
     notebook,
@@ -130,9 +132,12 @@ def test_overview_has_one_sectioned_table_with_record_tags_and_accessible_links(
         row for section, _ in RULES['sections'] for row in selected if row['section'] == section
     ]
     for row, record in zip(rows, expected, strict=True):
-        assert [tag.get_text(' ', strip=True) for tag in row.select('.ed-tag')] == [
-            tag['label'] for tag in record['tags']
-        ], 'Gate 3/4: every overview row has exactly its record tag set'
+        tags = row.select('.ed-tag')
+        assert len(tags) == len(record['tags']), (
+            'Gate 3/4: every overview row has exactly its record tag set'
+        )
+        for chip, tag in zip(tags, record['tags'], strict=True):
+            assert_overview_tag(chip, tag)
         name = row.select_one('.ed-example-name')
         assert name is not None and (
             record['title'] in name.get_text(' ', strip=True)
@@ -204,7 +209,7 @@ def test_built_navigation_groups_short_titles_under_the_five_iconed_sections(
         'Gate 3/4: built navigation contains the five short section names in the owner order'
     )
     for name, icon in RULES['sections']:
-        assert document['extra']['section_icons'][name].endswith('/' + icon), (
+        assert document['extra']['section_icons'][name].rsplit('/', 1)[-1] == icon, (
             'Gate 3/4: navigation sections use the declared shared icon'
         )
     names = [
@@ -225,3 +230,34 @@ def test_built_navigation_groups_short_titles_under_the_five_iconed_sections(
         in declared_interfaces(row)
     ]
     assert names == expected, 'Gate 3/4: built navigation uses the record short sample/code title'
+
+
+@pytest.mark.parametrize('damage', ['label', 'glyph', 'missing-icon', 'visible-icon', 'token'])
+def test_overview_tag_observer_refuses_changed_content_or_accessibility(damage):
+    record = read_records()[0]
+    tag = next(item for item in record['tags'] if item['facet'] == 'purpose')
+    registry = json.loads((ROOT / 'app/examples/tags.json').read_text())
+    definition = registry['tags'][tag['facet']][tag['value']]
+    chip = BeautifulSoup(
+        '<a class="ed-tag" data-ed-tag="purpose" data-ed-token="'
+        + tag['value']
+        + '"><span class="ed-reference-icon" aria-hidden="true">'
+        + definition['glyph']
+        + '</span>'
+        + tag['label']
+        + '</a>',
+        'html.parser',
+    ).a
+    assert_overview_tag(chip, tag)
+    if damage == 'label':
+        chip.contents[-1].replace_with('Another label')
+    elif damage == 'token':
+        chip['data-ed-token'] = 'unknown'
+    elif damage == 'missing-icon':
+        chip.span.decompose()
+    elif damage == 'visible-icon':
+        del chip.span['aria-hidden']
+    else:
+        chip.span.string = 'X'
+    with pytest.raises(AssertionError):
+        assert_overview_tag(chip, tag)

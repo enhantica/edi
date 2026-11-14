@@ -70,8 +70,8 @@ An experiment combines one label from each family below. For example, the first 
 
 | Label | Meaning |
 | --- | --- |
-| <span id="crystal-structure"></span><a class="ed-tag ed-tag--structure" data-ed-tag="structure" data-ed-token="crystal" href="../user-guide/glossary/#crystal-structure" title="Crystal structure"><span class="ed-reference-icon" aria-hidden="true"></span>Crystal</a> | Atoms, their positions and displacements in the unit cell. |
-| <span id="magnetic-structure"></span><a class="ed-tag ed-tag--magnetic" data-ed-tag="structure" data-ed-token="magnetic" href="../user-guide/glossary/#magnetic-structure" title="Magnetic structure"><span class="ed-reference-icon" aria-hidden="true"></span>Magnetic</a> | A crystal structure whose magnetic atoms also carry moments, related by magnetic symmetry. |
+| <span id="crystal-structure"></span><a class="ed-tag ed-tag--structure" data-ed-tag="structure" data-ed-token="crystal" href="../user-guide/glossary/#crystal-structure" title="Crystal structure"><span class="ed-reference-icon" aria-hidden="true"></span>Crystal structure</a> | Atoms, their positions and displacements in the unit cell. |
+| <span id="magnetic-structure"></span><a class="ed-tag ed-tag--magnetic" data-ed-tag="structure" data-ed-token="magnetic" href="../user-guide/glossary/#magnetic-structure" title="Magnetic structure"><span class="ed-reference-icon" aria-hidden="true"></span>Magnetic structure</a> | A crystal structure whose magnetic atoms also carry moments, related by magnetic symmetry. |
 
 ### Interface
 
