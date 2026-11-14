@@ -44,13 +44,15 @@ def test_selected_shell_refuses_invalid_environment_file_entries(tmp_path, damag
     assert not destination.exists()
 
 
-def test_every_pixi_setup_exposes_its_actual_running_bash():
-    action = yaml.safe_load((ROOT / '.github/actions/setup-pixi/action.yml').read_text())
-    steps = action['runs']['steps']
+def test_every_core_platform_exposes_its_actual_running_bash():
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    steps = workflow['jobs']['core']['steps']
     selected = [step for step in steps if 'native_shell.py' in step.get('run', '')]
     assert len(selected) == 1
     assert selected[0]['shell'] == 'bash'
     assert selected[0]['run'] == 'python tools/ci/native_shell.py "$BASH"'
     assert steps.index(selected[0]) > next(
-        index for index, step in enumerate(steps) if 'setup-pixi@' in step.get('uses', '')
+        index
+        for index, step in enumerate(steps)
+        if step.get('uses') == './.github/actions/setup-pixi'
     )

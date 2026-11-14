@@ -396,8 +396,8 @@ only those fields and the explicit historical selectors leave the old-format
 comparison. Ordinary saves and current-default solver qualification are unchanged.
 
 
-The common Pixi setup also exposes the actual Bash selected by Actions to Python
-children. It passes that running executable directly to one Python helper and
+The common core-test job setup also exposes the actual Bash selected by Actions
+to Python children. It passes that running executable directly to one Python helper and
 prepends its validated directory through GITHUB_PATH, without rediscovering a
 shell by name. This prevents Windows' unrelated WSL launcher from intercepting
 nested Bash commands. The same entry point and validation run on every host;
@@ -426,3 +426,9 @@ not remove Windows read access. Both preserve the original file, test the same
 I/O refusal and restore access in finally. A missing file refuses the vehicle;
 no platform skips or substitute directory inputs stand in for unreadability.
 Dangling-link identity comparisons resolve both path spellings before comparing.
+
+
+Shell selection belongs to the consumer test job, after its environment setup;
+it does not change the SDK producer's setup action or recipe. Qualified SDK
+archive identity therefore stays intact when only test-shell routing changes.
+The same setup runs for Linux, macOS and Windows in the existing core matrix.

@@ -261,6 +261,9 @@ jobs:
       - *windows-checkout
       - *windows-compiler
       - uses: ./.github/actions/setup-pixi
+      - name: Keep the selected Bash available to test subprocesses
+        shell: bash
+        run: python tools/ci/native_shell.py "$BASH"
       # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
       - id: ccache
         uses: ./.github/actions/ccache
