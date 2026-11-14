@@ -204,7 +204,7 @@ ANALYSIS_FACADE = (
 
 CATEGORY_ABSENCE_NOTES = {
     'absorption': (
-        "upstream's CW cylinder absorption surface; edi's TOF `abscor1`/`abscor2` pair is a "
+        "upstream's CW cylinder absorption surface; edi's TOF `abscor1` is a "
         'declared divergence — see table (a)'
     ),
     'aliases': ANALYSIS_FACADE,
