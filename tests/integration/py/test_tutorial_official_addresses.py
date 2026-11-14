@@ -138,3 +138,21 @@ def test_official_mapping_cannot_hide_a_missing_or_escaping_service_target(tmp_p
     }[damage]
     with pytest.raises(AssertionError, match='Gate 3/5/6:'):
         resolve_official(target, roots)
+
+
+@pytest.mark.parametrize(
+    'package',
+    [
+        'easydiffraction',
+        'easydiffraction==2026.11.14',
+        '"easydiffraction==2026.11.14"',
+        "'easydiffraction==2026.11.14'",
+    ],
+)
+def test_setup_observer_accepts_real_pinned_and_quoted_package_arguments(package):
+    assert_setup(
+        GOOD.replace('easydiffraction --', package + ' --').replace(
+            'pixi add --pypi easydiffraction', 'pixi add --pypi ' + package
+        ),
+        install_routes=True,
+    )
