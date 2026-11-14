@@ -4,6 +4,7 @@ import functools
 import hashlib
 import json
 import re
+import shlex
 import zipfile
 from pathlib import Path
 
@@ -49,6 +50,30 @@ def saved_analysis(data, source):
     """Check the declared or legacy stop rule before retaining older saved-byte pins."""
     path = Path(source) / 'analysis/analysis.edi'
     original = path.read_bytes() if path.is_file() else b''
+    plural_pattern = rb'(?m)^_minimizer\.stop_rules[ \t]+([^\r\n]+)\r?\n'
+    plural = re.findall(plural_pattern, original)
+    assert len(plural) <= 1, 'The input stop-rule set is a unique scalar declaration'
+    if plural:
+        assert not re.search(rb'(?m)^_minimizer\.stop_rule[ \t]', original), (
+            'The input must not declare both stop-rule syntaxes'
+        )
+
+        def tokens(value):
+            scalar = shlex.split(value.decode('utf-8'), comments=True)
+            assert len(scalar) == 1, 'A stop-rule set has one unambiguous scalar value'
+            choices = scalar[0].split()
+            assert len(choices) == len(set(choices))
+            assert set(choices) <= {'chi_square_change', 'shift_su'}
+            return frozenset(choices)
+
+        expected_set = tokens(plural[0])
+        emitted = re.findall(plural_pattern, data)
+        assert len(emitted) <= 1, 'The saved stop-rule set is a unique scalar declaration'
+        assert (tokens(emitted[0]) if emitted else frozenset()) == expected_set, (
+            'The saved stop-rule set must retain every declared choice exactly'
+        )
+        assert not re.search(rb'(?m)^_minimizer\.stop_rule[ \t]', data)
+        return re.sub(plural_pattern, b'', data)
     declared = re.findall(rb'(?m)^_minimizer\.stop_rule[ \t]+([^\r\n]+)', original)
     assert len(declared) <= 1, 'The input stop rule is a unique scalar declaration'
     expected = declared[0].strip() if declared else b'chi_square'

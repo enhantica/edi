@@ -409,3 +409,10 @@ save records that actual write before sealing its carried-file receipt, so its o
 an unexpected added file. Existing carried files still undergo the ordinary receipt checks.
 
 - [Qt QFileDialog native platform behavior](https://doc.qt.io/qt-6/qfiledialog.html)
+
+
+Historical saved-byte checks validate later declared stop-rule sets before their
+older layout comparison. They retain the original whole-file hashes and reject
+changed, duplicate, unknown or mixed stop declarations. Projection removes only
+the independently checked later field; it neither substitutes numerical output
+nor asserts fitting-policy equivalence.

@@ -17,3 +17,10 @@ plural chi-square-change declaration). It accepts only the complete committed
 before/after bytes. Scientific values, row order, metadata, comments and extra
 fields still fail closed. This projection preserves historical byte oracles;
 it does not assert that different fitting policies produce identical fits.
+
+The saved-byte adapter also validates the current plural stop-rule set against its
+explicit input before removing that later field from the historical comparison.
+Choices remain closed, unique and equal after scalar quoting/order is parsed;
+changed, repeated, unknown or mixed declarations refuse. Every other byte and
+the original full-file hashes remain checked. This is a format witness, not a
+claim that different stop policies produce the same fit.
