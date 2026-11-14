@@ -35,10 +35,9 @@ EaComponents.ApplicationWindow {
         const left = rows[0], tabs = rows[1], right = rows[2];
         const strip = () => appBar.SafeArea.margins.top;
         const baseHeight = appBar.height;
-        // The groups sit a whole strip below the system buttons' strip, so the tabs' hover does not touch it.
-        appBar.height = Qt.binding(() => baseHeight + 2 * strip());
+        appBar.height = Qt.binding(() => baseHeight + strip());
         for (const row of [left, tabs, right])
-            row.anchors.verticalCenterOffset = Qt.binding(() => strip());
+            row.anchors.verticalCenterOffset = Qt.binding(() => strip() / 2);
         console.info("merged title bar: strip", strip());
     }
     // Dragging the empty app bar moves the window, and a double click maximizes or restores it, as a title bar does.
