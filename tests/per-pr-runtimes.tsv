@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T07:34:09Z
+# measured_utc = 2026-11-14T08:17:02Z
 #
-# Recorded from: measured test run (192 node(s) measured once, 176058 banked, 2 stale row(s) dropped)
-# Collected tests: 245103; with a reported duration: 77106
+# Recorded from: measured test run (30 node(s) measured once, 176250 banked, 0 stale row(s) dropped)
+# Collected tests: 245133; with a reported duration: 77110
 # Module-scoped fixture costs recorded: 191
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245103
+# inventory_python = 245133
 # inventory_cpp = 402
-# inventory_measured = 176250
+# inventory_measured = 176280
 # inventory_unmeasured = 69255
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85836
+# inventory_pr_python = 85866
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -1400,6 +1400,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.030	tests/integration/py/test_app_build_cache.py::test_captured_app_observations_reuse_only_the_same_qualified_binary
 0.060	tests/integration/py/test_app_build_cache.py::test_failed_or_mutating_app_build_cannot_cache_success
 0.290	tests/integration/py/test_app_build_cache.py::test_real_app_fixtures_build_once_per_owner_and_backend
+0.050	tests/integration/py/test_app_build_cache.py::test_real_receipt_inputs_keep_portable_source_keys_on_both_path_styles[PurePosixPath]
+0.060	tests/integration/py/test_app_build_cache.py::test_real_receipt_inputs_keep_portable_source_keys_on_both_path_styles[PureWindowsPath]
 0.090	tests/integration/py/test_app_cache_closure.py::test_browser_reuse_cannot_serve_an_unsealed_linked_directory[cache-screen]
 0.320	tests/integration/py/test_app_cache_closure.py::test_browser_reuse_cannot_serve_an_unsealed_linked_directory[cache-selector]
 0.090	tests/integration/py/test_app_cache_closure.py::test_browser_reuse_cannot_serve_an_unsealed_linked_directory[prepared-screen]
@@ -167120,6 +167122,25 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.p
 0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[public-// #include "crysta/model.hpp"\n]
 0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[public-]
 0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[public-auto text = R"(\n#include "crysta/model.hpp"\n)";\n]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_historical_fit_record_checks_live_diagnostics_without_replacing_original_values[descent]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_historical_fit_record_checks_live_diagnostics_without_replacing_original_values[duplicate]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_historical_fit_record_checks_live_diagnostics_without_replacing_original_values[iterations]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_historical_fit_record_checks_live_diagnostics_without_replacing_original_values[missing]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_historical_fit_record_checks_live_diagnostics_without_replacing_original_values[none]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_historical_fit_record_checks_live_diagnostics_without_replacing_original_values[rule]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_historical_fit_record_checks_live_diagnostics_without_replacing_original_values[science]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_historical_fit_record_checks_live_diagnostics_without_replacing_original_values[shift]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_historical_fit_record_checks_live_diagnostics_without_replacing_original_values[value]
+0.020	tests/integration/py/test_native_saved_text_transport.py::test_saved_byte_caller_only_projects_native_edi_newlines[comment-\n]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_saved_byte_caller_only_projects_native_edi_newlines[comment-\r\n]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_saved_byte_caller_only_projects_native_edi_newlines[extra-blank-\n]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_saved_byte_caller_only_projects_native_edi_newlines[extra-blank-\r\n]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_saved_byte_caller_only_projects_native_edi_newlines[none-\n]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_saved_byte_caller_only_projects_native_edi_newlines[none-\r\n]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_saved_byte_caller_only_projects_native_edi_newlines[opaque-\n]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_saved_byte_caller_only_projects_native_edi_newlines[opaque-\r\n]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_saved_byte_caller_only_projects_native_edi_newlines[value-\n]
+0.000	tests/integration/py/test_native_saved_text_transport.py::test_saved_byte_caller_only_projects_native_edi_newlines[value-\r\n]
 0.030	tests/integration/py/test_native_serialized_source_admission.py::test_each_native_parser_refuses_competing_declared_sources[own+collection-batch-powder-cwl]
 0.020	tests/integration/py/test_native_serialized_source_admission.py::test_each_native_parser_refuses_competing_declared_sources[own+collection-batch-powder-tof]
 0.030	tests/integration/py/test_native_serialized_source_admission.py::test_each_native_parser_refuses_competing_declared_sources[own+collection-batch-reflections-cwl]
@@ -167446,6 +167467,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.p
 0.020	tests/integration/py/test_native_serialized_source_admission.py::test_native_linked_reflection_project_retains_file_dataset_identity[project-plural-tof]
 0.030	tests/integration/py/test_native_serialized_source_admission.py::test_native_linked_reflection_project_retains_file_dataset_identity[project-single-cwl]
 0.040	tests/integration/py/test_native_serialized_source_admission.py::test_native_linked_reflection_project_retains_file_dataset_identity[project-single-tof]
+0.050	tests/integration/py/test_native_shell_path.py::test_every_core_platform_exposes_its_actual_running_bash
+0.000	tests/integration/py/test_native_shell_path.py::test_selected_shell_refuses_invalid_environment_file_entries[directory]
+0.000	tests/integration/py/test_native_shell_path.py::test_selected_shell_refuses_invalid_environment_file_entries[missing]
+0.000	tests/integration/py/test_native_shell_path.py::test_selected_shell_refuses_invalid_environment_file_entries[newline]
+0.000	tests/integration/py/test_native_shell_path.py::test_selected_shell_refuses_invalid_environment_file_entries[wrong-name]
+0.000	tests/integration/py/test_native_shell_path.py::test_selected_workflow_shell_wins_over_an_unrelated_path_entry
 0.050	tests/integration/py/test_native_source_inputs.py::test_compiled_test_input_drift_is_admitted_to_refusal[deleted-data/assistant/openai-capabilities.json]
 0.040	tests/integration/py/test_native_source_inputs.py::test_compiled_test_input_drift_is_admitted_to_refusal[deleted-data/assistant/skills/future/native-input.md]
 0.030	tests/integration/py/test_native_source_inputs.py::test_compiled_test_input_drift_is_admitted_to_refusal[deleted-data/colormaps/scientific.tsv]
@@ -244833,6 +244860,9 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publicati
 0.000	tests/unit/py/test_native_artifact_identity.py::test_windows_native_identity_maps_to_its_own_sdk[win-64]
 0.000	tests/unit/py/test_native_capture_artifact.py::test_copy_that_straddles_a_relink_is_refused
 0.000	tests/unit/py/test_native_capture_artifact.py::test_native_capture_retains_its_artifact_across_relink
+0.000	tests/unit/py/test_native_read_access.py::test_actual_read_denial_preserves_the_file_and_restores_access[False]
+0.000	tests/unit/py/test_native_read_access.py::test_actual_read_denial_preserves_the_file_and_restores_access[True]
+0.000	tests/unit/py/test_native_read_access.py::test_read_denial_refuses_a_missing_file_without_creating_it
 0.000	tests/unit/py/test_online_host_failure_boundary.py::test_consumed_exit_marker_never_becomes_another_empty_queue_wait[deadline]
 0.000	tests/unit/py/test_online_host_failure_boundary.py::test_consumed_exit_marker_never_becomes_another_empty_queue_wait[empty]
 0.000	tests/unit/py/test_online_host_failure_boundary.py::test_consumed_exit_marker_never_becomes_another_empty_queue_wait[exit]
