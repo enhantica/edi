@@ -24,6 +24,7 @@
 #include <atomic>
 #include <cmath>
 #include <filesystem>
+#include <deque>
 #include <limits>
 #include <numeric>
 #include <optional>
@@ -37,6 +38,7 @@
 #include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
 #include "edi/display.hpp"
+#include "edi/edit.hpp"
 #include "edi/edits.hpp"
 #include "edi/fittability.hpp"
 #include "edi/io.hpp"
@@ -56,6 +58,8 @@
 #include "edi/version.hpp"
 
 #include <iomanip>
+#include <locale>
+#include <map>
 #include <sstream>
 #include "collection_views.hpp"
 #include "model_views_registry.hpp"
@@ -3787,14 +3791,17 @@ NB_MODULE(_edi, m) {
                          return out;
                      },
                      nb::keep_alive<0, 1>())
-        // A single crystal's calculation range (diffraction-lib ScDataRange); None for a powder.
+        // The calculation range (diffraction-lib ScDataRange, CwlPdDataRange or TofPdDataRange).
         .def_prop_ro(
             "data_range",
             [](edi::ExperimentBase& self) -> nb::object {
-                if (!self.reflections) {
-                    return nb::none();
+                if (self.reflections) {
+                    return nb::cast(edi::views::ScDataRangeNode{&self});
                 }
-                return nb::cast(edi::views::ScDataRangeNode{&self});
+                if (self.effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH) {
+                    return nb::cast(edi::views::CwlPdDataRangeNode{{&self}});
+                }
+                return nb::cast(edi::views::TofPdDataRangeNode{{&self}});
             },
             nb::keep_alive<0, 1>())
         // A single crystal's extinction; None for a powder.
@@ -4280,6 +4287,136 @@ NB_MODULE(_edi, m) {
             nb::arg("value").none(),
             "The resolution limit of a single crystal without measured reflections, in 1/angstrom: it calculates the "
             "reflections its space group allows up to this sin(theta)/lambda. None: no limit.");
+    // A powder's calculation range, as diffraction-lib's: unset bounds come from the d-spacing window
+    // 0.5 to 10 Å through the instrument, the step from 1000 points; a measured pattern's range is its
+    // own and read-only. Setting one value rebuilds the grid from the three.
+    struct PdAxis {
+        double min, max, step;
+    };
+    // The values last set on each experiment, read back while its grid is still the one they made, so
+    // the three can be set in any order (diffraction-lib stores them; edi's range is its grid).
+    static std::map<const edi::ExperimentBase*, PdAxis> declared_ranges;
+    const auto grid_of = [](const PdAxis& axis) {
+        std::vector<double> points;
+        const double intervals = std::floor((axis.max - axis.min) / axis.step);
+        for (std::size_t i = 0; i <= static_cast<std::size_t>(intervals); ++i) {
+            const double offset = static_cast<double>(i) * axis.step;
+            points.push_back(axis.min + offset);
+        }
+        return points;
+    };
+    const auto effective = [grid_of](const edi::ExperimentBase& experiment) -> PdAxis {
+        if (const auto found = declared_ranges.find(&experiment); found != declared_ranges.end()) {
+            const bool cw = experiment.effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH;
+            const auto* column = experiment.data ? &(cw ? experiment.data->two_theta : experiment.data->time_of_flight).get()
+                                                 : nullptr;
+            if (experiment.calculation_only && column && *column && **column == grid_of(found->second)) {
+                return found->second;
+            }
+        }
+        const bool cw = experiment.effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH;
+        constexpr double nan = std::numeric_limits<double>::quiet_NaN();
+        if (experiment.data) {
+            const auto& column = (cw ? experiment.data->two_theta : experiment.data->time_of_flight).get();
+            if (column && !column->empty()) {
+                const std::vector<double>& axis = *column;
+                if (axis.size() == 1) {
+                    return {axis.front(), axis.front(), nan};
+                }
+                const double estimate = (axis.back() - axis.front()) / static_cast<double>(axis.size() - 1);
+                for (std::size_t i = 1; i < axis.size(); ++i) {
+                    if (std::abs((axis[i] - axis[i - 1]) - estimate) > 1e-6 * std::abs(estimate)) {
+                        return {axis.front(), axis.back(), nan};  // a non-uniform measured grid
+                    }
+                }
+                // The shortest decimal step that regenerates the grid exactly, as a save declares it, so a
+                // grid rebuilt from it keeps every point.
+                for (int digits = 1; digits <= 17; ++digits) {
+                    std::ostringstream text;
+                    text.imbue(std::locale::classic());
+                    text << std::setprecision(digits) << estimate;
+                    std::istringstream read(text.str());
+                    read.imbue(std::locale::classic());
+                    double step = 0.0;
+                    read >> step;
+                    bool same = step > 0.0;
+                    for (std::size_t i = 0; same && i < axis.size(); ++i) {
+                        const double offset = static_cast<double>(i) * step;
+                        same = axis.front() + offset == axis[i];
+                    }
+                    if (same) {
+                        return {axis.front(), axis.back(), step};
+                    }
+                }
+                return {axis.front(), axis.back(), estimate};
+            }
+        }
+        constexpr double d_min = 0.5, d_max = 10.0, points = 1000.0;
+        const auto& instrument = experiment.instrument;
+        double low = nan, high = nan;
+        if (cw) {
+            if (instrument.setup_wavelength) {
+                const double wavelength = instrument.setup_wavelength->value.get();
+                const auto two_theta = [wavelength](double d) {
+                    return 2.0 * std::asin(std::min(wavelength / (2.0 * d), 0.999999)) * 180.0 / std::acos(-1.0);
+                };
+                low = two_theta(d_max);
+                high = std::min(two_theta(d_min), 170.0);
+            }
+        } else {
+            const double offset = instrument.calib_d_to_tof_offset.value.get();
+            const double linear = instrument.calib_d_to_tof_linear.value.get();
+            const double quadratic = instrument.calib_d_to_tof_quadratic.value.get();
+            low = offset + linear * d_min + quadratic * d_min * d_min;
+            high = offset + linear * d_max + quadratic * d_max * d_max;
+        }
+        return {low, high, (high - low) / (points - 1.0)};
+    };
+    const auto set_axis = [effective](edi::ExperimentBase& experiment, int which, double value) {
+        if (experiment.data && !experiment.data->intensity_meas.get().empty()) {
+            throw std::invalid_argument("Cannot set the calculation range for experiment '" + experiment.name.value() +
+                                        "': it is determined by the measured data");
+        }
+        PdAxis axis = effective(experiment);
+        (which == 0 ? axis.min : which == 1 ? axis.max : axis.step) = value;
+        const bool was = experiment.calculation_only;
+        experiment.calculation_only = true;  // a grid without measured data, as a declared range loads
+        try {
+            edi::Edit::data_range(experiment, axis.min, axis.max, axis.step)();
+        } catch (...) {
+            experiment.calculation_only = was;
+            throw;
+        }
+        declared_ranges[&experiment] = axis;
+    };
+    const auto def_pd_range = [effective, set_axis](auto& cls, const char* axis_name) {
+        using Node = typename std::remove_reference_t<decltype(cls)>::Type;
+        const std::string prefix = axis_name;
+        for (int which = 0; which < 3; ++which) {
+            static const char* const suffixes[] = {"_min", "_max", "_inc"};
+            static std::deque<std::string> names;  // nanobind keeps the name pointer; a deque never moves it
+            names.push_back(prefix + suffixes[which]);
+            cls.def_prop_rw(
+                names.back().c_str(),
+                [effective, which](const Node& self) {
+                    const PdAxis axis = effective(*self.experiment);
+                    return which == 0 ? axis.min : which == 1 ? axis.max : axis.step;
+                },
+                [set_axis, which](Node& self, double value) { set_axis(*self.experiment, which, value); });
+        }
+        cls.def_prop_ro("x_min", [effective](const Node& self) { return effective(*self.experiment).min; });
+        cls.def_prop_ro("x_max", [effective](const Node& self) { return effective(*self.experiment).max; });
+        cls.def_prop_ro("x_step", [effective](const Node& self) -> std::optional<double> {
+            const double step = effective(*self.experiment).step;
+            return std::isnan(step) ? std::nullopt : std::optional<double>(step);
+        });
+    };
+    nb::class_<edi::views::CwlPdDataRangeNode> cwl_pd_data_range(
+        m, "CwlPdDataRange", "A constant-wavelength powder's calculation range (diffraction-lib CwlPdDataRange).");
+    def_pd_range(cwl_pd_data_range, "two_theta");
+    nb::class_<edi::views::TofPdDataRangeNode> tof_pd_data_range(
+        m, "TofPdDataRange", "A time-of-flight powder's calculation range (diffraction-lib TofPdDataRange).");
+    def_pd_range(tof_pd_data_range, "time_of_flight");
     nb::class_<edi::views::ScReflnView>(m, "ReflnDataBase")
         .def_prop_ro("index_h",
                      [simulated](const edi::views::ScReflnView& self) -> nb::object {
@@ -4752,6 +4889,52 @@ NB_MODULE(_edi, m) {
         .def_prop_rw(
             "_template_file", [](const edi::Project& self) { return self.sequential_fit.template_file; },
             [](edi::Project& self, const std::string& file) { edi::set_scan_template_file(self, file); })
+        // The scan block (`_sequential_fit`), as the loader takes it, for the analysis facade's
+        // sequential_fit and sequential_fit_extract.
+        .def_prop_rw(
+            "_sequential_data_dir", [](const edi::Project& self) { return self.sequential_fit.data_dir; },
+            [](edi::Project& self, const std::string& data_dir) {
+                edi::validate_sequential_data_dir(data_dir, " (sequential_fit.data_dir)");
+                self.sequential_fit.data_dir = data_dir;
+            })
+        .def_prop_rw(
+            "_sequential_file_pattern", [](const edi::Project& self) { return self.sequential_fit.file_pattern; },
+            [](edi::Project& self, const std::string& pattern) {
+                if (pattern.empty()) {
+                    throw std::invalid_argument("sequential_fit.file_pattern is empty");
+                }
+                self.sequential_fit.file_pattern = pattern;
+            })
+        .def_prop_rw(
+            "_sequential_reverse", [](const edi::Project& self) { return self.sequential_fit.reverse; },
+            [](edi::Project& self, bool reverse) { self.sequential_fit.reverse = reverse; })
+        .def(
+            "_sequential_extract_create",
+            [](edi::Project& self, const std::string& id, const std::string& target, const std::string& pattern,
+               bool required) {
+                if (id.empty() || target.empty() || pattern.empty()) {
+                    throw std::invalid_argument("a sequential_fit_extract rule needs an id, a target and a pattern");
+                }
+                for (const auto& rule : self.sequential_fit.extract) {
+                    if (rule->id.value() == id) {
+                        throw std::invalid_argument("sequential_fit_extract already has a rule '" + id + "'");
+                    }
+                }
+                edi::SequentialExtractRule rule;
+                rule.id = id;
+                rule.target = target;
+                rule.pattern = pattern;
+                rule.required = required;
+                self.sequential_fit.extract.push_back(std::move(rule));
+            },
+            "id"_a, "target"_a, "pattern"_a, "required"_a)
+        .def_prop_ro("_sequential_extract_rows", [](const edi::Project& self) {
+            std::vector<std::tuple<std::string, std::string, std::string, bool>> rows;
+            for (const auto& rule : self.sequential_fit.extract) {
+                rows.emplace_back(rule->id.value(), rule->target.value(), rule->pattern.value(), rule->required.get());
+            }
+            return rows;
+        })
         .def_prop_rw(
             "fitting_mode", [](const edi::Project& self) { return self.fitting_mode; },
             [](edi::Project& self, const std::string& value) {

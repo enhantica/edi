@@ -244,6 +244,24 @@
      "reason": "C",
      "verdict": "public"
     },
+    "sequential_fit": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Analysis.sequential_fit",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "sequential_fit_extract": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Analysis.sequential_fit_extract",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "stop_rules": {
      "need": {
       "by": "deviation",
@@ -5517,6 +5535,46 @@
      "verdict": "public"
     }
    },
+   "SequentialFit": {
+    "data_dir": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SequentialFit.data_dir",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "file_pattern": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SequentialFit.file_pattern",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "reverse": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SequentialFit.reverse",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "SequentialFitExtract": {
+    "create": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SequentialFitExtract.create",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
    "Severity": {
     "Error": {
      "need": {
@@ -7314,6 +7372,24 @@
     "reason": "C",
     "verdict": "public"
    },
+   "SequentialFit": {
+    "need": {
+     "by": "counterpart",
+     "ref": "SequentialFit",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "SequentialFitExtract": {
+    "need": {
+     "by": "counterpart",
+     "ref": "SequentialFitExtract",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "Severity": {
     "need": {
      "by": "deviation",
@@ -7613,7 +7689,7 @@
    }
   }
  },
- "directionality": "crysta-py ⊆ edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration — crysta cannot add a public name without edi following",
+ "directionality": "crysta-py \u2286 edi-py is a standing constraint on edi: a name enters crysta.__all__ only in a commit where edi carries it; a public crysta name edi lacks is red at crysta's PR consumer job today, and at edi's verify against the pinned crysta once edi's tools/ci/crysta.pin carries the declaration \u2014 crysta cannot add a public name without edi following",
  "public": {
   "AbsorptionBase": {
    "kind": "class",
@@ -7664,6 +7740,8 @@
     "descent",
     "fit",
     "fitting_mode",
+    "sequential_fit",
+    "sequential_fit_extract",
     "stop_rules",
     "template_file"
    ]
@@ -8607,6 +8685,20 @@
     "add_note",
     "args",
     "with_traceback"
+   ]
+  },
+  "SequentialFit": {
+   "kind": "class",
+   "members": [
+    "data_dir",
+    "file_pattern",
+    "reverse"
+   ]
+  },
+  "SequentialFitExtract": {
+   "kind": "class",
+   "members": [
+    "create"
    ]
   },
   "Severity": {
