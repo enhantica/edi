@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T05:30:45Z
+# measured_utc = 2026-11-14T06:40:32Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 175909 banked, 1 stale row(s) dropped)
-# Collected tests: 244769; with a reported duration: 77055
-# Module-scoped fixture costs recorded: 190
+# Recorded from: measured test run (108 node(s) measured once, 175914 banked, 2 stale row(s) dropped)
+# Collected tests: 244875; with a reported duration: 77092
+# Module-scoped fixture costs recorded: 191
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 244769
+# inventory_python = 244875
 # inventory_cpp = 402
-# inventory_measured = 175915
-# inventory_unmeasured = 69256
+# inventory_measured = 176022
+# inventory_unmeasured = 69255
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85502
+# inventory_pr_python = 85608
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -165212,8 +165212,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-xray-cwl_lam7o3-p021]
 0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-xray-cwl_latp-bm01_scan]
 0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-xray-cwl_pbso4-lab]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[sc-neut-cwl_cosio-heidi]
 0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[sc-neut-cwl_pr2nio4-5c2]
 0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[sc-neut-cwl_tb2ti2o7-heidi]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[sc-neut-cwl_tb2ti2o7-heidi_simulation]
 0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[sc-neut-tof_taurine-senju]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_cosio-d20]
 0.000	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_cosio-d20_2k]
@@ -165234,8 +165236,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::te
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-xray-cwl_lam7o3-p021]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-xray-cwl_latp-bm01_scan]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-xray-cwl_pbso4-lab]
+0.020	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[sc-neut-cwl_cosio-heidi]
 0.000	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[sc-neut-cwl_pr2nio4-5c2]
 0.000	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[sc-neut-cwl_tb2ti2o7-heidi]
+0.000	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[sc-neut-cwl_tb2ti2o7-heidi_simulation]
 0.000	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[sc-neut-tof_taurine-senju]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_exclusions_name_every_selected_notebook_and_its_runner
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_magnetic_structure_membership_and_filter_counts_have_independent_expectations
@@ -167469,6 +167473,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.p
 0.040	tests/integration/py/test_native_source_inputs.py::test_compiled_test_input_drift_is_admitted_to_refusal[untracked-tools/ci/compiler_cache.py]
 0.040	tests/integration/py/test_native_source_inputs.py::test_compiled_test_input_drift_is_admitted_to_refusal[untracked-tools/ci/crysta_sdk.py]
 0.040	tests/integration/py/test_native_source_inputs.py::test_identical_bytes_and_ignored_build_output_are_not_source_drift
+0.180	tests/integration/py/test_native_utf8_catalogue.py::test_declared_utf8_mode_reads_and_emits_the_real_catalogue_in_a_legacy_locale
 0.000	tests/integration/py/test_newest_project_format.py::test_current_public_alias_and_compact_slot_keep_their_own_role[alias]
 0.020	tests/integration/py/test_newest_project_format.py::test_current_public_alias_and_compact_slot_keep_their_own_role[fit-state]
 0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[alias-chebyshev-bank.background.1.coef]
@@ -167833,6 +167838,51 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_fina
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_authoring_evidence_refuses_forged_or_incomplete_records[wrong-sdk-source]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_authoring_evidence_refuses_forged_or_incomplete_records[wrong-stage-display]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_authoring_evidence_refuses_forged_or_incomplete_records[wrong-url]
+0.040	tests/integration/py/test_release_pin_source_bytes.py::test_complete_release_source_pairs_retain_their_archived_byte_identities
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_iteration_classification_exception_is_bound_to_its_exact_source
+0.060	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_cosio-d20/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/expected.json]
+0.060	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_cosio-d20_scan/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_cosio-d20_start-1/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_cosio-d20_start-4/expected.json]
+0.040	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_hs-hrpt/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/expected.json]
+0.050	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/expected.json]
+0.010	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_lbco-hrpt/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/expected.json]
+0.020	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_lmo-echidna/expected.json]
+0.020	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_y2o3-spodi/expected.json]
+0.010	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_y2o3_beta-adp/expected.json]
+0.070	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/expected.json]
+0.010	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_yap-spodi_3k/expected.json]
+0.040	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_cecoal-polaris/expected.json]
+0.080	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/expected.json]
+0.010	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_ceo2-pearl/expected.json]
+0.050	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_diamond-dream_mcstas/expected.json]
+0.010	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_ferrite-austenite-beer/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/expected.json]
+0.010	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_lbco-si-mcstas/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/expected.json]
+0.090	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/expected.json]
+0.040	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/expected.json]
+0.040	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/expected.json]
+0.050	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_ncaf-wish/expected.json]
+0.010	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_si-sepd/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-tof_si-sepd_start-5/expected.json]
+0.060	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/expected.json]
+0.040	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-xray-cwl_lam7o3-p021/expected.json]
+0.050	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-xray-cwl_latp-bm01_scan/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-xray-cwl_latp_scan-4f/expected.json]
+0.060	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-xray-cwl_pbso4-lab/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/sc-neut-cwl_cosio-heidi/expected.json]
+0.070	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/sc-neut-cwl_pr2nio4-5c2/expected.json]
+0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/expected.json]
+0.870	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/sc-neut-tof_taurine-senju/expected.json]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_calendar_refuses_clock_rollback
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_calendar_uses_numeric_monthly_sequence[known0-2026-11-07-2026.11.0]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_calendar_uses_numeric_monthly_sequence[known1-2026-11-07-2026.11.11]
@@ -168318,6 +168368,16 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_
 0.000	tests/integration/py/test_runtime_update_index.py::test_indexed_update_preserves_measurements_holes_foreign_rows_and_stale_removal[False]
 0.000	tests/integration/py/test_runtime_update_index.py::test_indexed_update_preserves_measurements_holes_foreign_rows_and_stale_removal[True]
 0.000	tests/integration/py/test_runtime_update_index.py::test_unknown_remeasurement_still_refuses_before_writing
+0.000	tests/integration/py/test_saved_stop_rule_adaptations.py::test_saved_stop_set_projection_refuses_changed_or_ambiguous_choices[changed]
+0.000	tests/integration/py/test_saved_stop_rule_adaptations.py::test_saved_stop_set_projection_refuses_changed_or_ambiguous_choices[duplicate-input]
+0.000	tests/integration/py/test_saved_stop_rule_adaptations.py::test_saved_stop_set_projection_refuses_changed_or_ambiguous_choices[duplicate-save]
+0.000	tests/integration/py/test_saved_stop_rule_adaptations.py::test_saved_stop_set_projection_refuses_changed_or_ambiguous_choices[mixed]
+0.000	tests/integration/py/test_saved_stop_rule_adaptations.py::test_saved_stop_set_projection_refuses_changed_or_ambiguous_choices[repeated-choice]
+0.000	tests/integration/py/test_saved_stop_rule_adaptations.py::test_saved_stop_set_projection_refuses_changed_or_ambiguous_choices[unknown]
+0.000	tests/integration/py/test_saved_stop_rule_adaptations.py::test_saved_stop_set_projection_retains_every_other_byte[]
+0.000	tests/integration/py/test_saved_stop_rule_adaptations.py::test_saved_stop_set_projection_retains_every_other_byte[chi_square_change shift_su]
+0.000	tests/integration/py/test_saved_stop_rule_adaptations.py::test_saved_stop_set_projection_retains_every_other_byte[chi_square_change]
+0.000	tests/integration/py/test_saved_stop_rule_adaptations.py::test_saved_stop_set_projection_retains_every_other_byte[shift_su]
 0.010	tests/integration/py/test_scan_app_contract.py::test_button_names_and_follow_have_live_model_bindings
 0.480	tests/integration/py/test_scan_app_contract.py::test_create_experiment_is_enabled_and_routes_to_view_model
 0.160	tests/integration/py/test_scan_app_contract.py::test_data_free_experiment_type_has_a_write_boundary[beamMode]
@@ -169545,6 +169605,32 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_table_display.py::test_s
 0.000	tests/integration/py/test_tutorial_assistant_targets.py::test_assistant_target_observer_refuses_missing_and_renamed_gui_names[ui:structures.oldLoad]
 0.010	tests/integration/py/test_tutorial_assistant_targets.py::test_packaged_assistant_skills_name_only_current_gui_elements
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_auto_background.py::test_cwl_and_tof_cases_teach_the_same_auto_background_on_every_interface
+0.080	tests/integration/py/test_tutorial_case_records.py::test_case_checker_refuses_missing_authored_provenance[empty]
+0.020	tests/integration/py/test_tutorial_case_records.py::test_case_checker_refuses_missing_authored_provenance[missing]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-cwl_cosio-d20]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-cwl_cosio-d20_2k]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-cwl_cosio-d20_scan-213f]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-cwl_hs-hrpt]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-cwl_lbco-hrpt]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-cwl_lbco_simulation]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-cwl_lmo-echidna]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-cwl_y2o3-spodi]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-cwl_yalo3-al2o3-spodi]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-tof_cecoal-polaris]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-tof_ceo2-pearl]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-tof_ferrite-austenite-beer]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-tof_lbco-si-mcstas]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-tof_ncaf-wish]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-tof_si-sepd]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-neut-xray-cwl_pbso4-d1a-lab]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-xray-cwl_lam7o3-p021]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-xray-cwl_latp-bm01_scan]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[pd-xray-cwl_pbso4-lab]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[sc-neut-cwl_cosio-heidi]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[sc-neut-cwl_pr2nio4-5c2]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[sc-neut-cwl_tb2ti2o7-heidi]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[sc-neut-cwl_tb2ti2o7-heidi_simulation]
+0.000	tests/integration/py/test_tutorial_case_records.py::test_case_record_retains_its_complete_authored_provenance[sc-neut-tof_taurine-senju]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_case_records.py::test_each_case_record_has_all_fields_and_its_declared_tutorials[pd-neut-cwl_cosio-d20]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_case_records.py::test_each_case_record_has_all_fields_and_its_declared_tutorials[pd-neut-cwl_cosio-d20_2k]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_case_records.py::test_each_case_record_has_all_fields_and_its_declared_tutorials[pd-neut-cwl_cosio-d20_scan-213f]
@@ -169594,6 +169680,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_case_records.py
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_case_records.py::test_each_record_carries_the_complete_ordered_tag_set[sc-neut-cwl_tb2ti2o7-heidi_simulation]
 0.160	tests/integration/py/test_tutorial_case_records.py::test_each_record_carries_the_complete_ordered_tag_set[sc-neut-tof_taurine-senju]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_case_records.py::test_owner_inventory_has_exactly_twenty_four_unique_case_records
+0.030	tests/integration/py/test_tutorial_case_records.py::test_tutorial_intro_retains_caveats_without_code_or_stage_content
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_docs_presentation.py::test_built_navigation_groups_short_titles_under_the_five_iconed_sections[Application]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_docs_presentation.py::test_built_navigation_groups_short_titles_under_the_five_iconed_sections[Command line]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_docs_presentation.py::test_built_navigation_groups_short_titles_under_the_five_iconed_sections[Python]
@@ -169953,7 +170040,15 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_notebook_contra
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_notebook_contract.py::test_one_visible_font_derived_tag_cell_follows_the_case_title[sc-neut-cwl_tb2ti2o7-heidi]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_notebook_contract.py::test_one_visible_font_derived_tag_cell_follows_the_case_title[sc-neut-cwl_tb2ti2o7-heidi_simulation]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_notebook_contract.py::test_one_visible_font_derived_tag_cell_follows_the_case_title[sc-neut-tof_taurine-senju]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_notebook_contract.py::test_page_titles_are_unique_and_the_single_font_is_unchanged
+0.140	tests/integration/py/test_tutorial_notebook_contract.py::test_page_titles_are_unique_within_sections_and_the_single_font_is_unchanged
+0.020	tests/integration/py/test_tutorial_notebook_contract.py::test_vector_tag_observer_refuses_each_visible_identity_escape[external-symbol]
+0.000	tests/integration/py/test_tutorial_notebook_contract.py::test_vector_tag_observer_refuses_each_visible_identity_escape[extra-badge]
+0.000	tests/integration/py/test_tutorial_notebook_contract.py::test_vector_tag_observer_refuses_each_visible_identity_escape[extra-icon]
+0.000	tests/integration/py/test_tutorial_notebook_contract.py::test_vector_tag_observer_refuses_each_visible_identity_escape[missing-background]
+0.000	tests/integration/py/test_tutorial_notebook_contract.py::test_vector_tag_observer_refuses_each_visible_identity_escape[missing-badge]
+0.000	tests/integration/py/test_tutorial_notebook_contract.py::test_vector_tag_observer_refuses_each_visible_identity_escape[wrong-alt]
+0.000	tests/integration/py/test_tutorial_notebook_contract.py::test_vector_tag_observer_refuses_each_visible_identity_escape[wrong-glyph]
+0.000	tests/integration/py/test_tutorial_notebook_contract.py::test_vector_tag_observer_refuses_each_visible_identity_escape[wrong-label]
 0.000	tests/integration/py/test_tutorial_official_addresses.py::test_address_observer_rejects_old_hosts_and_keeps_github_source_links[https://ENHANTICA.GITHUB.IO/edi/]
 0.000	tests/integration/py/test_tutorial_official_addresses.py::test_address_observer_rejects_old_hosts_and_keeps_github_source_links[https://enhantica%2egithub.io/edi/]
 0.000	tests/integration/py/test_tutorial_official_addresses.py::test_address_observer_rejects_old_hosts_and_keeps_github_source_links[https://enhantica.github.io/edi/]
@@ -243087,7 +243182,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c11_t43_fit_status_contract.py:
 0.005	tests/unit/py/test_c11_t4_cw_selection.py::test_c11_t57_formerly_reserved_cw_rungs_load_and_unknown_still_refuses
 UNMEASURED:failed-in-this-run	tests/unit/py/test_c11_t51_cli_vocabulary.py::test_calc_exception_is_retired_without_wildcarding_child_options
 0.000	tests/unit/py/test_c11_t51_cli_vocabulary.py::test_crysta_honoured_set_requires_parser_and_project_guard_agreement
-0.000	tests/unit/py/test_c11_t51_cli_vocabulary.py::test_descent_listing_checker_rejects_non_byte_equal_output
+0.010	tests/unit/py/test_c11_t51_cli_vocabulary.py::test_descent_listing_checker_rejects_non_byte_equal_output[crlf]
+0.000	tests/unit/py/test_c11_t51_cli_vocabulary.py::test_descent_listing_checker_rejects_non_byte_equal_output[lf]
 0.000	tests/unit/py/test_c11_t51_cli_vocabulary.py::test_non_calc_command_exceptions_cannot_wildcard_exact_option_gaps
 0.000	tests/unit/py/test_c11_t51_cli_vocabulary.py::test_non_calc_exceptions_must_name_the_boundary_issue
 0.000	tests/unit/py/test_c11_t51_cli_vocabulary.py::test_parser_help_checker_rejects_a_suppressed_option
@@ -243239,6 +243335,16 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1a_tutorial_exclusions.py:
 UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_c34_t1a_exclusion_gate_rehearses_each_local_red_and_a_clean_checkout
 UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_c34_t1a_notebooks_are_stripped_and_execution_disabled
 UNMEASURED:failed-in-this-run	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_c34_t1a_ports_replace_deferred_switches_and_delete_only_max_workers
+0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_model_building_asset_observer_refuses_disconnected_downloads[detached-dict]
+0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_model_building_asset_observer_refuses_disconnected_downloads[dict-write]
+0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_model_building_asset_observer_refuses_disconnected_downloads[duplicate-key]
+0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_model_building_asset_observer_refuses_disconnected_downloads[keyword-unpack]
+0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_model_building_asset_observer_refuses_disconnected_downloads[late-project]
+0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_model_building_asset_observer_refuses_disconnected_downloads[reassignment]
+0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_model_building_asset_observer_refuses_disconnected_downloads[unreached]
+0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_model_building_asset_observer_refuses_disconnected_downloads[unused]
+0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_model_building_asset_observer_refuses_disconnected_downloads[wrong-loop]
+0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_model_building_asset_observer_refuses_disconnected_downloads[wrong-path]
 0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_portable_notebook_accepts_its_adjacent_unmodified_download[expression-load]
 0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_portable_notebook_accepts_its_adjacent_unmodified_download[literal-destination]
 0.000	tests/unit/py/test_c34_t1a_tutorial_exclusions.py::test_portable_notebook_accepts_its_adjacent_unmodified_download[plain]
@@ -245264,6 +245370,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 7.014	tests/integration/py/test_scan_undefined_magnetic_su.py
+# module-cost: 0.120	tests/integration/py/test_tutorial_case_records.py
 # module-cost: 1.002	tests/integration/py/test_weight_fraction_app.py
 # module-cost: 2.769	tests/system/py/test_adoption_listener_boundaries.py
 # module-cost: 11.310	tests/system/py/test_app_minimum.py
