@@ -273,6 +273,8 @@ try {
       await frame();
     }
     await frame();
+    if(projectAction==='project.open' || projectAction==='project.create')
+      await waitGuardedDialog(projectAction==='project.open'?'open.folder':'createProject.name');
     if (/^(?:Home|Project|Structure|Experiment|Analysis|Start)$/.test(node.name?.value || '') || /(?:Examples|Get started)$/.test(node.name?.value || '')) await settleRenderedPage();
     if (node.role?.value === 'tab' && /^(?:Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || '')) {
       const deadline=Date.now()+45000;
@@ -320,6 +322,26 @@ try {
       assert.equal(exposed, false,
         'The admitted unsaved control must retire before unchanged Reset-effect checks: '+name);
     }
+  };
+  const waitGuardedDialog = async objectName => {
+    const deadline=Date.now()+45000;
+    do {
+      const state=await evaluate(`(() => {
+        const read=name=>{
+          try {const item=window.ediControlGeometry(name); return item.visible===true && item.enabled===true;}
+          catch(error) {
+            if(error.message===\`ediControlGeometry: no item is named '\${name}'\` ||
+               error.message===\`ediControlGeometry: no visible item is named '\${name}'\`) return false;
+            throw error;
+          }
+        };
+        return read('unsavedChanges.discard') ? 'guard' : read(${JSON.stringify(objectName)}) ? 'dialog' : null;
+      })()`);
+      if(state==='guard') {await discardResetGuard(); await requireResetGuardClosed();}
+      else if(state==='dialog') {await waitControlGeometry(evaluate,frame,objectName);return;}
+      await frame();
+    } while(Date.now()<deadline);
+    throw Error('The guarded project action must expose its rendered dialog '+objectName);
   };
   const openExampleRow = async (exampleId, exampleName) => {
     // Filter through real keyboard input so the requested row is materialised and unclipped.
@@ -883,19 +905,6 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     const snapshot = async () => { await projectPage(); return inspectArchive(await saveArchive()); };
     const createEmpty = async name => {
       await projectPage(); await click(/^Create a new project$/, 'button', 'project.create');
-      await waitBrowser(`(() => {
-        for (const name of ['createProject.name','unsavedChanges.discard']) {
-          try {const item=window.ediControlGeometry(name); if(item.visible && item.enabled) return true;}
-          catch(error) {if(!/no visible item|no item is named/.test(error.message)) throw error;}
-        }
-        return false;
-      })()`, 'Create must expose its name input or the actual unsaved-changes guard');
-      const guarded=await evaluate(`(() => {
-        try {return window.ediControlGeometry('unsavedChanges.discard').visible;}
-        catch(error) {if(/no visible item|no item is named/.test(error.message)) return false; throw error;}
-      })()`);
-      if(guarded) {await discardResetGuard(); await requireResetGuardClosed();}
-      await waitControlGeometry(evaluate, frame, 'createProject.name');
       await settleRenderedPage();
       const beforeInput = await restoreCanvasViewport(evaluate);
       await writeFile(join(output, `${mode}-create-${name}-before-input.json`), JSON.stringify(beforeInput,null,2));

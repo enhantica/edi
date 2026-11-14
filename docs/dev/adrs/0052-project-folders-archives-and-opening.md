@@ -425,3 +425,11 @@ the guard to retire before continuing. No test setter clears the current project
 or bypasses the guard; malformed, ambiguous and out-of-viewport controls still
 refuse. The prior native-picker case intentionally leaves an edited project,
 which makes this transition part of the sequential browser test lifecycle.
+
+
+The same browser guard handoff applies to both Create and Open. Routing tests
+leave edited projects behind after real import/cancellation/Undo actions; the
+next Open must resolve the genuine unsaved-changes prompt before expecting its
+Folder/Zip choice. One shared observer handles both actions, gives the guard
+priority over underlying controls and rejects unexpected geometry errors. No
+chooser event can be used as evidence that an unresolved guard was bypassed.
