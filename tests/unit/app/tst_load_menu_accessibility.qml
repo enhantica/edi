@@ -44,6 +44,10 @@ TestCase {
     }
     function test_action_name_excludes_icon_and_hint() {
         compare(action.Accessible.name, "From file…");
+        compare(action.Accessible.description, ".cif .edi");
+        verify(action.contentItem.children[0].Accessible.ignored);
+        verify(action.contentItem.children[2].Accessible.ignored);
+        compare(action.contentItem.children[1].text, "From file…");
         action.fontIcon = "folder";
         action.hint = "Sequential: each from the previous";
         compare(action.Accessible.name, "From file…");

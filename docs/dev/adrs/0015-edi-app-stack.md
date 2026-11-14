@@ -605,3 +605,12 @@ The parameter table compares its two numeric width lists through a typed native
 helper rather than serializing both as JSON. List order/length, zero and each
 finite width remain exact; the previous JSON-null treatment of nonfinite interim
 widths is preserved. The existing queued application of new widths is unchanged.
+
+Load-menu decoration labels are excluded from the accessibility children; the
+action text stays exposed and the format hint becomes its accessible description.
+Qt 6.11.2's WebAssembly menu mapping sets the requested name as HTML `title`,
+which loses to descendant text in the browser name computation. The actual 8f
+browser AX tree proved that icon and hint text polluted that name despite the
+explicit QML Accessible.name. The shared control now gives both desktop and web
+one action name while preserving hint information as a description.
+Upstream: [Qt WebAssembly accessibility implementation](https://github.com/qt/qtbase/blob/v6.11.2/src/plugins/platforms/wasm/qwasmaccessibility.cpp).
