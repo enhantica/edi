@@ -34,9 +34,9 @@ EaComponents.ApplicationWindow {
     function setUpMergedTitleBar() {
         if (!mergedTitleBar)
             return;
-        // Our left and right buttons sit 6 px lower, clear of the system buttons; the page tabs stay.
-        appBar.children[0].anchors.verticalCenterOffset = 6;
-        appBar.children[2].anchors.verticalCenterOffset = 6;
+        // Our left and right buttons sit 4 px lower, clear of the system buttons; the page tabs stay.
+        appBar.children[0].anchors.verticalCenterOffset = 4;
+        appBar.children[2].anchors.verticalCenterOffset = 4;
         if (Qt.platform.os !== "osx")
             return;
         const left = appBar.children[0];
