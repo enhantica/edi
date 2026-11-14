@@ -307,3 +307,11 @@ layers. The shared wrapper forwards this explicit cache policy while preserving 
 launcher, frozen installation and job-scoped binary path. Changing the producer/setup recipe
 invalidates archive qualification as usual; existing compiler objects remain reusable. No paid
 storage limit is enabled and no qualified artifact is deleted by this policy.
+
+The Python fit policy preserves the same scratch test/reference layout for an exported SDK
+source as for a Git checkout. Exported tests/fitting keeps its sibling tests/fixtures rather
+than being copied as an isolated corpus. Explicit standalone corpus overrides retain their
+narrow copy behavior. Source fingerprinting, fit-site admission and session cleanup remain
+mandatory. Workflow observers also follow local reusable workflows to inspect real runners
+and source-token scopes; missing, opaque, malformed or cyclic calls refuse instead of hiding
+jobs. Source acquisition requires contents:read only, with fork-visible source checks token-free.

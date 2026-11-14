@@ -49,17 +49,27 @@ def test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs():
             assert active(
                 jobs[key],
                 event,
-                states={'changes': 'success', 'core': 'success', 'native': 'success'},
+                states={
+                    'changes': 'success',
+                    'core': 'success',
+                    'native': 'success',
+                    'crysta-sdk': 'success',
+                },
             ) == (not public or key != 'app-wasm' or event != 'pull_request'), (
                 'PRs retain fast consumers; full events also require WebAssembly'
             )
             assert not active(
                 jobs[key],
                 event,
-                states={'changes': 'success', 'core': 'success', 'native': 'success'},
+                states={
+                    'changes': 'success',
+                    'core': 'success',
+                    'native': 'success',
+                    'crysta-sdk': 'success',
+                },
                 core_only=True,
             ), 'explicitly requested core-only repair skips downstream consumers'
-        keys = ['changes', 'pin-currency', 'native', 'core']
+        keys = ['changes', 'crysta-sdk' if public else 'pin-currency', 'native', 'core']
         if public:
             keys.append('system')
         if not public:
@@ -68,7 +78,12 @@ def test_full_ci_consumers_run_on_every_event_and_only_skip_core_only_repairs():
             assert active(
                 jobs[key],
                 event,
-                states={'changes': 'success', 'core': 'success', 'native': 'success'},
+                states={
+                    'changes': 'success',
+                    'core': 'success',
+                    'native': 'success',
+                    'crysta-sdk': 'success',
+                },
                 core_only=True,
             ) == (not public or key != 'system' or event != 'pull_request'), (
                 'core-only repairs retain core and pin currency, with system excluded from PRs'
@@ -81,13 +96,17 @@ def test_pages_visibility_and_webapp_default_retention_follow_the_public_profile
         pages = yaml.safe_load((ROOT / '.github/workflows/pages.yml').read_text())['jobs']
         # Publish either component while preserving its deployed counterpart.
         assert set(pages) == {
+            'crysta-sdk',
             'docs',
             'wasm',
             'publish-docs',
             'publish-wasm',
             'refresh-release-notes',
         }, 'Public Pages retains both component build/publish routes and release-note refresh'
-        assert all(job['steps'] for job in pages.values()), 'Every Pages route must do real work'
+        assert all(
+            job.get('steps') or job.get('uses') == './.github/workflows/crysta-sdk.yml'
+            for job in pages.values()
+        ), 'Every Pages route must do real work'
         for event in ('push', 'workflow_dispatch'):
             for component in ('docs', 'wasm', 'all'):
                 for kind in ('docs', 'wasm'):
@@ -114,8 +133,11 @@ def test_pages_visibility_and_webapp_default_retention_follow_the_public_profile
         assert active(pages['refresh-release-notes'], 'release'), (
             'A published release must dispatch a documentation refresh'
         )
-        assert not active(pages['docs'], 'release') and not active(pages['wasm'], 'release'), (
-            'Release events dispatch fresh docs, without publishing the release tree'
+        assert not active(pages['docs'], 'release') and active(pages['wasm'], 'release'), (
+            'Stable release events refresh docs and build the web app at the release tag'
+        )
+        assert not active(pages['wasm'], 'release', prerelease=True), (
+            'Prereleases refresh documentation without replacing the stable browser app'
         )
         for kind in ('docs', 'wasm'):
             assert not active(pages[kind], 'pull_request', fork=True), (
@@ -179,7 +201,7 @@ def assert_core_failure_reporting(core):
 def test_later_jobs_report_after_core_and_native_results(event, upstream):
     jobs = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']
     for name in ['audit', 'notebooks', 'cli-python', 'docs', 'app', 'app-wasm', 'system']:
-        states = {'changes': 'success', 'core': upstream, 'app': upstream}
+        states = {'changes': 'success', 'core': upstream, 'app': upstream, 'crysta-sdk': 'success'}
         if name == 'notebooks':
             states['native'] = upstream
         expected = event != 'pull_request' or name not in {'system', 'app-wasm'}
@@ -195,7 +217,12 @@ def test_later_jobs_report_after_core_and_native_results(event, upstream):
 @pytest.mark.parametrize('block', ['changes-failed', 'changes-skipped', 'cancelled', 'core-only'])
 def test_reporting_keeps_source_cancellation_and_repair_boundaries(event, block):
     jobs = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']
-    states = {'changes': 'success', 'core': 'failure', 'native': 'failure'}
+    states = {
+        'changes': 'success',
+        'core': 'failure',
+        'native': 'failure',
+        'crysta-sdk': 'success',
+    }
     if block.startswith('changes-'):
         states['changes'] = 'failure' if block == 'changes-failed' else 'skipped'
     for name in ['audit', 'notebooks', 'cli-python', 'docs', 'app', 'app-wasm']:
@@ -303,3 +330,12 @@ def test_condition_observer_distinguishes_implicit_success_and_reporting(state):
         active({'if': "needs.unknown.result == 'success'"}, 'push', states=preceding)
     with pytest.raises(AssertionError, match='must be resolved'):
         active({'if': 'unknown()'}, 'push', states=preceding)
+
+
+@pytest.mark.parametrize('changed', [False, True])
+def test_browser_source_changes_are_qualified_on_trusted_pull_requests(changed):
+    job = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']['app-wasm']
+    states = {'changes': 'success', 'native': 'success', 'crysta-sdk': 'success'}
+    assert active(job, 'pull_request', states=states, wasm_build=changed) == changed
+    assert not active(job, 'pull_request', states=states, wasm_build=changed, fork=True)
+    assert not active(job, 'pull_request', states=states, wasm_build=changed, core_only=True)

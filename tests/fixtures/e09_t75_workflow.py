@@ -6,6 +6,8 @@ import math
 import re
 from pathlib import Path
 
+import yaml
+
 
 def event_ref(event):
     return 'refs/pull/75/merge' if event == 'pull_request' else 'refs/heads/main'
@@ -24,6 +26,8 @@ def active(  # noqa: PLR0913 - each keyword is one workflow context input
     fork=False,
     repository_private=False,
     cancelled=False,
+    wasm_build=False,
+    prerelease=False,
 ):
     ref = event_ref(event) if ref is None else ref
     value = node.get('if', 'success()')
@@ -39,8 +43,10 @@ def active(  # noqa: PLR0913 - each keyword is one workflow context input
     # Unknown atoms refuse instead of pretending the workflow executed them.
     values = {
         'github.event_name': event,
+        'github.event.release.prerelease': prerelease,
         'inputs.core_only': core_only,
         'inputs.component': component,
+        'needs.changes.outputs.wasm_build': str(wasm_build).lower(),
         'github.repository': repository,
         'github.event.repository.private': repository_private,
         'github.event.pull_request.head.repo.fork': fork if event == 'pull_request' else '',
@@ -171,3 +177,30 @@ def workflow_env(job, step, base, resolve):
         env.get(k) == v for k, v in base.items() if k.startswith('GITHUB_') and k != 'GITHUB_TOKEN'
     ), ' workflow environment cannot override independently observed GitHub event coordinates'
     return env
+
+
+def expanded_jobs(document, root, stack=()):
+    """Observe every local reusable workflow; an opaque or cyclic call cannot prove scope."""
+    assert isinstance(document, dict) and isinstance(document.get('jobs'), dict), (
+        'A workflow observation requires declared jobs'
+    )
+    result = []
+    for name, job in document['jobs'].items():
+        assert isinstance(job, dict), 'A workflow job must be a mapping'
+        result.append((name, job))
+        reference = job.get('uses')
+        if reference is None:
+            continue
+        path = Path(reference)
+        assert str(reference).startswith('./.github/workflows/') and '..' not in path.parts, (
+            'An opaque reusable workflow cannot prove its runner or token boundary'
+        )
+        assert reference not in stack, 'A cyclic reusable workflow cannot prove its boundary'
+        target = Path(root) / path
+        assert target.is_file(), 'A reusable workflow must exist before its boundary is observed'
+        child = yaml.safe_load(target.read_text())
+        result.extend(
+            (name + '/' + key, value)
+            for key, value in expanded_jobs(child, root, (*stack, reference))
+        )
+    return result

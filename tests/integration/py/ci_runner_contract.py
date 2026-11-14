@@ -1,6 +1,9 @@
 """Resolve the explicit CI matrix before checking the declared runner contract."""
 
 import re
+from pathlib import Path
+
+from tests.fixtures.e09_t75_workflow import expanded_jobs
 
 RUNNERS = {
     'Linux': ['self-hosted', 'Linux', 'X64'],
@@ -24,6 +27,14 @@ def _declared_runner(selected):
 
 
 def self_hosted_runners(job):
+    if 'uses' in job:
+        resolved = expanded_jobs({'jobs': {'reusable': job}}, Path(__file__).resolve().parents[3])
+        return [
+            runner
+            for _, child in resolved
+            if 'runs-on' in child
+            for runner in self_hosted_runners(child)
+        ]
     matrix = job.get('strategy', {}).get('matrix')
     selected = job.get('runs-on')
     if matrix is None:
@@ -40,7 +51,10 @@ def self_hosted_runners(job):
     for row in rows:
         assert isinstance(row, dict), 'E01: each runner row is a mapping'
         runner = _declared_runner(row.get(binding[1]))
-        assert row.get('platform') in RUNNERS and runner[1:] == RUNNERS[row['platform']][1:], (
+        platform = {'linux-64': 'Linux', 'osx-arm64': 'macOS', 'win-64': 'Windows'}.get(
+            row.get('platform'), row.get('platform')
+        )
+        assert platform in RUNNERS and runner[1:] == RUNNERS[platform][1:], (
             'E01: each platform executes on its own OS and architecture'
         )
         result.append(runner)

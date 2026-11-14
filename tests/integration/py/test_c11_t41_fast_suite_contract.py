@@ -401,7 +401,10 @@ def _assert_licence_delivery(jobs, active):
         )
         for event in ('push', 'schedule', 'workflow_dispatch'):
             for core_state in ('success', 'failure'):
-                context = {'states': {'changes': 'success', 'core': core_state}}
+                context = {
+                    'states': {'changes': 'success', 'core': core_state, 'crysta-sdk': 'success'},
+                    'outputs': {('inputs', 'run'): 'true'},
+                }
                 assert active(job, event, **context), (
                     'Delegated licence checks remain reachable on main, nightly '
                     'and full manual runs'
@@ -658,9 +661,18 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
             for platform in ('linux-64', 'osx-arm64'):
                 public_build_boundary(jobs, name, platform)
             for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-                assert active(jobs[name], event, states={'changes': 'success'}) == (
-                    name == 'core' or event != 'pull_request'
-                ), 'PRs execute core; full events also execute every system part'
+                assert active(
+                    jobs[name],
+                    event,
+                    states={
+                        'changes': 'success',
+                        'native': 'success',
+                        'app': 'success',
+                        'crysta-sdk': 'success',
+                    },
+                ) == (name == 'core' or event != 'pull_request'), (
+                    'PRs execute core; full events also execute every system part'
+                )
         durations = jobs['system-durations']
         assert (
             durations.get('if') == "github.event_name == 'push'" and durations['needs'] == 'system'

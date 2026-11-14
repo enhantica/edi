@@ -251,7 +251,12 @@ def condition(expression, *, fork, event):
         {'if': expression} if expression is not None else {},
         event,
         fork=fork,
-        states={'changes': 'success', 'native': 'success', 'core': 'success'},
+        states={
+            'changes': 'success',
+            'native': 'success',
+            'core': 'success',
+            'crysta-sdk': 'success',
+        },
     )
 
 
@@ -310,17 +315,21 @@ def test_e04_t12_environment_policy_matches_workflow_events(cut_replay, event, f
         'custom_branch_policies': True,
     }, 'the observed branch patterns must be the policy the environment actually uses'
     observe_jobs(doc, admitted=admitted, fork=fork, event=event)
-    if event == 'pull_request':
+    if event == 'pull_request' and not fork:
         with pytest.raises(AssertionError, match='admit each assigned'):
             observe_jobs(doc, admitted=False, fork=fork, event=event)
     if fork:
         damaged = copy.deepcopy(doc)
-        mint = next(
-            step
-            for step in damaged['jobs']['pin-currency']['steps']
-            if 'create-github-app-token' in str(step.get('uses', ''))
+        producer = yaml.safe_load((ROOT / '.github/workflows/crysta-sdk.yml').read_text())
+        mint = copy.deepcopy(
+            next(
+                step
+                for step in producer['jobs']['build']['steps']
+                if 'create-github-app-token' in str(step.get('uses', ''))
+            )
         )
         mint['if'] = 'true'
+        damaged['jobs']['changes']['steps'].append(mint)
         with pytest.raises(AssertionError, match='private token steps'):
             observe_jobs(damaged, admitted=admitted, fork=fork, event=event)
 
@@ -344,8 +353,13 @@ def observe_jobs(doc, *, admitted, fork, event):
                 assert not fork and environment == 'crysta-sdk', (
                     'private token steps require trusted events in the reviewed environment'
                 )
-    assert 'pin-currency' in active, (
-        'fork events must retain the unconditional token-free pin check'
+    assert 'changes' in active, 'Fork events retain the unconditional token-free source check'
+    source_steps = doc['jobs']['changes']['steps']
+    assert any('crysta-source.sh' in step.get('run', '') for step in source_steps), (
+        'The surviving changes job reads the declared source pin'
+    )
+    assert not any('ENHANTICA_APP_KEY' in json.dumps(step) for step in source_steps), (
+        'The fork-visible source check never receives private SDK credentials'
     )
     if not fork:
         for name in ('native', 'audit', 'core', 'notebooks', 'cli-python', 'docs', 'app'):
