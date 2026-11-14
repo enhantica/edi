@@ -10,6 +10,11 @@ from tests.fixtures.metadata_transition import task_inputs
 ROOT = Path(__file__).resolve().parents[3]
 
 
+@pytest.fixture(scope='module')
+def authenticated_inputs():
+    return {case: written.inputs(ROOT, case) for case in ('lbco', 'ncaf')}
+
+
 @pytest.mark.parametrize('case', ['lbco', 'ncaf'])
 def test_each_catalogue_source_pair_is_exact_and_idempotent(case):
     name = 'docs/user/cli/' + written.CASES[case] + '/project/analysis/analysis.edi'
@@ -44,8 +49,10 @@ def test_source_pair_refuses_unarchived_science_condition_or_metadata(case, chan
 
 
 @pytest.mark.parametrize('case', ['lbco', 'ncaf'])
-def test_actual_current_catalogue_inputs_preserve_their_original_raw_custody(case):
-    fixture, raw, source, _names, banks = written.inputs(ROOT, case)
+def test_actual_current_catalogue_inputs_preserve_their_original_raw_custody(
+    case, authenticated_inputs
+):
+    fixture, raw, source, _names, banks = authenticated_inputs[case]
     assert source == ROOT / fixture['project'] and banks, (
         'Current catalogue sources retain their original raw and conditioning capture'
     )

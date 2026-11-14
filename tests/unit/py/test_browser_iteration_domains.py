@@ -17,6 +17,12 @@ from tests.unit.py.test_browser_written_reference import raw_control
 ROOT = Path(__file__).resolve().parents[3]
 
 
+@pytest.fixture(scope='module')
+def authenticated_inputs():
+    # Parsing and authenticating the immutable source trees is shared setup, not a counter operand.
+    return {case: written.inputs(ROOT, case) for case in ('lbco', 'ncaf')}
+
+
 def control():
     fixture = {
         'relative_tolerance': 1e-9,
@@ -72,23 +78,30 @@ def control():
 
 
 @pytest.mark.parametrize('case', ['lbco', 'ncaf'])
-def test_historical_counters_remain_authenticated_in_their_original_domain(case):
-    fixture, old, *_ = written.inputs(ROOT, case)
+@pytest.mark.parametrize('field', ['iterations', 'descent', 'project'])
+def test_historical_counters_remain_authenticated_in_their_original_domain(
+    case, field, authenticated_inputs
+):
+    fixture, old, *_ = authenticated_inputs[case]
     assert fixture['_iteration_domain']['conditions']['descent'] == 'multistart_prune', (
         'Historical ladder counts stay separate from current continuation work'
     )
-    for field in ('iterations', 'descent', 'project'):
-        changed = copy.deepcopy(fixture)
-        if field == 'iterations':
-            changed['native_start_and_finish']['iterations'] += 1
-        elif field == 'descent':
-            for row in changed['scientific']['analysis/analysis.edi']:
-                if row[0] == '_fit_result.descent':
-                    row[1] = 'fast_descent'
-        else:
-            changed['project_sha256'] = '0' * 64
-        with pytest.raises(ValueError, match='Historical'):
-            counters.historical(ROOT, case, changed, old)
+    changed = dict(fixture)
+    if field == 'iterations':
+        changed['native_start_and_finish'] = dict(fixture['native_start_and_finish'])
+        changed['native_start_and_finish']['iterations'] += 1
+    elif field == 'descent':
+        changed['scientific'] = dict(fixture['scientific'])
+        changed['scientific']['analysis/analysis.edi'] = copy.deepcopy(
+            fixture['scientific']['analysis/analysis.edi']
+        )
+        for row in changed['scientific']['analysis/analysis.edi']:
+            if row[0] == '_fit_result.descent':
+                row[1] = 'fast_descent'
+    else:
+        changed['project_sha256'] = '0' * 64
+    with pytest.raises(ValueError, match='Historical'):
+        counters.historical(ROOT, case, changed, old)
 
 
 @pytest.mark.parametrize(
@@ -238,8 +251,10 @@ def test_native_written_path_is_exported_only_after_successful_shared_capture():
 
 
 @pytest.mark.parametrize('case', ['lbco', 'ncaf'])
-def test_historical_transcript_byte_tampering_cannot_reassign_its_domain(tmp_path, case):
-    fixture, raw, *_ = written.inputs(ROOT, case)
+def test_historical_transcript_byte_tampering_cannot_reassign_its_domain(
+    tmp_path, case, authenticated_inputs
+):
+    fixture, raw, *_ = authenticated_inputs[case]
     original = ROOT / 'tests/fixtures/e04_t11_wasm/catalogue_scientific'
     target = tmp_path / original.relative_to(ROOT)
     target.mkdir(parents=True)

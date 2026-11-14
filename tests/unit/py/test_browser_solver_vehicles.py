@@ -1,6 +1,7 @@
 """Frozen-data protocol controls; real twin fits remain mandatory qualification."""
 
 import copy
+import hashlib
 import json
 import math
 import shutil
@@ -24,10 +25,12 @@ def tree_bytes(root):
     }
 
 
-def immutable_sha(path, real, digests):
+def immutable_sha(path, real, digests, authenticated_bytes):
     path = Path(path)
     if path not in digests:
-        return real(path)
+        # A copied immutable input has the same mathematical digest, but still must be read.
+        data = path.read_bytes()
+        return authenticated_bytes[data] if data in authenticated_bytes else real(path)
     data = path.read_bytes()
     if data not in digests[path]:
         digests[path][data] = real(path)
@@ -79,6 +82,10 @@ def _immutable_sources():
         },
     )
 
+    cache.authenticated_bytes = {
+        data: digest for values in cache.digests.values() for data, digest in values.items()
+    }
+
     def inputs(root, case):
         if (root, case) != (ROOT, 'ncaf'):
             return real.inputs(root, case)
@@ -115,7 +122,11 @@ def _immutable_sources():
         patch.setattr(written, 'inputs', inputs)
         patch.setattr(written, 'document', document)
         patch.setattr(written, 'raw_candidates', raw_candidates)
-        patch.setattr(written, 'sha', lambda path: immutable_sha(path, real.sha, cache.digests))
+        patch.setattr(
+            written,
+            'sha',
+            lambda path: immutable_sha(path, real.sha, cache.digests, cache.authenticated_bytes),
+        )
         yield
     assert (fixture, old, names, banks) == immutable and json.dumps(
         (fixture, old, names, banks), sort_keys=True, allow_nan=False
@@ -827,3 +838,18 @@ def test_source_setup_cache_cannot_admit_changed_or_foreign_input(
         written.inputs(ROOT, 'ncaf')
     with pytest.raises(FileNotFoundError):
         written.inputs(tmp_path, 'ncaf')
+
+
+def test_authenticated_digest_reuse_still_reads_copies_and_detects_changed_bytes(
+    historical, tmp_path
+):
+    original = (historical.source / 'analysis/analysis.edi').read_bytes()
+    copy_path = tmp_path / 'same-input.edi'
+    copy_path.write_bytes(original)
+    assert written.sha(copy_path) == hashlib.sha256(original).hexdigest()
+    changed = original + b'\n# independently changed content\n'
+    copy_path.write_bytes(changed)
+    assert written.sha(copy_path) == hashlib.sha256(changed).hexdigest()
+    assert written.sha(copy_path) != hashlib.sha256(original).hexdigest(), (
+        'Cached immutable content cannot authorize a changed copied input by pathname'
+    )
