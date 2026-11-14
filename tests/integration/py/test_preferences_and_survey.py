@@ -109,21 +109,30 @@ def test_stacked_uses_palette_while_map_retains_its_selector():
 
 def test_citation_uses_zenodo_doi_and_consistent_title():
     citation = (ROOT / 'CITATION.cff').read_text()
-    assert '10.5281/zenodo.22905049' in citation, (
+    assert '10.5281/zenodo.24127939' in citation, (
         'The citation must use the approved Zenodo record DOI'
     )
     source = (QML / 'Pages/Home/CitationDialog.qml').read_text()
     assert 'How to cite' in source, 'The citation dialog must retain the common How to cite title'
     assert 'external' in source.lower(), 'The DOI link must carry the external resource icon'
-    assert 'underline: false' in source or 'text-decoration: none' in source, (
+    assert 'InfoDialog.InfoButton {' in source and 'objectName: "citation.doi"' in source, (
         'The clickable DOI must have no underline'
     )
     for label, value in [('Copy as text', 'text'), ('Copy as BibTeX', 'bibtex')]:
         assert label in source and 'copyText(dialog.citation.' + value in source, (
             'Both citation formats must copy their corresponding citation content'
         )
-    assert source.count('flat: true') >= 2, 'Both citation copy buttons must have no background'
-    assert 'footer:' in source, 'Citation copy actions must be in the footer beside Close'
+    info = (QML / 'Components/InfoDialog.qml').read_text()
+    assert source.count('InfoDialog.InfoButton {') == 3, (
+        'DOI and both citation copy actions must use the common background-free button'
+    )
+    assert 'actions: [' in source and 'property alias actions: buttons.contentData' in info, (
+        'Citation actions must populate the common dialog footer'
+    )
+    assert (
+        'footer: EaElements.DialogButtonBox {' in info
+        and 'standardButtons: Dialog.Close' in source
+    ), 'Citation copy actions must be in the footer beside Close'
     assert re.search(r'^# How to cite$', (DOCS / 'about/citation.md').read_text(), re.MULTILINE), (
         'The website and app must use the same How to cite title'
     )
@@ -142,7 +151,7 @@ def test_cosio_example_starting_moments():
 def survey():
     pages = list(DOCS.glob('about/**/survey*.md'))
     assert len(pages) == 1, 'About must contain one persistent Survey page'
-    return pages[0].read_text()
+    return pages[0].read_text() + '\n' + (DOCS / 'assets/survey/survey.js').read_text()
 
 
 def test_survey_navigation_and_question_groups():
@@ -170,7 +179,7 @@ def test_survey_navigation_and_question_groups():
         'jupyter',
         'scripting',
         'standalone',
-        'without python scripting',
+        'command-line tool as a python package',
     ]:
         assert phrase in source, 'Survey must distinguish all six interfaces'
     for phrase in ['fullprof', 'gsas-ii', 'topas', 'jana', 'none', 'other']:

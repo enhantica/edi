@@ -409,12 +409,18 @@ def crysta_reference_source() -> Path:
         result = Path(source)
     else:
         result = root / 'build/crysta-src'
-    current = subprocess.run(
-        ['git', '-C', str(result), 'rev-parse', 'HEAD'],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
+    if (result / '.git').exists():
+        current = subprocess.run(
+            ['git', '-C', str(result), 'rev-parse', 'HEAD'],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    else:
+        current = (result / 'CRYSTA_SOURCE_SHA').read_text().strip()
+        assert re.fullmatch(r'[0-9a-f]{40}', current), (
+            'engine source archives require the official full source identity marker'
+        )
     assert current == (prefix / '.crysta-sha').read_text().strip(), (
         'engine comparison corpus and CLI must belong to the same linked crysta source'
     )
