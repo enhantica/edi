@@ -9,8 +9,8 @@ import edi.app
 // The intro at start (the owner, 2026-11-14), after the 2020 app's Home page (easyDiffraction 0.x, Home.qml): over a
 // plain backdrop, "Making diffraction data analysis easy" fades in, every word but "easy" and "diffraction" fades out,
 // and those two move to their places in the Home wordmark, "easy" cross-fading to its logo face on the way. The
-// round mark then rolls in from beyond the left edge, very fast at first and braking hard like a sports car, its inner circles
-// shown as a 24 fps film shows a wheel, so they seem to turn backwards while it clearly rolls forwards. Last,
+// round mark rolls in from beyond the left edge meanwhile, very fast at first and braking hard like a sports car, its
+// inner circles shown as a 24 fps film shows a wheel, so they seem to turn backwards while it clearly rolls forwards. Last,
 // the backdrop fades, so the rest of the window fades in around the landed wordmark. Skip fades the intro out over
 // the finished window in about a second; Disable does the same after turning Preferences' Intro animation off.
 Item {
