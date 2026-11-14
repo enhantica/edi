@@ -583,12 +583,37 @@ constexpr int kScanTableBarCells = 10;
 constexpr std::size_t kScanTableProgressWidth = kScanTableBarCells + 2 + 6 + 2;  // and the count's own width
 // Below this many characters for the file name, the File column is dropped.
 constexpr std::size_t kScanTableFileMinimum = 12;
+// Every column reserves, from the first row, its widest value, so no value moves a separator during a run:
+// a duration up to `99h59m59s`, a number up to `1.23e-308` (the number format below); wider is cut.
+constexpr std::size_t kScanTableDurationWidth = 9;
+constexpr std::size_t kScanTableNumberWidth = 9;
+
+// A chi-square in the fit tables' number format: a decimal with two places for 0.001 <= |x| < 1000, else
+// three significant digits in e-notation (`1.87e-10`, `7.45e9`); zero is `0`.
+std::string scan_number(double value) {
+    if (!std::isfinite(value)) return {};
+    if (value == 0.0) return "0";
+    std::ostringstream text;
+    text.imbue(std::locale::classic());
+    const double size = std::abs(value);
+    if (size >= 0.001 && size < 1000.0) {
+        text << std::fixed << std::setprecision(2) << value;
+        return text.str();
+    }
+    int exponent = static_cast<int>(std::floor(std::log10(size)));
+    double mantissa = value / std::pow(10.0, exponent);
+    if (std::abs(std::round(mantissa * 100.0) / 100.0) >= 10.0) {
+        mantissa /= 10.0;
+        ++exponent;
+    }
+    text << std::fixed << std::setprecision(2) << mantissa << 'e' << exponent;
+    return text.str();
+}
 
 // The table's columns in their groups, Progress │ OK Failed │ Elapsed Left │ Chi2, Chi2 range │ File: each number column
 // right-aligned under its right-aligned heading, Progress (the bar, the percent and the count) and File
 // left-aligned, two spaces within a group and ` │ ` between groups. The count, OK and Failed are as wide as the
-// total makes them; the others as wide
-// as their headings or the values the owner's layout shows. File, last, takes what the terminal leaves. When
+// total makes them, the others as wide as their widest value. File, last, takes what the terminal leaves. When
 // too narrow, the file name is shortened in the middle down to kScanTableFileMinimum, then File is dropped,
 // then Chi2 range, Chi2 and Left in turn; Progress, OK, Failed and Elapsed always stay, and the line never
 // wraps. Which columns show depends on the terminal only, so the heading and every row keep the same columns.
@@ -604,10 +629,10 @@ std::string scan_table(std::optional<int> total, [[maybe_unused]] bool resumed, 
         {kScanTableProgressWidth + 2 * digits + 1, false, 0},
         {std::max(std::size_t{2}, digits), true, 1},
         {std::max(std::size_t{6}, digits), true, 1},
-        {7, true, 2},
-        {5, true, 2},
-        {4, true, 3},
-        {10, true, 3},
+        {kScanTableDurationWidth, true, 2},
+        {kScanTableDurationWidth, true, 2},
+        {kScanTableNumberWidth, true, 3},
+        {2 * kScanTableNumberWidth + 1, true, 3},
         {0, false, 4},  // File
     };
     const std::size_t file = table.size() - 1;
@@ -640,9 +665,12 @@ std::string scan_table(std::optional<int> total, [[maybe_unused]] bool resumed, 
     for (std::size_t i = 0; i < file; ++i) {
         if (!visible[i]) continue;
         if (previous != file) line += separator(previous, i) == 2 ? "  " : " │ ";
-        const std::size_t shown = text_width(values[i]);
+        // A value wider than its column's reserve is cut, never allowed to shift the row.
+        const std::string value = text_width(values[i]) > table[i].width ? text_prefix(values[i], table[i].width)
+                                                                         : values[i];
+        const std::size_t shown = text_width(value);
         const std::string pad(shown < table[i].width ? table[i].width - shown : 0, ' ');
-        line += table[i].right ? pad + values[i] : values[i] + pad;
+        line += table[i].right ? pad + value : value + pad;
         previous = i;
     }
     // Every separator stays, empty cells included.
@@ -734,9 +762,7 @@ std::string scan_progress_row(int completed, std::optional<int> total_files,
     const std::string count = std::to_string(completed) + (known ? "/" + std::to_string(*total_files) : "");
     progress += (progress.empty() ? "" : "  ") + std::string(count.size() < 2 * digits + 1 ? 2 * digits + 1 - count.size() : 0, ' ') + count;
     // The last fit's chi2 and the range so far, in the fit tables' number format; the final row keeps both.
-    const auto number = [](double value) {
-        return std::isfinite(value) ? display_text("fit_result.reduced_chi_square", value) : std::string{};
-    };
+    const auto number = [](double value) { return scan_number(value); };
     const auto range = std::isfinite(chi2_low) && std::isfinite(chi2_high)
         ? number(chi2_low) + "-" + number(chi2_high) : std::string{};
     const auto eta = scan_eta(completed, total_files, elapsed_seconds, measured_completed);
