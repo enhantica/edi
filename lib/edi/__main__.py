@@ -564,7 +564,6 @@ def human_fit(
         # owns every one of them — so the groups are described here by name, never quoted.
         state = {'total': None, 'elapsed': 0.0}
         live = [False]
-        last_width = [0]
         tally = _ScanTally()
         prior = [0]
         previous = [0.0]
@@ -572,13 +571,9 @@ def human_fit(
 
         def _emit_progress(line: str) -> None:
             if tty:
-                sys.stdout.write(
-                    edi._edi._scan_progress_rewrite(
-                        line, last_width[0], _terminal_columns(tty=tty)
-                    )
-                )
-                last_width[0] = len(line)
-                live[0] = True
+                # The core returns the whole terminal update, or nothing when it throttles.
+                sys.stdout.write(line)
+                live[0] = live[0] or bool(line)
             else:
                 sys.stdout.write(line + '\n')
             sys.stdout.flush()

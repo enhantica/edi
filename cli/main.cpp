@@ -154,7 +154,6 @@ void fit(const std::string& source, const std::string& output, bool dry,
     double elapsed = 0.0;
     const bool scan_rows = verbosity == edi::VerbosityEnum::FULL;
     const bool in_place = scan && !scan_rows && stdout_is_terminal();
-    std::size_t last_width = 0;
     bool live = false;
     double last_chi2 = std::numeric_limits<double>::quiet_NaN();
     std::string last_file;
@@ -196,9 +195,10 @@ void fit(const std::string& source, const std::string& output, bool dry,
                 tally.completed - tally.ok, record.reduced_chi_square, tally.chi2_min, tally.chi2_max,
                 record.file_name, columns);
             if (in_place) {
-                std::cout << edi::detail::scan_progress_rewrite(line, last_width, columns);
-                last_width = edi::detail::scan_progress_width(line);
-                live = true;
+                // On a terminal the core returns the whole update (the row, or the heading and the row when a
+                // column's width changed), or nothing when it throttles.
+                std::cout << line;
+                live = live || !line.empty();
             } else {
                 std::cout << line << '\n';
             }

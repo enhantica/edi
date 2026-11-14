@@ -118,34 +118,37 @@ current SDK manifest/library and Python ABI before reuse (ADR-0083).
 
 Both CLI hosts use one private core table projection: a heading line (`Sequential fit:` or
 `Independent fit:` and the project), a blank line, the column names, then one row per completed
-file, rewritten in place on a terminal. The columns come in groups separated by ` │ `: Progress │
-OK, Failed │ Elapsed, Left │ Chi2, Chi2 range │ File, with two spaces between the columns of a group.
-Number headings are right-aligned over right-aligned values, and Progress and File left-aligned
-over left-aligned values, so every heading sits over its values. Progress is a bar of ten block
-characters, two spaces, the percentage right-aligned in six characters, two spaces and the count of
-completed files, e.g. `██████░░░░  57.0%  24972/43802`. The count, OK and Failed reserve their
-width from the total file count from the first row (the count type's maximum
-width for an unknown total), so no column moves as counts grow. Every column reserves its widest value from the first row, so no value moves a separator during a run:
-Elapsed and Left up to `99h59m59s`, Chi2 up to `1.23e-308` and Chi2 range twice that; a wider value is
-cut. Elapsed is headed `Elapsed` always and
-counts this run only, and Left uses only the completions covered by that clock. Chi2 is the last completed fit's and
-Chi2 range the lowest and highest so far, e.g. `0.07-1.60`, in the fit tables' number format (a decimal
-with two places for 0.001 ≤ |x| < 1000, else three significant digits in e-notation). File names
-the last finished file without its extension. Unknown totals have no percentage or Left. The final
-row is the scan's summary: it keeps the last file, chi2 and the final range, leaves Left empty, and
-no summary line follows it; a run that fits no new file prints that row once, its Chi2, Chi2 range
-and File from the last completed row. Every row keeps every separator, empty cells included. The original public
+file. The columns come in groups separated by ` │ `: Progress │ OK, Failed │ Elapsed, Left │ Chi2,
+Chi2 range │ File, with two spaces between the columns of a group. Number headings are
+right-aligned over right-aligned values, and Progress and File left-aligned over left-aligned
+values. Progress is a bar of ten block characters, two spaces, the percentage right-aligned in six
+characters, two spaces and the count of completed files, e.g. `██████░░░░  57.0%  24972/43802`.
+Elapsed is headed `Elapsed` always and counts this run only, and Left uses only the completions
+covered by that clock. Chi2 is the last completed fit's and Chi2 range the lowest and highest so
+far, e.g. `0.07-1.60`, in the fit tables' number format (a decimal with two places for
+0.001 ≤ |x| < 1000, else three significant digits in e-notation). File names the last finished file
+without its extension. Unknown totals have no percentage or Left. Every row keeps every separator,
+empty cells included. The final row is the scan's summary: it keeps the last file, Chi2 and the
+final range, leaves Left empty, and no summary line follows it; a run that fits no new file prints
+that row once, its Chi2, Chi2 range and File from the last completed row. The original public
 scan_progress_line remains available for callers and shares the duration/ETA calculation.
 
-TTY hosts read the actual terminal width on each event, leaving its last column unused to prevent
-automatic wrapping. The File column takes what the other columns leave: a long name is shortened
-in the middle with `…`, down to twelve characters, then File is dropped, then Chi2 range, Chi2 and Left
-in that order; Progress, OK, Failed and Elapsed always stay and the row never wraps. Which columns
-show depends on the width only, so the heading and every row keep the same columns. Widths are
-counted in characters, not bytes, because the bar's blocks and the ellipsis are one column but
-several UTF-8 bytes; the rewrite bounds both the row and its clearing spaces after a resize the
-same way. Redirected output retains one complete row per completion. The private functions are
-host plumbing, outside the public Python surface. Machine records and saved scientific values are
+On a terminal, each update sizes every column to its current value, never narrower than its
+heading. When a width changes, the heading line and the row are redrawn together (cursor up one
+line, clear, reprint both); otherwise only the row is rewritten. A column shrinks only after its
+values have stayed narrower for two seconds, so alternating lengths do not flicker, and updates are
+limited to about ten a second, the final row always drawn. The terminal width is read on each
+event, leaving its last column unused to prevent automatic wrapping. File takes what the other
+columns leave: a long name is shortened in the middle with `…`, down to twelve characters, then
+File is dropped, then Chi2 range, Chi2 and Left in that order; Progress, OK, Failed and Elapsed
+always stay and the row never wraps. Widths are counted in characters, not bytes, because the
+bar's blocks and the ellipsis are one column but several UTF-8 bytes.
+
+Output that is not a terminal keeps one complete line per completion at realistic fixed widths,
+each at least its heading: the count, OK and Failed from the total file count, Elapsed and Left
+`59m59s`, or `9h59m59s` when the first estimate of the whole run is over an hour, Chi2 `99.99` and
+Chi2 range `99.99-99.99`; a wider value widens its column once. The private functions are host
+plumbing, outside the public Python surface. Machine records and saved scientific values are
 unaffected.
 
 Manual Undo output takes its version header from the linked engine's existing error-record
