@@ -77,7 +77,9 @@ def refuse(message: str) -> NoReturn:
 
 def git(*args: str) -> str:
     """Return a git answer about this checkout; a failure refuses."""
-    r = subprocess.run(['git', *args], cwd=ROOT, capture_output=True, text=True, check=False)
+    r = subprocess.run(
+        ['git', *args], cwd=ROOT, capture_output=True, text=True, encoding='utf-8', check=False
+    )
     return r.stdout.strip() if r.returncode == 0 else refuse(f'git {" ".join(args)} failed')
 
 
@@ -153,6 +155,7 @@ def prove_import() -> None:
         cwd=ROOT,
         capture_output=True,
         text=True,
+        encoding='utf-8',
         check=False,
         env=env,
     )
@@ -171,6 +174,7 @@ def prove() -> None:
         [str(executable('cli/easydiffraction')), '--version'],
         capture_output=True,
         text=True,
+        encoding='utf-8',
         check=False,
     )
     if cli.returncode or not re.fullmatch(
