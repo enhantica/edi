@@ -194,9 +194,8 @@ command alone does not qualify it.
 
 Before installing or compiling an uncached SDK, the producer compares every required
 ABI package's exact version and build in Crysta's cpp-ci lock with the installer lock.
-Linux and macOS additionally compare Edi's default and app environments; those root
-environments do not declare Windows. The existing SDK lock reader and required package
-inventory own this check. Missing or mismatched packages refuse before bootstrap.
+All three platforms additionally compare Edi's default and app environments. The existing
+SDK lock reader and required package inventory own this check. Missing or mismatched packages refuse before bootstrap.
 A metadata-only Python setup supplies the reader's declared language version without
 updating PATH or Python root hints. Only the check invokes its explicit executable;
 Pixi's locked Python remains authoritative for subsequent CMake/binding builds.
@@ -264,3 +263,15 @@ Windows APIs, including its performance observer build. That wrapper already rem
 GDI's `ERROR` macro before it can replace the public fit-status enum. CLI entry points
 and transport code share that boundary; direct SDK imports cannot bypass it. The
 Windows native compile and the importer census gate this existing portability rule.
+
+The early ABI check now covers installer, root default and app locks on all three
+platforms. The former Windows exception applied before the root manifest supported
+Windows; it is removed with that support. The selected metadata interpreter runs
+the same lock reader for every consumer. Changing this producer recipe invalidates
+the qualified archive cache once; compiler object caches remain eligible for reuse.
+
+Installer compiler objects follow the same explicit restore/save boundary as SDK
+and native CI builds. A successful restore may save objects after a later build or
+qualification failure; cancellation or a failed/skipped restore prevents saving.
+The exact platform/toolchain cache key is retained. This does not promote failed
+SDK archives, native artifacts or installers into qualified release inputs.

@@ -126,11 +126,9 @@ jobs:
           : "${sdk_platform:?The SDK matrix must declare its platform}"
           : "${metadata_python:?SDK metadata Python must be available}"
           "$metadata_python" tools/ci/crysta_sdk.py preflight --source-lock "$RUNNER_TEMP/crysta/pixi.lock" --platform "$sdk_platform" --lockfile tools/installer/pixi.lock --environment default
-          if [ "$sdk_platform" != win-64 ]; then
-            for environment in default app; do
-              "$metadata_python" tools/ci/crysta_sdk.py preflight --source-lock "$RUNNER_TEMP/crysta/pixi.lock" --platform "$sdk_platform" --lockfile pixi.lock --environment "$environment"
-            done
-          fi
+          for environment in default app; do
+            "$metadata_python" tools/ci/crysta_sdk.py preflight --source-lock "$RUNNER_TEMP/crysta/pixi.lock" --platform "$sdk_platform" --lockfile pixi.lock --environment "$environment"
+          done
       - name: Identify the SDK compiler-cache inputs
         if: steps.cache.outputs.cache-hit != 'true'
         id: compiler-inputs

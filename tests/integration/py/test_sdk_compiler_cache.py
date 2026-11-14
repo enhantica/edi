@@ -203,3 +203,62 @@ def test_failed_native_observations_are_retained_without_promoting_an_sdk():
         assert active(artifact, 'workflow_dispatch', **context) == (
             state == 'success' and not cancelled
         ), 'Failure evidence can never satisfy successful SDK transport'
+
+
+def installer_cache_boundary(job):
+    steps = job['steps']
+    restore = next(step for step in steps if step.get('id') == 'compiler-cache')
+    save = next(step for step in steps if step.get('name') == 'Save installer compiler objects')
+    build = next(
+        step
+        for step in steps
+        if step.get('name') == 'Build desktop bundle and CLI with the qualified SDK'
+    )
+    assert restore['uses'] == 'actions/cache/restore@v4'
+    assert save['uses'] == 'actions/cache/save@v4'
+    assert save['with'] == {key: restore['with'][key] for key in ('path', 'key')}
+    assert steps.index(restore) < steps.index(build) < steps.index(save)
+    for outcome, cancelled in [
+        ('success', False),
+        ('failure', False),
+        ('skipped', False),
+        ('success', True),
+    ]:
+        assert active(
+            save,
+            'pull_request',
+            outputs={('compiler-cache', 'outcome'): outcome},
+            states={'qualification': 'failure'},
+            cancelled=cancelled,
+        ) == (outcome == 'success' and not cancelled)
+
+
+def test_installer_preserves_objects_after_failure_with_the_same_explicit_cache_boundary():
+    document = yaml.safe_load((ROOT / '.github/workflows/installers.yml').read_text())
+    job = next(
+        job
+        for job in document['jobs'].values()
+        if any(
+            step.get('name') == 'Build desktop bundle and CLI with the qualified SDK'
+            for step in job.get('steps', [])
+        )
+    )
+    installer_cache_boundary(job)
+    for defect in ('success-only', 'unconditional', 'wrong-key', 'before-build'):
+        damaged = copy.deepcopy(job)
+        save = next(
+            step
+            for step in damaged['steps']
+            if step.get('name') == 'Save installer compiler objects'
+        )
+        if defect == 'success-only':
+            save['if'] = 'success()'
+        elif defect == 'unconditional':
+            save['if'] = '!cancelled()'
+        elif defect == 'wrong-key':
+            save['with']['key'] = 'foreign-objects'
+        else:
+            damaged['steps'].remove(save)
+            damaged['steps'].insert(0, save)
+        with pytest.raises(AssertionError):
+            installer_cache_boundary(damaged)

@@ -279,14 +279,14 @@ def python_calls(tmp_path):
     bindir.mkdir()
     records = tmp_path / 'python-calls.jsonl'
     program = (
-        '#!' + sys.executable + '\nimport json,os,sys\n'
+        '#!' + Path(sys.executable).as_posix() + '\nimport json,os,runpy,sys\n'
         'with open(os.environ["PREFLIGHT_CALLS"],"a") as output:\n'
         ' output.write(json.dumps(sys.argv[1:])+"\\n")\n'
-        'os.execv(' + repr(sys.executable) + ',[' + repr(sys.executable) + ',*sys.argv[1:]])\n'
+        'sys.argv=sys.argv[1:]\nrunpy.run_path(sys.argv[0],run_name="__main__")\n'
     )
     for name in ('python', 'python3'):
         path = bindir / name
-        path.write_text(program)
+        path.write_bytes(program.encode())
         path.chmod(0o755)
     ambient = tmp_path / 'ambient-python'
     ambient.mkdir()
@@ -329,8 +329,6 @@ def test_actual_preflight_step_checks_installer_and_only_supported_root_environm
     root_lock = write_lock(
         tmp_path / 'pixi.lock', platform, {'default': locked(platform), 'app': locked(platform)}
     )
-    if platform == 'win-64':
-        root_lock.unlink()
     records, env, interpreter = python_calls(tmp_path)
     env['RUNNER_TEMP'] = str(tmp_path / 'runner')
     env.pop('PLATFORM', None)
@@ -360,9 +358,9 @@ def test_actual_preflight_step_checks_installer_and_only_supported_root_environm
     assert good.returncode == 0, (
         'The actual cold preflight step admits every declared aligned consumer'
     )
-    assert good.stdout.count('SDK ABI package locks match') == (
-        1 if platform == 'win-64' else 3
-    ), 'Windows must check installer only; Unix must check installer, root default and app'
+    assert good.stdout.count('SDK ABI package locks match') == 3, (
+        'Every platform checks installer, root default and app through the same admission step'
+    )
     assert (tmp_path / 'environment-after').read_text().splitlines() == [
         env['PATH'],
         env['Python_ROOT_DIR'],
@@ -376,7 +374,8 @@ def test_actual_preflight_step_checks_installer_and_only_supported_root_environm
     )
     for selected, environment in [
         (installer, 'default'),
-        *([(root_lock, 'default'), (root_lock, 'app')] if platform != 'win-64' else []),
+        (root_lock, 'default'),
+        (root_lock, 'app'),
     ]:
         (tmp_path / 'admitted').unlink(missing_ok=True)
         broken = locked(platform)

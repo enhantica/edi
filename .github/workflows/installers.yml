@@ -183,7 +183,8 @@ jobs:
             echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
             echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
           } >>"$GITHUB_ENV"
-      - uses: actions/cache@v4
+      - id: compiler-cache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/edi-ccache
           key: ccache-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -231,6 +232,12 @@ jobs:
         run: git clone --depth 1 https://github.com/enhantica/edi-data "${{ github.workspace }}/.edi-data"
       - name: Build desktop bundle and CLI with the qualified SDK
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer" --collection "${{ github.workspace }}/.edi-data"
+      - name: Save installer compiler objects
+        if: ${{ !cancelled() && steps.compiler-cache.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/edi-ccache
+          key: ccache-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Compiler cache hits
         if: always()
         run: pixi run --manifest-path tools/installer/pixi.toml ccache --show-stats
