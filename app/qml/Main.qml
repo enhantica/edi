@@ -25,16 +25,20 @@ EaComponents.ApplicationWindow {
     // Experiment: draw the app bar under the system title bar on macOS and Windows (Qt 6.9 expanded client
     // area). The system window buttons stay; the app bar's own buttons move clear of them by the safe-area margins.
     readonly property bool mergedTitleBar: Qt.platform.os === "osx" || Qt.platform.os === "windows"
+    // Let the app bar reach the top edge (Qt keeps the content inside the safe area by default); the system
+    // buttons then sit in a strip at the top of the app bar, and every group of the app bar moves down below it.
+    topPadding: mergedTitleBar ? 0 : undefined
     function setUpMergedTitleBar() {
         if (!mergedTitleBar)
             return;
         const rows = appBar.children;
-        const left = rows[0], right = rows[2];
-        const leftBase = left.anchors.leftMargin, rightBase = right.anchors.rightMargin;
-        left.anchors.leftMargin = Qt.binding(() => leftBase + appBar.SafeArea.margins.left);
-        right.anchors.rightMargin = Qt.binding(() => rightBase + appBar.SafeArea.margins.right);
-        console.info("merged title bar: safe-area margins", appBar.SafeArea.margins.left, appBar.SafeArea.margins.top,
-                     appBar.SafeArea.margins.right);
+        const left = rows[0], tabs = rows[1], right = rows[2];
+        const strip = () => appBar.SafeArea.margins.top;
+        const baseHeight = appBar.height;
+        appBar.height = Qt.binding(() => baseHeight + strip());
+        for (const row of [left, tabs, right])
+            row.anchors.verticalCenterOffset = Qt.binding(() => strip() / 2);
+        console.info("merged title bar: strip", strip());
     }
     // Dragging the empty app bar moves the window, and a double click maximizes or restores it, as a title bar does.
     DragHandler {
