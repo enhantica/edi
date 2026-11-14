@@ -85,6 +85,7 @@ AppDialog {
         readonly property real iconSize: EaStyle.Sizes.fontPixelSize * 0.8
 
         width: dialog.columnWidth
+        height: dialog.rowHeight
         // The text stops short of the minus and plus, so a press on them reaches the spin box, which steps the
         // value and repeats while held, instead of the text field selecting its text.
         rightPadding: EaStyle.Sizes.fontPixelSize * 3.5
@@ -151,14 +152,21 @@ AppDialog {
     component TabRow: Row {
         spacing: dialog.columnSpacing
     }
-    // A label with its control (and a strip, if any) under it, as one row of a column.
+    // A label with its control (and a strip, if any) under it, as one row of a column. Every field has the same gap
+    // between its label and its control, so rows side by side line up; a strip keeps its own gap below the control.
     component Field: Column {
         property alias label: fieldLabel.text
+        default property alias content: body.data
 
         width: dialog.columnWidth
 
         FieldLabel {
             id: fieldLabel
+        }
+        Column {
+            id: body
+            width: parent.width
+            spacing: dialog.stripSpacing
         }
     }
 
@@ -317,7 +325,6 @@ AppDialog {
                     }
                     Field {
                         label: qsTr("Magnetic moment arrows")
-                        spacing: dialog.stripSpacing
                         FieldBox {
                             readonly property var schemes: ["atom", "greyed", "single"]
 
@@ -357,7 +364,6 @@ AppDialog {
                 // The figure palette of experiments and structures, the Pattern and Stacked views alike (ADR-0084).
                 Field {
                     label: qsTr("Palette")
-                    spacing: dialog.stripSpacing
                     FieldBox {
                         readonly property var schemes: ApplicationInfo.colourSchemes
 
@@ -376,7 +382,6 @@ AppDialog {
                 // The Map view's colour map, also chosen on the Map's toolbar.
                 Field {
                     label: qsTr("Map colours")
-                    spacing: dialog.stripSpacing
                     FieldBox {
                         id: mapBox
 
