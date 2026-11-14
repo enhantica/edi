@@ -3,6 +3,7 @@
 import functools
 import hashlib
 import json
+import re
 import subprocess
 import zipfile
 from pathlib import Path
@@ -18,7 +19,7 @@ def rows():
 
 
 def previous_bytes(name, data):
-    row = rows().get(name)
+    row = rows().get(str(name))
     if row is None:
         return data
     digest = hashlib.sha256(data).hexdigest()
@@ -34,6 +35,33 @@ def previous_bytes(name, data):
         'Retired-field projection retains the complete independently committed prior source'
     )
     return before
+
+
+def saved_absorption(data, source):
+    """Recover only the retired fixed-zero scalar for an immutable saved-byte witness."""
+    source = Path(source)
+    original = source.read_bytes()
+    if source.is_relative_to(ROOT):
+        original = previous_bytes(source.relative_to(ROOT).as_posix(), original)
+    pattern = rb'(?m)^_absorption\.abscor2[^\r\n]*\r?\n'
+    retired = re.findall(pattern, original)
+    if not retired:
+        return data
+    assert retired in ([b'_absorption.abscor2 0\n'], [b'_absorption.abscor2 0.0\n']), (
+        'The retired absorption projection admits exactly one fixed-zero source scalar'
+    )
+    assert not re.search(rb'(?m)^_absorption\.abscor2(?:[ \t]|$)', data), (
+        'The current saved document must omit the retired absorption scalar'
+    )
+    cylinder = rb'(?m)^_absorption\.type[ \t]+cylinder\r?$'
+    assert len(re.findall(cylinder, original)) == len(re.findall(cylinder, data)) == 1, (
+        'The retired scalar belongs only to the unchanged cylinder absorption type'
+    )
+    first = rb'(?m)^_absorption\.abscor1[^\r\n]*\r?\n'
+    assert len(re.findall(first, data)) == 1, (
+        'The saved cylinder must retain exactly one active absorption coefficient'
+    )
+    return re.sub(first, lambda match: match[0] + b'_absorption.abscor2 0\n', data)
 
 
 def generate():

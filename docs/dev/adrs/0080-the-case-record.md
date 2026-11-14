@@ -132,3 +132,13 @@ tokens to a CIF reflection asset, omitting calculated columns. Powder x/y/s.u.
 export retains its existing spelling. Both geometries use the same asset-id and
 sidecar writer. A data-free simulation exports no measurement asset. Malformed
 row cardinality refuses instead of manufacturing observations.
+
+
+Saved-byte witnesses also retain the retired cylinder `abscor2` scalar only as
+an in-memory fixed-zero projection. The input must declare exactly one fixed
+zero (or equal its complete archived removal source); the current output must
+omit that scalar and retain cylinder absorption with its active coefficient.
+The projected document still has to recover the original whole-file hash.
+Nonzero, free, duplicated or unexpectedly emitted retired scalars refuse, and
+changes to active coefficients remain visible to the unchanged hash witness.
+No reference, tolerance, regression hash or actual saved output is rewritten.

@@ -325,7 +325,7 @@ def test_retaken_seed_regression_pins_reject_byte_and_inventory_changes(
         AssertionError,
         match=(
             r'pinned|blob ids|source tree|regular files|archived source|'
-            r'reviewed source byte|exact committed'
+            r'reviewed source byte|exact committed|committed source byte'
         ),
     ):
         test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(
@@ -483,7 +483,7 @@ def test_pull_request_ci_and_verify_execute_the_complete_registry():
 
 def assert_registry_wiring(manifest, workflow):
     # : before, string-only dependencies and any one CI invocation sufficed.
-    # After, resolve environment-qualified edges and require both real OS runners.
+    # After, resolve environment-qualified edges and require every native OS runner.
     runner = 'tools/checks/cli_projects.py'
     for name in ('verify', 'verify-quick', 'verify-full'):
         commands = task_commands(manifest, name)
@@ -537,7 +537,7 @@ def assert_registry_wiring(manifest, workflow):
                 commands = task_commands(manifest, invoked[1])
                 if any(runner in item and '--project' not in item for item in commands):
                     platforms.update(runner[1] for runner in self_hosted_runners(job))
-    assert platforms == {'Linux', 'macOS'}, (
+    assert platforms == {'Linux', 'macOS', 'Windows'}, (
         'required private or trusted public pull-request CI executes the full CLI registry '
         'on every OS'
     )
@@ -690,11 +690,12 @@ def test_executing_registry_accepts_lowercase_page_stems_and_seed_variants(tmp_p
         'disabled-step',
         'conditional-step',
         'wrong-os',
+        'missing-windows',
     ],
 )
 def test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes(escape):
     # Independent contract fixture: the approved standard runners and positive SDK
-    # fork boundary must execute the complete registry on both desktop platforms.
+    # fork boundary must execute the complete registry on every desktop platform.
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
     job = {
         'runs-on': '${{ matrix.runner }}',
@@ -705,6 +706,7 @@ def test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes(esca
                 'include': [
                     {'platform': 'Linux', 'runner': 'ubuntu-24.04'},
                     {'platform': 'macOS', 'runner': 'macos-15'},
+                    {'platform': 'Windows', 'runner': 'windows-2022'},
                 ]
             }
         },
@@ -730,6 +732,8 @@ def test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes(esca
         job['steps'][0]['if'] = 'some.optional.condition'
     elif escape == 'wrong-os':
         job['strategy']['matrix']['include'][1]['runner'] = 'ubuntu-24.04'
+    elif escape == 'missing-windows':
+        job['strategy']['matrix']['include'].pop()
     with pytest.raises(AssertionError):
         assert_registry_wiring(manifest, workflow)
 

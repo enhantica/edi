@@ -11,6 +11,7 @@ import tempfile
 import warnings
 from pathlib import Path
 
+from tests.fixtures.metadata_transition.retired_source_fields import saved_absorption
 from tests.fixtures.metadata_transition.task_inputs import saved_analysis, saved_experiment
 from tests.fixtures.project_categories.historical_bytes import prior_digest
 
@@ -65,6 +66,7 @@ def fingerprints(root, *, order_reference=None, source=None):
             and relative.startswith('experiments/')
         ):
             content = saved_experiment(content, Path(source) / relative)
+            content = saved_absorption(content, Path(source) / relative)
         result[relative] = (
             prior_digest(content, order_reference[relative], name=relative)
             if order_reference is not None and relative in order_reference
