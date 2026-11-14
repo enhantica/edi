@@ -93,3 +93,11 @@ opening context before their interface instructions. This carries data limitatio
 and uncertainty estimates into each published interface, rather than discarding them
 when writing stage screenshots or file-edit instructions. Existing numerical output
 blocks are retained when adding that context to committed pages.
+
+
+Presentation observers distinguish the notebook's markdown H1 from installation
+code comments. Titles use the declared sample/instrument form and identify cases
+within their sections. SVG badge observers compare both visible and accessible
+labels, coloured backgrounds and the exact shared font icon's nested view box and
+path digest. External symbols, extra paths, altered glyphs and changed badge counts
+refuse, just as they do for inline symbol markup.
