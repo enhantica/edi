@@ -142,7 +142,7 @@ def test_public_webapp_packer_preserves_inventory_through_symlinked_build_parent
 def test_native_fixture_is_bound_to_the_committed_nontrivial_project():
     oracle = json.loads((FIXTURE / 'native.json').read_text())
     digest = hashlib.sha256()
-    for name, data in sorted(historical_bytes(input_bytes(), domain()).items()):
+    for name, data in sorted(historical_bytes(input_bytes(ROOT), domain()).items()):
         digest.update(name.encode() + b'\0')
         digest.update(data)
     assert digest.hexdigest() == oracle['project_sha256'], (
