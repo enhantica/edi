@@ -29,7 +29,7 @@ sys.path.insert(0, str(ROOT / 'website'))
 from app_groups import Tracker, dictionary, load_case, unrolled  # noqa: E402
 
 DICTIONARY = dictionary()
-from app_tutorial_plan import CLI_PAGES, free_lists, plan  # noqa: E402
+from app_tutorial_plan import CLI_PAGES, free_lists, plan, relations  # noqa: E402
 from render_app_tutorials import stage_sentence  # noqa: E402
 from render_cli_tutorials import stages  # noqa: E402
 
@@ -552,6 +552,7 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
                 f'examples.open.{case}',
                 f'example:{case}',
             ),
+            *example_relations(case),
         ]
     if ident == 'project-details':
         name = case if len(case) <= 31 else case.split('_', 1)[1]
@@ -822,7 +823,9 @@ def with_reasons(case: str, steps: list[dict]) -> list[dict]:
             r'(?:rows:constraints\.append=|field:constraint\.(?:id|expression)\.)(\d+).*', check
         ):
             row = str(int(m[1]) - 1) if check.startswith('rows:') else m[1]
-            return constraint_reason(ids.get(row, row))
+            # An opened example's constraint has no id step: its left-hand alias names it.
+            lhs = re.fullmatch(r'field:constraint\.expression\.\d+=(\w+)\s*=.*', check)
+            return constraint_reason(ids.get(row) or (lhs[1] if lhs else row))
         if m := re.fullmatch(
             r'(?:rows:aliases\.append=|field:alias\.id\.|pick:alias\.parameter\.)(\d+).*', check
         ):
@@ -885,6 +888,30 @@ def with_reasons(case: str, steps: list[dict]) -> list[dict]:
             s['text'] = f'{s["text"]} {why}'
             said.add(why)
     return steps
+
+
+def example_relations(case: str) -> list[dict]:
+    """The constraints an opened example comes with that the Python tutorial creates in its setup.
+
+    The example already holds them, so each is a step that checks its expression on Analysis >
+    Extra rather than one that types it, as the Python tutorial teaches every one of them.
+    """
+    source = (TUTORIALS / f'{case}.py').read_text(encoding='utf-8')
+    setup = source[: source.find('## Perform the analysis')]
+    created = set(re.findall(r"\.constraints\.create\(id='([^']+)'", setup))
+    return [
+        step(
+            "The example's constraints",
+            f'Check that the expression of constraint {row + 1} reads **{expression}**: the '
+            'example comes with it.',
+            'analysis',
+            f'constraint.expression.{row}',
+            f'field:constraint.expression.{row}={expression}',
+            tab='extras',
+        )
+        for row, (ident, expression) in enumerate(relations(case)[1])
+        if ident in created
+    ]
 
 
 def parameter_words(path: str, variant: str = '') -> str:

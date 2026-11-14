@@ -14919,6 +14919,51 @@
           "check": "example:pd-xray-cwl_latp-bm01_scan"
         },
         {
+          "title": "The example's constraints",
+          "text": "Check that the expression of constraint 1 reads **z_Al1 = z_Ti1**: the example comes with it. Al replaces some Ti on one site, so the two share its height.",
+          "page": "analysis",
+          "target": "constraint.expression.0",
+          "check": "field:constraint.expression.0=z_Al1 = z_Ti1",
+          "tab": "extras",
+          "why": "Al replaces some Ti on one site, so the two share its height."
+        },
+        {
+          "title": "The example's constraints",
+          "text": "Check that the expression of constraint 2 reads **b_Al1 = b_Ti1**: the example comes with it. Al and Ti share one site, so they share its displacement.",
+          "page": "analysis",
+          "target": "constraint.expression.1",
+          "check": "field:constraint.expression.1=b_Al1 = b_Ti1",
+          "tab": "extras",
+          "why": "Al and Ti share one site, so they share its displacement."
+        },
+        {
+          "title": "The example's constraints",
+          "text": "Check that the expression of constraint 3 reads **b2_P1 = b2_Al1**: the example comes with it. The AlPO₄ phase is small, so all its atoms share one displacement.",
+          "page": "analysis",
+          "target": "constraint.expression.2",
+          "check": "field:constraint.expression.2=b2_P1 = b2_Al1",
+          "tab": "extras",
+          "why": "The AlPO₄ phase is small, so all its atoms share one displacement."
+        },
+        {
+          "title": "The example's constraints",
+          "text": "Check that the expression of constraint 4 reads **b2_O1 = b2_Al1**: the example comes with it.",
+          "page": "analysis",
+          "target": "constraint.expression.3",
+          "check": "field:constraint.expression.3=b2_O1 = b2_Al1",
+          "tab": "extras",
+          "why": "The AlPO₄ phase is small, so all its atoms share one displacement."
+        },
+        {
+          "title": "The example's constraints",
+          "text": "Check that the expression of constraint 5 reads **b2_O2 = b2_Al1**: the example comes with it.",
+          "page": "analysis",
+          "target": "constraint.expression.4",
+          "check": "field:constraint.expression.4=b2_O2 = b2_Al1",
+          "tab": "extras",
+          "why": "The AlPO₄ phase is small, so all its atoms share one displacement."
+        },
+        {
           "title": "Fix every parameter first",
           "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
           "page": "analysis",
