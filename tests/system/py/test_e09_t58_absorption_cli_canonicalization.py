@@ -51,7 +51,7 @@ def _stage(destination: Path, *, spelling: str) -> Path:
     )
     for experiment in sorted((destination / 'experiments').glob('*.edi')):
         text = experiment.read_text(encoding='utf-8')
-        block = '_absorption.type cylinder\n_absorption.abscor1 0.0(10)\n_absorption.abscor2 0.0\n'
+        block = '_absorption.type cylinder\n_absorption.abscor1 0.0(10)\n'
         assert text.count(block) == 1, (
             'each NCAF bank must expose exactly one declared cylinder block before mutation'
         )

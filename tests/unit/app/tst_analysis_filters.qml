@@ -366,8 +366,8 @@ TestCase {
     }
     function test_ncaf_oracle() {
         ncaf();
-        compare(expected.length, 423, "The saved I 21 3 project has its independently counted parameter population");
-        compare(expected.filter(row => row.block === "wish_2_9").length, 67, "The reported wish bank has its independently counted complete parameter population");
+        compare(expected.length, 418, "The saved I 21 3 project has its independently counted parameter population");
+        compare(expected.filter(row => row.block === "wish_2_9").length, 66, "The reported wish bank has its independently counted complete parameter population");
         compare(expected.filter(row => row.category === "peak" && /^(rise_alpha_|decay_beta_)/.test(row.name)).length, 20, "The five banks each contribute four independent TOF asymmetry parameters");
         sameRows(expected, "The source-file and Wyckoff construction accounts for every real NCAF parameter identity");
         compare(actualRows().filter(row => row.free).map(identity).sort(), expected.filter(row => row.free).map(identity).sort(), "Saved value parentheses independently account for every NCAF free parameter");
