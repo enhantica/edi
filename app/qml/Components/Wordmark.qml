@@ -11,8 +11,8 @@ import edi.app
 // "diffraction" in Baloo 2. Every measure follows the mark's visible diameter by that SVG's proportions. The
 // SVG asks "easy" for weight 300, which Baloo 2 does not have (its weights start at 400), so "easy" draws in
 // Regular, as the SVG itself does, and "diffraction" in SemiBold. The version is not part of it: Home and
-// About set it below, centred (WordmarkWithVersion). The name stays live text, for the Home page's animation to
-// come.
+// About set it below, centred (WordmarkWithVersion). The name stays live text, which the Home page's intro moves into
+// place (HomeIntro).
 Item {
     id: wordmark
 
@@ -21,11 +21,22 @@ Item {
 
     readonly property real nameX: markDiameter * 1.1094  // the mark, then the gap before the name
     readonly property real namePixelSize: markDiameter * 0.4309
+    // Where the intro lands its words and the mark.
+    readonly property Item markItem: mark
+    readonly property Item prefixItem: prefix
+    readonly property Item suffixItem: suffix
+
+    // The web app's loading spin (app/web/make_logo.py: six turns, Qt's OutInElastic, amplitude 1, period 0.3), run
+    // twice at 2.5 s: the Home page's idle spin.
+    function spin() {
+        idleSpin.restart();
+    }
 
     implicitWidth: nameX + Math.max(prefix.implicitWidth, suffix.implicitWidth)
     implicitHeight: markDiameter
 
     Image {
+        id: mark
         // App.svg's circle spans 1020 of its 1024 units, so the image is that much larger than the mark.
         width: wordmark.markDiameter * 1024 / 1020
         height: width
@@ -63,5 +74,17 @@ Item {
         font.styleName: "SemiBold"
         font.pixelSize: wordmark.namePixelSize
         text: ApplicationInfo.nameSuffixForLogo
+    }
+
+    RotationAnimator {
+        id: idleSpin
+        target: mark
+        from: 0
+        to: 360 * 6
+        duration: 2500
+        loops: 2
+        easing.type: Easing.OutInElastic
+        easing.amplitude: 1
+        easing.period: 0.3
     }
 }

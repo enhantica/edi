@@ -1052,7 +1052,19 @@ class ApplicationInfo : public QObject {
     // `colour` as drawn flat on any of `backgrounds`: its lightness moved to 2:1 contrast on each, its hue kept (edi
     // ADR-0047).
     Q_INVOKABLE QColor readableColour(const QColor& colour, const QList<QColor>& backgrounds) const;
+    // Whether the Home intro and the idle logo spin may play in this run: not in a demo, test or observed run (fresh
+    // settings, --test-observer) nor with EDI_HOME_INTRO=0; EDI_HOME_INTRO=1 allows them anyway.
+    Q_PROPERTY(bool homeIntroAllowed READ homeIntroAllowed CONSTANT)
+    bool homeIntroAllowed() const;
+    // At most twice a second while the user moves, clicks, scrolls or types anywhere in the app: the Home page's idle
+    // spin waits for a pause in these.
+    Q_SIGNAL void userInput();
+
+   protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
    private:
+    qint64 last_input_ = 0;
     mutable QPointer<QObject> pending_project_picker_;
     mutable QPointer<QObject> dataset_folder_picker_, dataset_folder_project_, dataset_folder_experiment_;
 

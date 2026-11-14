@@ -368,10 +368,21 @@ EaComponents.ApplicationWindow {
         }
     }
 
+    // The Home page's intro at start, over the whole window (HomeIntro).
+    HomeIntro {
+        id: homeIntro
+        parent: Overlay.overlay
+        anchors.fill: parent
+        wordmark: homePage.wordmark
+        Component.onCompleted: if (Preferences.homeAnimationsOn)
+            Qt.callLater(homeIntro.start)
+    }
+
     contentArea: [
         HomePage {
             id: homePage
             objectName: "workflow.home.mainContent"
+            introRunning: homeIntro.running
         },
         Loader {
             id: projectLoader

@@ -215,6 +215,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/StatusBar.qml
         qml/Components/ExampleCell.qml
         qml/Components/ExampleFilters.qml
+        qml/Components/HomeIntro.qml
         qml/Components/IconLink.qml
         qml/Components/AssistantDownloadLink.qml
         qml/Components/StatusBarButton.qml

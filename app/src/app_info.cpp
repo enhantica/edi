@@ -38,6 +38,8 @@
 #include <QImage>
 #include <QDir>
 #include <QFile>
+#include <QDateTime>
+#include <QEvent>
 #include <QGuiApplication>
 #include <QJSManagedValue>
 #include <QJSPrimitiveValue>
@@ -206,6 +208,35 @@ bool assistant_device_available() {
 ApplicationInfo::ApplicationInfo(QObject* parent)
     : QObject(parent), assistant_available_(assistant_device_available()) {
     edi_app::UserActionLog::install();
+    if (QCoreApplication* app = QCoreApplication::instance()) app->installEventFilter(this);
+}
+
+bool ApplicationInfo::homeIntroAllowed() const {
+    const QString given = qEnvironmentVariable("EDI_HOME_INTRO");
+    if (given == QStringLiteral("1")) return true;
+    if (given == QStringLiteral("0")) return false;
+    return edi_app::fresh_settings_dir().isEmpty() &&
+           !QCoreApplication::arguments().contains(QStringLiteral("--test-observer"));
+}
+
+bool ApplicationInfo::eventFilter(QObject* watched, QEvent* event) {
+    switch (event->type()) {
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseMove:
+        case QEvent::Wheel:
+        case QEvent::KeyPress:
+        case QEvent::TouchBegin: {
+            const qint64 now = QDateTime::currentMSecsSinceEpoch();
+            if (now - last_input_ >= 500) {
+                last_input_ = now;
+                emit userInput();
+            }
+            break;
+        }
+        default:
+            break;
+    }
+    return QObject::eventFilter(watched, event);
 }
 
 bool ApplicationInfo::assistantAvailable() const { return assistant_available_; }

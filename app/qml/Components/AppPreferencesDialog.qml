@@ -299,6 +299,16 @@ AppDialog {
                             onActivated: index => ApplicationInfo.preferenceActivated(index, 0)
                         }
                     }
+                    Field {
+                        label: qsTr("Home page animations")
+                        FieldBox {
+                            objectName: "preferences.homeAnimations"
+                            model: [qsTr("On"), qsTr("Off")]
+                            currentIndex: Preferences.homeAnimations ? 0 : 1
+                            onActivated: index => Preferences.homeAnimations = index === 0
+                            ToolTip.text: qsTr("The intro when the app starts, and the logo's spin after a while without input on Home")
+                        }
+                    }
                 }
                 TabColumn {
                     GroupTitle {
