@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T04:36:07Z
+# measured_utc = 2026-11-14T05:30:45Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 175904 banked, 5 stale row(s) dropped)
-# Collected tests: 244764; with a reported duration: 77053
+# Recorded from: measured test run (6 node(s) measured once, 175909 banked, 1 stale row(s) dropped)
+# Collected tests: 244769; with a reported duration: 77055
 # Module-scoped fixture costs recorded: 190
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 244764
+# inventory_python = 244769
 # inventory_cpp = 402
-# inventory_measured = 175910
+# inventory_measured = 175915
 # inventory_unmeasured = 69256
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85497
+# inventory_pr_python = 85502
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -300,8 +300,10 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::tes
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_lam7o3-p021]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_latp-bm01_scan]
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_pbso4-lab]
+0.004	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-cwl_cosio-heidi]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-cwl_pr2nio4-5c2]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-cwl_tb2ti2o7-heidi]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-cwl_tb2ti2o7-heidi_simulation]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-tof_taurine-senju]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_existing_projects_open_and_populate_pages
 0.000	tests/integration/app/test_e04_t1_projects.py::test_retained_fixture_directory_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-162f]
@@ -381,8 +383,10 @@ UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_e
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_latp_scan-4f]
 UNMEASURED:not-completed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_pbso4-lab]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-xray-cwl_pbso4-lab_round-robin]
+0.001	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[sc-neut-cwl_cosio-heidi]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[sc-neut-cwl_pr2nio4-5c2]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[sc-neut-cwl_tb2ti2o7-heidi]
+0.000	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[sc-neut-cwl_tb2ti2o7-heidi_simulation]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[sc-neut-tof_taurine-senju]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_projects_open_and_populate_pages
 0.370	tests/integration/app/test_e04_t1_runtime_escapes.py::test_missing_property_fails_the_production_qmllint_import_context
@@ -168267,7 +168271,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_
 0.010	tests/integration/py/test_report_storage.py::test_save_as_copies_every_report_row_and_file_without_touching_the_source
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_saved_file_rows_refuse_unknown_formats_and_incomplete_boundaries[incomplete-row]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_storage.py::test_saved_file_rows_refuse_unknown_formats_and_incomplete_boundaries[unknown-format]
-0.030	tests/integration/py/test_report_table_precision.py::test_reflection_columns_have_fixed_decimals_and_no_exponents_in_model_and_html
+0.070	tests/integration/py/test_report_table_precision.py::test_reflection_notation_retains_the_original_phase_sum_precision
 0.000	tests/integration/py/test_report_temporary_placement.py::test_every_temporary_alias_witness_reaches_the_documented_writer[outside-linked-hard-experiment]
 0.000	tests/integration/py/test_report_temporary_placement.py::test_every_temporary_alias_witness_reaches_the_documented_writer[outside-linked-hard-html]
 0.000	tests/integration/py/test_report_temporary_placement.py::test_every_temporary_alias_witness_reaches_the_documented_writer[outside-linked-hard-settings]
@@ -244181,6 +244185,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e04_t11_description_inpu
 0.000	tests/unit/py/test_e04_t1_fixture_tokens.py::test_app_oracle_preserves_symbolic_and_incomplete_numeric_tokens
 0.000	tests/unit/py/test_e04_t1_fixture_tokens.py::test_app_oracle_retains_number_free_flag_and_uncertainty
 0.050	tests/unit/py/test_e04_t1_fixture_tokens.py::test_app_text_oracle_preserves_carriage_return_field_separators
+0.000	tests/unit/py/test_e04_t1_fixture_tokens.py::test_scan_source_oracle_uses_folder_declaration_in_every_fitting_mode
 0.000	tests/unit/py/test_e04_t5_calculator.py::test_e04_t5_seed_declares_supported_calculator[cosio-d20-s1]
 0.000	tests/unit/py/test_e04_t5_calculator.py::test_e04_t5_seed_declares_supported_calculator[cosio-d20-s4]
 0.000	tests/unit/py/test_e04_t5_calculator.py::test_e04_t5_seed_declares_supported_calculator[ncaf-wish-2bank-s3]
@@ -245223,8 +245228,8 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
 # module-cost: 1.650	tests/integration/app/test_c06_t8_descent_options.py
 # module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
-# module-cost: 1561.469	tests/integration/app/test_e04_t1_projects.py
-# module-cost: 37.773	tests/integration/app/test_e04_t1_runtime_escapes.py
+# module-cost: 83.806	tests/integration/app/test_e04_t1_projects.py
+# module-cost: 2.449	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 0.592	tests/integration/app/test_feedback_completion.py
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
 # module-cost: 19.123	tests/integration/app/test_magnetic_preview.py
