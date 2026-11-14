@@ -134,6 +134,10 @@ project.analysis.aliases.create(id='b2_Al1', param=c2221.atom_sites['Al1'].adp_i
 project.analysis.aliases.create(id='b2_P1', param=c2221.atom_sites['P1'].adp_iso)
 project.analysis.aliases.create(id='b2_O1', param=c2221.atom_sites['O1'].adp_iso)
 project.analysis.aliases.create(id='b2_O2', param=c2221.atom_sites['O2'].adp_iso)
+project.analysis.constraints.create(id='z_Al1', expression='z_Al1 = z_Ti1')
+project.analysis.constraints.create(id='b_Al1', expression='b_Al1 = b_Ti1')
+project.analysis.constraints.create(id='b2_P1', expression='b2_P1 = b2_Al1')
+project.analysis.constraints.create(id='b2_O1', expression='b2_O1 = b2_Al1')
 project.analysis.constraints.create(id='b2_O2', expression='b2_O2 = b2_Al1')
 
 # %%
