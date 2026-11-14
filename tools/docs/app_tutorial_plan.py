@@ -22,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'website'))
 
-from app_groups import Parameter, forget, groups, load_case  # noqa: E402
+from app_groups import Parameter, forget, groups, load_case, unrolled  # noqa: E402
 from render_cli_tutorials import stages  # noqa: E402
 
 # The case that also shows loading measured data from a file on disk (owner record 2026-11-08).
@@ -478,7 +478,7 @@ def grouped(paths: set[str], loops: list[str]) -> tuple[list[str], set[str]]:
 
 
 def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step by step
-    source = (ROOT / 'docs/user/tutorials' / f'{case}.py').read_text(encoding='utf-8')
+    source = unrolled((ROOT / 'docs/user/tutorials' / f'{case}.py').read_text(encoding='utf-8'))
     named, structures, experiments = blocks(source)
     exp_root = {
         name: ('experiment.' if len(experiments) == 1 else f'experiments[{name}].')

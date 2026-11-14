@@ -22,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-from app_groups import Tracker, load_case, symbols  # noqa: E402
+from app_groups import Tracker, load_case, symbols, unrolled  # noqa: E402
 from checks.gui_capture import validate_bundle  # noqa: E402
 from import_gui_captures import (  # noqa: E402
     DOCS,
@@ -341,7 +341,9 @@ def render(case: str) -> Path:  # noqa: PLR0912, PLR0914, PLR0915 - one page, se
     manifest = {
         'actions': [{'action': a, 'scene': step['id']} for step in steps for a in step['actions']]
     }
-    source = (ROOT.parent / 'docs/user/tutorials' / f'{case}.py').read_text(encoding='utf-8')
+    source = unrolled(
+        (ROOT.parent / 'docs/user/tutorials' / f'{case}.py').read_text(encoding='utf-8')
+    )
     title = re.search(r'^# # (.+)$', source, flags=re.MULTILINE).group(1)
     declared = re.findall(
         r"^(\w+) = project\.(structures|experiments)\['([^']+)'\]$", source, flags=re.MULTILINE
