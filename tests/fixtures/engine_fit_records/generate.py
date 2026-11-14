@@ -83,10 +83,10 @@ def main():
     if args.two_probe_default:
         if actual['descent'] != 'multistart_prune' or actual['iterations'] != '4':
             raise ValueError(
-                'The C06-T8 default receipt requires its four-iteration two-probe run'
+                'The two-probe default receipt requires its four-iteration two-probe run'
             )
         provenance.update({
-            'decision': 'C06-T8 default two-probe policy (crysta edab5435); same minimum',
+            'decision': 'Default probes fast descent and ladder; same minimum',
             'previous_policy_record_sha256': digest(HERE / 'joint-tail-default.json'),
             'previous_policy': 'Explicit ladder, seven iterations; complete record retained',
         })

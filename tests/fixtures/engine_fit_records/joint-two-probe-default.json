@@ -18,7 +18,7 @@
       "project.edi": "d4e1907d79a8210eef08856b7d16c00ac7b782f1a9b82101c75eadc8e573de86",
       "structures/ncaf.edi": "1f231ef2dc1ec210d95b9f52452dacb6102b7c515b6af603f205199a3aaf0e1d"
     },
-    "decision": "C06-T8 default two-probe policy (crysta edab5435); same minimum",
+    "decision": "Default probes fast descent and ladder; same minimum",
     "historical_record_sha256": "c3b8cae7e3b0dda42e08a2e1eec4f1d54a27bf490ccb03fe986979a256d6cbd8",
     "fullprof_expected_sha256": "06ec6c27ab6060ac762f00b8f0f4465d9a5349d663ca17a9e23ec9e5221e1d0c",
     "fullprof_files_sha256": {

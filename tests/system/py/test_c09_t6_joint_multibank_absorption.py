@@ -223,7 +223,7 @@ def test_c09_t6_joint_refit_matches_the_full_value_set_from_the_shared_producer(
     ), 'The default-policy receipt retains the complete historical ladder reference unchanged'
     default = engine_record('joint-two-probe-default')
     assert default['descent'] == 'multistart_prune' and default['iterations'] == '4', (
-        'C06-T8 records the actual two-probe default separately from the historical ladder'
+        'The CLI receipt separates the actual two-probe default from the historical ladder'
     )
     assert outcome.iterations == int(default['iterations']), (
         'The shared default fit must match the exact independently captured CLI iteration count'

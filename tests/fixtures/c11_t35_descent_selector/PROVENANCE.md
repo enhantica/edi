@@ -28,7 +28,7 @@ remains byte-identical. The independently captured compact engine record is
 `tests/fixtures/engine_fit_records/cosio-ladder.json`.
 
 
-The captured machine record is projected to schema 9 without rerunning its fit.
+The schema projection preserves the captured machine record without rerunning its fit.
 The original numeric/input/producer provenance above is retained; the wire-only
 projection and unavailable stop metadata are documented in
-[the version-projection receipt](../c06_t8/README.md).
+[the machine report schema projection](../c06_t8/README.md).
