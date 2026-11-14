@@ -275,3 +275,21 @@ and native CI builds. A successful restore may save objects after a later build 
 qualification failure; cancellation or a failed/skipped restore prevents saving.
 The exact platform/toolchain cache key is retained. This does not promote failed
 SDK archives, native artifacts or installers into qualified release inputs.
+
+Native test probes must include SDK declarations with their original access specifiers.
+MSVC encodes member access in decorated names; an access-keyword macro around an indirect
+SDK include can therefore link on ELF while requesting different symbols on Windows.
+The internal cache-index probe uses public accessors and needs no such macro. The retained
+transaction probe preloads the SDK umbrella before its application-only access injection.
+A source census exercises comments, raw strings, continued directives and conditional
+preloads, and rejects the committed failing internal-probe preimage. The actual transposed
+index exercise remains a required native executable; no SDK exports or package variant change.
+
+Consumer compiler-cache families use the committed root manifest and lock bytes at HEAD.
+The working lock may acquire editable-package metadata while Pixi realizes the app environment;
+that cannot change the restore/save family within a job. Missing committed inputs refuse
+before environment/output files are modified. This groups candidate compiler objects only:
+ccache still hashes compiler content and full compilation inputs, and SDK/native artifact
+admission retains its independent source, ABI, recipe and qualification checks. Actual helper
+subprocess tests exercise local rewrites, real committed changes and missing Git/input proof
+for all three runner labels. No SDK qualification recipe changes for this repair.

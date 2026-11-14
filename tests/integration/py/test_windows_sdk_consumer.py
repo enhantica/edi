@@ -127,6 +127,7 @@ def test_windows_pinned_fetch_refuses_foreign_archive_but_keeps_diagnostic_candi
 ):
     prefix, repo, manifest = make(tmp_path)
     monkeypatch.setattr(reader, 'ROOT', repo)
+    monkeypatch.delenv('MACOSX_DEPLOYMENT_TARGET', raising=False)
     manifest['source_sha'] = 'b8' * 20
     manifest['identity'] = 'git:' + manifest['source_sha']
     write_manifest(prefix, manifest)
