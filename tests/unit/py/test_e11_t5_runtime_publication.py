@@ -64,7 +64,8 @@ def _runtime_configure_outcome(result, marker_present, trace, module, caller, ma
     calls = [
         index
         for index, event in enumerate(trace)
-        if event.get('cmd') == 'edi_bundle_assistant_runtime' and event.get('file') == str(caller)
+        if event.get('cmd') == 'edi_bundle_assistant_runtime'
+        and event.get('file') == caller.as_posix()
     ]
     active = []
     returned = False
@@ -73,14 +74,15 @@ def _runtime_configure_outcome(result, marker_present, trace, module, caller, ma
         for event in trace[calls[0] + 1 :]:
             if event.get('frame', 0) <= call.get('frame', 0):
                 returned = (
-                    event.get('file') == str(caller)
+                    event.get('file') == caller.as_posix()
                     and event.get('cmd') == 'file'
-                    and event.get('args') == ['WRITE', str(marker), 'original function returned']
+                    and event.get('args')
+                    == ['WRITE', marker.as_posix(), 'original function returned']
                 )
                 break
             active.append(event)
     entered = any(
-        event.get('file') == str(module) and event.get('cmd') not in {'function', 'macro'}
+        event.get('file') == module.as_posix() and event.get('cmd') not in {'function', 'macro'}
         for event in active
     )
     errors = re.findall(r'^CMake Error[^\n]*', result.stderr, flags=re.MULTILINE)
@@ -252,7 +254,7 @@ file(WRITE "${CMAKE_BINARY_DIR}/accepted" "original function returned")
         before_inputs = {str(path): _inventory(path) for path in input_paths}
         try:
             run = subprocess.run(
-                command, env=env, capture_output=True, text=True, check=False, timeout=5
+                command, env=env, capture_output=True, text=True, check=False, timeout=15
             )
         except subprocess.TimeoutExpired as error:
             after_inputs = {name: _inventory(Path(name)) for name in before_inputs}
@@ -1166,25 +1168,25 @@ def test_original_configure_disposition_keeps_return_and_entered_failure_distinc
     module = tmp_path / 'runtime.cmake'
     caller = tmp_path / 'CMakeLists.txt'
     path = tmp_path / 'accepted'
-    trace = [{'cmd': 'edi_bundle_assistant_runtime', 'file': str(caller), 'frame': 1}]
+    trace = [{'cmd': 'edi_bundle_assistant_runtime', 'file': caller.as_posix(), 'frame': 1}]
     if entered:
         trace.append({
             'cmd': 'file',
-            'file': str(module),
+            'file': module.as_posix(),
             'frame': 2,
             'args': ['READ', 'missing-input', 'input'],
         })
     if resumes:
         trace.append({
             'cmd': 'file',
-            'file': str(caller),
+            'file': caller.as_posix(),
             'frame': 1,
-            'args': ['WRITE', str(path), 'original function returned'],
+            'args': ['WRITE', path.as_posix(), 'original function returned'],
         })
     error = ''
     if error_owner is not None:
         owner = module if error_owner == 'module' else caller
-        error = f'CMake Error at {owner}:25 (file):\n  explicit controlled diagnostic\n'
+        error = f'CMake Error at {owner.as_posix()}:25 (file):\n  explicit controlled diagnostic\n'
     run = subprocess.CompletedProcess(['cmake'], code, stdout='', stderr=error)
     proof = _runtime_configure_outcome(run, marker, trace, module, caller, path)
     assert proof['return_marker_present'] is marker, (

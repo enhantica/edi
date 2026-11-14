@@ -21,6 +21,7 @@ from conftest import calculator_load_warning, corpus_case_dir, crysta_reference_
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
 from tests.fixtures.project_categories.historical_bytes import check_project_spacing, prior_digest
 from tests.fixtures.project_save.carried_results import carried_file_hash
+from tests.fixtures.read_access import unreadable_file
 from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 from tests.unit.py.e04_t5_calculator_bytes import without_calculator
 
@@ -719,14 +720,8 @@ def test_c11_t56_present_unreadable_record_refuses_with_io_error(
     source = _stage_project_without_record(tmp_path)
     record = source / 'project.edi'
     record.write_text(REFERENCE_PROJECT_RECORD, encoding='utf-8')
-    record.chmod(0)
-    try:
-        assert not os.access(record, os.R_OK), (
-            'the filesystem-failure vehicle must make project.edi unreadable before loading'
-        )
+    with unreadable_file(record):
         _assert_record_refuses(source, capfd)
-    finally:
-        record.chmod(0o600)
 
 
 def test_c11_t56_present_directory_record_refuses_with_io_error(
@@ -789,7 +784,7 @@ def test_c11_t56_save_refuses_broken_carried_record_without_replacing_it(
         'a failed save must preserve the broken carried project.edi entry instead of replacing '
         'it with a metadata-only regular file'
     )
-    assert record.readlink() == missing_target, (
+    assert record.readlink().resolve() == missing_target.resolve(), (
         'a failed save must leave the unreadable carried project.edi link target unchanged'
     )
     assert project.metadata.last_modified == before_last_modified, (
@@ -804,25 +799,19 @@ def test_c11_t56_save_refuses_unreadable_carried_record_without_replacing_it(
     project, record = _save_project_with_record(tmp_path, capfd)
     expected_bytes = record.read_bytes()
     before_last_modified = project.metadata.last_modified
-    record.chmod(0)
-    try:
-        assert not os.access(record, os.R_OK), (
-            'the carried-record failure vehicle must remove read access before save'
-        )
+    with unreadable_file(record) as unreadable_mode:
         with pytest.raises(
             (edi.IoError, OSError, ValueError),
             match=r'project|record|read|stage|save',
         ):
             project.save()
 
-        assert record.is_file() and record.stat().st_mode & 0o777 == 0, (
+        assert record.is_file() and record.stat().st_mode & 0o777 == unreadable_mode, (
             'a failed save must preserve the unreadable carried project.edi entry and mode'
         )
         assert project.metadata.last_modified == before_last_modified, (
             'a save that cannot read its carried record must not advance live last_modified'
         )
-    finally:
-        record.chmod(0o600)
     assert record.read_bytes() == expected_bytes, (
         'a failed save must leave every byte of the unreadable carried project.edi unchanged'
     )

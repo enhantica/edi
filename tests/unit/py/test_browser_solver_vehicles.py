@@ -593,7 +593,7 @@ def capsule_template(historical, current, tmp_path_factory):
     }
     (reference / 'producer.json').write_text(json.dumps(producer))
     captured = [
-        str(path.relative_to(reference))
+        path.relative_to(reference).as_posix()
         for path in reference.rglob('*')
         if path.is_file() and not path.is_relative_to(project) and path.name != 'producer.json'
     ]

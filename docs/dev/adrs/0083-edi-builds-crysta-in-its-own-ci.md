@@ -402,3 +402,27 @@ prepends its validated directory through GITHUB_PATH, without rediscovering a
 shell by name. This prevents Windows' unrelated WSL launcher from intercepting
 nested Bash commands. The same entry point and validation run on every host;
 missing executables or multiline environment entries refuse before mutation.
+
+
+The same portable inventory-key contract covers retained CLI seed trees,
+FullProf input hashes, Git-tracked notebook identities, SDK archive member names
+and native-written browser capture names. Their file contents and hashes remain
+unchanged. The ordinary native parser consumer resolves its platform executable
+suffix before invocation; every original parser route and source-identity check
+still runs on Windows.
+
+
+CMake trace observers use CMake's forward-slash path spelling on every host,
+including caller/return-marker identity. Native path spelling cannot make a real
+entered module look unexecuted. The configure subprocess retains a finite
+fifteen-second limit for host startup; original preservation, refusal and
+control-flow assertions are unchanged.
+
+
+Unreadable-regular-file tests share one Python context manager and prove a real
+second read is denied before exercising the loader or saver. POSIX uses the
+file's mode; Windows uses an exclusive existing-file handle because chmod does
+not remove Windows read access. Both preserve the original file, test the same
+I/O refusal and restore access in finally. A missing file refuses the vehicle;
+no platform skips or substitute directory inputs stand in for unreadability.
+Dangling-link identity comparisons resolve both path spellings before comparing.

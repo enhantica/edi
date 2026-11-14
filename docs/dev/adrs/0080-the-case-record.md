@@ -164,3 +164,10 @@ filesystem paths remain native while reading; serialization uses POSIX relative
 identifiers, so Windows regenerates the same metadata and collection references
 as Linux and macOS. Cross-platform controls exercise the real description builder
 with both path representations and compare every field to committed metadata.
+
+
+The native-written browser qualifier authenticates annotated expected documents
+through the same exact insertion-only provenance archive before checking its
+unchanged original reference hash. Its producer receipt still records the actual
+current file hash. Added documentary provenance cannot change quantities,
+tolerances or disclosures, nor conceal a changed or re-signed reference document.

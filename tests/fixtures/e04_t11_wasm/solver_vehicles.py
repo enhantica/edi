@@ -1,5 +1,6 @@
 """Keep historical regression and current-default backend checks in their own conditions."""
 
+import copy
 import hashlib
 import json
 import math
@@ -10,6 +11,7 @@ import gemmi
 
 from tests.fixtures.e04_t11_wasm import iteration_domains
 from tests.fixtures.e04_t11_wasm.cli_domains import fields
+from tests.fixtures.metadata_transition import pin_sources
 from tests.fixtures.web_parallel import numeric
 from tools.checks import cli_projects
 
@@ -42,12 +44,19 @@ def reference_binding(fixture):
 def current_references(fixture, source):
     """Authenticate complete current reference and provenance bytes before capture."""
     binding = reference_binding(fixture)
-    observed = {
-        name: hashlib.sha256((source.parent / name).read_bytes()).hexdigest()
-        for name in ('expected.json', 'PROVENANCE.md')
-    }
-    if any(observed[name] != binding[name] for name in observed):
-        raise ValueError('Current reference or provenance differs from its declared hash')
+    observed = {}
+    for name in ('expected.json', 'PROVENANCE.md'):
+        actual = (source.parent / name).read_bytes()
+        observed[name] = hashlib.sha256(actual).hexdigest()
+        relative = fixture['project'].removesuffix('/project') + '/' + name
+        try:
+            original = pin_sources.previous_bytes(relative, actual)
+        except AssertionError as error:
+            raise ValueError(
+                'Current reference or provenance differs from its declared hash'
+            ) from error
+        if hashlib.sha256(original).hexdigest() != binding[name]:
+            raise ValueError('Current reference or provenance differs from its declared hash')
     return observed
 
 
@@ -80,8 +89,15 @@ def historical(fixture, raw, report):
 def current(fixture, old, raw, report, selected, expected):
     """Retain the whole raw population and the existing independent CLI references."""
     binding = reference_binding(fixture)
+    original = copy.deepcopy(expected)
+    annotated = original.get('source', {}).pop('pins', None)
+    if annotated is not None:
+        name = fixture['project'].removesuffix('/project') + '/expected.json'
+        archived = pin_sources.rows().get(name)
+        if archived is None or annotated != archived['metadata']:
+            raise ValueError('Current reference annotation differs from its committed source')
     digest = hashlib.sha256(
-        json.dumps(expected, sort_keys=True, allow_nan=False).encode()
+        json.dumps(original, sort_keys=True, allow_nan=False).encode()
     ).hexdigest()
     if digest != binding['quantities']:
         raise ValueError('Current reference quantities differ from their declared hash')

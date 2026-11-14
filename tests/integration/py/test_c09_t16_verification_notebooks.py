@@ -162,7 +162,7 @@ def _assert_reference_files(
         assert path.is_file() and not path.is_symlink(), (
             f'{page}: unresolved {constant}={filename!r}'
         )
-        relative = str(path.relative_to(ROOT))
+        relative = path.relative_to(ROOT).as_posix()
         assert relative in tracked, f'{page}: reference is not committed: {relative}'
 
 
@@ -443,9 +443,9 @@ def test_verification_sources_generate_stripped_notebooks_on_demand() -> None:
     required.update(VERIFICATION / name for name in expected_sources)
     tracked = set(_run('git', 'ls-files').stdout.splitlines())
     untracked = sorted(
-        str(path.relative_to(ROOT))
+        path.relative_to(ROOT).as_posix()
         for path in required
-        if str(path.relative_to(ROOT)) not in tracked
+        if path.relative_to(ROOT).as_posix() not in tracked
     )
     assert not untracked, f'verification sources must be committed: {untracked}'
 

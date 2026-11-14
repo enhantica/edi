@@ -65,7 +65,7 @@ def producer_archive(tmp_path, sdk, manifest, platform, defect):
     with tarfile.open(fileobj=buffer, mode='w:gz') as archive:
         for file in sorted(sdk.rglob('*')):
             if file.is_file():
-                archive.add(file, arcname=str(file.relative_to(sdk)))
+                archive.add(file, arcname=file.relative_to(sdk).as_posix())
     asset = tmp_path / 'published-sdk.tar.gz'
     asset.write_bytes(buffer.getvalue())
     digest = hashlib.sha256(asset.read_bytes()).hexdigest()

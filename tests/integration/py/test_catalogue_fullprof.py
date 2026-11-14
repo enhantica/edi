@@ -73,7 +73,7 @@ def test_fullprof_reference_binds_all_committed_start_inputs_and_outputs(case):
         'Reference provenance must name FullProf and the exact unmodified start'
     )
     project = ROOT / record['start_project']
-    inputs = {str(p.relative_to(project)): sha256(p) for p in sorted(project.rglob('*.edi'))}
+    inputs = {p.relative_to(project).as_posix(): sha256(p) for p in sorted(project.rglob('*.edi'))}
     assert record['project_sha256'] == inputs, (
         'Every structure, experiment, free flag and constraint must match the referenced start'
     )

@@ -158,7 +158,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
     live_directory = directory
     directory = restore(directory, tmp_path / 'retained-seed')
     paths = {
-        str(path.relative_to(directory)): path
+        path.relative_to(directory).as_posix(): path
         for path in (directory / 'project').rglob('*')
         if path.is_file()
     }
