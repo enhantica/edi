@@ -5,6 +5,8 @@ import json
 import math
 import re
 
+from tests.fixtures.metadata_transition.pin_sources import previous_bytes
+
 OFFICIAL = 'https://easydiffraction.org/'
 FREE_COUNTS = [3, 8, 12, 16, 15]
 INPUT_HASHES = {
@@ -116,7 +118,7 @@ def assert_comparisons(root, evidence, row):
     path = root / 'docs/user/cli/pd-neut-cwl_lbco-hrpt/expected.json'
     assert (
         reference['path'] == path.relative_to(root).as_posix()
-        and sha256(path.read_bytes()) == reference['sha256']
+        and sha256(previous_bytes(reference['path'], path.read_bytes())) == reference['sha256']
     ), 'Gate 3/5: authoring comparisons preserve the independent scientific reference bytes'
     pins = json.loads(path.read_text())['quantities']
     rows = {item['quantity']: item for item in row['comparisons']}

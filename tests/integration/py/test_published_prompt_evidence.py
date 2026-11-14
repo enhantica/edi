@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures.tutorial_cases.published_trials import (
+    assert_comparisons,
     assert_history,
     assert_published_trial,
     assert_recorded_trial,
@@ -175,3 +176,21 @@ def test_preview_metadata_cannot_bypass_the_same_real_execution_proof(change):
         row.pop(change.removeprefix('missing-'))
     with pytest.raises(AssertionError, match='Gate 3/5:'):
         assert_recorded_trial(ROOT, document, row, 'python', row['prompt_sha256'])
+
+
+@pytest.mark.parametrize('damage', ['scientific-value', 'tolerance', 'pin-provenance'])
+def test_published_trial_refuses_changes_to_the_annotated_original_reference(tmp_path, damage):
+    document = evidence()
+    relative = Path(document['scientific_reference']['path'])
+    original = (ROOT / relative).read_bytes()
+    reference = json.loads(original)
+    if damage == 'pin-provenance':
+        reference['source']['pins']['commit'] = '0' * 40
+    else:
+        pin = next(iter(reference['quantities'].values()))
+        pin['value' if damage == 'scientific-value' else 'tol_abs'] = 12345
+    destination = tmp_path / relative
+    destination.parent.mkdir(parents=True)
+    destination.write_text(json.dumps(reference))
+    with pytest.raises(AssertionError, match='committed source byte'):
+        assert_comparisons(tmp_path, document, document['records'][0])

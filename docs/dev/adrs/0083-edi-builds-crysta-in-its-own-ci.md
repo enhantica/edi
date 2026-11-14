@@ -438,3 +438,10 @@ Shell selection belongs to the consumer test job, after its environment setup;
 it does not change the SDK producer's setup action or recipe. Qualified SDK
 archive identity therefore stays intact when only test-shell routing changes.
 The same setup runs for Linux, macOS and Windows in the existing core matrix.
+
+
+Recorded assistant-trial comparisons use the same archived provenance insertion
+check as browser references. The original complete scientific-reference hash remains
+mandatory after removing only its verified provenance annotation in memory. Changed
+values, tolerances or source metadata still refuse; retained trial outputs and findings
+are not recaptured.
