@@ -584,13 +584,13 @@ constexpr std::size_t kScanTableProgressWidth = kScanTableBarCells + 2 + 6 + 2; 
 // Below this many characters for the file name, the File column is dropped.
 constexpr std::size_t kScanTableFileMinimum = 12;
 
-// The table's columns in their groups, Progress │ OK Failed │ Elapsed Left │ chi2 range │ File: each number column
+// The table's columns in their groups, Progress │ OK Failed │ Elapsed Left │ Chi2, Chi2 range │ File: each number column
 // right-aligned under its right-aligned heading, Progress (the bar, the percent and the count) and File
 // left-aligned, two spaces within a group and ` │ ` between groups. The count, OK and Failed are as wide as the
 // total makes them; the others as wide
 // as their headings or the values the owner's layout shows. File, last, takes what the terminal leaves. When
 // too narrow, the file name is shortened in the middle down to kScanTableFileMinimum, then File is dropped,
-// then range, chi2 and Left in turn; Progress, OK, Failed and Elapsed always stay, and the line never
+// then Chi2 range, Chi2 and Left in turn; Progress, OK, Failed and Elapsed always stay, and the line never
 // wraps. Which columns show depends on the terminal only, so the heading and every row keep the same columns.
 std::string scan_table(std::optional<int> total, bool resumed, const std::vector<std::string>& values,
                        std::size_t columns) {
@@ -607,7 +607,7 @@ std::string scan_table(std::optional<int> total, bool resumed, const std::vector
         {resumed ? std::size_t{18} : std::size_t{7}, true, 2},
         {5, true, 2},
         {4, true, 3},
-        {9, true, 3},
+        {10, true, 3},
         {0, false, 4},  // File
     };
     const std::size_t file = table.size() - 1;
@@ -632,7 +632,7 @@ std::string scan_table(std::optional<int> total, bool resumed, const std::vector
         return budget > taken ? budget - taken : 0;
     };
     if (file_room() < kScanTableFileMinimum) visible[file] = false;
-    for (std::size_t omit : {6, 5, 4}) {  // range, chi2, Left
+    for (std::size_t omit : {6, 5, 4}) {  // Chi2 range, Chi2, Left
         if (fixed_width().first > budget) visible[omit] = false;
     }
     std::string line;
@@ -707,8 +707,8 @@ std::string scan_progress_heading(const std::string& project_name, bool sequenti
     for (char& ch : name) if (static_cast<unsigned char>(ch) < 32 || ch == 127) ch = ' ';
     return std::string(sequential ? "Sequential fit: " : "Independent fit: ") + name + "\n\n" +
         scan_table(total_files, resumed,
-                   {"Progress", "OK", "Failed", resumed ? "Elapsed (this run)" : "Elapsed", "Left", "chi2", "range",
-                    "File"},
+                   {"Progress", "OK", "Failed", resumed ? "Elapsed (this run)" : "Elapsed", "Left", "Chi2",
+                    "Chi2 range", "File"},
                    columns);
 }
 
