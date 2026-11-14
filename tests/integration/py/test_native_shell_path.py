@@ -56,3 +56,28 @@ def test_every_core_platform_exposes_its_actual_running_bash():
         for index, step in enumerate(steps)
         if step.get('uses') == './.github/actions/setup-pixi'
     )
+
+
+@pytest.mark.parametrize('suffix', ['.exe', '.EXE'])
+def test_selected_bash_retains_an_explicit_native_executable_suffix(tmp_path, suffix):
+    selected = tmp_path / ('bash' + suffix)
+    selected.write_bytes(b'actual selected shell')
+    destination = tmp_path / 'github-path'
+    assert expose(str(selected), destination) == selected
+    assert destination.read_bytes() == str(selected.parent).encode() + b'\n'
+
+
+def test_bash_without_suffix_resolves_its_existing_exe_without_a_path_search(tmp_path):
+    selected = tmp_path / 'bash.exe'
+    selected.write_bytes(b'actual selected shell')
+    destination = tmp_path / 'github-path'
+    assert expose(str(selected.with_suffix('')), destination) == selected
+    assert destination.read_bytes() == str(selected.parent).encode() + b'\n'
+
+
+def test_existing_unsuffixed_bash_wins_over_a_neighbouring_exe(tmp_path):
+    selected = tmp_path / 'bash'
+    selected.write_bytes(b'actual selected shell')
+    selected.with_suffix('.exe').write_bytes(b'other executable')
+    destination = tmp_path / 'github-path'
+    assert expose(str(selected), destination) == selected

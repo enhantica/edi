@@ -405,7 +405,9 @@ to Python children. It passes that running executable directly to one Python hel
 prepends its validated directory through GITHUB_PATH, without rediscovering a
 shell by name. This prevents Windows' unrelated WSL launcher from intercepting
 nested Bash commands. The same entry point and validation run on every host;
-missing executables or multiline environment entries refuse before mutation.
+missing executables or multiline environment entries refuse before mutation. Git Bash can
+report its running path without `.exe`; only an existing adjacent executable with that
+suffix is accepted when the exact unsuffixed file is absent. It never falls back to PATH.
 
 
 The same portable inventory-key contract covers retained CLI seed trees,

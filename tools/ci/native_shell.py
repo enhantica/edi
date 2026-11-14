@@ -10,8 +10,11 @@ def expose(shell: str, destination: Path) -> Path:
     """Append the actual running shell's directory to the Actions process path."""
     if any(character in shell for character in '\r\n'):
         raise ValueError('A shell path must occupy one environment-file line')
-    selected = Path(shell).resolve(strict=True)
-    if not selected.is_file() or selected.name not in {'bash', 'bash.exe'}:
+    selected = Path(shell)
+    if selected.name.lower() == 'bash' and not selected.exists():
+        selected = selected.with_suffix('.exe')
+    selected = selected.resolve(strict=True)
+    if not selected.is_file() or selected.name.lower() not in {'bash', 'bash.exe'}:
         raise ValueError('The selected workflow shell must be an existing Bash executable')
     directory = str(selected.parent)
     if any(character in directory for character in '\r\n'):
