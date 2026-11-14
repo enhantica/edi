@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T09:47:41Z
+# measured_utc = 2026-11-14T10:26:35Z
 #
-# Recorded from: measured test run (4094 node(s) measured once, 172783 banked, 1626 stale row(s) dropped)
+# Recorded from: measured test run (1 node(s) measured once, 172786 banked, 0 stale row(s) dropped)
 # Collected tests: 243007; with a reported duration: 75516
 # Module-scoped fixture costs recorded: 185
 #
@@ -170684,7 +170684,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_browser_saved_project.
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_browser_saved_project.py::test_saved_archive_encoded_symlink_refuses_even_inside_flat_owner[project.edi]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_browser_saved_project.py::test_saved_archive_flat_and_nested_owners_retain_every_file_byte[]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_browser_saved_project.py::test_saved_archive_flat_and_nested_owners_retain_every_file_byte[owned/]
-0.190	tests/system/py/test_browser_saved_project.py::test_saved_browser_reference_and_real_row_refuse_wrong_operands[web_control_geometry_controls.mjs]
+0.110	tests/system/py/test_browser_saved_project.py::test_saved_browser_reference_and_real_row_refuse_wrong_operands[web_control_geometry_controls.mjs]
 0.220	tests/system/py/test_browser_saved_project.py::test_saved_browser_reference_and_real_row_refuse_wrong_operands[web_saved_fit_controls.mjs]
 0.000	tests/system/py/test_c06_t6_fitting_corpus.py::test_corpus_absent_at_pin_is_a_named_transition_state[corpus-present]
 0.100	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-cecoal]
