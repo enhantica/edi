@@ -509,10 +509,10 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
 
     shot('home', 'home', 'Start a new analysis', ['platform:light', 'theme:light'], ['home.start'])
     scan = "fitting_mode = 'sequential'" in source
-    # A calculation without data loads its project and fits nothing: open the example, look at the
+    # A calculation without data builds its project like a fit, then fits nothing: it looks at the
     # calculated pattern and the report.
     simulation = '## Perform the analysis' not in source
-    if scan or simulation:
+    if scan:
         # A scan's datasets come with its project: open the example from Project > Examples.
         shot(
             'example-open',
@@ -531,25 +531,6 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             ],
             ['workflow.project.mainContent'],
         )
-        if simulation:
-            shot(
-                'calculated',
-                'analysis',
-                'See the calculated pattern',
-                ['appBar.tab.analysis', 'sideBar.tab.basic', 'mainArea.tab.pattern'],
-                ['workflow.analysis.mainContent'],
-            )
-            shot(
-                'report',
-                'report',
-                'Review the report',
-                ['appBar.tab.report', 'sideBar.tab.basic'],
-                ['workflow.report.mainContent'],
-                'Main',
-            )
-            for step in steps:
-                step['capture'] = step['id'] != 'home'
-            return {'example': case, 'steps': steps}
     else:
         shot(
             'project-details',
@@ -628,9 +609,33 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
                     ['experiments.list', 'workflow.experiment.mainContent'],
                 )
 
+    if simulation:
+        shot(
+            'calculated',
+            'analysis',
+            'See the calculated pattern',
+            ['appBar.tab.analysis', 'sideBar.tab.basic', 'mainArea.tab.pattern'],
+            ['workflow.analysis.mainContent'],
+        )
+        shot(
+            'report',
+            'report',
+            'Review the report',
+            ['appBar.tab.report', 'sideBar.tab.basic'],
+            ['workflow.report.mainContent'],
+            'Main',
+        )
+        for step in steps:
+            step['capture'] = step['id'] != 'home'
+        return {'example': case, 'steps': steps}
+
     aliases, constraints = relations(case)
     # A relation the tutorial adds in a stage is added there, not at the start.
-    created = set(re.findall(r"\.(?:aliases|constraints)\.create\(id='([^']+)'", source))
+    # The setup creates the others before the first stage, as the project starts with them.
+    stages_from = source.find('## Perform the analysis')
+    created = set(
+        re.findall(r"\.(?:aliases|constraints)\.create\(id='([^']+)'", source[stages_from:])
+    )
     aliases = [item for item in aliases if item[0] not in created]
     constraints = [item for item in constraints if item[0] not in created]
     alias_count = constraint_count = 0

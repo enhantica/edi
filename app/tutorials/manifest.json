@@ -936,384 +936,146 @@
         },
         {
           "title": "New project",
-          "text": "Create a new project with Create a new project.",
+          "text": "Create a new project with **Create a new project**.",
           "page": "project",
           "target": "project.create",
-          "expected": "The Create project dialog is open.",
           "check": "creating"
         },
         {
           "title": "Name the project",
-          "text": "Give the project a name, for example lbco: type it in Name, or press Next.",
+          "text": "Give the project a name, for example **pd-neut-cwl_lbco_simulation**.",
           "page": "project",
           "target": "createProject.name",
-          "expected": "The project has a name.",
-          "check": "text:createProject.name=lbco"
+          "check": "text:createProject.name=pd-neut-cwl_lbco_simulation"
         },
         {
           "title": "Create it",
-          "text": "Click OK to create the project. It is not saved: at the end you keep working on it or return to your own project.",
+          "text": "Click **OK** to create the project.",
           "page": "project",
           "target": "createProject.accept",
-          "expected": "A new project is open.",
           "check": "project"
         },
         {
-          "title": "Open Structure",
-          "text": "This is the Structure page, where structures are defined. Open the Structure page with its tab, or press Next.",
+          "title": "Open Report",
+          "text": "The **Report** page collects the structure and the experiment.",
+          "page": "report",
+          "target": "appBar.tab.report",
+          "check": "page:report"
+        }
+      ]
+    },
+    {
+      "id": "sc-neut-cwl_tb2ti2o7-heidi_simulation",
+      "title": "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
+      "description": "Single crystal · Calculated reflections without measured data",
+      "project": "temporary",
+      "start": "aside",
+      "completion": [
+        "keep",
+        "discard"
+      ],
+      "stop": "restore-user-project",
+      "tags": [
+        "purpose:simulation",
+        "fittingMode:single",
+        "sampleForm:single crystal",
+        "probe:neutron",
+        "beamMode:constant wavelength",
+        "scatteringType:bragg",
+        "structure:crystal"
+      ],
+      "steps": [
+        {
+          "title": "Open Project",
+          "text": "Click **Start** to begin on the Project page.",
+          "page": "home",
+          "target": "home.start",
+          "check": "page:project"
+        },
+        {
+          "title": "New project",
+          "text": "Create a new project with **Create a new project**.",
           "page": "project",
-          "target": "appBar.tab.structure",
-          "expected": "The Structure page is open.",
-          "check": "page:structure"
+          "target": "project.create",
+          "check": "creating"
         },
         {
-          "title": "New structure",
-          "text": "Create a structure.",
+          "title": "Name the project",
+          "text": "Give the project a name, for example **tb2ti2o7-heidi_simulation**.",
+          "page": "project",
+          "target": "createProject.name",
+          "check": "text:createProject.name=tb2ti2o7-heidi_simulation"
+        },
+        {
+          "title": "Create it",
+          "text": "Click **OK** to create the project.",
+          "page": "project",
+          "target": "createProject.accept",
+          "check": "project"
+        },
+        {
+          "title": "Open the Load menu",
+          "text": "Click **Load ▾**.",
           "page": "structure",
-          "target": "structures.create",
-          "expected": "A structure is in the list.",
-          "check": "structures:1"
+          "target": "structures.load",
+          "check": "menu:structures.load.web"
         },
         {
-          "title": "Name it",
-          "text": "A new structure is called structure1. Click its name and type lbco, the name this tutorial uses from here on.",
+          "title": "From web",
+          "text": "Choose **From web…**.",
           "page": "structure",
-          "target": "structures.name.0",
-          "expected": "The structure is called lbco.",
-          "check": "structure:lbco"
+          "target": "structures.load.web",
+          "check": "web-dialog:structure"
         },
         {
-          "title": "Open Space group",
-          "text": "Open the Space group group to see the structure's symmetry.",
+          "title": "Find the structure",
+          "text": "With **EasyDiffraction Database** as the **Source**, enter **sc-neut-cwl_tb2ti2o7-heidi_simulation-tb2ti2o7** as the **ID** and press **Search**.",
           "page": "structure",
-          "target": "group.space_group",
-          "expected": "The Space group group is open.",
-          "check": "open:group.space_group"
+          "target": "onlineLoad.search",
+          "check": "web-search:structure:sc-neut-cwl_tb2ti2o7-heidi_simulation-tb2ti2o7"
         },
         {
-          "title": "Space group",
-          "text": "A new structure starts in P b n m. Choose the space group P m -3 m for lbco.",
+          "title": "Load the structure tb2ti2o7",
+          "text": "Click the row of **sc-neut-cwl_tb2ti2o7-heidi_simulation-tb2ti2o7** to load it.",
           "page": "structure",
-          "target": "spaceGroup.nameHM",
-          "expected": "The space group is P m -3 m, number 221.",
-          "check": "space-group:221"
+          "target": "onlineLoad.row.0",
+          "check": "web-row:structure:sc-neut-cwl_tb2ti2o7-heidi_simulation-tb2ti2o7=tb2ti2o7"
         },
         {
-          "title": "Open Cell",
-          "text": "Open the Cell group to see the cell lengths and angles.",
-          "page": "structure",
-          "target": "group.cell",
-          "expected": "The Cell group is open.",
-          "check": "open:group.cell"
-        },
-        {
-          "title": "Cell length",
-          "text": "Set the cell length a to 3.89 Å. In a cubic cell b and c follow it.",
-          "page": "structure",
-          "target": "cell.length_a",
-          "expected": "a, b and c are 3.89 Å.",
-          "check": "cell-a:3.89"
-        },
-        {
-          "title": "Open Atom sites",
-          "text": "Open the Atom sites group to see the structure's atoms.",
-          "page": "structure",
-          "target": "group.atom_site",
-          "expected": "The Atom sites group is open.",
-          "check": "open:group.atom_site"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **La** as the label of site 1.",
-          "target": "atomSite.label.0",
-          "check": "field:atomSite.label.0=La"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Choose **La** as the element of site 1.",
-          "target": "atomSite.typeSymbol.0",
-          "check": "pick:atomSite.typeSymbol.0=La"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **0.5** as the occupancy of site 1: La and Ba share the site.",
-          "target": "atomSite.occupancy.0",
-          "check": "field:atomSite.occupancy.0=0.5"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Click **+** under **Atom sites** to add site 2. It starts as a random element at a random position; the next steps make it the site lbco needs.",
-          "target": "atomSites.append",
-          "check": "rows:atomSites.append=2"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **Ba** as the label of site 2.",
-          "target": "atomSite.label.1",
-          "check": "field:atomSite.label.1=Ba"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Choose **Ba** as the element of site 2.",
-          "target": "atomSite.typeSymbol.1",
-          "check": "pick:atomSite.typeSymbol.1=Ba"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Choose **a** as the Wyckoff position of site 2: its coordinates follow from the symmetry.",
-          "target": "atomSite.wyckoffLetter.1",
-          "check": "pick:atomSite.wyckoffLetter.1=a:"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **0.5** as the occupancy of site 2: La and Ba share the site.",
-          "target": "atomSite.occupancy.1",
-          "check": "field:atomSite.occupancy.1=0.5"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Click **+** under **Atom sites** to add site 3. It starts as a random element at a random position; the next steps make it the site lbco needs.",
-          "target": "atomSites.append",
-          "check": "rows:atomSites.append=3"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **Co** as the label of site 3.",
-          "target": "atomSite.label.2",
-          "check": "field:atomSite.label.2=Co"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Choose **Co** as the element of site 3.",
-          "target": "atomSite.typeSymbol.2",
-          "check": "pick:atomSite.typeSymbol.2=Co"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Choose **b** as the Wyckoff position of site 3: its coordinates follow from the symmetry.",
-          "target": "atomSite.wyckoffLetter.2",
-          "check": "pick:atomSite.wyckoffLetter.2=b:"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Click **+** under **Atom sites** to add site 4. It starts as a random element at a random position; the next steps make it the site lbco needs.",
-          "target": "atomSites.append",
-          "check": "rows:atomSites.append=4"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Enter **O** as the label of site 4.",
-          "target": "atomSite.label.3",
-          "check": "field:atomSite.label.3=O"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Choose **O** as the element of site 4.",
-          "target": "atomSite.typeSymbol.3",
-          "check": "pick:atomSite.typeSymbol.3=O"
-        },
-        {
-          "page": "structure",
-          "expected": "The four atom sites are in the table and the structure view shows them.",
-          "title": "Atom sites",
-          "text": "Choose **c** as the Wyckoff position of site 4: its coordinates follow from the symmetry.",
-          "target": "atomSite.wyckoffLetter.3",
-          "check": "pick:atomSite.wyckoffLetter.3=c:"
-        },
-        {
-          "title": "Open Experiment",
-          "text": "Open the Experiment page with its tab, or press Next.",
-          "page": "structure",
-          "target": "appBar.tab.experiment",
-          "expected": "The Experiment page is open.",
-          "check": "page:experiment"
-        },
-        {
-          "title": "New experiment",
-          "text": "Open the Experiment page and create an experiment.",
+          "title": "Open the Load menu",
+          "text": "Click **Load ▾**.",
           "page": "experiment",
-          "target": "experiments.create",
-          "expected": "The new experiment is in the list.",
-          "check": "experiment"
+          "target": "experiments.load",
+          "check": "menu:experiments.load.experimentWeb"
         },
         {
-          "title": "Experiment type",
-          "text": "Powder, constant wavelength and neutrons are selected by default. For your own data you can change them here; in this tutorial keep the defaults.",
+          "title": "From web",
+          "text": "Choose **From web…**.",
           "page": "experiment",
-          "target": "experimentType",
-          "expected": "The experiment type is powder, constant wavelength, neutron."
+          "target": "experiments.load.experimentWeb",
+          "check": "web-dialog:experiment"
         },
         {
-          "title": "Open Instrument",
-          "text": "Open the Instrument group to see the wavelength and the zero shift.",
+          "title": "Find the experiment",
+          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-cwl_tb2ti2o7-heidi_simulation-heidi** as the **ID** and press **Search**.",
           "page": "experiment",
-          "target": "group.instrument",
-          "expected": "The Instrument group is open.",
-          "check": "open:group.instrument"
+          "target": "onlineLoad.search",
+          "check": "web-search:experiment:sc-neut-cwl_tb2ti2o7-heidi_simulation-heidi"
         },
         {
-          "title": "Wavelength",
-          "text": "A new experiment starts at 1 Å, because every experiment has its own wavelength. Set it to 1.494 Å, HRPT's, the one this tutorial uses.",
+          "title": "Load the experiment heidi",
+          "text": "Click the row of **sc-neut-cwl_tb2ti2o7-heidi_simulation-heidi** to load it.",
           "page": "experiment",
-          "target": "instrument.setup_wavelength",
-          "expected": "The wavelength is 1.494 Å.",
-          "check": "param:instrument.setup_wavelength=1.494"
+          "target": "onlineLoad.row.0",
+          "check": "web-row:experiment:sc-neut-cwl_tb2ti2o7-heidi_simulation-heidi=heidi"
         },
         {
-          "title": "Open Linked structures",
-          "text": "Open the Linked structures group to see the structures in this pattern.",
+          "title": "The calculated reflections",
+          "text": "On **Experiment → Extra**, **Reflections** lists every reflection with the F² calculated from the model.",
           "page": "experiment",
-          "target": "group.linked_structure",
-          "expected": "The Linked structures group is open.",
-          "check": "open:group.linked_structure"
-        },
-        {
-          "title": "Scale",
-          "text": "Every structure is linked to a new experiment automatically, so lbco is here with scale 1. Here you can change a scale or weight fraction, switch a link off or add another.",
-          "page": "experiment",
-          "target": "linkedStructure.scale.0",
-          "expected": "lbco is linked with scale 1."
-        },
-        {
-          "title": "The pattern",
-          "text": "The calculated pattern of lbco is in the main area. On Analysis, next, you change parameters and watch it respond.",
-          "page": "experiment",
-          "target": "workflow.experiment.mainContent",
-          "expected": "The main area shows the calculated pattern."
-        },
-        {
-          "title": "Show the cell",
-          "text": "The table holds every parameter; its filters find the one to change. Choose Cell in the category filter.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "expected": "The table lists the cell length a.",
-          "check": "category:Cell"
-        },
-        {
-          "title": "Change cell a",
-          "text": "Drag the slider or type a new value, and watch the peaks shift: a larger cell moves them to lower angles.",
-          "page": "analysis",
-          "target": "parameters.slider",
-          "expected": "The cell length a has changed.",
-          "check": "changed:cell.length_a=3.95"
-        },
-        {
-          "title": "Clear filters",
-          "text": "Clear the filters with the eraser.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "expected": "Every parameter is listed.",
-          "check": "filters-clear"
-        },
-        {
-          "title": "Filter by name",
-          "text": "Type wave in the name filter to show the wavelength.",
-          "page": "analysis",
-          "target": "parameters.nameFilter",
-          "expected": "The table lists the wavelength.",
-          "check": "name-filter:wave"
-        },
-        {
-          "title": "Change wavelength",
-          "text": "Drag the slider or type a new value, and watch the peaks spread out to higher angles as it grows.",
-          "page": "analysis",
-          "target": "parameters.slider",
-          "expected": "The wavelength has changed.",
-          "check": "changed:instrument.setup_wavelength=1.6"
-        },
-        {
-          "title": "Clear filters",
-          "text": "Clear the filters with the eraser.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "expected": "Every parameter is listed.",
-          "check": "filters-clear"
-        },
-        {
-          "title": "Show B iso",
-          "text": "Choose Atomic displacement in the category filter.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "expected": "The table lists the sites' B_iso.",
-          "check": "category:Atomic displacement"
-        },
-        {
-          "title": "Change B iso",
-          "text": "Drag the slider or type a new value, and watch the peaks at high angles weaken most as it grows.",
-          "page": "analysis",
-          "target": "parameters.slider",
-          "expected": "La's B_iso has changed.",
-          "check": "changed:La.adp_iso=2"
-        },
-        {
-          "title": "Clear filters",
-          "text": "Clear the filters with the eraser.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "expected": "Every parameter is listed.",
-          "check": "filters-clear"
-        },
-        {
-          "title": "Show the peak",
-          "text": "Choose Peak profile in the category filter.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "expected": "The table lists the peak profile.",
-          "check": "category:Peak profile"
-        },
-        {
-          "title": "Select peak width",
-          "text": "Click the row of the peak width W to select it: the slider below the table now changes W.",
-          "page": "analysis",
-          "target": "parameters.name@peak.broad_gauss_w",
-          "expected": "The peak width W is selected.",
-          "check": "selected:peak.broad_gauss_w"
-        },
-        {
-          "title": "Change peak width",
-          "text": "Drag the slider or type a new value, and watch the peaks broaden as it grows.",
-          "page": "analysis",
-          "target": "parameters.slider",
-          "expected": "The peak width W has changed.",
-          "check": "changed:peak.broad_gauss_w=0.5"
-        },
-        {
-          "title": "Clear filters",
-          "text": "Clear the filters with the eraser.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "expected": "Every parameter is listed.",
-          "check": "filters-clear"
+          "target": "group.refln",
+          "check": "open:group.refln",
+          "tab": "extras"
         },
         {
           "title": "Open Report",
@@ -15757,65 +15519,6 @@
       ]
     },
     {
-      "id": "sc-neut-cwl_tb2ti2o7-heidi_simulation",
-      "title": "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
-      "description": "Single crystal · Calculated reflections without measured data",
-      "project": "temporary",
-      "start": "aside",
-      "completion": [
-        "keep",
-        "discard"
-      ],
-      "stop": "restore-user-project",
-      "tags": [
-        "purpose:simulation",
-        "fittingMode:single",
-        "sampleForm:single crystal",
-        "probe:neutron",
-        "beamMode:constant wavelength",
-        "scatteringType:bragg",
-        "structure:crystal"
-      ],
-      "steps": [
-        {
-          "title": "Open Project",
-          "text": "Click **Start** to begin on the Project page.",
-          "page": "home",
-          "target": "home.start",
-          "check": "page:project"
-        },
-        {
-          "title": "Find the example",
-          "text": "In **Examples** on the Project page, type **sc-neut-cwl_tb2ti2o7-heidi_simulation** in the search.",
-          "page": "project",
-          "target": "examples.search",
-          "check": "examples-search:sc-neut-cwl_tb2ti2o7-heidi_simulation"
-        },
-        {
-          "title": "Open the example",
-          "text": "Click **sc-neut-cwl_tb2ti2o7-heidi_simulation** to open it.",
-          "page": "project",
-          "target": "examples.open.sc-neut-cwl_tb2ti2o7-heidi_simulation",
-          "check": "example:sc-neut-cwl_tb2ti2o7-heidi_simulation"
-        },
-        {
-          "title": "The calculated reflections",
-          "text": "On **Experiment → Extra**, **Reflections** lists every reflection with the F² calculated from the model.",
-          "page": "experiment",
-          "target": "group.refln",
-          "check": "open:group.refln",
-          "tab": "extras"
-        },
-        {
-          "title": "Open Report",
-          "text": "The **Report** page collects the structure and the experiment.",
-          "page": "report",
-          "target": "appBar.tab.report",
-          "check": "page:report"
-        }
-      ]
-    },
-    {
       "id": "sc-neut-cwl_tb2ti2o7-heidi",
       "title": "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
       "description": "Single crystal · Anisotropic displacements and extinction from a rough start",
@@ -16430,6 +16133,1895 @@
           ],
           "expectWholeBackground": [],
           "expectChi2": 9.75,
+          "expectChi2Tolerance": 0.01
+        },
+        {
+          "title": "Fit results",
+          "text": "Read the fit results, then press **OK**.",
+          "page": "analysis",
+          "target": "fit.results.ok",
+          "check": "results-closed"
+        },
+        {
+          "title": "Correlations",
+          "text": "The **Correlations** view shows which fitted parameters move together.",
+          "page": "analysis",
+          "target": "mainArea.tab.correlations",
+          "open": true
+        },
+        {
+          "title": "Open Report",
+          "text": "The **Report** page collects the structure, the experiment and the fit.",
+          "page": "report",
+          "target": "appBar.tab.report",
+          "check": "page:report"
+        }
+      ]
+    },
+    {
+      "id": "sc-neut-tof_taurine-senju",
+      "title": "Taurine [P2₁/c] · SENJU @ J-PARC",
+      "description": "Single crystal · Time of flight · Six datasets · Anisotropic displacements",
+      "project": "temporary",
+      "start": "aside",
+      "completion": [
+        "keep",
+        "discard"
+      ],
+      "stop": "restore-user-project",
+      "tags": [
+        "purpose:refinement",
+        "fittingMode:joint",
+        "sampleForm:single crystal",
+        "probe:neutron",
+        "beamMode:time-of-flight",
+        "scatteringType:bragg",
+        "structure:crystal"
+      ],
+      "steps": [
+        {
+          "title": "Open Project",
+          "text": "Click **Start** to begin on the Project page.",
+          "page": "home",
+          "target": "home.start",
+          "check": "page:project"
+        },
+        {
+          "title": "New project",
+          "text": "Create a new project with **Create a new project**.",
+          "page": "project",
+          "target": "project.create",
+          "check": "creating"
+        },
+        {
+          "title": "Name the project",
+          "text": "Give the project a name, for example **sc-neut-tof_taurine-senju**.",
+          "page": "project",
+          "target": "createProject.name",
+          "check": "text:createProject.name=sc-neut-tof_taurine-senju"
+        },
+        {
+          "title": "Create it",
+          "text": "Click **OK** to create the project.",
+          "page": "project",
+          "target": "createProject.accept",
+          "check": "project"
+        },
+        {
+          "title": "Open the Load menu",
+          "text": "Click **Load ▾**.",
+          "page": "structure",
+          "target": "structures.load",
+          "check": "menu:structures.load.web"
+        },
+        {
+          "title": "From web",
+          "text": "Choose **From web…**.",
+          "page": "structure",
+          "target": "structures.load.web",
+          "check": "web-dialog:structure"
+        },
+        {
+          "title": "Find the structure",
+          "text": "With **EasyDiffraction Database** as the **Source**, enter **sc-neut-tof_taurine-senju-taurine** as the **ID** and press **Search**.",
+          "page": "structure",
+          "target": "onlineLoad.search",
+          "check": "web-search:structure:sc-neut-tof_taurine-senju-taurine"
+        },
+        {
+          "title": "Load the structure taurine",
+          "text": "Click the row of **sc-neut-tof_taurine-senju-taurine** to load it.",
+          "page": "structure",
+          "target": "onlineLoad.row.0",
+          "check": "web-row:structure:sc-neut-tof_taurine-senju-taurine=taurine"
+        },
+        {
+          "title": "Open the Load menu",
+          "text": "Click **Load ▾**.",
+          "page": "experiment",
+          "target": "experiments.load",
+          "check": "menu:experiments.load.experimentWeb"
+        },
+        {
+          "title": "From web",
+          "text": "Choose **From web…**.",
+          "page": "experiment",
+          "target": "experiments.load.experimentWeb",
+          "check": "web-dialog:experiment"
+        },
+        {
+          "title": "Find the experiment",
+          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-tof_taurine-senju-senju_1** as the **ID** and press **Search**.",
+          "page": "experiment",
+          "target": "onlineLoad.search",
+          "check": "web-search:experiment:sc-neut-tof_taurine-senju-senju_1"
+        },
+        {
+          "title": "Load the experiment senju_1",
+          "text": "Click the row of **sc-neut-tof_taurine-senju-senju_1** to load it.",
+          "page": "experiment",
+          "target": "onlineLoad.row.0",
+          "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_1=senju_1"
+        },
+        {
+          "title": "Open the Load menu",
+          "text": "Click **Load ▾**.",
+          "page": "experiment",
+          "target": "experiments.load",
+          "check": "menu:experiments.load.experimentWeb"
+        },
+        {
+          "title": "From web",
+          "text": "Choose **From web…**.",
+          "page": "experiment",
+          "target": "experiments.load.experimentWeb",
+          "check": "web-dialog:experiment"
+        },
+        {
+          "title": "Find the experiment",
+          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-tof_taurine-senju-senju_2** as the **ID** and press **Search**.",
+          "page": "experiment",
+          "target": "onlineLoad.search",
+          "check": "web-search:experiment:sc-neut-tof_taurine-senju-senju_2"
+        },
+        {
+          "title": "Load the experiment senju_2",
+          "text": "Click the row of **sc-neut-tof_taurine-senju-senju_2** to load it.",
+          "page": "experiment",
+          "target": "onlineLoad.row.0",
+          "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_2=senju_2"
+        },
+        {
+          "title": "Open the Load menu",
+          "text": "Click **Load ▾**.",
+          "page": "experiment",
+          "target": "experiments.load",
+          "check": "menu:experiments.load.experimentWeb"
+        },
+        {
+          "title": "From web",
+          "text": "Choose **From web…**.",
+          "page": "experiment",
+          "target": "experiments.load.experimentWeb",
+          "check": "web-dialog:experiment"
+        },
+        {
+          "title": "Find the experiment",
+          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-tof_taurine-senju-senju_3** as the **ID** and press **Search**.",
+          "page": "experiment",
+          "target": "onlineLoad.search",
+          "check": "web-search:experiment:sc-neut-tof_taurine-senju-senju_3"
+        },
+        {
+          "title": "Load the experiment senju_3",
+          "text": "Click the row of **sc-neut-tof_taurine-senju-senju_3** to load it.",
+          "page": "experiment",
+          "target": "onlineLoad.row.0",
+          "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_3=senju_3"
+        },
+        {
+          "title": "Open the Load menu",
+          "text": "Click **Load ▾**.",
+          "page": "experiment",
+          "target": "experiments.load",
+          "check": "menu:experiments.load.experimentWeb"
+        },
+        {
+          "title": "From web",
+          "text": "Choose **From web…**.",
+          "page": "experiment",
+          "target": "experiments.load.experimentWeb",
+          "check": "web-dialog:experiment"
+        },
+        {
+          "title": "Find the experiment",
+          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-tof_taurine-senju-senju_4** as the **ID** and press **Search**.",
+          "page": "experiment",
+          "target": "onlineLoad.search",
+          "check": "web-search:experiment:sc-neut-tof_taurine-senju-senju_4"
+        },
+        {
+          "title": "Load the experiment senju_4",
+          "text": "Click the row of **sc-neut-tof_taurine-senju-senju_4** to load it.",
+          "page": "experiment",
+          "target": "onlineLoad.row.0",
+          "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_4=senju_4"
+        },
+        {
+          "title": "Open the Load menu",
+          "text": "Click **Load ▾**.",
+          "page": "experiment",
+          "target": "experiments.load",
+          "check": "menu:experiments.load.experimentWeb"
+        },
+        {
+          "title": "From web",
+          "text": "Choose **From web…**.",
+          "page": "experiment",
+          "target": "experiments.load.experimentWeb",
+          "check": "web-dialog:experiment"
+        },
+        {
+          "title": "Find the experiment",
+          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-tof_taurine-senju-senju_5** as the **ID** and press **Search**.",
+          "page": "experiment",
+          "target": "onlineLoad.search",
+          "check": "web-search:experiment:sc-neut-tof_taurine-senju-senju_5"
+        },
+        {
+          "title": "Load the experiment senju_5",
+          "text": "Click the row of **sc-neut-tof_taurine-senju-senju_5** to load it.",
+          "page": "experiment",
+          "target": "onlineLoad.row.0",
+          "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_5=senju_5"
+        },
+        {
+          "title": "Open the Load menu",
+          "text": "Click **Load ▾**.",
+          "page": "experiment",
+          "target": "experiments.load",
+          "check": "menu:experiments.load.experimentWeb"
+        },
+        {
+          "title": "From web",
+          "text": "Choose **From web…**.",
+          "page": "experiment",
+          "target": "experiments.load.experimentWeb",
+          "check": "web-dialog:experiment"
+        },
+        {
+          "title": "Find the experiment",
+          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-tof_taurine-senju-senju_6** as the **ID** and press **Search**.",
+          "page": "experiment",
+          "target": "onlineLoad.search",
+          "check": "web-search:experiment:sc-neut-tof_taurine-senju-senju_6"
+        },
+        {
+          "title": "Load the experiment senju_6",
+          "text": "Click the row of **sc-neut-tof_taurine-senju-senju_6** to load it.",
+          "page": "experiment",
+          "target": "onlineLoad.row.0",
+          "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_6=senju_6"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Fix every parameter first",
+          "text": "Choose **Fixed · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.fixed",
+          "check": "free-choice:fixed:All categories",
+          "tab": "basic"
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_1** as the id of alias 1.",
+          "page": "analysis",
+          "target": "alias.id.0",
+          "check": "field:alias.id.0=x11_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_1.extinction.coefficient_11** as the parameter of alias 1.",
+          "page": "analysis",
+          "target": "alias.parameter.0",
+          "check": "pick:alias.parameter.0=senju_1.extinction.coefficient_11",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=2",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_1** as the id of alias 2.",
+          "page": "analysis",
+          "target": "alias.id.1",
+          "check": "field:alias.id.1=x22_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_1.extinction.coefficient_22** as the parameter of alias 2.",
+          "page": "analysis",
+          "target": "alias.parameter.1",
+          "check": "pick:alias.parameter.1=senju_1.extinction.coefficient_22",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=3",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_1** as the id of alias 3.",
+          "page": "analysis",
+          "target": "alias.id.2",
+          "check": "field:alias.id.2=x33_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_1.extinction.coefficient_33** as the parameter of alias 3.",
+          "page": "analysis",
+          "target": "alias.parameter.2",
+          "check": "pick:alias.parameter.2=senju_1.extinction.coefficient_33",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=4",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_2** as the id of alias 4.",
+          "page": "analysis",
+          "target": "alias.id.3",
+          "check": "field:alias.id.3=x11_2",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_2.extinction.coefficient_11** as the parameter of alias 4.",
+          "page": "analysis",
+          "target": "alias.parameter.3",
+          "check": "pick:alias.parameter.3=senju_2.extinction.coefficient_11",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=5",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_2** as the id of alias 5.",
+          "page": "analysis",
+          "target": "alias.id.4",
+          "check": "field:alias.id.4=x22_2",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_2.extinction.coefficient_22** as the parameter of alias 5.",
+          "page": "analysis",
+          "target": "alias.parameter.4",
+          "check": "pick:alias.parameter.4=senju_2.extinction.coefficient_22",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=6",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_2** as the id of alias 6.",
+          "page": "analysis",
+          "target": "alias.id.5",
+          "check": "field:alias.id.5=x33_2",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_2.extinction.coefficient_33** as the parameter of alias 6.",
+          "page": "analysis",
+          "target": "alias.parameter.5",
+          "check": "pick:alias.parameter.5=senju_2.extinction.coefficient_33",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=7",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_3** as the id of alias 7.",
+          "page": "analysis",
+          "target": "alias.id.6",
+          "check": "field:alias.id.6=x11_3",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_3.extinction.coefficient_11** as the parameter of alias 7.",
+          "page": "analysis",
+          "target": "alias.parameter.6",
+          "check": "pick:alias.parameter.6=senju_3.extinction.coefficient_11",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=8",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_3** as the id of alias 8.",
+          "page": "analysis",
+          "target": "alias.id.7",
+          "check": "field:alias.id.7=x22_3",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_3.extinction.coefficient_22** as the parameter of alias 8.",
+          "page": "analysis",
+          "target": "alias.parameter.7",
+          "check": "pick:alias.parameter.7=senju_3.extinction.coefficient_22",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=9",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_3** as the id of alias 9.",
+          "page": "analysis",
+          "target": "alias.id.8",
+          "check": "field:alias.id.8=x33_3",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_3.extinction.coefficient_33** as the parameter of alias 9.",
+          "page": "analysis",
+          "target": "alias.parameter.8",
+          "check": "pick:alias.parameter.8=senju_3.extinction.coefficient_33",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=10",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_4** as the id of alias 10.",
+          "page": "analysis",
+          "target": "alias.id.9",
+          "check": "field:alias.id.9=x11_4",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_4.extinction.coefficient_11** as the parameter of alias 10.",
+          "page": "analysis",
+          "target": "alias.parameter.9",
+          "check": "pick:alias.parameter.9=senju_4.extinction.coefficient_11",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=11",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_4** as the id of alias 11.",
+          "page": "analysis",
+          "target": "alias.id.10",
+          "check": "field:alias.id.10=x22_4",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_4.extinction.coefficient_22** as the parameter of alias 11.",
+          "page": "analysis",
+          "target": "alias.parameter.10",
+          "check": "pick:alias.parameter.10=senju_4.extinction.coefficient_22",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=12",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_4** as the id of alias 12.",
+          "page": "analysis",
+          "target": "alias.id.11",
+          "check": "field:alias.id.11=x33_4",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_4.extinction.coefficient_33** as the parameter of alias 12.",
+          "page": "analysis",
+          "target": "alias.parameter.11",
+          "check": "pick:alias.parameter.11=senju_4.extinction.coefficient_33",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=13",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_5** as the id of alias 13.",
+          "page": "analysis",
+          "target": "alias.id.12",
+          "check": "field:alias.id.12=x11_5",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_5.extinction.coefficient_11** as the parameter of alias 13.",
+          "page": "analysis",
+          "target": "alias.parameter.12",
+          "check": "pick:alias.parameter.12=senju_5.extinction.coefficient_11",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=14",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_5** as the id of alias 14.",
+          "page": "analysis",
+          "target": "alias.id.13",
+          "check": "field:alias.id.13=x22_5",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_5.extinction.coefficient_22** as the parameter of alias 14.",
+          "page": "analysis",
+          "target": "alias.parameter.13",
+          "check": "pick:alias.parameter.13=senju_5.extinction.coefficient_22",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=15",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_5** as the id of alias 15.",
+          "page": "analysis",
+          "target": "alias.id.14",
+          "check": "field:alias.id.14=x33_5",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_5.extinction.coefficient_33** as the parameter of alias 15.",
+          "page": "analysis",
+          "target": "alias.parameter.14",
+          "check": "pick:alias.parameter.14=senju_5.extinction.coefficient_33",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=16",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_6** as the id of alias 16.",
+          "page": "analysis",
+          "target": "alias.id.15",
+          "check": "field:alias.id.15=x11_6",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_6.extinction.coefficient_11** as the parameter of alias 16.",
+          "page": "analysis",
+          "target": "alias.parameter.15",
+          "check": "pick:alias.parameter.15=senju_6.extinction.coefficient_11",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=17",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_6** as the id of alias 17.",
+          "page": "analysis",
+          "target": "alias.id.16",
+          "check": "field:alias.id.16=x22_6",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_6.extinction.coefficient_22** as the parameter of alias 17.",
+          "page": "analysis",
+          "target": "alias.parameter.16",
+          "check": "pick:alias.parameter.16=senju_6.extinction.coefficient_22",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Aliases** to add an alias.",
+          "page": "analysis",
+          "target": "aliases.append",
+          "check": "rows:aliases.append=18",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_6** as the id of alias 18.",
+          "page": "analysis",
+          "target": "alias.id.17",
+          "check": "field:alias.id.17=x33_6",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Choose **senju_6.extinction.coefficient_33** as the parameter of alias 18.",
+          "page": "analysis",
+          "target": "alias.parameter.17",
+          "check": "pick:alias.parameter.17=senju_6.extinction.coefficient_33",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_2** as the id of constraint 1.",
+          "page": "analysis",
+          "target": "constraint.id.0",
+          "check": "field:constraint.id.0=x11_2",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_2 = x11_1** as the expression of constraint 1.",
+          "page": "analysis",
+          "target": "constraint.expression.0",
+          "check": "field:constraint.expression.0=x11_2 = x11_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=2",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_2** as the id of constraint 2.",
+          "page": "analysis",
+          "target": "constraint.id.1",
+          "check": "field:constraint.id.1=x22_2",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_2 = x22_1** as the expression of constraint 2.",
+          "page": "analysis",
+          "target": "constraint.expression.1",
+          "check": "field:constraint.expression.1=x22_2 = x22_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=3",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_2** as the id of constraint 3.",
+          "page": "analysis",
+          "target": "constraint.id.2",
+          "check": "field:constraint.id.2=x33_2",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_2 = x33_1** as the expression of constraint 3.",
+          "page": "analysis",
+          "target": "constraint.expression.2",
+          "check": "field:constraint.expression.2=x33_2 = x33_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=4",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_3** as the id of constraint 4.",
+          "page": "analysis",
+          "target": "constraint.id.3",
+          "check": "field:constraint.id.3=x11_3",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_3 = x11_1** as the expression of constraint 4.",
+          "page": "analysis",
+          "target": "constraint.expression.3",
+          "check": "field:constraint.expression.3=x11_3 = x11_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=5",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_3** as the id of constraint 5.",
+          "page": "analysis",
+          "target": "constraint.id.4",
+          "check": "field:constraint.id.4=x22_3",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_3 = x22_1** as the expression of constraint 5.",
+          "page": "analysis",
+          "target": "constraint.expression.4",
+          "check": "field:constraint.expression.4=x22_3 = x22_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=6",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_3** as the id of constraint 6.",
+          "page": "analysis",
+          "target": "constraint.id.5",
+          "check": "field:constraint.id.5=x33_3",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_3 = x33_1** as the expression of constraint 6.",
+          "page": "analysis",
+          "target": "constraint.expression.5",
+          "check": "field:constraint.expression.5=x33_3 = x33_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=7",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_4** as the id of constraint 7.",
+          "page": "analysis",
+          "target": "constraint.id.6",
+          "check": "field:constraint.id.6=x11_4",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_4 = x11_1** as the expression of constraint 7.",
+          "page": "analysis",
+          "target": "constraint.expression.6",
+          "check": "field:constraint.expression.6=x11_4 = x11_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=8",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_4** as the id of constraint 8.",
+          "page": "analysis",
+          "target": "constraint.id.7",
+          "check": "field:constraint.id.7=x22_4",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_4 = x22_1** as the expression of constraint 8.",
+          "page": "analysis",
+          "target": "constraint.expression.7",
+          "check": "field:constraint.expression.7=x22_4 = x22_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=9",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_4** as the id of constraint 9.",
+          "page": "analysis",
+          "target": "constraint.id.8",
+          "check": "field:constraint.id.8=x33_4",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_4 = x33_1** as the expression of constraint 9.",
+          "page": "analysis",
+          "target": "constraint.expression.8",
+          "check": "field:constraint.expression.8=x33_4 = x33_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=10",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_5** as the id of constraint 10.",
+          "page": "analysis",
+          "target": "constraint.id.9",
+          "check": "field:constraint.id.9=x11_5",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_5 = x11_1** as the expression of constraint 10.",
+          "page": "analysis",
+          "target": "constraint.expression.9",
+          "check": "field:constraint.expression.9=x11_5 = x11_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=11",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_5** as the id of constraint 11.",
+          "page": "analysis",
+          "target": "constraint.id.10",
+          "check": "field:constraint.id.10=x22_5",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_5 = x22_1** as the expression of constraint 11.",
+          "page": "analysis",
+          "target": "constraint.expression.10",
+          "check": "field:constraint.expression.10=x22_5 = x22_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=12",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_5** as the id of constraint 12.",
+          "page": "analysis",
+          "target": "constraint.id.11",
+          "check": "field:constraint.id.11=x33_5",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_5 = x33_1** as the expression of constraint 12.",
+          "page": "analysis",
+          "target": "constraint.expression.11",
+          "check": "field:constraint.expression.11=x33_5 = x33_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=13",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_6** as the id of constraint 13.",
+          "page": "analysis",
+          "target": "constraint.id.12",
+          "check": "field:constraint.id.12=x11_6",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x11_6 = x11_1** as the expression of constraint 13.",
+          "page": "analysis",
+          "target": "constraint.expression.12",
+          "check": "field:constraint.expression.12=x11_6 = x11_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=14",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_6** as the id of constraint 14.",
+          "page": "analysis",
+          "target": "constraint.id.13",
+          "check": "field:constraint.id.13=x22_6",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x22_6 = x22_1** as the expression of constraint 14.",
+          "page": "analysis",
+          "target": "constraint.expression.13",
+          "check": "field:constraint.expression.13=x22_6 = x22_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Click **+** under **Constraints** to add a constraint.",
+          "page": "analysis",
+          "target": "constraints.append",
+          "check": "rows:constraints.append=15",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_6** as the id of constraint 15.",
+          "page": "analysis",
+          "target": "constraint.id.14",
+          "check": "field:constraint.id.14=x33_6",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Enter **x33_6 = x33_1** as the expression of constraint 15.",
+          "page": "analysis",
+          "target": "constraint.expression.14",
+          "check": "field:constraint.expression.14=x33_6 = x33_1",
+          "tab": "extras",
+          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
+        },
+        {
+          "title": "Reflection cutoff",
+          "text": "Enter **3** as the s.u. cutoff of **Fitted reflections**. The project fits only the reflections stronger than three times their s.u., as FullProf does for this case.",
+          "page": "analysis",
+          "target": "refine_ls.thresholdSigma",
+          "check": "field:refine_ls.thresholdSigma=3",
+          "tab": "extras",
+          "why": "The project fits only the reflections stronger than three times their s.u., as FullProf does for this case."
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 1.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.0",
+          "check": "pick:atomSiteAdp.type.0=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 2.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.1",
+          "check": "pick:atomSiteAdp.type.1=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 3.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.2",
+          "check": "pick:atomSiteAdp.type.2=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 4.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.3",
+          "check": "pick:atomSiteAdp.type.3=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 5.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.4",
+          "check": "pick:atomSiteAdp.type.4=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 6.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.5",
+          "check": "pick:atomSiteAdp.type.5=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 7.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.6",
+          "check": "pick:atomSiteAdp.type.6=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 8.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.7",
+          "check": "pick:atomSiteAdp.type.7=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 9.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.8",
+          "check": "pick:atomSiteAdp.type.8=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 10.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.9",
+          "check": "pick:atomSiteAdp.type.9=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 11.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.10",
+          "check": "pick:atomSiteAdp.type.10=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 12.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.11",
+          "check": "pick:atomSiteAdp.type.11=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 13.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.12",
+          "check": "pick:atomSiteAdp.type.12=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Biso** as the ADP type of site 14.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.13",
+          "check": "pick:atomSiteAdp.type.13=Biso",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Linked structures",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Scales, every site isotropic",
+          "text": "Choose **Free · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Linked structures",
+          "tab": "basic"
+        },
+        {
+          "title": "Fit stage 1",
+          "text": "Press **Fit** in the status bar to fit **Scales, every site isotropic**.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
+          "check": "fit-done",
+          "expectFree": [
+            "experiments[senju_1].linked_structures[taurine].scale",
+            "experiments[senju_2].linked_structures[taurine].scale",
+            "experiments[senju_3].linked_structures[taurine].scale",
+            "experiments[senju_4].linked_structures[taurine].scale",
+            "experiments[senju_5].linked_structures[taurine].scale",
+            "experiments[senju_6].linked_structures[taurine].scale"
+          ],
+          "expectWholeBackground": [],
+          "expectChi2": 470.73,
+          "expectChi2Tolerance": 0.01
+        },
+        {
+          "title": "Fit results",
+          "text": "Read the fit results, then press **OK**.",
+          "page": "analysis",
+          "target": "fit.results.ok",
+          "check": "results-closed"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Choose **Atomic displacement** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Atomic displacement",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Isotropic displacements",
+          "text": "Choose **Free · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Atomic displacement",
+          "tab": "basic"
+        },
+        {
+          "title": "Fit: Isotropic displacements",
+          "text": "Press **Fit** in the status bar.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
+          "check": "fit-done",
+          "expectFree": [
+            "experiments[senju_1].linked_structures[taurine].scale",
+            "experiments[senju_2].linked_structures[taurine].scale",
+            "experiments[senju_3].linked_structures[taurine].scale",
+            "experiments[senju_4].linked_structures[taurine].scale",
+            "experiments[senju_5].linked_structures[taurine].scale",
+            "experiments[senju_6].linked_structures[taurine].scale",
+            "structure.atom_sites[C1].adp_iso",
+            "structure.atom_sites[C2].adp_iso",
+            "structure.atom_sites[H11].adp_iso",
+            "structure.atom_sites[H12].adp_iso",
+            "structure.atom_sites[H1].adp_iso",
+            "structure.atom_sites[H21].adp_iso",
+            "structure.atom_sites[H22].adp_iso",
+            "structure.atom_sites[H2].adp_iso",
+            "structure.atom_sites[H3].adp_iso",
+            "structure.atom_sites[N1].adp_iso",
+            "structure.atom_sites[O1].adp_iso",
+            "structure.atom_sites[O2].adp_iso",
+            "structure.atom_sites[O3].adp_iso",
+            "structure.atom_sites[S1].adp_iso"
+          ],
+          "expectWholeBackground": [],
+          "expectChi2": 129.56,
+          "expectChi2Tolerance": 0.01
+        },
+        {
+          "title": "Fit results",
+          "text": "Read the fit results, then press **OK**.",
+          "page": "analysis",
+          "target": "fit.results.ok",
+          "check": "results-closed"
+        },
+        {
+          "title": "Extinction",
+          "text": "Choose **senju_1** as the datablock filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.datablock",
+          "check": "pick:parameters.datablock=senju_1",
+          "tab": "basic"
+        },
+        {
+          "title": "Extinction",
+          "text": "Choose **Extinction** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Extinction",
+          "tab": "basic"
+        },
+        {
+          "title": "Extinction",
+          "text": "Tick **Free** for **x11**.",
+          "page": "analysis",
+          "target": "parameters.free@experiments.senju_1.extinction.coefficient_11",
+          "check": "tick:experiments.senju_1.extinction.coefficient_11",
+          "tab": "basic"
+        },
+        {
+          "title": "Extinction",
+          "text": "Tick **Free** for **x22**.",
+          "page": "analysis",
+          "target": "parameters.free@experiments.senju_1.extinction.coefficient_22",
+          "check": "tick:experiments.senju_1.extinction.coefficient_22",
+          "tab": "basic"
+        },
+        {
+          "title": "Extinction",
+          "text": "Tick **Free** for **x33**.",
+          "page": "analysis",
+          "target": "parameters.free@experiments.senju_1.extinction.coefficient_33",
+          "check": "tick:experiments.senju_1.extinction.coefficient_33",
+          "tab": "basic"
+        },
+        {
+          "title": "Extinction",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Fit: Extinction",
+          "text": "Press **Fit** in the status bar.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
+          "check": "fit-done",
+          "expectFree": [
+            "experiments[senju_1].extinction.coefficient_11",
+            "experiments[senju_1].extinction.coefficient_22",
+            "experiments[senju_1].extinction.coefficient_33",
+            "experiments[senju_1].linked_structures[taurine].scale",
+            "experiments[senju_2].linked_structures[taurine].scale",
+            "experiments[senju_3].linked_structures[taurine].scale",
+            "experiments[senju_4].linked_structures[taurine].scale",
+            "experiments[senju_5].linked_structures[taurine].scale",
+            "experiments[senju_6].linked_structures[taurine].scale",
+            "structure.atom_sites[C1].adp_iso",
+            "structure.atom_sites[C2].adp_iso",
+            "structure.atom_sites[H11].adp_iso",
+            "structure.atom_sites[H12].adp_iso",
+            "structure.atom_sites[H1].adp_iso",
+            "structure.atom_sites[H21].adp_iso",
+            "structure.atom_sites[H22].adp_iso",
+            "structure.atom_sites[H2].adp_iso",
+            "structure.atom_sites[H3].adp_iso",
+            "structure.atom_sites[N1].adp_iso",
+            "structure.atom_sites[O1].adp_iso",
+            "structure.atom_sites[O2].adp_iso",
+            "structure.atom_sites[O3].adp_iso",
+            "structure.atom_sites[S1].adp_iso"
+          ],
+          "expectWholeBackground": [],
+          "expectChi2": 73.55,
+          "expectChi2Tolerance": 0.01
+        },
+        {
+          "title": "Fit results",
+          "text": "Read the fit results, then press **OK**.",
+          "page": "analysis",
+          "target": "fit.results.ok",
+          "check": "results-closed"
+        },
+        {
+          "title": "Positions",
+          "text": "Choose **Atomic coordinates** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Atomic coordinates",
+          "tab": "basic"
+        },
+        {
+          "title": "Positions",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Positions",
+          "text": "Choose **Free · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Atomic coordinates",
+          "tab": "basic"
+        },
+        {
+          "title": "Fit: Positions",
+          "text": "Press **Fit** in the status bar.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
+          "check": "fit-done",
+          "expectFree": [
+            "experiments[senju_1].extinction.coefficient_11",
+            "experiments[senju_1].extinction.coefficient_22",
+            "experiments[senju_1].extinction.coefficient_33",
+            "experiments[senju_1].linked_structures[taurine].scale",
+            "experiments[senju_2].linked_structures[taurine].scale",
+            "experiments[senju_3].linked_structures[taurine].scale",
+            "experiments[senju_4].linked_structures[taurine].scale",
+            "experiments[senju_5].linked_structures[taurine].scale",
+            "experiments[senju_6].linked_structures[taurine].scale",
+            "structure.atom_sites[C1].adp_iso",
+            "structure.atom_sites[C1].fract_x",
+            "structure.atom_sites[C1].fract_y",
+            "structure.atom_sites[C1].fract_z",
+            "structure.atom_sites[C2].adp_iso",
+            "structure.atom_sites[C2].fract_x",
+            "structure.atom_sites[C2].fract_y",
+            "structure.atom_sites[C2].fract_z",
+            "structure.atom_sites[H11].adp_iso",
+            "structure.atom_sites[H11].fract_x",
+            "structure.atom_sites[H11].fract_y",
+            "structure.atom_sites[H11].fract_z",
+            "structure.atom_sites[H12].adp_iso",
+            "structure.atom_sites[H12].fract_x",
+            "structure.atom_sites[H12].fract_y",
+            "structure.atom_sites[H12].fract_z",
+            "structure.atom_sites[H1].adp_iso",
+            "structure.atom_sites[H1].fract_x",
+            "structure.atom_sites[H1].fract_y",
+            "structure.atom_sites[H1].fract_z",
+            "structure.atom_sites[H21].adp_iso",
+            "structure.atom_sites[H21].fract_x",
+            "structure.atom_sites[H21].fract_y",
+            "structure.atom_sites[H21].fract_z",
+            "structure.atom_sites[H22].adp_iso",
+            "structure.atom_sites[H22].fract_x",
+            "structure.atom_sites[H22].fract_y",
+            "structure.atom_sites[H22].fract_z",
+            "structure.atom_sites[H2].adp_iso",
+            "structure.atom_sites[H2].fract_x",
+            "structure.atom_sites[H2].fract_y",
+            "structure.atom_sites[H2].fract_z",
+            "structure.atom_sites[H3].adp_iso",
+            "structure.atom_sites[H3].fract_x",
+            "structure.atom_sites[H3].fract_y",
+            "structure.atom_sites[H3].fract_z",
+            "structure.atom_sites[N1].adp_iso",
+            "structure.atom_sites[N1].fract_x",
+            "structure.atom_sites[N1].fract_y",
+            "structure.atom_sites[N1].fract_z",
+            "structure.atom_sites[O1].adp_iso",
+            "structure.atom_sites[O1].fract_x",
+            "structure.atom_sites[O1].fract_y",
+            "structure.atom_sites[O1].fract_z",
+            "structure.atom_sites[O2].adp_iso",
+            "structure.atom_sites[O2].fract_x",
+            "structure.atom_sites[O2].fract_y",
+            "structure.atom_sites[O2].fract_z",
+            "structure.atom_sites[O3].adp_iso",
+            "structure.atom_sites[O3].fract_x",
+            "structure.atom_sites[O3].fract_y",
+            "structure.atom_sites[O3].fract_z",
+            "structure.atom_sites[S1].adp_iso",
+            "structure.atom_sites[S1].fract_x",
+            "structure.atom_sites[S1].fract_y",
+            "structure.atom_sites[S1].fract_z"
+          ],
+          "expectWholeBackground": [],
+          "expectChi2": 54.49,
+          "expectChi2Tolerance": 0.01
+        },
+        {
+          "title": "Fit results",
+          "text": "Read the fit results, then press **OK**.",
+          "page": "analysis",
+          "target": "fit.results.ok",
+          "check": "results-closed"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 1.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.0",
+          "check": "pick:atomSiteAdp.type.0=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 2.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.1",
+          "check": "pick:atomSiteAdp.type.1=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 3.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.2",
+          "check": "pick:atomSiteAdp.type.2=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 4.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.3",
+          "check": "pick:atomSiteAdp.type.3=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 5.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.4",
+          "check": "pick:atomSiteAdp.type.4=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 6.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.5",
+          "check": "pick:atomSiteAdp.type.5=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 7.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.6",
+          "check": "pick:atomSiteAdp.type.6=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 8.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.7",
+          "check": "pick:atomSiteAdp.type.7=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 9.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.8",
+          "check": "pick:atomSiteAdp.type.8=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 10.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.9",
+          "check": "pick:atomSiteAdp.type.9=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 11.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.10",
+          "check": "pick:atomSiteAdp.type.10=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 12.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.11",
+          "check": "pick:atomSiteAdp.type.11=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 13.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.12",
+          "check": "pick:atomSiteAdp.type.12=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **beta** as the ADP type of site 14.",
+          "page": "structure",
+          "target": "atomSiteAdp.type.13",
+          "check": "pick:atomSiteAdp.type.13=beta",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **Atomic displacement** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Atomic displacement",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Click the **Free** column header of the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.freeHeader",
+          "check": "free-menu",
+          "tab": "basic"
+        },
+        {
+          "title": "Anisotropic displacements",
+          "text": "Choose **Free · all**.",
+          "page": "analysis",
+          "target": "parameters.freeHeader.free",
+          "check": "free-choice:free:Atomic displacement",
+          "tab": "basic"
+        },
+        {
+          "title": "Fit: Anisotropic displacements",
+          "text": "Press **Fit** in the status bar.",
+          "page": "analysis",
+          "target": "statusBar.fit.button",
+          "check": "fit-done",
+          "expectFree": [
+            "experiments[senju_1].extinction.coefficient_11",
+            "experiments[senju_1].extinction.coefficient_22",
+            "experiments[senju_1].extinction.coefficient_33",
+            "experiments[senju_1].linked_structures[taurine].scale",
+            "experiments[senju_2].linked_structures[taurine].scale",
+            "experiments[senju_3].linked_structures[taurine].scale",
+            "experiments[senju_4].linked_structures[taurine].scale",
+            "experiments[senju_5].linked_structures[taurine].scale",
+            "experiments[senju_6].linked_structures[taurine].scale",
+            "structure.atom_site_aniso[C1].adp_11",
+            "structure.atom_site_aniso[C1].adp_12",
+            "structure.atom_site_aniso[C1].adp_13",
+            "structure.atom_site_aniso[C1].adp_22",
+            "structure.atom_site_aniso[C1].adp_23",
+            "structure.atom_site_aniso[C1].adp_33",
+            "structure.atom_site_aniso[C2].adp_11",
+            "structure.atom_site_aniso[C2].adp_12",
+            "structure.atom_site_aniso[C2].adp_13",
+            "structure.atom_site_aniso[C2].adp_22",
+            "structure.atom_site_aniso[C2].adp_23",
+            "structure.atom_site_aniso[C2].adp_33",
+            "structure.atom_site_aniso[H11].adp_11",
+            "structure.atom_site_aniso[H11].adp_12",
+            "structure.atom_site_aniso[H11].adp_13",
+            "structure.atom_site_aniso[H11].adp_22",
+            "structure.atom_site_aniso[H11].adp_23",
+            "structure.atom_site_aniso[H11].adp_33",
+            "structure.atom_site_aniso[H12].adp_11",
+            "structure.atom_site_aniso[H12].adp_12",
+            "structure.atom_site_aniso[H12].adp_13",
+            "structure.atom_site_aniso[H12].adp_22",
+            "structure.atom_site_aniso[H12].adp_23",
+            "structure.atom_site_aniso[H12].adp_33",
+            "structure.atom_site_aniso[H1].adp_11",
+            "structure.atom_site_aniso[H1].adp_12",
+            "structure.atom_site_aniso[H1].adp_13",
+            "structure.atom_site_aniso[H1].adp_22",
+            "structure.atom_site_aniso[H1].adp_23",
+            "structure.atom_site_aniso[H1].adp_33",
+            "structure.atom_site_aniso[H21].adp_11",
+            "structure.atom_site_aniso[H21].adp_12",
+            "structure.atom_site_aniso[H21].adp_13",
+            "structure.atom_site_aniso[H21].adp_22",
+            "structure.atom_site_aniso[H21].adp_23",
+            "structure.atom_site_aniso[H21].adp_33",
+            "structure.atom_site_aniso[H22].adp_11",
+            "structure.atom_site_aniso[H22].adp_12",
+            "structure.atom_site_aniso[H22].adp_13",
+            "structure.atom_site_aniso[H22].adp_22",
+            "structure.atom_site_aniso[H22].adp_23",
+            "structure.atom_site_aniso[H22].adp_33",
+            "structure.atom_site_aniso[H2].adp_11",
+            "structure.atom_site_aniso[H2].adp_12",
+            "structure.atom_site_aniso[H2].adp_13",
+            "structure.atom_site_aniso[H2].adp_22",
+            "structure.atom_site_aniso[H2].adp_23",
+            "structure.atom_site_aniso[H2].adp_33",
+            "structure.atom_site_aniso[H3].adp_11",
+            "structure.atom_site_aniso[H3].adp_12",
+            "structure.atom_site_aniso[H3].adp_13",
+            "structure.atom_site_aniso[H3].adp_22",
+            "structure.atom_site_aniso[H3].adp_23",
+            "structure.atom_site_aniso[H3].adp_33",
+            "structure.atom_site_aniso[N1].adp_11",
+            "structure.atom_site_aniso[N1].adp_12",
+            "structure.atom_site_aniso[N1].adp_13",
+            "structure.atom_site_aniso[N1].adp_22",
+            "structure.atom_site_aniso[N1].adp_23",
+            "structure.atom_site_aniso[N1].adp_33",
+            "structure.atom_site_aniso[O1].adp_11",
+            "structure.atom_site_aniso[O1].adp_12",
+            "structure.atom_site_aniso[O1].adp_13",
+            "structure.atom_site_aniso[O1].adp_22",
+            "structure.atom_site_aniso[O1].adp_23",
+            "structure.atom_site_aniso[O1].adp_33",
+            "structure.atom_site_aniso[O2].adp_11",
+            "structure.atom_site_aniso[O2].adp_12",
+            "structure.atom_site_aniso[O2].adp_13",
+            "structure.atom_site_aniso[O2].adp_22",
+            "structure.atom_site_aniso[O2].adp_23",
+            "structure.atom_site_aniso[O2].adp_33",
+            "structure.atom_site_aniso[O3].adp_11",
+            "structure.atom_site_aniso[O3].adp_12",
+            "structure.atom_site_aniso[O3].adp_13",
+            "structure.atom_site_aniso[O3].adp_22",
+            "structure.atom_site_aniso[O3].adp_23",
+            "structure.atom_site_aniso[O3].adp_33",
+            "structure.atom_site_aniso[S1].adp_11",
+            "structure.atom_site_aniso[S1].adp_12",
+            "structure.atom_site_aniso[S1].adp_13",
+            "structure.atom_site_aniso[S1].adp_22",
+            "structure.atom_site_aniso[S1].adp_23",
+            "structure.atom_site_aniso[S1].adp_33",
+            "structure.atom_sites[C1].fract_x",
+            "structure.atom_sites[C1].fract_y",
+            "structure.atom_sites[C1].fract_z",
+            "structure.atom_sites[C2].fract_x",
+            "structure.atom_sites[C2].fract_y",
+            "structure.atom_sites[C2].fract_z",
+            "structure.atom_sites[H11].fract_x",
+            "structure.atom_sites[H11].fract_y",
+            "structure.atom_sites[H11].fract_z",
+            "structure.atom_sites[H12].fract_x",
+            "structure.atom_sites[H12].fract_y",
+            "structure.atom_sites[H12].fract_z",
+            "structure.atom_sites[H1].fract_x",
+            "structure.atom_sites[H1].fract_y",
+            "structure.atom_sites[H1].fract_z",
+            "structure.atom_sites[H21].fract_x",
+            "structure.atom_sites[H21].fract_y",
+            "structure.atom_sites[H21].fract_z",
+            "structure.atom_sites[H22].fract_x",
+            "structure.atom_sites[H22].fract_y",
+            "structure.atom_sites[H22].fract_z",
+            "structure.atom_sites[H2].fract_x",
+            "structure.atom_sites[H2].fract_y",
+            "structure.atom_sites[H2].fract_z",
+            "structure.atom_sites[H3].fract_x",
+            "structure.atom_sites[H3].fract_y",
+            "structure.atom_sites[H3].fract_z",
+            "structure.atom_sites[N1].fract_x",
+            "structure.atom_sites[N1].fract_y",
+            "structure.atom_sites[N1].fract_z",
+            "structure.atom_sites[O1].fract_x",
+            "structure.atom_sites[O1].fract_y",
+            "structure.atom_sites[O1].fract_z",
+            "structure.atom_sites[O2].fract_x",
+            "structure.atom_sites[O2].fract_y",
+            "structure.atom_sites[O2].fract_z",
+            "structure.atom_sites[O3].fract_x",
+            "structure.atom_sites[O3].fract_y",
+            "structure.atom_sites[O3].fract_z",
+            "structure.atom_sites[S1].fract_x",
+            "structure.atom_sites[S1].fract_y",
+            "structure.atom_sites[S1].fract_z"
+          ],
+          "expectWholeBackground": [],
+          "expectChi2": 30.27,
           "expectChi2Tolerance": 0.01
         },
         {
@@ -18379,1895 +19971,6 @@
           ],
           "expectWholeBackground": [],
           "expectChi2": 0.62,
-          "expectChi2Tolerance": 0.01
-        },
-        {
-          "title": "Fit results",
-          "text": "Read the fit results, then press **OK**.",
-          "page": "analysis",
-          "target": "fit.results.ok",
-          "check": "results-closed"
-        },
-        {
-          "title": "Correlations",
-          "text": "The **Correlations** view shows which fitted parameters move together.",
-          "page": "analysis",
-          "target": "mainArea.tab.correlations",
-          "open": true
-        },
-        {
-          "title": "Open Report",
-          "text": "The **Report** page collects the structure, the experiment and the fit.",
-          "page": "report",
-          "target": "appBar.tab.report",
-          "check": "page:report"
-        }
-      ]
-    },
-    {
-      "id": "sc-neut-tof_taurine-senju",
-      "title": "Taurine [P2₁/c] · SENJU @ J-PARC",
-      "description": "Single crystal · Time of flight · Six datasets · Anisotropic displacements",
-      "project": "temporary",
-      "start": "aside",
-      "completion": [
-        "keep",
-        "discard"
-      ],
-      "stop": "restore-user-project",
-      "tags": [
-        "purpose:refinement",
-        "fittingMode:joint",
-        "sampleForm:single crystal",
-        "probe:neutron",
-        "beamMode:time-of-flight",
-        "scatteringType:bragg",
-        "structure:crystal"
-      ],
-      "steps": [
-        {
-          "title": "Open Project",
-          "text": "Click **Start** to begin on the Project page.",
-          "page": "home",
-          "target": "home.start",
-          "check": "page:project"
-        },
-        {
-          "title": "New project",
-          "text": "Create a new project with **Create a new project**.",
-          "page": "project",
-          "target": "project.create",
-          "check": "creating"
-        },
-        {
-          "title": "Name the project",
-          "text": "Give the project a name, for example **sc-neut-tof_taurine-senju**.",
-          "page": "project",
-          "target": "createProject.name",
-          "check": "text:createProject.name=sc-neut-tof_taurine-senju"
-        },
-        {
-          "title": "Create it",
-          "text": "Click **OK** to create the project.",
-          "page": "project",
-          "target": "createProject.accept",
-          "check": "project"
-        },
-        {
-          "title": "Open the Load menu",
-          "text": "Click **Load ▾**.",
-          "page": "structure",
-          "target": "structures.load",
-          "check": "menu:structures.load.web"
-        },
-        {
-          "title": "From web",
-          "text": "Choose **From web…**.",
-          "page": "structure",
-          "target": "structures.load.web",
-          "check": "web-dialog:structure"
-        },
-        {
-          "title": "Find the structure",
-          "text": "With **EasyDiffraction Database** as the **Source**, enter **sc-neut-tof_taurine-senju-taurine** as the **ID** and press **Search**.",
-          "page": "structure",
-          "target": "onlineLoad.search",
-          "check": "web-search:structure:sc-neut-tof_taurine-senju-taurine"
-        },
-        {
-          "title": "Load the structure taurine",
-          "text": "Click the row of **sc-neut-tof_taurine-senju-taurine** to load it.",
-          "page": "structure",
-          "target": "onlineLoad.row.0",
-          "check": "web-row:structure:sc-neut-tof_taurine-senju-taurine=taurine"
-        },
-        {
-          "title": "Open the Load menu",
-          "text": "Click **Load ▾**.",
-          "page": "experiment",
-          "target": "experiments.load",
-          "check": "menu:experiments.load.experimentWeb"
-        },
-        {
-          "title": "From web",
-          "text": "Choose **From web…**.",
-          "page": "experiment",
-          "target": "experiments.load.experimentWeb",
-          "check": "web-dialog:experiment"
-        },
-        {
-          "title": "Find the experiment",
-          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-tof_taurine-senju-senju_1** as the **ID** and press **Search**.",
-          "page": "experiment",
-          "target": "onlineLoad.search",
-          "check": "web-search:experiment:sc-neut-tof_taurine-senju-senju_1"
-        },
-        {
-          "title": "Load the experiment senju_1",
-          "text": "Click the row of **sc-neut-tof_taurine-senju-senju_1** to load it.",
-          "page": "experiment",
-          "target": "onlineLoad.row.0",
-          "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_1=senju_1"
-        },
-        {
-          "title": "Open the Load menu",
-          "text": "Click **Load ▾**.",
-          "page": "experiment",
-          "target": "experiments.load",
-          "check": "menu:experiments.load.experimentWeb"
-        },
-        {
-          "title": "From web",
-          "text": "Choose **From web…**.",
-          "page": "experiment",
-          "target": "experiments.load.experimentWeb",
-          "check": "web-dialog:experiment"
-        },
-        {
-          "title": "Find the experiment",
-          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-tof_taurine-senju-senju_2** as the **ID** and press **Search**.",
-          "page": "experiment",
-          "target": "onlineLoad.search",
-          "check": "web-search:experiment:sc-neut-tof_taurine-senju-senju_2"
-        },
-        {
-          "title": "Load the experiment senju_2",
-          "text": "Click the row of **sc-neut-tof_taurine-senju-senju_2** to load it.",
-          "page": "experiment",
-          "target": "onlineLoad.row.0",
-          "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_2=senju_2"
-        },
-        {
-          "title": "Open the Load menu",
-          "text": "Click **Load ▾**.",
-          "page": "experiment",
-          "target": "experiments.load",
-          "check": "menu:experiments.load.experimentWeb"
-        },
-        {
-          "title": "From web",
-          "text": "Choose **From web…**.",
-          "page": "experiment",
-          "target": "experiments.load.experimentWeb",
-          "check": "web-dialog:experiment"
-        },
-        {
-          "title": "Find the experiment",
-          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-tof_taurine-senju-senju_3** as the **ID** and press **Search**.",
-          "page": "experiment",
-          "target": "onlineLoad.search",
-          "check": "web-search:experiment:sc-neut-tof_taurine-senju-senju_3"
-        },
-        {
-          "title": "Load the experiment senju_3",
-          "text": "Click the row of **sc-neut-tof_taurine-senju-senju_3** to load it.",
-          "page": "experiment",
-          "target": "onlineLoad.row.0",
-          "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_3=senju_3"
-        },
-        {
-          "title": "Open the Load menu",
-          "text": "Click **Load ▾**.",
-          "page": "experiment",
-          "target": "experiments.load",
-          "check": "menu:experiments.load.experimentWeb"
-        },
-        {
-          "title": "From web",
-          "text": "Choose **From web…**.",
-          "page": "experiment",
-          "target": "experiments.load.experimentWeb",
-          "check": "web-dialog:experiment"
-        },
-        {
-          "title": "Find the experiment",
-          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-tof_taurine-senju-senju_4** as the **ID** and press **Search**.",
-          "page": "experiment",
-          "target": "onlineLoad.search",
-          "check": "web-search:experiment:sc-neut-tof_taurine-senju-senju_4"
-        },
-        {
-          "title": "Load the experiment senju_4",
-          "text": "Click the row of **sc-neut-tof_taurine-senju-senju_4** to load it.",
-          "page": "experiment",
-          "target": "onlineLoad.row.0",
-          "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_4=senju_4"
-        },
-        {
-          "title": "Open the Load menu",
-          "text": "Click **Load ▾**.",
-          "page": "experiment",
-          "target": "experiments.load",
-          "check": "menu:experiments.load.experimentWeb"
-        },
-        {
-          "title": "From web",
-          "text": "Choose **From web…**.",
-          "page": "experiment",
-          "target": "experiments.load.experimentWeb",
-          "check": "web-dialog:experiment"
-        },
-        {
-          "title": "Find the experiment",
-          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-tof_taurine-senju-senju_5** as the **ID** and press **Search**.",
-          "page": "experiment",
-          "target": "onlineLoad.search",
-          "check": "web-search:experiment:sc-neut-tof_taurine-senju-senju_5"
-        },
-        {
-          "title": "Load the experiment senju_5",
-          "text": "Click the row of **sc-neut-tof_taurine-senju-senju_5** to load it.",
-          "page": "experiment",
-          "target": "onlineLoad.row.0",
-          "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_5=senju_5"
-        },
-        {
-          "title": "Open the Load menu",
-          "text": "Click **Load ▾**.",
-          "page": "experiment",
-          "target": "experiments.load",
-          "check": "menu:experiments.load.experimentWeb"
-        },
-        {
-          "title": "From web",
-          "text": "Choose **From web…**.",
-          "page": "experiment",
-          "target": "experiments.load.experimentWeb",
-          "check": "web-dialog:experiment"
-        },
-        {
-          "title": "Find the experiment",
-          "text": "With **EasyDiffraction** as the **Source**, enter **sc-neut-tof_taurine-senju-senju_6** as the **ID** and press **Search**.",
-          "page": "experiment",
-          "target": "onlineLoad.search",
-          "check": "web-search:experiment:sc-neut-tof_taurine-senju-senju_6"
-        },
-        {
-          "title": "Load the experiment senju_6",
-          "text": "Click the row of **sc-neut-tof_taurine-senju-senju_6** to load it.",
-          "page": "experiment",
-          "target": "onlineLoad.row.0",
-          "check": "web-row:experiment:sc-neut-tof_taurine-senju-senju_6=senju_6"
-        },
-        {
-          "title": "Fix every parameter first",
-          "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Fix every parameter first",
-          "text": "Choose **Fixed · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.fixed",
-          "check": "free-choice:fixed:All categories",
-          "tab": "basic"
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias. Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_1** as the id of alias 1.",
-          "page": "analysis",
-          "target": "alias.id.0",
-          "check": "field:alias.id.0=x11_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_1.extinction.coefficient_11** as the parameter of alias 1.",
-          "page": "analysis",
-          "target": "alias.parameter.0",
-          "check": "pick:alias.parameter.0=senju_1.extinction.coefficient_11",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=2",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_1** as the id of alias 2.",
-          "page": "analysis",
-          "target": "alias.id.1",
-          "check": "field:alias.id.1=x22_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_1.extinction.coefficient_22** as the parameter of alias 2.",
-          "page": "analysis",
-          "target": "alias.parameter.1",
-          "check": "pick:alias.parameter.1=senju_1.extinction.coefficient_22",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=3",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_1** as the id of alias 3.",
-          "page": "analysis",
-          "target": "alias.id.2",
-          "check": "field:alias.id.2=x33_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_1.extinction.coefficient_33** as the parameter of alias 3.",
-          "page": "analysis",
-          "target": "alias.parameter.2",
-          "check": "pick:alias.parameter.2=senju_1.extinction.coefficient_33",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=4",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_2** as the id of alias 4.",
-          "page": "analysis",
-          "target": "alias.id.3",
-          "check": "field:alias.id.3=x11_2",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_2.extinction.coefficient_11** as the parameter of alias 4.",
-          "page": "analysis",
-          "target": "alias.parameter.3",
-          "check": "pick:alias.parameter.3=senju_2.extinction.coefficient_11",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=5",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_2** as the id of alias 5.",
-          "page": "analysis",
-          "target": "alias.id.4",
-          "check": "field:alias.id.4=x22_2",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_2.extinction.coefficient_22** as the parameter of alias 5.",
-          "page": "analysis",
-          "target": "alias.parameter.4",
-          "check": "pick:alias.parameter.4=senju_2.extinction.coefficient_22",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=6",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_2** as the id of alias 6.",
-          "page": "analysis",
-          "target": "alias.id.5",
-          "check": "field:alias.id.5=x33_2",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_2.extinction.coefficient_33** as the parameter of alias 6.",
-          "page": "analysis",
-          "target": "alias.parameter.5",
-          "check": "pick:alias.parameter.5=senju_2.extinction.coefficient_33",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=7",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_3** as the id of alias 7.",
-          "page": "analysis",
-          "target": "alias.id.6",
-          "check": "field:alias.id.6=x11_3",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_3.extinction.coefficient_11** as the parameter of alias 7.",
-          "page": "analysis",
-          "target": "alias.parameter.6",
-          "check": "pick:alias.parameter.6=senju_3.extinction.coefficient_11",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=8",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_3** as the id of alias 8.",
-          "page": "analysis",
-          "target": "alias.id.7",
-          "check": "field:alias.id.7=x22_3",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_3.extinction.coefficient_22** as the parameter of alias 8.",
-          "page": "analysis",
-          "target": "alias.parameter.7",
-          "check": "pick:alias.parameter.7=senju_3.extinction.coefficient_22",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=9",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_3** as the id of alias 9.",
-          "page": "analysis",
-          "target": "alias.id.8",
-          "check": "field:alias.id.8=x33_3",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_3.extinction.coefficient_33** as the parameter of alias 9.",
-          "page": "analysis",
-          "target": "alias.parameter.8",
-          "check": "pick:alias.parameter.8=senju_3.extinction.coefficient_33",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=10",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_4** as the id of alias 10.",
-          "page": "analysis",
-          "target": "alias.id.9",
-          "check": "field:alias.id.9=x11_4",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_4.extinction.coefficient_11** as the parameter of alias 10.",
-          "page": "analysis",
-          "target": "alias.parameter.9",
-          "check": "pick:alias.parameter.9=senju_4.extinction.coefficient_11",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=11",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_4** as the id of alias 11.",
-          "page": "analysis",
-          "target": "alias.id.10",
-          "check": "field:alias.id.10=x22_4",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_4.extinction.coefficient_22** as the parameter of alias 11.",
-          "page": "analysis",
-          "target": "alias.parameter.10",
-          "check": "pick:alias.parameter.10=senju_4.extinction.coefficient_22",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=12",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_4** as the id of alias 12.",
-          "page": "analysis",
-          "target": "alias.id.11",
-          "check": "field:alias.id.11=x33_4",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_4.extinction.coefficient_33** as the parameter of alias 12.",
-          "page": "analysis",
-          "target": "alias.parameter.11",
-          "check": "pick:alias.parameter.11=senju_4.extinction.coefficient_33",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=13",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_5** as the id of alias 13.",
-          "page": "analysis",
-          "target": "alias.id.12",
-          "check": "field:alias.id.12=x11_5",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_5.extinction.coefficient_11** as the parameter of alias 13.",
-          "page": "analysis",
-          "target": "alias.parameter.12",
-          "check": "pick:alias.parameter.12=senju_5.extinction.coefficient_11",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=14",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_5** as the id of alias 14.",
-          "page": "analysis",
-          "target": "alias.id.13",
-          "check": "field:alias.id.13=x22_5",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_5.extinction.coefficient_22** as the parameter of alias 14.",
-          "page": "analysis",
-          "target": "alias.parameter.13",
-          "check": "pick:alias.parameter.13=senju_5.extinction.coefficient_22",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=15",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_5** as the id of alias 15.",
-          "page": "analysis",
-          "target": "alias.id.14",
-          "check": "field:alias.id.14=x33_5",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_5.extinction.coefficient_33** as the parameter of alias 15.",
-          "page": "analysis",
-          "target": "alias.parameter.14",
-          "check": "pick:alias.parameter.14=senju_5.extinction.coefficient_33",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=16",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_6** as the id of alias 16.",
-          "page": "analysis",
-          "target": "alias.id.15",
-          "check": "field:alias.id.15=x11_6",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_6.extinction.coefficient_11** as the parameter of alias 16.",
-          "page": "analysis",
-          "target": "alias.parameter.15",
-          "check": "pick:alias.parameter.15=senju_6.extinction.coefficient_11",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=17",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_6** as the id of alias 17.",
-          "page": "analysis",
-          "target": "alias.id.16",
-          "check": "field:alias.id.16=x22_6",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_6.extinction.coefficient_22** as the parameter of alias 17.",
-          "page": "analysis",
-          "target": "alias.parameter.16",
-          "check": "pick:alias.parameter.16=senju_6.extinction.coefficient_22",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Aliases** to add an alias.",
-          "page": "analysis",
-          "target": "aliases.append",
-          "check": "rows:aliases.append=18",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_6** as the id of alias 18.",
-          "page": "analysis",
-          "target": "alias.id.17",
-          "check": "field:alias.id.17=x33_6",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Choose **senju_6.extinction.coefficient_33** as the parameter of alias 18.",
-          "page": "analysis",
-          "target": "alias.parameter.17",
-          "check": "pick:alias.parameter.17=senju_6.extinction.coefficient_33",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_2** as the id of constraint 1.",
-          "page": "analysis",
-          "target": "constraint.id.0",
-          "check": "field:constraint.id.0=x11_2",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_2 = x11_1** as the expression of constraint 1.",
-          "page": "analysis",
-          "target": "constraint.expression.0",
-          "check": "field:constraint.expression.0=x11_2 = x11_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=2",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_2** as the id of constraint 2.",
-          "page": "analysis",
-          "target": "constraint.id.1",
-          "check": "field:constraint.id.1=x22_2",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_2 = x22_1** as the expression of constraint 2.",
-          "page": "analysis",
-          "target": "constraint.expression.1",
-          "check": "field:constraint.expression.1=x22_2 = x22_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=3",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_2** as the id of constraint 3.",
-          "page": "analysis",
-          "target": "constraint.id.2",
-          "check": "field:constraint.id.2=x33_2",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_2 = x33_1** as the expression of constraint 3.",
-          "page": "analysis",
-          "target": "constraint.expression.2",
-          "check": "field:constraint.expression.2=x33_2 = x33_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=4",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_3** as the id of constraint 4.",
-          "page": "analysis",
-          "target": "constraint.id.3",
-          "check": "field:constraint.id.3=x11_3",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_3 = x11_1** as the expression of constraint 4.",
-          "page": "analysis",
-          "target": "constraint.expression.3",
-          "check": "field:constraint.expression.3=x11_3 = x11_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=5",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_3** as the id of constraint 5.",
-          "page": "analysis",
-          "target": "constraint.id.4",
-          "check": "field:constraint.id.4=x22_3",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_3 = x22_1** as the expression of constraint 5.",
-          "page": "analysis",
-          "target": "constraint.expression.4",
-          "check": "field:constraint.expression.4=x22_3 = x22_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=6",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_3** as the id of constraint 6.",
-          "page": "analysis",
-          "target": "constraint.id.5",
-          "check": "field:constraint.id.5=x33_3",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_3 = x33_1** as the expression of constraint 6.",
-          "page": "analysis",
-          "target": "constraint.expression.5",
-          "check": "field:constraint.expression.5=x33_3 = x33_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=7",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_4** as the id of constraint 7.",
-          "page": "analysis",
-          "target": "constraint.id.6",
-          "check": "field:constraint.id.6=x11_4",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_4 = x11_1** as the expression of constraint 7.",
-          "page": "analysis",
-          "target": "constraint.expression.6",
-          "check": "field:constraint.expression.6=x11_4 = x11_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=8",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_4** as the id of constraint 8.",
-          "page": "analysis",
-          "target": "constraint.id.7",
-          "check": "field:constraint.id.7=x22_4",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_4 = x22_1** as the expression of constraint 8.",
-          "page": "analysis",
-          "target": "constraint.expression.7",
-          "check": "field:constraint.expression.7=x22_4 = x22_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=9",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_4** as the id of constraint 9.",
-          "page": "analysis",
-          "target": "constraint.id.8",
-          "check": "field:constraint.id.8=x33_4",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_4 = x33_1** as the expression of constraint 9.",
-          "page": "analysis",
-          "target": "constraint.expression.8",
-          "check": "field:constraint.expression.8=x33_4 = x33_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=10",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_5** as the id of constraint 10.",
-          "page": "analysis",
-          "target": "constraint.id.9",
-          "check": "field:constraint.id.9=x11_5",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_5 = x11_1** as the expression of constraint 10.",
-          "page": "analysis",
-          "target": "constraint.expression.9",
-          "check": "field:constraint.expression.9=x11_5 = x11_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=11",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_5** as the id of constraint 11.",
-          "page": "analysis",
-          "target": "constraint.id.10",
-          "check": "field:constraint.id.10=x22_5",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_5 = x22_1** as the expression of constraint 11.",
-          "page": "analysis",
-          "target": "constraint.expression.10",
-          "check": "field:constraint.expression.10=x22_5 = x22_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=12",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_5** as the id of constraint 12.",
-          "page": "analysis",
-          "target": "constraint.id.11",
-          "check": "field:constraint.id.11=x33_5",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_5 = x33_1** as the expression of constraint 12.",
-          "page": "analysis",
-          "target": "constraint.expression.11",
-          "check": "field:constraint.expression.11=x33_5 = x33_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=13",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_6** as the id of constraint 13.",
-          "page": "analysis",
-          "target": "constraint.id.12",
-          "check": "field:constraint.id.12=x11_6",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x11_6 = x11_1** as the expression of constraint 13.",
-          "page": "analysis",
-          "target": "constraint.expression.12",
-          "check": "field:constraint.expression.12=x11_6 = x11_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=14",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_6** as the id of constraint 14.",
-          "page": "analysis",
-          "target": "constraint.id.13",
-          "check": "field:constraint.id.13=x22_6",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x22_6 = x22_1** as the expression of constraint 14.",
-          "page": "analysis",
-          "target": "constraint.expression.13",
-          "check": "field:constraint.expression.13=x22_6 = x22_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Click **+** under **Constraints** to add a constraint.",
-          "page": "analysis",
-          "target": "constraints.append",
-          "check": "rows:constraints.append=15",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_6** as the id of constraint 15.",
-          "page": "analysis",
-          "target": "constraint.id.14",
-          "check": "field:constraint.id.14=x33_6",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Add the relations",
-          "text": "Enter **x33_6 = x33_1** as the expression of constraint 15.",
-          "page": "analysis",
-          "target": "constraint.expression.14",
-          "check": "field:constraint.expression.14=x33_6 = x33_1",
-          "tab": "extras",
-          "why": "Every bank measures the same crystal, so banks 2 to 6 share bank 1's extinction."
-        },
-        {
-          "title": "Reflection cutoff",
-          "text": "Enter **3** as the s.u. cutoff of **Fitted reflections**. The project fits only the reflections stronger than three times their s.u., as FullProf does for this case.",
-          "page": "analysis",
-          "target": "refine_ls.thresholdSigma",
-          "check": "field:refine_ls.thresholdSigma=3",
-          "tab": "extras",
-          "why": "The project fits only the reflections stronger than three times their s.u., as FullProf does for this case."
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 1.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.0",
-          "check": "pick:atomSiteAdp.type.0=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 2.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.1",
-          "check": "pick:atomSiteAdp.type.1=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 3.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.2",
-          "check": "pick:atomSiteAdp.type.2=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 4.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.3",
-          "check": "pick:atomSiteAdp.type.3=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 5.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.4",
-          "check": "pick:atomSiteAdp.type.4=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 6.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.5",
-          "check": "pick:atomSiteAdp.type.5=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 7.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.6",
-          "check": "pick:atomSiteAdp.type.6=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 8.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.7",
-          "check": "pick:atomSiteAdp.type.7=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 9.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.8",
-          "check": "pick:atomSiteAdp.type.8=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 10.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.9",
-          "check": "pick:atomSiteAdp.type.9=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 11.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.10",
-          "check": "pick:atomSiteAdp.type.10=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 12.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.11",
-          "check": "pick:atomSiteAdp.type.11=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 13.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.12",
-          "check": "pick:atomSiteAdp.type.12=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Biso** as the ADP type of site 14.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.13",
-          "check": "pick:atomSiteAdp.type.13=Biso",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Linked structures** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Scales, every site isotropic",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Linked structures",
-          "tab": "basic"
-        },
-        {
-          "title": "Fit stage 1",
-          "text": "Press **Fit** in the status bar to fit **Scales, every site isotropic**.",
-          "page": "analysis",
-          "target": "statusBar.fit.button",
-          "check": "fit-done",
-          "expectFree": [
-            "experiments[senju_1].linked_structures[taurine].scale",
-            "experiments[senju_2].linked_structures[taurine].scale",
-            "experiments[senju_3].linked_structures[taurine].scale",
-            "experiments[senju_4].linked_structures[taurine].scale",
-            "experiments[senju_5].linked_structures[taurine].scale",
-            "experiments[senju_6].linked_structures[taurine].scale"
-          ],
-          "expectWholeBackground": [],
-          "expectChi2": 470.73,
-          "expectChi2Tolerance": 0.01
-        },
-        {
-          "title": "Fit results",
-          "text": "Read the fit results, then press **OK**.",
-          "page": "analysis",
-          "target": "fit.results.ok",
-          "check": "results-closed"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Choose **Atomic displacement** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Atomic displacement",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Isotropic displacements",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Atomic displacement",
-          "tab": "basic"
-        },
-        {
-          "title": "Fit: Isotropic displacements",
-          "text": "Press **Fit** in the status bar.",
-          "page": "analysis",
-          "target": "statusBar.fit.button",
-          "check": "fit-done",
-          "expectFree": [
-            "experiments[senju_1].linked_structures[taurine].scale",
-            "experiments[senju_2].linked_structures[taurine].scale",
-            "experiments[senju_3].linked_structures[taurine].scale",
-            "experiments[senju_4].linked_structures[taurine].scale",
-            "experiments[senju_5].linked_structures[taurine].scale",
-            "experiments[senju_6].linked_structures[taurine].scale",
-            "structure.atom_sites[C1].adp_iso",
-            "structure.atom_sites[C2].adp_iso",
-            "structure.atom_sites[H11].adp_iso",
-            "structure.atom_sites[H12].adp_iso",
-            "structure.atom_sites[H1].adp_iso",
-            "structure.atom_sites[H21].adp_iso",
-            "structure.atom_sites[H22].adp_iso",
-            "structure.atom_sites[H2].adp_iso",
-            "structure.atom_sites[H3].adp_iso",
-            "structure.atom_sites[N1].adp_iso",
-            "structure.atom_sites[O1].adp_iso",
-            "structure.atom_sites[O2].adp_iso",
-            "structure.atom_sites[O3].adp_iso",
-            "structure.atom_sites[S1].adp_iso"
-          ],
-          "expectWholeBackground": [],
-          "expectChi2": 129.56,
-          "expectChi2Tolerance": 0.01
-        },
-        {
-          "title": "Fit results",
-          "text": "Read the fit results, then press **OK**.",
-          "page": "analysis",
-          "target": "fit.results.ok",
-          "check": "results-closed"
-        },
-        {
-          "title": "Extinction",
-          "text": "Choose **senju_1** as the datablock filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.datablock",
-          "check": "pick:parameters.datablock=senju_1",
-          "tab": "basic"
-        },
-        {
-          "title": "Extinction",
-          "text": "Choose **Extinction** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Extinction",
-          "tab": "basic"
-        },
-        {
-          "title": "Extinction",
-          "text": "Tick **Free** for **x11**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.senju_1.extinction.coefficient_11",
-          "check": "tick:experiments.senju_1.extinction.coefficient_11",
-          "tab": "basic"
-        },
-        {
-          "title": "Extinction",
-          "text": "Tick **Free** for **x22**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.senju_1.extinction.coefficient_22",
-          "check": "tick:experiments.senju_1.extinction.coefficient_22",
-          "tab": "basic"
-        },
-        {
-          "title": "Extinction",
-          "text": "Tick **Free** for **x33**.",
-          "page": "analysis",
-          "target": "parameters.free@experiments.senju_1.extinction.coefficient_33",
-          "check": "tick:experiments.senju_1.extinction.coefficient_33",
-          "tab": "basic"
-        },
-        {
-          "title": "Extinction",
-          "text": "Click the filters' **Clear** button.",
-          "page": "analysis",
-          "target": "parameters.clearFilters",
-          "check": "filters-clear",
-          "tab": "basic"
-        },
-        {
-          "title": "Fit: Extinction",
-          "text": "Press **Fit** in the status bar.",
-          "page": "analysis",
-          "target": "statusBar.fit.button",
-          "check": "fit-done",
-          "expectFree": [
-            "experiments[senju_1].extinction.coefficient_11",
-            "experiments[senju_1].extinction.coefficient_22",
-            "experiments[senju_1].extinction.coefficient_33",
-            "experiments[senju_1].linked_structures[taurine].scale",
-            "experiments[senju_2].linked_structures[taurine].scale",
-            "experiments[senju_3].linked_structures[taurine].scale",
-            "experiments[senju_4].linked_structures[taurine].scale",
-            "experiments[senju_5].linked_structures[taurine].scale",
-            "experiments[senju_6].linked_structures[taurine].scale",
-            "structure.atom_sites[C1].adp_iso",
-            "structure.atom_sites[C2].adp_iso",
-            "structure.atom_sites[H11].adp_iso",
-            "structure.atom_sites[H12].adp_iso",
-            "structure.atom_sites[H1].adp_iso",
-            "structure.atom_sites[H21].adp_iso",
-            "structure.atom_sites[H22].adp_iso",
-            "structure.atom_sites[H2].adp_iso",
-            "structure.atom_sites[H3].adp_iso",
-            "structure.atom_sites[N1].adp_iso",
-            "structure.atom_sites[O1].adp_iso",
-            "structure.atom_sites[O2].adp_iso",
-            "structure.atom_sites[O3].adp_iso",
-            "structure.atom_sites[S1].adp_iso"
-          ],
-          "expectWholeBackground": [],
-          "expectChi2": 73.55,
-          "expectChi2Tolerance": 0.01
-        },
-        {
-          "title": "Fit results",
-          "text": "Read the fit results, then press **OK**.",
-          "page": "analysis",
-          "target": "fit.results.ok",
-          "check": "results-closed"
-        },
-        {
-          "title": "Positions",
-          "text": "Choose **Atomic coordinates** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Atomic coordinates",
-          "tab": "basic"
-        },
-        {
-          "title": "Positions",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Positions",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Atomic coordinates",
-          "tab": "basic"
-        },
-        {
-          "title": "Fit: Positions",
-          "text": "Press **Fit** in the status bar.",
-          "page": "analysis",
-          "target": "statusBar.fit.button",
-          "check": "fit-done",
-          "expectFree": [
-            "experiments[senju_1].extinction.coefficient_11",
-            "experiments[senju_1].extinction.coefficient_22",
-            "experiments[senju_1].extinction.coefficient_33",
-            "experiments[senju_1].linked_structures[taurine].scale",
-            "experiments[senju_2].linked_structures[taurine].scale",
-            "experiments[senju_3].linked_structures[taurine].scale",
-            "experiments[senju_4].linked_structures[taurine].scale",
-            "experiments[senju_5].linked_structures[taurine].scale",
-            "experiments[senju_6].linked_structures[taurine].scale",
-            "structure.atom_sites[C1].adp_iso",
-            "structure.atom_sites[C1].fract_x",
-            "structure.atom_sites[C1].fract_y",
-            "structure.atom_sites[C1].fract_z",
-            "structure.atom_sites[C2].adp_iso",
-            "structure.atom_sites[C2].fract_x",
-            "structure.atom_sites[C2].fract_y",
-            "structure.atom_sites[C2].fract_z",
-            "structure.atom_sites[H11].adp_iso",
-            "structure.atom_sites[H11].fract_x",
-            "structure.atom_sites[H11].fract_y",
-            "structure.atom_sites[H11].fract_z",
-            "structure.atom_sites[H12].adp_iso",
-            "structure.atom_sites[H12].fract_x",
-            "structure.atom_sites[H12].fract_y",
-            "structure.atom_sites[H12].fract_z",
-            "structure.atom_sites[H1].adp_iso",
-            "structure.atom_sites[H1].fract_x",
-            "structure.atom_sites[H1].fract_y",
-            "structure.atom_sites[H1].fract_z",
-            "structure.atom_sites[H21].adp_iso",
-            "structure.atom_sites[H21].fract_x",
-            "structure.atom_sites[H21].fract_y",
-            "structure.atom_sites[H21].fract_z",
-            "structure.atom_sites[H22].adp_iso",
-            "structure.atom_sites[H22].fract_x",
-            "structure.atom_sites[H22].fract_y",
-            "structure.atom_sites[H22].fract_z",
-            "structure.atom_sites[H2].adp_iso",
-            "structure.atom_sites[H2].fract_x",
-            "structure.atom_sites[H2].fract_y",
-            "structure.atom_sites[H2].fract_z",
-            "structure.atom_sites[H3].adp_iso",
-            "structure.atom_sites[H3].fract_x",
-            "structure.atom_sites[H3].fract_y",
-            "structure.atom_sites[H3].fract_z",
-            "structure.atom_sites[N1].adp_iso",
-            "structure.atom_sites[N1].fract_x",
-            "structure.atom_sites[N1].fract_y",
-            "structure.atom_sites[N1].fract_z",
-            "structure.atom_sites[O1].adp_iso",
-            "structure.atom_sites[O1].fract_x",
-            "structure.atom_sites[O1].fract_y",
-            "structure.atom_sites[O1].fract_z",
-            "structure.atom_sites[O2].adp_iso",
-            "structure.atom_sites[O2].fract_x",
-            "structure.atom_sites[O2].fract_y",
-            "structure.atom_sites[O2].fract_z",
-            "structure.atom_sites[O3].adp_iso",
-            "structure.atom_sites[O3].fract_x",
-            "structure.atom_sites[O3].fract_y",
-            "structure.atom_sites[O3].fract_z",
-            "structure.atom_sites[S1].adp_iso",
-            "structure.atom_sites[S1].fract_x",
-            "structure.atom_sites[S1].fract_y",
-            "structure.atom_sites[S1].fract_z"
-          ],
-          "expectWholeBackground": [],
-          "expectChi2": 54.49,
-          "expectChi2Tolerance": 0.01
-        },
-        {
-          "title": "Fit results",
-          "text": "Read the fit results, then press **OK**.",
-          "page": "analysis",
-          "target": "fit.results.ok",
-          "check": "results-closed"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 1.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.0",
-          "check": "pick:atomSiteAdp.type.0=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 2.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.1",
-          "check": "pick:atomSiteAdp.type.1=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 3.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.2",
-          "check": "pick:atomSiteAdp.type.2=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 4.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.3",
-          "check": "pick:atomSiteAdp.type.3=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 5.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.4",
-          "check": "pick:atomSiteAdp.type.4=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 6.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.5",
-          "check": "pick:atomSiteAdp.type.5=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 7.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.6",
-          "check": "pick:atomSiteAdp.type.6=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 8.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.7",
-          "check": "pick:atomSiteAdp.type.7=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 9.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.8",
-          "check": "pick:atomSiteAdp.type.8=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 10.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.9",
-          "check": "pick:atomSiteAdp.type.9=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 11.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.10",
-          "check": "pick:atomSiteAdp.type.10=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 12.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.11",
-          "check": "pick:atomSiteAdp.type.11=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 13.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.12",
-          "check": "pick:atomSiteAdp.type.12=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **beta** as the ADP type of site 14.",
-          "page": "structure",
-          "target": "atomSiteAdp.type.13",
-          "check": "pick:atomSiteAdp.type.13=beta",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **Atomic displacement** as the category filter above the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.category",
-          "check": "pick:parameters.category=Atomic displacement",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Click the **Free** column header of the **Parameters** table.",
-          "page": "analysis",
-          "target": "parameters.freeHeader",
-          "check": "free-menu",
-          "tab": "basic"
-        },
-        {
-          "title": "Anisotropic displacements",
-          "text": "Choose **Free · all**.",
-          "page": "analysis",
-          "target": "parameters.freeHeader.free",
-          "check": "free-choice:free:Atomic displacement",
-          "tab": "basic"
-        },
-        {
-          "title": "Fit: Anisotropic displacements",
-          "text": "Press **Fit** in the status bar.",
-          "page": "analysis",
-          "target": "statusBar.fit.button",
-          "check": "fit-done",
-          "expectFree": [
-            "experiments[senju_1].extinction.coefficient_11",
-            "experiments[senju_1].extinction.coefficient_22",
-            "experiments[senju_1].extinction.coefficient_33",
-            "experiments[senju_1].linked_structures[taurine].scale",
-            "experiments[senju_2].linked_structures[taurine].scale",
-            "experiments[senju_3].linked_structures[taurine].scale",
-            "experiments[senju_4].linked_structures[taurine].scale",
-            "experiments[senju_5].linked_structures[taurine].scale",
-            "experiments[senju_6].linked_structures[taurine].scale",
-            "structure.atom_site_aniso[C1].adp_11",
-            "structure.atom_site_aniso[C1].adp_12",
-            "structure.atom_site_aniso[C1].adp_13",
-            "structure.atom_site_aniso[C1].adp_22",
-            "structure.atom_site_aniso[C1].adp_23",
-            "structure.atom_site_aniso[C1].adp_33",
-            "structure.atom_site_aniso[C2].adp_11",
-            "structure.atom_site_aniso[C2].adp_12",
-            "structure.atom_site_aniso[C2].adp_13",
-            "structure.atom_site_aniso[C2].adp_22",
-            "structure.atom_site_aniso[C2].adp_23",
-            "structure.atom_site_aniso[C2].adp_33",
-            "structure.atom_site_aniso[H11].adp_11",
-            "structure.atom_site_aniso[H11].adp_12",
-            "structure.atom_site_aniso[H11].adp_13",
-            "structure.atom_site_aniso[H11].adp_22",
-            "structure.atom_site_aniso[H11].adp_23",
-            "structure.atom_site_aniso[H11].adp_33",
-            "structure.atom_site_aniso[H12].adp_11",
-            "structure.atom_site_aniso[H12].adp_12",
-            "structure.atom_site_aniso[H12].adp_13",
-            "structure.atom_site_aniso[H12].adp_22",
-            "structure.atom_site_aniso[H12].adp_23",
-            "structure.atom_site_aniso[H12].adp_33",
-            "structure.atom_site_aniso[H1].adp_11",
-            "structure.atom_site_aniso[H1].adp_12",
-            "structure.atom_site_aniso[H1].adp_13",
-            "structure.atom_site_aniso[H1].adp_22",
-            "structure.atom_site_aniso[H1].adp_23",
-            "structure.atom_site_aniso[H1].adp_33",
-            "structure.atom_site_aniso[H21].adp_11",
-            "structure.atom_site_aniso[H21].adp_12",
-            "structure.atom_site_aniso[H21].adp_13",
-            "structure.atom_site_aniso[H21].adp_22",
-            "structure.atom_site_aniso[H21].adp_23",
-            "structure.atom_site_aniso[H21].adp_33",
-            "structure.atom_site_aniso[H22].adp_11",
-            "structure.atom_site_aniso[H22].adp_12",
-            "structure.atom_site_aniso[H22].adp_13",
-            "structure.atom_site_aniso[H22].adp_22",
-            "structure.atom_site_aniso[H22].adp_23",
-            "structure.atom_site_aniso[H22].adp_33",
-            "structure.atom_site_aniso[H2].adp_11",
-            "structure.atom_site_aniso[H2].adp_12",
-            "structure.atom_site_aniso[H2].adp_13",
-            "structure.atom_site_aniso[H2].adp_22",
-            "structure.atom_site_aniso[H2].adp_23",
-            "structure.atom_site_aniso[H2].adp_33",
-            "structure.atom_site_aniso[H3].adp_11",
-            "structure.atom_site_aniso[H3].adp_12",
-            "structure.atom_site_aniso[H3].adp_13",
-            "structure.atom_site_aniso[H3].adp_22",
-            "structure.atom_site_aniso[H3].adp_23",
-            "structure.atom_site_aniso[H3].adp_33",
-            "structure.atom_site_aniso[N1].adp_11",
-            "structure.atom_site_aniso[N1].adp_12",
-            "structure.atom_site_aniso[N1].adp_13",
-            "structure.atom_site_aniso[N1].adp_22",
-            "structure.atom_site_aniso[N1].adp_23",
-            "structure.atom_site_aniso[N1].adp_33",
-            "structure.atom_site_aniso[O1].adp_11",
-            "structure.atom_site_aniso[O1].adp_12",
-            "structure.atom_site_aniso[O1].adp_13",
-            "structure.atom_site_aniso[O1].adp_22",
-            "structure.atom_site_aniso[O1].adp_23",
-            "structure.atom_site_aniso[O1].adp_33",
-            "structure.atom_site_aniso[O2].adp_11",
-            "structure.atom_site_aniso[O2].adp_12",
-            "structure.atom_site_aniso[O2].adp_13",
-            "structure.atom_site_aniso[O2].adp_22",
-            "structure.atom_site_aniso[O2].adp_23",
-            "structure.atom_site_aniso[O2].adp_33",
-            "structure.atom_site_aniso[O3].adp_11",
-            "structure.atom_site_aniso[O3].adp_12",
-            "structure.atom_site_aniso[O3].adp_13",
-            "structure.atom_site_aniso[O3].adp_22",
-            "structure.atom_site_aniso[O3].adp_23",
-            "structure.atom_site_aniso[O3].adp_33",
-            "structure.atom_site_aniso[S1].adp_11",
-            "structure.atom_site_aniso[S1].adp_12",
-            "structure.atom_site_aniso[S1].adp_13",
-            "structure.atom_site_aniso[S1].adp_22",
-            "structure.atom_site_aniso[S1].adp_23",
-            "structure.atom_site_aniso[S1].adp_33",
-            "structure.atom_sites[C1].fract_x",
-            "structure.atom_sites[C1].fract_y",
-            "structure.atom_sites[C1].fract_z",
-            "structure.atom_sites[C2].fract_x",
-            "structure.atom_sites[C2].fract_y",
-            "structure.atom_sites[C2].fract_z",
-            "structure.atom_sites[H11].fract_x",
-            "structure.atom_sites[H11].fract_y",
-            "structure.atom_sites[H11].fract_z",
-            "structure.atom_sites[H12].fract_x",
-            "structure.atom_sites[H12].fract_y",
-            "structure.atom_sites[H12].fract_z",
-            "structure.atom_sites[H1].fract_x",
-            "structure.atom_sites[H1].fract_y",
-            "structure.atom_sites[H1].fract_z",
-            "structure.atom_sites[H21].fract_x",
-            "structure.atom_sites[H21].fract_y",
-            "structure.atom_sites[H21].fract_z",
-            "structure.atom_sites[H22].fract_x",
-            "structure.atom_sites[H22].fract_y",
-            "structure.atom_sites[H22].fract_z",
-            "structure.atom_sites[H2].fract_x",
-            "structure.atom_sites[H2].fract_y",
-            "structure.atom_sites[H2].fract_z",
-            "structure.atom_sites[H3].fract_x",
-            "structure.atom_sites[H3].fract_y",
-            "structure.atom_sites[H3].fract_z",
-            "structure.atom_sites[N1].fract_x",
-            "structure.atom_sites[N1].fract_y",
-            "structure.atom_sites[N1].fract_z",
-            "structure.atom_sites[O1].fract_x",
-            "structure.atom_sites[O1].fract_y",
-            "structure.atom_sites[O1].fract_z",
-            "structure.atom_sites[O2].fract_x",
-            "structure.atom_sites[O2].fract_y",
-            "structure.atom_sites[O2].fract_z",
-            "structure.atom_sites[O3].fract_x",
-            "structure.atom_sites[O3].fract_y",
-            "structure.atom_sites[O3].fract_z",
-            "structure.atom_sites[S1].fract_x",
-            "structure.atom_sites[S1].fract_y",
-            "structure.atom_sites[S1].fract_z"
-          ],
-          "expectWholeBackground": [],
-          "expectChi2": 30.27,
           "expectChi2Tolerance": 0.01
         },
         {
