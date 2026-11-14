@@ -8,51 +8,115 @@ is staged on the 2.3 K pattern, the scan's template; then each later pattern sta
 previous result. The cobalt moments stay free at every temperature and fall towards zero near
 the Néel temperature, about 50 K.
 
-The project is the catalogue case `pd-neut-cwl_cosio-d20_scan-213f`, the one the command line
-and the app's Examples open. Its two Co sites share one displacement from the start.
+It builds the catalogue case `pd-neut-cwl_cosio-d20_scan-213f` step by step: the same project the
+command line fits and the app's Examples open. Its two Co sites share one displacement.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_cosio-d20_scan-213f/structures pd-neut-cwl_cosio-d20_scan-213f/experiments pd-neut-cwl_cosio-d20_scan-213f/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_cosio-d20_scan-213f
+_metadata.title "Co₂SiO₄ [Pnma.1] · D20 @ ILL"
+_metadata.description "Cooling scan · 213 patterns from 497.4 to 2.3 K, fitted from 2.3 K up with the magnetic structure"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_cosio-d20_scan-213f
+    edi download-data pd-neut-cwl_cosio-d20_scan-213f-cosio
+    mv data/pd-neut-cwl_cosio-d20_scan-213f-cosio.edi pd-neut-cwl_cosio-d20_scan-213f/structures/cosio.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_cosio-d20_scan-213f
+    python -m edi download-data pd-neut-cwl_cosio-d20_scan-213f-cosio
+    mv data/pd-neut-cwl_cosio-d20_scan-213f-cosio.edi pd-neut-cwl_cosio-d20_scan-213f/structures/cosio.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/d20.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-cwl_cosio-d20_scan-213f-d20
+    mv data/pd-neut-cwl_cosio-d20_scan-213f-d20.edi pd-neut-cwl_cosio-d20_scan-213f/experiments/d20.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-cwl_cosio-d20_scan-213f-d20
+    mv data/pd-neut-cwl_cosio-d20_scan-213f-d20.edi pd-neut-cwl_cosio-d20_scan-213f/experiments/d20.edi
+    ```
+
+Download the scan's patterns, one archive, and unpack them into the folder the analysis declares:
+
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-cwl_cosio-d20_scan-213f-scan
+    mkdir -p pd-neut-cwl_cosio-d20_scan-213f/experiments/d20_scan
+    tar -xf data/pd-neut-cwl_cosio-d20_scan-213f-scan.zip -C pd-neut-cwl_cosio-d20_scan-213f/experiments/d20_scan
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-cwl_cosio-d20_scan-213f-scan
+    mkdir -p pd-neut-cwl_cosio-d20_scan-213f/experiments/d20_scan
+    tar -xf data/pd-neut-cwl_cosio-d20_scan-213f-scan.zip -C pd-neut-cwl_cosio-d20_scan-213f/experiments/d20_scan
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_twotheta_offset 0.29433
-_peak.broad_gauss_u 0.273527
-_peak.broad_gauss_v -0.589718
-_peak.broad_gauss_w 0.413007
-1 6 603.5
-2 6.5 585
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.descent fast_descent
+
+_fitting_mode.type sequential
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Co1 cosio.atom_site.Co1.adp_iso
+biso_Co2 cosio.atom_site.Co2.adp_iso
+
+loop_
+_constraint.id
+_constraint.expression
+biso_Co2 "biso_Co2 = biso_Co1"
+
+_sequential_fit.data_dir experiments/d20_scan
+_sequential_fit.file_pattern *.dat
+_sequential_fit.reverse true
+
+loop_
+_sequential_fit_extract.id
+_sequential_fit_extract.target
+_sequential_fit_extract.pattern
+_sequential_fit_extract.required
+temperature diffrn.ambient_temperature ^TEMP\s+([0-9.]+) true
+
+_edi.schema_version 3
 ```
-
-The same for every other row (15 more).
-
-In `structures/cosio.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 10.3081
-_cell.length_b 6.00219
-_cell.length_c 4.78739
-Co1 Co 0 0 0 a 4 1 0.269 Biso
-Co2 Co 0.2809 0.25 0.9836 c 4 1 0.269 Biso
-```
-
-The same for every other row (6 more).
 
 ## Scale, 2θ zero and cell
 

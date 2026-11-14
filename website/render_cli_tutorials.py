@@ -292,6 +292,25 @@ def build(case: str, files: dict[str, list[str]]) -> list[str]:
         ),
         downloads(case, 'experiments', experiments),
     ]
+    scan = re.search(r'^_sequential_fit\.data_dir\s+(\S+)', analysis, flags=re.MULTILINE)
+    if scan:
+        folder = f'{case}/{scan.group(1)}'
+        lines = [
+            f'{{edi}} download-data {case}-scan',
+            f'mkdir -p {folder}',
+            f'tar -xf data/{case}-scan.zip -C {folder}',
+        ]
+        parts += [
+            (
+                "Download the scan's patterns, one archive, and unpack them into the folder the "
+                'analysis declares:\n'
+            ),
+            '=== "Standalone executable"\n\n    ```console\n'
+            + ''.join(f'    {line.format(edi="edi")}\n' for line in lines)
+            + '    ```\n\n=== "Python package"\n\n    ```console\n'
+            + ''.join(f'    {line.format(edi="python -m edi")}\n' for line in lines)
+            + '    ```\n',
+        ]
     if analysis:
         parts += [
             'Then write how the project is fitted in `analysis/analysis.edi`:\n',

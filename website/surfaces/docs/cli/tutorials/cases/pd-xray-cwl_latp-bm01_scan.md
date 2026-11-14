@@ -5,69 +5,127 @@ The same staged fit as the Python tutorial, on the command line. The command lin
 Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at ESRF,
 one after another, with linked displacement parameters.
 
-The project is the catalogue case `pd-xray-cwl_latp-bm01_scan`, the one the command line and the
-app's Examples open. Al shares Ti's site, coordinate and displacement, and the impurity phase's
-displacements are shared, from the start.
+It builds the catalogue case `pd-xray-cwl_latp-bm01_scan` step by step: the same project the
+command line fits and the app's Examples open. Al shares Ti's site, coordinate and displacement,
+and the impurity phase's displacements are shared,.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-xray-cwl_latp-bm01_scan/structures pd-xray-cwl_latp-bm01_scan/experiments pd-xray-cwl_latp-bm01_scan/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name             pd-xray-cwl_latp-bm01_scan
+_metadata.title "LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF"
+_metadata.description "3 phases · 73 synchrotron patterns · Linked displacement parameters"
+_metadata.authors .
+_metadata.created          "22 Oct 2026 09:50:09"
+_metadata.last_modified    "22 Oct 2026 14:01:42"
+_su_format.rule iucr_19
+```
+
+## Define the structures
+
+Download the structures from EasyDiffraction's collection into `structures`. Each CIF gives its space group, cell and atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-xray-cwl_latp-bm01_scan
+    edi download-data pd-xray-cwl_latp-bm01_scan-alpo4_c2221
+    mv data/pd-xray-cwl_latp-bm01_scan-alpo4_c2221.edi pd-xray-cwl_latp-bm01_scan/structures/alpo4_c2221.edi
+    edi download-data pd-xray-cwl_latp-bm01_scan-alpo4_p63mc
+    mv data/pd-xray-cwl_latp-bm01_scan-alpo4_p63mc.edi pd-xray-cwl_latp-bm01_scan/structures/alpo4_p63mc.edi
+    edi download-data pd-xray-cwl_latp-bm01_scan-latp
+    mv data/pd-xray-cwl_latp-bm01_scan-latp.edi pd-xray-cwl_latp-bm01_scan/structures/latp.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-xray-cwl_latp-bm01_scan
+    python -m edi download-data pd-xray-cwl_latp-bm01_scan-alpo4_c2221
+    mv data/pd-xray-cwl_latp-bm01_scan-alpo4_c2221.edi pd-xray-cwl_latp-bm01_scan/structures/alpo4_c2221.edi
+    python -m edi download-data pd-xray-cwl_latp-bm01_scan-alpo4_p63mc
+    mv data/pd-xray-cwl_latp-bm01_scan-alpo4_p63mc.edi pd-xray-cwl_latp-bm01_scan/structures/alpo4_p63mc.edi
+    python -m edi download-data pd-xray-cwl_latp-bm01_scan-latp
+    mv data/pd-xray-cwl_latp-bm01_scan-latp.edi pd-xray-cwl_latp-bm01_scan/structures/latp.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/bm01.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-xray-cwl_latp-bm01_scan-bm01
+    mv data/pd-xray-cwl_latp-bm01_scan-bm01.edi pd-xray-cwl_latp-bm01_scan/experiments/bm01.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-xray-cwl_latp-bm01_scan-bm01
+    mv data/pd-xray-cwl_latp-bm01_scan-bm01.edi pd-xray-cwl_latp-bm01_scan/experiments/bm01.edi
+    ```
+
+Download the scan's patterns, one archive, and unpack them into the folder the analysis declares:
+
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-xray-cwl_latp-bm01_scan-scan
+    mkdir -p pd-xray-cwl_latp-bm01_scan/experiments/bm01_scan
+    tar -xf data/pd-xray-cwl_latp-bm01_scan-scan.zip -C pd-xray-cwl_latp-bm01_scan/experiments/bm01_scan
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-xray-cwl_latp-bm01_scan-scan
+    mkdir -p pd-xray-cwl_latp-bm01_scan/experiments/bm01_scan
+    tar -xf data/pd-xray-cwl_latp-bm01_scan-scan.zip -C pd-xray-cwl_latp-bm01_scan/experiments/bm01_scan
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_twotheta_offset -0.0388
-_peak.broad_gauss_u 0.019
-_peak.broad_gauss_v 0.019
-_peak.broad_gauss_w 0.0156
-_peak.mixing_eta_0 0.374
-_peak.asym_beba_a0 0.088
-_peak.asym_beba_b0 0.0043
-4 4.0117 37000000
-5 5.3148 41700000
+_fitting_mode.type sequential
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+z_Ti1 latp.atom_site.Ti1.fract_z
+z_Al1 latp.atom_site.Al1.fract_z
+b_Ti1 latp.atom_site.Ti1.adp_iso
+b_Al1 latp.atom_site.Al1.adp_iso
+b2_Al1 alpo4_c2221.atom_site.Al1.adp_iso
+b2_P1 alpo4_c2221.atom_site.P1.adp_iso
+b2_O1 alpo4_c2221.atom_site.O1.adp_iso
+b2_O2 alpo4_c2221.atom_site.O2.adp_iso
+
+loop_
+_constraint.id
+_constraint.expression
+z_Al1 "z_Al1 = z_Ti1"
+b_Al1 "b_Al1 = b_Ti1"
+b2_P1 "b2_P1 = b2_Al1"
+b2_O1 "b2_O1 = b2_Al1"
+b2_O2 "b2_O2 = b2_Al1"
+
+_sequential_fit.data_dir experiments/bm01_scan
+_sequential_fit.file_pattern *.dat
+_sequential_fit.reverse true
+_sequential_fit.template_file latp_312.dat
+
+_edi.schema_version 3
 ```
-
-The same for every other row (28 more).
-
-In `structures/alpo4_c2221.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 6.97
-_cell.length_b 7.11
-_cell.length_c 7.004
-```
-
-In `structures/alpo4_p63mc.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 4.983
-_cell.length_c 9.504
-```
-
-In `structures/latp.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 8.4953
-_cell.length_c 20.8268
-Ti1 Ti 0 0 0.14184 c 12 0.85 0.33 Biso
-P1 P 0.2877 0 0.25 e 18 1 0.23 Biso
-```
-
-The same for every other row (2 more).
 
 ## Scales, 2θ zero and cells
 
