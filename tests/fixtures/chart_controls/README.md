@@ -52,3 +52,8 @@ the independent Oklab formulas and ADR-0084 position rule. Both active palettes
 retain every structure-count and light/dark boundary, including overflow. It never
 reads current product colour output. `owner.json` and `bragg.hpp` retain the earlier
 historical palettes unchanged; the no-argument generator still reproduces those.
+
+Python report/source-table observers now consume the same hash-checked published
+approval as the native Bragg fixture, including each palette's three curve roles.
+The historical five-palette capture remains unchanged. Role positions and independent
+Oklab overflow arithmetic continue to cover both active palettes and both themes.

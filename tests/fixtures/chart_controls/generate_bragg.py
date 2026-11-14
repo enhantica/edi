@@ -42,7 +42,21 @@ def published_palettes():
             'name': name,
             'light': [r[1] for r in rows],
             'dark': [r[2] for r in rows],
+            'roles': {
+                role: {'light': light, 'dark': dark}
+                for role, light, dark in re.findall(
+                    r'^\| (total_calculation|background|difference) \| 0 \| '
+                    r'`(#[0-9A-F]{6})` \| `(#[0-9A-F]{6})` \|$',
+                    section,
+                    re.MULTILINE,
+                )
+            },
         })
+    if any(
+        set(palette['roles']) != {'total_calculation', 'background', 'difference'}
+        for palette in palettes
+    ):
+        raise ValueError('Every approved palette retains all three curve roles')
     return palettes
 
 
