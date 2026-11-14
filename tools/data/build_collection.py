@@ -241,12 +241,16 @@ REFLECTION_COLUMNS = (
 def measured_reflections(text: str) -> str:
     """Export the existing measured reflection tokens, without calculated columns."""
     block = gemmi.cif.read_string(text).sole_block()
-    table = block.find(list(REFLECTION_COLUMNS))
+    # Time-of-flight reflections each have their own wavelength, which the data load needs.
+    columns = list(REFLECTION_COLUMNS)
+    if block.find_values('_refln.wavelength'):
+        columns.append('_refln.wavelength')
+    table = block.find(columns)
     if not table:
         return ''
     return (
         'data_reflections\n\nloop_\n'
-        + '\n'.join(REFLECTION_COLUMNS)
+        + '\n'.join(columns)
         + '\n'
         + ''.join(' '.join(row) + '\n' for row in table)
     )
