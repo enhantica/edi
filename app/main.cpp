@@ -9,6 +9,7 @@
 #include <QScreen>
 #include <QSettings>
 #include <QQuickWindow>
+#include <QQuickItem>
 #include <QStyleHints>
 #include <QSurfaceFormat>
 #include <QtQml/qqmlextensionplugin.h>
@@ -27,7 +28,7 @@
 #ifndef __EMSCRIPTEN__
 void start_installer_smoke(QQuickWindow&, const QString&);
 #ifdef Q_OS_MACOS
-void hide_mac_window_title(QWindow* window);
+void merge_mac_title_bar(QWindow* window, double bar_height);
 #endif
 #endif
 
@@ -144,7 +145,10 @@ int main(int argc, char* argv[]) {
         merged->setFlag(Qt::ExpandedClientAreaHint, true);
         merged->setFlag(Qt::NoTitleBarBackgroundHint, true);
 #ifdef Q_OS_MACOS
-        hide_mac_window_title(merged);
+        // The traffic lights sit in the app bar, centred on its row (the bar's height is read from the QML).
+        const QVariant bar = merged->property("appBar");
+        if (auto* item = bar.value<QQuickItem*>())
+            merge_mac_title_bar(merged, item->height());
 #endif
         QTimer::singleShot(1500, merged, [merged] {
             const QMargins m = merged->safeAreaMargins();

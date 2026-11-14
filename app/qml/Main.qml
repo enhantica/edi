@@ -33,14 +33,20 @@ EaComponents.ApplicationWindow {
             return;
         const rows = appBar.children;
         const left = rows[0], tabs = rows[1], right = rows[2];
+        if (Qt.platform.os === "osx") {
+            // macOS: the traffic lights move into the app bar's row (mac_titlebar.mm); the left buttons start
+            // after them and the bar keeps its height.
+            const leftBase = left.anchors.leftMargin;
+            left.anchors.leftMargin = leftBase + 70;
+            return;
+        }
+        // Windows: the system buttons keep a strip at the top of the app bar and the groups sit below it.
         const strip = () => appBar.SafeArea.margins.top;
-        const baseHeight = appBar.height;
-        // The groups sit 16 points (32 pixels on a Retina screen) below the system buttons' strip.
         const gap = 16;
+        const baseHeight = appBar.height;
         appBar.height = Qt.binding(() => baseHeight + strip() + gap);
         for (const row of [left, tabs, right])
             row.anchors.verticalCenterOffset = Qt.binding(() => (strip() + gap) / 2);
-        console.info("merged title bar: strip", strip());
     }
     // Dragging the empty app bar moves the window, and a double click maximizes or restores it, as a title bar does.
     // Starts on press, before any button or tab can take the press, so a drag works anywhere on the empty bar.
