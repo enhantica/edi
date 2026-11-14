@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
-import QtQuick.Effects
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
@@ -10,7 +9,8 @@ import edi.app
 // The intro at start (the owner, 2026-11-14), after the 2020 app's Home page (easyDiffraction 0.x, Home.qml): over a
 // plain backdrop, "Making diffraction data analysis easy" fades in, every word but "easy" and "diffraction" fades out,
 // and those two move to their places in the Home wordmark, "diffraction" turning SemiBold on the way. The round mark
-// then rolls in from beyond the left edge, spinning fast and blurred by its speed, and stops with a hard brake. Last,
+// then rolls in from beyond the left edge, very fast at first and braking hard like a sports car, its inner circles
+// shown as a 24 fps film shows a wheel, so they seem to turn backwards while it clearly rolls forwards. Last,
 // the backdrop fades, so the rest of the window fades in around the landed wordmark. Skip jumps to the end; Disable
 // also turns Preferences' Home page animations off.
 Item {
@@ -27,13 +27,27 @@ Item {
     property real roll: 0
     property real reveal: 0
 
-    // The mark coasts at one speed, then brakes at a steady rate over the last fifth of its time.
-    readonly property real brakeStart: 0.8
-    readonly property real rolled: {
-        const p = roll, p0 = brakeStart, v = 2 / (1 + p0);
-        return p < p0 ? v * p : v * p0 + v * (p - p0) - v * (p - p0) * (p - p0) / (2 * (1 - p0));
+    // The mark's entry (the owner, 2026-11-14): an ease-out (quartic) over the roll's time, so it starts very fast and
+    // brakes hard, and it rolls without slipping, its angle the distance travelled over its radius.
+    readonly property real rollTime: 1.2  // s, the roll animation's duration
+    readonly property real rolled: 1 - Math.pow(1 - roll, 4)
+    readonly property real speed: Math.pow(1 - roll, 3)  // the speed as a share of the first speed
+    // The film look: the six circles around the centre repeat every 60 degrees, so a turn of just under a multiple of
+    // 60 degrees per 24 fps frame looks like a slow turn backwards. The first speed is chosen so, with the start far
+    // enough left to begin beyond the window's edge; braking then passes through still and slowly forwards.
+    readonly property real filmRate: 24
+    readonly property real frameTurn: {
+        const radius = markSize / 2;
+        const needed = markEnd.x + markSize * 1.2;  // from beyond the left edge
+        const perPeriod = (60 - 3) * Math.PI / 180 * filmRate * radius * rollTime / 4;
+        return (60 * Math.max(1, Math.ceil(needed / perPeriod)) - 3) * Math.PI / 180;  // rad per frame at the start
     }
-    readonly property real speed: roll <= 0 || roll >= 1 ? 0 : roll < brakeStart ? 1 : (1 - roll) / (1 - brakeStart)
+    readonly property real distance: frameTurn * filmRate * (markSize / 2) * rollTime / 4
+    // The inner circles' angle, in degrees, sampled at the film's frame times; the position stays smooth.
+    function turnAt(progress) {
+        return (distance * (1 - Math.pow(1 - progress, 4)) - distance) / (markSize / 2) * 180 / Math.PI;
+    }
+    readonly property real filmTurn: turnAt(Math.floor(roll * rollTime * filmRate) / (rollTime * filmRate))
 
     readonly property real pixelSize: wordmark ? wordmark.namePixelSize : 40
     readonly property real lineBaseline: height / 2
@@ -127,30 +141,34 @@ Item {
         text: ApplicationInfo.namePrefixForLogo
     }
 
-    // The mark, rolling: its turn follows the distance it covers, six turns in all.
+    // The mark, rolling. A light rotational blur trails the circles by part of one frame's turn while it is fast.
     Item {
+        id: rollingMark
+
+        readonly property real trail: Math.min(12, intro.frameTurn * 180 / Math.PI * intro.speed) * (intro.speed > 0.05 ? 1 : 0)
+
         width: intro.markSize
         height: width
-        x: -width * 1.2 + (intro.markEnd.x + width * 1.2) * intro.rolled
+        x: intro.markEnd.x - intro.distance * (1 - intro.rolled)
         y: intro.markEnd.y
         visible: intro.roll > 0
 
-        Image {
-            // App.svg's circle spans 1020 of its 1024 units, as in Wordmark.
-            width: parent.width * 1024 / 1020
-            height: width
-            x: (parent.width - width) / 2
-            y: x
-            rotation: 360 * 6 * (intro.rolled - 1)
-            source: Qt.resolvedUrl("../../resources/logo/App.svg")
-            sourceSize: Qt.size(width, height)
-            antialiasing: true
-        }
-        layer.enabled: intro.speed > 0
-        layer.effect: MultiEffect {
-            blurEnabled: true
-            blurMax: 16
-            blur: 0.7 * intro.speed
+        Repeater {
+            model: 4
+            Image {
+                required property int index
+                // App.svg's circle spans 1020 of its 1024 units, as in Wordmark.
+                width: rollingMark.width * 1024 / 1020
+                height: width
+                x: (rollingMark.width - width) / 2
+                y: x
+                rotation: intro.filmTurn - rollingMark.trail * index / 3
+                opacity: index === 0 ? 1 : rollingMark.trail > 0 ? 0.25 : 0
+                z: index
+                source: Qt.resolvedUrl("../../resources/logo/App.svg")
+                sourceSize: Qt.size(width, height)
+                antialiasing: true
+            }
         }
     }
 
@@ -234,7 +252,7 @@ Item {
             target: intro
             property: "roll"
             to: 1
-            duration: 1200
+            duration: intro.rollTime * 1000
         }
         NumberAnimation {
             target: intro
