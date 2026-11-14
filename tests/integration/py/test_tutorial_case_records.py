@@ -2,6 +2,7 @@
 
 import json
 import shlex
+import shutil
 
 import pytest
 import yaml
@@ -34,6 +35,62 @@ def test_owner_inventory_has_exactly_twenty_four_unique_case_records():
     )
     assert [row['order'] for row in read_records()] == list(range(1, 25)), (
         'Gate 1: every record carries its unique registry position'
+    )
+
+
+@pytest.mark.parametrize('case', CASES)
+def test_case_record_retains_its_complete_authored_provenance(case):
+    document = ROOT / 'docs/user/cli' / case / 'PROVENANCE.md'
+    assert document.is_file()
+    assert case_record(case).get('provenance') == document.read_text(encoding='utf-8'), (
+        'The portable case record must retain its source and uncertainty disclosures exactly'
+    )
+
+
+@pytest.mark.parametrize('state', ['missing', 'empty'])
+def test_case_checker_refuses_missing_authored_provenance(tmp_path, state):
+    from tools.checks import case_records  # noqa: PLC0415 - exercise the real producer/checker
+
+    case = 'pd-neut-cwl_lbco-hrpt'
+    folder = tmp_path / 'docs/user/cli' / case
+    shutil.copytree(ROOT / 'docs/user/cli' / case, folder)
+    provenance = folder / 'PROVENANCE.md'
+    if state == 'missing':
+        provenance.unlink()
+    else:
+        provenance.write_text('')
+    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())
+    registry['projects'] = [row for row in registry['projects'] if row['id'] == case]
+    (folder.parent / 'projects.yml').write_text(yaml.safe_dump(registry))
+    vocabulary = tmp_path / 'app/examples'
+    vocabulary.mkdir(parents=True)
+    for name in ('metadata.json', 'tags.json'):
+        shutil.copyfile(ROOT / 'app/examples' / name, vocabulary / name)
+    metadata = json.loads((vocabulary / 'metadata.json').read_text())
+    metadata['examples'] = {case: metadata['examples'][case]}
+    (vocabulary / 'metadata.json').write_text(json.dumps(metadata))
+    assert case_records.records(tmp_path)[0]['provenance'] in {None, ''}
+    assert f'{case}: has no authored PROVENANCE.md disclosure' in case_records.problems(tmp_path)
+
+
+def test_tutorial_intro_retains_caveats_without_code_or_stage_content(monkeypatch):
+    monkeypatch.syspath_prepend(str(ROOT / 'website'))
+    from render_cli_tutorials import introduction  # noqa: PLC0415 - passive source renderer
+
+    source = """# %% [markdown]
+# # Title
+#
+# The 2.5 K uncertainties are estimated from 55 K.
+# Fitted moment uncertainties inherit that estimate.
+# %% [markdown]
+# ## Import the library
+# Stage content must stay out.
+# %%
+raise RuntimeError('code must not execute')
+"""
+    assert introduction(source) == (
+        'The 2.5 K uncertainties are estimated from 55 K.\n'
+        'Fitted moment uncertainties inherit that estimate.'
     )
 
 

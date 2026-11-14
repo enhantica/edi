@@ -75,7 +75,7 @@ def tutorials(case: str) -> dict[str, str]:
     return {
         'python': f'docs/user/tutorials/{case}.ipynb',
         'app': case,
-        'app_docs': f'docs/user/app/{case}.md',
+        'app_docs': f'website/surfaces/docs/application/tutorials/cases/{case}.md',
         'cli_docs': f'{CLI_DIR}/{case}/index.md',
     }
 
@@ -110,6 +110,7 @@ def record(root: Path, row: dict, order: int) -> dict:
     folder = root / CLI_DIR / case
     project = folder / 'project'
     expected_path = folder / 'expected.json'
+    provenance = folder / 'PROVENANCE.md'
     expected = json.loads(expected_path.read_text()) if expected_path.is_file() else {}
     structure_from = 'hand' if row.get('structure-by-hand') is True else 'collection'
     case_tags = tags(root, case)
@@ -117,6 +118,7 @@ def record(root: Path, row: dict, order: int) -> dict:
         'schema': SCHEMA,
         'id': case,
         'order': order,
+        'provenance': provenance.read_text(encoding='utf-8') if provenance.is_file() else None,
         # The page title, '<sample> on <instrument>', and the one-line navigation title,
         # '<short sample name> <code>' (the owner, 2026-11-08).
         'title': str(row.get('title', '')),
@@ -191,6 +193,8 @@ def problems(root: Path = ROOT) -> list[str]:
         seen.setdefault(key, built['id'])
     for built in built_records:
         case = built['id']
+        if not built['provenance']:
+            out.append(f'{case}: has no authored PROVENANCE.md disclosure')
         if not built['title'] or not built['nav_title']:
             out.append(f'{case}: {REGISTRY} gives no title or no short-name')
         if built['diffraction_lib'] is None:

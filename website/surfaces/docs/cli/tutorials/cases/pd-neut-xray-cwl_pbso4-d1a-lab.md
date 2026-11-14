@@ -2,6 +2,12 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Fit PbSO₄ to two patterns at once, the Rietveld round robin's neutron pattern from D1A at ILL
+and its laboratory X-ray pattern: one structure, two experiments.
+
+The project is the catalogue case `pd-neut-xray-cwl_pbso4-d1a-lab`, the one the command line and
+the app's Examples open.
+
 ## Get the project
 
 === "Standalone executable"

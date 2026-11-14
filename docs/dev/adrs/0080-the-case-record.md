@@ -44,8 +44,9 @@ artefacts read it instead of restating it, and a check can refuse a case that la
    | `tags` | the case's tags as the app's Examples list shows them, in its order: each a facet, value and label (`{facet, value, label}`), the facets and labels from `app/examples/tags.json` and the values the catalogue derives from the case's project (`app/examples/metadata.json`, `tools/dev/example_metadata.py`). The record is their one source: the app's Examples list and Tutorials dialog, the docs tutorial and examples pages and each notebook's header show exactly these, with the same names, colours and icons, and a check compares every surface with the record (the owner, 2026-11-08) |
 | `section`, `section_icon` | the tutorial section every interface groups the case under, and its Font Awesome icon, in this order (the owner, 2026-11-08): Getting started (`rocket`, the case whose structure is built by hand), Simulation (`calculator`), Multiple datasets (`layer-group`, a joint or scan fit), Single crystal (`cube`), else Powder (`chart-area`); the first rule that holds decides, from the record's own `structure_from` and `tags`. The overview pages, the navigation, the app's lists and the notebooks show these names and icons |
 | `structure_from`, `data_from` | the row's `structure-by-hand: true` (the structure is built step by step: `hand`; else loaded from the collection's CIF: `collection`) and `data-from-file: true` (the data also come from a file on the user's disk: `[collection, file]`; else `[collection]`), the same on every interface (the owner, 2026-11-08; the command line cannot build a structure yet, so its page loads the starting project there) |
+| `provenance` | the complete authored `PROVENANCE.md` text, including data-source and estimated-uncertainty disclosures; missing or empty provenance refuses the record check. Portable collection records retain that text unchanged |
 | `pin` | the `regression-pin` quantities of the case's `expected.json`, with its `source.pins` block: the edi commit the values came from and the reason they were last changed |
-   | `tutorials` | by the case id: `docs/user/tutorials/<id>.ipynb`, the app's built-in tutorial `<id>`, `docs/user/app/<id>.md`, `docs/user/cli/<id>/index.md` |
+   | `tutorials` | by the case id: `docs/user/tutorials/<id>.ipynb`, the app's built-in tutorial `<id>`, `website/surfaces/docs/application/tutorials/cases/<id>.md`, `docs/user/cli/<id>/index.md` |
 
    The pins are regression pins: they show that the three interfaces and later versions agree, not that the values
    are right. Correctness stays with the FullProf references in the same `expected.json` (ADR-0048 §10).
@@ -85,3 +86,10 @@ order: simulations first, then powder fits/scans and the declared single-crystal
 cases. Source-hash transitions for the two CoSiO powder cases admit only the
 previously approved ADP free flags and removal of the retired stop-rule field;
 all prior experimental and displayed-value expectations remain exact.
+
+
+Application and Command line page renderers retain the authored Python tutorial's
+opening context before their interface instructions. This carries data limitations
+and uncertainty estimates into each published interface, rather than discarding them
+when writing stage screenshots or file-edit instructions. Existing numerical output
+blocks are retained when adding that context to committed pages.

@@ -6,6 +6,12 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. Its structure and experiment come from EasyDiffraction's collection with **Load ▾ From web…**, and each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+Fit the amino-sulfonic acid taurine to six time-of-flight neutron single-crystal datasets from
+SENJU at J-PARC together, each reflection measured at its own wavelength.
+
+The project is the catalogue case `sc-neut-tof_taurine-senju`, the one the command line and the
+app's Examples open. Banks 2 to 6 share bank 1's three extinction terms, from the start.
+
 ## Create a project
 
 Press **Start** on Home, then **Create a new project**, and give it a name.

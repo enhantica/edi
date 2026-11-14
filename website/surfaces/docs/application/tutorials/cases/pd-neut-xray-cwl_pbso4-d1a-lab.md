@@ -6,6 +6,12 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. Its structure and experiment come from EasyDiffraction's collection with **Load ▾ From web…**, and each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+Fit PbSO₄ to two patterns at once, the Rietveld round robin's neutron pattern from D1A at ILL
+and its laboratory X-ray pattern: one structure, two experiments.
+
+The project is the catalogue case `pd-neut-xray-cwl_pbso4-d1a-lab`, the one the command line and
+the app's Examples open.
+
 ## Create a project
 
 Press **Start** on Home, then **Create a new project**, and give it a name.

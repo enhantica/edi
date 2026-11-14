@@ -2,6 +2,11 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+This tutorial fits the olivine Co₂SiO₄ to constant-wavelength neutron powder data measured on
+D20 at the ILL. Its structure and its measured pattern come from EasyDiffraction's collection;
+the tutorial describes the experiment, links the two and fits the coordinates, the
+displacements and the oxygen occupancies.
+
 ## Get the project
 
 === "Standalone executable"

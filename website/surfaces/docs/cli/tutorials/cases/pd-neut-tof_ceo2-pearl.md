@@ -2,6 +2,12 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Fit the CeO₂ standard to time-of-flight neutron powder data from PEARL at ISIS: the calibration
+and the profile, with a polynomial background.
+
+The project is the catalogue case `pd-neut-tof_ceo2-pearl`, the one the command line and the
+app's Examples open.
+
 ## Get the project
 
 === "Standalone executable"

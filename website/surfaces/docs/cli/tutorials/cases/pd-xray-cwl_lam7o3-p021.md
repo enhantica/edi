@@ -2,6 +2,13 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Fit the high-entropy perovskite La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃, seven cations on one site, to
+synchrotron X-ray powder data from P02.1 at PETRA III.
+
+The project is the catalogue case `pd-xray-cwl_lam7o3-p021`, the one the command line and the
+app's Examples open. The seven metals sharing one site have one displacement, held by
+constraints from the start.
+
 ## Get the project
 
 === "Standalone executable"

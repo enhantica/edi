@@ -2,6 +2,11 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Fit two phases, La₀.₅Ba₀.₅CoO₃ and silicon, to a time-of-flight pattern simulated with McStas.
+
+The project is the catalogue case `pd-neut-tof_lbco-si-mcstas`, the one the command line and the
+app's Examples open.
+
 ## Get the project
 
 === "Standalone executable"

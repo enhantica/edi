@@ -6,6 +6,13 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. Its structure and experiment come from EasyDiffraction's collection with **Load ▾ From web…**, and each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+Calibrate the BEER instrument at ESS with two McStas-simulated banks of a ferrite and austenite
+duplex steel, fitted together: each bank has its own zero and resolution.
+
+The project is the catalogue case `pd-neut-tof_ferrite-austenite-beer`, the one the command line
+and the app's Examples open. Austenite's displacement follows ferrite's, and each phase's scale
+in bank n2 follows bank s2, from the start.
+
 ## Create a project
 
 Press **Start** on Home, then **Create a new project**, and give it a name.

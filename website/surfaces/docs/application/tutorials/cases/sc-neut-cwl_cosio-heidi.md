@@ -6,6 +6,15 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. Its structure and experiment come from EasyDiffraction's collection with **Load ▾ From web…**, and each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+Fit one Co₂SiO₄ crystal measured on HEiDi at MLZ at 300 K, 55 K and 2.5 K. Each temperature has
+its own structure and its own reflections, and the three are fitted independently: each fit sees
+only its own data and gives its own goodness of fit and uncertainties. At 2.5 K the cobalt
+moments order, and the magnetic structure is fitted too.
+
+The data are those of Sazonov et al., Acta Cryst. B 64 (2008) 661-668. The 2.5 K file has no
+usable uncertainties, so they are estimated from the 55 K data of the same crystal (see the
+case's provenance); the fitted 2.5 K uncertainties depend on that estimate.
+
 ## Create a project
 
 Press **Start** on Home, then **Create a new project**, and give it a name.

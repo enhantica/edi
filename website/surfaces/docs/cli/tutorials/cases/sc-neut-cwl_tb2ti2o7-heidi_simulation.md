@@ -2,6 +2,15 @@
 
 Nothing to fit: edi calculates from the model as the project holds it, as the Python tutorial does.
 
+Calculate the single-crystal neutron reflections of the pyrochlore Tb₂Ti₂O₇ on HEiDi at MLZ
+without any measured data. The structure, the wavelength and the extinction are in the project,
+and edi calculates every reflection up to the project's sin θ/λ limit.
+
+The project is the catalogue case `sc-neut-cwl_tb2ti2o7-heidi_simulation`: the files the command
+line calculates with
+`python -m edi calc docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project` and the app
+opens from its Examples.
+
 ## Get the project
 
 === "Standalone executable"

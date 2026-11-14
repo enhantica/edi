@@ -2,6 +2,14 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Fit the layered oxide LiNiO₂ to constant-wavelength neutron powder data from ECHIDNA at ANSTO.
+Li and Ni mix between two sites, held to full occupancy by constraints, and the profile has
+Finger-Cox-Jephcoat asymmetry.
+
+The project is the catalogue case `pd-neut-cwl_lmo-echidna`, the one the command line and the
+app's Examples open. Li and Ni share their sites through five relations (displacements and
+occupancies), kept from the start.
+
 ## Get the project
 
 === "Standalone executable"

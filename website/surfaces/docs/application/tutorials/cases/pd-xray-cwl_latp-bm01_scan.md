@@ -6,6 +6,13 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. A scan's patterns come with its project, so open it from EasyDiffraction's collection with **Project → Examples**; each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at ESRF,
+one after another, with linked displacement parameters.
+
+The project is the catalogue case `pd-xray-cwl_latp-bm01_scan`, the one the command line and the
+app's Examples open. Al shares Ti's site, coordinate and displacement, and the impurity phase's
+displacements are shared, from the start.
+
 ## Open the example
 
 Press **Start** on Home, search **Examples** on **Project** for **pd-xray-cwl_latp-bm01_scan** and open it.

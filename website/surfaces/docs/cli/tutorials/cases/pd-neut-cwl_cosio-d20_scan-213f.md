@@ -2,6 +2,15 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Fit the olivine Co₂SiO₄ with its magnetic structure to the whole D20 cooling scan, 213 patterns
+from 497.4 K down to 2.3 K, one after another and from the lowest temperature up. First the fit
+is staged on the 2.3 K pattern, the scan's template; then each later pattern starts from the
+previous result. The cobalt moments stay free at every temperature and fall towards zero near
+the Néel temperature, about 50 K.
+
+The project is the catalogue case `pd-neut-cwl_cosio-d20_scan-213f`, the one the command line
+and the app's Examples open. Its two Co sites share one displacement from the start.
+
 ## Get the project
 
 === "Standalone executable"

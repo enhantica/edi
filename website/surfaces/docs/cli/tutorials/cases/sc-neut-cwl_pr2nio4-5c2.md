@@ -2,6 +2,12 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Fit the layered nickelate Pr₂NiO₄ to constant-wavelength neutron single-crystal data from 5C2 at
+LLB, with anisotropic displacements.
+
+The project is the catalogue case `sc-neut-cwl_pr2nio4-5c2`, the one the command line and the
+app's Examples open.
+
 ## Get the project
 
 === "Standalone executable"

@@ -2,6 +2,12 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Fit the pyrochlore Tb₂Ti₂O₇ to constant-wavelength neutron single-crystal data from HEiDi at
+MLZ, with anisotropic displacements and Becker-Coppens extinction.
+
+The project is the catalogue case `sc-neut-cwl_tb2ti2o7-heidi`, the one the command line and the
+app's Examples open.
+
 ## Get the project
 
 === "Standalone executable"

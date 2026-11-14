@@ -2,6 +2,14 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Fit the magnetic structure of the olivine Co₂SiO₄ to constant-wavelength neutron powder data
+from D20 at ILL, measured at 2.3 K, below its ordering temperature. The cobalt moments order with
+k = 0 in the magnetic space group Pnma.1: Co1 may point in any direction, Co2 only along b.
+
+The project is the catalogue case `pd-neut-cwl_cosio-d20_2k`, the one the command line and the
+app's Examples open. Its two Co sites share one displacement, and the two FCJ asymmetry terms are
+tied, from the start.
+
 ## Get the project
 
 === "Standalone executable"

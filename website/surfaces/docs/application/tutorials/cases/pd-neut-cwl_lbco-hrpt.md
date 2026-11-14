@@ -6,6 +6,11 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. Its structure and experiment come from EasyDiffraction's collection with **Load ▾ From web…**, and each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+This tutorial fits the cubic perovskite La₀.₅Ba₀.₅CoO₃ to constant-wavelength neutron powder data
+measured on HRPT at PSI. It builds the structure by hand, loads the measured pattern from
+EasyDiffraction's collection, describes the experiment, links the two and fits them, showing the
+pattern and the parameters after each step. The other tutorials load their structures from a CIF.
+
 ## Create a project
 
 Press **Start** on Home, then **Create a new project**, and give it a name.

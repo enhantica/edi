@@ -2,6 +2,12 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Fit two phases, YAlO₃ and corundum Al₂O₃, in one constant-wavelength neutron pattern from SPODI
+at FRM II, measured at 3 K, with a shared Bérar-Baldinozzi profile and cylinder absorption.
+
+The project is the catalogue case `pd-neut-cwl_yalo3-al2o3-spodi`, the one the command line and
+the app's Examples open.
+
 ## Get the project
 
 === "Standalone executable"

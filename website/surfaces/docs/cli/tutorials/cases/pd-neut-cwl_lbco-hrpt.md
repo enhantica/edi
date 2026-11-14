@@ -2,6 +2,11 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage. The Python tutorial builds this project by hand; here the command line starts from its starting project instead, since building a project by hand on the command line is planned for a later release.
 
+This tutorial fits the cubic perovskite La₀.₅Ba₀.₅CoO₃ to constant-wavelength neutron powder data
+measured on HRPT at PSI. It builds the structure by hand, loads the measured pattern from
+EasyDiffraction's collection, describes the experiment, links the two and fits them, showing the
+pattern and the parameters after each step. The other tutorials load their structures from a CIF.
+
 ## Get the project
 
 === "Standalone executable"

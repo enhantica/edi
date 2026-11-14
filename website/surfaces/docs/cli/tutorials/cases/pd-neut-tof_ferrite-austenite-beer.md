@@ -2,6 +2,13 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Calibrate the BEER instrument at ESS with two McStas-simulated banks of a ferrite and austenite
+duplex steel, fitted together: each bank has its own zero and resolution.
+
+The project is the catalogue case `pd-neut-tof_ferrite-austenite-beer`, the one the command line
+and the app's Examples open. Austenite's displacement follows ferrite's, and each phase's scale
+in bank n2 follows bank s2, from the start.
+
 ## Get the project
 
 === "Standalone executable"

@@ -56,6 +56,20 @@ def cells(source: str) -> list[tuple[str, str]]:
     return out
 
 
+def introduction(source: str) -> str:
+    """The authored opening context before teaching/code begins, without its H1."""
+    parts = []
+    for kind, body in cells(source):
+        if kind != 'markdown' or re.search(r'^##\s', body, flags=re.MULTILINE):
+            break
+        context = '\n'.join(
+            line for line in body.splitlines() if not line.startswith('# ')
+        ).strip()
+        if context:
+            parts.append(context)
+    return '\n\n'.join(parts)
+
+
 def stages(source: str) -> list[dict]:
     """Each fit stage of the analysis: its heading and text, and the lines it applies."""
     parts = cells(source)
@@ -271,6 +285,8 @@ def render_calculation(case: str, title: str) -> Path:
     ]
     PAGES.mkdir(parents=True, exist_ok=True)
     page = PAGES / f'{case}.md'
+    source = (ROOT / f'docs/user/tutorials/{case}.py').read_text(encoding='utf-8')
+    parts.insert(2, introduction(source) + '\n')
     page.write_text('\n'.join(parts), encoding='utf-8')
     return page
 
@@ -426,6 +442,7 @@ def render(case: str, binary: Path) -> Path:  # noqa: PLR0914, PLR0915 - one pag
         ]
     PAGES.mkdir(parents=True, exist_ok=True)
     page = PAGES / f'{case}.md'
+    parts.insert(2, introduction(source) + '\n')
     page.write_text('\n'.join(part for part in parts if part), encoding='utf-8')
     return page
 

@@ -2,6 +2,12 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Fit the amino-sulfonic acid taurine to six time-of-flight neutron single-crystal datasets from
+SENJU at J-PARC together, each reflection measured at its own wavelength.
+
+The project is the catalogue case `sc-neut-tof_taurine-senju`, the one the command line and the
+app's Examples open. Banks 2 to 6 share bank 1's three extinction terms, from the start.
+
 ## Get the project
 
 === "Standalone executable"
