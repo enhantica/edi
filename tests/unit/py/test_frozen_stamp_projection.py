@@ -13,7 +13,14 @@ RETIRED = b'    put_optional_parameter(out, experiment.absorption.abscor2, scope
 FOLLOWING = b'    put_optional_parameter(out, experiment.absorption.mu_r, scope);'
 
 
-def verify(data, receipt):
+def verify(frozen, projected, receipt):
+    if hashlib.sha256(frozen).hexdigest() != ORIGINAL:
+        raise ValueError('The historical source identity remains immutable')
+    prefix, data = projected.split(b'\n', 1)
+    if prefix != b'// Active-domain projection of the immutable frozen codec; see README.md.':
+        raise ValueError('The active-domain projection has its declared independent header')
+    if hashlib.sha256(projected).hexdigest() != receipt['target_sha256']:
+        raise ValueError('The active-domain projection retains its recorded target identity')
     if (
         receipt['before_sha256'] != ORIGINAL
         or hashlib.sha256(data).hexdigest() != receipt['after_sha256']
@@ -27,9 +34,11 @@ def verify(data, receipt):
 
 
 def test_retired_slot_projection_reconstructs_the_complete_original_codec():
-    data = (HERE / 'prechange_stamp_codec.inc').read_bytes()
+    frozen = (HERE / 'prechange_stamp_codec.inc').read_bytes()
+    projected = (HERE / 'active_stamp_codec.inc').read_bytes()
+    data = projected.split(b'\n', 1)[1]
     receipt = json.loads((HERE / 'retired-absorption-codec.json').read_text())
-    verify(data, receipt)
+    verify(frozen, projected, receipt)
     assert b'experiment.absorption.abscor1' in data and FOLLOWING in data, (
         'Both active absorption fields remain in the independent stamp-byte reference'
     )
@@ -37,7 +46,9 @@ def test_retired_slot_projection_reconstructs_the_complete_original_codec():
 
 @pytest.mark.parametrize('escape', ['active-field', 'source-hash', 'reintroduced-slot'])
 def test_frozen_codec_projection_refuses_unrelated_source_or_field_changes(escape):
-    data = (HERE / 'prechange_stamp_codec.inc').read_bytes()
+    frozen = (HERE / 'prechange_stamp_codec.inc').read_bytes()
+    projected = (HERE / 'active_stamp_codec.inc').read_bytes()
+    data = projected.split(b'\n', 1)[1]
     receipt = copy.deepcopy(json.loads((HERE / 'retired-absorption-codec.json').read_text()))
     if escape == 'source-hash':
         receipt['before_sha256'] = '0' * 64
@@ -47,5 +58,7 @@ def test_frozen_codec_projection_refuses_unrelated_source_or_field_changes(escap
     else:
         data = data.replace(FOLLOWING, RETIRED + FOLLOWING)
         receipt['after_sha256'] = hashlib.sha256(data).hexdigest()
+    projected = projected.split(b'\n', 1)[0] + b'\n' + data
+    receipt['target_sha256'] = hashlib.sha256(projected).hexdigest()
     with pytest.raises(ValueError, match=r'source identity|single retired|Every other'):
-        verify(data, receipt)
+        verify(frozen, projected, receipt)

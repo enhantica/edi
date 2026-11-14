@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -11,7 +12,8 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 INPUTS = {
-    'app/src/assistant*',
+    'app/**',
+    'tests/system/manual/e04_t11_browser.mjs',
     '.github/actions/wasm-cache/**',
     '.github/workflows/ci.yml',
     '.github/workflows/pages.yml',
@@ -49,24 +51,31 @@ def dispatch(tmp_path, program, owed):
     binaries = tmp_path / 'commands'
     binaries.mkdir()
     trace = tmp_path / 'commands.jsonl'
+    trace_program = tmp_path / 'trace.py'
+    trace_program.write_text(
+        'import json,os,sys\nfrom pathlib import Path\n'
+        'with Path(os.environ["WASM_COMMAND_TRACE"]).open("a") as stream:\n'
+        ' stream.write(json.dumps([Path(sys.argv[1]).name,*sys.argv[2:]])+"\\n")\n',
+        encoding='utf-8',
+    )
     for name in ('pixi', 'bash'):
         command = binaries / name
-        command.write_text(
-            '#!' + sys.executable + '\nimport json,os,sys\n'
-            'from pathlib import Path\n'
-            'with Path(os.environ["WASM_COMMAND_TRACE"]).open("a") as stream:\n'
-            ' stream.write(json.dumps([Path(sys.argv[0]).name,*sys.argv[1:]])+"\\n")\n',
-            encoding='utf-8',
+        command.write_bytes(
+            b'#!/bin/sh\nexec "$WASM_TRACE_PYTHON" "$WASM_TRACE_PROGRAM" "$0" "$@"\n'
         )
         command.chmod(0o755)
+    real_bash = shutil.which('bash')
+    assert real_bash, 'The same Bash entry used by CI must be installed'
     result = subprocess.run(
-        ['/bin/bash', '-e', '-c', program],
+        [real_bash, '-e', '-c', program],
         cwd=tmp_path,
         env={
             **os.environ,
             'PATH': str(binaries) + os.pathsep + os.environ['PATH'],
             'EDI_WASM_OWED': owed,
             'WASM_COMMAND_TRACE': str(trace),
+            'WASM_TRACE_PYTHON': Path(sys.executable).as_posix(),
+            'WASM_TRACE_PROGRAM': trace_program.as_posix(),
         },
         check=False,
         capture_output=True,
@@ -81,37 +90,49 @@ def dispatch(tmp_path, program, owed):
 
 @pytest.mark.parametrize('owed', ['true', 'false'])
 def test_required_linux_wasm_compile_routes_through_sdk_build_and_exclusion_check(tmp_path, owed):
-    step = next(
-        step
-        for step in workflow()['app']['steps']
-        if step.get('name') == 'Compile the app for WebAssembly'
+    from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
+
+    job = workflow()['app-wasm']
+    assert job['runs-on'] == 'ubuntu-24.04'
+    assert set(job['needs']) == {'changes', 'native', 'crysta-sdk'}
+    resolved = {**job, 'if': job['if'].replace('needs.changes.outputs.wasm_build', repr(owed))}
+    selected = active(
+        resolved,
+        'pull_request',
+        states={'changes': 'success', 'native': 'success', 'crysta-sdk': 'success'},
     )
-    assert step['env']['EDI_WASM_OWED'] == '${{ needs.changes.outputs.wasm_build }}', (
-        'The app compile consumes the actual changed-input decision from the common source job'
+    assert selected == (owed == 'true'), (
+        'The dedicated browser job consumes the real changed-input decision on PRs'
     )
-    assert step['if'] == "${{ !cancelled() && matrix.platform == 'Linux' }}" and not step.get(
-        'continue-on-error'
-    ), 'The Linux compile boundary remains mandatory and propagates failures'
-    expected = (
-        [
-            ['pixi', 'run', 'crysta-sdk'],
-            ['pixi', 'run', '-e', 'app', 'wasm-toolchain'],
-            ['pixi', 'run', '-e', 'app', '--skip-deps', 'wasm-build', 'multithread'],
-            ['bash', 'tools/ci/wasm-assistant-check.sh', 'build/wasm/multithread/app'],
-        ]
-        if owed == 'true'
-        else []
+    steps = job['steps']
+    sdk = next(s for s in steps if s.get('uses') == './.github/actions/crysta-sdk')
+    native = next(s for s in steps if s.get('uses') == './.github/actions/edi-native')
+    commands = [
+        'pixi run core-build',
+        'pixi run -e app wasm-toolchain',
+        'pixi run -e app --skip-deps wasm-build',
+    ]
+    calls = [next(s for s in steps if s.get('run') == command) for command in commands]
+    assert steps.index(sdk) < steps.index(native) < steps.index(calls[0])
+    assert [steps.index(s) for s in calls] == sorted(steps.index(s) for s in calls)
+    assert not any(s.get('if') or s.get('continue-on-error') for s in [sdk, native, *calls])
+    build = (ROOT / 'tools/ci/wasm-build.sh').read_text()
+    assert 'bash "$ROOT/tools/ci/wasm-assistant-check.sh" "$out/app"' in build, (
+        'The common multithread builder retains the mandatory assistant-exclusion check'
     )
-    assert dispatch(tmp_path, step['run'], owed) == expected, (
-        'Changed wasm inputs acquire the SDK, build the kit and check assistant exclusion in order'
-    )
+    expected = [command.split() for command in commands] if selected else []
+    assert dispatch(tmp_path, '\n'.join(commands) if selected else ':', owed) == expected
 
 
 def shared_cache_routes(ci, pages):
     from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
 
-    routes = [('app', ci['app']), ('app-wasm', ci['app-wasm']), ('pages', pages['wasm'])]
-    for name, job in routes:
+    assert not any(
+        step.get('uses') == './.github/actions/wasm-cache' or 'wasm-build' in step.get('run', '')
+        for step in ci['app']['steps']
+    ), 'Desktop jobs cannot duplicate the dedicated browser build/cache route'
+    routes = [('app-wasm', ci['app-wasm']), ('pages', pages['wasm'])]
+    for _name, job in routes:
         calls = [
             step for step in job['steps'] if step.get('uses') == './.github/actions/wasm-cache'
         ]
@@ -126,15 +147,7 @@ def shared_cache_routes(ci, pages):
         assert restore.get('id') == 'wasm-cache', (
             'The save guard binds the actual shared restore result'
         )
-        if name == 'app':
-            assert restore.get('if') == (
-                "${{ !cancelled() && matrix.platform == 'Linux' "
-                "&& needs.changes.outputs.wasm_build == 'true' }}"
-            ), 'The PR cache retains its original Linux and actual owed-input guard'
-        else:
-            assert not restore.get('if'), (
-                'Dedicated wasm builders always restore their shared caches'
-            )
+        assert not restore.get('if'), 'Dedicated wasm builders always restore their shared caches'
         builds = [i for i, step in enumerate(job['steps']) if 'wasm-build' in step.get('run', '')]
         assert len(builds) == 1 and job['steps'].index(restore) < builds[0] < job['steps'].index(
             save
@@ -169,7 +182,7 @@ def test_every_wasm_route_uses_shared_toolchain_and_compiler_caches_and_rejects_
     assert any(
         step.get('uses') == './.github/actions/ccache' for step in action['runs']['steps']
     ), 'The shared action activates the original compiler-wrapper configuration owner'
-    for area in ['app', 'app-wasm', 'pages']:
+    for area in ['app-wasm', 'pages']:
         changed_ci, changed_pages = copy.deepcopy(ci), copy.deepcopy(pages)
         job = changed_pages['wasm'] if area == 'pages' else changed_ci[area]
         step = next(
@@ -228,7 +241,7 @@ def test_shared_cache_action_refuses_unknown_operations_before_any_cache_side_ef
     action = yaml.safe_load((ROOT / '.github/actions/wasm-cache/action.yml').read_text())
     guard = cache_action_boundary(action)
     result = subprocess.run(
-        ['/bin/bash', '-e', '-c', guard],
+        [shutil.which('bash'), '-e', '-c', guard],
         env={**os.environ, 'OPERATION': operation},
         capture_output=True,
         check=False,

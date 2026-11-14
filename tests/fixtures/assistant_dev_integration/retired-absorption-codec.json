@@ -3,6 +3,8 @@
   "source": "tests/fixtures/assistant_dev_integration/prechange_stamp_codec.inc",
   "before_sha256": "8b300f35b31f9f5b9bf54a5af9e4e470255f8983817ef4f463b91d46707d7800",
   "after_sha256": "d807c5109bee16af1e0db9487e2196f09973fb19083e653a01c13eb3bf1b7726",
-  "transition": "Remove the retired optional absorption slot; keep all other frozen bytes",
-  "command": "python tests/fixtures/assistant_dev_integration/freeze_stamp_codec.py --retire-absorption-slot --fixture-base e0d61f6de6239efb3bad372398e886f8e1e7561d"
+  "transition": "Preserve the immutable historical codec; project only its retired slot into the separate active-domain codec",
+  "command": "python tests/fixtures/assistant_dev_integration/freeze_stamp_codec.py --active-domain",
+  "target": "tests/fixtures/assistant_dev_integration/active_stamp_codec.inc",
+  "target_sha256": "f80f0cb7d369993f4d7238f37f6bf4039202f0156a8e86e1cec1a691ed52f220"
 }
