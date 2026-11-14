@@ -315,3 +315,17 @@ narrow copy behavior. Source fingerprinting, fit-site admission and session clea
 mandatory. Workflow observers also follow local reusable workflows to inspect real runners
 and source-token scopes; missing, opaque, malformed or cyclic calls refuse instead of hiding
 jobs. Source acquisition requires contents:read only, with fork-visible source checks token-free.
+
+### Gate migration from the retired discovery protocol
+
+The former Crysta PR/release discovery, history-pagination, paired-branch and
+release-digest pin tests no longer exercise a supported path. Their replacement
+executes the current local archive reader with independently authored SDK bytes
+and ABI locks, verifies exact cold acquisition and warm revalidation, rejects
+source/platform/library/ABI/qualification substitutions, and proves ambient branch
+context cannot override the declared commit. Pin updates and read-only checks
+remain explicit and publication-free. The retired REST simulator and its unused
+paired-world fixture leave the active suite; their history remains in Git.
+Existing native transport, source-receipt, Windows DLL/ABI and producer workflow
+controls continue to prove the corresponding current boundaries. No compatibility
+stub is added to production to satisfy the retired acquisition API.

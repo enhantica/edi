@@ -390,7 +390,7 @@ def main(argv: list[str]) -> int:
     a = parser.parse_args(argv)
     try:
         run(a)
-    except (RefusedError, OSError, KeyError, ValueError) as refusal:
+    except (RefusedError, OSError, KeyError, ValueError, tarfile.TarError) as refusal:
         print(f'crysta_sdk.py {a.cmd}: REFUSED — {refusal}', file=sys.stderr)
         return 1
     return 0
