@@ -6,7 +6,7 @@
 #include <QUrl>
 #include <QTimer>
 #ifdef Q_OS_WIN
-#include <windows.h>
+#include "../core/src/windows_sdk.hpp"  // the one place edi includes windows.h
 #include <uxtheme.h>
 #endif
 #include <QQmlApplicationEngine>
