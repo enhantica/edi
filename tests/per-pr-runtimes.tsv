@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T02:45:29Z
+# measured_utc = 2026-11-14T03:15:10Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 175918 banked, 0 stale row(s) dropped)
-# Collected tests: 244805; with a reported duration: 77074
+# Recorded from: measured test run (15 node(s) measured once, 175921 banked, 0 stale row(s) dropped)
+# Collected tests: 244820; with a reported duration: 77077
 # Module-scoped fixture costs recorded: 190
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 244805
+# inventory_python = 244820
 # inventory_cpp = 402
-# inventory_measured = 175921
+# inventory_measured = 175936
 # inventory_unmeasured = 69286
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85538
+# inventory_pr_python = 85553
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -164002,6 +164002,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_name_loading.
 0.000	tests/integration/py/test_e01_scaffold.py::test_verify_requires_core_build
 0.080	tests/integration/py/test_e02_t2_io_parity_integration.py::test_e02_t2_edi_save_reload_preserves_semantics
 0.080	tests/integration/py/test_e02_t2_io_parity_integration.py::test_e02_t2_save_as_replaces_the_complete_destination_without_stale_files
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_browser_source_changes_are_qualified_on_trusted_pull_requests[False]
+0.050	tests/integration/py/test_e04_t11_ci_order.py::test_browser_source_changes_are_qualified_on_trusted_pull_requests[True]
 0.000	tests/integration/py/test_e04_t11_ci_order.py::test_condition_observer_distinguishes_implicit_success_and_reporting[failure]
 0.000	tests/integration/py/test_e04_t11_ci_order.py::test_condition_observer_distinguishes_implicit_success_and_reporting[skipped]
 0.000	tests/integration/py/test_e04_t11_ci_order.py::test_condition_observer_distinguishes_implicit_success_and_reporting[success]
@@ -170456,6 +170458,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::tes
 0.000	tests/integration/py/test_windows_sdk_consumer.py::test_windows_reader_requires_runtime_and_compiler_independently_of_entry_count[wrong-id-empty]
 0.000	tests/integration/py/test_windows_sdk_consumer.py::test_windows_reader_requires_runtime_and_compiler_independently_of_entry_count[wrong-id-retained]
 0.000	tests/integration/py/test_windows_sdk_consumer.py::test_windows_reader_uses_explicit_installer_lock_and_exact_qualified_layout
+0.020	tests/integration/py/test_workflow_reuse_observer.py::test_actual_shared_sdk_exposes_all_platform_runners_and_only_source_read_scope
+0.000	tests/integration/py/test_workflow_reuse_observer.py::test_unproved_reusable_workflow_cannot_hide_jobs[cycle]
+0.000	tests/integration/py/test_workflow_reuse_observer.py::test_unproved_reusable_workflow_cannot_hide_jobs[malformed]
+0.000	tests/integration/py/test_workflow_reuse_observer.py::test_unproved_reusable_workflow_cannot_hide_jobs[missing]
+0.000	tests/integration/py/test_workflow_reuse_observer.py::test_unproved_reusable_workflow_cannot_hide_jobs[remote]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_doublet_roundtrip_and_reached_serialization_escape[False]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_xray_doublet.py::test_doublet_roundtrip_and_reached_serialization_escape[True]
 0.050	tests/integration/py/test_xray_doublet.py::test_fixed_fullprof_profile_and_reached_correction_escape[absorption]
@@ -244398,6 +244405,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e05_t1_input_declaration
 0.000	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_crysta_token_permission_counterfactuals[extra1]
 0.000	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_crysta_token_permission_counterfactuals[extra2]
 0.000	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_crysta_token_permission_counterfactuals[extra3]
+0.000	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_crysta_token_permission_counterfactuals[extra4]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_every_ci_consumer_uses_one_shared_crysta_resolution
 0.010	tests/unit/py/test_e09_t74_ci_source_wiring.py::test_source_sweep_catches_a_new_consumer_bypassing_resolution
 0.010	tests/unit/py/test_e09_t74_runtime_headers.py::test_inventory_writer_keeps_unmeasured_rows_and_rejects_a_hand_edited_header
@@ -244516,6 +244524,13 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publicati
 0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[duplicate]
 0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[extra-column]
 0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[unknown]
+0.000	tests/unit/py/test_machine_record_schema.py::test_malformed_engine_header_cannot_be_used_for_an_undo_record[None]
+0.000	tests/unit/py/test_machine_record_schema.py::test_malformed_engine_header_cannot_be_used_for_an_undo_record[]
+0.000	tests/unit/py/test_machine_record_schema.py::test_malformed_engine_header_cannot_be_used_for_an_undo_record[schema=0\nrecord=error\n]
+0.000	tests/unit/py/test_machine_record_schema.py::test_malformed_engine_header_cannot_be_used_for_an_undo_record[schema=9\nrecord=error\nschema=8\n]
+0.000	tests/unit/py/test_machine_record_schema.py::test_malformed_engine_header_cannot_be_used_for_an_undo_record[schema=9\nrecord=error]
+0.000	tests/unit/py/test_machine_record_schema.py::test_malformed_engine_header_cannot_be_used_for_an_undo_record[schema=9\nrecord=fit\n]
+0.000	tests/unit/py/test_machine_record_schema.py::test_shared_header_preserves_an_engine_version_without_a_local_literal
 0.000	tests/unit/py/test_native_artifact_identity.py::test_failed_cli_refuses_even_when_output_looks_valid[-1]
 0.000	tests/unit/py/test_native_artifact_identity.py::test_failed_cli_refuses_even_when_output_looks_valid[1]
 0.000	tests/unit/py/test_native_artifact_identity.py::test_failed_cli_refuses_even_when_output_looks_valid[2]
