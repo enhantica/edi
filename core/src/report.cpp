@@ -584,7 +584,7 @@ constexpr std::size_t kScanTableProgressWidth = kScanTableBarCells + 2 + 6 + 2; 
 // Below this many characters for the file name, the File column is dropped.
 constexpr std::size_t kScanTableFileMinimum = 12;
 
-// The table's columns in their groups, Progress OK Failed │ Elapsed Left │ chi2 range │ File: each number column
+// The table's columns in their groups, Progress │ OK Failed │ Elapsed Left │ chi2 range │ File: each number column
 // right-aligned under its right-aligned heading, Progress (the bar, the percent and the count) and File
 // left-aligned, two spaces within a group and ` │ ` between groups. The count, OK and Failed are as wide as the
 // total makes them; the others as wide
@@ -602,13 +602,13 @@ std::string scan_table(std::optional<int> total, bool resumed, const std::vector
     const auto digits = std::to_string(total && *total > 0 ? *total : std::numeric_limits<int>::max()).size();
     const std::vector<Column> table{
         {kScanTableProgressWidth + 2 * digits + 1, false, 0},
-        {std::max(std::size_t{2}, digits), true, 0},
-        {std::max(std::size_t{6}, digits), true, 0},
-        {resumed ? std::size_t{18} : std::size_t{7}, true, 1},
-        {5, true, 1},
-        {4, true, 2},
-        {9, true, 2},
-        {0, false, 3},  // File
+        {std::max(std::size_t{2}, digits), true, 1},
+        {std::max(std::size_t{6}, digits), true, 1},
+        {resumed ? std::size_t{18} : std::size_t{7}, true, 2},
+        {5, true, 2},
+        {4, true, 3},
+        {9, true, 3},
+        {0, false, 4},  // File
     };
     const std::size_t file = table.size() - 1;
     std::vector<bool> visible(table.size(), true);

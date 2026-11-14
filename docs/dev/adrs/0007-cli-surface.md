@@ -118,7 +118,7 @@ current SDK manifest/library and Python ABI before reuse (ADR-0083).
 
 Both CLI hosts use one private core table projection: a heading line (`Sequential fit:` or
 `Independent fit:` and the project), a blank line, the column names, then one row per completed
-file, rewritten in place on a terminal. The columns come in groups separated by ` │ `: Progress,
+file, rewritten in place on a terminal. The columns come in groups separated by ` │ `: Progress │
 OK, Failed │ Elapsed, Left │ chi2, range │ File, with two spaces between the columns of a group.
 Number headings are right-aligned over right-aligned values, and Progress and File left-aligned
 over left-aligned values, so every heading sits over its values. Progress is a bar of ten block
