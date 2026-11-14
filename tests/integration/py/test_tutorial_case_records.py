@@ -38,11 +38,16 @@ def test_owner_inventory_has_exactly_twenty_four_unique_case_records():
     )
 
 
+@pytest.fixture(scope='module')
+def provenance_records():
+    return {row['id']: row for row in read_records()}
+
+
 @pytest.mark.parametrize('case', CASES)
-def test_case_record_retains_its_complete_authored_provenance(case):
+def test_case_record_retains_its_complete_authored_provenance(case, provenance_records):
     document = ROOT / 'docs/user/cli' / case / 'PROVENANCE.md'
     assert document.is_file()
-    assert case_record(case).get('provenance') == document.read_text(encoding='utf-8'), (
+    assert provenance_records[case].get('provenance') == document.read_text(encoding='utf-8'), (
         'The portable case record must retain its source and uncertainty disclosures exactly'
     )
 

@@ -35,35 +35,27 @@ def test_complete_release_source_pairs_retain_their_archived_byte_identities():
     assert source.previous_bytes('unmapped/expected.json', b'foreign') == b'foreign'
 
 
-def test_rebinding_a_source_hash_cannot_launder_reference_changes(monkeypatch):
+@pytest.mark.parametrize('name', sorted(source.rows()))
+def test_rebinding_a_source_hash_cannot_launder_reference_changes(monkeypatch, name):
     rows = source.rows()
-    reached = set()
+    row = rows[name]
     with zipfile.ZipFile(source.HERE / 'release-pins.zip') as archive:
-        documents = [
-            (name, row, json.loads(archive.read(row['after_sha256'])))
-            for name, row in rows.items()
-        ]
-    for name, row, after in documents:
-        for trail, reference in source.references(after).items():
-            for field in ('value', 'kind', 'tol_abs', 'tol_rel'):
-                if field not in reference:
-                    continue
-                mutated = copy.deepcopy(after)
-                current = mutated
-                for key in trail:
-                    current = current[key]
-                current[field] = 'altered'
-                raw = json.dumps(mutated).encode()
-                mapping = {
-                    **rows,
-                    name: {**row, 'after_sha256': hashlib.sha256(raw).hexdigest()},
-                }
-                with monkeypatch.context() as scoped:
-                    scoped.setattr(source, 'rows', lambda mapping=mapping: mapping)
-                    with pytest.raises(AssertionError):
-                        source.previous_bytes(name, raw)
-                reached.add(field)
-    assert reached == {'value', 'kind', 'tol_abs', 'tol_rel'}
+        after = json.loads(archive.read(row['after_sha256']))
+    for trail, reference in source.references(after).items():
+        for field in ('value', 'kind', 'tol_abs', 'tol_rel'):
+            if field not in reference:
+                continue
+            mutated = copy.deepcopy(after)
+            current = mutated
+            for key in trail:
+                current = current[key]
+            current[field] = 'altered'
+            raw = json.dumps(mutated).encode()
+            mapping = {**rows, name: {**row, 'after_sha256': hashlib.sha256(raw).hexdigest()}}
+            with monkeypatch.context() as scoped:
+                scoped.setattr(source, 'rows', lambda mapping=mapping: mapping)
+                with pytest.raises(AssertionError):
+                    source.previous_bytes(name, raw)
 
 
 def test_iteration_classification_exception_is_bound_to_its_exact_source():
