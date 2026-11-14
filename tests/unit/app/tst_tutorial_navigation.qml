@@ -2441,6 +2441,7 @@ TestCase {
                 return observed;
             }, 2000, "The actual open Free header menu exposes its original Fixed action: " + JSON.stringify(facts));
             tryVerify(() => requiredTargetItems("parameters.freeHeader.fixed").length === 0, 2000, "The observer retires the original menu action after genuine Escape input");
+            console.info('TUTORIAL_MENU_OBSERVER_CONTROL ' + JSON.stringify({closed: 0, opened: facts.scoped, closed_after: requiredTargetItems("parameters.freeHeader.fixed").length}));
         } finally {
             painter.stop();
             painter.destroy();

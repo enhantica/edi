@@ -156,6 +156,24 @@ def test_unknown_recipe_action_is_refused_before_generation(
         translator.tutorial_steps(case)
 
 
+def native_records(raw, prefix):
+    marker = prefix.encode('ascii') + b' '
+    return [
+        json.loads(line.partition(marker)[2].decode('utf-8'))
+        for line in raw.splitlines()
+        if marker in line
+    ]
+
+
+def test_native_record_reader_keeps_diagnostic_bytes_outside_the_scientific_transport():
+    raw = b'Qt comparison: \xb7\nTUTORIAL_RECIPE_BOUNDARY {"id":"control","stage":3}\n'
+    assert native_records(raw, 'TUTORIAL_RECIPE_BOUNDARY') == [{'id': 'control', 'stage': 3}], (
+        'Non-UTF8 Qt failure diagnostics cannot disable separately valid scientific JSON records'
+    )
+    with pytest.raises(UnicodeDecodeError):
+        native_records(b'TUTORIAL_RECIPE_BOUNDARY {"id":"\xb7"}\n', 'TUTORIAL_RECIPE_BOUNDARY')
+
+
 def observe_states(tmp_path_factory, wanted):
     runner = Path(
         os.environ.get(
@@ -231,14 +249,11 @@ def observe_states(tmp_path_factory, wanted):
             check=False,
         )
     (artifacts / 'native.exit').write_text(str(run.returncode) + '\n')
-    text = (artifacts / 'native.log').read_text()
+    raw = (artifacts / 'native.log').read_bytes()
     return {
         'run': run,
-        'records': [
-            json.loads(line.partition('TUTORIAL_RECIPE_BOUNDARY ')[2])
-            for line in text.splitlines()
-            if 'TUTORIAL_RECIPE_BOUNDARY ' in line
-        ],
+        'records': native_records(raw, 'TUTORIAL_RECIPE_BOUNDARY'),
+        'menu_controls': native_records(raw, 'TUTORIAL_MENU_OBSERVER_CONTROL'),
         'folder': str(artifacts),
     }
 
@@ -266,6 +281,10 @@ def test_builtin_pre_fit_state_equals_the_declared_docs_recipe(case, states):
 
 
 def test_recipe_observer_has_a_real_positive_control(states):
+    assert states['menu_controls'] == [{'closed': 0, 'opened': 1, 'closed_after': 0}], (
+        'The original-menu observer must pass its genuine closed/opened/Escape control '
+        'before its native state observations are qualified'
+    )
     found = [row for row in states['records'] if row['id'] == 'observer-control']
     assert len(found) == 1, (
         'The boundary observer reaches an independently authored real app model'

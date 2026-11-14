@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T21:46:29Z
+# measured_utc = 2026-11-14T21:54:21Z
 #
-# Recorded from: measured test run (122 node(s) measured once, 176351 banked, 78 stale row(s) dropped)
-# Collected tests: 245168; with a reported duration: 77172
+# Recorded from: measured test run (1 node(s) measured once, 176369 banked, 0 stale row(s) dropped)
+# Collected tests: 245169; with a reported duration: 77172
 # Module-scoped fixture costs recorded: 194
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245168
+# inventory_python = 245169
 # inventory_cpp = 402
-# inventory_measured = 176369
+# inventory_measured = 176370
 # inventory_unmeasured = 69201
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85901
+# inventory_pr_python = 85902
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -241568,6 +241568,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_recipe_preservation.
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_missing_action_controls_keep_the_docs_expectation[pd-neut-tof_si-sepd-1-estimate]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_missing_action_controls_keep_the_docs_expectation[pd-neut-tof_si-sepd-1-file]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_missing_action_controls_keep_the_docs_expectation[pd-xray-cwl_lam7o3-p021-4-residual]
+0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_native_record_reader_keeps_diagnostic_bytes_outside_the_scientific_transport
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_recipe_observer_has_a_real_positive_control
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_unclassified_actions_cannot_be_declared_inert[aliasXparameter.0]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_unclassified_actions_cannot_be_declared_inert[appBar.tab.missing]
@@ -245794,7 +245795,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 39.089	tests/system/py/test_tutorial_notebook_pipeline.py
 # module-cost: 52.271	tests/system/py/test_tutorial_official_site.py
 # module-cost: 5.339	tests/system/py/test_tutorial_project_ownership.py
-# module-cost: 58.151	tests/system/py/test_tutorial_recipe_preservation.py
+# module-cost: 60.542	tests/system/py/test_tutorial_recipe_preservation.py
 # module-cost: 85.543	tests/system/py/test_tutorial_screenshot_pages.py
 # module-cost: 77.682	tests/system/py/test_tutorial_subset_catalogue.py
 # module-cost: 139.961	tests/system/py/test_user_action_logging.py
