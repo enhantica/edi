@@ -195,12 +195,7 @@ project.display.pattern('hrpt')
 # displacements change the peak intensities with angle and come last.
 
 # %%
-for site in (
-    structure.atom_sites['La'],
-    structure.atom_sites['Ba'],
-    structure.atom_sites['Co'],
-    structure.atom_sites['O'],
-):
+for site in structure.atom_sites:
     site.adp_iso.free = True
 
 # %%
