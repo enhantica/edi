@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T06:45:12Z
+# measured_utc = 2026-11-14T07:11:26Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 176022 banked, 0 stale row(s) dropped)
-# Collected tests: 244876; with a reported duration: 77092
+# Recorded from: measured test run (37 node(s) measured once, 176023 banked, 0 stale row(s) dropped)
+# Collected tests: 244913; with a reported duration: 77095
 # Module-scoped fixture costs recorded: 191
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 244876
+# inventory_python = 244913
 # inventory_cpp = 402
-# inventory_measured = 176023
+# inventory_measured = 176060
 # inventory_unmeasured = 69255
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85609
+# inventory_pr_python = 85646
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -161543,6 +161543,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_import_contract.py::
 0.000	tests/integration/py/test_cif_reader_regression.py::test_main_reader_model_regression_pin_changes_only_published_parameter_state[structure:tests/fixtures/single_crystal/projects/sc-neut-tof_taurine_basic/structures/structure.edi]
 0.000	tests/integration/py/test_cif_reader_regression.py::test_main_reader_model_regression_pin_changes_only_published_parameter_state[structure:tests/fixtures/table_display/structures/structure.edi]
 0.000	tests/integration/py/test_cif_reader_regression.py::test_reader_regression_pin_population_is_not_empty
+0.020	tests/integration/py/test_collection_measured_export.py::test_actual_measured_asset_writer_retains_the_project_observations[pd-neut-cwl_lbco-hrpt]
+0.000	tests/integration/py/test_collection_measured_export.py::test_actual_measured_asset_writer_retains_the_project_observations[sc-neut-cwl_cosio-heidi]
+0.000	tests/integration/py/test_collection_measured_export.py::test_actual_measured_asset_writer_retains_the_project_observations[sc-neut-cwl_pr2nio4-5c2]
+0.000	tests/integration/py/test_collection_measured_export.py::test_actual_measured_asset_writer_retains_the_project_observations[sc-neut-cwl_tb2ti2o7-heidi]
+0.000	tests/integration/py/test_collection_measured_export.py::test_actual_measured_asset_writer_retains_the_project_observations[sc-neut-cwl_tb2ti2o7-heidi_simulation]
+0.020	tests/integration/py/test_collection_measured_export.py::test_actual_measured_asset_writer_retains_the_project_observations[sc-neut-tof_taurine-senju]
+0.000	tests/integration/py/test_collection_measured_export.py::test_reflection_export_refuses_incomplete_or_malformed_measurement_rows
 0.230	tests/integration/py/test_compiled_app_environment.py::test_browser_live_progress_refuses_terminal_only_and_idle_reports
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[browser-toolchain]
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[scan-host]
@@ -167702,6 +167709,30 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.010	tests/integration/py/test_physical_relation_diagnostics.py::test_physical_relation_refusal_keeps_domain_diagnostics[load-polarization]
 0.010	tests/integration/py/test_physical_relation_diagnostics.py::test_physical_relation_refusal_keeps_domain_diagnostics[load-ratio]
 0.010	tests/integration/py/test_physical_relation_diagnostics.py::test_physical_relation_refusal_keeps_domain_diagnostics[load-second-line]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-cwl_cosio-d20/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-cwl_cosio-d20_2k/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-cwl_hs-hrpt/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-cwl_lbco-hrpt/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-cwl_lbco_simulation/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-cwl_lmo-echidna/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-cwl_y2o3-spodi/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-tof_cecoal-polaris/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-tof_ceo2-pearl/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-tof_ferrite-austenite-beer/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-tof_lbco-si-mcstas/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-tof_ncaf-wish/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-tof_si-sepd/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-xray-cwl_lam7o3-p021/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-xray-cwl_latp-bm01_scan/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/pd-xray-cwl_pbso4-lab/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/sc-neut-cwl_cosio-heidi/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/sc-neut-cwl_pr2nio4-5c2/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/expected.json]
+0.000	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/expected.json]
+0.010	tests/integration/py/test_pin_source_metadata.py::test_pin_annotation_retains_its_exact_committed_source_document[docs/user/cli/sc-neut-tof_taurine-senju/expected.json]
 0.000	tests/integration/py/test_plain_data.py::test_nonpositive_retention_escape_is_rejected
 0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/comma]
 0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[cwl/headers_malformed]
@@ -169605,6 +169636,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_table_display.py::test_s
 0.000	tests/integration/py/test_tutorial_assistant_targets.py::test_assistant_target_observer_refuses_missing_and_renamed_gui_names[ui:structures..load]
 0.000	tests/integration/py/test_tutorial_assistant_targets.py::test_assistant_target_observer_refuses_missing_and_renamed_gui_names[ui:structures.oldLoad]
 0.010	tests/integration/py/test_tutorial_assistant_targets.py::test_packaged_assistant_skills_name_only_current_gui_elements
+0.000	tests/integration/py/test_tutorial_auto_background.py::test_background_teaching_observer_reaches_the_real_action_and_refuses_escapes[late-estimate]
+0.000	tests/integration/py/test_tutorial_auto_background.py::test_background_teaching_observer_reaches_the_real_action_and_refuses_escapes[no-action]
+0.000	tests/integration/py/test_tutorial_auto_background.py::test_background_teaching_observer_reaches_the_real_action_and_refuses_escapes[no-check]
+0.000	tests/integration/py/test_tutorial_auto_background.py::test_background_teaching_observer_reaches_the_real_action_and_refuses_escapes[no-method-lesson]
+0.000	tests/integration/py/test_tutorial_auto_background.py::test_background_teaching_observer_reaches_the_real_action_and_refuses_escapes[no-mode]
+0.000	tests/integration/py/test_tutorial_auto_background.py::test_background_teaching_observer_reaches_the_real_action_and_refuses_escapes[unknown-method]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_auto_background.py::test_cwl_and_tof_cases_teach_the_same_auto_background_on_every_interface
 0.080	tests/integration/py/test_tutorial_case_records.py::test_case_checker_refuses_missing_authored_provenance[empty]
 0.020	tests/integration/py/test_tutorial_case_records.py::test_case_checker_refuses_missing_authored_provenance[missing]
