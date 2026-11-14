@@ -324,7 +324,7 @@ std::pair<std::string, std::string> table_value_su(double value, const std::stri
                                                    const std::string& su_text, bool display) {
     if (!std::isfinite(value)) return {value_text, su_text};
     const std::string number = expanded(value_text), su = expanded(su_text);
-    if (in_decimal_range(value)) return {number, display ? su_alone(su, display) : su};
+    if (in_decimal_range(value)) return {number, su};
     const int power = power_of(value);
     const std::string exponent = exponent_text(power, display);
     std::string shown = shifted(number, power);
