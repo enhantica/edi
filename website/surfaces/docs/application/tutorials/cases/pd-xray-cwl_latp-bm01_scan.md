@@ -9,9 +9,9 @@ The same staged fit as the Python and Command line tutorials, in the app. A scan
 Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at ESRF,
 one after another, with linked displacement parameters.
 
-The project is the catalogue case `pd-xray-cwl_latp-bm01_scan`, the one the command line and the
-app's Examples open. Al shares Ti's site, coordinate and displacement, and the impurity phase's
-displacements are shared, from the start.
+It builds the catalogue case `pd-xray-cwl_latp-bm01_scan` step by step: the same project the
+command line fits and the app's Examples open. Al shares Ti's site, coordinate and displacement,
+and the impurity phase's displacements are shared.
 
 ## Open the example
 
@@ -21,6 +21,10 @@ Press **Start** on Home, search **Examples** on **Project** for **pd-xray-cwl_la
 <a class="gui-image-link" href="../../../assets/gui/cases/pd-xray-cwl_latp-bm01_scan/example-open.webp?v=b5d61c71d63e" data-gui-dark="a20959e04ea9" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Open the example from Examples"><svg class="gui-capture" data-gui-view="overview" viewBox="0 0 1480 800" width="1480" height="800" role="img" aria-label="Open the example from Examples"><title>Open the example from Examples</title><defs><clipPath id="gui-clip-example-open-overview"><rect width="1480" height="800" rx="17.76" /></clipPath></defs><image href="../../../assets/gui/cases/pd-xray-cwl_latp-bm01_scan/example-open.webp?v=b5d61c71d63e" data-gui-dark="a20959e04ea9" width="1480" height="800" clip-path="url(#gui-clip-example-open-overview)" /><rect class="gui-image-frame" width="1480" height="800" rx="17.76" /><path class="is-active" data-gui-region="example-open-overview-1" data-gui-area="main" data-gui-parts="[[0,77,770,681]]" d="M1.000 82.000 Q1.000 78.000 5.000 78.000 L765.000 78.000 Q769.000 78.000 769.000 82.000 L769.000 753.000 Q769.000 757.000 765.000 757.000 L5.000 757.000 Q1.000 757.000 1.000 753.000 Z" /><path data-gui-navigation data-gui-area="navigation" data-gui-parts="[[595.46875,0,59.734375,77]]" d="M596.469 5.000 Q596.469 1.000 600.469 1.000 L650.203 1.000 Q654.203 1.000 654.203 5.000 L654.203 72.000 Q654.203 76.000 650.203 76.000 L600.469 76.000 Q596.469 76.000 596.469 72.000 Z" /></svg></a>
 
 </figure>
+
+## The example's constraints
+
+The example comes with the constraints the project keeps from the start. On **Analysis → Extra**, **Constraints** lists them: **z_Al1 = z_Ti1**, **b_Al1 = b_Ti1**, **b2_P1 = b2_Al1**, **b2_O1 = b2_Al1**, **b2_O2 = b2_Al1**.
 
 ## Start with nothing free
 

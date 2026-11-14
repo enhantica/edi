@@ -7,7 +7,7 @@
 #
 # It builds the catalogue case `pd-xray-cwl_latp-bm01_scan` step by step: the same project the
 # command line fits and the app's Examples open. Al shares Ti's site, coordinate and displacement,
-# and the impurity phase's displacements are shared,.
+# and the impurity phase's displacements are shared.
 
 # %% [markdown]
 # ## Import the library

@@ -376,6 +376,22 @@ def render(case: str) -> Path:  # noqa: PLR0912, PLR0914, PLR0915 - one page, se
             ),
             shown(by_id['example-open']),
         ]
+        # The constraints the Python tutorial adds in its setup come with the example: the page
+        # names them, as the Python and Command line tutorials do.
+        setup = source[: source.find('## Perform the analysis')]
+        expressions = re.findall(
+            r"\.constraints\.create\(id='[^']+', expression='([^']+)'\)", setup
+        )
+        if expressions:
+            body += [
+                "## The example's constraints\n",
+                (
+                    'The example comes with the constraints the project keeps from the start. On '
+                    '**Analysis → Extra**, **Constraints** lists them: '
+                    + ', '.join(f'**{expression}**' for expression in expressions)
+                    + '.\n'
+                ),
+            ]
         if 'calculated' in by_id:
             # A calculation without data: nothing to fit.
             body[0] = (
