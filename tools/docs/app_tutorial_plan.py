@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import itertools
 import json
 import re
 import sys
@@ -67,7 +68,8 @@ def relations(case: str) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
         text = path.read_text(encoding='utf-8')
         for loop in re.split(r'^loop_\s*$', text, flags=re.MULTILINE)[1:]:
             lines = [line.strip() for line in loop.strip().splitlines()]
-            keys = [line for line in lines if line.startswith('_')]
+            # The loop's own tags lead it; a later `_tag value` line is the file's, not the loop's.
+            keys = list(itertools.takewhile(lambda line: line.startswith('_'), lines))
             rows = [line for line in lines[len(keys) :] if line and not line.startswith('_')]
             if keys and keys[0].startswith('_alias.'):
                 for row in rows:
