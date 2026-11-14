@@ -354,3 +354,16 @@ history and work with the admitted current native run. The GUI still fits its or
 current defaults and proves Save/reopen; no raw GUI vector observation is claimed.
 A failure in either configuration refuses browser qualification. Solver settings are
 never searched or tuned to obtain a desired count or a passing result.
+
+Browser toolbar actors use the already published project action names: Save the
+project, Undo the last change, Redo the last undone change, and Clear: close the
+project and start again. The full actor still observes all four real accessible
+buttons, their rendered order, the close-project action and its guard. Save/archive
+and storage actors use the same published Save name. The source census rejects
+retired captions in every browser actor; published Main.qml supplies the independent
+caption reference, and the original published actor preimages are explicit negatives.
+
+Load-menu items explicitly expose their action text as their accessible name. Their icon-font
+labels and format/source hints remain visible content, not extra words in the action name.
+The same component owns structure, full-experiment and measured-data actions on desktop and
+in the browser. Browser actors retain exact action-name and native object-identity checks.

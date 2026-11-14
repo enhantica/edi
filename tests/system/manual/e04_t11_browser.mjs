@@ -566,7 +566,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     const first=await statusActions.live('first-fit');
     await shot('status-action-first-focus');
     // Same original toolbar Reset route as the full workflow, no native setter.
-    await click(/^Reset to initial state without project, model and data$/);
+    await click(/^Clear: close the project and start again$/);
     await settleRenderedPage();
     await click(/^Start$/); await click(/^Project$/);
     const empty=await send('Accessibility.getFullAXTree');
@@ -748,8 +748,8 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
 
   // The public reset action closes the model. Observe all four actual left toolbar buttons
   // by their accessible names and rendered rectangles, including the disabled Redo button.
-  const toolbarNames = ['Save current state of the project', 'Undo the last change',
-    'Redo the last undone change', 'Reset to initial state without project, model and data'];
+  const toolbarNames = ['Save the project', 'Undo the last change',
+    'Redo the last undone change', 'Clear: close the project and start again'];
   const tree = await send('Accessibility.getFullAXTree');
   const toolbar = [];
   for (const item of tree.nodes.filter(n => !n.ignored && n.role?.value === 'button' && n.backendDOMNodeId)) {
@@ -760,8 +760,8 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   toolbar.sort((a,b) => a.x-b.x);
   assert.equal(toolbar.length,4,'reset must address the real four-button left app toolbar');
   assert.deepEqual(toolbar.map(button=>button.name),toolbarNames,
-    'The actual left app toolbar must name Save, Undo, Redo and Reset in its displayed order');
-  await click(/^Reset to initial state without project, model and data$/);
+    'The actual left app toolbar must name Save, Undo, Redo and Clear in its displayed order');
+  await click(/^Clear: close the project and start again$/);
   await discardResetGuard();
   await settleRenderedPage();
   await requireResetGuardClosed();

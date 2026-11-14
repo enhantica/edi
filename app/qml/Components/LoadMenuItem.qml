@@ -17,6 +17,7 @@ EaElements.MenuItem {
 
     readonly property color foreground: !item.enabled ? EaStyle.Colors.themeForegroundDisabled : item.hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
 
+    Accessible.name: item.text
     textFormat: Text.PlainText
     // Items of one section close together (the owner, 2026-11-04); LoadMenuHeader leaves the same gap above the first.
     topPadding: EaStyle.Sizes.fontPixelSize * 0.35

@@ -211,7 +211,7 @@ try {
       assert.equal(first['reports/opaque.html'],initial['reports/opaque.html'],'Picked-folder Save retains exact report bytes');
       const picks=await page.evaluate(()=>window.__projectFolderPickCount);
       await rename('archive-folder-second');
-      await click(/^Save current state of the project$/, 'button');
+      await click(/^Save the project$/, 'button');
       await ready(()=>page.evaluate(async () => {
         const root=await window.__projectFolderReady;
         return (await (await root.getFileHandle('project.edi')).getFile()).text().then(text=>text.includes('archive-folder-second'));
