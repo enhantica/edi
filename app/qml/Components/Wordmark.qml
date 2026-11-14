@@ -90,7 +90,8 @@ Item {
             easing.amplitude: 1
             easing.period: 0.3
         }
-        // OutInElastic's first half is OutElastic over half the time and half the turn, with the same period.
+        // OutInElastic's first half (qeasingcurve.cpp) is OutElastic over half the time and half the turn, with the
+        // same period and its amplitude measured against that half: 2 here, for 1 there.
         NumberAnimation {
             target: mark
             property: "rotation"
@@ -98,7 +99,7 @@ Item {
             to: 360 * 3
             duration: 1250
             easing.type: Easing.OutElastic
-            easing.amplitude: 1
+            easing.amplitude: 2
             easing.period: 0.3
         }
         NumberAnimation {
