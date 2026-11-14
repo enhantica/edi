@@ -69,7 +69,8 @@ for build in multithread; do
 done
 printf '{"multithread": "%s"}\n' "$folder_multithread" >"$SITE/build.json"
 cp app/web/index.html app/web/coi-serviceworker.js app/web/README.md app/web/logo.svg app/web/logo-dark.svg \
-  app/web/mark.svg app/web/name.svg app/web/name-dark.svg app/web/splash.css "$SITE/"
+  app/web/mark.svg app/web/name.svg app/web/name-dark.svg app/web/splash.css app/web/intro.js app/web/intro-words.js \
+  "$SITE/"
 cp -R app/web/LICENSES "$SITE/LICENSES"
 # The HTML report's chart libraries, which a report saved with them embedded reads from the site.
 mkdir -p "$SITE/report/vendor"

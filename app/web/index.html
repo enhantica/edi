@@ -24,6 +24,15 @@
       /* The full logo at its size on the app's Home page (a 70 px mark; the owner, 2026-10-03). */
       #splash { width: 224px; }
       #still { width: 200px; display: none; }
+      /* The intro (intro.js) over the app while it starts: its words and mark placed by the script. */
+      #loading.introducing { position: fixed; inset: 0; z-index: 1; background: var(--background); }
+      .intro { position: fixed; inset: 0; color: var(--foreground); }
+      .intro svg, .intro img { position: absolute; fill: currentColor; will-change: transform, opacity; }
+      .intro-buttons { position: absolute; left: 0; right: 0; bottom: 1.4em; display: flex; justify-content: center; gap: 2em; }
+      .intro-buttons button {
+        border: none; background: none; padding: 0; color: var(--foreground); opacity: 0.6; font: 14px sans-serif; cursor: pointer;
+      }
+      .intro-buttons button:hover { opacity: 1; }
     </style>
     <link rel="stylesheet" href="splash.css">
     <script>
@@ -70,6 +79,8 @@
       <div id="status">Loading...</div>
       <noscript>EasyDiffraction needs JavaScript.</noscript>
     </div>
+    <script src="intro-words.js"></script>
+    <script src="intro.js"></script>
     <div id="screen"></div>
     <script>
       "use strict";
@@ -77,6 +88,7 @@
 
       // The page has a message instead of the app: the logo stops turning.
       function showMessage(text) {
+        window.ediIntro.abort();
         document.getElementById("splash").style.display = "none";
         document.getElementById("still").style.display = "block";
         statusLine.textContent = text;
@@ -225,8 +237,10 @@
             environment,
             module: loadModule(`${folder}/edi_app.wasm`),
             onLoaded: () => {
-              document.getElementById("loading").style.display = "none";
-              screen.style.display = "block";
+              // Shown under the intro when it still plays (intro.js), else at once.
+              window.ediIntro.appLoaded(() => {
+                screen.style.display = "block";
+              });
             },
             onExit: (exit) => {
               if (leaving) {
