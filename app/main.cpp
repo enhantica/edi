@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QFile>
 #include <QUrl>
+#include <QTimer>
 #include <QQmlApplicationEngine>
 #include <QScreen>
 #include <QSettings>
@@ -134,6 +135,18 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     edi_app::install_test_observer(engine);
+#if defined(Q_OS_MACOS) || defined(Q_OS_WIN)
+    // Experiment: draw the app bar under the system title bar (Qt 6.9 expanded client area).
+    if (auto* merged = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst())) {
+        merged->setFlag(Qt::ExpandedClientAreaHint, true);
+        merged->setFlag(Qt::NoTitleBarBackgroundHint, true);
+        QTimer::singleShot(1500, merged, [merged] {
+            const QMargins m = merged->safeAreaMargins();
+            std::fprintf(stderr, "merged title bar: flags 0x%x, safe-area margins left %d top %d right %d\n",
+                         unsigned(merged->flags()), m.left(), m.top(), m.right());
+        });
+    }
+#endif
     #ifndef __EMSCRIPTEN__
     if (smoke_flag >= 0) {
         auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());

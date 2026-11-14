@@ -25,7 +25,6 @@ EaComponents.ApplicationWindow {
     // Experiment: draw the app bar under the system title bar on macOS and Windows (Qt 6.9 expanded client
     // area). The system window buttons stay; the app bar's own buttons move clear of them by the safe-area margins.
     readonly property bool mergedTitleBar: Qt.platform.os === "osx" || Qt.platform.os === "windows"
-    flags: mergedTitleBar ? (Qt.Window | Qt.ExpandedClientAreaHint | Qt.NoTitleBarBackgroundHint) : Qt.Window
     function setUpMergedTitleBar() {
         if (!mergedTitleBar)
             return;
