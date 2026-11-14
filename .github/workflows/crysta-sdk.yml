@@ -166,6 +166,9 @@ jobs:
         with:
           manifest-path: ${{ runner.temp }}/crysta/pixi.toml
           environments: cpp-ci
+          # SDK archives and compiler objects provide the useful warm paths.
+          # Whole builder environments crowd out consumer/WASM caches.
+          cache: false
       - name: Build, test and pack the SDK, and archive the source
         if: steps.cache.outputs.cache-hit != 'true'
         env:

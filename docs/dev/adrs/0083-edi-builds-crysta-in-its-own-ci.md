@@ -293,3 +293,17 @@ ccache still hashes compiler content and full compilation inputs, and SDK/native
 admission retains its independent source, ABI, recipe and qualification checks. Actual helper
 subprocess tests exercise local rewrites, real committed changes and missing Git/input proof
 for all three runner labels. No SDK qualification recipe changes for this repair.
+
+Reference readers distinguish a real Crysta checkout from the exported source supplied by the
+SDK producer. A checkout must resolve its own Git identity; an export must carry a full
+CRYSTA_SOURCE_SHA. Both must match the selected extension's linked prefix. Running Git in an
+export can otherwise discover the enclosing Edi repository and falsely report its commit as
+Crysta's. Missing/malformed export records and broken real checkouts refuse explicitly.
+
+Within the repository's configured cache limit, the SDK producer retains qualified archives and
+compiler objects, not a second complete Pixi builder-environment snapshot per platform. Consumer
+environments retain the wrapper's cached default, and WASM retains its toolchain and object
+layers. The shared wrapper forwards this explicit cache policy while preserving the pinned
+launcher, frozen installation and job-scoped binary path. Changing the producer/setup recipe
+invalidates archive qualification as usual; existing compiler objects remain reusable. No paid
+storage limit is enabled and no qualified artifact is deleted by this policy.

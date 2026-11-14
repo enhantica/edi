@@ -75,6 +75,9 @@ def object_cache_boundary(job):
     assert (
         archive['uses'] == 'actions/cache@v4' and archive['with']['path'] == 'crysta-sdk-archives'
     ), 'Qualified SDK archive caching retains its separate successful-job policy'
+    assert install['with'].get('cache') is False, (
+        'SDK archives and compiler objects survive without redundant whole builder environments'
+    )
     assert install['with'].get('environments') == 'cpp-ci', (
         'SDK bootstrap installs only the environment used by its actual pack command'
     )
@@ -89,6 +92,7 @@ def test_compiler_cache_survives_failed_qualification_and_refuses_missing_or_wro
         'success-only',
         'unconditional',
         'other-environment',
+        'redundant-builder-environment',
     ]:
         changed = copy.deepcopy(job)
         save = next(
@@ -102,6 +106,13 @@ def test_compiler_cache_survives_failed_qualification_and_refuses_missing_or_wro
             save['if'] = 'success()'
         elif damage == 'unconditional':
             save['if'] = '!cancelled()'
+        elif damage == 'redundant-builder-environment':
+            install = next(
+                step
+                for step in changed['steps']
+                if step.get('uses') == './.github/actions/setup-pixi'
+            )
+            install['with']['cache'] = True
         else:
             install = next(
                 step
@@ -169,7 +180,13 @@ def test_selected_windows_bootstrap_uses_ninja_and_wrapper_keeps_other_callers_d
     assert wrapper['inputs']['environments']['default'] == 'default', (
         'Existing wrapper callers keep their original default environment'
     )
+    assert wrapper['inputs']['cache']['default'] == 'true', (
+        'Existing consumer environments keep their cached default'
+    )
     upstream = wrapper['runs']['steps'][0]
+    assert upstream['with']['cache'] == '${{ inputs.cache }}', (
+        'The single wrapper forwards the selected environment-cache policy'
+    )
     assert upstream['with']['environments'] == '${{ inputs.environments }}', (
         'The selected environment reaches the pinned upstream Pixi action'
     )
