@@ -157,3 +157,10 @@ The production case check refuses missing pin provenance as well as missing
 source disclosures: each record must carry a complete commit identity, a
 nonempty reason and its declared regression values. The collection cannot
 silently publish a future partial case after the current annotations are added.
+
+
+Catalogue source identifiers use forward slashes on every host. Native Windows
+filesystem paths remain native while reading; serialization uses POSIX relative
+identifiers, so Windows regenerates the same metadata and collection references
+as Linux and macOS. Cross-platform controls exercise the real description builder
+with both path representations and compare every field to committed metadata.

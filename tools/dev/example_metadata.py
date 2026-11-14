@@ -100,7 +100,7 @@ def describe(example_id: str) -> dict[str, object]:
             metadata['_metadata.title'],
             metadata['_metadata.description'],
         ],
-        'sources': [str(p.relative_to(ROOT)) for p in sources],
+        'sources': [p.relative_to(ROOT).as_posix() for p in sources],
     }
 
 
