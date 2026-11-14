@@ -592,7 +592,7 @@ constexpr std::size_t kScanTableFileMinimum = 12;
 // too narrow, the file name is shortened in the middle down to kScanTableFileMinimum, then File is dropped,
 // then Chi2 range, Chi2 and Left in turn; Progress, OK, Failed and Elapsed always stay, and the line never
 // wraps. Which columns show depends on the terminal only, so the heading and every row keep the same columns.
-std::string scan_table(std::optional<int> total, bool resumed, const std::vector<std::string>& values,
+std::string scan_table(std::optional<int> total, [[maybe_unused]] bool resumed, const std::vector<std::string>& values,
                        std::size_t columns) {
     struct Column {
         std::size_t width;
@@ -604,7 +604,7 @@ std::string scan_table(std::optional<int> total, bool resumed, const std::vector
         {kScanTableProgressWidth + 2 * digits + 1, false, 0},
         {std::max(std::size_t{2}, digits), true, 1},
         {std::max(std::size_t{6}, digits), true, 1},
-        {resumed ? std::size_t{18} : std::size_t{7}, true, 2},
+        {7, true, 2},
         {5, true, 2},
         {4, true, 3},
         {10, true, 3},
@@ -645,8 +645,10 @@ std::string scan_table(std::optional<int> total, bool resumed, const std::vector
         line += table[i].right ? pad + values[i] : values[i] + pad;
         previous = i;
     }
-    if (visible[file] && values.size() > file && !values[file].empty()) {
-        line += (separator(previous, file) == 2 ? "  " : " │ ") + shortened_middle(values[file], file_room());
+    // Every separator stays, empty cells included.
+    if (visible[file]) {
+        line += separator(previous, file) == 2 ? "  " : " │ ";
+        if (values.size() > file) line += shortened_middle(values[file], file_room());
     }
     return text_width(line) > budget ? text_prefix(line, budget) : line;
 }
@@ -707,8 +709,7 @@ std::string scan_progress_heading(const std::string& project_name, bool sequenti
     for (char& ch : name) if (static_cast<unsigned char>(ch) < 32 || ch == 127) ch = ' ';
     return std::string(sequential ? "Sequential fit: " : "Independent fit: ") + name + "\n\n" +
         scan_table(total_files, resumed,
-                   {"Progress", "OK", "Failed", resumed ? "Elapsed (this run)" : "Elapsed", "Left", "Chi2",
-                    "Chi2 range", "File"},
+                   {"Progress", "OK", "Failed", "Elapsed", "Left", "Chi2", "Chi2 range", "File"},
                    columns);
 }
 

@@ -173,7 +173,12 @@ void fit(const std::string& source, const std::string& output, bool dry,
     if (human && scan) {
         on_scan_start = [&](const edi::ScanPreamble& preamble) {
             total = preamble.total_files;
-            for (const auto& row : preamble.completed_rows) tally.add(row);
+            for (const auto& row : preamble.completed_rows) {
+                tally.add(row);
+                // A resumed run's rows start from the last completed one, so its final row is complete.
+                last_chi2 = row.reduced_chi_square;
+                last_file = row.file_name;
+            }
             tally.prior = tally.completed;
             std::cout << edi::detail::scan_progress_heading(name, project.fitting_mode == "sequential",
                                                             total, tally.prior > 0, in_place ? terminal_columns() : 0)

@@ -591,6 +591,8 @@ def human_fit(
             # that carries no resume rows (a test fake) means the same thing.
             for row in getattr(preamble, 'completed_rows', []):
                 tally.add(row)
+                # A resumed run's rows start from the last completed one, so its final row is complete.
+                state['chi2'], state['file'] = row.reduced_chi_square, row.file_name
             prior[0] = tally.completed
             sys.stdout.write(
                 edi._edi._scan_progress_heading(

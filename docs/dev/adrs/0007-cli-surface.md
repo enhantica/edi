@@ -125,12 +125,13 @@ over left-aligned values, so every heading sits over its values. Progress is a b
 characters, two spaces, the percentage right-aligned in six characters, two spaces and the count of
 completed files, e.g. `██████░░░░  57.0%  24972/43802`. The count, OK and Failed reserve their
 width from the total file count from the first row (the count type's maximum
-width for an unknown total), so no column moves as counts grow. Elapsed names “this run” on resume,
-and Left uses only the completions covered by that clock. Chi2 is the last completed fit's and
+width for an unknown total), so no column moves as counts grow. Elapsed is headed `Elapsed` always and
+counts this run only, and Left uses only the completions covered by that clock. Chi2 is the last completed fit's and
 Chi2 range the lowest and highest so far, e.g. `0.07-1.60`, in the fit tables' number format. File names
 the last finished file without its extension. Unknown totals have no percentage or Left. The final
 row is the scan's summary: it keeps the last file, chi2 and the final range, leaves Left empty, and
-no summary line follows it; a run that fits no new file prints that row once. The original public
+no summary line follows it; a run that fits no new file prints that row once, its Chi2, Chi2 range
+and File from the last completed row. Every row keeps every separator, empty cells included. The original public
 scan_progress_line remains available for callers and shares the duration/ETA calculation.
 
 TTY hosts read the actual terminal width on each event, leaving its last column unused to prevent
