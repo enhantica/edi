@@ -26,8 +26,26 @@ Item {
     readonly property Item prefixItem: prefix
     readonly property Item suffixItem: suffix
 
-    // The Home page's idle spin: the fast part of the web app's loading spin (app/web/make_logo.py), twice in a row and
-    // no slow part after it: six turns in 1.25 s, Qt's OutElastic, amplitude 1, period 0.3 (the owner, 2026-11-14).
+    // The Home page's idle spin (the owner, 2026-11-14): two fast spins back to back, each coasting for a second at
+    // just under one turn per 24 fps film frame, then braking (quartic) to rest where it started, 27 turns in all.
+    // The mark is shown at the film's frame times, so while it coasts its dots seem to drift slowly backwards, and a
+    // light rotational blur keeps the forward speed visible. The web page's loader runs the same motion (index.html).
+    readonly property real spinRate: (360 - 15) * 24  // degrees per second while coasting
+    readonly property real spinCoast: 1.0  // s
+    readonly property real spinBrake: (360 * 27 - spinRate * spinCoast) / (spinRate / 4)  // s
+    property real spinTime: 0  // s into the current spin
+    readonly property bool spinning: idleSpin.running
+    function spinAngle(time) {
+        if (time <= spinCoast)
+            return spinRate * time;
+        const u = Math.min(1, (time - spinCoast) / spinBrake);
+        return spinRate * spinCoast + spinRate * spinBrake * (1 - Math.pow(1 - u, 4)) / 4;
+    }
+    function spinSpeed(time) {  // a share of the coasting speed
+        return time <= spinCoast ? 1 : Math.pow(1 - Math.min(1, (time - spinCoast) / spinBrake), 3);
+    }
+    readonly property real filmAngle: spinning ? spinAngle(Math.floor(spinTime * 24) / 24) % 360 : 0
+    readonly property real spinTrail: spinning ? 12 * spinSpeed(spinTime) : 0
     function spin() {
         idleSpin.restart();
     }
@@ -46,12 +64,30 @@ Item {
         sourceSize: Qt.size(width, height)
         fillMode: Image.PreserveAspectFit
         antialiasing: true
+        rotation: wordmark.filmAngle
 
         MouseArea {
             anchors.fill: parent
             enabled: wordmark.link !== ""
             cursorShape: Qt.PointingHandCursor
             onClicked: Qt.openUrlExternally(wordmark.link)
+        }
+    }
+
+    // The spin's rotational blur: three faint copies trailing the mark by up to 12 degrees while it is fast.
+    Repeater {
+        model: wordmark.spinTrail > 0.5 ? 3 : 0
+        Image {
+            required property int index
+            width: mark.width
+            height: mark.height
+            x: mark.x
+            y: mark.y
+            rotation: wordmark.filmAngle - wordmark.spinTrail * (index + 1) / 3
+            opacity: 0.25
+            source: mark.source
+            sourceSize: mark.sourceSize
+            antialiasing: true
         }
     }
 
@@ -76,15 +112,13 @@ Item {
         text: ApplicationInfo.nameSuffixForLogo
     }
 
-    RotationAnimator {
+    NumberAnimation {
         id: idleSpin
-        target: mark
+        target: wordmark
+        property: "spinTime"
         from: 0
-        to: 360 * 6
-        duration: 1250
+        to: wordmark.spinCoast + wordmark.spinBrake
+        duration: (wordmark.spinCoast + wordmark.spinBrake) * 1000
         loops: 2
-        easing.type: Easing.OutElastic
-        easing.amplitude: 1
-        easing.period: 0.3
     }
 }
