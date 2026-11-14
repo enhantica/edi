@@ -1,6 +1,7 @@
 """Owner 7101f0fd9 / 58c51248e / 1c330632f: strategy governs stages; retain constraints."""
 
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -8,6 +9,7 @@ from tests.fixtures.tutorial_cases.contract import CASES, CONTRACT, ROOT, cases_
 from tests.fixtures.tutorial_cases.presentation import notebook, text
 from tests.fixtures.tutorial_cases.stages import (
     app_cycles,
+    app_population,
     assert_correlation_lesson,
     assert_teaching_stages,
     observe,
@@ -34,7 +36,12 @@ CORRELATION = sorted(
 def source(case, surface):
     if surface == 'script':
         return (ROOT / 'docs/user/tutorials' / (case + '.py')).read_text()
-    return '\n'.join(text(cell) for cell in notebook(case)['cells'] if cell['cell_type'] == 'code')
+    return '\n'.join(
+        text(cell)
+        if cell['cell_type'] == 'code'
+        else '\n'.join('# ' + line for line in text(cell).splitlines())
+        for cell in notebook(case)['cells']
+    )
 
 
 @pytest.mark.parametrize('case', [case for case in FITTING if 'python' in interfaces_for(case)])
@@ -64,7 +71,7 @@ def test_app_tutorial_teaches_the_same_fitting_groups_cycles_and_constraints(cas
         steps = [step for page in document['pages'] for step in page['steps']]
     else:
         steps = entry.get('steps', [])
-    assert app_cycles(steps) == observe(source(case, 'script'))['cycles'], (
+    assert app_cycles(steps, app_population(case)) == observe(source(case, 'script'))['cycles'], (
         'Gate 3/4: the app teaches the same groups, fit order, repeats and constraints as Python'
     )
 
@@ -161,3 +168,93 @@ def test_correlation_order_observer_refuses_missing_and_reordered_steps(escape):
         ]
     with pytest.raises(AssertionError, match='Gate 3:'):
         assert_correlation_lesson({'events': events})
+
+
+def test_app_observer_tracks_members_resets_and_completed_unique_constraints():
+    population = {
+        'structure.atom_sites.A.adp_iso': ('isotropic displacement', 'sample'),
+        'structure.atom_sites.B.adp_iso': ('isotropic displacement', 'sample'),
+    }
+    steps = [
+        {'check': 'tick:experiment.scale'},
+        {'check': 'free-choice:free:Atomic displacement'},
+        {'check': 'untick:structure.atom_sites.A.adp_iso'},
+        {'check': 'rows:constraints.append=1'},
+        {'check': 'field:constraint.expression.0=a = b'},
+        {'check': 'field:constraint.expression.0='},
+        {'target': 'statusBar.fit.button'},
+        {'check': 'fit-done'},
+        {'check': 'field:constraint.expression.0=b = a'},
+        {'check': 'field:constraint.expression.0=b = a'},
+        {'check': 'field:constraint.expression.1=b = a'},
+        {'target': 'statusBar.fit.button', 'check': 'fit-done'},
+        {'check': 'free-choice:fixed:All categories'},
+        {'check': 'tick:structure.atom_sites.A.adp_iso'},
+        {'check': 'fit-done'},
+    ]
+    cycles = app_cycles(steps, population)
+    assert len(cycles) == 3, 'Gate 3/4: a button followed by completion is one fit cycle'
+    assert cycles[0]['active'] == ['isotropic displacement', 'scale'], (
+        'Gate 3/4: unticking one member preserves the other active displacement member'
+    )
+    assert [cycle['constraints'] for cycle in cycles] == [0, 1, 0], (
+        'Gate 3/4: empty rows are not constraints and completed identical expressions count once'
+    )
+    assert cycles[-1]['active'] == ['isotropic displacement'], (
+        'Gate 3/4: Fixed All clears every parameter before individual rows can be freed again'
+    )
+    assert app_cycles(steps[:3] + [{'check': 'fit-done'}], population) != app_cycles(
+        steps[:3] + [{'check': 'untick:structure.atom_sites.B.adp_iso'}, {'check': 'fit-done'}],
+        population,
+    ), 'Gate 3/4: removing the final member removes its scientific group'
+
+
+def test_source_observer_expands_loops_and_evaluates_symmetry_and_user_constraints():
+    sites = [SimpleNamespace(id='A'), SimpleNamespace(id='B')]
+    for site in sites:
+        site.fract_x = SimpleNamespace(symmetry_constrained=site.id == 'A')
+        site.fract_y = SimpleNamespace(symmetry_constrained=False)
+        site.adp_iso = SimpleNamespace(user_constrained=site.id == 'B')
+    code = """for site in structure.atom_sites:
+    site.adp_iso.free = not site.adp_iso.user_constrained
+    for coordinate in (site.fract_x, site.fract_y):
+        coordinate.free = not coordinate.symmetry_constrained
+project.analysis.fit()
+for parameter in project.free_parameters:
+    parameter.free = False
+experiment.scale.free = True
+project.analysis.fit()
+"""
+    bindings = {'structure': SimpleNamespace(atom_sites=sites)}
+    plan = observe(code, bindings)
+    assert plan['free_before'][0] == [
+        "structure.atom_sites['A'].adp_iso",
+        "structure.atom_sites['A'].fract_y",
+        "structure.atom_sites['B'].fract_x",
+        "structure.atom_sites['B'].fract_y",
+    ], 'Gate 3: tuple and collection loops retain each eligible independent parameter'
+    assert plan['free_before'][1] == ['experiment.scale'], (
+        'Gate 3: a reset clears the actual active population before the next fit'
+    )
+    sites[0].fract_x.symmetry_constrained = False
+    assert observe(code, bindings)['free_before'] != plan['free_before'], (
+        'Gate 3: changing symmetry eligibility changes the actual observed free population'
+    )
+
+    counted = observe(
+        'for index in range(2):\n    experiment.background[index].intensity.free = True\n'
+        'experiment.background[0].intensity.free = False\nproject.analysis.fit()\n'
+    )
+    assert counted['free_before'] == [['experiment.background[1].intensity']], (
+        'Gate 3: range indices resolve to actual members so a later explicit fix reaches them'
+    )
+
+    points = [SimpleNamespace(id='1'), SimpleNamespace(id='2')]
+    indexed = observe(
+        'for point in experiment.background:\n    point.intensity.free = True\n'
+        'experiment.background[0].intensity.free = False\nproject.analysis.fit()\n',
+        {'experiment': SimpleNamespace(background=points)},
+    )
+    assert indexed['free_before'] == counted['free_before'], (
+        'Gate 3: background iteration uses sequence indices rather than display row ids'
+    )
