@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T22:53:21Z
+# measured_utc = 2026-11-14T23:15:13Z
 #
-# Recorded from: measured test run (5 node(s) measured once, 176375 banked, 0 stale row(s) dropped)
-# Collected tests: 245179; with a reported duration: 77172
+# Recorded from: measured test run (34 node(s) measured once, 176368 banked, 0 stale row(s) dropped)
+# Collected tests: 245179; with a reported duration: 77171
 # Module-scoped fixture costs recorded: 194
 #
 # Breaches are decided PER TIER against the table
@@ -238038,11 +238038,11 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_cli_stream_parity.py
 0.000	tests/system/py/test_tutorial_cli_stream_parity.py::test_time_normalizer_never_hides_other_output_changes[rwp]
 0.000	tests/system/py/test_tutorial_cli_stream_parity.py::test_time_normalizer_never_hides_other_output_changes[starting-row]
 0.000	tests/system/py/test_tutorial_cli_stream_parity.py::test_time_normalizer_never_hides_other_output_changes[summary]
-0.210	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[extra-model]
-0.240	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[measured-file]
-0.350	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[redirected-input]
+0.230	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[extra-model]
+0.250	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[measured-file]
+0.300	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[redirected-input]
 0.130	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[staged-model]
-0.230	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[unchanged]
+0.150	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[unchanged]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_command_line_stages.py::test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin[pd-neut-cwl_cosio-d20]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_command_line_stages.py::test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin[pd-neut-cwl_cosio-d20_2k]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_command_line_stages.py::test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin[pd-neut-cwl_cosio-d20_scan-213f]
@@ -238069,7 +238069,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_command_line_stages.
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_edit_observer_refuses_missing_context_and_escaping_paths[ambiguous-row]
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_edit_observer_refuses_missing_context_and_escaping_paths[no-file]
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_edit_observer_refuses_missing_context_and_escaping_paths[outside]
-0.020	tests/system/py/test_tutorial_command_line_stages.py::test_visible_flag_instructions_keep_previous_fit_values_and_expand_counted_uniform_rows
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_flag_instructions_keep_previous_fit_values_and_expand_counted_uniform_rows
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_relation_edits_can_add_and_update_alias_and_constraint_loops
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_stage_reader_executes_one_route_of_the_linked_command_tabs
 0.000	tests/system/py/test_tutorial_command_tabs.py::test_command_pair_observer_refuses_unpaired_or_inequivalent_examples[broken-label]
@@ -245798,7 +245798,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 87.264	tests/system/py/test_tutorial_callout_markup.py
 # module-cost: 951.380	tests/system/py/test_tutorial_clean_wheel.py
 # module-cost: 0.672	tests/system/py/test_tutorial_cli_stream_parity.py
-# module-cost: 3.026	tests/system/py/test_tutorial_command_line_stages.py
+# module-cost: 3.021	tests/system/py/test_tutorial_command_line_stages.py
 # module-cost: 6.295	tests/system/py/test_tutorial_continuation_requests.py
 # module-cost: 9.913	tests/system/py/test_tutorial_dialog_scrolling.py
 # module-cost: 56.909	tests/system/py/test_tutorial_notebook_build_modes.py
