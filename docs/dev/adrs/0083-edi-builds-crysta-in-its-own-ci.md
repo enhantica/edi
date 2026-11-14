@@ -188,6 +188,10 @@ Compiler probes run a nested CMake project, which must inherit the chosen resolv
 custom or list value instead of re-importing the original environment default. Real native
 compiler configure/probe controls cover this boundary; a successful post-configure Ninja
 command alone does not qualify it.
+The observer compares absolute launcher executables by filesystem identity, so Windows
+filename casing cannot reject the same executable. Launcher arguments remain exact;
+relative and explicitly empty selections still compare exactly. Failed nested execution
+reports the actual working-directory and command records without weakening forwarding checks.
 
 
 ## Check locked ABI packages before cold compilation

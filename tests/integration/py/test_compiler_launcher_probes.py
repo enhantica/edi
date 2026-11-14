@@ -38,9 +38,19 @@ def test_real_initial_and_nested_compiler_configuration_preserves_launcher_polic
         'Actual compiler initialization and nested probes preserve the selected launcher'
     )
     expected = definitions.get(language, program.as_posix())
-    assert (tree / (language + '.launcher')).read_text() == expected, (
-        'The root compiler project retains its exact effective launcher selection'
-    )
+    actual = (tree / (language + '.launcher')).read_text()
+    actual_parts, expected_parts = actual.split(';'), expected.split(';')
+    if Path(actual_parts[0]).is_absolute() and Path(expected_parts[0]).is_absolute():
+        assert Path(actual_parts[0]).samefile(expected_parts[0]), (
+            'The root compiler project retains the exact selected launcher executable'
+        )
+        assert actual_parts[1:] == expected_parts[1:], (
+            'The root compiler project retains every exact launcher argument'
+        )
+    else:
+        assert actual == expected, (
+            'The root compiler project retains its exact relative or empty launcher selection'
+        )
     assert (tree / (language + '.environment')).read_text() == 'ccache', (
         'Launcher propagation retains the unchanged caller environment'
     )
@@ -84,4 +94,12 @@ def test_actual_nested_compiler_execution_uses_the_selected_cache_policy(
             for line in lines
         )
         for lines in invocations.values()
-    ), 'Each real cache process forwards its C or C++ source in the linked child project'
+    ), (
+        'Each real cache process forwards its C or C++ source in the linked child project; '
+        'actual process trace:\n'
+        + '\n'.join(
+            line
+            for line in trace.splitlines()
+            if 'Working directory:' in line or 'Command line:' in line
+        )[-12000:]
+    )
