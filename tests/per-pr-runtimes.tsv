@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T03:15:10Z
+# measured_utc = 2026-11-14T04:26:19Z
 #
-# Recorded from: measured test run (15 node(s) measured once, 175921 banked, 0 stale row(s) dropped)
-# Collected tests: 244820; with a reported duration: 77077
+# Recorded from: measured test run (72 node(s) measured once, 175832 banked, 129 stale row(s) dropped)
+# Collected tests: 244763; with a reported duration: 77047
 # Module-scoped fixture costs recorded: 190
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 244820
+# inventory_python = 244763
 # inventory_cpp = 402
-# inventory_measured = 175936
-# inventory_unmeasured = 69286
+# inventory_measured = 175904
+# inventory_unmeasured = 69261
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85553
+# inventory_pr_python = 85496
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -3120,118 +3120,50 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t25_fullprof_layout.
 0.030	tests/integration/py/test_c34_t27_structure_geometry.py::test_edi_rock_salt_categories_geom_and_save
 0.000	tests/integration/py/test_c34_t27_structure_geometry.py::test_edi_triclinic_frame_and_edit_currentness
 UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t27_structure_geometry.py::test_same_atom_site_removed_and_readded_stays_stale_for_view_and_save
-0.020	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[host-artifacts]
-0.020	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[host-jobs]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[host-release]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[host-runs]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[host-zip]
-0.020	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[operation-artifacts]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[operation-jobs]
-0.020	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[operation-release]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[operation-runs]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[operation-zip]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[owner-artifacts]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[owner-jobs]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[owner-release]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[owner-runs]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[owner-zip]
-0.020	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[representation-artifacts]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[representation-jobs]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[representation-release]
-0.020	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[representation-runs]
-0.020	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[representation-zip]
-0.020	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[resource-artifacts]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[resource-jobs]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[resource-release]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[resource-runs]
-0.020	tests/integration/py/test_c34_t28_artifact_addressing.py::test_artifact_transport_never_aliases_another_address[resource-zip]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_history_selectors_are_required_to_receive_complete_records[event]
-0.010	tests/integration/py/test_c34_t28_artifact_addressing.py::test_history_selectors_are_required_to_receive_complete_records[filter]
-0.890	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_stale_pin_builds_the_current_branch_artifact[available-pull_request-linux-64]
-0.360	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_stale_pin_builds_the_current_branch_artifact[available-pull_request-osx-arm64]
-0.380	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_stale_pin_builds_the_current_branch_artifact[available-workflow_dispatch-linux-64]
-0.370	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_stale_pin_builds_the_current_branch_artifact[available-workflow_dispatch-osx-arm64]
-0.760	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_stale_pin_builds_the_current_branch_artifact[expired-pull_request-linux-64]
-0.390	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_stale_pin_builds_the_current_branch_artifact[expired-pull_request-osx-arm64]
-0.310	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_stale_pin_builds_the_current_branch_artifact[expired-workflow_dispatch-linux-64]
-0.360	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_stale_pin_builds_the_current_branch_artifact[expired-workflow_dispatch-osx-arm64]
-0.360	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_stale_pin_builds_the_current_branch_artifact[missing-pull_request-linux-64]
-0.370	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_stale_pin_builds_the_current_branch_artifact[missing-pull_request-osx-arm64]
-0.380	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_stale_pin_builds_the_current_branch_artifact[missing-workflow_dispatch-linux-64]
-0.360	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_stale_pin_builds_the_current_branch_artifact[missing-workflow_dispatch-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[expired-pull_request-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[expired-pull_request-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[expired-workflow_dispatch-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[expired-workflow_dispatch-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[failed-later-run-pull_request-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[failed-later-run-pull_request-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[failed-later-run-workflow_dispatch-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[failed-later-run-workflow_dispatch-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[failed-rerun-pull_request-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[failed-rerun-pull_request-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[failed-rerun-workflow_dispatch-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[failed-rerun-workflow_dispatch-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[missing-pull_request-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[missing-pull_request-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[missing-workflow_dispatch-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[missing-workflow_dispatch-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[superseded-pull_request-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[superseded-pull_request-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[superseded-workflow_dispatch-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[superseded-workflow_dispatch-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[unchanged-pull_request-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[unchanged-pull_request-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[unchanged-workflow_dispatch-linux-64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t28_paired_cache.py::test_selected_head_warm_cache_reproves_the_addressed_producer[unchanged-workflow_dispatch-osx-arm64]
-0.100	tests/integration/py/test_c34_t28_pin_ship.py::test_artifact_pin_is_committed_then_consumed_without_publication[linux-64]
-0.100	tests/integration/py/test_c34_t28_pin_ship.py::test_artifact_pin_is_committed_then_consumed_without_publication[osx-arm64]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[None-artifacts]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[None-jobs]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[None-runs]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[changing-artifacts]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[changing-jobs]
-0.060	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[changing-runs]
-0.060	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[repeat-artifacts]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[repeat-jobs]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[repeat-runs]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[short-artifacts]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[short-jobs]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[short-runs]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[unreadable-artifacts]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[unreadable-jobs]
-0.060	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[unreadable-runs]
-0.050	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[untotalled-artifacts]
-0.060	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[untotalled-jobs]
-0.300	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_listings_require_every_distinct_record_on_every_page[untotalled-runs]
-0.090	tests/integration/py/test_c34_t28_pin_ship.py::test_ship_check_compares_every_released_archive_and_never_rewrites_pin[None-None]
-0.090	tests/integration/py/test_c34_t28_pin_ship.py::test_ship_check_compares_every_released_archive_and_never_rewrites_pin[absent-None]
-0.100	tests/integration/py/test_c34_t28_pin_ship.py::test_ship_check_compares_every_released_archive_and_never_rewrites_pin[different-linux-64]
-0.110	tests/integration/py/test_c34_t28_pin_ship.py::test_ship_check_compares_every_released_archive_and_never_rewrites_pin[different-osx-arm64]
-0.130	tests/integration/py/test_c34_t28_pin_ship.py::test_ship_check_compares_every_released_archive_and_never_rewrites_pin[incomplete-linux-64]
-0.090	tests/integration/py/test_c34_t28_pin_ship.py::test_ship_check_compares_every_released_archive_and_never_rewrites_pin[incomplete-osx-arm64]
-0.180	tests/integration/py/test_c34_t28_pin_ship.py::test_unavailable_selected_artifact_never_borrows_an_available_decoy[fetch-expired]
-0.100	tests/integration/py/test_c34_t28_pin_ship.py::test_unavailable_selected_artifact_never_borrows_an_available_decoy[fetch-missing]
-0.100	tests/integration/py/test_c34_t28_pin_ship.py::test_unavailable_selected_artifact_never_borrows_an_available_decoy[pin-expired]
-0.130	tests/integration/py/test_c34_t28_pin_ship.py::test_unavailable_selected_artifact_never_borrows_an_available_decoy[pin-missing]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[abi]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[artifact-head]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[artifact-run]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[earlier-attempt]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[expired]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[failed-job]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[manifest-attempt]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[manifest-job]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[manifest-run]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[manifest-sha]
-0.030	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[missing]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[pin-digest]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[run-event]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[run-head]
-0.040	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[run-workflow]
-0.030	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[sidecar]
-0.030	tests/integration/py/test_c34_t28_pr_artifact.py::test_artifact_substitutions_refuse_after_the_matching_control[tested-file]
-0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_matching_pr_artifact_is_usable_before_the_whole_run_finishes[linux-64]
-0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_matching_pr_artifact_is_usable_before_the_whole_run_finishes[osx-arm64]
+0.020	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_build_keeps_the_explicit_pin_despite_foreign_branch_context[pull_request-linux-64]
+0.020	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_build_keeps_the_explicit_pin_despite_foreign_branch_context[pull_request-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_build_keeps_the_explicit_pin_despite_foreign_branch_context[push-linux-64]
+0.020	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_build_keeps_the_explicit_pin_despite_foreign_branch_context[push-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_build_keeps_the_explicit_pin_despite_foreign_branch_context[workflow_dispatch-linux-64]
+0.020	tests/integration/py/test_c34_t28_intermediate_pin.py::test_intermediate_build_keeps_the_explicit_pin_despite_foreign_branch_context[workflow_dispatch-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_paired_cache.py::test_warm_sdk_revalidates_qualified_content_without_history_queries[abi-linux-64]
+0.020	tests/integration/py/test_c34_t28_paired_cache.py::test_warm_sdk_revalidates_qualified_content_without_history_queries[abi-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_paired_cache.py::test_warm_sdk_revalidates_qualified_content_without_history_queries[library-linux-64]
+0.020	tests/integration/py/test_c34_t28_paired_cache.py::test_warm_sdk_revalidates_qualified_content_without_history_queries[library-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_paired_cache.py::test_warm_sdk_revalidates_qualified_content_without_history_queries[platform-linux-64]
+0.020	tests/integration/py/test_c34_t28_paired_cache.py::test_warm_sdk_revalidates_qualified_content_without_history_queries[platform-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_paired_cache.py::test_warm_sdk_revalidates_qualified_content_without_history_queries[source-linux-64]
+0.020	tests/integration/py/test_c34_t28_paired_cache.py::test_warm_sdk_revalidates_qualified_content_without_history_queries[source-osx-arm64]
+0.030	tests/integration/py/test_c34_t28_paired_cache.py::test_warm_sdk_revalidates_qualified_content_without_history_queries[tier-linux-64]
+0.020	tests/integration/py/test_c34_t28_paired_cache.py::test_warm_sdk_revalidates_qualified_content_without_history_queries[tier-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_paired_cache.py::test_warm_sdk_revalidates_qualified_content_without_history_queries[unchanged-linux-64]
+0.020	tests/integration/py/test_c34_t28_paired_cache.py::test_warm_sdk_revalidates_qualified_content_without_history_queries[unchanged-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_pin_ship.py::test_explicit_commit_pin_is_checked_then_consumed_without_publication[linux-64]
+0.020	tests/integration/py/test_c34_t28_pin_ship.py::test_explicit_commit_pin_is_checked_then_consumed_without_publication[osx-arm64]
+0.020	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_refuses_legacy_or_malformed_inputs_without_rewriting[args0]
+0.020	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_refuses_legacy_or_malformed_inputs_without_rewriting[args1]
+0.020	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_refuses_legacy_or_malformed_inputs_without_rewriting[args2]
+0.020	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_refuses_legacy_or_malformed_inputs_without_rewriting[args3]
+0.020	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_refuses_legacy_or_malformed_inputs_without_rewriting[args4]
+0.020	tests/integration/py/test_c34_t28_pin_ship.py::test_pin_refuses_legacy_or_malformed_inputs_without_rewriting[args5]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_edi_owned_archive_installs_exact_qualified_bytes_without_network[linux-64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_edi_owned_archive_installs_exact_qualified_bytes_without_network[osx-arm64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[archive-library-linux-64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[archive-library-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[archive-missing-linux-64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[archive-missing-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[archive-platform-linux-64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[archive-platform-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[archive-source-linux-64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[archive-source-osx-arm64]
+0.030	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[archive-truncated-linux-64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[archive-truncated-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[build-linux-64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[build-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[package-linux-64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[package-osx-arm64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[version-linux-64]
+0.020	tests/integration/py/test_c34_t28_pr_artifact.py::test_qualified_archive_reader_refuses_substitution_without_fallback[version-osx-arm64]
 0.140	tests/integration/py/test_case_pin_contract_controls.py::test_a_changed_start_fails_until_re_pinned_with_a_reason
 0.440	tests/integration/py/test_case_pin_contract_controls.py::test_changing_a_pin_cannot_reuse_old_source_provenance[tol_abs-committed]
 0.300	tests/integration/py/test_case_pin_contract_controls.py::test_changing_a_pin_cannot_reuse_old_source_provenance[tol_abs-later-metadata-edit]
@@ -163923,13 +163855,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::tes
 0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[url]
 0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[zero-stall]
 0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[zero-total]
-0.000	tests/integration/py/test_desk_build.py::test_missing_desktop_login_refuses_without_disclosing_output[empty]
-0.000	tests/integration/py/test_desk_build.py::test_missing_desktop_login_refuses_without_disclosing_output[failed]
-0.000	tests/integration/py/test_desk_build.py::test_missing_desktop_login_refuses_without_disclosing_output[missing]
-0.000	tests/integration/py/test_desk_build.py::test_missing_desktop_login_refuses_without_disclosing_output[timeout]
-0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[GH_TOKEN]
-0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[GITHUB_TOKEN]
-0.000	tests/integration/py/test_desk_build.py::test_sdk_uses_cli_login_when_no_token_was_exported[None]
+0.190	tests/integration/py/test_desk_build.py::test_qualified_desk_sdk_needs_no_exported_or_cli_login[GH_TOKEN]
+0.210	tests/integration/py/test_desk_build.py::test_qualified_desk_sdk_needs_no_exported_or_cli_login[GITHUB_TOKEN]
+0.210	tests/integration/py/test_desk_build.py::test_qualified_desk_sdk_needs_no_exported_or_cli_login[None]
+0.210	tests/integration/py/test_desk_build.py::test_unusable_login_is_irrelevant_to_a_qualified_local_sdk[empty]
+0.240	tests/integration/py/test_desk_build.py::test_unusable_login_is_irrelevant_to_a_qualified_local_sdk[failed]
+0.200	tests/integration/py/test_desk_build.py::test_unusable_login_is_irrelevant_to_a_qualified_local_sdk[missing]
+0.210	tests/integration/py/test_desk_build.py::test_unusable_login_is_irrelevant_to_a_qualified_local_sdk[timeout]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_marks_a_constrained_occupancy_and_keeps_its_uncertainty[False]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_marks_a_constrained_occupancy_and_keeps_its_uncertainty[True]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_dictionary_cif_contract.py::test_cif_export_preserves_each_native_anisotropic_tensor[Bani-B]
@@ -164432,11 +164364,15 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_e04_t11_science_i
 0.250	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-build-recovery]
 0.230	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-format-check]
 0.230	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-lint]
+0.560	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-test-scan-refresh]
+0.190	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-test-scan-save]
 0.240	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-test]
 0.620	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[app-ui-test]
 0.370	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_failed_build_prevents_checks[group-app]
 0.330	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-format-check]
 0.920	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-lint]
+0.210	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-test-scan-refresh]
+0.230	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-test-scan-save]
 0.370	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-test]
 0.430	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[app-ui-test]
 0.290	tests/integration/py/test_e04_t2_build_contract.py::test_standalone_step_builds_first_every_time[group-app]
@@ -167140,6 +167076,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_token_readers.p
 0.080	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[datablock]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[structure]
 0.010	tests/integration/py/test_multiphase_constraints.py::test_structure_added_after_project_creation_participates_in_constraints
+0.120	tests/integration/py/test_native_artifact_encoding.py::test_git_source_text_is_utf8_under_a_non_utf8_process_locale[manifest]
+0.090	tests/integration/py/test_native_artifact_encoding.py::test_git_source_text_is_utf8_under_a_non_utf8_process_locale[tracked-names]
 0.100	tests/integration/py/test_native_keyword_macro_boundary.py::test_authored_native_test_sources_preserve_sdk_access_identity
 0.010	tests/integration/py/test_native_keyword_macro_boundary.py::test_committed_probe_preimage_reaches_the_access_macro_gate
 0.020	tests/integration/py/test_native_keyword_macro_boundary.py::test_existing_transaction_probe_preloads_the_sdk_before_its_access_macro
@@ -167559,16 +167497,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py
 0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-polynomial-bank.background.1.coef]
 0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-polynomial-bank.background.2.coef]
 0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-polynomial-bank.background[0]]
-0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Classic]
 0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Colour-blind safe]
-0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Earth]
-0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Natural]
-0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Soft]
+0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Main]
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#0055A0-False]
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#808080-False]
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#EF9A9A-True]
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#F44336-True]
-0.000	tests/integration/py/test_palette_published_sources.py::test_exactly_five_approved_tables_and_attribution_are_published
+0.000	tests/integration/py/test_palette_published_sources.py::test_exactly_two_approved_tables_and_attribution_are_published
 0.460	tests/integration/py/test_palette_published_sources.py::test_oklab_observer_reaches_independent_black_white_and_hue_controls
 0.140	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#03A9F4light]
 0.150	tests/integration/py/test_palette_published_sources.py::test_one_sided_quantisation_matches_exhaustive_independent_lattice[Default#4CAF50light]
@@ -167903,7 +167838,7 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_calendar_uses_numeric_monthly_sequence[known0-2026-11-07-2026.11.0]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_calendar_uses_numeric_monthly_sequence[known1-2026-11-07-2026.11.11]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_calendar_uses_numeric_monthly_sequence[known2-2027-01-01-2027.01.0]
-UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_distribution_mirror_uses_the_declared_singular_host
+0.000	tests/integration/py/test_release_reference_contracts.py::test_distribution_uses_the_official_primary_and_independent_pages_mirror
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_docs_publication_conserves_deployed_components
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_draft_preparation_refuses_identity_drift[bytes]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_draft_preparation_refuses_identity_drift[history]
@@ -168186,11 +168121,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-as-iucr_99]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-iucr_19]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-iucr_99]
-0.030	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[classic]
 0.030	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[colourBlindSafe]
-0.026	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[earth]
-0.030	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[natural]
-0.030	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[soft]
+0.071	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[main]
 0.010	tests/integration/py/test_report_pdf_image_identity.py::test_pdf_image_identity_reaches_bytes_dimensions_and_alpha
 0.010	tests/integration/py/test_report_physical_domain.py::test_rounded_cell_must_remain_readable_or_refuse_before_publication[alpha-endpoint-dependent-save-as-iucr_19]
 0.020	tests/integration/py/test_report_physical_domain.py::test_rounded_cell_must_remain_readable_or_refuse_before_publication[alpha-endpoint-dependent-save-as-iucr_99]
@@ -169021,6 +168953,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.010	tests/integration/py/test_sdk_abi_preflight.py::test_workflow_preflight_orders_cold_build_and_rejects_reordered_or_warm_admission
 0.010	tests/integration/py/test_sdk_compiler_cache.py::test_compiler_cache_survives_failed_qualification_and_refuses_missing_or_wrong_save
 0.010	tests/integration/py/test_sdk_compiler_cache.py::test_failed_native_observations_are_retained_without_promoting_an_sdk
+0.040	tests/integration/py/test_sdk_compiler_cache.py::test_failed_sdk_pack_reports_cache_stats_then_keeps_its_failure
 0.030	tests/integration/py/test_sdk_compiler_cache.py::test_installer_preserves_objects_after_failure_with_the_same_explicit_cache_boundary
 0.210	tests/integration/py/test_sdk_compiler_cache.py::test_selected_windows_bootstrap_uses_ninja_and_wrapper_keeps_other_callers_default
 0.110	tests/integration/py/test_sdk_sharing_contract.py::test_actual_sparse_checkout_omits_reserved_fixture_and_keeps_producer_inputs
@@ -169888,8 +169821,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_interface_subse
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_interface_subsets.py::test_real_table_renderer_obeys_a_declared_case_subset[selection3]
 0.000	tests/integration/py/test_tutorial_interface_subsets.py::test_subset_catalogue_observer_requires_prefix_dashes_and_only_declared_links[None]
 0.000	tests/integration/py/test_tutorial_interface_subsets.py::test_subset_catalogue_observer_requires_prefix_dashes_and_only_declared_links[extra-link]
+0.000	tests/integration/py/test_tutorial_interface_subsets.py::test_subset_catalogue_observer_requires_prefix_dashes_and_only_declared_links[link-text]
 0.000	tests/integration/py/test_tutorial_interface_subsets.py::test_subset_catalogue_observer_requires_prefix_dashes_and_only_declared_links[missing-dash]
 0.000	tests/integration/py/test_tutorial_interface_subsets.py::test_subset_catalogue_observer_requires_prefix_dashes_and_only_declared_links[missing-prefix]
+0.000	tests/integration/py/test_tutorial_interface_subsets.py::test_subset_catalogue_observer_requires_prefix_dashes_and_only_declared_links[svg-text]
 0.000	tests/integration/py/test_tutorial_interface_subsets.py::test_subset_catalogue_observer_requires_prefix_dashes_and_only_declared_links[wrong-case]
 0.000	tests/integration/py/test_tutorial_notebook_contract.py::test_case_section_and_icon_follow_the_owner_rules[pd-neut-cwl_cosio-d20]
 0.000	tests/integration/py/test_tutorial_notebook_contract.py::test_case_section_and_icon_follow_the_owner_rules[pd-neut-cwl_cosio-d20_2k]
@@ -170036,6 +169971,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_official_addres
 0.000	tests/integration/py/test_tutorial_official_addresses.py::test_official_mapping_cannot_hide_a_missing_or_escaping_service_target[unknown-service]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_official_addresses.py::test_python_setup_sources_are_usable_without_placeholders_or_legacy_imports[cli/python.md]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_official_addresses.py::test_python_setup_sources_are_usable_without_placeholders_or_legacy_imports[python/setup.md]
+0.010	tests/integration/py/test_tutorial_official_addresses.py::test_setup_observer_accepts_real_pinned_and_quoted_package_arguments["easydiffraction==2026.11.14"]
+0.000	tests/integration/py/test_tutorial_official_addresses.py::test_setup_observer_accepts_real_pinned_and_quoted_package_arguments['easydiffraction==2026.11.14']
+0.000	tests/integration/py/test_tutorial_official_addresses.py::test_setup_observer_accepts_real_pinned_and_quoted_package_arguments[easydiffraction==2026.11.14]
+0.000	tests/integration/py/test_tutorial_official_addresses.py::test_setup_observer_accepts_real_pinned_and_quoted_package_arguments[easydiffraction]
 0.000	tests/integration/py/test_tutorial_official_addresses.py::test_setup_observer_refuses_each_non_user_installation_route[bad-index]
 0.000	tests/integration/py/test_tutorial_official_addresses.py::test_setup_observer_refuses_each_non_user_installation_route[dev-command]
 0.000	tests/integration/py/test_tutorial_official_addresses.py::test_setup_observer_refuses_each_non_user_installation_route[legacy-import]
@@ -244543,6 +244482,8 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publicati
 0.000	tests/unit/py/test_native_artifact_identity.py::test_missing_foreign_or_multiline_cli_response_refuses[edi \n]
 0.000	tests/unit/py/test_native_artifact_identity.py::test_missing_foreign_or_multiline_cli_response_refuses[edi\n]
 0.000	tests/unit/py/test_native_artifact_identity.py::test_missing_foreign_or_multiline_cli_response_refuses[foreign edi 1.0\n]
+0.010	tests/unit/py/test_native_artifact_identity.py::test_native_source_protocol_readers_never_use_ambient_text_decoding[tools/ci/crysta_source_receipt.py]
+0.010	tests/unit/py/test_native_artifact_identity.py::test_native_source_protocol_readers_never_use_ambient_text_decoding[tools/ci/edi_native.py]
 0.000	tests/unit/py/test_native_artifact_identity.py::test_shipped_cli_version_forms_cross_the_complete_producer_check[easydiffraction (edi core 0.0.0-dev)\n]
 0.000	tests/unit/py/test_native_artifact_identity.py::test_shipped_cli_version_forms_cross_the_complete_producer_check[edi 2026.11.14\n]
 0.000	tests/unit/py/test_native_artifact_identity.py::test_unknown_windows_architecture_is_not_an_x64_sdk
@@ -245105,6 +245046,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 0.000	tests/unit/py/test_tutorial_lifecycle_receipts.py::test_incomplete_or_conflicting_observer_cannot_certify_a_case[unfinished]
 0.000	tests/unit/py/test_tutorial_lifecycle_receipts.py::test_incomplete_or_conflicting_observer_cannot_certify_a_case[wrong-tag]
 0.000	tests/unit/py/test_tutorial_lifecycle_receipts.py::test_receipts_remain_bound_to_the_requested_actor_suite
+0.000	tests/unit/py/test_tutorial_package.py::test_batch_tutorial_output_requires_completion_progress_and_terminal_status[fit_independent]
+0.000	tests/unit/py/test_tutorial_package.py::test_batch_tutorial_output_requires_completion_progress_and_terminal_status[fit_sequential]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_tutorial_package.py::test_every_tutorial_fit_is_followed_by_pattern_and_fit_results
 0.000	tests/unit/py/test_tutorial_package.py::test_notebook_rules_accept_a_plain_workflow_and_reject_missing_displays
 UNMEASURED:failed-in-this-run	tests/unit/py/test_tutorial_package.py::test_tutorial_install_is_one_plain_cell_before_the_public_import
@@ -245309,7 +245252,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.191	tests/integration/py/test_native_serialized_source_admission.py
 # module-cost: 14.337	tests/integration/py/test_parameter_table_notation.py
 # module-cost: 0.956	tests/integration/py/test_plain_data_picker.py
-# module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
+# module-cost: 0.069	tests/integration/py/test_report_palette_cardinality.py
 # module-cost: 1.555	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.373	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
