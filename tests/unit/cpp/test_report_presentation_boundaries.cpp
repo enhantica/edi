@@ -10,10 +10,10 @@
 #include "edi/presentation.hpp"
 #include "edi/report_html.hpp"
 
-#include "../../fixtures/chart_controls/bragg.hpp"
+#include "../../fixtures/chart_controls/bragg-current.hpp"
 
 TEST_CASE("Every structure count retains its approved Bragg colour") {
-    for (const auto& expected : figure_bragg::cases) {
+    for (const auto& expected : figure_bragg_current::cases) {
         CAPTURE(expected.scheme);
         CAPTURE(expected.count);
         CAPTURE(expected.dark);
