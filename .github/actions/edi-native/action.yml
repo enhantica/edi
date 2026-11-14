@@ -2,7 +2,7 @@ name: Native Edi artifacts
 description: Restore the same run's native build after checking its source, SDK and Python ABI.
 inputs:
   platform:
-    description: The native producer platform (linux-64 or osx-arm64)
+    description: The native producer platform (linux-64, osx-arm64 or win-64)
     required: true
 runs:
   using: composite

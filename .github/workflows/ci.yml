@@ -107,16 +107,59 @@ jobs:
           - platform: macOS
             runner: &macos macos-15
             sdk: osx-arm64
+          - platform: Windows
+            runner: windows-2022
+            sdk: win-64
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v5
+      - &windows-git
+        name: Enable Windows-compatible source paths
+        if: runner.os == 'Windows'
+        run: |
+          git config --global core.longpaths true
+          git config --global core.protectNTFS false
+      - &native-checkout
+        uses: actions/checkout@v5
+        if: runner.os != 'Windows'
+        with:
+          fetch-depth: 0
+      - &windows-checkout
+        name: Check out Windows-compatible source paths
+        if: runner.os == 'Windows'
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !**/[aA][uU][xX]
+            !**/[aA][uU][xX].*
+            !**/[cC][oO][nN]
+            !**/[cC][oO][nN].*
+            !**/[pP][rR][nN]
+            !**/[pP][rR][nN].*
+            !**/[nN][uU][lL]
+            !**/[nN][uU][lL].*
+            !**/[cC][oO][mM][1-9]
+            !**/[cC][oO][mM][1-9].*
+            !**/[lL][pP][tT][1-9]
+            !**/[lL][pP][tT][1-9].*
+      - &windows-compiler
+        name: Set up the Windows compiler
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          toolset: '14.44'
       - uses: ./.github/actions/setup-pixi
       # The compiler cache (core), between runs: this job keeps it for the next run.
       - id: ccache
         uses: ./.github/actions/ccache
         with:
           max-size: 400M
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
         with:
           path: ~/.cache/edi-ccache
           key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -125,7 +168,7 @@ jobs:
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
         with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+          platform: ${{ matrix.sdk }}
       - name: Build the native code once (core-build, then edi_tests in the same tree)
         run: pixi run core-build
         env:
@@ -142,6 +185,13 @@ jobs:
         run: pixi run --skip-deps cpp-test
       - name: Standalone and Python fit output agree
         run: pixi run --skip-deps cli-stream-parity
+      - name: Save the native compiler cache after the attempt
+        if: ${{ !cancelled() && steps.ccache.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+
 
   audit:
     name: audit
@@ -196,11 +246,18 @@ jobs:
           - platform: macOS
             runner: *macos
             sdk: osx-arm64
+          - platform: Windows
+            runner: windows-2022
+            sdk: win-64
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+      - *windows-git
+      - *native-checkout
+      - *windows-checkout
+      - *windows-compiler
       - uses: ./.github/actions/setup-pixi
       # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
       - id: ccache
@@ -216,10 +273,10 @@ jobs:
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
         with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+          platform: ${{ matrix.sdk }}
       - uses: ./.github/actions/edi-native
         with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+          platform: ${{ matrix.sdk }}
       - name: Build the native code
         run: pixi run core-build
       - name: The crysta consumer proof
@@ -512,9 +569,18 @@ jobs:
           - platform: macOS
             runner: *macos
             sdk: osx-arm64
+          - platform: Windows
+            runner: windows-2022
+            sdk: win-64
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v5
+      - *windows-git
+      - *native-checkout
+      - *windows-checkout
+      - *windows-compiler
       - uses: ./.github/actions/setup-pixi
       # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
       - id: ccache
@@ -530,10 +596,10 @@ jobs:
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
         with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+          platform: ${{ matrix.sdk }}
       - uses: ./.github/actions/edi-native
         with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+          platform: ${{ matrix.sdk }}
       - name: Build the native code
         run: pixi run core-build
       - name: Execute the CLI projects through python -m edi fit

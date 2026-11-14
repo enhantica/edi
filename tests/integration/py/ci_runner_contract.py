@@ -5,11 +5,13 @@ import re
 RUNNERS = {
     'Linux': ['self-hosted', 'Linux', 'X64'],
     'macOS': ['self-hosted', 'macOS', 'ARM64'],
+    'Windows': ['self-hosted', 'Windows', 'X64'],
 }
 
 HOSTED = {
     'ubuntu-24.04': ['github-hosted', 'Linux', 'X64'],
     'macos-15': ['github-hosted', 'macOS', 'ARM64'],
+    'windows-2022': ['github-hosted', 'Windows', 'X64'],
 }
 
 
@@ -51,7 +53,7 @@ def platform_job(jobs, area, platform):
         for key, job in jobs.items()
         if key in {area, area + '-macos'}
         if any(
-            runner[1] == ('macOS' if platform == 'osx-arm64' else 'Linux')
+            runner[1] == {'osx-arm64': 'macOS', 'linux-64': 'Linux', 'win-64': 'Windows'}[platform]
             for runner in self_hosted_runners(job)
         )
     ]

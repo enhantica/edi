@@ -232,3 +232,28 @@ remain local path operands; shell tar may interpret a drive colon as a remote ho
 Git still creates the source archive from the exact pin, the receipt still binds its
 Git objects, and extraction uses the SDK reader's data filter. The helper belongs to
 the producer recipe identity, so a changed archive policy cannot reuse an older recipe.
+
+
+## Three-platform Edi native qualification
+
+The `native`, `core` and `cli-python` matrices include Linux x64, macOS arm64 and Windows
+x64. Windows is a leg of the same jobs and tasks, not an installer-only substitute for Edi
+qualification. Native production runs the same C++ unit/integration binaries and CLI/Python
+stream parity check; core and CLI jobs restore the same-run platform artifact and execute the
+same declared tests. All three legs use Bash; Windows uses Git for Windows Bash and the
+qualified MSVC toolset. Unix shell packages remain target-specific in Pixi. Python's minor
+and the Windows CRT/OpenMP package identities match the SDK/installer contract.
+
+The existing installer checkout policy for Windows reserved device filenames also applies to
+native and test consumers. Its sparse selection removes only filenames Windows cannot
+represent; it does not filter the native test inventory. The matrix/checkout gates compare
+all three hosts and the original installer policy, and reject an omitted host or sibling SDK.
+Windows executable suffixes and the qualified `.lib` SDK member are resolved explicitly.
+
+Native artifact production validates both shipped CLI version forms: release builds print
+`edi <version>` and ordinary builds print `easydiffraction (edi core <version>)`. Both require
+a successful process and one complete version line, alongside the existing exact-source
+extension and executable checks. This corrects the obsolete release-only expectation without
+changing CLI output. Native compiler caches save after an attempted build even when a later
+packaging/test check fails, following the existing app and SDK cache policy. SDK archive
+cache identity and qualification remain unchanged by these consumer repairs.

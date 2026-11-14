@@ -25,6 +25,7 @@ import json
 import os
 import platform
 import posixpath
+import re
 import shutil
 import subprocess
 import sys
@@ -53,6 +54,7 @@ SOURCES = (
     'tools/ci/core-build.sh',
     'tools/ci/build-crysta.sh',
     'tools/ci/edi_native.py',
+    'tools/ci/compiler_cache.py',
     'cmake',
     'core',
     'cli',
@@ -86,7 +88,8 @@ def sdk_platform() -> str:
         os.environ.get('RUNNER_ARCH') or platform.machine()
     )
     table = {'linux-64': 'linux-64', 'linux-64-app': 'linux-64', 'osx-arm64': 'osx-arm64'}
-    table |= {'osx-arm64-app': 'osx-arm64'}
+    table |= {'osx-arm64-app': 'osx-arm64', 'win-64': 'win-64', 'win-64-app': 'win-64'}
+    table |= {'Windows-X64': 'win-64', 'Windows-AMD64': 'win-64'}
     table |= {'Linux-X64': 'linux-64', 'Linux-x86_64': 'linux-64'}
     table |= {'macOS-ARM64': 'osx-arm64', 'Darwin-arm64': 'osx-arm64'}
     return table.get(host) or refuse(f'no edi native platform for {host}')
@@ -117,7 +120,7 @@ def observed() -> dict:
         'pixi_lock_sha256': sha256(ROOT / 'pixi.lock'),
         'crysta_source_sha': pin,
         'crysta_sdk_sha256': sha256(manifest_path),
-        'crysta_library_sha256': sha256(prefix / crysta_sdk.TESTED[0]),
+        'crysta_library_sha256': sha256(prefix / crysta_sdk.tested_paths(name)[0]),
     }
 
 
@@ -165,20 +168,27 @@ def prove() -> None:
     """Prove the imported source identity, CLI response and both declared test runners."""
     prove_import()
     cli = subprocess.run(
-        [str(TREE / 'cli' / 'easydiffraction'), '--version'],
+        [str(executable('cli/easydiffraction')), '--version'],
         capture_output=True,
         text=True,
         check=False,
     )
-    if cli.returncode or not cli.stdout.startswith('edi '):
+    if cli.returncode or not re.fullmatch(
+        r'(?:edi [^\s()]+|easydiffraction \(edi core [^\s()]+\))\n?', cli.stdout
+    ):
         refuse(f'the CLI gives no version line: {(cli.stdout + cli.stderr).strip()[:200]}')
     runnable()
+
+
+def executable(relative: str) -> Path:
+    """The same native target, with the host executable suffix."""
+    return TREE / (relative + ('.exe' if os.name == 'nt' else ''))
 
 
 def runnable() -> None:
     """Refuse unless the CLI and both declared test runners are executable files."""
     for rel in ('cli/easydiffraction', 'core/edi_tests', 'core/edi_integration_tests'):
-        if not ((TREE / rel).is_file() and os.access(TREE / rel, os.X_OK)):
+        if not (executable(rel).is_file() and os.access(executable(rel), os.X_OK)):
             refuse(f'build/ci/{rel} is not built or not executable')
 
 

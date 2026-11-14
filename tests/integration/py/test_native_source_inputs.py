@@ -57,6 +57,7 @@ def commit(root):
         'data/future-compiled-input/payload.bin',
         'pyproject.toml',
         'tools/ci/crysta_sdk.py',
+        'tools/ci/compiler_cache.py',
     ],
 )
 @pytest.mark.parametrize('transition', ['modified', 'deleted', 'untracked'])

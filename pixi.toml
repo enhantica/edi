@@ -13,7 +13,8 @@ platforms = [
     # glibc 2.28 sysroot and the 13.4 deployment target (MACOSX_DEPLOYMENT_TARGET below).
     { platform = "linux-64", glibc = "2.34" },
     { platform = "osx-arm64", macos = "14.0" },
-]  # win-64 returns once the bash-based tasks get platform shims
+    "win-64",
+]
 # The org launcher pin: pixi itself refuses to run under any other launcher version, locally and
 # in CI alike. CI installs exactly this version via .github/actions/setup-pixi; the hub parity
 # gate proves the two agree.
@@ -39,7 +40,7 @@ PYTHONPYCACHEPREFIX = '$PIXI_PROJECT_ROOT/build/pycache'
 COVERAGE_FILE = '$PIXI_PROJECT_ROOT/build/.coverage'
 
 [dependencies]
-python = ">=3.12"
+python = "3.14.*"
 # Pinned to the version the committed pixi.lock already resolves (an unpinned linter makes lint
 # non-reproducible — a new ruff release could add rules and turn CI red with no code change).
 # The pin targets the locked version exactly, so the lock is unchanged by construction.
@@ -47,19 +48,8 @@ ruff = "==0.15.20"
 pytest = "*"
 # CI splits the system tier into parallel jobs by recorded test times (tools/ci/system-tests-part.sh).
 pytest-split = ">=0.11.0,<0.12"
-# Owner ruling 67: the shell is pinned like any other toolchain input, so
-# `pixi run bash …` resolves the same bash on every leg. macOS ships bash 3.2 (2007) while
-# Linux runs 5.x, and edi's CI has a macOS leg. Declared HERE rather than in the linux-64
-# target table: that table holds the Linux compilers and coverage tools, and the shell is needed on every
-# platform.
-# Global is safe because every platform edi declares has a conda-forge bash; if win-64 returns
-# (see `platforms` above) this must become per-platform, and the lock will refuse loudly first.
-bash = ">=5.2"
-# Same class, same sweep: GNU userland assumed present. `sha256sum` is coreutils and macOS
-# ships `shasum` instead. Global rather than per-platform because every platform edi
-# declares (linux-64, osx-arm64) has a conda-forge coreutils — verified, not assumed — and
-# edi declares no win-64, which is the one platform that has none.
-coreutils = ">=9"
+# Unix shells and GNU tools are declared in their target tables. Windows CI uses Git for
+# Windows' Bash; the same scripts run under the workflow's explicit Bash shell.
 numpy = "*"
 # A compiler cache for the core build. CI switches it on (CMAKE_CXX_COMPILER_LAUNCHER, set by
 # .github/actions/ccache) and keeps its directory between runs; a local build uses it only when asked.
@@ -94,9 +84,6 @@ ninja = "*"
 # which crysta refused, and builds silently used a system Eigen instead.
 eigen = "==3.4.0"
 sleef = "*"
-# Explicit OpenMP runtime/headers on every supported platform; the compiler toolchain also pulls
-# libgomp on Linux, while llvm-openmp supplies the portable CMake find-package seam used by crysta.
-llvm-openmp = "*"
 pytest-cov = "*"
 # Declared explicitly, not relied on transitively: lib/edi/verification.py reads the crysta
 # corpus manifest to resolve a case's pinned FullProf reference, so this is a PRODUCTION
@@ -116,6 +103,8 @@ nodejs = "==22.23.2"
 # Clang. ld64 reads the SDK's text stubs through tapi, and only tapi build 4 or later skips the arm64e.x1 slices SDK
 # 27 adds (conda-forge tapi-feedstock #21). The same toolchain as crysta's; ADR-0017.
 [target.osx-arm64.dependencies]
+bash = ">=5.2"
+coreutils = ">=9"
 tapi = { version = "==1600.0.11.8", build = "hb561403_4" }
 clang_osx-arm64 = "23.*"
 clangxx_osx-arm64 = "23.*"
@@ -156,11 +145,21 @@ llvm-openmp = "23.*"
 MACOSX_DEPLOYMENT_TARGET = '13.4'
 
 [target.linux-64.dependencies]
+bash = ">=5.2"
+coreutils = ">=9"
+llvm-openmp = "*"
 cxx-compiler = "*"
 clangxx = "22.*"
 llvm-tools = "22.*"
 # The core and its wheels link against glibc 2.28 although the platform's floor is 2.34 (the app's).
 sysroot_linux-64 = "2.28.*"
+
+# Same compiler/CRT and OpenMP ABI as the qualified Windows SDK and installer environment.
+[target.win-64.dependencies]
+cxx-compiler = "*"
+vs2022_win-64 = { version = "==19.44.35207", build = "ha74f236_42" }
+vc14_runtime = { version = "==14.51.36247", build = "habf1de7_42" }
+vcomp14 = { version = "==14.51.36247", build = "habf1de7_42" }
 
 # ADR-0015: the Qt/QML app host builds in its own environment, so the default environment stays Qt-free for
 # the core, the bindings and CI legs that never touch the app. qt6-main is LGPL-3.0-only on conda-forge.

@@ -36,7 +36,7 @@ def public_build_boundary(data, name, platform=None):
         'public native jobs must use the approved standard hosted platforms'
     )
     if platform is not None:
-        expected_os = {'linux-64': 'Linux', 'osx-arm64': 'macOS'}[platform]
+        expected_os = {'linux-64': 'Linux', 'osx-arm64': 'macOS', 'win-64': 'Windows'}[platform]
         if name == 'system':
             legs = job['strategy']['matrix']['include']
             expected = {
@@ -192,12 +192,13 @@ def test_d6_one_unfiltered_native_matrix_uploads_the_prescribed_artifacts():
     assert 'native' in data, ' I34 requires the one native producer job'
     native = data['native']
     if public_profile(data):
-        for platform in ('linux-64', 'osx-arm64'):
+        for platform in ('linux-64', 'osx-arm64', 'win-64'):
             public_build_boundary(data, 'native', platform)
         assert {leg.get('sdk') for leg in native['strategy']['matrix']['include']} == {
             'linux-64',
             'osx-arm64',
-        }, 'the public native matrix must compile against both independently prescribed SDKs'
+            'win-64',
+        }, 'the public native matrix must compile against all three independently prescribed SDKs'
         return
     producers = [platform_job(data, 'native', sdk) for sdk in ('linux-64', 'osx-arm64')]
     legs = [leg for job in producers for leg in job['strategy']['matrix']['include']]
@@ -547,9 +548,10 @@ def public_native_transfer(steps, index):
     assert len(transports) == 1, 'Each consumer selects one same-run native artifact action'
     transfer_index, transfer = transports[0]
     assert transfer_index < index, 'Artifact selection precedes restoration and first use'
-    assert transfer.get('with', {}).get('platform') == (
-        "${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}"
-    ), 'Each consumer requests its actual platform artifact rather than a sibling platform'
+    assert transfer.get('with', {}).get('platform') in {
+        "${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}",
+        '${{ matrix.sdk }}',
+    }, 'Each consumer requests its actual platform artifact rather than a sibling platform'
     assert not transfer.get('if') and not transfer.get('continue-on-error'), (
         'The native artifact action cannot be optional or bypassed'
     )
