@@ -18,6 +18,7 @@ from conftest import (
     project_record_without_fields,
     project_tree_parts,
 )
+from tests.fixtures.project_categories.historical_bytes import prior_bytes
 from tests.fixtures.saved_spelling.reference import with_default_rule
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -99,13 +100,20 @@ def test_both_clis_write_one_typed_none_absorption_tree(
         'from each absorption-none spelling'
     )
     expected_carried = source_record.replace(b'_edi.schema_version 2', b'_edi.schema_version 3', 1)
-    assert crysta_record == expected_carried, (
+    assert prior_bytes(crysta_record, expected_carried, name='project.edi') == expected_carried, (
         'the disengaged crysta CLI must carry its partial project record byte-for-byte apart '
-        'from the required schema reconciliation'
+        'from schema reconciliation and ADR-0102 category placement'
     )
-    assert project_record_without_fields(
-        edi_record, 'created', 'last_modified', 'timestamp'
-    ) == with_default_rule(crysta_record), (
+    # The GUI design ADR specifies the current default; historical archives stay iucr_19.
+    expected_edi = with_default_rule(crysta_record, rule='iucr_99')
+    assert (
+        prior_bytes(
+            project_record_without_fields(edi_record, 'created', 'last_modified', 'timestamp'),
+            expected_edi,
+            name='project.edi',
+        )
+        == expected_edi
+    ), (
         'edi adds only the three owned metadata fields and the exact default uncertainty '
         'rule, preserving every other carried record byte'
     )
