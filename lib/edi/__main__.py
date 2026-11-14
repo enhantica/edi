@@ -562,7 +562,7 @@ def human_fit(
         # `measured_completed`.
         # Prose note: this function must not contain the scan line's format literals — the core
         # owns every one of them — so the groups are described here by name, never quoted.
-        state = {'total': None, 'elapsed': 0.0, 'chi2': float('nan'), 'file': ''}
+        state = {'total': None, 'elapsed': 0.0}
         live = [False]
         last_width = [0]
         tally = _ScanTally()
@@ -591,8 +591,6 @@ def human_fit(
             # that carries no resume rows (a test fake) means the same thing.
             for row in getattr(preamble, 'completed_rows', []):
                 tally.add(row)
-                # A resumed run's rows start from the last completed one, so its final row is complete.
-                state['chi2'], state['file'] = row.reduced_chi_square, row.file_name
             prior[0] = tally.completed
             sys.stdout.write(
                 edi._edi._scan_progress_heading(
@@ -623,11 +621,7 @@ def human_fit(
 
         def on_file_complete(record: object) -> None:
             tally.add(record)
-            state['elapsed'], state['chi2'], state['file'] = (
-                clock() - started,
-                record.reduced_chi_square,
-                record.file_name,
-            )
+            state['elapsed'] = clock() - started
             _emit_progress(
                 _row(record.reduced_chi_square, record.file_name, tally.completed - prior[0])
             )
@@ -716,6 +710,9 @@ class _ScanTally:
         self.ok = 0
         self.chi2_min = float('nan')
         self.chi2_max = float('nan')
+        # The last completed row's, a resumed run's included, so a final row is complete.
+        self.last_chi2 = float('nan')
+        self.last_file = ''
 
     @property
     def failed(self) -> int:
@@ -728,6 +725,7 @@ class _ScanTally:
             self.chi2_max = chi if math.isnan(self.chi2_max) else max(self.chi2_max, chi)
         self.completed += 1
         self.ok += 1 if record.converged else 0
+        self.last_chi2, self.last_file = chi, getattr(record, 'file_name', '')
 
 
 def _stream_single_fit(project: edi.Project, verbosity, project_name: str) -> int:
