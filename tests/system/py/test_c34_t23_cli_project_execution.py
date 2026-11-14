@@ -147,10 +147,18 @@ def reporting_controls(tmp_path):
         'fit_result.reduced_chi_square': 142228766.76932976,
     }
     pin = {'value': 20.831573, 'tol_abs': 0.0001, 'tol_rel': None}
-    assert checker._deviations('c', pin, raw['phase.cell.length_c']) == []
-    assert checker._reported('phase.cell.length_c', raw) == Decimal('20.83147')
-    assert checker._reported('phase.cell.length_c.uncertainty', raw) == Decimal('0.00088')
-    assert checker._reported('fit_result.reduced_chi_square', raw) == Decimal(140000000)
+    assert checker._deviations('c', pin, raw['phase.cell.length_c']) == [], (
+        'Unrounded scientific values satisfy the original numerical tolerance'
+    )
+    assert checker._reported('phase.cell.length_c', raw) == Decimal('20.83147'), (
+        'Displayed cell values use the declared reporting precision'
+    )
+    assert checker._reported('phase.cell.length_c.uncertainty', raw) == Decimal('0.00088'), (
+        'Displayed uncertainties use the declared reporting precision'
+    )
+    assert checker._reported('fit_result.reduced_chi_square', raw) == Decimal(140000000), (
+        'Displayed reduced chi square uses the declared reporting precision'
+    )
     assert checker._deviations('c', pin, 20.83147), (
         'Reported rounding must never replace the unrounded scientific assertion'
     )
@@ -189,7 +197,7 @@ def reporting_controls(tmp_path):
         **raw,
         'fit_result.iterations': 4,
         'fit_result.success': 1.0,
-    }
+    }, 'Raw fit outcome columns preserve unrounded values and completion metadata'
     outcome.values = {'unidentified.cell.length_c': 20.83147355523315}
     with pytest.raises(ValueError, match='not uniquely labelled'):
         checker._raw_outcome_columns(project, outcome)

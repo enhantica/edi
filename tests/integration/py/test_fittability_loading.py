@@ -233,7 +233,9 @@ def test_tof_capability_load_keeps_value_and_uncertainty(api, tmp_path, field):
     project, notes = load(api, source)
     parameter = getattr(getattr(project.experiments[0], category), active_field)
     if field == 'abscor2':
-        assert not hasattr(project.experiments[0].absorption, 'abscor2')
+        assert not hasattr(project.experiments[0].absorption, 'abscor2'), (
+            'The retired TOF coefficient is absent from the supported model'
+        )
         assert parameter.free, 'The active TOF coefficient retains its supported free mark'
     else:
         assert not parameter.free, 'Unsupported TOF derivatives load as fixed parameters'
