@@ -450,7 +450,7 @@ std::string machine_report(const Project& project, const FitResultBase& outcome,
     report.stopping_value = outcome.stopping_value;
     report.last_shift_su = outcome.last_shift_su;
     // The default descent's probe accounting, as crysta emits it for the same fit.
-    report.multistart_prune = outcome.descent == "multistart_prune";
+    report.multistart_prune = outcome.descent == default_descent();
     report.multistart_probes_started = outcome.multistart_probes_started;
     report.multistart_probes_pruned = outcome.multistart_probes_pruned;
     report.multistart_probe_iterations = outcome.multistart_probe_iterations;

@@ -4735,6 +4735,9 @@ struct LeastSquaresFitResult final : FitResultBase {
 // diverge by construction).
 std::vector<std::string> descent_ids();
 std::string default_descent();
+// The current id for a descent id: the default's former id maps to its current one, any other
+// id comes back unchanged.
+std::string current_descent_id(const std::string& id);
 // The absorption vocabulary and its two spellings are crysta's own table, asked through the
 // adapter. edi keeps no list and no mapping of its own.
 //   - the spellings a file of this beam mode may declare;

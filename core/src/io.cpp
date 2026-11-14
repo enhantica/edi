@@ -3911,8 +3911,10 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 warn("_minimizer.descent " + *descent + " is retired; the fit runs fast_descent instead");
                 project.descent = "fast_descent";
             } else {
+                // The default's former id loads under its current one, so a save writes that.
+                const std::string id = current_descent_id(*descent);
                 const std::vector<std::string> ids = descent_ids();
-                if (std::find(ids.begin(), ids.end(), *descent) == ids.end()) {
+                if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
                     std::string registered;
                     for (const std::string& id : ids) {
                         registered += (registered.empty() ? "" : ", ") + id;
@@ -3921,7 +3923,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                                   "' (registered descents: " + registered +
                                   "): " + analysis_file.string());
                 }
-                project.descent = *descent;
+                project.descent = id;
             }
         }
         if (const std::string* tolerance = block.find("_minimizer.chi_square_tolerance")) {

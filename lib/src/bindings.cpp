@@ -5162,7 +5162,8 @@ NB_MODULE(_edi, m) {
                 return self.descent.empty() ? edi::default_descent() : self.descent;
             },
             [](edi::Project& self, const std::optional<std::string>& value) {
-                const std::string id = value.value_or(std::string{});
+                // The default's former id is stored under its current one.
+                const std::string id = edi::current_descent_id(value.value_or(std::string{}));
                 edi::validate_descent(id, "edi descent");
                 self.descent = id;
             },
