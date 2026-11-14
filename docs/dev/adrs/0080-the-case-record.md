@@ -74,3 +74,14 @@ artefacts read it instead of restating it, and a check can refuse a case that la
 | A hand-written `case.json` per case | Rejected: it would restate the registry, the project and `expected.json`, and drift from them |
 | A new `case` kind in `index.json` | Rejected: ADR-0068's reader refuses an unknown kind, so every installed app would stop reading the index |
 | A separate pin file | Rejected: `expected.json` already holds the CLI's regression pins; the case pins extend it |
+
+### Catalogue addition coverage
+
+The later TbTi simulation and CoSiO HEiDi additions participate in the source-text
+and displayed-field app witnesses alongside the retained cases. Their source-only
+generators add input expectations without refreshing earlier measured or calculated
+values. The registry and app metadata preserve the independent current inventory
+order: simulations first, then powder fits/scans and the declared single-crystal
+cases. Source-hash transitions for the two CoSiO powder cases admit only the
+previously approved ADP free flags and removal of the retired stop-rule field;
+all prior experimental and displayed-value expectations remain exact.

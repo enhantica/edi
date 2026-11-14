@@ -204,12 +204,22 @@ var frozen = {
     "docs/user/cli/sc-neut-tof_taurine-senju/project/experiments/senju_5.edi": "bd8a6874ba85059564b90759f703edcd1a566d30baad0aa1985c3c06f9b0705c",
     "docs/user/cli/sc-neut-tof_taurine-senju/project/experiments/senju_6.edi": "c595c707c74b08180091cf63a8afa8141f7f40a4b75c90a31e6821f2aa524328",
     "docs/user/cli/sc-neut-tof_taurine-senju/project/analysis/analysis.edi": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469",
-    "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/structures/cosio.edi": "37983b2243d249186d235bc0eb2b3d5acf78edb0872ddbd0f5314ef39c252443",
+    "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/structures/cosio.edi": "4505d34c32bb8f576900ea17b478bdd8589bb5ca40f7e5d293db03ad71dcd034",
     "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/experiments/d20.edi": "50e40518f4864b3e310c0b76de5d43d5f48af1a8b89191a6f03cfd9ab87e280d",
-    "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/analysis/analysis.edi": "87aed0d15aea1ac6ce289611341709557ca4ef11344a3bab5fcc9c152ea3b1a4",
+    "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/analysis/analysis.edi": "fc3edb415512ca536353f603603646ad83eddedd88d50a81019b54e4e165a616",
     "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/structures/cosio.edi": "70324d6326ee447d4c4d83d26918e6a7ce2f0fd929e261e999ee30af8d8b329a",
     "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/experiments/d20.edi": "f647dd3cc5b10ab31a05ed5660f635c9df6090c44986cc8c0857db992fe4076f",
-    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/analysis/analysis.edi": "1e3e07e8d90b6d07f00a7dc60d9a89213637a3062ed3c3223c47091285f5db6e"
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project/analysis/analysis.edi": "38509b411c3da6e12738df723bf64732d13c1c955a4a5b36ff1d464c3d99c0d8",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project/structures/tb2ti2o7.edi": "745e6cd90c21ab52226e3dc3fc5693682b5570a4e0515fc0f780f4c47b3c499e",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project/experiments/heidi.edi": "0b599ca8ca6006b41ed3529601d1f598a27ab90e54629b2457835da65db1ca19",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project/analysis/analysis.edi": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3",
+    "docs/user/cli/sc-neut-cwl_cosio-heidi/project/structures/cosio_2k5.edi": "1a0d69436ecc043b523edc7d7f5c43de1754969e906f30f577c5237909c96569",
+    "docs/user/cli/sc-neut-cwl_cosio-heidi/project/structures/cosio_300k.edi": "2fd26bc4d305b15beccfeabaa8391d3ec33845624501443e783774fbed58fe5d",
+    "docs/user/cli/sc-neut-cwl_cosio-heidi/project/structures/cosio_55k.edi": "2cbf27891099826ff14e4b1817fcbbc9ef328966696e671b41635c570328dcfb",
+    "docs/user/cli/sc-neut-cwl_cosio-heidi/project/experiments/heidi_2k5.edi": "942c52ea8de5e11cc9cf892de335b19c0a7da4297ba4eb2250255c3ae3d5dfff",
+    "docs/user/cli/sc-neut-cwl_cosio-heidi/project/experiments/heidi_300k.edi": "b6223d3a5a943ccaaafa1971b7b2ddce91f3e43962cbc8447b66fc27018ca965",
+    "docs/user/cli/sc-neut-cwl_cosio-heidi/project/experiments/heidi_55k.edi": "bb9ae92f454146e7c6a7baa1dd248c42696acd620a624504a808a9a9854a3102",
+    "docs/user/cli/sc-neut-cwl_cosio-heidi/project/analysis/analysis.edi": "620e93ea4cb063a908db88aff58acfed83234bd6975be42c117a9b433128d7d9"
   },
   "cases": [
     {
@@ -8455,6 +8465,431 @@ var frozen = {
     {
       "tag": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project:engines",
       "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project:space_group:tb2ti2o7",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "tb2ti2o7",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "cubic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "227",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "F d -3 m",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "2",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project:experiment_type:heidi",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "heidi",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project:extinction:heidi",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "heidi",
+      "fields": [
+        [
+          "extinction.domain_radius",
+          25.0,
+          "parameter"
+        ],
+        [
+          "extinction.mosaic_spread",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.crystal_radius",
+          3.0,
+          "parameter"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project:engines",
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project",
+      "page": "analysis",
+      "tier": "extras",
+      "group": "engines",
+      "selection": null,
+      "fields": [
+        [
+          "statusBar.calculator",
+          "crysta",
+          "label"
+        ],
+        [
+          "statusBar.minimizer",
+          "crysta",
+          "label"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_cosio-heidi/project:space_group:cosio_2k5",
+      "path": "docs/user/cli/sc-neut-cwl_cosio-heidi/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "cosio_2k5",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "orthorhombic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "62",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "P n m a",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "abc",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_cosio-heidi/project:space_group:cosio_300k",
+      "path": "docs/user/cli/sc-neut-cwl_cosio-heidi/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "cosio_300k",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "orthorhombic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "62",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "P n m a",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "abc",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_cosio-heidi/project:space_group:cosio_55k",
+      "path": "docs/user/cli/sc-neut-cwl_cosio-heidi/project",
+      "page": "structure",
+      "tier": "basic",
+      "group": "space_group",
+      "selection": "cosio_55k",
+      "fields": [
+        [
+          "spaceGroup.crystalSystem",
+          "orthorhombic",
+          "readonly"
+        ],
+        [
+          "spaceGroup.itNumber",
+          "62",
+          "text"
+        ],
+        [
+          "spaceGroup.nameHM",
+          "P n m a",
+          "text"
+        ],
+        [
+          "spaceGroup.coordSystemCode",
+          "abc",
+          "text"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_cosio-heidi/project:experiment_type:heidi_2k5",
+      "path": "docs/user/cli/sc-neut-cwl_cosio-heidi/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "heidi_2k5",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_cosio-heidi/project:extinction:heidi_2k5",
+      "path": "docs/user/cli/sc-neut-cwl_cosio-heidi/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "heidi_2k5",
+      "fields": [
+        [
+          "extinction.coefficient_11",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_22",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_33",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_12",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_13",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_23",
+          0.0,
+          "parameter"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_cosio-heidi/project:experiment_type:heidi_300k",
+      "path": "docs/user/cli/sc-neut-cwl_cosio-heidi/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "heidi_300k",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_cosio-heidi/project:extinction:heidi_300k",
+      "path": "docs/user/cli/sc-neut-cwl_cosio-heidi/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "heidi_300k",
+      "fields": [
+        [
+          "extinction.coefficient_11",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_22",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_33",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_12",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_13",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_23",
+          0.0,
+          "parameter"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_cosio-heidi/project:experiment_type:heidi_55k",
+      "path": "docs/user/cli/sc-neut-cwl_cosio-heidi/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "experiment_type",
+      "selection": "heidi_55k",
+      "fields": [
+        [
+          "experimentType.sampleForm",
+          "single crystal",
+          "disabled"
+        ],
+        [
+          "experimentType.beamMode",
+          "constant wavelength",
+          "disabled"
+        ],
+        [
+          "experimentType.radiationProbe",
+          "neutron",
+          "disabled"
+        ],
+        [
+          "experimentType.scatteringType",
+          "bragg",
+          "disabled"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_cosio-heidi/project:extinction:heidi_55k",
+      "path": "docs/user/cli/sc-neut-cwl_cosio-heidi/project",
+      "page": "experiment",
+      "tier": "basic",
+      "group": "extinction",
+      "selection": "heidi_55k",
+      "fields": [
+        [
+          "extinction.coefficient_11",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_22",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_33",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_12",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_13",
+          0.0,
+          "parameter"
+        ],
+        [
+          "extinction.coefficient_23",
+          0.0,
+          "parameter"
+        ]
+      ]
+    },
+    {
+      "tag": "docs/user/cli/sc-neut-cwl_cosio-heidi/project:engines",
+      "path": "docs/user/cli/sc-neut-cwl_cosio-heidi/project",
       "page": "analysis",
       "tier": "extras",
       "group": "engines",

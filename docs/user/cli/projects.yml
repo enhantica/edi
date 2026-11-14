@@ -104,6 +104,14 @@ projects:
     diffraction-lib: simulate-lbco-cwl
     executing: true
     user-facing: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi_simulation
+    title: "Tb₂Ti₂O₇ on HEiDi"
+    short-name: "Tb₂Ti₂O₇"
+    # The single-crystal simulation (owner, 2026-11-08): HEiDi's Tb2Ti2O7 structure and instrument without its
+    # reflections.
+    follows-diffraction-lib: refine-tbti-heidi
+    executing: true
+    user-facing: true
   - id: pd-neut-cwl_lbco-hrpt
     title: "La₀.₅Ba₀.₅CoO₃ on HRPT"
     short-name: "LBCO"
@@ -230,14 +238,6 @@ projects:
   - id: sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp
     executing: true
     verification: true
-  - id: sc-neut-cwl_tb2ti2o7-heidi_simulation
-    title: "Tb₂Ti₂O₇ on HEiDi"
-    short-name: "Tb₂Ti₂O₇"
-    # The single-crystal simulation (owner, 2026-11-08): HEiDi's Tb2Ti2O7 structure and instrument without its
-    # reflections.
-    follows-diffraction-lib: refine-tbti-heidi
-    executing: true
-    user-facing: true
   - id: sc-neut-cwl_tb2ti2o7-heidi
     title: "Tb₂Ti₂O₇ on HEiDi"
     short-name: "Tb₂Ti₂O₇"
@@ -250,12 +250,6 @@ projects:
     follows-diffraction-lib: refine-tbti-heidi
     executing: true
     user-facing: true
-  - id: sc-neut-cwl_cosio-heidi
-    title: "Co₂SiO₄ on HEiDi"
-    short-name: "Co₂SiO₄"
-    follows-diffraction-lib: refine-tbti-heidi
-    executing: true
-    user-facing: true
   - id: sc-neut-tof_taurine-unknown_basic
     executing: true
     verification: true
@@ -263,5 +257,11 @@ projects:
     title: "Taurine on SENJU"
     short-name: "C₂H₇NO₃S"
     diffraction-lib: refine-taurine-senju
+    executing: true
+    user-facing: true
+  - id: sc-neut-cwl_cosio-heidi
+    title: "Co₂SiO₄ on HEiDi"
+    short-name: "Co₂SiO₄"
+    follows-diffraction-lib: refine-tbti-heidi
     executing: true
     user-facing: true

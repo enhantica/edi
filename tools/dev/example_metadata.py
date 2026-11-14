@@ -111,8 +111,8 @@ def generate() -> dict[str, object]:
     }
 
 
-# The Examples list order: powder before single crystal, simulations before fits, sequential
-# fits after the others, and within each group the technique in this order.
+# Simulations precede fits (ADR-0080). Powder fits precede single crystal; scans
+# follow other powder fits. Single-crystal cases retain their declared registry order.
 TECHNIQUES = ('neut-cwl', 'neut-tof', 'xray-cwl', 'neut-xray-cwl')
 
 
@@ -121,10 +121,10 @@ def order_key(example_id: str, values: dict[str, list[str]]) -> tuple[int, int, 
     if technique not in TECHNIQUES:
         raise ValueError(f'{example_id}: technique {technique!r} has no place in TECHNIQUES')
     return (
-        values['sampleForm'] != ['powder'],
         values['purpose'] != ['simulation'],
+        values['sampleForm'] != ['powder'],
         values['fittingMode'] == ['sequential'],
-        TECHNIQUES.index(technique),
+        TECHNIQUES.index(technique) if values['sampleForm'] == ['powder'] else 0,
     )
 
 

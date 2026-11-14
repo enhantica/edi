@@ -791,6 +791,8 @@ def oracle_input_bytes(path):
     if relative[:3] == ('docs', 'user', 'cli') and relative[3] in {
         'pd-neut-cwl_cosio-d20_2k',
         'pd-neut-cwl_cosio-d20_scan-213f',
+        'sc-neut-cwl_tb2ti2o7-heidi_simulation',
+        'sc-neut-cwl_cosio-heidi',
     }:
         return path.read_bytes()
     return read_previous(path)

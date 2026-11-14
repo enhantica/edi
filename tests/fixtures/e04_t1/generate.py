@@ -180,8 +180,14 @@ def measured_range(path):
 
 def scan_inputs(project, analysis):
     """Independent file catalogue and measured-range witnesses; never import the app."""
-    if analysis.get('_fitting_mode.type') not in {'sequential', 'independent'}:
+    keys = ('_sequential_fit.data_dir', '_sequential_fit.file_pattern')
+    declared = [key in analysis for key in keys]
+    if not any(declared):
         return []
+    if not all(declared) or not all(
+        isinstance(analysis[key], str) and analysis[key] for key in keys
+    ):
+        raise ValueError('A scan source needs its declared data directory and file pattern')
     directory = project / analysis['_sequential_fit.data_dir']
     files = sorted(directory.glob(analysis['_sequential_fit.file_pattern']))
     if analysis.get('_sequential_fit.reverse') == 'true':
