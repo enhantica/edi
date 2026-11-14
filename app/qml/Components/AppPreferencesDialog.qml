@@ -277,50 +277,51 @@ AppDialog {
         // A tab shows at once, without the swipe's slide.
         Component.onCompleted: (pages.contentItem as ListView).highlightMoveDuration = 0
 
-        // Appearance: the theme, then the structure view's arrows, then the charts' behaviour and colours. Rows with
-        // colour strips pair up.
+        // Appearance: General and the structure view's arrows side by side, then the charts' behaviour and colours.
+        // Rows with colour strips pair up.
         TabColumn {
             width: dialog.contentRowWidth
 
-            GroupTitle {
-                icon: "adjust"
-                text: qsTr("General")
-            }
             TabRow {
-                Field {
-                    label: qsTr("Theme")
-                    FieldBox {
-                        id: themeBox
+                TabColumn {
+                    GroupTitle {
+                        icon: "adjust"
+                        text: qsTr("General")
+                    }
+                    Field {
+                        label: qsTr("Theme")
+                        FieldBox {
+                            id: themeBox
 
-                        objectName: "preferences.theme"
-                        model: [qsTr("Light"), qsTr("Dark"), qsTr("System")]
-                        currentIndex: EaStyle.Colors.theme === EaStyle.Colors.DarkTheme ? 1 : EaStyle.Colors.theme === EaStyle.Colors.SystemTheme ? 2 : 0
-                        onActivated: index => ApplicationInfo.preferenceActivated(index, 0)
+                            objectName: "preferences.theme"
+                            model: [qsTr("Light"), qsTr("Dark"), qsTr("System")]
+                            currentIndex: EaStyle.Colors.theme === EaStyle.Colors.DarkTheme ? 1 : EaStyle.Colors.theme === EaStyle.Colors.SystemTheme ? 2 : 0
+                            onActivated: index => ApplicationInfo.preferenceActivated(index, 0)
+                        }
                     }
                 }
-            }
-            GroupTitle {
-                first: false
-                icon: "cubes"
-                text: qsTr("Structure view")
-            }
-            TabRow {
-                Field {
-                    label: qsTr("Magnetic moment arrows")
-                    spacing: dialog.stripSpacing
-                    FieldBox {
-                        readonly property var schemes: ["atom", "greyed", "single"]
-
-                        objectName: "preferences.momentColours"
-                        model: [qsTr("Atom colour"), qsTr("Greyed atom colour"), qsTr("Single grey")]
-                        currentIndex: Math.max(0, schemes.indexOf(Preferences.momentColours))
-                        onActivated: index => Preferences.momentColours = schemes[index]
-                        ToolTip.text: qsTr("How the structure view colours the magnetic moment arrows")
+                TabColumn {
+                    GroupTitle {
+                        icon: "cubes"
+                        text: qsTr("Structure view")
                     }
-                    PaletteStrip {
-                        objectName: "preferences.momentColourStrip"
-                        width: dialog.columnWidth
-                        colours: ApplicationInfo.momentColourSamples(Preferences.momentColours, EaStyle.Colors.isDarkPalette)
+                    Field {
+                        label: qsTr("Magnetic moment arrows")
+                        spacing: dialog.stripSpacing
+                        FieldBox {
+                            readonly property var schemes: ["atom", "greyed", "single"]
+
+                            objectName: "preferences.momentColours"
+                            model: [qsTr("Atom colour"), qsTr("Greyed atom colour"), qsTr("Single grey")]
+                            currentIndex: Math.max(0, schemes.indexOf(Preferences.momentColours))
+                            onActivated: index => Preferences.momentColours = schemes[index]
+                            ToolTip.text: qsTr("How the structure view colours the magnetic moment arrows")
+                        }
+                        PaletteStrip {
+                            objectName: "preferences.momentColourStrip"
+                            width: dialog.columnWidth
+                            colours: ApplicationInfo.momentColourSamples(Preferences.momentColours, EaStyle.Colors.isDarkPalette)
+                        }
                     }
                 }
             }
