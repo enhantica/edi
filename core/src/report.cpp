@@ -546,31 +546,83 @@ std::optional<double> scan_eta(int completed, std::optional<int> total, double e
     return elapsed / measured * (*total - completed);
 }
 
-std::string scan_table(std::optional<int> total, const std::vector<std::string>& values,
+// Terminal columns are counted in characters: the bar's blocks and the ellipsis are one column each but
+// several UTF-8 bytes.
+std::size_t text_width(const std::string& text) {
+    std::size_t width = 0;
+    for (const char ch : text) width += (static_cast<unsigned char>(ch) & 0xC0) != 0x80;
+    return width;
+}
+
+// The first `count` characters of `text`.
+std::string text_prefix(const std::string& text, std::size_t count) {
+    std::size_t at = 0;
+    for (std::size_t seen = 0; at < text.size(); ++at) {
+        if ((static_cast<unsigned char>(text[at]) & 0xC0) != 0x80 && seen++ == count) break;
+    }
+    return text.substr(0, at);
+}
+
+// The last `count` characters of `text`.
+std::string text_suffix(const std::string& text, std::size_t count) {
+    const std::size_t width = text_width(text);
+    return width <= count ? text : text.substr(text_prefix(text, width - count).size());
+}
+
+// A name shortened in the middle to `width` characters, the cut marked with an ellipsis.
+std::string shortened_middle(const std::string& name, std::size_t width) {
+    if (text_width(name) <= width) return name;
+    if (width == 0) return "";
+    const std::size_t keep = width - 1, head = (keep + 1) / 2;
+    return text_prefix(name, head) + "…" + text_suffix(name, keep - head);
+}
+
+// The bar and percentage of the Progress column, e.g. `██████░░░░  9.5%`.
+constexpr int kScanTableBarCells = 10;
+constexpr std::size_t kScanTableProgressWidth = kScanTableBarCells + 1 + 6;  // the bar, a space, `100.0%`
+// Below this many characters for the file name, the other optional columns go first.
+constexpr std::size_t kScanTableFileMinimum = 12;
+
+// One line of the table: the columns right-aligned, each as wide as its heading (the counts as wide as the
+// total), and the File column last, left-aligned, in what the terminal leaves. When too narrow, the file name
+// is shortened in the middle down to kScanTableFileMinimum, then the File column is dropped, then chi2 range,
+// chi2 and Estimated in turn; Progress and Completed always stay, and the line never wraps. Which columns show
+// depends on the terminal only, so the heading and every row keep the same columns.
+std::string scan_table(std::optional<int> total, bool resumed, const std::vector<std::string>& values,
                        std::size_t columns) {
+    // Progress, Completed, OK, Failed, Elapsed, Estimated, chi2, chi2 range, then File. The counts reserve
+    // the total's digits from the first row, so no column moves as they grow.
     const auto digits = std::to_string(total && *total > 0 ? *total : std::numeric_limits<int>::max()).size();
-    const std::vector<std::size_t> widths{std::max(std::size_t{9}, 2 * digits + 1), 8, 18,
-                                          10, std::max(std::size_t{2}, digits),
-                                          std::max(std::size_t{6}, digits), 10};
-    std::vector<bool> visible(widths.size(), true);
+    const std::vector<std::size_t> widths{kScanTableProgressWidth, std::max(std::size_t{9}, 2 * digits + 1),
+                                          std::max(std::size_t{2}, digits), std::max(std::size_t{6}, digits),
+                                          resumed ? std::size_t{18} : std::size_t{7}, 9, 4, 10};
+    std::vector<bool> visible(widths.size() + 1, true);  // the last is the File column
     const auto width = [&] {
         std::size_t result = 0;
         for (std::size_t i = 0; i < widths.size(); ++i) if (visible[i]) result += widths[i] + 2;
         return result - 2;
     };
     const auto budget = columns > 0 ? columns - 1 : std::numeric_limits<std::size_t>::max();
-    for (std::size_t omit : {6, 1, 3}) {
+    const auto file_room = [&]() -> std::size_t {
+        const std::size_t used = width() + 2;
+        return budget > used ? budget - used : 0;
+    };
+    if (file_room() < kScanTableFileMinimum) visible.back() = false;
+    for (std::size_t omit : {7, 6, 5}) {  // chi2 range, chi2, Estimated; Progress and Completed always stay
         if (width() > budget) visible[omit] = false;
     }
     std::string line;
     for (std::size_t i = 0; i < widths.size(); ++i) {
         if (!visible[i]) continue;
         if (!line.empty()) line += "  ";
-        if (values[i].size() < widths[i]) line += std::string(widths[i] - values[i].size(), ' ');
+        const std::size_t shown = text_width(values[i]);
+        if (shown < widths[i]) line += std::string(widths[i] - shown, ' ');
         line += values[i];
     }
-    if (line.size() > budget) line.resize(budget);
-    return line;
+    if (visible.back() && values.size() > widths.size() && !values.back().empty()) {
+        line += "  " + shortened_middle(values.back(), file_room());
+    }
+    return text_width(line) > budget ? text_prefix(line, budget) : line;
 }
 
 void append_scan_part(std::string& line, const std::string& part) {
@@ -628,35 +680,53 @@ std::string scan_progress_heading(const std::string& project_name, bool sequenti
     std::string name = project_name;
     for (char& ch : name) if (static_cast<unsigned char>(ch) < 32 || ch == 127) ch = ' ';
     return std::string(sequential ? "Sequential fit: " : "Independent fit: ") + name + "\n\n" +
-        scan_table(total_files, {"Completed", "Progress", resumed ? "Elapsed (this run)" : "Elapsed", "ETA (est.)", "OK", "Failed", "chi2"}, columns);
+        scan_table(total_files, resumed,
+                   {"Progress", "Completed", "OK", "Failed", resumed ? "Elapsed (this run)" : "Elapsed", "Estimated",
+                    "chi2", "chi2 range", "File"},
+                   columns);
 }
 
 std::string scan_progress_row(int completed, std::optional<int> total_files,
                               double elapsed_seconds, int measured_completed, int ok_count,
-                              int fail_count, double reduced_chi_square, std::size_t columns) {
+                              int fail_count, double reduced_chi_square, double chi2_low, double chi2_high,
+                              const std::string& file_name, std::size_t columns) {
     const bool known = total_files && *total_files > 0;
-    const bool finished = known && completed >= *total_files;
-    std::ostringstream percent;
-    percent.imbue(std::locale::classic());
-    if (known) percent << std::fixed << std::setprecision(1) << 100.0 * completed / *total_files << '%';
-    const auto chi = !finished && std::isfinite(reduced_chi_square)
-        ? display_text("fit_result.reduced_chi_square", reduced_chi_square) : "";
+    std::string progress;
+    if (known) {
+        const double fraction = std::clamp(static_cast<double>(completed) / *total_files, 0.0, 1.0);
+        const int filled = static_cast<int>(kScanTableBarCells * fraction + 0.5);
+        for (int cell = 0; cell < kScanTableBarCells; ++cell) progress += cell < filled ? "█" : "░";
+        std::ostringstream percent;
+        percent.imbue(std::locale::classic());
+        percent << std::fixed << std::setprecision(1) << 100.0 * fraction << '%';
+        const std::string text = percent.str();
+        progress += std::string(kScanTableProgressWidth - kScanTableBarCells - text.size(), ' ') + text;
+    }
+    // The last fit's chi2 and the range so far, in the fit tables' number format; the final row keeps both.
+    const auto number = [](double value) {
+        return std::isfinite(value) ? display_text("fit_result.reduced_chi_square", value) : std::string{};
+    };
+    const auto range = std::isfinite(chi2_low) && std::isfinite(chi2_high)
+        ? number(chi2_low) + "-" + number(chi2_high) : std::string{};
     const auto eta = scan_eta(completed, total_files, elapsed_seconds, measured_completed);
-    return scan_table(total_files, {
-        std::to_string(completed) + (known ? "/" + std::to_string(*total_files) : ""),
-        percent.str(), scan_duration(elapsed_seconds),
-        eta ? scan_duration(*eta) : "", std::to_string(ok_count), std::to_string(fail_count), chi
+    return scan_table(total_files, measured_completed < completed, {
+        progress, std::to_string(completed) + (known ? "/" + std::to_string(*total_files) : ""),
+        std::to_string(ok_count), std::to_string(fail_count), scan_duration(elapsed_seconds),
+        eta ? scan_duration(*eta) : "", number(reduced_chi_square), range, scan_display_name(file_name)
     }, columns);
 }
 
 std::string scan_progress_rewrite(const std::string& line, std::size_t previous_width,
                                   std::size_t columns) {
     const auto budget = columns > 0 ? columns - 1 : std::numeric_limits<std::size_t>::max();
-    std::string visible = line.substr(0, budget);
+    std::string visible = text_width(line) > budget ? text_prefix(line, budget) : line;
     const auto erase_width = std::min(previous_width, budget);
-    if (visible.size() < erase_width) visible.append(erase_width - visible.size(), ' ');
+    const auto shown = text_width(visible);
+    if (shown < erase_width) visible.append(erase_width - shown, ' ');
     return "\r" + visible;
 }
+
+std::size_t scan_progress_width(const std::string& line) { return text_width(line); }
 }  // namespace detail
 
 std::string scan_summary(int total_files, int ok_count, int fail_count, double chi2_min,

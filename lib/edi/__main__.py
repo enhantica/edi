@@ -562,7 +562,7 @@ def human_fit(
         # `measured_completed`.
         # Prose note: this function must not contain the scan line's format literals — the core
         # owns every one of them — so the groups are described here by name, never quoted.
-        state = {'total': None, 'elapsed': 0.0}
+        state = {'total': None, 'elapsed': 0.0, 'chi2': float('nan'), 'file': ''}
         live = [False]
         last_width = [0]
         tally = _ScanTally()
@@ -604,20 +604,30 @@ def human_fit(
             )
             sys.stdout.flush()
 
+        def _row(chi2: float, file_name: str, measured: int) -> str:
+            return edi._edi._scan_progress_row(
+                tally.completed,
+                state['total'],
+                state['elapsed'],
+                measured,
+                tally.ok,
+                tally.failed,
+                chi2,
+                tally.chi2_min,
+                tally.chi2_max,
+                file_name,
+                _terminal_columns(tty=tty),
+            )
+
         def on_file_complete(record: object) -> None:
             tally.add(record)
-            state['elapsed'] = clock() - started
+            state['elapsed'], state['chi2'], state['file'] = (
+                clock() - started,
+                record.reduced_chi_square,
+                record.file_name,
+            )
             _emit_progress(
-                edi._edi._scan_progress_row(
-                    tally.completed,
-                    state['total'],
-                    state['elapsed'],
-                    tally.completed - prior[0],
-                    tally.ok,
-                    tally.failed,
-                    record.reduced_chi_square,
-                    _terminal_columns(tty=tty),
-                )
+                _row(record.reduced_chi_square, record.file_name, tally.completed - prior[0])
             )
 
         def on_scan_iteration(record: object) -> None:
@@ -643,24 +653,16 @@ def human_fit(
                 on_scan_start=on_scan_start,
                 on_file_complete=on_file_complete,
             )
-        if live[0]:
-            # Freeze the in-place line: the bar finishes at 100% and stays; the summary follows.
-            sys.stdout.write('\n')
-        # Every group below comes from the SAME fold — counts and χ² bounds alike — so the
-        # summary cannot report a χ² range over a narrower set than the files it counts.
-        # Failures are counted, never listed: the per-file outcome is in analysis/results.csv.
-        # `measured_completed` carries the one quantity that legitimately covers less: the
-        # clock.
+        # The last row is the scan's summary, every column filled (the core owns its format): the
+        # in-place line stays, and a run that fitted no new file prints that row once from what the
+        # earlier runs left.
+        fitted_none = tally.completed == prior[0]
         sys.stdout.write(
-            edi.scan_summary(
-                total_files=state['total'] if state['total'] is not None else tally.completed,
-                ok_count=tally.ok,
-                fail_count=tally.failed,
-                chi2_min=tally.chi2_min,
-                chi2_max=tally.chi2_max,
-                elapsed_seconds=state['elapsed'],
-                measured_completed=tally.completed - prior[0],
-            )
+            _row(state['chi2'], state['file'], 0) + '\n'
+            if fitted_none
+            else '\n'
+            if live[0]
+            else ''
         )
         skipped = _skipped_line(project)
         if skipped:

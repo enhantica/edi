@@ -116,19 +116,32 @@ current SDK manifest/library and Python ABI before reuse (ADR-0083).
 
 ## Bounded scan progress rows
 
-Both CLI hosts use one private core table projection: project identity and column labels precede
-the numeric rows. Counts reserve their total's digit width (the count type's maximum width for
-an unknown total), so crossing a digit boundary cannot move the columns. The elapsed value
-still names “this run” on resume, and ETA uses only the completions covered by that clock.
-Unknown totals have no percentage or ETA; failures remain visible at completion. The original
-public scan_progress_line remains available for callers and shares the duration/ETA calculation.
+Both CLI hosts use one private core table projection: a heading line (`Sequential fit:` or
+`Independent fit:` and the project), a blank line, the column names, then one row per completed
+file, rewritten in place on a terminal. The columns are Progress, Completed, OK, Failed, Elapsed,
+Estimated, chi2, chi2 range and File. Progress is a bar of ten block characters, a space and the
+percentage right-aligned in six characters, e.g. `██████░░░░  9.5%`. Completed, OK and Failed are
+right-aligned and reserve their width from the total file count from the first row (the count
+type's maximum width for an unknown total), so no column moves as counts grow. Elapsed,
+Estimated, chi2 and chi2 range are right-aligned and as wide as their headings; Elapsed names
+“this run” on resume, and Estimated uses only the completions covered by that clock. chi2 is the
+last completed fit's and chi2 range the lowest and highest so far, e.g. `0.07-1.10`, in the fit
+tables' number format. File, last and left-aligned, names the last finished file without its
+extension. Unknown totals have no percentage or estimate. The final row is the scan's summary: it
+keeps the last file and chi2 and the final range, leaves Estimated empty, and no summary line
+follows it; a run that fits no new file prints that row once. The original public
+scan_progress_line remains available for callers and shares the duration/ETA calculation.
 
 TTY hosts read the actual terminal width on each event, leaving its last column unused to prevent
-automatic wrapping. The projection drops chi-square, percentage, then ETA when necessary; the
-rewrite bounds both the row and its clearing spaces after a resize. Plain ASCII rows avoid
-byte/display-width disagreement. Redirected output retains one complete row per completion.
-The private functions are host plumbing, outside the public Python surface. Machine records
-and saved scientific values are unaffected.
+automatic wrapping. The File column takes what the other columns leave: a long name is shortened
+in the middle with `…`, down to twelve characters, then File is dropped, then chi2 range, chi2 and
+Estimated in that order; Progress and Completed always stay and the row never wraps. Which columns
+show depends on the width only, so the heading and every row keep the same columns. Widths are
+counted in characters, not bytes, because the bar's blocks and the ellipsis are one column but
+several UTF-8 bytes; the rewrite bounds both the row and its clearing spaces after a resize the
+same way. Redirected output retains one complete row per completion. The private functions are
+host plumbing, outside the public Python surface. Machine records and saved scientific values are
+unaffected.
 
 Manual Undo output takes its version header from the linked engine's existing error-record
 emitter, through the same private header validator used by the descent-listing comparison.

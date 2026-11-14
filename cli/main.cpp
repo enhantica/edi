@@ -156,6 +156,8 @@ void fit(const std::string& source, const std::string& output, bool dry,
     const bool in_place = scan && !scan_rows && stdout_is_terminal();
     std::size_t last_width = 0;
     bool live = false;
+    double last_chi2 = std::numeric_limits<double>::quiet_NaN();
+    std::string last_file;
     if (human && !scan) {
         on_start = [&](const edi::FitPreamble& preamble) {
             std::cout << edi::stream_header(preamble, name, variant) << std::flush;
@@ -182,12 +184,15 @@ void fit(const std::string& source, const std::string& output, bool dry,
             elapsed =
                 std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
             const std::size_t columns = in_place ? terminal_columns() : 0;
+            last_chi2 = record.reduced_chi_square;
+            last_file = record.file_name;
             const std::string line = edi::detail::scan_progress_row(
                 tally.completed, total, elapsed, tally.completed - tally.prior, tally.ok,
-                tally.completed - tally.ok, record.reduced_chi_square, columns);
+                tally.completed - tally.ok, record.reduced_chi_square, tally.chi2_min, tally.chi2_max,
+                record.file_name, columns);
             if (in_place) {
                 std::cout << edi::detail::scan_progress_rewrite(line, last_width, columns);
-                last_width = line.size();
+                last_width = edi::detail::scan_progress_width(line);
                 live = true;
             } else {
                 std::cout << line << '\n';
@@ -214,10 +219,16 @@ void fit(const std::string& source, const std::string& output, bool dry,
     if (machine) {
         std::cout << edi::machine_report(project, result, verbosity);
     } else if (human && scan) {
-        if (live) std::cout << '\n';
-        std::cout << edi::scan_summary(total.value_or(tally.completed), tally.ok,
-                                       tally.completed - tally.ok, tally.chi2_min, tally.chi2_max,
-                                       elapsed, tally.completed - tally.prior);
+        // The last row is the scan's summary, every column filled; a run that fitted no new file prints
+        // that row once from what the earlier runs left.
+        if (tally.completed == tally.prior) {
+            std::cout << edi::detail::scan_progress_row(tally.completed, total, elapsed, 0, tally.ok,
+                                                        tally.completed - tally.ok, last_chi2, tally.chi2_min,
+                                                        tally.chi2_max, last_file, in_place ? terminal_columns() : 0)
+                      << '\n';
+        } else if (live) {
+            std::cout << '\n';
+        }
     } else if (human) {
         std::cout << edi::summary_line(result, variant);
         if (verbosity == edi::VerbosityEnum::FULL) {
