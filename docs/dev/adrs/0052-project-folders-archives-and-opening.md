@@ -416,3 +416,12 @@ older layout comparison. They retain the original whole-file hashes and reject
 changed, duplicate, unknown or mixed stop declarations. Projection removes only
 the independently checked later field; it neither substitutes numerical output
 nor asserts fitting-policy equivalence.
+
+
+Browser creation qualification follows the existing unsaved-changes guard before
+entering a new project name. It observes either the real guarded action or the
+rendered name input, uses the actual Discard pointer when guarded and requires
+the guard to retire before continuing. No test setter clears the current project
+or bypasses the guard; malformed, ambiguous and out-of-viewport controls still
+refuse. The prior native-picker case intentionally leaves an edited project,
+which makes this transition part of the sequential browser test lifecycle.

@@ -883,6 +883,19 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     const snapshot = async () => { await projectPage(); return inspectArchive(await saveArchive()); };
     const createEmpty = async name => {
       await projectPage(); await click(/^Create a new project$/, 'button', 'project.create');
+      await waitBrowser(`(() => {
+        for (const name of ['createProject.name','unsavedChanges.discard']) {
+          try {const item=window.ediControlGeometry(name); if(item.visible && item.enabled) return true;}
+          catch(error) {if(!/no visible item|no item is named/.test(error.message)) throw error;}
+        }
+        return false;
+      })()`, 'Create must expose its name input or the actual unsaved-changes guard');
+      const guarded=await evaluate(`(() => {
+        try {return window.ediControlGeometry('unsavedChanges.discard').visible;}
+        catch(error) {if(/no visible item|no item is named/.test(error.message)) return false; throw error;}
+      })()`);
+      if(guarded) {await discardResetGuard(); await requireResetGuardClosed();}
+      await waitControlGeometry(evaluate, frame, 'createProject.name');
       await settleRenderedPage();
       const beforeInput = await restoreCanvasViewport(evaluate);
       await writeFile(join(output, `${mode}-create-${name}-before-input.json`), JSON.stringify(beforeInput,null,2));
