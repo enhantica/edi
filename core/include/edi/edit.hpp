@@ -1497,7 +1497,10 @@ class Edit {
             }
             std::vector<double> axis(static_cast<std::size_t>(intervals) + 1);
             for (std::size_t index = 0; index < axis.size(); ++index) {
-                axis[index] = start + static_cast<double>(index) * step;
+                // Multiply, then add, in two statements, as the loader generates a declared range: a fused
+                // multiply-add differs in the last bit, and a save then finds no range that regenerates it.
+                const double offset = static_cast<double>(index) * step;
+                axis[index] = start + offset;
                 // Every point distinct, as the saved declaration regenerates them: a step too small for
                 // the range's values leaves two points equal.
                 if (index > 0 && !(axis[index] > axis[index - 1])) {
