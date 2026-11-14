@@ -28,21 +28,15 @@ EaComponents.ApplicationWindow {
     // Let the app bar reach the top edge (Qt keeps the content inside the safe area by default); the system
     // buttons then sit in a strip at the top of the app bar, and every group of the app bar moves down below it.
     topPadding: mergedTitleBar ? 0 : undefined
-    // macOS: the traffic lights' row at the top of the app bar and the left edge of its first button
-    // (mac_titlebar.mm places the red light there).
-    readonly property real trafficLightsRowHeight: 28
-    readonly property real trafficLightsLeft: appBar.children.length ? appBar.children[0].anchors.leftMargin : 0
+    // macOS: the red traffic light's left edge, set from C++ (mac_titlebar.mm); the first app bar button lines up
+    // with it. The bar keeps its height.
+    property real trafficLightsLeft: -1
     function setUpMergedTitleBar() {
-        if (!mergedTitleBar)
+        if (!mergedTitleBar || Qt.platform.os !== "osx")
             return;
-        const rows = appBar.children;
-        // The system buttons keep a row at the top of the app bar (left on macOS, right on Windows); the bar grows
-        // a little and its groups move down, so the two rows are not too close.
-        const extra = 12;
-        const baseHeight = appBar.height;
-        appBar.height = baseHeight + extra;
-        for (const row of [rows[0], rows[1], rows[2]])
-            row.anchors.verticalCenterOffset = extra / 2;
+        const left = appBar.children[0];
+        const base = left.anchors.leftMargin;
+        left.anchors.leftMargin = Qt.binding(() => trafficLightsLeft >= 0 ? trafficLightsLeft : base);
     }
     // Dragging the empty app bar moves the window, and a double click maximizes or restores it, as a title bar does.
     // Starts on press, before any button or tab can take the press, so a drag works anywhere on the empty bar.
