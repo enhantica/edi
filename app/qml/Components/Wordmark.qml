@@ -27,7 +27,7 @@ Item {
     readonly property Item suffixItem: suffix
 
     // The Home page's idle spin: the fast part of the web app's loading spin (app/web/make_logo.py), twice in a row and
-    // no slow part after it: six turns in 1.25 s, Qt's OutElastic, amplitude 1, period 0.3 (the owner, 2026-11-14).
+    // no slow part after it: six turns anticlockwise in 2.5 s, Qt's OutElastic, amplitude 1, period 0.3 (the owner, 2026-11-15).
     function spin() {
         idleSpin.restart();
     }
@@ -80,8 +80,8 @@ Item {
         id: idleSpin
         target: mark
         from: 0
-        to: 360 * 6
-        duration: 1250
+        to: -360 * 6
+        duration: 2500
         loops: 2
         easing.type: Easing.OutElastic
         easing.amplitude: 1
