@@ -256,7 +256,7 @@ Item {
 
     // After the 2020 app's timing, with the line's fade-in shortened and the time given to holding it (the owner,
     // 2026-11-14): a 1 s pause, the line fading in over 1.5 s and held for 2.5 s, the other words fading out over 2 s,
-    // and the move over 1 s; then the mark's 1.2 s roll and the 1 s fade of the rest.
+    // and the move over 1 s with the mark's 1.2 s roll starting with it; then the 1 s fade of the rest.
     SequentialAnimation {
         id: play
 
@@ -281,18 +281,21 @@ Item {
         ScriptAction {
             script: intro.place()
         }
-        NumberAnimation {
-            target: intro
-            property: "move"
-            to: 1
-            duration: 1000
-            easing.type: Easing.OutExpo
-        }
-        NumberAnimation {
-            target: intro
-            property: "roll"
-            to: 1
-            duration: intro.rollTime * 1000
+        // The mark starts rolling in as the two words start to move (the owner, 2026-11-15).
+        ParallelAnimation {
+            NumberAnimation {
+                target: intro
+                property: "move"
+                to: 1
+                duration: 1000
+                easing.type: Easing.OutExpo
+            }
+            NumberAnimation {
+                target: intro
+                property: "roll"
+                to: 1
+                duration: intro.rollTime * 1000
+            }
         }
         NumberAnimation {
             target: intro

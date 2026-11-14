@@ -139,7 +139,7 @@
   const easyX = x;
 
   // The timing of HomeIntro.qml: a 1 s pause, a 1.5 s fade-in, a 2.5 s hold, a 2 s fade of the other
-  // words, the 1 s move, then the mark's 1.2 s roll.
+  // words, then the 1 s move with the mark's 1.2 s roll starting with it.
   const shown = [{ opacity: 0 }, { opacity: 1 }];
   for (const element of [making, diffraction, middle, easyBold]) play(element, shown, 1000, 1500);
   for (const element of [making, middle]) play(element, [{ opacity: 1 }, { opacity: 0 }], 5000, 2000, "linear", "forwards");
@@ -178,7 +178,7 @@
   }
   // The intro ends when the roll has finished on the animations' own clock, which starts with the first frame drawn
   // and so can lag a timer started now.
-  play(mark, roll, 8000, 1200).finished.then(() => {
+  play(mark, roll, 7000, 1200).finished.then(() => {
     ended = true;
     if (loaded) reveal();
     else toSplash();
