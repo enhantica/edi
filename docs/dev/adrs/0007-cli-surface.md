@@ -119,11 +119,12 @@ current SDK manifest/library and Python ABI before reuse (ADR-0083).
 Both CLI hosts use one private core table projection: a heading line (`Sequential fit:` or
 `Independent fit:` and the project), a blank line, the column names, then one row per completed
 file, rewritten in place on a terminal. The columns come in groups separated by ` │ `: Progress,
-Done, OK, Failed │ Elapsed, Left │ chi2, range │ File, with two spaces between the columns of a
-group. Number headings are right-aligned over right-aligned values, and Progress and File
-left-aligned over left-aligned values, so every heading sits over its values. Progress is a bar of
-ten block characters, two spaces and the percentage right-aligned in six characters. Done, OK and
-Failed reserve their width from the total file count from the first row (the count type's maximum
+OK, Failed │ Elapsed, Left │ chi2, range │ File, with two spaces between the columns of a group.
+Number headings are right-aligned over right-aligned values, and Progress and File left-aligned
+over left-aligned values, so every heading sits over its values. Progress is a bar of ten block
+characters, two spaces, the percentage right-aligned in six characters, two spaces and the count of
+completed files, e.g. `██████░░░░  57.0%  24972/43802`. The count, OK and Failed reserve their
+width from the total file count from the first row (the count type's maximum
 width for an unknown total), so no column moves as counts grow. Elapsed names “this run” on resume,
 and Left uses only the completions covered by that clock. chi2 is the last completed fit's and
 range the lowest and highest so far, e.g. `0.07-1.60`, in the fit tables' number format. File names
@@ -135,7 +136,7 @@ scan_progress_line remains available for callers and shares the duration/ETA cal
 TTY hosts read the actual terminal width on each event, leaving its last column unused to prevent
 automatic wrapping. The File column takes what the other columns leave: a long name is shortened
 in the middle with `…`, down to twelve characters, then File is dropped, then range, chi2 and Left
-in that order; Progress, Done, OK, Failed and Elapsed always stay and the row never wraps. Which columns
+in that order; Progress, OK, Failed and Elapsed always stay and the row never wraps. Which columns
 show depends on the width only, so the heading and every row keep the same columns. Widths are
 counted in characters, not bytes, because the bar's blocks and the ellipsis are one column but
 several UTF-8 bytes; the rewrite bounds both the row and its clearing spaces after a resize the
