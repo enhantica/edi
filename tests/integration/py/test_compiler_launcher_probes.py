@@ -1,5 +1,6 @@
 """Real compiler probes must retain launcher policy inside nested CMake projects."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -31,10 +32,10 @@ def test_real_initial_and_explicit_nested_compiler_probes_preserve_launcher_poli
         assert (tree / (language + '.environment')).read_text() == 'ccache', (
             'Launcher propagation retains the unchanged caller environment'
         )
-        assert (tree / ('nested-' + language)).is_dir(), (
+        assert (tree / 'nested-native').is_dir(), (
             'Every declared language reaches its explicit nested native compiler project'
         )
-        children = list((tree / ('nested-' + language)).rglob('CMakeCache.txt'))
+        children = list((tree / 'nested-native').rglob('CMakeCache.txt'))
         assert any(
             'USER_PROBE_WITNESS:UNINITIALIZED=retained-toolchain-value' in child.read_text()
             for child in children
@@ -49,7 +50,19 @@ def test_real_initial_and_explicit_nested_compiler_probes_preserve_launcher_poli
         assert 'TryCompile-' in trace, (
             'The actual cache forwards compiler checks during project initialization'
         )
+        invocations = {}
+        for line in trace.splitlines():
+            record = re.match(r'\[[^]]+ (\d+)\] (.*)', line)
+            if record:
+                invocations.setdefault(record[1], []).append(record[2])
         for language in LANGUAGES:
-            assert 'nested-' + language in trace, (
-                'The actual cache forwards every explicit nested compiler invocation'
-            )
+            suffix = 'c' if language == 'C' else 'cpp'
+            assert any(
+                any('Working directory:' in line and 'nested-native' in line for line in lines)
+                and any(
+                    'Command line:' in line
+                    and re.search(r'probe\.' + suffix + r'(?:[.\s"]|$)', line)
+                    for line in lines
+                )
+                for lines in invocations.values()
+            ), 'Each real cache process forwards its C or C++ source in the linked child project'

@@ -227,3 +227,27 @@ def test_active_stamp_codec_projects_only_the_retired_historical_slot():
     assert body == frozen.replace(retired, b''), (
         'All other historical codec bytes remain independent of the current producer'
     )
+
+
+@pytest.mark.parametrize('suffix', ['.md', '.png', '.dat', '.json', '.ipynb'])
+@pytest.mark.parametrize('spelling', ['abscor2', 'ABSCOR_2', 'ab\u017fcor 2'])
+def test_binary_prefilter_cannot_hide_unicode_case_or_mislabeled_text(tmp_path, suffix, spelling):
+    scope = tmp_path / 'public'
+    scope.mkdir()
+    path = scope / ('probe' + suffix)
+    text = (
+        json.dumps({'text': spelling}, ensure_ascii=True)
+        if suffix in {'.json', '.ipynb'}
+        else spelling
+    )
+    path.write_bytes(text.encode())
+    assert violations(tmp_path, ['public']) == [str(path.relative_to(tmp_path))], (
+        'The byte prefilter preserves Unicode casefolding, escaped JSON and all file suffixes'
+    )
+
+
+def test_clean_binary_files_remain_in_the_nonexempt_surface_census(tmp_path):
+    scope = tmp_path / 'public'
+    scope.mkdir()
+    (scope / 'image.png').write_bytes(bytes(range(256)) * 10)
+    assert violations(tmp_path, ['public']) == []

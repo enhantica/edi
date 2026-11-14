@@ -113,7 +113,11 @@ def test_sdk_cold_and_warm_producers_publish_required_artifacts_only_after_succe
         ), 'A failed qualification cannot publish an SDK artifact'
 
 
-def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(tmp_path):
+@pytest.mark.parametrize('platform', ['linux-64', 'osx-arm64', 'win-64'])
+@pytest.mark.parametrize('index', range(13))
+def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(
+    tmp_path, platform, index
+):
     steps = document(PRODUCER)['jobs']['build']['steps']
     guard = next(
         step
@@ -129,63 +133,59 @@ def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(tmp_
         )
     assert guard['env']['SHA'] == '${{ needs.resolve.outputs.sha }}'
     assert guard['env']['CRYSTA_SDK_PLATFORM'] == '${{ matrix.platform }}'
-    for platform in ('linux-64', 'osx-arm64', 'win-64'):
-        pin = 'a7' * 20
-        archive = f'crysta-sdk-{pin}-{platform}.tar.gz'
-        checksum = archive + '.sha256'
-        source = f'crysta-src-{pin}.tar.gz'
-        authored = b'independent opaque archive transport, not a scientific SDK'
-        files = {
-            archive: authored,
-            checksum: (hashlib.sha256(authored).hexdigest() + '  ' + archive + '\n').encode(),
-            source: b'independent source transport',
-        }
-        mutations = [
-            (None, None),
-            *[(name, None) for name in files],
-            *[(name, b'') for name in files],
-            (archive, b'changed archive'),
-            (checksum, b'0' * 64 + b'  ' + archive.encode() + b'\n'),
-            (checksum, files[checksum] * 2),
-            (checksum, files[checksum] + b'extra record\n'),
-            (checksum, files[checksum].replace(archive.encode(), b'../external.tar.gz')),
-            (
-                checksum,
-                (hashlib.sha256(authored).hexdigest() + '  other-archive.tar.gz\n').encode(),
-            ),
-        ]
-        for index, (name, replacement) in enumerate(mutations):
-            world = tmp_path / platform / str(index)
-            destination = world / 'crysta-sdk-archives'
-            destination.mkdir(parents=True)
-            for member, data in files.items():
-                if member != name or replacement is not None:
-                    (destination / member).write_bytes(replacement if member == name else data)
-            if name == checksum and b'other-archive' in (replacement or b''):
-                (destination / 'other-archive.tar.gz').write_bytes(authored)
-                (destination / archive).write_bytes(b'unverified replacement')
-            result = subprocess.run(
-                ['bash', '-e', '-c', guard['run']],
-                cwd=world,
-                env={
-                    **{
-                        key: value
-                        for key, value in os.environ.items()
-                        if key.casefold() != 'platform'
-                    },
-                    'SHA': pin,
-                    'Platform': 'x64',
-                    'CRYSTA_SDK_PLATFORM': platform,
-                },
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=5,
-            )
-            assert (result.returncode == 0) == (name is None), (
-                'The actual producer must reject missing, empty, corrupt or wrong-file '
-                f'checksum transport: {platform} {name}'
-            )
+    pin = 'a7' * 20
+    archive = f'crysta-sdk-{pin}-{platform}.tar.gz'
+    checksum = archive + '.sha256'
+    source = f'crysta-src-{pin}.tar.gz'
+    authored = b'independent opaque archive transport, not a scientific SDK'
+    files = {
+        archive: authored,
+        checksum: (hashlib.sha256(authored).hexdigest() + '  ' + archive + '\n').encode(),
+        source: b'independent source transport',
+    }
+    mutations = [
+        (None, None),
+        *[(name, None) for name in files],
+        *[(name, b'') for name in files],
+        (archive, b'changed archive'),
+        (checksum, b'0' * 64 + b'  ' + archive.encode() + b'\n'),
+        (checksum, files[checksum] * 2),
+        (checksum, files[checksum] + b'extra record\n'),
+        (checksum, files[checksum].replace(archive.encode(), b'../external.tar.gz')),
+        (
+            checksum,
+            (hashlib.sha256(authored).hexdigest() + '  other-archive.tar.gz\n').encode(),
+        ),
+    ]
+    assert len(mutations) == 13, 'Every independent transport damage remains declared'
+    name, replacement = mutations[index]
+    world = tmp_path / platform / str(index)
+    destination = world / 'crysta-sdk-archives'
+    destination.mkdir(parents=True)
+    for member, data in files.items():
+        if member != name or replacement is not None:
+            (destination / member).write_bytes(replacement if member == name else data)
+    if name == checksum and b'other-archive' in (replacement or b''):
+        (destination / 'other-archive.tar.gz').write_bytes(authored)
+        (destination / archive).write_bytes(b'unverified replacement')
+    result = subprocess.run(
+        ['bash', '-e', '-c', guard['run']],
+        cwd=world,
+        env={
+            **{key: value for key, value in os.environ.items() if key.casefold() != 'platform'},
+            'SHA': pin,
+            'Platform': 'x64',
+            'CRYSTA_SDK_PLATFORM': platform,
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=5,
+    )
+    assert (result.returncode == 0) == (name is None), (
+        'The actual producer must reject missing, empty, corrupt or wrong-file '
+        f'checksum transport: {platform} {name}'
+    )
 
 
 @pytest.mark.parametrize('changed', INPUTS)

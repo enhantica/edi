@@ -200,15 +200,32 @@ def native_probe_project(root, source, languages):
     assert declaration, 'The native probe retains the actual declared project language boundary'
     project = root / 'source'
     project.mkdir()
-    body = ''
+    names = []
+    combined = len(languages) == 2
     for language in languages:
         name = 'probe.' + ('c' if language == 'C' else 'cpp')
-        (project / name).write_text('int main(void) { return 0; }\n', encoding='utf-8')
+        code = (
+            (
+                'int probe_c(void) { return 0; }\n'
+                if language == 'C'
+                else 'extern "C" int probe_c(void); int main() { return probe_c(); }\n'
+            )
+            if combined
+            else 'int main(void) { return 0; }\n'
+        )
+        (project / name).write_text(code, encoding='utf-8')
+        names.append('"${CMAKE_CURRENT_SOURCE_DIR}/' + name + '"')
+    # One real child project compiles both languages and links the C/C++ boundary.
+    # Separate child configurations repeated the same CMake bootstrap for each language.
+    body = (
+        'try_compile(NATIVE_OK "${CMAKE_BINARY_DIR}/nested-native" SOURCES '
+        + ' '.join(names)
+        + ' OUTPUT_VARIABLE NATIVE_OUTPUT)\n'
+        'if(NOT NATIVE_OK)\n'
+        'message(FATAL_ERROR "Nested native compiler failed: ${NATIVE_OUTPUT}")\nendif()\n'
+    )
+    for language in languages:
         body += (
-            'try_compile(NATIVE_OK "${CMAKE_BINARY_DIR}/nested-' + language + '" '
-            '"${CMAKE_CURRENT_SOURCE_DIR}/' + name + '" OUTPUT_VARIABLE NATIVE_OUTPUT)\n'
-            'if(NOT NATIVE_OK)\n'
-            'message(FATAL_ERROR "Nested native compiler failed: ${NATIVE_OUTPUT}")\nendif()\n'
             'file(WRITE "${CMAKE_BINARY_DIR}/' + language + '.launcher" '
             '"${CMAKE_' + language + '_COMPILER_LAUNCHER}")\n'
             'file(WRITE "${CMAKE_BINARY_DIR}/' + language + '.environment" '

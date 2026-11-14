@@ -6,12 +6,20 @@ import re
 from pathlib import Path
 
 FIELD = re.compile(r'abscor[\s_-]*2', re.IGNORECASE)
+# Unicode IGNORECASE also matches long s; retain that UTF-8 spelling in the byte prefilter.
 FULLPROF_INPUTS = {'.pcr', '.inp', '.new'}
 
 
 def surface_text(path):
-    raw = path.read_bytes().decode('utf-8', errors='replace')
-    if path.suffix.lower() in {'.json', '.ipynb'}:
+    data = path.read_bytes()
+    suffix = path.suffix.lower()
+    # JSON escapes and FullProf's exemption grammar require decoding even without a literal prefix.
+    if suffix not in FULLPROF_INPUTS | {'.json', '.ipynb'}:
+        folded = data.lower()
+        if b'abscor' not in folded and b'ab\xc5\xbfcor' not in folded:
+            return ''
+    raw = data.decode('utf-8', errors='replace')
+    if suffix in {'.json', '.ipynb'}:
         data = json.loads(raw)
         if path.name == 'python-surface.json':
             assert 'public' in data, 'A Python declaration must prove its live public surface'
