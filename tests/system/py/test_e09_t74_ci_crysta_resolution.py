@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures.e09_t75_commands import COMMANDS, assert_no_swallowed_refusal
+from tests.fixtures.native_process import environment_bash
 
 
 class RemoteFixture:
@@ -80,7 +81,7 @@ class RemoteFixture:
 
     def run(self, script, *args, timeout=2):
         result = subprocess.run(
-            ['bash', str(self.edi / 'tools/ci' / script), *args],
+            [environment_bash(), str(self.edi / 'tools/ci' / script), *args],
             cwd=self.edi,
             env=self.env,
             capture_output=True,
@@ -269,7 +270,7 @@ def harness(tmp_path, *, lookup='none', probe='readable', operation='ls-remote',
     )
     for name in ('git', 'gh', 'curl', 'sleep', 'cmake', 'ninja', 'make', 'cc', 'c++'):
         executable = tmp_path / 'bin' / name
-        executable.write_text(f'#!{sys.executable}\n' + PRELUDE)
+        executable.write_text(f'#!{sys.executable}\n' + PRELUDE, newline='\n')
         executable.chmod(0o755)
     build.env.update({
         'CI': 'true',
@@ -470,7 +471,7 @@ def test_auth_retry_is_bounded_and_exhaustion_never_substitutes_a_sibling(
     )
     outcome = subprocess.run(
         [
-            'bash',
+            environment_bash(),
             '-eu',
             '-c',
             (

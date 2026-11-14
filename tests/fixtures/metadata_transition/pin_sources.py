@@ -9,6 +9,8 @@ from pathlib import Path
 
 import yaml
 
+from tests.fixtures.path_keys import repository_key
+
 HERE = Path(__file__).parent
 ROOT = HERE.resolve().parents[2]
 BASE = '398a48e2b53a074e745956cee6e5399f963788f5'
@@ -28,7 +30,7 @@ def rows():
 
 
 def previous_bytes(name, data):
-    row = rows().get(str(name))
+    row = rows().get(repository_key(name))
     if row is None:
         return data
     digest = hashlib.sha256(data).hexdigest()

@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
 from tests.fixtures.native_transport import run as native
 from tests.fixtures.native_transport import world
 from tests.integration.py.test_e09_t75_native_workflow import ROSTER
@@ -109,7 +110,7 @@ def test_every_native_consumer_restores_the_branch_build_and_rechecks_bytes(
         if attempt:
             (context.root / 'build/ci/cli/easydiffraction').write_text('overwritten cache bytes\n')
         dependency = subprocess.run(
-            ['bash', 'tools/ci/core-build.sh'],
+            [environment_bash(), 'tools/ci/core-build.sh'],
             cwd=context.root,
             env=context.env,
             capture_output=True,

@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T08:42:49Z
+# measured_utc = 2026-11-14T12:01:30Z
 #
-# Recorded from: measured test run (12 node(s) measured once, 176280 banked, 0 stale row(s) dropped)
-# Collected tests: 245145; with a reported duration: 77115
+# Recorded from: measured test run (2 node(s) measured once, 176299 banked, 0 stale row(s) dropped)
+# Collected tests: 245154; with a reported duration: 77116
 # Module-scoped fixture costs recorded: 191
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245145
+# inventory_python = 245154
 # inventory_cpp = 402
-# inventory_measured = 176292
+# inventory_measured = 176301
 # inventory_unmeasured = 69255
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85878
+# inventory_pr_python = 85887
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -167839,6 +167839,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::te
 0.460	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-multiplicity]
 0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[False]
 0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[True]
+0.010	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[path]
+0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[string]
+0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_native_consumer_uses_release_executable_and_honours_exact_override
+0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_node_uses_the_interpreter_environment_root
+0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_shell_selects_git_bash_and_never_the_wsl_launcher
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_boolean_preferences_use_aligned_selectors[ai.copyTechnicalDetails]
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_boolean_preferences_use_aligned_selectors[autoCollapse]
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_boolean_preferences_use_aligned_selectors[checkUpdateOnStart]
@@ -170012,6 +170017,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[sc-neut-cwl_pr2nio4-5c2]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[sc-neut-cwl_tb2ti2o7-heidi]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[sc-neut-tof_taurine-senju]
+0.000	tests/integration/py/test_tutorial_fit_stages.py::test_app_observer_tracks_members_resets_and_completed_unique_constraints
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_tutorial_teaches_the_same_fitting_groups_cycles_and_constraints[pd-neut-cwl_cosio-d20]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_tutorial_teaches_the_same_fitting_groups_cycles_and_constraints[pd-neut-cwl_cosio-d20_2k]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_tutorial_teaches_the_same_fitting_groups_cycles_and_constraints[pd-neut-cwl_cosio-d20_scan-213f]
@@ -170153,6 +170159,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::
 0.000	tests/integration/py/test_tutorial_fit_stages.py::test_notebook_and_script_teach_the_same_exact_stage_sequence[sc-neut-cwl_pr2nio4-5c2]
 0.000	tests/integration/py/test_tutorial_fit_stages.py::test_notebook_and_script_teach_the_same_exact_stage_sequence[sc-neut-cwl_tb2ti2o7-heidi]
 0.020	tests/integration/py/test_tutorial_fit_stages.py::test_notebook_and_script_teach_the_same_exact_stage_sequence[sc-neut-tof_taurine-senju]
+0.000	tests/integration/py/test_tutorial_fit_stages.py::test_source_observer_expands_loops_and_evaluates_symmetry_and_user_constraints
 0.000	tests/integration/py/test_tutorial_fit_stages.py::test_stage_observer_rejects_flat_fits_and_missing_teaching_outputs[all-free-first]
 0.000	tests/integration/py/test_tutorial_fit_stages.py::test_stage_observer_rejects_flat_fits_and_missing_teaching_outputs[no-results]
 0.000	tests/integration/py/test_tutorial_fit_stages.py::test_stage_observer_rejects_flat_fits_and_missing_teaching_outputs[no-stage-pattern]
@@ -170518,6 +170525,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::te
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-sc-neut-cwl_tb2ti2o7-heidi]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-sc-neut-cwl_tb2ti2o7-heidi_simulation]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-sc-neut-tof_taurine-senju]
+0.000	tests/integration/py/test_tutorial_strategy.py::test_combined_blocks_require_a_reason_in_their_own_stage[first]
+0.000	tests/integration/py/test_tutorial_strategy.py::test_combined_blocks_require_a_reason_in_their_own_stage[later]
 0.000	tests/integration/py/test_tutorial_strategy.py::test_command_line_tutorial_edits_large_parameter_groups_together[pd-neut-cwl_cosio-d20]
 0.000	tests/integration/py/test_tutorial_strategy.py::test_command_line_tutorial_edits_large_parameter_groups_together[pd-neut-cwl_cosio-d20_2k]
 0.000	tests/integration/py/test_tutorial_strategy.py::test_command_line_tutorial_edits_large_parameter_groups_together[pd-neut-cwl_cosio-d20_scan-213f]
@@ -171604,7 +171613,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_browser_saved_project.
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_browser_saved_project.py::test_saved_archive_encoded_symlink_refuses_even_inside_flat_owner[project.edi]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_browser_saved_project.py::test_saved_archive_flat_and_nested_owners_retain_every_file_byte[]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_browser_saved_project.py::test_saved_archive_flat_and_nested_owners_retain_every_file_byte[owned/]
-0.190	tests/system/py/test_browser_saved_project.py::test_saved_browser_reference_and_real_row_refuse_wrong_operands[web_control_geometry_controls.mjs]
+0.200	tests/system/py/test_browser_saved_project.py::test_saved_browser_reference_and_real_row_refuse_wrong_operands[web_control_geometry_controls.mjs]
 0.220	tests/system/py/test_browser_saved_project.py::test_saved_browser_reference_and_real_row_refuse_wrong_operands[web_saved_fit_controls.mjs]
 0.000	tests/system/py/test_c06_t6_fitting_corpus.py::test_corpus_absent_at_pin_is_a_named_transition_state[corpus-present]
 0.100	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-cecoal]
@@ -245628,14 +245637,14 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 3.111	tests/integration/py/test_compiler_launcher_probes.py
 # module-cost: 1.522	tests/integration/py/test_cosio_heidi_collection.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
-# module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
+# module-cost: 0.254	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 0.574	tests/integration/py/test_independent_experiments.py
 # module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
 # module-cost: 0.191	tests/integration/py/test_native_serialized_source_admission.py
 # module-cost: 14.337	tests/integration/py/test_parameter_table_notation.py
 # module-cost: 0.956	tests/integration/py/test_plain_data_picker.py
 # module-cost: 0.069	tests/integration/py/test_report_palette_cardinality.py
-# module-cost: 1.555	tests/integration/py/test_scan_app_contract.py
+# module-cost: 9.776	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.373	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py

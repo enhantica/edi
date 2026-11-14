@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_table_and_about_contract import table_census
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -80,7 +81,7 @@ def input_output(request):
         )
         process = subprocess.Popen(
             [
-                'bash',
+                environment_bash(),
                 str(ROOT / 'tests/fixtures/scan_views/run.sh'),
                 str(runner),
                 '-input',

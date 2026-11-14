@@ -216,3 +216,35 @@ def test_app_name_observer_refuses_paths_and_invented_parameter_labels(name, sty
     }[style]
     with pytest.raises(AssertionError, match='Gate 3/4:'):
         assert_app_names('Free ' + subject + '.', LABELS)
+
+
+@pytest.mark.parametrize('stage', ['first', 'later'])
+def test_combined_blocks_require_a_reason_in_their_own_stage(stage):
+    first = """# ### Alignment and magnetic moments
+# Free the scale, cell and magnetic moments together because their intensities are coupled.
+experiment.scale.free = True
+structure.cell.length_a.free = True
+structure.atom_site_moment['Co'].crystalaxis_y.free = True
+project.analysis.fit()
+"""
+    later = (
+        GOOD
+        + """# ### Atomic positions and displacements
+# Free coordinates and displacement together because separating them leaves a worse fit.
+structure.atom_sites['A'].fract_x.free = True
+structure.atom_sites['A'].adp_iso.free = True
+project.analysis.fit()
+"""
+    )
+    code = first if stage == 'first' else later
+    assert_strategy(observe(code))
+    missing = '\n'.join(line for line in code.splitlines() if 'because' not in line)
+    for mutation in [
+        missing,
+        missing.replace('# ###', '# Together because the earlier blocks need coupling.\n# ###'),
+        '# ### Earlier stage\n# Because coordinates and displacement couple in this earlier fit.\n'
+        + missing,
+        code + '# ### New stage without a new block\nproject.analysis.fit()\n',
+    ]:
+        with pytest.raises(AssertionError, match='Gate 3/4:'):
+            assert_strategy(observe(mutation))

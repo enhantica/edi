@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e09_t75_sdk_consumer import SHA, consumer
 from tests.system.py.test_e09_t75_native_execution import assert_restored, restore
 
@@ -35,7 +36,8 @@ def _source_transport(root, build):
         f'{str(build.sibling)!r},"dependency"]).returncode)\n'
         f'if a == ["-C","dependency","checkout","-q","--detach",{build.second!r}]:\n'
         f' sys.exit(subprocess.run([{build.git!r},*a]).returncode)\n'
-        f'os.execv({str(protocol)!r},[{str(protocol)!r},*a])\n'
+        f'os.execv(sys.executable,[sys.executable,{str(protocol)!r},*a])\n',
+        newline='\n',
     )
     transport.chmod(0o755)
 
@@ -97,11 +99,12 @@ while args and args[0] in ('-e','--environment'): args=args[2:]
 skip='--skip-deps' in args
 args=[a for a in args if a!='--skip-deps']
 if args and args[0] in {consuming_tasks!r} and (not skip or args[0] in {direct_tasks!r}):
-    result=subprocess.run(['bash','tools/ci/build-crysta.sh'],check=False)
+    result=subprocess.run([{environment_bash()!r},'tools/ci/build-crysta.sh'],check=False)
     if result.returncode: sys.exit(result.returncode)
     with Path({str(root / 'consumed')!r}).open('a') as out:
         out.write(Path('build/crysta-prefix/.crysta-sha').read_text().strip()+'\\n')
-"""
+""",
+        newline='\n',
     )
     pixi.chmod(0o755)
     home = root / 'home'
@@ -152,7 +155,14 @@ if args and args[0] in {consuming_tasks!r} and (not skip or args[0] in {direct_t
             active = {**inherited, **env_values(step.get('env'), inputs)}
             if 'run' in step:
                 outcome = subprocess.run(
-                    ['bash', '-e', '-o', 'pipefail', '-c', render(step['run'], inputs)],
+                    [
+                        environment_bash(),
+                        '-e',
+                        '-o',
+                        'pipefail',
+                        '-c',
+                        render(step['run'], inputs),
+                    ],
                     cwd=build.edi,
                     env=active,
                     capture_output=True,

@@ -98,6 +98,8 @@ pyyaml = "*"
 doctest = "*"
 # Non-GUI QML expression gates execute JavaScript in this declared environment.
 nodejs = "==22.23.2"
+# Screenshot contract checks decode pixels in the default test environment.
+libwebp-base = "==1.6.0"
 
 # macOS SDK 27 (Xcode 27) needs Clang and libc++ 23: with Clang 19, libc++'s <complex> no longer sees INFINITY and
 # NAN through the SDK's math.h. The Mac drivers are named directly, since the cxx-compiler metapackage holds an older

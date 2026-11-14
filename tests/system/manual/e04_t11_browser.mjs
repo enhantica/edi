@@ -17,6 +17,7 @@ import { checkDesktopOnlyAssistant } from './web_assistant_desktop_only.mjs';
 import { statusActionLifetimeChecks } from './web_status_action_lifetime.mjs';
 import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport, waitControlGeometry } from './web_control_geometry.mjs';
+import {projectDialogExpression,waitForSaveSettled,projectFailureRecorder} from './web_project_save.mjs';
 import { assertSavedProject, assertSavedNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
@@ -91,7 +92,7 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 const child = spawn(chrome, ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
   '--disable-blink-features=FileSystemAccessLocal', '--window-size=1280,768', '--remote-debugging-port=0', `--user-data-dir=${scratch}`, 'about:blank'],
 { stdio: ['ignore', 'ignore', 'pipe'] });
-let ws, send;
+let ws, send, recordFailure;
 const transcript = [], network = [], errors = [];
 try {
   const endpoint = await new Promise((ok, fail) => {
@@ -127,20 +128,35 @@ try {
       if (item.method === 'Runtime.consoleAPICalled') transcript.push(item.params.args.map(a => a.value ?? a.description));
     }
   };
-  send = (method, params = {}, browser = false) => new Promise((ok, fail) => {
+  send = (method, params = {}, browser = false, diagnostic = false) => new Promise((ok, fail) => {
     const number = ++id;
-    const timer = setTimeout(() => { pending.delete(number); fail(Error(`CDP deadline: ${method}`)); }, 45000);
+    const timer = setTimeout(() => {
+      pending.delete(number);
+      const error=Error(`CDP deadline: ${method}`);
+      if(!diagnostic)recordFailure(error);
+      fail(error);
+    }, diagnostic ? 2000 : 45000);
     pending.set(number, { ok, fail, timer });
     ws.send(JSON.stringify({ id: number, method, params, ...(!browser && session ? { sessionId: session } : {}) }));
   });
-  const event = (name, predicate = () => true) => new Promise((ok, fail) => {
+  recordFailure=projectFailureRecorder({send:(method,params)=>send(method,params,false,true),output,mode});
+  const event = (name, predicate = () => true) => {
+    const result=new Promise((ok, fail) => {
     const current = lastEvents.get(name);
     if (current && predicate(current)) { ok(current); return; }
     const functions = listeners.get(name) || new Set(); listeners.set(name, functions);
-    const timer = setTimeout(() => { functions.delete(onEvent); fail(Error(`event deadline: ${name}`)); }, 45000);
+    const timer = setTimeout(() => {
+      functions.delete(onEvent);
+      const error=Error(`event deadline: ${name}`);
+      recordFailure(error);
+      fail(error);
+    }, 45000);
     const onEvent = value => { if (predicate(value)) { clearTimeout(timer); functions.delete(onEvent); ok(value); } };
     functions.add(onEvent);
-  });
+    });
+    result.catch(()=>{}); // Preserve rejection until its owner awaits it during a pending UI action.
+    return result;
+  };
   const created = await send('Target.createTarget', { url: 'about:blank' }, true);
   session = (await send('Target.attachToTarget', { targetId: created.targetId, flatten: true }, true)).sessionId;
   for (const method of ['Page.enable', 'Runtime.enable', 'Network.enable', 'Accessibility.enable']) await send(method);
@@ -263,7 +279,10 @@ try {
       y=rect.y+Math.min(rect.height,model.model.height)/2;
       assert(x>=0&&x<1280&&y>=0&&y<768,
         'The real group header pointer must lie inside the fixed browser viewport');
-    } else if (nativeObjectName) ({x,y} = await controlPointer(evaluate,nativeObjectName,containerName));
+    } else if (nativeObjectName) {
+      await waitControlGeometry(evaluate,frame,nativeObjectName);
+      ({x,y} = await controlPointer(evaluate,nativeObjectName,containerName));
+    }
     else {
       const model = await send('DOM.getBoxModel', { backendNodeId: node.backendDOMNodeId });
       const q = model.model.content;
@@ -552,7 +571,9 @@ try {
   await waitAX(/^Save project as/, true, 'button');
   await click(/^Structure$/); await waitAX(/Cell|Space group/i); await shot('structure');
   await click(/^Experiment$/); await waitAX(/HRPT|Measured/i); await shot('pattern');
+  let saveSequence=0;
   const saveArchive = async () => {
+    const before=(await evaluate(projectDialogExpression)).controls['appBar.button.save'].item;
     // A completed event from the first save cannot satisfy the second save.
     lastEvents.delete('Browser.downloadProgress');
     const download = event('Browser.downloadProgress', item => item.state === 'completed');
@@ -561,7 +582,11 @@ try {
     // The app's format choice precedes the browser download, including the fallback.
     await click(/^Zip archive$/,'radio');
     await click(/^OK$/,'button');
-    return join(output, (await download).guid);
+    const completed=await download;
+    const state=await waitForSaveSettled(evaluate,frame,before);
+    await settleRenderedPage();
+    await writeFile(join(output,`${mode}-save-${++saveSequence}-settled.json`),JSON.stringify({download:completed,before,state},null,2));
+    return join(output,completed.guid);
   };
   const inspectArchive = archive => {
     const result = spawnSync('python', ['-c', `import hashlib, json, pathlib, re, sys, zipfile
@@ -1134,16 +1159,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
   }
 } catch (error) {
   await writeFile(join(output, `${mode}-failure.json`), JSON.stringify({ message: error.message, network, errors, transcript }, null, 2));
-  if (send) {
-    try {
-      const screenshot = await send('Page.captureScreenshot', { format: 'png' });
-      await writeFile(join(output, `${mode}-failure.png`), Buffer.from(screenshot.data, 'base64'));
-      const tree = await send('Accessibility.getFullAXTree');
-      await writeFile(join(output, `${mode}-failure-accessibility.json`), JSON.stringify(tree, null, 2));
-      const picker = await send('Runtime.evaluate', {expression:'window.__e04PickerAttempts || []',returnByValue:true});
-      await writeFile(join(output, `${mode}-failure-pickers.json`), JSON.stringify(picker.result.value,null,2));
-    } catch { /* The original failure remains the verdict if the target already closed. */ }
-  }
+  if(recordFailure)await recordFailure(error).catch(()=>{});
   throw error;
 } finally {
   ws?.close(); child.kill(); server.closeAllConnections(); server.close();

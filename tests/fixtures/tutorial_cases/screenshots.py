@@ -3,6 +3,8 @@
 import ctypes
 import ctypes.util
 import json
+import os
+import sys
 from functools import cache, lru_cache
 from pathlib import Path
 from urllib.parse import unquote, urljoin, urlparse
@@ -12,13 +14,25 @@ PNG = b'\x89PNG\r\n\x1a\n'
 
 @cache
 def webp_library():
-    app = Path(__file__).resolve().parents[3] / '.pixi/envs/app'
-    candidates = [
-        ctypes.util.find_library('webp'),
-        str(app / 'lib/libwebp.so.7'),
-        str(app / 'lib/libwebp.dylib'),
-        str(app / 'Library/bin/libwebp.dll'),
-    ]
+    root = Path(__file__).resolve().parents[3]
+    prefixes = [Path(sys.prefix), root / '.pixi/envs/app']
+    candidates = []
+    directory_handles = []
+    for prefix in prefixes:
+        directory = prefix / 'Library/bin'
+        if os.name == 'nt' and directory.is_dir():
+            directory_handles.append(os.add_dll_directory(str(directory)))
+        candidates.extend(
+            str(path)
+            for pattern in (
+                'lib/libwebp.so*',
+                'lib/libwebp.dylib',
+                'Library/bin/*webp*.dll',
+            )
+            for path in sorted(prefix.glob(pattern))
+            if 'demux' not in path.name and 'mux' not in path.name
+        )
+    candidates.append(ctypes.util.find_library('webp'))
     for name in filter(None, candidates):
         try:
             library = ctypes.CDLL(name)
@@ -27,6 +41,7 @@ def webp_library():
             continue
     else:
         raise RuntimeError('Provision the public libwebp decoder for screenshot checks')
+    library._directory_handles = directory_handles
     library.WebPGetInfo.argtypes = [
         ctypes.c_void_p,
         ctypes.c_size_t,

@@ -14,6 +14,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.native_process import environment_bash
 
 ROOT = Path(__file__).resolve().parents[3]
 PRODUCER = '.github/workflows/crysta-sdk.yml'
@@ -49,13 +50,21 @@ def current_run_download(action):
         'A consumer uses its producer artifact rather than cache availability'
     )
     selected = downloads[0]['with']
-    assert selected.get('name') == 'crysta-sdk-${{ inputs.platform }}'
-    assert selected.get('path') == 'crysta-sdk-archives'
+    assert selected.get('name') == 'crysta-sdk-${{ inputs.platform }}', (
+        'Consumers select the exact platform SDK artifact'
+    )
+    assert selected.get('path') == 'crysta-sdk-archives', (
+        'Consumers download SDK archives into their declared directory'
+    )
     assert selected.get('run-id') in {None, '${{ github.run_id }}'}, (
         'Ordinary consumers cannot take an SDK from a foreign run'
     )
-    assert selected.get('repository') in {None, '${{ github.repository }}'}
-    assert not selected.get('pattern') and not selected.get('merge-multiple')
+    assert selected.get('repository') in {None, '${{ github.repository }}'}, (
+        'Ordinary consumers use artifacts from the current repository'
+    )
+    assert not selected.get('pattern') and not selected.get('merge-multiple'), (
+        'Exact SDK downloads cannot merge wildcard artifact selections'
+    )
     assert any(
         'CRYSTA_SDK_ARCHIVES=$GITHUB_WORKSPACE/crysta-sdk-archives' in step.get('run', '')
         for step in steps
@@ -65,11 +74,19 @@ def current_run_download(action):
 def test_sdk_producer_serializes_platform_pin_and_recipe_without_cancelling_waiters():
     workflow = document(PRODUCER)
     triggers = workflow.get('on', workflow.get(True))
-    assert {'workflow_dispatch', 'workflow_call'} <= set(triggers)
+    assert {'workflow_dispatch', 'workflow_call'} <= set(triggers), (
+        'The producer supports both reusable and manually dispatched runs'
+    )
     build = workflow['jobs']['build']
-    assert build['needs'] == 'resolve'
-    assert build['concurrency']['cancel-in-progress'] is False
-    assert build['concurrency']['queue'] == 'max'
+    assert build['needs'] == 'resolve', (
+        'The producer resolves immutable inputs before building SDK archives'
+    )
+    assert build['concurrency']['cancel-in-progress'] is False, (
+        'A competing SDK request cannot cancel an existing producer'
+    )
+    assert build['concurrency']['queue'] == 'max', (
+        'Concurrent SDK requests retain the full waiting queue'
+    )
     group = build['concurrency']['group']
     cache = next(step for step in build['steps'] if step.get('id') == 'cache')
     assert not cache['with'].get('restore-keys'), 'Another recipe cannot satisfy the exact cache'
@@ -96,15 +113,23 @@ def test_sdk_cold_and_warm_producers_publish_required_artifacts_only_after_succe
     steps = build['steps']
     package = next(step for step in steps if 'sdk-pack' in step.get('run', ''))
     upload = next(step for step in steps if step.get('uses') == 'actions/upload-artifact@v4')
-    assert steps.index(package) < steps.index(upload)
-    assert upload['with']['name'] == 'crysta-sdk-${{ matrix.platform }}'
-    assert upload['with']['path'] == 'crysta-sdk-archives'
+    assert steps.index(package) < steps.index(upload), (
+        'SDK packaging finishes before its artifacts are uploaded'
+    )
+    assert upload['with']['name'] == 'crysta-sdk-${{ matrix.platform }}', (
+        'Producers publish the artifact for their exact matrix platform'
+    )
+    assert upload['with']['path'] == 'crysta-sdk-archives', (
+        'Producers upload archives from their declared output directory'
+    )
     assert upload['with'].get('if-no-files-found') == 'error', (
         'A producer with missing archives must fail rather than report artifact delivery'
     )
     for hit, packed in [('false', True), ('true', False)]:
         outputs = {('cache', 'cache-hit'): hit}
-        assert active(package, 'workflow_dispatch', outputs=outputs) is packed
+        assert active(package, 'workflow_dispatch', outputs=outputs) is packed, (
+            'Only a cold cache requires the SDK packaging step'
+        )
         assert active(upload, 'workflow_dispatch', outputs=outputs), (
             'A warm producer still exports qualified bytes for its own consumers'
         )
@@ -126,12 +151,16 @@ def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(
         and 'crysta-sdk-archives' in step.get('run', '')
     )
     upload = next(step for step in steps if step.get('uses') == 'actions/upload-artifact@v4')
-    assert steps.index(guard) < steps.index(upload)
+    assert steps.index(guard) < steps.index(upload), (
+        'Complete output validation precedes every SDK artifact upload'
+    )
     for hit in ('false', 'true'):
         assert active(guard, 'workflow_dispatch', outputs={('cache', 'cache-hit'): hit}), (
             'Every cold and warm artifact crosses the same complete-output boundary'
         )
-    assert guard['env']['SHA'] == '${{ needs.resolve.outputs.sha }}'
+    assert guard['env']['SHA'] == '${{ needs.resolve.outputs.sha }}', (
+        'Output validation uses the source identity resolved by this run'
+    )
     assert guard['env']['CRYSTA_SDK_PLATFORM'] == '${{ matrix.platform }}'
     pin = 'a7' * 20
     archive = f'crysta-sdk-{pin}-{platform}.tar.gz'
@@ -169,7 +198,7 @@ def test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs(
         (destination / 'other-archive.tar.gz').write_bytes(authored)
         (destination / archive).write_bytes(b'unverified replacement')
     result = subprocess.run(
-        ['bash', '-e', '-c', guard['run']],
+        [environment_bash(), '-e', '-c', guard['run']],
         cwd=world,
         env={
             **{key: value for key, value in os.environ.items() if key.casefold() != 'platform'},
@@ -201,7 +230,7 @@ def test_sdk_recipe_invalidates_every_local_producer_build_input(tmp_path, chang
     def resolve():
         output.write_text('')
         result = subprocess.run(
-            ['bash', '-e', '-c', recipe],
+            [environment_bash(), '-e', '-c', recipe],
             cwd=tmp_path,
             env={**os.environ, 'GITHUB_OUTPUT': str(output)},
             capture_output=True,
@@ -211,7 +240,9 @@ def test_sdk_recipe_invalidates_every_local_producer_build_input(tmp_path, chang
         )
         assert result.returncode == 0, 'The actual declared producer recipe must execute'
         fields = dict(line.split('=', 1) for line in output.read_text().splitlines())
-        assert len(fields['sha']) == 64
+        assert len(fields['sha']) == 64, (
+            'The SDK build recipe is identified by a complete SHA256 digest'
+        )
         return fields['sha']
 
     before = resolve()
@@ -247,12 +278,24 @@ def test_release_sdk_download_uses_the_exact_qualified_installer_run():
         if step.get('uses') == 'actions/download-artifact@v4'
         and step.get('with', {}).get('pattern') == 'crysta-sdk-*'
     )
-    assert steps.index(promotion) < steps.index(download)
-    assert promotion['env']['INSTALLER_RUN'] == '${{ inputs.installer_run }}'
-    assert download['with']['run-id'] == '${{ inputs.installer_run }}'
-    assert download['with']['github-token'] == '${{ github.token }}'
-    assert download['with']['merge-multiple'] is True
-    assert download['with']['path'] == 'crysta-sdk-archives'
+    assert steps.index(promotion) < steps.index(download), (
+        'Installer promotion is validated before downloading qualified SDK artifacts'
+    )
+    assert promotion['env']['INSTALLER_RUN'] == '${{ inputs.installer_run }}', (
+        'Promotion validation receives the explicitly selected installer run'
+    )
+    assert download['with']['run-id'] == '${{ inputs.installer_run }}', (
+        'Release SDK downloads use the explicitly qualified installer run'
+    )
+    assert download['with']['github-token'] == '${{ github.token }}', (
+        'Qualified artifact downloads authenticate with the current repository token'
+    )
+    assert download['with']['merge-multiple'] is True, (
+        'Release downloads merge the qualified platform archives into one directory'
+    )
+    assert download['with']['path'] == 'crysta-sdk-archives', (
+        'Release SDK archives arrive in the declared consumer directory'
+    )
     assert not any('cache' in step.get('uses', '') for step in steps), (
         'Publication must not substitute an opportunistic cache for qualified run artifacts'
     )
@@ -337,14 +380,14 @@ def test_compiler_cache_precedes_install_and_is_keyed_by_actual_engine_lock(tmp_
     engine.mkdir()
     jobs = engine / 'tools' / 'ci' / 'build-jobs.sh'
     jobs.parent.mkdir(parents=True)
-    jobs.write_text("printf '%s\\n' 4\n", encoding='utf-8')
+    jobs.write_text("printf '%s\\n' 4\n", encoding='utf-8', newline='\n')
     output, environment = tmp_path / 'output', tmp_path / 'environment'
     observed = []
     for content in (b'actual engine ABI lock', b'changed actual engine ABI lock'):
         (engine / 'pixi.lock').write_bytes(content)
         output.write_text('')
         result = subprocess.run(
-            ['bash', '-e', '-c', inputs['run']],
+            [environment_bash(), '-e', '-c', inputs['run']],
             cwd=tmp_path,
             env={
                 **os.environ,
@@ -447,7 +490,7 @@ def test_windows_checkout_configures_index_admission_before_sparse_materializati
     guard = windows_checkout_guard(steps)
     isolated = {**os.environ, 'GIT_CONFIG_GLOBAL': str(tmp_path / 'global-git-config')}
     result = subprocess.run(
-        ['bash', '-e', '-c', guard['run']],
+        [environment_bash(), '-e', '-c', guard['run']],
         env=isolated,
         capture_output=True,
         check=False,
@@ -525,7 +568,11 @@ def test_actual_sparse_checkout_omits_reserved_fixture_and_keeps_producer_inputs
     steps = document(PRODUCER)['jobs']['build']['steps']
     guard = windows_checkout_guard(steps)
     subprocess.run(
-        ['bash', '-e', '-c', guard['run']], env=env, check=True, capture_output=True, timeout=5
+        [environment_bash(), '-e', '-c', guard['run']],
+        env=env,
+        check=True,
+        capture_output=True,
+        timeout=5,
     )
     checkout = next(step for step in steps if step.get('uses') == 'actions/checkout@v5')
     git(target, 'config', 'core.sparseCheckout', 'true')

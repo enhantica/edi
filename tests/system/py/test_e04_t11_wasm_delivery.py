@@ -23,6 +23,7 @@ import yaml
 
 from tests.fixtures.e04_t11_wasm.cli_domains import domain, historical_bytes, input_bytes
 from tests.fixtures.metadata_transition.source_bytes import previous_bytes
+from tests.fixtures.native_process import environment_bash
 from tests.fixtures.web_parallel.numeric import uncertainty_tolerances
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -45,7 +46,7 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
     toolchain = tmp_path / 'toolchain'
     node = toolchain / 'emsdk-4.0.7/node/transport/bin/node'
     node.parent.mkdir(parents=True)
-    node.write_text('#!/bin/sh\nexit 0\n')
+    node.write_text('#!/bin/sh\nexit 0\n', newline='\n')
     node.chmod(0o755)
     # Transport inventory only: the real module/link validator has its own gates.
     native = {'engine.a', 'engine.so', 'engine.dll', 'engine.o', '_edi.pyd'}
@@ -62,7 +63,7 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
     env = {**os.environ, 'EDI_WASM_TOOLCHAIN': str(toolchain)}
     env['PATH'] = str(Path(sys.executable).parent) + os.pathsep + env['PATH']
     run = subprocess.run(
-        ['bash', str(scripts / 'wasm-pack.sh')],
+        [environment_bash(), str(scripts / 'wasm-pack.sh')],
         cwd=root,
         env=env,
         capture_output=True,
@@ -101,7 +102,7 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
         path.relative_to(site): path.read_bytes() for path in site.rglob('*') if path.is_file()
     }
     placed = subprocess.run(
-        ['bash', str(ROOT / 'tools/ci/docs-webapp.sh'), str(site), str(docs)],
+        [environment_bash(), str(ROOT / 'tools/ci/docs-webapp.sh'), str(site), str(docs)],
         env=env,
         capture_output=True,
         text=True,

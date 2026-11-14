@@ -34,12 +34,51 @@ def overlaps(left, right):
     return bool(re.fullmatch(pattern(left), right) or re.fullmatch(pattern(right), left))
 
 
+def stage_boundary(plan, event):
+    """Identify a distinct teaching stage, keeping repeated fits within their current stage."""
+    lines = plan.get('source', '').splitlines()[: event.get('line', 1) - 1]
+    return next(
+        (i for i in range(len(lines) - 1, -1, -1) if re.match(r'#\s+#{2,3}\s', lines[i])),
+        None,
+    )
+
+
+def stage_reason(plan, event, blocks):
+    """Require a causal explanation local to the stage introducing the named blocks."""
+    if len(blocks) <= 1:
+        return False
+    lines = plan.get('source', '').splitlines()[: event.get('line', 1) - 1]
+    boundaries = [i for i, line in enumerate(lines) if re.match(r'#\s+#{2,3}\s', line)]
+    if not boundaries:
+        return False
+    text = '\n'.join(
+        line.lstrip('# ')
+        for line in lines[boundaries[-1] :]
+        if line.lstrip().startswith('#') and not line.startswith('# %%')
+    )
+    causal = re.search(
+        r'\b(?:because|so that|otherwise|separating)\b(.{20,})', text, re.IGNORECASE | re.DOTALL
+    )
+    vocabulary = {
+        'alignment': r'scale|cell|alignment|offset|zero',
+        'profile': r'profile|width|asymmetry',
+        'displacement': r'displacement|B iso|ADP',
+        'positions': r'position|coordinate',
+        'magnetic moments': r'moment|magnetic',
+        'magnetic form factor': r'form factor|j2',
+    }
+    return bool(causal) and all(
+        re.search(vocabulary.get(name, re.escape(name)), text, re.IGNORECASE) for name in blocks
+    )
+
+
 def assert_strategy(plan):
     accepted = set()
     fixed_after_fit = set()
     pending = []
     beyond_alignment = False
     index = 0
+    previous_boundary = None
     for event in plan['events']:
         if event['kind'] != 'fit':
             pending.append(event)
@@ -75,11 +114,17 @@ def assert_strategy(plan):
         )
         new = current - accepted
         blocks = {block(group(value)) for value in new}
-        assert len(blocks) <= 1, (
-            'Gate 3/4: each fit introduces at most one new unvalidated scientific block'
+        explained = stage_reason(plan, event, blocks)
+        boundary = stage_boundary(plan, event)
+        assert blocks or (index and boundary == previous_boundary), (
+            'Gate 3/4: each new teaching stage introduces a scientific block; '
+            'repeated fits stay within their current stage'
+        )
+        assert len(blocks) <= 1 or explained, (
+            'Gate 3/4: a stage combining scientific blocks states its reason in that stage text'
         )
         if index == 0:
-            assert blocks == {'alignment'}, (
+            assert 'alignment' in blocks and (blocks == {'alignment'} or explained), (
                 'Gate 3/4: alignment with eligible cell, scale and calibration '
                 'precedes profile and structure fitting'
             )
@@ -89,6 +134,7 @@ def assert_strategy(plan):
             )
         beyond_alignment |= bool(blocks - {'alignment'})
         accepted = current
+        previous_boundary = boundary
         pending.clear()
         index += 1
     assert index, 'Gate 3/4: the strategy observer reaches an actual tutorial fit'

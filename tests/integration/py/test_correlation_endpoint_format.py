@@ -98,7 +98,7 @@ def test_current_numeric_row_endpoint_and_coefficient_text_roundtrip(endpoint, p
     )
     model = engine.Project.load(source)
     model.save_as(tmp_path / 'first')
-    saved = (tmp_path / 'first/analysis/analysis.edi').read_text()
+    saved = (tmp_path / 'first/analysis/analysis.edi').read_bytes().decode('utf-8')
     assert current in saved.split(), (
         'A declared numeric row id is current, never an ordinal escape'
     )
@@ -122,7 +122,7 @@ def test_current_historical_numeric_endpoint_survives_without_its_live_row(
     source = stage(kind, endpoint, identity, per_file, tmp_path / 'input')
     model = engine.Project.load(source)
     model.save_as(tmp_path / 'first')
-    saved = (tmp_path / 'first/analysis/analysis.edi').read_text()
+    saved = (tmp_path / 'first/analysis/analysis.edi').read_bytes().decode('utf-8')
     assert identity in saved.split(), (
         'A current numeric historical endpoint remains valid after its live row is absent'
     )

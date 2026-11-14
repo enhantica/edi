@@ -7,6 +7,8 @@ import subprocess
 import zipfile
 from pathlib import Path
 
+from tests.fixtures.path_keys import repository_key
+
 HERE = Path(__file__).parent
 ROOT = HERE.resolve().parents[2]
 REVISION = 'ec587609746b50823c048463f353b1767cbfa5f9'
@@ -66,7 +68,7 @@ def rows():
 
 def previous_bytes(name, data):
     """Reverse only complete source-qualified before/after documents."""
-    name = str(name)
+    name = repository_key(name)
     row = rows().get(name)
     if row is None:
         return data

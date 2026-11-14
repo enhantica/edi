@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -69,7 +71,7 @@ for arg in args:
 """
     for name in ('emcc', 'emcmake', 'cmake'):
         executable = bin_dir / name
-        executable.write_text('#!' + sys.executable + '\n' + transport)
+        executable.write_text('#!' + sys.executable + '\n' + transport, newline='\n')
         executable.chmod(0o755)
     for mode in ('multithread',):
         kit = tools / 'qt/6.11.2' / ('wasm_' + mode)
@@ -106,7 +108,7 @@ def run_build(namespace, modes):
     root, scripts, env, calls = namespace
     calls.unlink(missing_ok=True)
     result = subprocess.run(
-        ['bash', str(scripts / 'wasm-build.sh'), *modes],
+        [environment_bash(), str(scripts / 'wasm-build.sh'), *modes],
         cwd=root,
         env=env,
         capture_output=True,

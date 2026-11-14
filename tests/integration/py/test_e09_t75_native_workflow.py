@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e09_t75_workflow import active, reached
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.ci_runner_contract import platform_job, self_hosted_runners
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -620,7 +621,7 @@ def test_native_action_refuses_foreign_optional_and_fallback_routes(tmp_path, da
 
     environment = tmp_path / 'job-environment'
     subprocess.run(
-        ['bash', '-e', '-c', selector],
+        [environment_bash(), '-e', '-c', selector],
         env={**os.environ, 'GITHUB_ENV': str(environment)},
         check=True,
         capture_output=True,

@@ -20,6 +20,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e09_t75_commands import assert_no_swallowed_refusal, checked_program
+from tests.fixtures.native_process import environment_bash, fixture_program
 from tests.system.py.test_e09_t75_pin_currency import currency_world
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -166,7 +167,9 @@ def consumer(  # noqa: PLR0914, PLR0915
     binpath.mkdir()
     for command in ('cmake', 'ninja', 'make', 'git', 'gh', 'curl'):
         p = binpath / command
-        p.write_text('#!/bin/sh\nprintf "%s\\n" "$0 $*" >> "$SDK_COMMANDS"\nexit 91\n')
+        p.write_text(
+            '#!/bin/sh\nprintf "%s\\n" "$0 $*" >> "$SDK_COMMANDS"\nexit 91\n', newline='\n'
+        )
         p.chmod(0o755)
     env = {
         k: v
@@ -189,7 +192,11 @@ def consumer(  # noqa: PLR0914, PLR0915
     runner_temp = tmp_path / 'runner-temp'
     runner_temp.mkdir()
     env.update(
-        PATH=f'{binpath}:{Path(sys.executable).parent}:{env.get("PATH", os.defpath)}',
+        PATH=os.pathsep.join([
+            str(binpath),
+            str(Path(sys.executable).parent),
+            env.get('PATH', os.defpath),
+        ]),
         CRYSTA_SDK_DIR=str(sdk),
         PIXI_PROJECT_ROOT=str(repo),
         PIXI_ENVIRONMENT_NAME='default',
@@ -279,9 +286,10 @@ elif u in (
 else:
     sys.exit(64)
 emit_curl(data)
-"""
+""",
+            newline='\n',
         )
-        curl.write_text(checked_program(curl.read_text(), 'curl'))
+        curl.write_text(checked_program(curl.read_text(), 'curl'), newline='\n')
         curl.chmod(0o755)
         env.pop('CRYSTA_SDK_DIR')
         env.update(
@@ -295,9 +303,9 @@ emit_curl(data)
     if prepare_only:
         return env, repo, sdk
     result = subprocess.run(
-        ['bash', '-eu', '-c', command_override]
+        [environment_bash(), '-eu', '-c', command_override]
         if command_override is not None
-        else ['bash', str(repo / 'tools/ci/build-crysta.sh')],
+        else [environment_bash(), str(repo / 'tools/ci/build-crysta.sh')],
         cwd=repo,
         env=env,
         capture_output=True,
@@ -409,7 +417,7 @@ def test_d2_fleet_pair_lookup_never_masks_an_error_or_requires_gh(tmp_path):
     env, repo, _ = consumer(tmp_path, prepare_only=True)
     output = tmp_path / 'source-output'
     result = subprocess.run(
-        ['bash', str(repo / 'tools/ci/crysta-source.sh')],
+        [environment_bash(), str(repo / 'tools/ci/crysta-source.sh')],
         cwd=repo,
         env={**env, 'GITHUB_OUTPUT': str(output)},
         text=True,
@@ -520,17 +528,20 @@ def test_d2_pairing_executes_branch_discovery_and_refuses_transport_failure(
     }
     response = tmp_path / 'response'
     git = binpath / 'git'
-    git.write_text(pair_lookup_program(calls, response))
+    git.write_text(pair_lookup_program(calls, response), newline='\n')
     git.chmod(0o755)
     for name in ('gh', 'cmake', 'curl'):
         p = binpath / name
         p.write_text(
-            '#!/bin/sh\nprintf "%s\\n" "$0 $*" >> "' + str(tmp_path / 'forbidden') + '"\nexit 64\n'
+            '#!/bin/sh\nprintf "%s\\n" "$0 $*" >> "'
+            + str(tmp_path / 'forbidden')
+            + '"\nexit 64\n',
+            newline='\n',
         )
         p.chmod(0o755)
     env = {
         **build.env,
-        'PATH': str(binpath) + ':' + str(Path(sys.executable).parent) + ':' + os.defpath,
+        'PATH': os.pathsep.join([str(binpath), str(Path(sys.executable).parent), os.defpath]),
         'GITHUB_EVENT_NAME': 'pull_request',
         'GITHUB_HEAD_REF': 'paired-topic',
         'PIXI_PROJECT_ROOT': str(repo),
@@ -545,7 +556,7 @@ def test_d2_pairing_executes_branch_discovery_and_refuses_transport_failure(
     def invoke(answer, status=0):
         response.write_text(answer)
         return subprocess.run(
-            ['bash', str(repo / 'tools/ci/crysta-source.sh')],
+            [environment_bash(), str(repo / 'tools/ci/crysta-source.sh')],
             cwd=repo,
             env={**env, 'FIXTURE_LOOKUP_STATUS': str(status)},
             text=True,
@@ -660,7 +671,7 @@ def pair_lookup_program(calls, response):
         '  exec "$FIXTURE_CURRENCY_GIT" "$@"\n'
         'fi\n'
         'exec '
-        + shlex.quote(sys.executable)
+        + shlex.quote(Path(sys.executable).as_posix())
         + ' - "$@" <<\'C34_PAIR_LOOKUP\'\n'
         + ('CALLS=' + repr(str(calls)) + '\nRESPONSE=' + repr(str(response)) + '\n')
         + r"""import json, os, sys
@@ -738,11 +749,11 @@ def test_pairing_git_transport_binds_host_repo_ref_and_operation(tmp_path, args)
     response = tmp_path / 'response'
     response.write_text(SHA + '\trefs/heads/paired-topic\n')
     entry = tmp_path / 'git'
-    entry.write_text(pair_lookup_program(tmp_path / 'calls', response))
+    entry.write_text(pair_lookup_program(tmp_path / 'calls', response), newline='\n')
     entry.chmod(0o755)
     good = subprocess.run(
         [
-            str(entry),
+            *fixture_program(entry),
             'ls-remote',
             '--heads',
             'https://x-access-token:fixture@github.com/enhantica/crysta.git',
@@ -761,7 +772,7 @@ def test_pairing_git_transport_binds_host_repo_ref_and_operation(tmp_path, args)
     )
     plain = subprocess.run(
         [
-            str(entry),
+            *fixture_program(entry),
             'ls-remote',
             'https://github.com/enhantica/c' + 'rysta',
             'refs/heads/paired-topic',
@@ -775,7 +786,7 @@ def test_pairing_git_transport_binds_host_repo_ref_and_operation(tmp_path, args)
         ' I26 the exact heads ref is a complete selection without an optional heads flag'
     )
     bad = subprocess.run(
-        [str(entry), *args], capture_output=True, text=True, check=False, timeout=2
+        [*fixture_program(entry), *args], capture_output=True, text=True, check=False, timeout=2
     )
     assert bad.returncode == 64, (
         ' I26 wrong host, repo, ref or operation cannot receive the paired branch'
@@ -871,7 +882,7 @@ def test_sdk_warm_cache_reuses_qualified_bytes_and_rechecks_them_before_configur
 
     def run():
         return subprocess.run(
-            ['bash', str(repo / 'tools/ci/build-crysta.sh')],
+            [environment_bash(), str(repo / 'tools/ci/build-crysta.sh')],
             cwd=repo,
             env=env,
             capture_output=True,
@@ -909,7 +920,7 @@ def test_current_source_resolution_refuses_invalid_explicit_pin_before_transport
     env, repo, _ = consumer(tmp_path, prepare_only=True)
     (repo / 'pixi.toml').write_text('[activation.env]\nCRYSTA_COMMIT = ' + json.dumps(pin) + '\n')
     result = subprocess.run(
-        ['bash', str(repo / 'tools/ci/crysta-source.sh')],
+        [environment_bash(), str(repo / 'tools/ci/crysta-source.sh')],
         cwd=repo,
         env=env,
         text=True,

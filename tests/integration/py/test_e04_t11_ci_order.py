@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e09_t75_native_workflow import (
     public_build_boundary,
     public_profile,
@@ -288,13 +289,15 @@ def test_split_test_step_propagates_each_real_command_failure(tmp_path, failed_t
     # doubled: its exit and receipt prove that this required step stays red.
     executable = tmp_path / 'pixi'
     executable.write_text(
-        f'#!/bin/sh\necho "$*" >> "{tmp_path / "calls"}"\n[ "$2" != "{failed_task}" ] || exit 37\n'
+        f'#!/bin/sh\necho "$*" >> "{tmp_path / "calls"}"\n'
+        f'[ "$2" != "{failed_task}" ] || exit 37\n',
+        newline='\n',
     )
     executable.chmod(0o755)
     import os  # noqa: PLC0415 - scoped runner environment
 
     result = subprocess.run(
-        ['bash', '-e', '-o', 'pipefail', '-c', command],
+        [environment_bash(), '-e', '-o', 'pipefail', '-c', command],
         env={**os.environ, 'PATH': str(tmp_path) + os.pathsep + os.environ['PATH']},
         capture_output=True,
         text=True,

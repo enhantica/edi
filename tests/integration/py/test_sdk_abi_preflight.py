@@ -15,6 +15,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.native_process import environment_bash
 
 ROOT = Path(__file__).resolve().parents[3]
 PACKAGES = {
@@ -292,7 +293,9 @@ def python_calls(tmp_path):
     ambient.mkdir()
     for name in ('python', 'python3'):
         path = ambient / name
-        path.write_text('#!/bin/sh\nprintf ambient-called > ambient-called\nexit 91\n')
+        path.write_text(
+            '#!/bin/sh\nprintf ambient-called > ambient-called\nexit 91\n', newline='\n'
+        )
         path.chmod(0o755)
     return (
         records,
@@ -345,7 +348,7 @@ def test_actual_preflight_step_checks_installer_and_only_supported_root_environm
 
     def run():
         return subprocess.run(
-            ['bash', '-e', '-c', script],
+            [environment_bash(), '-e', '-c', script],
             cwd=tmp_path,
             env=env,
             text=True,
@@ -424,7 +427,7 @@ def test_preflight_missing_matrix_identity_refuses_before_any_python_call(
     for key in ('PLATFORM', 'sdk_platform', 'metadata_python'):
         env.pop(key, None)
     result = subprocess.run(
-        ['bash', '-e', '-u', '-c', script],
+        [environment_bash(), '-e', '-u', '-c', script],
         cwd=tmp_path,
         env=env,
         text=True,

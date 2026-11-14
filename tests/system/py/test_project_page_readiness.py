@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
+
 ROOT = Path(__file__).resolve().parents[3]
 PAGES = ('project', 'structure', 'experiment', 'analysis', 'report')
 BASELINE = json.loads((ROOT / 'tests/fixtures/project_opening/baseline.json').read_text())
@@ -30,7 +32,7 @@ def run_opening_route(route):
     assert binary.is_file(), 'Page readiness requires the actual built application test host'
     result = subprocess.run(
         [
-            'bash',
+            environment_bash(),
             str(ROOT / 'tests/fixtures/scan_views/run.sh'),
             str(binary),
             '-input',

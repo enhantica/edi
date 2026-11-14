@@ -7,6 +7,8 @@ from pathlib import Path
 
 import yaml
 
+from tests.fixtures.native_process import environment_bash
+
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = Path(os.environ.get('EDI_ONBOARDING_SOURCE_ROOT', ROOT))
 
@@ -36,14 +38,15 @@ def test_capture_launcher_forwards_native_contract_without_a_display(tmp_path):
     executable.write_text(
         '#!/bin/sh\n'
         'printf "%s\\n" "$EDI_CAPTURE_WIDTH" "$EDI_CAPTURE_HEIGHT" "$@" '
-        '> "$ONBOARDING_LAUNCH_RECEIPT"\n'
+        '> "$ONBOARDING_LAUNCH_RECEIPT"\n',
+        newline='\n',
     )
     executable.chmod(0o755)
     receipt = tmp_path / 'receipt.txt'
     output = tmp_path / 'bundle with spaces'
     script = tmp_path / 'walkthrough with spaces.js'
     run = subprocess.run(
-        ['bash', str(launcher), str(output), '--docs-script', str(script)],
+        [environment_bash(), str(launcher), str(output), '--docs-script', str(script)],
         cwd=tmp_path,
         env={
             **os.environ,
@@ -77,7 +80,7 @@ def test_capture_launcher_refuses_missing_app_and_missing_destination(tmp_path):
     assert launcher.is_file(), 'The capture refusal gate requires the main-tree capture launcher'
     for arguments in [[], [str(tmp_path / 'output')]]:
         run = subprocess.run(
-            ['bash', str(launcher), *arguments],
+            [environment_bash(), str(launcher), *arguments],
             env={**os.environ, 'EDI_DOCS_APP': str(tmp_path / 'no-such-app')},
             capture_output=True,
             text=True,

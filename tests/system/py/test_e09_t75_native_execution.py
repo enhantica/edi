@@ -22,6 +22,7 @@ from ci_runner_contract import platform_job
 
 from tests.fixtures.e09_t75_commands import assert_no_swallowed_refusal, checked_program
 from tests.fixtures.e09_t75_workflow import workflow_cwd, workflow_env
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e09_t75_native_workflow import (
     ROSTER,
     consumer_boundary,
@@ -179,11 +180,14 @@ def restore(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     binary.mkdir()
     for name in ('cmake', 'ninja', 'make', 'c++', 'clang++', 'g++'):
         command = binary / name
-        command.write_text('#!/bin/sh\necho "$0 $*" >> "$NATIVE_COMPILES"\nexit 91\n')
+        command.write_text(
+            '#!/bin/sh\necho "$0 $*" >> "$NATIVE_COMPILES"\nexit 91\n', newline='\n'
+        )
         command.chmod(0o755)
     pixi = binary / 'pixi'
     pixi.write_text(
-        '#!/bin/sh\n[ "$*" = "run core-build" ] || exit 64\nexec bash tools/ci/core-build.sh\n'
+        '#!/bin/sh\n[ "$*" = "run core-build" ] || exit 64\nexec bash tools/ci/core-build.sh\n',
+        newline='\n',
     )
     pixi.chmod(0o755)
     uname = binary / 'uname'
@@ -192,7 +196,8 @@ def restore(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         + ('arm64' if platform == 'osx-arm64' else 'x86_64')
         + ';; *) echo '
         + ('Darwin' if platform == 'osx-arm64' else 'Linux')
-        + ';; esac\n'
+        + ';; esac\n',
+        newline='\n',
     )
     uname.chmod(0o755)
     env = {
@@ -245,9 +250,10 @@ def restore(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         + repr(realgit)
         + ', ['
         + repr(realgit)
-        + ',*args])\n'
+        + ',*args])\n',
+        newline='\n',
     )
-    git_transport.write_text(checked_program(git_transport.read_text(), 'git'))
+    git_transport.write_text(checked_program(git_transport.read_text(), 'git'), newline='\n')
     git_transport.chmod(0o755)
 
     def resolve(value):
@@ -291,7 +297,7 @@ def restore(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             )
             target.chmod(target.stat().st_mode & ~0o111)
         r = subprocess.run(
-            ['bash', '-eu', '-c', commands[attempt]['run']],
+            [environment_bash(), '-eu', '-c', commands[attempt]['run']],
             cwd=workflow_cwd(job, commands[attempt], repo, resolve),
             env=workflow_env(job, commands[attempt], env, resolve),
             capture_output=True,
@@ -556,7 +562,7 @@ def native_producer(tmp_path, platform, defect=None):  # noqa: PLR0914, PLR0915
     repo = tmp_path / 'edi'
     cli = repo / 'build/ci/cli/easydiffraction'
     cli.parent.mkdir(parents=True, exist_ok=True)
-    cli.write_text('#!/bin/sh\necho easydiffraction-independent-version\n')
+    cli.write_text('#!/bin/sh\necho easydiffraction-independent-version\n', newline='\n')
     cli.chmod(0o755)
     expected = {
         str(p.relative_to(repo)): p.read_bytes()
@@ -589,7 +595,8 @@ os.execv("""
         + repr(sys.executable)
         + ',['
         + repr(sys.executable)
-        + ',*args[2:]])\n'
+        + ',*args[2:]])\n',
+        newline='\n',
     )
     pixi.chmod(0o755)
     native = platform_job(jobs(), 'native', platform)
@@ -638,7 +645,7 @@ os.execv("""
         return value
 
     build_run = subprocess.run(
-        ['bash', '-eu', '-c', resolve(build_step['run'])],
+        [environment_bash(), '-eu', '-c', resolve(build_step['run'])],
         cwd=workflow_cwd(native, build_step, repo, resolve),
         env=workflow_env(native, build_step, env, resolve),
         capture_output=True,
@@ -652,7 +659,7 @@ os.execv("""
     if defect == 'linked-pin':
         (repo / 'build/ci/.crysta-linked-sha').write_text('f' * 40 + '\n')
     run = subprocess.run(
-        ['bash', '-eu', '-c', command],
+        [environment_bash(), '-eu', '-c', command],
         cwd=workflow_cwd(native, step, repo, resolve),
         env=workflow_env(native, step, env, resolve),
         capture_output=True,

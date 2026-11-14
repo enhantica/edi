@@ -12,6 +12,7 @@ from tests.fixtures.e04_t11_wasm import iteration_domains as counters
 from tests.fixtures.e04_t11_wasm import written
 from tests.fixtures.e04_t11_wasm.cli_domains import fields
 from tests.fixtures.e04_t11_wasm.reopen import assert_documents
+from tests.fixtures.native_process import environment_bash
 from tests.unit.py.test_browser_written_reference import raw_control
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -388,7 +389,7 @@ def test_shared_capture_exports_only_the_successful_reference(tmp_path, capture_
     env.pop('EDI_WASM_WRITTEN_REFERENCE', None)
     run = subprocess.run(
         [
-            'bash',
+            environment_bash(),
             '-c',
             'set -euo pipefail\n' + script[start:end] + '\necho -n "$EDI_WASM_WRITTEN_REFERENCE"',
         ],

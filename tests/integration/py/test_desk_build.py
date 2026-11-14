@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e04_t1_app_contract import GUI_ARCHIVE_SHA256, GUI_PIN
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -28,7 +29,7 @@ def test_qualified_desk_sdk_needs_no_exported_or_cli_login(tmp_path, exported):
     if exported:
         env[exported] = 'private-synthetic-token'
     result = subprocess.run(
-        ['bash', str(root / 'tools/ci/build-crysta.sh')],
+        [environment_bash(), str(root / 'tools/ci/build-crysta.sh')],
         cwd=root,
         env=env,
         capture_output=True,
@@ -54,9 +55,9 @@ def test_unusable_login_is_irrelevant_to_a_qualified_local_sdk(tmp_path, login):
     else:
         # Any invocation is forbidden, irrespective of what the obsolete login
         # path would return; no artificial timeout or sleep is needed.
-        gh.write_text('#!/bin/sh\necho forbidden > "$SDK_COMMANDS"\nexit 91\n')
+        gh.write_text('#!/bin/sh\necho forbidden > "$SDK_COMMANDS"\nexit 91\n', newline='\n')
     result = subprocess.run(
-        ['bash', str(root / 'tools/ci/build-crysta.sh')],
+        [environment_bash(), str(root / 'tools/ci/build-crysta.sh')],
         cwd=root,
         env=env,
         capture_output=True,
@@ -69,7 +70,7 @@ def test_unusable_login_is_irrelevant_to_a_qualified_local_sdk(tmp_path, login):
 
 
 def executable(path, text):
-    path.write_text('#!/bin/bash\n' + text)
+    path.write_text('#!/bin/bash\n' + text, newline='\n')
     path.chmod(0o755)
 
 
@@ -101,7 +102,7 @@ exit 0
     for name in ('EDI_GUI_COMPONENTS_SRC', 'GH_TOKEN', 'GITHUB_TOKEN', 'EDI_CRYSTA_PREFIX', 'CI'):
         env.pop(name, None)
     env.update(PATH=f'{bin_dir}:/usr/bin:/bin', CONDA_PREFIX=str(prefix), CXX=str(bin_dir / 'c++'))
-    command = ['bash', 'tools/ci/app-build.sh']
+    command = [environment_bash(), 'tools/ci/app-build.sh']
     failed = subprocess.run(
         command, cwd=root, env=env, capture_output=True, text=True, timeout=10, check=False
     )

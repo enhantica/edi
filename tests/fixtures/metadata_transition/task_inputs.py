@@ -8,6 +8,8 @@ import shlex
 import zipfile
 from pathlib import Path
 
+from tests.fixtures.path_keys import repository_key
+
 HERE = Path(__file__).parent
 
 
@@ -26,7 +28,7 @@ def archived(digest):
 
 
 def previous_bytes(name, data):
-    row = rows().get(str(name))
+    row = rows().get(repository_key(name))
     if row is None:
         return data
     digest = hashlib.sha256(data).hexdigest()

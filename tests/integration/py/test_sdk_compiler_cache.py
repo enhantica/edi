@@ -9,6 +9,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.native_process import environment_bash
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -131,13 +132,13 @@ def test_selected_windows_bootstrap_uses_ninja_and_wrapper_keeps_other_callers_d
     (tmp_path / 'crysta/pixi.lock').write_bytes(b'independent real lock bytes')
     jobs = tmp_path / 'crysta' / 'tools' / 'ci' / 'build-jobs.sh'
     jobs.parent.mkdir(parents=True)
-    jobs.write_text("printf '%s\\n' 6\n", encoding='utf-8')
+    jobs.write_text("printf '%s\\n' 6\n", encoding='utf-8', newline='\n')
     for platform in ['Windows', 'Linux', 'macOS']:
         output, environment = tmp_path / 'output', tmp_path / 'environment'
         output.write_text('', encoding='utf-8')
         environment.write_text('', encoding='utf-8')
         result = subprocess.run(
-            ['bash', '-e', '-c', inputs['run']],
+            [environment_bash(), '-e', '-c', inputs['run']],
             cwd=tmp_path,
             env={
                 **os.environ,
@@ -160,7 +161,7 @@ def test_selected_windows_bootstrap_uses_ninja_and_wrapper_keeps_other_callers_d
         ), 'Only Windows bootstrap selects Ninja so MSVC uses the compiler launcher'
     jobs.unlink()
     missing = subprocess.run(
-        ['bash', '-e', '-c', inputs['run']],
+        [environment_bash(), '-e', '-c', inputs['run']],
         cwd=tmp_path,
         env={
             **os.environ,
@@ -292,11 +293,17 @@ def test_failed_sdk_pack_reports_cache_stats_then_keeps_its_failure(tmp_path):
         'echo "$*" >> "$CACHE_WITNESS"\n'
         'case "$*" in *sdk-pack*) exit 23;; esac\n',
         encoding='utf-8',
+        newline='\n',
     )
     pixi.chmod(0o755)
     witness = tmp_path / 'calls'
     result = subprocess.run(
-        ['bash', '-e', '-c', build['run'].replace('${{ matrix.platform }}', 'linux-64')],
+        [
+            environment_bash(),
+            '-e',
+            '-c',
+            build['run'].replace('${{ matrix.platform }}', 'linux-64'),
+        ],
         cwd=tmp_path,
         env={
             **os.environ,

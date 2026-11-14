@@ -16,6 +16,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
+
 
 def _repo_root() -> Path:
     result = subprocess.run(
@@ -184,6 +186,7 @@ def _worker_build_sandbox(root: Path) -> tuple[Path, Path, Path]:
         'mkdir -p build/shared-worker-artifact\n'
         'exit 91\n',
         encoding='utf-8',
+        newline='\n',
     )
     stand_in.chmod(0o755)
     return marker, shared, root / 'tools/ci/core-build.sh'
@@ -321,7 +324,8 @@ def _partition_transport(groups, omitted, *, core=False, weekly_omitted=True):
             '#!' + sys.executable + '\nimport json, subprocess, sys\n'
             'if sys.argv[1] == "-c":\n'
             '    sys.exit(subprocess.call([sys.executable, *sys.argv[1:]]))\n'
-            'print(json.dumps(sys.argv[1:]))\n'
+            'print(json.dumps(sys.argv[1:]))\n',
+            newline='\n',
         )
         shim.chmod(0o755)
         env = {
@@ -333,9 +337,9 @@ def _partition_transport(groups, omitted, *, core=False, weekly_omitted=True):
         }
         result = subprocess.run(
             (
-                ['/bin/bash', str(ROOT / 'tools/ci/core-tests.sh'), '--collect-only']
+                [environment_bash(), str(ROOT / 'tools/ci/core-tests.sh'), '--collect-only']
                 if core
-                else ['/bin/bash', str(ROOT / 'tools/ci/system-tests-part.sh'), '1', '3']
+                else [environment_bash(), str(ROOT / 'tools/ci/system-tests-part.sh'), '1', '3']
             ),
             cwd=replay,
             env=env,

@@ -7,11 +7,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tests.fixtures.native_process import environment_bash
+from tests.fixtures.node_runtime import environment_node
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_actual_web_loader_requires_isolation_and_refuses_removed_or_invalid_targets():
-    node = Path(sys.prefix) / 'bin/node'
+    node = environment_node()
     assert node.is_file(), 'The locked environment supplies Node for the actual page policy'
     result = subprocess.run(
         [str(node), str(ROOT / 'tests/system/manual/web_multithread_loader_controls.mjs')],
@@ -46,11 +49,11 @@ elif args[0]=='-c': print('b'*64)
 """
     for name in ('python', 'git'):
         executable = binaries / name
-        executable.write_text('#!' + sys.executable + '\n' + transport)
+        executable.write_text('#!' + sys.executable + '\n' + transport, newline='\n')
         executable.chmod(0o755)
     output = tmp_path / 'references'
     run = subprocess.run(
-        ['bash', str(scripts / 'wasm-written-reference.sh'), str(output)],
+        [environment_bash(), str(scripts / 'wasm-written-reference.sh'), str(output)],
         cwd=root,
         env={
             **os.environ,
