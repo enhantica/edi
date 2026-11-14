@@ -103,11 +103,19 @@ def test_promotion_requires_every_platform_from_one_successful_main_attempt(dama
     elif damage == 'expired':
         artifacts[0]['expired'] = True
     if damage == 'none':
-        assert set(PROMOTE.qualified_artifacts(run, artifacts, jobs)) == set(names), (
+        expected = {name.removesuffix('-2'): index + 1 for index, name in enumerate(names)}
+        assert PROMOTE.qualified_artifacts(run, artifacts, jobs) == expected, (
             'Promotion requires every platform from one successful main attempt.'
         )
     else:
-        with pytest.raises(ValueError, match=r'qualification|platform|artifacts'):
+        expected = {
+            'branch': 'qualification',
+            'workflow': 'qualification',
+            'job': 'no successful attempt',
+            'attempt': 'artifact .* is missing',
+            'expired': 'artifact .* is missing',
+        }[damage]
+        with pytest.raises(ValueError, match=expected):
             PROMOTE.qualified_artifacts(run, artifacts, jobs)
 
 
@@ -371,7 +379,7 @@ def test_stable_release_attaches_every_platform_component_archive(tmp_path):
     assets.mkdir()
     release = {'version': '2026.11.0', 'commit': 'a' * 40}
     for index, (platform, target) in enumerate(PROMOTE.PLATFORMS.items()):
-        delivery = tmp_path / f'installer-{platform}-1'
+        delivery = tmp_path / f'installer-{platform}'
         delivery.mkdir()
         if index:
             PROMOTE.pack_components(
@@ -379,13 +387,13 @@ def test_stable_release_attaches_every_platform_component_archive(tmp_path):
                 delivery / PROMOTE.components_name('2026.11.0', target, 'stable'),
             )
     with pytest.raises(ValueError, match='all platforms together'):
-        PROMOTE.stage_optional_assets(tmp_path, assets, 1, release)
+        PROMOTE.stage_optional_assets(tmp_path, assets, release)
     first, target = next(iter(PROMOTE.PLATFORMS.items()))
     PROMOTE.pack_components(
         component_repository(tmp_path / 'repo-first'),
-        tmp_path / f'installer-{first}-1' / PROMOTE.components_name('2026.11.0', target, 'stable'),
+        tmp_path / f'installer-{first}' / PROMOTE.components_name('2026.11.0', target, 'stable'),
     )
-    PROMOTE.stage_optional_assets(tmp_path, assets, 1, release)
+    PROMOTE.stage_optional_assets(tmp_path, assets, release)
     assert sorted(p.name for p in assets.iterdir()) == sorted(
         PROMOTE.components_name('2026.11.0', t, 'stable') for t in PROMOTE.PLATFORMS.values()
     ), 'A stable release attaches one component archive per platform.'
