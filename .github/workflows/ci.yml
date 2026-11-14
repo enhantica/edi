@@ -205,6 +205,8 @@ jobs:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup-pixi
       # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
       - id: ccache

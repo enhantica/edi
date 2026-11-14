@@ -610,3 +610,11 @@ def test_windows_sdk_workflows_refuse_case_ambiguous_platform_environment_routes
         )
         with pytest.raises(AssertionError, match='case-ambiguous'):
             no_ambiguous_windows_platform_environment(changed)
+
+
+def test_runtime_audit_fetches_the_immutable_source_history_its_collection_reads():
+    workflow = document('.github/workflows/ci.yml')
+    audit = workflow['jobs']['audit']
+    assert any('per-pr-audit' in step.get('run', '') for step in audit['steps'])
+    checkouts = [step for step in audit['steps'] if step.get('uses') == 'actions/checkout@v5']
+    assert len(checkouts) == 1 and checkouts[0].get('with', {}).get('fetch-depth') == 0

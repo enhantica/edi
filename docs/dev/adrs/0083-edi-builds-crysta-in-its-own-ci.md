@@ -369,3 +369,10 @@ text readers and writers also name UTF-8 at their file boundary. The real record
 CLI is exercised under an uncoerced C locale with Unicode titles retained. This
 extends the existing native consumer environment and catalogue paths; it adds no
 Windows-specific test invocation or alternate data format.
+
+
+The runtime-manifest audit fetches full Edi source history, matching the native
+and core producers. Collection imports immutable published-source references
+through Git object identities; a shallow checkout cannot prove those references.
+The audit retains the same archived hashes and refuses missing objects rather
+than replacing them with current product output.
