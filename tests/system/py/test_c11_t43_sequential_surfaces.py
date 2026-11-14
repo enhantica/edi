@@ -13,6 +13,8 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.scan_csv import CONDITION_COLUMNS
+
 ROOT = Path(__file__).resolve().parents[3]
 CORPUS_ROOT = Path(
     os.environ.get('EDI_CRYSTA_CORPUS_ROOT', ROOT / 'build/crysta-src/tests/fitting')
@@ -147,7 +149,7 @@ def test_cli_fit_and_python_resume_share_crysta_results_writer(tmp_path: Path) -
     csv_path = project_dir / 'analysis' / 'results.csv'
     header, rows = _rows(csv_path)
     reference_header, _ = _rows(CASE / 'diffraction-lib' / 'project' / 'analysis' / 'results.csv')
-    assert set(header) == set(reference_header), (
+    assert header == [*reference_header, *CONDITION_COLUMNS], (
         " requires the edi CLI surface to emit diffraction-lib's exact column set; "
         f'missing={sorted(set(reference_header) - set(header))!r}, '
         f'extra={sorted(set(header) - set(reference_header))!r}'

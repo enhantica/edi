@@ -15,7 +15,7 @@ datablock names orange, item names blue, loop column names green and `loop_` gre
   reflections and the fit results. This text is read-only.
 
 Show is one setting for every Text tab. Changing it on one page changes it on all of them, and it is also in
-Preferences > Appearance as "Text tab shows". It is saved with your preferences, not with the project.
+Preferences > Interface as "Text tab shows". It is saved with your preferences, not with the project.
 
 ## Editing and applying
 

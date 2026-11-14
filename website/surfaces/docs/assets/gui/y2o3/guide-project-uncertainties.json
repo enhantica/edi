@@ -1,13 +1,13 @@
 {
     "description": "Choose how values and standard uncertainties are displayed",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "group.su_format"
     ],
     "id": "guide-project-uncertainties",
-    "image": "guide-project-uncertainties.png",
-    "image_sha256": "369d2de6fc772aaa2f0d1e68275830b55820d1bfbc487cf8f1b011db8c06bf9a",
+    "image": "guide-project-uncertainties.webp",
+    "image_sha256": "5515ceece5e9fa2204d34b9cd59b311677fc2ea33854150be2a95e1398d43a7b",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -89,43 +89,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -134,7 +100,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -186,6 +152,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -328,7 +311,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -337,10 +320,43 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
+            ]
+        },
+        "group.save_data": {
+            "bounds": [
+                770,
+                217,
+                710,
+                42
+            ],
+            "enabled": true,
+            "icon": "database",
+            "label": "Data on save",
+            "visible_bounds": [
+                770,
+                217,
+                710,
+                42
+            ]
+        },
+        "group.save_data.pin": {
+            "bounds": [
+                1433.2261363926236,
+                215.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                217,
+                44.54772721475251,
+                42
             ]
         },
         "group.su_format": {
@@ -358,6 +374,22 @@
                 119,
                 710,
                 98
+            ]
+        },
+        "group.su_format.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
             ]
         },
         "label": {
@@ -435,7 +467,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/private/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-otQAdg/docs-saved-project",
+            "label": "/tmp/EasyDiffraction-OxYLYn/docs-saved-project",
             "visible_bounds": [
                 183.4,
                 329.40000000000003,
@@ -546,7 +578,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.453125,
@@ -698,7 +730,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.026s 3.58→2.28",
+            "label": "1 0.097s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -869,8 +901,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -905,7 +937,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

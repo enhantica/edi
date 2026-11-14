@@ -428,13 +428,13 @@ def _filter_bar(selects: list, kind: str, label: str, placeholder: str) -> list[
             + ''.join(options)
             + '</select>'
         )
-    reset = (ROOT / 'surfaces/overrides/.icons/fa5/undo-alt.svg').read_text(encoding='utf-8')
+    reset = (ROOT / 'surfaces/overrides/.icons/fa5/eraser.svg').read_text(encoding='utf-8')
     reset = re.sub(r'<!--.*?-->', '', reset).strip()
     controls.append(
         f'<div class="ed-example-search"><input type="search" data-{kind}-search '
         f'aria-label="{label}" placeholder="{placeholder}">'
-        f'<button type="button" data-{kind}-reset title="Reset the filters" '
-        f'aria-label="Reset the filters">{reset}</button></div>'
+        f'<button type="button" data-{kind}-reset title="Clear all filters" '
+        f'aria-label="Clear all filters">{reset}</button></div>'
     )
     return controls
 

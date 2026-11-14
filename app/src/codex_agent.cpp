@@ -397,7 +397,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         scope = ++generation_;
         settleOperation();
         failure_kind_ = FailureKind::Other;
-        failed_ = false; eof_pending_=false; incoming_.clear(); deferred_required_.clear(); optional_queued_bytes_ = 0; preempting_optional_usage_ = false; deferred_deadline_ = -1;
+        failed_ = false; eof_pending_=false; exit_code_=-1; exit_detail_.clear(); incoming_.clear(); deferred_required_.clear(); optional_queued_bytes_ = 0; preempting_optional_usage_ = false; deferred_deadline_ = -1;
         pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear();
         pending_sizes_.clear(); pending_deadlines_.clear(); server_sizes_.clear();
         pending_bytes_ = 0; wire_bytes_ = 0; event_count_ = 0;
@@ -479,11 +479,20 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
             // Never put raw runtime stderr (which may contain user data) in a
             // provider failure card or credential log.
         });
-        connect(process, &QProcess::errorOccurred, this, [this, original = prepared, scope](QProcess::ProcessError) {
-            if (original && process_ == original.data() && generation_ == scope) fail("The official agent process could not continue.");
+        connect(process, &QProcess::errorOccurred, this, [this, original = prepared, scope](QProcess::ProcessError error) {
+            if (!original || process_ != original.data() || generation_ != scope || failed_) return;
+            // A write fails when the guard has already exited; its exit code, read at finished, says why. The
+            // operation deadline still ends a write that fails while the guard runs.
+            if (error == QProcess::WriteError) return;
+            // Name what went wrong: the guard could not start, crashed, or stopped reading before the runtime's answer.
+            static const char* const kinds[] = {"start error", "crashed", "timed out", "read error", "write error", "unknown error"};
+            const auto kind = kinds[std::clamp(static_cast<int>(error), 0, 5)];
+            try { exit_detail_ = QString::fromLatin1(kind) + QStringLiteral(": ") + original->errorString(); } catch (...) {}
+            fail("The official agent process could not continue (%1).");
         });
         connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
-                [this, original = prepared, scope](int, QProcess::ExitStatus) {
+                [this, original = prepared, scope](int code, QProcess::ExitStatus status) {
+            if (original && process_ == original.data() && generation_ == scope) exit_code_ = status == QProcess::NormalExit ? code : -1;
             if (original) read(original.data(), scope, true);
         });
         beginOperation(Limits::http_json_ms, 0);
@@ -670,7 +679,19 @@ void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
     drain(); // All local record/parse/assembly owners settle before EOF effects.
     if (!current() || !eof_pending_) return;
     eof_pending_=false;
-    if (!failed_) fail("The official agent process ended. Unfinished work was interrupted.");
+    if (!failed_) {
+        // The guard exits 127 when the runtime could not start, 128 + n when a signal stopped it (macOS stops a
+        // program it refuses to run with signal 9), and the runtime's own code otherwise.
+        if (exit_code_ == 127) fail("The official agent could not be started by the system.");
+        else if (exit_code_ > 128 && exit_code_ < 160) {
+            exit_detail_ = QString::number(exit_code_ - 128);
+            fail("The official agent was stopped by the system (signal %1).");
+        } else if (exit_code_ == 125) fail("The assistant lifetime guard refused to start the official agent.");
+        else if (exit_code_ > 0) {
+            exit_detail_ = QString::number(exit_code_);
+            fail("The official agent process ended with exit code %1. Unfinished work was interrupted.");
+        } else fail("The official agent process ended. Unfinished work was interrupted.");
+    }
     if (!current()) return;
     retired_process_=original;
     process_=nullptr;
@@ -744,7 +765,12 @@ void CodexAgent::fail(const char* explanation, FailureKind kind) noexcept {
     pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear(); incoming_.clear(); pending_deadlines_.clear(); pending_sizes_.clear(); server_sizes_.clear(); pending_bytes_ = 0;
     // Publish the original cause before terminate can synchronously finish and
     // detach this process. After notification, touch only the captured process.
-    try { emit failed(tr(explanation)); } catch (...) {}
+    try {
+        QString text = tr(explanation);
+        if (!exit_detail_.isEmpty()) text = text.arg(exit_detail_);
+        exit_detail_.clear();
+        emit failed(text);
+    } catch (...) {}
     try { if (original && original->state() != QProcess::NotRunning) original->terminate(); } catch (...) {}
 }
 void CodexAgent::retire() {

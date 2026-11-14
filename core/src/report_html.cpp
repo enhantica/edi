@@ -131,6 +131,11 @@ th, td {
 .table-scroll table { margin: 0; }
 .wide-table th, .wide-table td { padding: 0 var(--wide-colsep); }
 td.wrap { white-space: normal; }
+/* The change column: right-aligned on the percentage's last digit, the direction an arrow icon after a fixed gap. */
+td.change, th.change { text-align: right; white-space: nowrap; }
+/* A poorly determined or strongly correlated parameter's s.u., its reasons in the title (edi ADR-0085). */
+td.su-flag, td.su-flag span, .su-flag-term { color: #c8323c; }
+.change-arrow { display: inline-block; width: 0.75em; height: 0.85em; margin-left: 0.25em; vertical-align: -0.1em; fill: currentColor; }
 table.correlations { border: none; }
 table.correlations tbody tr { background: none; }
 table.correlations thead tr { background: none; }
@@ -226,7 +231,7 @@ table.correlations td {
 }
 /* The fitted parameters' column notes: one term to a line, the explanations aligned. */
 .column-notes { list-style: disc; margin: 0 0 9.5pt; padding-left: 1.4em; font-size: 0.92em; }
-.column-notes .term { display: inline-block; min-width: 3.6em; font-weight: 700; }
+.column-notes .term { display: inline-block; min-width: 4.4em; margin-right: 0.5em; font-weight: 700; }
 /* A pattern chart's tick-row label: the structure's icon and name, as the app's chart writes them. */
 .pattern-row-label {
   position: absolute;
@@ -647,7 +652,7 @@ private:
         std::string anchor = uid;
         std::replace(anchor.begin(), anchor.end(), '_', '-');
         std::replace(anchor.begin(), anchor.end(), '.', '-');
-        return "https://enhantica.github.io/edi/physics/parameters/#" + anchor;
+        return "https://easydiffraction.org/physics/parameters/#" + anchor;
     }
 
     // The parameter list as diffraction-lib's tables show it: free, fittable or every parameter, each row numbered,
@@ -687,6 +692,28 @@ private:
         table(list);
     }
 
+    // Font Awesome's arrow-up and arrow-down (CC BY 4.0), the app table's arrows, sized and coloured by the text.
+    static std::string arrow_icon(bool up) {
+        return std::string("<svg class=\"change-arrow\" viewBox=\"0 0 384 512\" aria-label=\"") + (up ? "up" : "down") +
+               "\"><path d=\"" +
+               (up ? "M214.6 17.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 "
+                     "117.3V488c0 17.7 14.3 32 32 32s32-14.3 32-32V117.3l105.4 105.4c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 "
+                     "0-45.3l-160-160z"
+                   : "M169.4 502.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 "
+                     "402.7V32c0-17.7-14.3-32-32-32s-32 14.3-32 32v370.7L54.6 297.3c-12.5-12.5-32.8-12.5-45.3 0s-12.5 "
+                     "32.8 0 45.3l160 160z") +
+               "\"/></svg>";
+    }
+    // A change cell's percentage and its arrow icon, from the text form "1.3% ↑".
+    static std::string change_cell(const std::string& text) {
+        for (const auto& [suffix, up] : {std::pair{" \u2191", true}, std::pair{" \u2193", false}}) {
+            if (text.size() > std::string_view(suffix).size() && text.ends_with(suffix)) {
+                return escaped(text.substr(0, text.size() - std::string_view(suffix).size())) + arrow_icon(up);
+            }
+        }
+        return escaped(text);
+    }
+
     // The fitted parameters after the fit's summary, as diffraction-lib's fit results show them: each free parameter's
     // place, units, value before the fit, fitted value, s.u. and change, then what the four columns mean.
     void fitted_parameters() {
@@ -704,14 +731,38 @@ private:
             links[4] = documentation(parameter.uid);
             list.rows.push_back(std::move(row));
             list.links.push_back(std::move(links));
+            std::string reasons;
+            if (parameter.su_poor) reasons = su_poor_text();
+            if (!parameter.su_partner.empty()) {
+                SuMarks marks;
+                marks.partner = parameter.su_partner;
+                marks.correlation = parameter.su_correlation;
+                reasons += (reasons.empty() ? "" : "\n") + su_correlated_text(marks);
+            }
+            su_reasons_.push_back(std::move(reasons));
         }
-        if (list.rows.empty()) return;
+        if (list.rows.empty()) {
+            su_reasons_.clear();
+            return;
+        }
         heading(3, "", "Fitted parameters");
+        change_column_ = list.columns.size() - 1;
+        su_column_ = list.columns.size() - 2;
         table(list);
-        // What the four columns mean, one term to a line, as diffraction-lib lists them (fitted_columns).
+        change_column_ = static_cast<std::size_t>(-1);
+        su_column_ = static_cast<std::size_t>(-1);
+        su_reasons_.clear();
+        // What the four columns mean, one term to a line, as diffraction-lib lists them (fitted_columns), the arrows
+        // as the table draws them.
         out_ += "<ul class=\"column-notes\">\n";
         for (const auto& [term, meaning] : fitted_columns()) {
-            out_ += "<li><span class=\"term\">" + escaped(term) + "</span>" + escaped(meaning) + "</li>\n";
+            std::string shown = escaped(meaning);
+            for (const auto& [glyph, up] : {std::pair{"\u2191", true}, std::pair{"\u2193", false}}) {
+                for (std::size_t at = shown.find(glyph); at != std::string::npos; at = shown.find(glyph)) {
+                    shown.replace(at, std::string_view(glyph).size(), arrow_icon(up));
+                }
+            }
+            out_ += "<li><span class=\"term\">" + escaped(term) + "</span>" + shown + "</li>\n";
         }
         const bool undefined = std::any_of(model_.parameters.begin(), model_.parameters.end(), [](const auto& parameter) {
             return parameter.free && parameter.su_cell == kUndefinedSu;
@@ -719,6 +770,13 @@ private:
         if (undefined) {
             out_ += "<li><span class=\"term\">" + std::string(kUndefinedSu) + "</span>" + std::string(kUndefinedSuNote) +
                     "</li>\n";
+        }
+        const bool flagged = std::any_of(model_.parameters.begin(), model_.parameters.end(), [](const auto& parameter) {
+            return parameter.free && (parameter.su_poor || !parameter.su_partner.empty());
+        });
+        if (flagged) {
+            out_ += "<li><span class=\"term su-flag-term\">s.u.</span>in red: a poorly determined or strongly correlated "
+                    "parameter; its title says why</li>\n";
         }
         out_ += "</ul>\n";
     }
@@ -993,7 +1051,7 @@ private:
         out_ += "<div class=\"table-scroll\">";
         out_ += "<table class=\"wide-table\">\n<thead>\n<tr>";
         for (std::size_t i = 0; i < data.columns.size(); ++i) {
-            out_ += columns[i].numeric ? "<th class=\"numeric-header\">" : "<th>";
+            out_ += i == change_column_ ? "<th class=\"change\">" : columns[i].numeric ? "<th class=\"numeric-header\">" : "<th>";
             out_ += escaped(data.columns[i]) + "</th>";
         }
         out_ += "</tr>\n</thead>\n<tbody>\n";
@@ -1011,6 +1069,10 @@ private:
             for (std::size_t i = 0; i < columns.size(); ++i) {
                 const std::string text = i < row.size() ? row[i] : std::string();
                 const std::string link = r < data.links.size() && i < data.links[r].size() ? data.links[r][i] : "";
+                if (i == change_column_) {
+                    out_ += "<td class=\"change\">" + change_cell(text) + "</td>";
+                    continue;
+                }
                 if ((!link.empty() || (data.wrap_names && names[i])) && !columns[i].numeric) {
                     // A long name may wrap after an underscore (<wbr> adds nothing to copied text).
                     std::string shown = escaped(text);
@@ -1024,7 +1086,21 @@ private:
                                          : "<a href=\"" + escaped(link) + "\" target=\"_blank\" rel=\"noopener\">" + shown + "</a>";
                     out_ += "</td>";
                 } else {
+                    const std::size_t at = out_.size();
                     cell(text, columns[i]);
+                    // A poorly determined or strongly correlated parameter's s.u., red, its reasons in the title.
+                    if (i == su_column_ && r < su_reasons_.size() && !su_reasons_[r].empty()) {
+                        const std::size_t open = out_.find("<td", at);
+                        if (open != std::string::npos) {
+                            out_.insert(open + 3, " title=\"" + escaped(su_reasons_[r]) + "\"");
+                            const std::size_t quote = out_.find("class=\"", open);
+                            if (quote != std::string::npos && quote < out_.find('>', open)) {
+                                out_.insert(quote + 7, "su-flag ");
+                            } else {
+                                out_.insert(open + 3, " class=\"su-flag\"");
+                            }
+                        }
+                    }
                 }
             }
             out_ += "</tr>\n";
@@ -1108,6 +1184,11 @@ private:
     const ReportModel& model_;
     std::optional<double> figure_width_;
     std::string out_;
+    // The column the web table draws as a change, its arrow an icon (fitted_parameters); none otherwise.
+    std::size_t change_column_ = static_cast<std::size_t>(-1);
+    // The s.u. column the web table marks red, and each row's reasons (fitted_parameters); none otherwise.
+    std::size_t su_column_ = static_cast<std::size_t>(-1);
+    std::vector<std::string> su_reasons_;
     std::size_t section_ = 0;
 };
 
@@ -1135,14 +1216,24 @@ ReportLibraries read_report_libraries(const std::filesystem::path& data_dir) {
 
 namespace {
 
-// The view's page: the report's paper, no page shell round it.
+// The view's page: the report's paper, no page shell round it. It sets its own fonts, the app's (Noto Sans, then the
+// system's sans), as it is shown in pages that set none of theirs, a notebook in Colab for one (the owner, 2026-11-10).
 constexpr const char* kViewStyle = R"css(
-html, body { background: var(--paper); padding: 0; }
+:root {
+  --body-font: 'Noto Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --head-font: 'Noto Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+html, body { background: var(--paper); padding: 0; font-family: var(--body-font); }
 .report-view { padding: 8px 12px; }
 .report-view > h3:first-child { margin-top: 0; }
 /* A notebook page's tables fill its width, as the site's do (owner record 2026-11-09); a saved report keeps its own. */
 .report-view table { width: 100%; }
+/* The correlations sized to their content: the names beside the matrix, not the matrix at the far right. */
+.report-view table.correlations { width: auto; }
 .report-view td.wrap { white-space: normal; }
+.report-view td.change, .report-view th.change { text-align: right; white-space: nowrap; }
+.report-view td.su-flag, .report-view td.su-flag span, .report-view .su-flag-term { color: #c8323c; }
+.report-view .change-arrow { display: inline-block; width: 0.75em; height: 0.85em; margin-left: 0.25em; vertical-align: -0.1em; fill: currentColor; }
 )css";
 
 // A whole report document round `body`: the style, the libraries, the model's JSON and report.js.

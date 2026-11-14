@@ -8,14 +8,21 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// The Structure page (easydiffractionbeta Pages/Model): the structure view in the main area; the Structures
-// list and the current structure's `.edi` categories in the sidebar (packet §2b (ii), §15.6), with the
-// view's Appearance group on Extras; the structure block's `.edi` in Text.
+// The Structure page (easydiffractionbeta Pages/Model): the Structures list and the current structure's `.edi`
+// categories in the sidebar (packet §2b (ii), §15.6), with the structure view's Appearance group on Extras; the
+// structure block's `.edi` in Text. The views are the window's one main view beside it (MainView).
 WorkflowPage {
     id: page
 
     readonly property ProjectViewModel project: Session.project
-    readonly property StructureViewModel structure: project ? project.currentStructure : null
+    property StructureViewModel structure: null
+    Binding {
+        target: page
+        property: "structure"
+        value: page.project ? page.project.currentStructure : null
+        when: page.current
+        restoreMode: Binding.RestoreNone
+    }
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
@@ -31,41 +38,6 @@ WorkflowPage {
         })
 
     pageName: "structure"
-    defaultInfo: structure ? "" : qsTr("No structures defined")
-    mainTabs: [
-        IconTabButton {
-            objectName: "mainArea.structure.tab.view"
-            // The view's name, text only (edi ADR-0017 §2).
-            text: qsTr("Structure")
-        },
-        // The app's one pattern chart, as the Experiment and Analysis pages show it, once an experiment exists.
-        IconTabButton {
-            objectName: "mainArea.structure.tab.pattern"
-            text: qsTr("Pattern")
-            enabled: page.project !== null && page.project.experiments.count > 0
-        }
-    ]
-    mainItems: [
-        StructureView {
-            id: structureView
-
-            structure: page.structure
-            options: page.project ? page.project.structureViewOptions : null
-            shown: page.current && SwipeView.isCurrentItem
-        },
-        ProjectPatternChart {
-            id: chartView
-            experiment: page.project ? page.project.currentExperiment : null
-            axisProject: page.project
-            settingsPage: "pattern"
-            shown: page.current && SwipeView.isCurrentItem
-        }
-    ]
-    // The Pattern tab selects among the experiments, as the Experiment and Analysis pages do; the Structure tab among the
-    // structures.
-    readonly property bool patternShown: mainTabIndex === 1
-    readonly property bool patternEnabled: project !== null && project.experiments.count > 0
-    onPatternEnabledChanged: ApplicationInfo.finishUiEvent(2, undefined)
     extrasEnabled: structure !== null
     textEnabled: structure !== null
     basicItem: Component {
@@ -95,7 +67,7 @@ WorkflowPage {
             }
             AppearanceGroup {
                 options: page.project ? page.project.structureViewOptions : null
-                controller: structureView.controller
+                controller: AppState.mainView ? AppState.mainView.structureController : null
                 structure: page.structure
             }
         }
@@ -105,18 +77,6 @@ WorkflowPage {
             source: page.structure ? page.structure.text : null
         }
     }
-    // One block selector for Basic, Extras and Text (edi ADR-0017 §7).
-    blockSelectorShown: true
-    blockSelectorRightInset: patternShown ? chartView.toolbarRightInset : structureView.toolbarRightInset
-    blocks: project ? (patternShown ? project.experiments : project.structures) : null
-    blocksTextRole: "label"
-    blockKind: patternShown ? "experiment" : "structure"
-    blockOutcomeRole: patternShown ? "fitOutcome" : ""
-    blockCurrentOutcome: patternShown && project && project.currentExperiment ? project.currentExperiment.fitOutcome : ""
-    blockTemplateRole: patternShown && project !== null && project.scan ? "isTemplate" : ""
-    blockCurrentTemplate: patternShown && project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
-    blockIndex: project ? (patternShown ? project.currentExperimentIndex : project.currentStructureIndex) : -1
-    onBlockActivated: index => ApplicationInfo.finishUiEvent(15, index)
     continueText: qsTr("Continue")
     onContinueClicked: AppState.open(AppState.Page.Experiment)
 

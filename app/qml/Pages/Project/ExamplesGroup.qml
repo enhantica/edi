@@ -26,6 +26,10 @@ SideBarGroup {
         ExampleFilters {
             catalogue: Session.examples
         }
+        TagRowsWidth {
+            id: tagWidths
+            model: Session.examples
+        }
         // Why no example can be opened: every online source holding the projects failed (ADR-0068).
         EaElements.Label {
             objectName: "examples.notice"
@@ -37,7 +41,9 @@ SideBarGroup {
         DataTable {
             id: table
             objectName: "examples.list"
-            tableRowHeight: Math.ceil(EaStyle.Sizes.fontPixelSize * 5.5)
+            // One line more when the widest tag row does not fit the sidebar's cell: the tags wrap, never cut short.
+            readonly property bool tagsWrap: tagWidths.widest > table.width - table.numberColumnWidth - EaStyle.Sizes.fontPixelSize * 2
+            tableRowHeight: Math.ceil(EaStyle.Sizes.fontPixelSize * (table.tagsWrap ? 7.4 : 5.5))
             maxRowCountShow: 6
             defaultInfoText: qsTr("No matching examples")
             sourceModel: Session.examples

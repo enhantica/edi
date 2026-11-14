@@ -17,6 +17,7 @@
 #include "crysta/su_format.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_spec.hpp"
+#include "edi/report.hpp"
 #include "edi/su_text.hpp"
 
 namespace edi {
@@ -468,6 +469,12 @@ std::string display_text(const Parameter& parameter, const std::string& su_rule,
 std::string display_text(std::string_view uid, double value, std::string_view variant) {
     const crysta::DictionaryItem& found = item(uid);
     return crysta::format_display(value, format_of(found, variant));
+}
+
+std::string shown_text(std::string_view uid, double value, std::string_view variant, bool display) {
+    const crysta::DisplayFormat format = format_of(item(uid), variant);
+    const std::string text = crysta::format_display(value, format);
+    return table_number(format.kind == crysta::DisplayFormat::Kind::Percent ? 100.0 * value : value, text, display);
 }
 
 std::vector<std::string> reflection_hover_lines(int h, int k, int l, double meas, double su, double calc, bool squared,

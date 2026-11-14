@@ -164,7 +164,7 @@ Column {
                 objectName: "background.list"
                 // At most four rows, then it scrolls (the owner, 2026-10-04; edi ADR-0017 §3).
                 maxRowCountShow: 4
-                defaultInfoText: qsTr("No background points")
+                defaultInfoText: qsTr("No background points yet")
                 sourceModel: group.points
 
                 columns: [numberColumnWidth, -1, -1, -1, AppSizes.iconColumnWidth]
@@ -285,7 +285,7 @@ Column {
                 objectName: "background.terms"
                 // At most four rows, then it scrolls, as the points (edi ADR-0017 §3).
                 maxRowCountShow: 4
-                defaultInfoText: qsTr("No background terms")
+                defaultInfoText: qsTr("No background terms yet")
                 sourceModel: group.terms
 
                 columns: [numberColumnWidth, -1, -1, -1, AppSizes.iconColumnWidth]

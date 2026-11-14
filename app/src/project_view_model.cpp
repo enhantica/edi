@@ -306,7 +306,11 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::missingDataFileChanged);
     connect(this, &ProjectViewModel::missingDataFolderChanged, this, &ProjectViewModel::missingDataFileChanged);
     connect(this, &ProjectViewModel::missingDataFileChanged, this, &ProjectViewModel::pendingCollectionDataChanged);
-    connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, &ProjectViewModel::syncPatternColours);
+    connect(this, &ProjectViewModel::currentExperimentIndexChanged, this, [this] {
+        if (scan_ && !experiment_models_.isEmpty() && experiment_models_[0]->showsDataset())
+            experiment_models_[0]->setDatasetColourPlace(static_cast<std::size_t>(std::max(current_dataset_, 0)));
+        else syncPatternColours();
+    });
     syncBlocks();
     report_ = new ReportViewModel(*this, this);
     // The report filters its correlations by the Analysis page's level, and in a fit of several experiments shows the
@@ -482,6 +486,9 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
             }
         }
     }
+    selection_store_timer_.setSingleShot(true);
+    selection_store_timer_.setInterval(200);
+    connect(&selection_store_timer_, &QTimer::timeout, this, &ProjectViewModel::storeSelection);
     selection_restored_ = true;
     storeSelection();
     restoreViewSettings();
@@ -504,6 +511,10 @@ void ProjectViewModel::holdPublicationFailure(const QString& warning) noexcept {
 }
 
 ProjectViewModel::~ProjectViewModel() {
+    if (selection_store_timer_.isActive()) {
+        selection_store_timer_.stop();
+        storeSelection();
+    }
     // No delivery after this: the fit and the preview first, then the worker, which waits for the job in flight.
     if (fit_ != nullptr) {
         fit_->close();
@@ -525,7 +536,11 @@ QString ProjectViewModel::name() const { return QString::fromStdString(project_-
 QString ProjectViewModel::title() const { return QString::fromStdString(project_->metadata.title); }
 QString ProjectViewModel::description() const { return QString::fromStdString(project_->metadata.description); }
 QString ProjectViewModel::lastModified() const { return QString::fromStdString(project_->metadata.last_modified); }
-QString ProjectViewModel::authors() const { return QString::fromStdString(project_->metadata.authors); }
+QString ProjectViewModel::authors() const {
+    // "." (not applicable) and "?" (unknown) are the file's empty markers, never an author.
+    const QString authors = QString::fromStdString(project_->metadata.authors).trimmed();
+    return authors == QLatin1String(".") || authors == QLatin1String("?") ? QString() : authors;
+}
 QString ProjectViewModel::suRule() const { return QString::fromStdString(project_->su_rule); }
 
 UncertaintyText ProjectViewModel::suText(double value, double su) const {
@@ -713,7 +728,7 @@ void ProjectViewModel::setCurrentStructureIndex(int index) {
 void ProjectViewModel::setCurrentExperimentIndex(int index) {
     if (scan_) {
         // A choice while a scan runs stops following it; the chosen dataset is shown as its row gives it.
-        if (fit_ != nullptr && fit_->scanning()) {
+        if (fit_ != nullptr && (fit_->scanning() || fit_->catchingUp())) {
             fit_->setFollowing(false);
         }
         viewDataset(index);
@@ -814,7 +829,9 @@ QString ProjectViewModel::selectionKey() const {
 void ProjectViewModel::publishCurrent() {
     const PublicationScope publication(*this);
     if (retired_) return;
-    storeSelection();
+    const bool changed = current_structure_ != published_structure_index_ || currentStructure() != published_structure_ ||
+        currentExperimentIndex() != published_experiment_index_ || currentExperiment() != published_experiment_;
+    if (changed && selection_restored_) selection_store_timer_.start();
     if (current_structure_ != published_structure_index_) {
         published_structure_index_ = current_structure_;
         emit currentStructureIndexChanged();
@@ -826,8 +843,8 @@ void ProjectViewModel::publishCurrent() {
         emit currentStructureChanged();
         if (retired_) return;
     }
-    if (currentExperiment() != published_experiment_) {
-        syncParameterTable();  // a scan mode lists the selected experiment's parameters; before the signals
+    if (currentExperiment() != published_experiment_ && edi::fits_a_scan(*project_)) {
+        syncParameterTable();  // only the scoped table changes with selection; model edits refresh all views in publish
         if (retired_) return;
     }
     if (currentExperimentIndex() != published_experiment_index_) {
@@ -1359,13 +1376,6 @@ QString file_sha256(const QString& path) {
     return QString::fromLatin1(hash.result().toHex());
 }
 
-// The hash a receipt recorded for a linked file (its absolute path); empty when it has none or could not read it, which
-// no copy matches.
-QString receipt_hash(const QString& receipt, const QString& entry) {
-    const QJsonObject linked = QJsonDocument::fromJson(receipt.toUtf8()).object().value(QStringLiteral("linked")).toObject();
-    return linked.value(entry).toObject().value(QStringLiteral("sha256")).toString();
-}
-
 // Every entry a save carries from `root`: each regular file and each link, a link to a folder included, without
 // entering a linked folder (the writer carries the link, never what it reaches).
 void walk_carried(const QString& root, const std::function<void(const QString&, const QString&)>& visit) {
@@ -1439,12 +1449,13 @@ QString ProjectViewModel::linkedInputsKey(bool wholeTree) const {
     };
     const edi::Project& project = scan_template_ ? *scan_template_ : *project_;
     const std::string& base = project.scan_data_root.empty() ? project.path : project.scan_data_root;
+    // A scan is referenced by its folder and file pattern (edi ADR-0026): the receipt names the folder and how many
+    // files it lists, and reads none of them, so a save costs the same for ten files or a million.
     if (scan_session_ != nullptr && project.sequential_fit.declared()) {
-        const QString folder = QString::fromStdString(scan_session_->datasets().directory);
-        for (const std::string& file : scan_session_->datasets().files) {
-            const QString path = QDir::cleanPath(QDir(folder).filePath(QString::fromStdString(file)));
-            linked.insert(path, describe(path));
-        }
+        const QString folder = QDir::cleanPath(QString::fromStdString(scan_session_->datasets().directory));
+        linked.insert(folder, QJsonObject{{QStringLiteral("scan_folder"), QFileInfo(folder).canonicalFilePath()},
+                                          {QStringLiteral("pattern"), QString::fromStdString(project.sequential_fit.file_pattern)},
+                                          {QStringLiteral("files"), static_cast<double>(scan_session_->datasets().files.size())}});
     }
     for (const auto& experiment : project.experiments) {
         QString path;
@@ -1452,9 +1463,19 @@ QString ProjectViewModel::linkedInputsKey(bool wholeTree) const {
         else if (!experiment->data_path.empty()) path = QString::fromStdString(edi::linked_data_file(base, experiment->data_path));
         if (!path.isEmpty()) linked.insert(QDir::cleanPath(path), describe(path));
     }
+    // A scan folder inside the project is carried as a plain copy: its files are named with their size, never hashed.
+    const QString scanFolder = scan_session_ != nullptr && project.sequential_fit.declared()
+                                   ? QDir::cleanPath(QString::fromStdString(scan_session_->datasets().directory))
+                                   : QString();
     if (wholeTree && !base.empty()) {
         const QString root = QString::fromStdString(base);
         walk_carried(root, [&](const QString& file, const QString& relative) {
+            if (!scanFolder.isEmpty() && QDir::cleanPath(file).startsWith(scanFolder + QLatin1Char('/')) &&
+                !QFileInfo(file).isSymLink()) {
+                tree.insert(relative, QJsonObject{{QStringLiteral("scan_file"), true},
+                                                  {QStringLiteral("size"), static_cast<double>(QFileInfo(file).size())}});
+                return;
+            }
             // The project record is written again as a document of its own with the save's fields merged, even when
             // it is a link: what it carries is the rest of its content, read through the link.
             if (relative == QLatin1String("project.edi")) {
@@ -1556,6 +1577,11 @@ QString ProjectViewModel::carriedBytesDiffer(const QString& receipt, const QStri
             continue;
         }
         if (info.isSymLink()) return changedText.arg(relative);
+        // A scan's file: copied as it is, checked by its size (edi ADR-0026: no file of a scan is read to save it).
+        if (planned.value(QStringLiteral("scan_file")).toBool()) {
+            if (info.size() != static_cast<qint64>(planned.value(QStringLiteral("size")).toDouble())) return changedText.arg(relative);
+            continue;
+        }
         const QString hash = planned.value(QStringLiteral("sha256")).toString();
         if (hash.isEmpty()) return tr("%1 could not be read when the save was planned: nothing was written").arg(relative);
         if (file_sha256(copied) != hash) return changedText.arg(relative);
@@ -1764,7 +1790,7 @@ void ProjectViewModel::setIncludeDataOnSave(const QString& mode) {
 
 
 QString ProjectViewModel::includeDataInto(edi::Project& written, const QString& directory, QString* linked,
-                                          bool* changed, const QString* receipt) const {
+                                          bool* changed, const QString* /*receipt: a scan's copy is plain, no hashes*/) const {
     if (changed != nullptr) *changed = false;
     const std::string where = directory.toStdString();
     // Linked experiment files: the copy holds their data, read when the project opened, so it is
@@ -1832,14 +1858,6 @@ QString ProjectViewModel::includeDataInto(edi::Project& written, const QString& 
                 QDir(target).removeRecursively();
                 restore();
                 return tr("%1 could not be copied into the saved project").arg(each);
-            }
-            // The copy is the file the save planned: its bytes against the receipt's hash.
-            if (receipt != nullptr &&
-                file_sha256(QDir(target).filePath(each)) !=
-                    receipt_hash(*receipt, QDir::cleanPath(QDir(source).filePath(each)))) {
-                QDir(target).removeRecursively();
-                restore();
-                return tr("%1 changed while the project was being saved: save again").arg(each);
             }
         }
         written.sequential_fit.data_dir = target.toStdString();
@@ -2241,6 +2259,40 @@ void ProjectViewModel::downloadCollectionData() {
         self->setLastError(error);
         if (self->retired_) return;
         emit self->refused(error);
+    });
+}
+
+void ProjectViewModel::loadDatasetFolder(ExperimentViewModel* experiment, const QUrl& folder) {
+    if (retired_ || listing_dataset_folder_ || !experiment_models_.contains(experiment)) return;
+    const QPointer<ProjectViewModel> self(this);
+    const QPointer<ExperimentViewModel> target(experiment);
+    if (!folder.isLocalFile()) {
+        setLastError(tr("Choose a local folder of datasets"));
+        if (self && !retired_) emit refused(last_error_);
+        return;
+    }
+    listing_dataset_folder_ = true;
+    emit listingDatasetFolderChanged();
+    if (!self || retired_ || !target) return;
+    run_in_background([self, target, folder] {
+        const QDir directory(folder.toLocalFile());
+        const QStringList names = directory.entryList(
+            {"*.xye", "*.xy", "*.dat", "*.txt", "*.csv"}, QDir::Files, QDir::Name);
+        QList<QUrl> files;
+        files.reserve(names.size());
+        for (const QString& name : names) files.append(QUrl::fromLocalFile(directory.filePath(name)));
+        QMetaObject::invokeMethod(QCoreApplication::instance(), [self, target, files = std::move(files)] {
+            if (!self || self->retired_) return;
+            self->listing_dataset_folder_ = false;
+            emit self->listingDatasetFolderChanged();
+            if (!self || self->retired_ || !target) return;
+            if (files.size() < 2) {
+                self->setLastError(tr("The folder must contain at least two dataset files (.xye, .xy, .dat, .txt or .csv)"));
+                if (self && !self->retired_) emit self->refused(self->last_error_);
+                return;
+            }
+            self->loadDatasets(target, files, true, false);
+        }, Qt::QueuedConnection);
     });
 }
 
@@ -3497,7 +3549,7 @@ ExperimentListModel::Dataset ProjectViewModel::datasetRow(int index) const {
     const auto& results = scan_session_->index().rows;
     if (static_cast<std::size_t>(index) < results.size() && results[static_cast<std::size_t>(index)].offset >= 0) {
         dataset.reliability = QString::fromStdString(edi::label("fit_result.reduced_chi_square") + " ") +
-                              QString::fromStdString(edi::display_text(
+                              QString::fromStdString(edi::shown_text(
                                   "fit_result.reduced_chi_square", results[static_cast<std::size_t>(index)].reduced_chi_square));
     }
     // A single fit on the template dataset with no scan row gives it that fit's outcome.
@@ -5903,6 +5955,7 @@ QString ProjectViewModel::stageScan(const QString& directory, const edi::Project
         if (const QString refusal = scan_session_->writeRun(shown, scan_session_->run()); !refusal.isEmpty()) {
             return refusal;
         }
+        scan.wroteRun = true;
     }
     // What the project will read there, read now: the folder's listing, and the shown dataset's values over the
     // staged copy, which is what the template takes.

@@ -40,45 +40,20 @@ Item {
             font.family: "Noto Sans"
             text: cell.title
         }
-        Item {
+        // The tags on one line when they fit, else on the next ones, never cut short: the list sizes itself for the
+        // widest row (TagRowsWidth).
+        Flow {
+            id: tagRow
             width: parent.width
-            height: EaStyle.Sizes.fontPixelSize * 1.65
-            clip: true
-            Row {
-                id: tagRow
-                spacing: AppSizes.fieldSpacing / 2
-                Repeater {
-                    model: cell.tagLabels
-                    delegate: Rectangle {
-                        id: badge
-                        required property string modelData
-                        required property int index
-                        readonly property color ink: EaStyle.Colors.isDarkPalette ? cell.tagDarkColors[index] : cell.tagColors[index]
-                        radius: 3
-                        color: Qt.rgba(ink.r, ink.g, ink.b, 0.13)
-                        width: badgeContent.implicitWidth + 2 * AppSizes.fieldSpacing
-                        height: EaStyle.Sizes.fontPixelSize * 1.65
-                        Row {
-                            id: badgeContent
-                            anchors.centerIn: parent
-                            spacing: AppSizes.fieldSpacing / 2
-                            EaElements.Label {
-                                visible: text !== ""
-                                anchors.verticalCenter: parent.verticalCenter
-                                font.family: EaStyle.Fonts.iconsFamily
-                                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.8
-                                color: badge.ink
-                                text: cell.tagIcons[badge.index] ?? ""
-                            }
-                            EaElements.Label {
-                                anchors.verticalCenter: parent.verticalCenter
-                                horizontalAlignment: Text.AlignHCenter
-                                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
-                                color: badge.ink
-                                text: badge.modelData
-                            }
-                        }
-                    }
+            spacing: AppSizes.fieldSpacing / 2
+            Repeater {
+                model: cell.tagLabels
+                delegate: TagChip {
+                    required property string modelData
+                    required property int index
+                    ink: EaStyle.Colors.isDarkPalette ? cell.tagDarkColors[index] : cell.tagColors[index]
+                    icon: cell.tagIcons[index] ?? ""
+                    label: modelData
                 }
             }
         }
@@ -97,7 +72,9 @@ Item {
         id: hover
     }
     EaElements.ToolTip {
+        // The cut-short text in full: data, shown whatever the tooltip level.
+        data: true
         requested: hover.hovered
-        text: [identityLabel.truncated ? identityLabel.text : "", tagRow.width > cell.width ? cell.tagLabels.join(", ") : "", detailLabel.truncated ? cell.detail : ""].filter(line => line !== "").join("\n")
+        text: [identityLabel.truncated ? identityLabel.text : "", detailLabel.truncated ? cell.detail : ""].filter(line => line !== "").join("\n")
     }
 }

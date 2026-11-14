@@ -142,16 +142,64 @@ def test_mirror_is_enabled_only_for_production(tmp_path, channel, prefix):
     repositories = xml.findall('RemoteRepositories/Repository')
     assert repositories[0].findtext('Enabled') == '1', 'Mirror is enabled only for production.'
     tail = f'repository/{prefix}{PACKAGE.PLATFORM_ID}/'
-    assert repositories[0].findtext('Url') == f'https://enhantica.github.io/edi-download/{tail}', (
+    assert repositories[0].findtext('Url') == f'https://download.easydiffraction.org/{tail}', (
         'Mirror is enabled only for production.'
     )
-    assert repositories[1].findtext('Url') == f'https://download.easydiffraction.org/{tail}', (
+    assert repositories[1].findtext('Url') == f'https://enhantica.github.io/edi-download/{tail}', (
         'Mirror is enabled only for production.'
     )
     assert repositories[1].find('DisplayName') is None, 'Mirror is enabled only for production.'
     assert repositories[1].findtext('Enabled') == ('1' if channel == 'stable' else '0'), (
         'Mirror is enabled only for production.'
     )
+
+
+@pytest.mark.parametrize('channel', ['stable', 'testing'])
+def test_offline_installer_retains_default_update_repositories(tmp_path, channel):
+    stage = tmp_path / 'stage'
+    marker = stage / (
+        'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
+        if PACKAGE.SYSTEM == 'macos'
+        else 'bin/EasyDiffraction' + PACKAGE.SUFFIX
+    )
+    marker.parent.mkdir(parents=True)
+    marker.write_text('application marker')
+    assistant = stage / PACKAGE.ASSISTANT_RUNTIME / 'assistant.txt'
+    assistant.parent.mkdir(parents=True)
+    assistant.write_text('optional marker')
+    if channel == 'stable':
+        (stage / 'build-inputs.json').write_text(json.dumps({'release_history_sha256': 'fixture'}))
+    archive = tmp_path / 'installer.zip'
+    archive.write_bytes(b'archive fixture')
+    runtime = tmp_path / 'runtime'
+    runtime.mkdir()
+    output = tmp_path / 'output'
+    with (
+        mock.patch.object(
+            PACKAGE,
+            'linux_installer_runtime',
+            return_value=(tmp_path / 'installerbase', runtime, None),
+        ),
+        mock.patch.object(
+            PACKAGE, 'macos_installer_template', return_value=tmp_path / 'installerbase'
+        ),
+        mock.patch.object(PACKAGE, 'run') as builder,
+        mock.patch.object(PACKAGE, 'archive_installer', return_value=archive),
+    ):
+        PACKAGE.package_app(stage, tmp_path / 'tools', output, '2026.11.0')
+    repositories = ElementTree.parse(output / 'source/config/config.xml').findall(
+        'RemoteRepositories/Repository'
+    )
+    assert tuple(item.findtext('Url') for item in repositories) == PACKAGE.repository_urls(
+        channel
+    ), 'Offline maintenance retains the selected channel repositories.'
+    assert [item.findtext('Enabled') for item in repositories] == [
+        '1',
+        '1' if channel == 'stable' else '0',
+    ], 'Offline maintenance retains channel mirror policy.'
+    builder.assert_called_once()
+    assert '--hybrid' in builder.call_args.args[0], 'Offline maintenance permits updates.'
+    assert not (output / 'repository').exists(), 'Offline packaging publishes no repository.'
 
 
 def test_download_archive_keeps_bootstrap_libraries_and_permissions(tmp_path):

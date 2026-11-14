@@ -42,7 +42,7 @@ Link parameter and calculation explanations to the existing Physics anchors rath
 
 ## Existing capture infrastructure to extend
 
-`app/main.cpp` already supports `--demo <output>` and `--demo-only <prefix>`. Demo mode isolates settings, sets the design font/appearance identity, disables caret blinking and normalizes the default capture scale. `DemoDriver` seeds randomized model additions, drives controls by `objectName`, waits for calculations/page preparation and compares frames until settled before writing PNGs.
+`app/main.cpp` already supports `--demo <output>` and `--demo-only <prefix>`. Demo mode isolates settings, sets the design font/appearance identity, disables caret blinking and normalizes the default capture scale. `DemoDriver` seeds randomized model additions, drives controls by `objectName`, waits for calculations/page preparation and compares frames until settled before writing WebP images (quality 85).
 
 `DemoDriver::find` already searches both QObject descendants and visual children. Its on-screen check accounts for clipping ancestors. These are useful precedents, but a documentation resolver must also reject ambiguous required names and scope repeated names to the selected page/sidebar. Hidden pages stay loaded; finding a matching name alone does not prove the intended target is shown.
 
@@ -52,13 +52,13 @@ Do not add a second screenshot saver beside the existing one. Extract/reuse one 
 
 ## Capture bundle
 
-For a declared scene, write a PNG, a JSON sidecar and a manifest entry as one validated bundle:
+For a declared scene, write a WebP image (quality 85), a JSON sidecar and a manifest entry as one validated bundle:
 
 - capture/scene identifier and schema version;
 - app source commit, shared GUI-components commit, built-artifact hash and fixture identity/checksum;
 - Qt version, platform/renderer, theme, language and font settings;
-- client-area logical dimensions, actual PNG pixel dimensions and effective scaling;
-- PNG SHA-256;
+- client-area logical dimensions, actual image pixel dimensions and effective scaling;
+- image SHA-256;
 - named regions/controls with scene-space bounds, clipped visible bounds, visibility/enabled state and available accessible/display labels.
 
 Export named relevant controls and containers, not every Qt implementation object. The annotation manifest declares the required targets. Repeated delegates need stable model/record identifiers; a scrolled-away virtualized row must first be revealed by the scene actions.

@@ -5,17 +5,13 @@ import QtQuick
 
 import edi.app
 
-// The one rule for a number shown in a table cell or a field (owner, 2026-10-07): round it to what it is known
-// to (the place of its uncertainty's first digit, or six significant digits without one) and to what the cell can
-// show, never padding or clipping digits. A value that would not fit in `width` characters is written with an
-// exponent instead, keeping the digits its uncertainty allows. The base library's own rounding padded a value
-// smaller than its uncertainty with zeros (`000`) and broke on an exponent (`-4.2e-170000000000000`).
-//
-// A parameter with an uncertainty is rounded as the project writes it, by its rule for standard uncertainties: the
-// uncertainty rounded up to one or two digits and the value to the same digit. A parameter is written whatever the
-// width of its cell, which clips a long one at its edge, and edited in full (`full`). One at or above a million, or
-// below 1e-4 and not zero, is written in scientific notation with four significant digits and its uncertainty in the
-// same exponent (`2.290e7`, `0.010e7`), so a column of large intensities reads at a glance (the owner, 2026-10-10).
+// The one rule for a number shown in the app (the owner, 2026-11-09 and 2026-11-11): a decimal when
+// 0.001 <= |x| < 1000 (zero is 0), else three significant digits times a power of ten with a superscript exponent
+// (`8.40×10⁻⁵`). A value with an uncertainty is rounded by the project's rule for standard uncertainties, and outside
+// that range both are written in the value's power of ten (`2.290×10⁷`, `0.010×10⁷`); an uncertainty beside a value
+// inside the range follows the rule on its own (`2.5×10⁻⁴`). The text never depends on the cell's width or on whether
+// the parameter is free; a field being edited shows the value in plain digits (`full`). The displayed texts come from
+// edi::table_number and edi::table_value_su, which the report uses too.
 QtObject {
     // Whether `value` is written in scientific notation.
     function scientific(value) {
@@ -43,8 +39,8 @@ QtObject {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberPlainFull, value, undefined, undefined, undefined);
     }
 
-    // A parameter's `value` with its uncertainty `error` (0 or absent: none). `digits` caps the significant digits
-    // of a value without an uncertainty (6 by default; the ADP table asks for 5, so a beta component fits its cell).
+    // A parameter's `value` with its uncertainty `error` (0 or absent: none), by the rule above. `digits` caps the
+    // significant digits of a value without an uncertainty inside the decimal range (6 by default).
     function parameter(value, error, digits) {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberParameter, value, error, digits, undefined);
     }
@@ -60,9 +56,7 @@ QtObject {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberRounded, value, error, width, digits);
     }
 
-    // An uncertainty as the error column shows it: rounded up by the project's rule and written plainly (without a
-    // project, one significant digit, plainly while it fits). Beside a `parameterValue` in scientific notation it
-    // takes that value's exponent and three decimals.
+    // An uncertainty as the error column shows it, beside its `parameterValue`, by the rule above.
     function error(value, width, parameterValue) {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberError, value, width, parameterValue, undefined);
     }
@@ -80,11 +74,9 @@ QtObject {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberPlain, value, width, undefined, undefined);
     }
 
-    // How a chart's value axis writes its ticks (the owner, 2026-10-11): by the rule above, an axis whose largest
-    // tick is at or above a million, or below 1e-4, writes every tick with that tick's exponent (`2.5e8`, `5.0e8`,
-    // `7.5e8`), one exponent for the axis, and any other axis writes them plainly. Either way the ticks share the
-    // fewest decimals that write each of them exactly, or else that tell them apart. On a logarithmic axis
-    // (`shared` false) the ticks are decades apart and each is written on its own, as a parameter's value.
+    // How an axis writes its ticks, each on its own by the rule above: a decimal when 0.001 <= |x| < 1000, else three
+    // significant digits times a power of ten, trailing zeros dropped (500, 1×10³, 1.5×10³), with the fewest digits
+    // that write every tick exactly, or else tell neighbours apart. `shared` is not used.
     function axisFormat(ticks, shared) {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberAxisFormat, ticks, shared, undefined, undefined);
     }
@@ -94,18 +86,21 @@ QtObject {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberAxisTick, value, format, undefined, undefined);
     }
 
+    // The round tick step for an axis from `low` to `high`, `pixels` long, whose labels in `font` leave a gap between
+    // neighbours (their widths along a horizontal axis, their height along a vertical one), nearest `count` ticks.
+    function axisStep(low, high, count, pixels, font, horizontal) {
+        return ApplicationInfo.numberPresentation(ApplicationInfo.NumberAxisStep, [low, high, count], pixels, font, horizontal);
+    }
+
     // A plain decimal text as its sign, its digits from the first significant one and that digit's power of ten, and
     // whether it is a whole number; null for a zero or a text that is not a plain decimal number.
     function decimal(text) {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberDecimal, text, undefined, undefined, undefined);
     }
 
-    // A number's text as written for its cell, in scientific notation with the same significant digits, for a cell too
-    // narrow to show it (the owner, 2026-10-22): `0.0000123` is `1.23e-5`, `0.0010` is `1.0e-3`, `1250000` is
-    // `1.25e6`. `significant` is how many digits the text holds where its rounding says so (narrowParameter,
-    // ownUncertainty): `120000` known to the units is `1.20000e5`. Without it a whole number's trailing zeros are not
-    // counted, as for a number with no uncertainty. A text that is not a plain decimal number (already an exponent, a
-    // word) is returned as it is.
+    // A number's text by the rule for numbers: a decimal when 0.001 <= |x| < 1000, else three significant digits times
+    // a power of ten (`8.40×10⁻⁵`; the owner, 2026-11-09 and 2026-11-11). A text that is not a number is returned as
+    // it is; `significant` is not used.
     function compact(text, significant) {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberCompact, text, significant, undefined, undefined);
     }
@@ -129,22 +124,18 @@ QtObject {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberRuledDigits, value, su, undefined, undefined);
     }
 
-    // A parameter's text (parameter) in scientific notation, for a cell too narrow for it, with the digits its
-    // uncertainty leaves it.
+    // The same text as parameter: a cell's width never changes how a number is written.
     function narrowParameter(value, error, digits) {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberNarrowParameter, value, error, digits, undefined);
     }
 
-    // A number's text as a cell `room` pixels wide shows it, measured with `metrics` (a FontMetrics in the cell's
-    // font): as it is when it fits, else in scientific notation with the same significant digits. `narrow` is that
-    // form, compact(text) unless given.
+    // The text as it is: a number is written the same whatever the cell's width (the owner, 2026-11-11). Kept for the
+    // cells that call it.
     function fitted(text, room, metrics, narrow) {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberFitted, text, room, metrics, narrow);
     }
 
-    // An uncertainty in its own shortest scientific form, for an s.u. cell too narrow for the column's form (the
-    // owner, 2026-10-22): the one or two significant digits the project's rule gives (one without a project), never
-    // in its value's exponent, so `0.008e-6` beside 3.700e-6 is `8e-9`, and 0.0012 is `1.2e-3`.
+    // The same text as error.
     function ownUncertainty(value, parameterValue) {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberOwnUncertainty, value, parameterValue, undefined, undefined);
     }

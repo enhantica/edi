@@ -27,7 +27,7 @@ namespace edi_app {
 namespace {
 
 // The goodness-of-fit and the fit-results table show χ² in its dictionary format.
-QString chi(double value) { return QString::fromStdString(edi::display_text("fit_result.reduced_chi_square", value)); }
+QString chi(double value) { return QString::fromStdString(edi::shown_text("fit_result.reduced_chi_square", value)); }
 // A recorded χ² that was not a number is none, and shows as nothing.
 QString chi(const std::optional<double>& value) { return value.has_value() ? chi(*value) : QString(); }
 // The goodness-of-fit's dictionary label (`reduced χ²`).
@@ -124,7 +124,7 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     }
     // crysta's R factors are fractions; each shows in its dictionary format, in per cent as FullProf prints them.
     const auto percent = [](const char* uid, const std::optional<double>& value, std::string_view variant = {}) {
-        return value.has_value() ? QString::fromStdString(edi::display_text(uid, *value, variant)) : QString();
+        return value.has_value() ? QString::fromStdString(edi::shown_text(uid, *value, variant)) : QString();
     };
     // The profile factors in the order FullProf prints them, then each linked structure's two (the owner,
     // 2026-10-21).
@@ -590,7 +590,8 @@ void FitViewModel::startImpl(std::uint64_t attempt) {
         results_->clear();
         if (owner_.retired_) return;
         clock_.start();
-        clock_timer_.start();
+        if (scan) clock_timer_.start();
+        else clock_timer_.stop();
         setElapsed(duration(0.0));
         if (owner_.retired_) return;
         setRunning(true);
@@ -826,6 +827,10 @@ void FitViewModel::started(const edi::FitPreamble& preamble) {
 }
 
 void FitViewModel::iterated(const edi::IterationRecord& record) {
+    const ProjectViewModel::PublicationScope publication(owner_);
+    if (owner_.retired_) return;
+    if (!scanning_) setElapsed(duration(record.elapsed_ms / 1000.0));
+    if (owner_.retired_) return;
     setProgress(QString::number(record.iteration),
                 QStringLiteral("%1 → %2").arg(chi(chi_before_), chi(record.reduced_chi_square)), tr("Running"));
 }
@@ -905,9 +910,8 @@ void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
     setScanCounts(counts, QString::fromStdString(record.file_name));
     setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
     latest_file_ = record.file_name;
-    if (following() && pattern_updates_ != kCatchUp) {
-        // The cheap indicators follow every finished file; only the pattern waits for the view (edi ADR-0029). A
-        // display catching up shows them with the file it draws.
+    if (following() && pattern_updates_ != kCatchUp && (owner_.patternShown() || !owner_.scanViewShown())) {
+        // Stacked and Map selection follows scanFrame at the chosen cadence: changing it here bypasses that throttle.
         owner_.markScanFile(latest_file_);
     }
     followLatest();
@@ -920,6 +924,8 @@ void FitViewModel::scanFrame(const std::string& file, const edi::FitFrame& frame
         return;
     }
     if (pattern_updates_ == kCatchUp) {
+        // A hidden pattern view must not accumulate a playback queue for a later tab switch.
+        if (!owner_.patternShown() && !owner_.scanViewShown()) return;
         // Every file's pattern waits its turn; the fit has gone on already.
         catch_up_.emplace_back(file, frame);
         ++scan_received_;
@@ -1032,6 +1038,12 @@ void FitViewModel::followLatest() {
 }
 
 void FitViewModel::patternShownChanged() {
+    if (pattern_updates_ == kCatchUp && !owner_.patternShown() && !owner_.scanViewShown()) {
+        catch_up_.clear();
+        dropHandedFile();
+        frame_shown_ = true;
+        syncBehind();
+    }
     // Every pattern: the worker waits for a drawing only while a chart can draw one.
     if (job_) {
         job_->wait_for_patterns(waitsForView(pattern_updates_));

@@ -63,6 +63,11 @@ QtObject {
         ApplicationInfo.storeSettings();
     }
     property bool autoCollapse: true
+    // The folder every Save image starts in, the last one an image was saved to; empty until then, when the
+    // project's reports folder is the start (the owner, 2026-11-10).
+    property string imageFolder: ""
+    // The sidebar groups kept open when another opens, by object name, separated by commas (the owner, 2026-11-10).
+    property string pinnedGroups: ""
     // Where the workflow pages show their sidebar: "Right" (the default) or "Left" (WorkflowPage).
     property string sideBarSide: "Right"
     readonly property bool sideBarOnLeft: sideBarSide === "Left"
@@ -74,15 +79,15 @@ QtObject {
     property int scanWorkers: 1
     // What the engine runs with: one file at a time where the app runs single-threaded.
     readonly property int scanWorkersApplied: ApplicationInfo.engineThreadsSelectable ? Math.max(1, Math.min(scanWorkers, ApplicationInfo.scanWorkersMaximum)) : 1
-    // The message level (Develop; edi ADR-0062, owner record 2026-11-09): "Debug", "Info", "Warning" or "Error",
+    // The message level (Advanced; edi ADR-0062, owner record 2026-11-09): "Debug", "Info", "Warning" or "Error",
     // for the run log and for crysta's and edi's messages; errors always show.
     property string loggingLevel: "Warning"
     onLoggingLevelChanged: {
         RunLog.level = loggingLevel;
         ApplicationInfo.setMessageLevel(loggingLevel);
     }
-    // Where Help and feedback posts (Develop; edi ADR-0063): the feedback service's `/feedback` address. A user may set
-    // their own or clear it, which turns Send off.
+    // Where Help and feedback posts (edi ADR-0063): the feedback service's `/feedback` address. Preferences no longer
+    // show it; a user may set their own in the settings file, or clear it, which turns Send off.
     property string feedbackEndpoint: "https://edi-feedback.savanna-animas-0g.workers.dev/feedback"
     // What Help and feedback offers to send as the user's contact, each optional, kept for the next message.
     property string feedbackName: ""
@@ -108,20 +113,20 @@ QtObject {
     property bool analysisShowBySymmetry: false
     property bool analysisShowByConstraint: false
     property bool analysisShowFixedSettings: false
-    // Whether a finished fit opens its results window (Prompts; the owner, 2026-10-26). Off, the status bar's fit status
+    // Whether a finished fit opens its results window (Interface). Off, the status bar's fit status
     // still opens it.
     property bool showFitResults: true
-    // How the Stacked view draws its lines (Develop; edi ADR-0041): "auto" (the default) on the GPU when Qt draws with
+    // How the Stacked view draws its lines (Performance; edi ADR-0041): "auto" (the default) on the GPU when Qt draws with
     // one and painted without (RenderingInfo), "gpu" or "software" whatever was detected.
     property string scanRenderer: "auto"
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
     property string newProjectSuRule: "iucr_99"
-    // The figure palette of experiments and structures (data/palettes, edi ADR-0038): a palette's token, "earth" (the
-    // default) or another of ApplicationInfo.colourSchemes; a stored earlier palette reads as its nearest new one
+    // The figure palette of experiments and structures (data/palettes, edi ADR-0038): a palette's token, "main" (the
+    // default) or "colourBlindSafe" (ApplicationInfo.colourSchemes); a stored earlier palette reads as its nearest new one
     // (ApplicationInfo.colourSchemeOrDefault). Every chart, legend, icon and report the app draws follows it, a report
-    // in its light colours. The Stacked and Map colours are scanStackedPalette and scanMapColours.
-    property string colourScheme: "earth"
+    // in its light colours, the Stacked view too (edi ADR-0084). The Map's colours are scanMapColours.
+    property string colourScheme: "main"
     // How the structure view colours the magnetic moment arrows: "atom", "greyed" (the default) or "single" (edi ADR-0078).
     property string momentColours: "greyed"
     // The patterns' palette stored before the one palette (the owner, 2026-10-22, until 2026-10-26): read once into
@@ -142,6 +147,8 @@ QtObject {
         property alias toolTips: preferences.toolTips
         property alias autoCollapse: preferences.autoCollapse
         property alias sideBarSide: preferences.sideBarSide
+        property alias imageFolder: preferences.imageFolder
+        property alias pinnedGroups: preferences.pinnedGroups
     }
 
     property Settings feedbackSettings: Settings {
@@ -217,11 +224,8 @@ QtObject {
     // "linePoints" (the owner, 2026-10-22).
     property string patternMeasuredStyle: "band"
     property string patternPointerMode: "zoom"
-    // A scan's Stacked and Map views (edi ADR-0041): the palette or colour map the stacked patterns take their colours
-    // from (one of ApplicationInfo.colourSchemes or ApplicationInfo.scanColourMaps; empty follows colourScheme) and the
-    // map's colour map (one of ApplicationInfo.scanColourMaps; Blue-Red by default, the owner, 2026-10-26). The Map's
-    // direction is the project's (ScanViewModel.mapDirection).
-    property string scanStackedPalette: ""
+    // A scan's Map view (edi ADR-0041): its colour map (one of ApplicationInfo.scanColourMaps; Blue-Red by default).
+    // The Map's direction is the project's (ScanViewModel.mapDirection); the Stacked view follows colourScheme.
     property string scanMapColours: "blue-red"
     // The Map's colour between datasets' rows: smooth, or stepped in bands (the owner, 2026-10-22).
     property bool scanMapSmooth: true
@@ -290,7 +294,6 @@ QtObject {
     property Settings scanViewSettings: Settings {
         location: EaGlobals.Vars.settingsFile
         category: "ScanViews"
-        property alias stackedPalette: preferences.scanStackedPalette
         property alias mapColours: preferences.scanMapColours
         property alias mapSmooth: preferences.scanMapSmooth
         property alias stackedReversed: preferences.scanStackedReversed
@@ -344,11 +347,9 @@ QtObject {
     // A stored palette no longer offered becomes the one it reads as, so the chosen palette and the one drawn agree
     // and the settings file keeps the one shown.
     onColourSchemeChanged: ApplicationInfo.preferencesColourChanged()
-    // A stored Stacked choice no longer offered (an earlier palette's token) follows the palette again, so the Stacked
-    // lines and the choice Preferences shows agree (the owner's report, 2026-10-27).
-    onScanStackedPaletteChanged: ApplicationInfo.preferencesStackedPaletteChanged()
     onPatternColourSchemeChanged: ApplicationInfo.preferencesLegacyPaletteChanged()
-    onAutoCollapseChanged: EaGlobals.Vars.autoCollapseSideBarGroups = autoCollapse
+    // The app folds its sidebar groups itself, leaving pinned ones open (SideBarGroup), so the base's folding stays off.
+    onAutoCollapseChanged: EaGlobals.Vars.autoCollapseSideBarGroups = false
     onEngineThreadsChanged: ApplicationInfo.persistPreference(0)
     // Saved at once too: a restart or a new window soon after the toggle must find it, and no write is left pending
     // for the settings' own schedule when the window closes.

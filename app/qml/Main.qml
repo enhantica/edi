@@ -112,8 +112,8 @@ EaComponents.ApplicationWindow {
             highlighted: true
             fontIcon: "save"
             // A disabled control's tooltip says why and how to enable it (the owner, 2026-11-02).
-            ToolTip.text: enabled ? qsTr("Save current state of the project") : Session.project === null ? qsTr("No project to save: open or create one first") : Session.project.saving ? qsTr("Saving the project: Save is available again when it finishes") : qsTr("Nothing to save: the project has no unsaved changes")
-            Accessible.name: qsTr("Save current state of the project")
+            ToolTip.text: enabled ? qsTr("Save the project") : Session.project === null ? qsTr("No project to save: open or create one first") : Session.project.saving ? qsTr("Saving the project: Save is available again when it finishes") : qsTr("Nothing to save: the project has no unsaved changes")
+            Accessible.name: qsTr("Save the project")
             onClicked: window.saveProject()
         },
         // Undo: the newest recorded change, an edit of the aliases or constraints or a fit, in the order they
@@ -136,7 +136,7 @@ EaComponents.ApplicationWindow {
         EaElements.ToolButton {
             objectName: "appBar.button.reset"
             fontIcon: "backspace"
-            ToolTip.text: qsTr("Reset to initial state without project, model and data")
+            ToolTip.text: qsTr("Clear: close the project and start again")
             Accessible.name: ToolTip.text
             onClicked: ApplicationInfo.resetProjectAfterChanges()
         }
@@ -227,16 +227,6 @@ EaComponents.ApplicationWindow {
             Accessible.name: !ApplicationInfo.assistantAvailable ? qsTr("AI assistant unavailable") : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
             Accessible.description: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantUnavailableReason : qsTr("The AI assistant is available in the desktop app")
             onClicked: ApplicationInfo.assistantBuilt ? ApplicationInfo.assistantToolbarActivated(window, assistantToggle, window.assistantPanel, Session, Preferences, assistantDesktopOnlyDialog) : assistantDesktopOnlyDialog.open()
-
-            // The status bar's faint rule, between the tabs and the app controls (the owner, 2026-11-01).
-            Rectangle {
-                objectName: "appBar.separator"
-                x: -EaStyle.Sizes.fontPixelSize * 0.5
-                anchors.verticalCenter: parent.verticalCenter
-                width: EaStyle.Sizes.borderThickness
-                height: Math.round(EaStyle.Sizes.fontPixelSize * 6 / 7)
-                color: EaStyle.Colors.appBarBorder
-            }
         },
         // The tooltip switch (the owner, 2026-11-01): a click turns tooltips off, or back on at the last level used; a right
         // click opens Preferences, where the level and the delay are.
@@ -405,6 +395,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 StructurePage {
                     current: structureLoader.SwipeView.isCurrentItem
+                    ownBorderHidden: mainViewFrame.visible
                     assistantCovered: window.assistantPanelVisible
                 }
             }
@@ -418,6 +409,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 ExperimentPage {
                     current: experimentLoader.SwipeView.isCurrentItem
+                    ownBorderHidden: mainViewFrame.visible
                     assistantCovered: window.assistantPanelVisible
                 }
             }
@@ -431,6 +423,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 AnalysisPage {
                     current: analysisLoader.SwipeView.isCurrentItem
+                    ownBorderHidden: mainViewFrame.visible
                     assistantCovered: window.assistantPanelVisible
                 }
             }
@@ -448,6 +441,47 @@ EaComponents.ApplicationWindow {
             }
         }
     ]
+
+    // The one main view of the Structure, Experiment and Analysis pages (MainView; the owner, 2026-11-10), over their
+    // main areas in the pages' view, which stays put while the pages slide: only the sidebar changes from page to
+    // page. Placed where a loaded workflow page has its main area.
+    Rectangle {
+        id: mainViewFrame
+
+        readonly property Item area: [structureLoader, experimentLoader, analysisLoader].map(loader => loader.item).find(page => page !== null && page !== undefined)?.mainArea ?? null
+        readonly property int page: EaGlobals.Vars.appBarCurrentIndex
+
+        parent: structureLoader.SwipeView.view
+        z: 2
+        x: area ? area.x : 0
+        y: area ? area.y : 0
+        width: area ? area.width : 0
+        height: area ? area.height : 0
+        visible: area !== null && Session.project !== null && page >= AppState.Page.Structure && page <= AppState.Page.Analysis
+        color: EaStyle.Colors.contentBackground
+        clip: true
+
+        MainView {
+            id: mainView
+
+            shown: mainViewFrame.visible
+            page: mainViewFrame.page
+            Component.onCompleted: AppState.mainView = mainView
+        }
+    }
+    // The border between the main view and the sidebar belongs to the fixed main view, so it stays put while a page
+    // slides; the pages' own sidebar borders are hidden meanwhile (edi ADR-0017 §2).
+    Rectangle {
+        objectName: "mainArea.divider"
+        parent: mainViewFrame.parent
+        z: 3
+        x: Preferences.sideBarOnLeft ? mainViewFrame.x - width : mainViewFrame.x + mainViewFrame.width
+        y: mainViewFrame.y
+        width: EaStyle.Sizes.borderThickness
+        height: mainViewFrame.height
+        visible: mainViewFrame.visible
+        color: EaStyle.Colors.appBorder
+    }
 
     statusBar: StatusBar {
         assistantChatShown: window.assistantPanelVisible && window.assistantPanelShown
@@ -641,6 +675,7 @@ EaComponents.ApplicationWindow {
     // A running tutorial's steps (edi ADR-0064).
     TutorialPanel {
         id: tutorialPanel
+        objectName: "tutorialPanel"
     }
 
     // Below the supported minimum, which only the browser's page can reach (the owner, 2026-10-25): the empty view's
@@ -981,6 +1016,16 @@ EaComponents.ApplicationWindow {
         }
     }
 
+    // A saved report says so in the short notice below, with the files and their folder (the owner, 2026-11-10).
+    Connections {
+        target: Session.project ? Session.project.report : null
+        function onSaved(location) {
+            const files = location.split(", ");
+            const names = files.map(file => file.substring(file.lastIndexOf("/") + 1)).join(", ");
+            const folder = files[0].substring(0, files[0].lastIndexOf("/"));
+            webNotice.show(WebFiles.available ? qsTr("Report saved: %1, handed to the browser to download.").arg(names) : qsTr("Report saved: %1, in %2").arg(names).arg(ApplicationInfo.shownLocalPath(folder)));
+        }
+    }
     // A short notice at the foot of the window, gone after a few seconds or on a click.
     Popup {
         id: webNotice

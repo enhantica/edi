@@ -97,6 +97,10 @@
             "scene": "scan-project-settings"
         },
         {
+            "action": "sideBar.tab.settings",
+            "scene": "scan-project-settings"
+        },
+        {
             "action": "appBar.tab.structure",
             "scene": "scan-structure-basic"
         },
@@ -138,6 +142,10 @@
         },
         {
             "action": "if-enabled:sideBar.tab.settings",
+            "scene": "scan-structure-settings"
+        },
+        {
+            "action": "sideBar.tab.settings",
             "scene": "scan-structure-settings"
         },
         {
@@ -254,6 +262,10 @@
         },
         {
             "action": "if-enabled:sideBar.tab.extras",
+            "scene": "scan-report-extras"
+        },
+        {
+            "action": "sideBar.tab.extras",
             "scene": "scan-report-extras"
         },
         {
@@ -274,6 +286,10 @@
         },
         {
             "action": "if-enabled:sideBar.tab.settings",
+            "scene": "scan-report-settings"
+        },
+        {
+            "action": "sideBar.tab.settings",
             "scene": "scan-report-settings"
         },
         {
@@ -349,7 +365,7 @@
             "scene": "scan-experiment-stacked"
         },
         {
-            "action": "mainArea.experiment.tab.stacked",
+            "action": "mainArea.tab.stacked",
             "scene": "scan-experiment-stacked"
         },
         {
@@ -365,7 +381,7 @@
             "scene": "scan-experiment-map"
         },
         {
-            "action": "mainArea.experiment.tab.map",
+            "action": "mainArea.tab.map",
             "scene": "scan-experiment-map"
         },
         {
@@ -381,7 +397,7 @@
             "scene": "scan-analysis-stacked"
         },
         {
-            "action": "mainArea.analysis.tab.stacked",
+            "action": "mainArea.tab.stacked",
             "scene": "scan-analysis-stacked"
         },
         {
@@ -397,7 +413,7 @@
             "scene": "scan-analysis-map"
         },
         {
-            "action": "mainArea.analysis.tab.map",
+            "action": "mainArea.tab.map",
             "scene": "scan-analysis-map"
         },
         {
@@ -409,11 +425,11 @@
             "scene": "scan-evolution"
         },
         {
-            "action": "mainArea.analysis.tab.evolution",
+            "action": "mainArea.tab.evolution",
             "scene": "scan-evolution"
         },
         {
-            "action": "mainArea.analysis.tab.fitting",
+            "action": "mainArea.tab.pattern",
             "scene": "scan-progress-controls"
         },
         {
@@ -425,15 +441,15 @@
             "scene": "scan-correlations"
         },
         {
-            "action": "mainArea.analysis.tab.correlations",
+            "action": "mainArea.tab.correlations",
             "scene": "scan-correlations"
         }
     ],
-    "binary_sha256": "28e3d9673280410e17dec8acb2916048b0ae606f1dd9b2fa42f1609b162c72fb",
+    "binary_sha256": "930017e29ba7c0ffac4bfbdbf09a5bea4beb135a2c33f624ca74e8fc4fe8d6bf",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "1e3e07e8d90b6d07f00a7dc60d9a89213637a3062ed3c3223c47091285f5db6e"
+            "sha256": "38509b411c3da6e12738df723bf64732d13c1c955a4a5b36ff1d464c3d99c0d8"
         },
         {
             "file": "inputs/experiments/d20_scan/01_001_497p3790.dat",
@@ -1345,7 +1361,7 @@
             ]
         }
     },
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "inputs": {
         "experiment": {
             "file": "inputs/experiments/d20.edi",
@@ -1364,7 +1380,7 @@
         {
             "description": "Select an experiment or dataset",
             "id": "scan-experiment-before",
-            "image": "scan-experiment-before.png",
+            "image": "scan-experiment-before.webp",
             "metadata": "scan-experiment-before.json",
             "page": "experiment",
             "sidebar": "",
@@ -1373,7 +1389,7 @@
         {
             "description": "Inspect the project's project controls",
             "id": "scan-project-basic",
-            "image": "scan-project-basic.png",
+            "image": "scan-project-basic.webp",
             "metadata": "scan-project-basic.json",
             "page": "project",
             "sidebar": "Main",
@@ -1382,7 +1398,7 @@
         {
             "description": "Inspect the project's project controls",
             "id": "scan-project-extras",
-            "image": "scan-project-extras.png",
+            "image": "scan-project-extras.webp",
             "metadata": "scan-project-extras.json",
             "page": "project",
             "sidebar": "Extra",
@@ -1391,23 +1407,25 @@
         {
             "description": "Inspect the project's project controls",
             "id": "scan-project-text",
-            "image": "scan-project-text.png",
+            "image": "scan-project-text.webp",
             "metadata": "scan-project-text.json",
             "page": "project",
             "sidebar": "Text",
             "status": "captured"
         },
         {
+            "description": "Inspect the project's project controls",
             "id": "scan-project-settings",
+            "image": "scan-project-settings.webp",
+            "metadata": "scan-project-settings.json",
             "page": "project",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Settings",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Inspect the project's structure controls",
             "id": "scan-structure-basic",
-            "image": "scan-structure-basic.png",
+            "image": "scan-structure-basic.webp",
             "metadata": "scan-structure-basic.json",
             "page": "structure",
             "sidebar": "Main",
@@ -1416,7 +1434,7 @@
         {
             "description": "Inspect the project's structure controls",
             "id": "scan-structure-extras",
-            "image": "scan-structure-extras.png",
+            "image": "scan-structure-extras.webp",
             "metadata": "scan-structure-extras.json",
             "page": "structure",
             "sidebar": "Extra",
@@ -1425,23 +1443,25 @@
         {
             "description": "Inspect the project's structure controls",
             "id": "scan-structure-text",
-            "image": "scan-structure-text.png",
+            "image": "scan-structure-text.webp",
             "metadata": "scan-structure-text.json",
             "page": "structure",
             "sidebar": "Text",
             "status": "captured"
         },
         {
+            "description": "Inspect the project's structure controls",
             "id": "scan-structure-settings",
+            "image": "scan-structure-settings.webp",
+            "metadata": "scan-structure-settings.json",
             "page": "structure",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Settings",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Inspect the project's experiment controls",
             "id": "scan-experiment-basic",
-            "image": "scan-experiment-basic.png",
+            "image": "scan-experiment-basic.webp",
             "metadata": "scan-experiment-basic.json",
             "page": "experiment",
             "sidebar": "Main",
@@ -1450,7 +1470,7 @@
         {
             "description": "Inspect the project's experiment controls",
             "id": "scan-experiment-extras",
-            "image": "scan-experiment-extras.png",
+            "image": "scan-experiment-extras.webp",
             "metadata": "scan-experiment-extras.json",
             "page": "experiment",
             "sidebar": "Extra",
@@ -1459,7 +1479,7 @@
         {
             "description": "Inspect the project's experiment controls",
             "id": "scan-experiment-text",
-            "image": "scan-experiment-text.png",
+            "image": "scan-experiment-text.webp",
             "metadata": "scan-experiment-text.json",
             "page": "experiment",
             "sidebar": "Text",
@@ -1468,7 +1488,7 @@
         {
             "description": "Inspect the project's experiment controls",
             "id": "scan-experiment-settings",
-            "image": "scan-experiment-settings.png",
+            "image": "scan-experiment-settings.webp",
             "metadata": "scan-experiment-settings.json",
             "page": "experiment",
             "sidebar": "Settings",
@@ -1477,7 +1497,7 @@
         {
             "description": "Inspect the project's analysis controls",
             "id": "scan-analysis-basic",
-            "image": "scan-analysis-basic.png",
+            "image": "scan-analysis-basic.webp",
             "metadata": "scan-analysis-basic.json",
             "page": "analysis",
             "sidebar": "Main",
@@ -1486,7 +1506,7 @@
         {
             "description": "Inspect the project's analysis controls",
             "id": "scan-analysis-extras",
-            "image": "scan-analysis-extras.png",
+            "image": "scan-analysis-extras.webp",
             "metadata": "scan-analysis-extras.json",
             "page": "analysis",
             "sidebar": "Extra",
@@ -1495,7 +1515,7 @@
         {
             "description": "Inspect the project's analysis controls",
             "id": "scan-analysis-text",
-            "image": "scan-analysis-text.png",
+            "image": "scan-analysis-text.webp",
             "metadata": "scan-analysis-text.json",
             "page": "analysis",
             "sidebar": "Text",
@@ -1504,7 +1524,7 @@
         {
             "description": "Inspect the project's analysis controls",
             "id": "scan-analysis-settings",
-            "image": "scan-analysis-settings.png",
+            "image": "scan-analysis-settings.webp",
             "metadata": "scan-analysis-settings.json",
             "page": "analysis",
             "sidebar": "Settings",
@@ -1513,39 +1533,43 @@
         {
             "description": "Inspect the project's report controls",
             "id": "scan-report-basic",
-            "image": "scan-report-basic.png",
+            "image": "scan-report-basic.webp",
             "metadata": "scan-report-basic.json",
             "page": "report",
             "sidebar": "Main",
             "status": "captured"
         },
         {
+            "description": "Inspect the project's report controls",
             "id": "scan-report-extras",
+            "image": "scan-report-extras.webp",
+            "metadata": "scan-report-extras.json",
             "page": "report",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Extra",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Inspect the project's report controls",
             "id": "scan-report-text",
-            "image": "scan-report-text.png",
+            "image": "scan-report-text.webp",
             "metadata": "scan-report-text.json",
             "page": "report",
             "sidebar": "Text",
             "status": "captured"
         },
         {
+            "description": "Inspect the project's report controls",
             "id": "scan-report-settings",
+            "image": "scan-report-settings.webp",
+            "metadata": "scan-report-settings.json",
             "page": "report",
-            "reason": "sidebar tab is disabled",
             "sidebar": "Settings",
-            "status": "skipped"
+            "status": "captured"
         },
         {
             "description": "Choose sequential, independent or single-dataset fitting",
             "id": "scan-mode",
-            "image": "scan-mode.png",
+            "image": "scan-mode.webp",
             "metadata": "scan-mode.json",
             "page": "analysis",
             "sidebar": "",
@@ -1554,7 +1578,7 @@
         {
             "description": "See how many files are fitted at once",
             "id": "scan-performance-analysis",
-            "image": "scan-performance-analysis.png",
+            "image": "scan-performance-analysis.webp",
             "metadata": "scan-performance-analysis.json",
             "page": "analysis",
             "sidebar": "",
@@ -1563,7 +1587,7 @@
         {
             "description": "Inspect the scan's data directory, file pattern and order",
             "id": "scan-declaration",
-            "image": "scan-declaration.png",
+            "image": "scan-declaration.webp",
             "metadata": "scan-declaration.json",
             "page": "analysis",
             "sidebar": "",
@@ -1572,7 +1596,7 @@
         {
             "description": "Inspect values extracted from each dataset",
             "id": "scan-extraction",
-            "image": "scan-extraction.png",
+            "image": "scan-extraction.webp",
             "metadata": "scan-extraction.json",
             "page": "analysis",
             "sidebar": "",
@@ -1581,7 +1605,7 @@
         {
             "description": "Inspect the scan in the stacked view",
             "id": "scan-experiment-stacked",
-            "image": "scan-experiment-stacked.png",
+            "image": "scan-experiment-stacked.webp",
             "metadata": "scan-experiment-stacked.json",
             "page": "experiment",
             "sidebar": "",
@@ -1590,7 +1614,7 @@
         {
             "description": "Inspect the scan in the map view",
             "id": "scan-experiment-map",
-            "image": "scan-experiment-map.png",
+            "image": "scan-experiment-map.webp",
             "metadata": "scan-experiment-map.json",
             "page": "experiment",
             "sidebar": "",
@@ -1599,7 +1623,7 @@
         {
             "description": "Inspect the scan in the stacked view",
             "id": "scan-analysis-stacked",
-            "image": "scan-analysis-stacked.png",
+            "image": "scan-analysis-stacked.webp",
             "metadata": "scan-analysis-stacked.json",
             "page": "analysis",
             "sidebar": "",
@@ -1608,7 +1632,7 @@
         {
             "description": "Inspect the scan in the map view",
             "id": "scan-analysis-map",
-            "image": "scan-analysis-map.png",
+            "image": "scan-analysis-map.webp",
             "metadata": "scan-analysis-map.json",
             "page": "analysis",
             "sidebar": "",
@@ -1617,7 +1641,7 @@
         {
             "description": "Inspect a fitted parameter across the scan",
             "id": "scan-evolution",
-            "image": "scan-evolution.png",
+            "image": "scan-evolution.webp",
             "metadata": "scan-evolution.json",
             "page": "analysis",
             "sidebar": "",
@@ -1626,7 +1650,7 @@
         {
             "description": "Review completed datasets, Follow and reset controls",
             "id": "scan-progress-controls",
-            "image": "scan-progress-controls.png",
+            "image": "scan-progress-controls.webp",
             "metadata": "scan-progress-controls.json",
             "page": "analysis",
             "sidebar": "",
@@ -1635,7 +1659,7 @@
         {
             "description": "Inspect correlations for the selected measurement",
             "id": "scan-correlations",
-            "image": "scan-correlations.png",
+            "image": "scan-correlations.webp",
             "metadata": "scan-correlations.json",
             "page": "analysis",
             "sidebar": "",
@@ -1643,8 +1667,8 @@
         }
     ],
     "schema": 1,
-    "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "db1af167615f4344703ac808b4364deaf281536e8d9bb793c3e81bda9f74db6e",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "status": "complete",
     "workflow": "reference"
 }

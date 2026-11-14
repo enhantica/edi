@@ -1,13 +1,13 @@
 {
     "description": "Read the Bragg reflections",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "group.refln"
     ],
     "id": "group-refln",
-    "image": "group-refln.png",
-    "image_sha256": "73cb95e2fc87d225ee680f0890be51a070f4b347f81490bfc60cdfb65675c034",
+    "image": "group-refln.webp",
+    "image_sha256": "6fb3ef6be836e8de1b8894d551cda69d610f717725c6194766bdd81b3ab63656",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -89,43 +89,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -134,7 +100,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -186,6 +152,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -328,7 +311,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -337,7 +320,7 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -345,7 +328,7 @@
         },
         "chart.toolbar.hover": {
             "bounds": [
-                370.75,
+                346.75,
                 182,
                 35,
                 35
@@ -354,7 +337,7 @@
             "icon": "comment-alt",
             "label": "",
             "visible_bounds": [
-                370.75,
+                346.75,
                 182,
                 35,
                 35
@@ -362,7 +345,7 @@
         },
         "chart.toolbar.legend": {
             "bounds": [
-                332.25,
+                308.25,
                 182,
                 35,
                 35
@@ -371,7 +354,7 @@
             "icon": "align-left",
             "label": "",
             "visible_bounds": [
-                332.25,
+                308.25,
                 182,
                 35,
                 35
@@ -379,7 +362,7 @@
         },
         "chart.toolbar.pan": {
             "bounds": [
-                419.75,
+                395.75,
                 182,
                 35,
                 35
@@ -388,7 +371,7 @@
             "icon": "arrows-alt",
             "label": "",
             "visible_bounds": [
-                419.75,
+                395.75,
                 182,
                 35,
                 35
@@ -396,7 +379,7 @@
         },
         "chart.toolbar.reset": {
             "bounds": [
-                496.75,
+                472.75,
                 182,
                 35,
                 35
@@ -405,7 +388,40 @@
             "icon": "home",
             "label": "",
             "visible_bounds": [
-                496.75,
+                472.75,
+                182,
+                35,
+                35
+            ]
+        },
+        "chart.toolbar.save": {
+            "bounds": [
+                511.25,
+                182,
+                45.5,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                511.25,
+                182,
+                45.5,
+                35
+            ]
+        },
+        "chart.toolbar.save.button": {
+            "bounds": [
+                521.75,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "camera",
+            "label": "",
+            "visible_bounds": [
+                521.75,
                 182,
                 35,
                 35
@@ -413,7 +429,7 @@
         },
         "chart.toolbar.zoom": {
             "bounds": [
-                458.25,
+                434.25,
                 182,
                 35,
                 35
@@ -422,7 +438,7 @@
             "icon": "expand",
             "label": "",
             "visible_bounds": [
-                458.25,
+                434.25,
                 182,
                 35,
                 35
@@ -445,6 +461,22 @@
                 42
             ]
         },
+        "group.refine_ls.pin": {
+            "bounds": [
+                1433.2261363926236,
+                201.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                203,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.refln": {
             "bounds": [
                 770,
@@ -460,6 +492,22 @@
                 245,
                 710,
                 464.5
+            ]
+        },
+        "group.refln.pin": {
+            "bounds": [
+                1433.2261363926236,
+                243.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                245,
+                44.54772721475251,
+                43.273863607376256
             ]
         },
         "group.reflns": {
@@ -479,6 +527,22 @@
                 42
             ]
         },
+        "group.reflns.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.scattering_source": {
             "bounds": [
                 770,
@@ -493,6 +557,22 @@
                 770,
                 161,
                 710,
+                42
+            ]
+        },
+        "group.scattering_source.pin": {
+            "bounds": [
+                1433.2261363926236,
+                159.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                161,
+                44.54772721475251,
                 42
             ]
         },
@@ -565,25 +645,41 @@
                 35
             ]
         },
-        "mainArea.experiment.tab.chart": {
+        "mainArea.divider": {
             "bounds": [
-                0,
+                770,
                 77,
-                57.765625,
+                1,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                1,
+                681
+            ]
+        },
+        "mainArea.tab.correlations": {
+            "bounds": [
+                126.640625,
+                77,
+                86.15625,
                 42
             ],
             "enabled": true,
-            "label": "Pattern",
+            "label": "Correlations",
             "visible_bounds": [
-                0,
+                126.640625,
                 77,
-                57.765625,
+                86.15625,
                 42
             ]
         },
-        "mainArea.experiment.tab.map": {
+        "mainArea.tab.map": {
             "bounds": [
-                118.34375,
+                273.375,
                 77,
                 39.5625,
                 42
@@ -591,15 +687,31 @@
             "enabled": false,
             "label": "Map",
             "visible_bounds": [
-                118.34375,
+                273.375,
                 77,
                 39.5625,
                 42
             ]
         },
-        "mainArea.experiment.tab.stacked": {
+        "mainArea.tab.pattern": {
             "bounds": [
+                68.875,
+                77,
                 57.765625,
+                42
+            ],
+            "enabled": true,
+            "label": "Pattern",
+            "visible_bounds": [
+                68.875,
+                77,
+                57.765625,
+                42
+            ]
+        },
+        "mainArea.tab.stacked": {
+            "bounds": [
+                212.796875,
                 77,
                 60.578125,
                 42
@@ -607,9 +719,25 @@
             "enabled": false,
             "label": "Stacked",
             "visible_bounds": [
-                57.765625,
+                212.796875,
                 77,
                 60.578125,
+                42
+            ]
+        },
+        "mainArea.tab.structure": {
+            "bounds": [
+                0,
+                77,
+                68.875,
+                42
+            ],
+            "enabled": true,
+            "label": "Structure",
+            "visible_bounds": [
+                0,
+                77,
+                68.875,
                 42
             ]
         },
@@ -955,39 +1083,39 @@
         },
         "singleCrystal.reflections.sort.dSpacing": {
             "bounds": [
-                956,
+                954,
                 364,
-                58,
+                76.83333333333333,
                 39
             ],
             "enabled": true,
             "label": "d (Å)",
             "visible_bounds": [
-                956,
+                954,
                 364,
-                58,
+                76.83333333333326,
                 39
             ]
         },
         "singleCrystal.reflections.sort.fitUse": {
             "bounds": [
-                1441,
+                1439,
                 364,
-                12.28125,
+                15.71875,
                 39
             ],
             "enabled": true,
-            "label": "fit",
+            "label": "Fit",
             "visible_bounds": [
-                1441,
+                1439,
                 364,
-                12.28125,
+                15.71875,
                 39
             ]
         },
         "singleCrystal.reflections.sort.h": {
             "bounds": [
-                839,
+                837,
                 364,
                 35,
                 39
@@ -995,7 +1123,7 @@
             "enabled": true,
             "label": "h",
             "visible_bounds": [
-                839,
+                837,
                 364,
                 35,
                 39
@@ -1003,55 +1131,55 @@
         },
         "singleCrystal.reflections.sort.intensityCalc": {
             "bounds": [
-                1258,
+                1277.3333333333333,
                 364,
-                73,
+                76.83333333333333,
                 39
             ],
             "enabled": true,
             "label": "F² calc",
             "visible_bounds": [
-                1258,
+                1277.3333333333333,
                 364,
-                73,
+                76.83333333333326,
                 39
             ]
         },
         "singleCrystal.reflections.sort.intensityMeas": {
             "bounds": [
-                1112,
+                1115.6666666666665,
                 364,
-                73,
+                76.83333333333333,
                 39
             ],
             "enabled": true,
             "label": "F² meas",
             "visible_bounds": [
-                1112,
+                1115.6666666666665,
                 364,
-                73,
+                76.83333333333326,
                 39
             ]
         },
         "singleCrystal.reflections.sort.intensityMeasSu": {
             "bounds": [
-                1189,
+                1196.5,
                 364,
-                65,
+                76.83333333333333,
                 39
             ],
             "enabled": true,
             "label": "s.u.",
             "visible_bounds": [
-                1189,
+                1196.5,
                 364,
-                65,
+                76.83333333333326,
                 39
             ]
         },
         "singleCrystal.reflections.sort.k": {
             "bounds": [
-                878,
+                876,
                 364,
                 35,
                 39
@@ -1059,7 +1187,7 @@
             "enabled": true,
             "label": "k",
             "visible_bounds": [
-                878,
+                876,
                 364,
                 35,
                 39
@@ -1067,7 +1195,7 @@
         },
         "singleCrystal.reflections.sort.l": {
             "bounds": [
-                917,
+                915,
                 364,
                 35,
                 39
@@ -1075,7 +1203,7 @@
             "enabled": true,
             "label": "l",
             "visible_bounds": [
-                917,
+                915,
                 364,
                 35,
                 39
@@ -1083,33 +1211,33 @@
         },
         "singleCrystal.reflections.sort.residual": {
             "bounds": [
-                1335,
+                1358.1666666666665,
                 364,
-                102,
+                76.83333333333333,
                 39
             ],
             "enabled": true,
             "label": "Δ / s.u.",
             "visible_bounds": [
-                1335,
+                1358.1666666666665,
                 364,
-                102,
+                76.83333333333326,
                 39
             ]
         },
         "singleCrystal.reflections.sort.sinThetaOverLambda": {
             "bounds": [
-                1018,
+                1034.8333333333333,
                 364,
-                90,
+                76.83333333333333,
                 39
             ],
             "enabled": true,
             "label": "sin θ/λ (1/Å)",
             "visible_bounds": [
-                1018,
+                1034.8333333333333,
                 364,
-                90,
+                76.83333333333326,
                 39
             ]
         },
@@ -1147,7 +1275,7 @@
         },
         "singleCrystal.toolbar.quantity": {
             "bounds": [
-                238,
+                214,
                 182,
                 80.25,
                 35
@@ -1155,7 +1283,7 @@
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                238,
+                214,
                 182,
                 80.25,
                 35
@@ -1424,7 +1552,7 @@
     "qt_version": "6.11.2",
     "schema": 1,
     "script_sha256": "d5122f9a30b820ddb8e950bd218add712484af4ed386761370e29f6deabec864",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 1,
         "fit_outcome": "",

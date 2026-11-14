@@ -2,9 +2,30 @@
 icon: fa5/quote-right
 ---
 
-# Citation
+# How to cite
 
-When you publish a result, say which version of EasyDiffraction you used. The app shows it in its About window, and in Python `edi.__version__` holds it. If a release gives a citation or a DOI, use that one.
+If you use EasyDiffraction in your work, please cite it. The app shows the same citation under Home → How to cite.
+
+## Citation
+
+Sazonov, A. (2026). EasyDiffraction [Computer software].
+DOI: [10.5281/zenodo.24127939](https://doi.org/10.5281/zenodo.24127939)
+
+```bibtex
+@software{easydiffraction,
+  author = {Sazonov, Andrew},
+  title = {EasyDiffraction},
+  year = {2026},
+  doi = {10.5281/zenodo.24127939},
+  url = {https://doi.org/10.5281/zenodo.24127939}
+}
+```
+
+Zenodo keeps a record of every release under that DOI. The app's How to cite adds the version and year of the build
+you run.
+
+Also say which version of EasyDiffraction you used. The app shows it in its About window, and in Python
+`edi.__version__` holds it.
 
 ## Keep your analysis repeatable
 

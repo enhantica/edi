@@ -10,8 +10,8 @@ import edi.app
 // Session, and as its tooltip the label and the `.edi` name it labels, so every header says which item of the file
 // its column shows.
 EaComponents.ListViewLabel {
-    elide: Text.ElideRight
     id: header
+    elide: Text.ElideRight
 
     // The item, `category.name`, and the token its label depends on (an ADP's type).
     property string uid: ""

@@ -42,7 +42,7 @@ Item {
         id: empty
         visible: chart.count < 2
         color: EaStyle.Colors.themeForegroundMinor
-        text: chart.correlations && chart.correlations.empty_text ? chart.correlations.empty_text : qsTr("No correlations yet")
+        text: chart.correlations && chart.correlations.empty_text ? chart.correlations.empty_text : qsTr("No correlations")
     }
     // The lists themselves are the models, so a delegate holds its own label or value while a shorter list replaces it.
     Repeater {

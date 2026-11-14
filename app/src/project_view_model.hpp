@@ -287,7 +287,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
    public:
     // `colourScheme` is the palette the blocks first take their positions in: the one selected when the project opens,
     // so an opened project's positions are those of that palette (ADR-0038).
-    ProjectViewModel(edi::Project project, QObject* parent, const QString& colourScheme = QStringLiteral("earth"));
+    ProjectViewModel(edi::Project project, QObject* parent, const QString& colourScheme = QStringLiteral("main"));
     ~ProjectViewModel() override;
 
     QString name() const;
@@ -337,6 +337,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         std::shared_ptr<ScanSession> listing;
         QString refusal;  // why the listing refused, if it did: the scan shows it, the save goes ahead
         std::optional<std::vector<edi::Edit::ScanValue>> shown;
+        bool wroteRun = false;  // stageScan generated the run record in this staged tree
         bool includedData = false;  // the staged save included linked data
         QString included;           // the linked scan folder whose files it copied in, if it did
     };
@@ -447,6 +448,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Create structure: a new structure named structure1, structure2, … holding easydiffractionbeta's default phase
     // (P b n m, a = 10, b = 6, c = 5 Å, one O site at the origin), selected and linked to no experiment. One
     // undoable step.
+    // Whether an edit or a fit would be taken now, without the refusal a too-early press shows (a tutorial's Next
+    // waits for this rather than meeting "still being published").
+    Q_INVOKABLE bool readyForEdit() const { return editReadinessRefusal(false).isEmpty(); }
     Q_INVOKABLE bool createStructure();
     // Duplicate structure: a copy of the current structure (edi::structure_copy) named `<name>_copy`, selected and
     // linked to no experiment. One undoable step.
@@ -505,6 +509,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
                                   bool copy = true, const QList<edi_app::CollectionOrigin>& origins = {});
     /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
     Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
+    /// List a local folder off the GUI thread, then link its datasets through the normal scan loader.
+    Q_INVOKABLE void loadDatasetFolder(edi_app::ExperimentViewModel* experiment, const QUrl& folder);
+    Q_PROPERTY(bool listingDatasetFolder READ listingDatasetFolder NOTIFY listingDatasetFolderChanged)
+    bool listingDatasetFolder() const { return listing_dataset_folder_; }
     QString includeDataOnSave() const;
     struct LinkedInventory {
         bool linked = false;
@@ -734,6 +742,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void calculationStarted();
     void templateIndexChanged();
     void scanChanged();
+    void listingDatasetFolderChanged();
     void missingDataFolderChanged();
     void missingDataFileChanged();
     void pendingCollectionDataChanged();
@@ -761,6 +770,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void storeSelection() const;
     QString selectionKey() const;
     bool selection_restored_ = false;
+    QTimer selection_store_timer_;
     void syncBlocks();
     void completeSymmetry();
     void syncParameterTable(bool refresh_report = true);
@@ -1069,7 +1079,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void syncPatternColours();
     // Every block's position in the palette, after the blocks or the palette changed.
     void syncColourPositions();
-    QString colour_scheme_ = QStringLiteral("earth");
+    QString colour_scheme_ = QStringLiteral("main");
     QHash<const QObject*, std::size_t> colour_positions_;  // by the block's view-model
     QList<int> experiment_colour_positions_, structure_colour_positions_;
     // The scan views' kept settings: read when the project opens, written when changed and at every save.
@@ -1088,6 +1098,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::uint64_t view_request_ = 0, view_applied_ = 0;
     int view_wanted_ = -1;       // the dataset of the newest request
     int projected_dataset_ = -1;  // the dataset the model holds now (a failed read leaves the one before)
+    bool listing_dataset_folder_ = false;
     bool view_reading_ = false;  // a read is in flight
     // A followed file's pattern from the scan's fit (its dataset and the frame), until its dataset is shown.
     std::optional<std::pair<int, edi::FitFrame>> follow_frame_;

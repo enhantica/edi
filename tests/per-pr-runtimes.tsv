@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-10T08:49:32Z
+# measured_utc = 2026-11-10T12:29:08Z
 #
-# Recorded from: a merge of main into this branch: both tables' rows and holes kept, this branch's winning where both name a node.
+# New feature gates remain explicitly unmeasured until passing runner qualification.
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -27,12 +27,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 240510
+# inventory_python = 240539
 # inventory_cpp = 402
 # inventory_measured = 173260
-# inventory_unmeasured = 67652
+# inventory_unmeasured = 67681
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 81725
+# inventory_pr_python = 81754
 
 UNMEASURED:not-completed-in-this-run	tests/fixtures/assistant_fixes/test_grouped_flags.py::test_grouped_adp_flags_after_fit_and_relation[normal]
 UNMEASURED:not-completed-in-this-run	tests/fixtures/assistant_fixes/test_grouped_flags.py::test_grouped_adp_flags_after_fit_and_relation[shown]
@@ -167505,6 +167505,23 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::te
 0.460	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-multiplicity]
 0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[False]
 0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[True]
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_boolean_preferences_use_aligned_selectors[ai.copyTechnicalDetails]
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_boolean_preferences_use_aligned_selectors[autoCollapse]
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_boolean_preferences_use_aligned_selectors[checkUpdateOnStart]
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_boolean_preferences_use_aligned_selectors[showFitResults]
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_citation_uses_zenodo_doi_and_consistent_title
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_cosio_example_starting_moments
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_online_sources_documented_collection_passes_real_checker
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_preferences_retains_working_controls
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_preferences_tab_order_and_removed_controls
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_stacked_uses_palette_while_map_retains_its_selector
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_ai_questions_are_separate
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-09T23:59:59Z]
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-10T00:00:00Z]
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-11T12:00:00Z]
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-12T23:59:59Z]
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-13T00:00:00Z]
+UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_navigation_and_question_groups
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[Clang]
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[New design helper]
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[diffraction-lib]
@@ -238035,6 +238052,18 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_structure_toolbars.p
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_subset_catalogue.py::test_built_assistant_catalogue_rows_declare_their_distinct_interface_subsets[built-in]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_subset_catalogue.py::test_built_assistant_catalogue_rows_declare_their_distinct_interface_subsets[own]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_subset_catalogue.py::test_built_case_catalogue_uses_declared_interfaces_for_prefixes_and_dashes
+UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_colour_blind_dark_gradient_stays_clear_of_background
+UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_exact_approved_roles[dark-colourBlindSafe]
+UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_exact_approved_roles[dark-main]
+UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_exact_approved_roles[light-colourBlindSafe]
+UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_exact_approved_roles[light-main]
+UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_independent_ciede_observer_matches_published_pair
+UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_independent_interpolation_has_nonidentity_witness
+UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_only_two_palettes_and_main_default
+UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_pattern_threshold_reservations_and_oklab[dark-colourBlindSafe]
+UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_pattern_threshold_reservations_and_oklab[dark-main]
+UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_pattern_threshold_reservations_and_oklab[light-colourBlindSafe]
+UNMEASURED:awaiting working feature and runner qualification	tests/system/py/test_two_figure_palettes.py::test_pattern_threshold_reservations_and_oklab[light-main]
 0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[shared_control_has_one_private_info_receipt:affiliation]
 0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[shared_control_has_one_private_info_receipt:button]
 0.000	tests/system/py/test_user_action_logging.py::test_real_user_action_receipts[shared_control_has_one_private_info_receipt:checkbox]

@@ -37,7 +37,7 @@ Column {
     DataTable {
         id: table
         objectName: "atomSiteAdps.list"
-        defaultInfoText: qsTr("No atom sites defined")
+        defaultInfoText: qsTr("No atom sites yet")
         sourceModel: group.adps
 
         // A beta component is small (about 1e-4 to 1e-2) and so has more characters than a U or B: with a beta row

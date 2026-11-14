@@ -31,4 +31,4 @@ Check report state before sharing it. Keep the report together with the matching
 - [Python: report rendering and save methods](../../python/reports.md).
 - [Command line: report output and freshness checks](../../cli/reports.md).
 
-Use [citation and reproducibility](../../about/citation.md) when preparing a publication or handing an analysis to a collaborator.
+See [How to cite](../../about/citation.md) when preparing a publication or handing an analysis to a collaborator.

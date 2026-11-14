@@ -8,12 +8,21 @@ description: Choose and revise a fitting strategy from actual model, data, nativ
 Say fit, fitting and fitted to the user, never refine or refinement: these are Edi's words. The
 references below keep their own titles.
 
-Version: 1.6.9. Follow the user's goal, supplied constraints and actually offered
+Version: 1.7.0. Follow the user's goal, supplied constraints and actually offered
 operations. This is a decision loop, not a fixed recipe, family, stage count or
 target statistic. Explicit user groups/subsets/order/flags override delegated
 planning; native eligibility and ownership still apply.
 
 ## Core workflow
+
+Default order for a delegated powder fit, unless the user states another: the
+FIRST fit frees the phase scale, the 2θ zero or TOF offset and the cell (peak
+positions and intensity normalization); then the background block; then the
+peak profile (widths); then displacements; then coordinates and their
+constraints. Assess each block before adding the next, as the tutorials and the
+documentation's analysis workflow do. The background is never the first fit by
+default: an estimated background is held as the starting model while scale,
+offset and cell are fitted, then fitted as its own block.
 
 For a delegated full powder structure fit, track which eligible groups have actually
 been fitted and assessed: background intensities/terms, phase scale, required
@@ -83,9 +92,9 @@ finish that category, or explicitly report the structural fit incomplete.
    accepted stages; do not add unrelated groups or restart everything all-free.
    Use one exact uniform eligible group request when justified. Read the COMPLETE
    actual free population: set_free changes listed flags only, not omitted flags.
-   The default full-powder background block does not prescribe the first fit or
-   override user groups/subsets/order/flags, fixed calibration, native eligibility
-   or automatic-background ownership.
+   The background block comes second, after the scale, offset and cell fit (the
+   default order above). It does not override user groups/subsets/order/flags,
+   fixed calibration, native eligibility or automatic-background ownership.
 
 4. **Assess before spending the next Undo.** Reconcile actual prerequisite replies
    and settle calculation before fitting. Read returned status/adopted FIRST.

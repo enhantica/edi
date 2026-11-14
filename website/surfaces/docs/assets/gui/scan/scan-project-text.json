@@ -1,14 +1,14 @@
 {
     "description": "Inspect the project's project controls",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "workflow.project.mainContent",
         "workflow.project.manualSidebar"
     ],
     "id": "scan-project-text",
-    "image": "scan-project-text.png",
-    "image_sha256": "434785c8e64ef2f312f338f18184295a4d7528c5d0480d585d623236a26b43ed",
+    "image": "scan-project-text.webp",
+    "image_sha256": "b5e4e3b83b5d5ccb8791266594a258b0c86549ea0c7201699f08328e6c56dfe6",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -74,43 +74,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -119,7 +85,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -171,6 +137,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -313,7 +296,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -322,7 +305,7 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -403,7 +386,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/var/folders/ym/htbh7q790j50h0txr1w84fzr0000gq/T/EasyDiffraction-MTisfR/pd-neut-cwl_cosio-d20_scan-213f/project",
+            "label": "/tmp/EasyDiffraction-rEKkVY/pd-neut-cwl_cosio-d20_scan-213f/project",
             "visible_bounds": [
                 183.4,
                 347.40000000000003,
@@ -498,7 +481,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.703125,
@@ -684,7 +667,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "213/213 213 0 11s 4.32–6.25",
+            "label": "213/213 213 0 51s 4.32–6.25",
             "visible_bounds": [
                 985,
                 770,
@@ -713,7 +696,7 @@
             "bounds": [
                 552.3625,
                 772,
-                144.859375,
+                144.109375,
                 14
             ],
             "enabled": true,
@@ -722,7 +705,7 @@
             "visible_bounds": [
                 552.3625,
                 772,
-                144.859375,
+                144.109375,
                 14
             ]
         },
@@ -904,8 +887,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "2e61fbd7a85652640fa5a0781315729851575f83fce096185f1f4df071393bb3",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "db1af167615f4344703ac808b4364deaf281536e8d9bb793c3e81bda9f74db6e",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",
@@ -940,7 +923,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

@@ -109,9 +109,8 @@ cosio_300k 10()
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 1 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         33.39        14.24
-      1      0.002      15.51         3.07   78.4% ↓
-      2      0.005      15.51         3.07   
-  done · converged · 2 iters · reduced χ² 3.07 · wR(F²) 15.51 % · 0.01 s
+      1      0.068      15.51         3.07   78.4% ↓
+  done · converged · 1 iters · reduced χ² 3.07 · wR(F²) 15.51 % · 0.08 s
 
   per-bank wR(F²) (%):   heidi_300k 15.51
 
@@ -120,8 +119,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 1 free
   scale           experiments[heidi_300k].linked_structures[cosio_300k].scale            10       14.272     0.056   42.7% ↑
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -152,10 +151,8 @@ The same for every other row (3 more).
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 12 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         15.51         3.10
-      1      0.004      15.34         3.03   2.2% ↓
-      2      0.007      15.34         3.03   
-      3      0.010      15.34         3.03   
-  done · converged · 3 iters · reduced χ² 3.03 · wR(F²) 15.34 % · 0.01 s
+      1      0.079      15.34         3.03   2.2% ↓
+  done · converged · 1 iters · reduced χ² 3.03 · wR(F²) 15.34 % · 0.09 s
 
   per-bank wR(F²) (%):   heidi_300k 15.34
 
@@ -164,7 +161,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 12 free
   scale           experiments[heidi_300k].linked_structures[cosio_300k].scale        14.272       14.286     0.056   0.1% ↑
   x               structures[cosio_300k].atom_sites[Co2].fract_x                    0.27645      0.27632   0.00022   
   z               structures[cosio_300k].atom_sites[Co2].fract_z                    0.99143      0.99115   0.00044   
-  x               structures[cosio_300k].atom_sites[O1].fract_x                     0.09205     0.092304  0.000099   0.3% ↑
+  x               structures[cosio_300k].atom_sites[O1].fract_x                     0.09205     0.092305  0.000099   0.3% ↑
   z               structures[cosio_300k].atom_sites[O1].fract_z                     0.76712      0.76634   0.00019   0.1% ↓
   x               structures[cosio_300k].atom_sites[O2].fract_x                     0.44872     0.448706  0.000090   
   z               structures[cosio_300k].atom_sites[O2].fract_z                     0.21560      0.21574   0.00021   0.1% ↑
@@ -175,8 +172,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 12 free
   z               structures[cosio_300k].atom_sites[Si].fract_z                     0.42821      0.42807   0.00025   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -207,10 +204,8 @@ The same for every other row (4 more).
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 40 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         15.34         3.08
-      1      0.011       7.73         0.78   74.6% ↓
-      2      0.019       7.67         0.77   1.7% ↓
-      3      0.029       7.67         0.77   
-  done · converged · 3 iters · reduced χ² 0.77 · wR(F²) 7.67 % · 0.04 s
+      1      0.114       7.67         0.77   75.0% ↓
+  done · converged · 1 iters · reduced χ² 0.77 · wR(F²) 7.67 % · 0.13 s
 
   per-bank wR(F²) (%):   heidi_300k 7.67
 
@@ -235,8 +230,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 40 free
   U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_13                 0.00000         7e-5     11e-5   
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_22                 0.00300      0.00575   0.00014   91.6% ↑
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_33                 0.00300      0.00456   0.00012   52.0% ↑
-  U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_11                 0.00300     0.006419  0.000098   114.0% ↑
-  U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00000     0.001877  0.000081   
+  U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_11                 0.00300     0.006420  0.000098   114.0% ↑
+  U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00000     0.001878  0.000081   
   U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_13                 0.00000      2.49e-4   0.87e-4   
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00300     0.004698  0.000089   56.6% ↑
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_23                 0.00000     -3.78e-4   0.70e-4   
@@ -258,8 +253,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 40 free
   z               structures[cosio_300k].atom_sites[Si].fract_z                     0.42807      0.42811   0.00012   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -294,11 +289,8 @@ _extinction.coefficient_23 0()
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          7.67         0.77
-      1      0.012       6.25         0.51   33.6% ↓
-      2      0.023       6.16         0.50   2.9% ↓
-      3      0.033       6.15         0.50   
-      4      0.044       6.15         0.50   
-  done · converged · 4 iters · reduced χ² 0.50 · wR(F²) 6.15 % · 0.06 s
+      1      0.124       6.15         0.50   35.6% ↓
+  done · converged · 1 iters · reduced χ² 0.50 · wR(F²) 6.15 % · 0.15 s
 
   per-bank wR(F²) (%):   heidi_300k 6.15
 
@@ -330,7 +322,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 46 free
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_22                 0.00575      0.00642   0.00011   11.7% ↑
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_33                 0.00456     0.004944  0.000092   8.4% ↑
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_11                 0.00642     0.007137  0.000084   11.2% ↑
-  U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00188     0.001897  0.000066   1.1% ↑
+  U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00188     0.001897  0.000066   1.0% ↑
   U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_13                 2.49e-4      2.39e-4   0.69e-4   4.0% ↓
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00470     0.005365  0.000077   14.2% ↑
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_23                -3.78e-4     -3.57e-4   0.56e-4   5.6% ↑
@@ -352,8 +344,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 46 free
   z               structures[cosio_300k].atom_sites[Si].fract_z                     0.42811     0.428146  0.000093   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -383,14 +375,12 @@ cosio_55k 10()
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.15         0.50
-      1      0.014       6.15         0.50   
+      1      0.096       6.15         0.50   
 edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 1 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         36.94        70.00
-      1      0.003       8.90         4.07   94.2% ↓
-      2      0.005       8.90         4.07   
-      3      0.007       8.90         4.07   
-  done · converged · 4 iters · reduced χ² 2.22 · wR(F²) 8.39 % · 0.04 s
+      1      0.072       8.90         4.07   94.2% ↓
+  done · converged · 2 iters · reduced χ² 2.22 · wR(F²) 8.39 % · 0.20 s
 
   per-bank wR(F²) (%):   heidi_300k 6.15   heidi_55k 8.90
 
@@ -398,7 +388,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 1 free
   name            parameter                                                           start        value      s.u.   change
   x11             experiments[heidi_300k].extinction.coefficient_11                   0.117        0.117     0.014   
   x12             experiments[heidi_300k].extinction.coefficient_12                  -0.076       -0.076     0.037   0.2% ↓
-  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.1% ↓
+  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.2% ↓
   x22             experiments[heidi_300k].extinction.coefficient_22                   0.283        0.283     0.016   0.1% ↓
   x23             experiments[heidi_300k].extinction.coefficient_23                    0.14         0.14      0.12   2.0% ↑
   x33             experiments[heidi_300k].extinction.coefficient_33                   1.156        1.156     0.078   
@@ -406,7 +396,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 1 free
   scale           experiments[heidi_55k].linked_structures[cosio_55k].scale              10       15.624     0.037   56.2% ↑
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_11                0.00671      0.00671   0.00025   0.1% ↓
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_12               -9.00e-4      -9.0e-4    2.0e-4   0.4% ↑
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.8% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.9% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_22                0.00412      0.00412   0.00022   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_23               -5.10e-4      -5.1e-4    1.9e-4   0.6% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_33                0.00410      0.00410   0.00019   0.1% ↑
@@ -415,7 +405,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 1 free
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_22                0.00539      0.00539   0.00022   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_33                0.00524      0.00524   0.00021   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_11                 0.00639      0.00639   0.00012   0.1% ↓
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.80e-5       3.9e-5    8.0e-5   1.4% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.80e-5       3.9e-5    8.0e-5   1.3% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_22                 0.00586      0.00586   0.00011   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_33                 0.00307     0.003074  0.000087   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_11                 0.00413      0.00413   0.00011   
@@ -425,11 +415,11 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 1 free
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_11                 0.00714     0.007137  0.000084   
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00190     0.001897  0.000066   
   U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_13                 2.39e-4      2.39e-4   0.69e-4   0.1% ↑
-  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00536     0.005365  0.000077   
+  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00536     0.005366  0.000077   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_23                -3.57e-4     -3.57e-4   0.56e-4   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_33                 0.00521     0.005205  0.000062   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_11                 0.00386      0.00386   0.00015   
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.0% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.1% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_22                 0.00396      0.00396   0.00014   0.1% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_33                 0.00278      0.00278   0.00012   0.1% ↑
   x               structures[cosio_300k].atom_sites[Co2].fract_x                    0.27656     0.276559  0.000091   
@@ -445,8 +435,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 1 free
   z               structures[cosio_300k].atom_sites[Si].fract_z                     0.42815     0.428146  0.000093   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -477,14 +467,12 @@ The same for every other row (3 more).
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.15         0.50
-      1      0.011       6.15         0.50   
+      1      0.090       6.15         0.50   
 edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 12 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          8.90         4.10
-      1      0.004       8.78         3.99   2.7% ↓
-      2      0.007       8.78         3.99   
-      3      0.011       8.78         3.99   
-  done · converged · 4 iters · reduced χ² 2.17 · wR(F²) 8.29 % · 0.04 s
+      1      0.077       8.78         3.99   2.7% ↓
+  done · converged · 2 iters · reduced χ² 2.17 · wR(F²) 8.29 % · 0.20 s
 
   per-bank wR(F²) (%):   heidi_300k 6.15   heidi_55k 8.78
 
@@ -492,7 +480,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 12 free
   name            parameter                                                           start        value      s.u.   change
   x11             experiments[heidi_300k].extinction.coefficient_11                   0.117        0.117     0.014   
   x12             experiments[heidi_300k].extinction.coefficient_12                  -0.076       -0.076     0.037   0.2% ↓
-  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.1% ↓
+  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.2% ↓
   x22             experiments[heidi_300k].extinction.coefficient_22                   0.283        0.283     0.016   0.1% ↓
   x23             experiments[heidi_300k].extinction.coefficient_23                    0.14         0.14      0.12   2.0% ↑
   x33             experiments[heidi_300k].extinction.coefficient_33                   1.156        1.156     0.078   
@@ -500,7 +488,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 12 free
   scale           experiments[heidi_55k].linked_structures[cosio_55k].scale          15.624       15.642     0.037   0.1% ↑
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_11                0.00671      0.00671   0.00025   0.1% ↓
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_12               -9.00e-4      -9.0e-4    2.0e-4   0.4% ↑
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.8% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.9% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_22                0.00412      0.00412   0.00022   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_23               -5.10e-4      -5.1e-4    1.9e-4   0.6% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_33                0.00410      0.00410   0.00019   0.1% ↑
@@ -509,7 +497,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 12 free
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_22                0.00539      0.00539   0.00022   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_33                0.00524      0.00524   0.00021   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_11                 0.00639      0.00639   0.00012   0.1% ↓
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.1% ↓
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.3% ↓
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_22                 0.00586      0.00586   0.00011   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_33                 0.00307     0.003074  0.000087   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_11                 0.00413      0.00413   0.00011   
@@ -519,11 +507,11 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 12 free
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_11                 0.00714     0.007137  0.000084   
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00190     0.001897  0.000066   
   U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_13                 2.39e-4      2.39e-4   0.69e-4   0.1% ↑
-  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00536     0.005365  0.000077   
+  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00537     0.005366  0.000077   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_23                -3.57e-4     -3.57e-4   0.56e-4   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_33                 0.00521     0.005205  0.000062   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_11                 0.00386      0.00386   0.00015   
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.0% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.1% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_22                 0.00396      0.00396   0.00014   0.1% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_33                 0.00278      0.00278   0.00012   0.1% ↑
   x               structures[cosio_300k].atom_sites[Co2].fract_x                    0.27656     0.276559  0.000091   
@@ -550,8 +538,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 12 free
   z               structures[cosio_55k].atom_sites[Si].fract_z                      0.42824      0.42784   0.00018   0.1% ↓
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -587,15 +575,13 @@ _extinction.coefficient_23 0()
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.15         0.50
-      1      0.012       6.15         0.50   
+      1      0.088       6.15         0.50   
 edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 18 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          8.78         4.00
-      1      0.004       6.80         2.40   40.1% ↓
-      2      0.007       6.59         2.25   6.2% ↓
-      3      0.011       6.58         2.25   0.1% ↓
-      4      0.015       6.58         2.25   
-  done · converged · 5 iters · reduced χ² 1.34 · wR(F²) 6.49 % · 0.04 s
+      1      0.070       6.58         2.25   43.8% ↓
+      2      0.080       6.58         2.25   
+  done · converged · 3 iters · reduced χ² 1.34 · wR(F²) 6.49 % · 0.20 s
 
   per-bank wR(F²) (%):   heidi_300k 6.15   heidi_55k 6.58
 
@@ -603,7 +589,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 18 free
   name            parameter                                                           start        value      s.u.   change
   x11             experiments[heidi_300k].extinction.coefficient_11                   0.117        0.117     0.014   
   x12             experiments[heidi_300k].extinction.coefficient_12                  -0.076       -0.076     0.037   0.2% ↓
-  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.1% ↓
+  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.2% ↓
   x22             experiments[heidi_300k].extinction.coefficient_22                   0.283        0.283     0.016   0.1% ↓
   x23             experiments[heidi_300k].extinction.coefficient_23                    0.14         0.14      0.12   2.0% ↑
   x33             experiments[heidi_300k].extinction.coefficient_33                   1.156        1.156     0.078   
@@ -617,7 +603,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 18 free
   scale           experiments[heidi_55k].linked_structures[cosio_55k].scale          15.642       16.830     0.053   7.6% ↑
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_11                0.00671      0.00671   0.00025   0.1% ↓
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_12               -9.00e-4      -9.0e-4    2.0e-4   0.4% ↑
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.8% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.9% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_22                0.00412      0.00412   0.00022   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_23               -5.10e-4      -5.1e-4    1.9e-4   0.6% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_33                0.00410      0.00410   0.00019   0.1% ↑
@@ -626,7 +612,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 18 free
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_22                0.00539      0.00539   0.00022   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_33                0.00524      0.00524   0.00021   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_11                 0.00639      0.00639   0.00012   0.1% ↓
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.1% ↓
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.3% ↓
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_22                 0.00586      0.00586   0.00011   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_33                 0.00307     0.003074  0.000087   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_11                 0.00413      0.00413   0.00011   
@@ -636,11 +622,11 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 18 free
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_11                 0.00714     0.007137  0.000084   
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00190     0.001897  0.000066   
   U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_13                 2.39e-4      2.39e-4   0.69e-4   0.1% ↑
-  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00536     0.005365  0.000077   
+  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00537     0.005366  0.000077   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_23                -3.57e-4     -3.57e-4   0.56e-4   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_33                 0.00521     0.005205  0.000062   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_11                 0.00386      0.00386   0.00015   
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.0% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.1% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_22                 0.00396      0.00396   0.00014   0.1% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_33                 0.00278      0.00278   0.00012   0.1% ↑
   x               structures[cosio_300k].atom_sites[Co2].fract_x                    0.27656     0.276559  0.000091   
@@ -667,8 +653,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 18 free
   z               structures[cosio_55k].atom_sites[Si].fract_z                      0.42784      0.42798   0.00014   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -699,14 +685,12 @@ The same for every other row (4 more).
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.15         0.50
-      1      0.012       6.15         0.50   
+      1      0.089       6.15         0.50   
 edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.58         2.29
-      1      0.010       3.80         0.76   66.7% ↓
-      2      0.020       3.79         0.76   0.4% ↓
-      3      0.030       3.79         0.76   
-  done · converged · 4 iters · reduced χ² 0.62 · wR(F²) 4.41 % · 0.07 s
+      1      0.112       3.79         0.76   66.8% ↓
+  done · converged · 2 iters · reduced χ² 0.62 · wR(F²) 4.41 % · 0.24 s
 
   per-bank wR(F²) (%):   heidi_300k 6.15   heidi_55k 3.79
 
@@ -714,7 +698,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   name            parameter                                                           start        value      s.u.   change
   x11             experiments[heidi_300k].extinction.coefficient_11                   0.117        0.117     0.014   
   x12             experiments[heidi_300k].extinction.coefficient_12                  -0.076       -0.076     0.037   0.2% ↓
-  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.1% ↓
+  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.2% ↓
   x22             experiments[heidi_300k].extinction.coefficient_22                   0.283        0.283     0.016   0.1% ↓
   x23             experiments[heidi_300k].extinction.coefficient_23                    0.14         0.14      0.12   2.0% ↑
   x33             experiments[heidi_300k].extinction.coefficient_33                   1.156        1.156     0.078   
@@ -728,7 +712,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   scale           experiments[heidi_55k].linked_structures[cosio_55k].scale           16.83       16.018     0.065   4.8% ↓
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_11                0.00671      0.00671   0.00025   0.1% ↓
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_12               -9.00e-4      -9.0e-4    2.0e-4   0.4% ↑
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.8% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.9% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_22                0.00412      0.00412   0.00022   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_23               -5.10e-4      -5.1e-4    1.9e-4   0.6% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_33                0.00410      0.00410   0.00019   0.1% ↑
@@ -737,7 +721,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_22                0.00539      0.00539   0.00022   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_33                0.00524      0.00524   0.00021   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_11                 0.00639      0.00639   0.00012   0.1% ↓
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.1% ↓
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.3% ↓
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_22                 0.00586      0.00586   0.00011   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_33                 0.00307     0.003074  0.000087   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_11                 0.00413      0.00413   0.00011   
@@ -747,11 +731,11 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_11                 0.00714     0.007137  0.000084   
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00190     0.001897  0.000066   
   U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_13                 2.39e-4      2.39e-4   0.69e-4   0.1% ↑
-  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00536     0.005365  0.000077   
+  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00537     0.005366  0.000077   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_23                -3.57e-4     -3.57e-4   0.56e-4   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_33                 0.00521     0.005205  0.000062   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_11                 0.00386      0.00386   0.00015   
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.0% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.1% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_22                 0.00396      0.00396   0.00014   0.1% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_33                 0.00278      0.00278   0.00012   0.1% ↑
   x               structures[cosio_300k].atom_sites[Co2].fract_x                    0.27656     0.276559  0.000091   
@@ -792,7 +776,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₁₁, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_11                  0.00300     0.001810  0.000090   39.7% ↓
   U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_13                  0.00000      -3.6e-5    6.9e-5   
   U₂₂, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_22                  0.00300      0.00112   0.00015   62.6% ↓
-  U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_33                  0.00300     0.001540  0.000092   48.7% ↓
+  U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_33                  0.00300     0.001541  0.000092   48.6% ↓
   x               structures[cosio_55k].atom_sites[Co2].fract_x                     0.27588     0.276023  0.000055   0.1% ↑
   z               structures[cosio_55k].atom_sites[Co2].fract_z                     0.99163      0.99134   0.00013   
   x               structures[cosio_55k].atom_sites[O1].fract_x                      0.09198     0.091844  0.000027   0.1% ↓
@@ -806,8 +790,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_55k].atom_sites[Si].fract_z                      0.42798     0.428231  0.000071   0.1% ↑
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -837,18 +821,16 @@ cosio_2k5 10()
 edi fit: project sc-neut-cwl_cosio-heidi, 1424 pts fitted / 1424 loaded, 1 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         39.11        63.53
-      1      0.002      13.12         7.15   88.7% ↓
-      2      0.004      13.12         7.15   
-      3      0.006      13.12         7.15   
+      1      0.135      13.12         7.15   88.7% ↓
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.15         0.50
-      1      0.011       6.15         0.50   
+      1      0.090       6.15         0.50   
 edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          3.79         0.76
-      1      0.014       3.79         0.76   
-  done · converged · 5 iters · reduced χ² 2.72 · wR(F²) 8.82 % · 0.06 s
+      1      0.078       3.79         0.76   
+  done · converged · 3 iters · reduced χ² 2.72 · wR(F²) 8.82 % · 0.36 s
 
   per-bank wR(F²) (%):   heidi_2k5 13.12   heidi_300k 6.15   heidi_55k 3.79
 
@@ -857,7 +839,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   scale           experiments[heidi_2k5].linked_structures[cosio_2k5].scale              10       15.915     0.056   59.2% ↑
   x11             experiments[heidi_300k].extinction.coefficient_11                   0.117        0.117     0.014   
   x12             experiments[heidi_300k].extinction.coefficient_12                  -0.076       -0.076     0.037   0.2% ↓
-  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.1% ↓
+  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.2% ↓
   x22             experiments[heidi_300k].extinction.coefficient_22                   0.283        0.283     0.016   0.1% ↓
   x23             experiments[heidi_300k].extinction.coefficient_23                    0.14         0.14      0.12   2.0% ↑
   x33             experiments[heidi_300k].extinction.coefficient_33                   1.156        1.156     0.078   
@@ -866,12 +848,12 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   x12             experiments[heidi_55k].extinction.coefficient_12                    0.186        0.186     0.059   0.2% ↑
   x13             experiments[heidi_55k].extinction.coefficient_13                    0.191        0.191     0.048   0.1% ↓
   x22             experiments[heidi_55k].extinction.coefficient_22                    0.068        0.068     0.067   0.6% ↑
-  x23             experiments[heidi_55k].extinction.coefficient_23                    0.078        0.078     0.082   
+  x23             experiments[heidi_55k].extinction.coefficient_23                    0.078        0.078     0.082   0.1% ↑
   x33             experiments[heidi_55k].extinction.coefficient_33                    1.356        1.356     0.054   
   scale           experiments[heidi_55k].linked_structures[cosio_55k].scale          16.018       16.018     0.065   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_11                0.00671      0.00671   0.00025   0.1% ↓
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_12               -9.00e-4      -9.0e-4    2.0e-4   0.4% ↑
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.8% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.9% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_22                0.00412      0.00412   0.00022   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_23               -5.10e-4      -5.1e-4    1.9e-4   0.6% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_33                0.00410      0.00410   0.00019   0.1% ↑
@@ -880,7 +862,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_22                0.00539      0.00539   0.00022   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_33                0.00524      0.00524   0.00021   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_11                 0.00639      0.00639   0.00012   0.1% ↓
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.1% ↓
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.3% ↓
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_22                 0.00586      0.00586   0.00011   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_33                 0.00307     0.003074  0.000087   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_11                 0.00413      0.00413   0.00011   
@@ -890,11 +872,11 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_11                 0.00714     0.007137  0.000084   
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00190     0.001897  0.000066   
   U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_13                 2.39e-4      2.39e-4   0.69e-4   0.1% ↑
-  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00536     0.005365  0.000077   
+  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00537     0.005366  0.000077   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_23                -3.57e-4     -3.57e-4   0.56e-4   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_33                 0.00521     0.005205  0.000062   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_11                 0.00386      0.00386   0.00015   
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.0% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.1% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_22                 0.00396      0.00396   0.00014   0.1% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_33                 0.00278      0.00278   0.00012   0.1% ↑
   x               structures[cosio_300k].atom_sites[Co2].fract_x                    0.27656     0.276559  0.000091   
@@ -910,7 +892,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_300k].atom_sites[Si].fract_z                     0.42815     0.428146  0.000093   
   U₁₁, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_11                 0.00244      0.00244   0.00015   0.2% ↑
   U₁₂, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_12                -1.50e-4      -1.5e-4    1.1e-4   1.3% ↑
-  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_13                 5.00e-5         5e-5     11e-5   4.2% ↑
+  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_13                 5.00e-5         5e-5     11e-5   4.3% ↑
   U₂₂, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_22                 0.00101      0.00101   0.00024   0.3% ↑
   U₂₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_23                -1.20e-4      -1.2e-4    1.3e-4   3.5% ↓
   U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_33                 0.00167      0.00167   0.00015   0.1% ↑
@@ -933,9 +915,9 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₂₃, Å²         structures[cosio_55k].atom_site_aniso[O3].adp_23                 -1.57e-4     -1.57e-4   0.45e-4   
   U₃₃, Å²         structures[cosio_55k].atom_site_aniso[O3].adp_33                  0.00308     0.003080  0.000052   
   U₁₁, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_11                  0.00181     0.001810  0.000090   
-  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_13                 -3.60e-5      -3.6e-5    6.9e-5   0.2% ↓
+  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_13                 -3.60e-5      -3.6e-5    6.9e-5   0.3% ↓
   U₂₂, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_22                  0.00112      0.00112   0.00015   0.1% ↑
-  U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_33                  0.00154     0.001540  0.000092   
+  U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_33                  0.00154     0.001541  0.000092   
   x               structures[cosio_55k].atom_sites[Co2].fract_x                     0.27602     0.276023  0.000055   
   z               structures[cosio_55k].atom_sites[Co2].fract_z                     0.99134      0.99134   0.00013   
   x               structures[cosio_55k].atom_sites[O1].fract_x                      0.09184     0.091844  0.000027   
@@ -949,8 +931,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_55k].atom_sites[Si].fract_z                      0.42823     0.428231  0.000071   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -981,18 +963,16 @@ The same for every other row (3 more).
 edi fit: project sc-neut-cwl_cosio-heidi, 1424 pts fitted / 1424 loaded, 12 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         13.12         7.21
-      1      0.004      13.01         7.09   1.7% ↓
-      2      0.007      13.01         7.09   
-      3      0.010      13.01         7.09   
+      1      0.111      13.01         7.09   1.7% ↓
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.15         0.50
-      1      0.010       6.15         0.50   
+      1      0.084       6.15         0.50   
 edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          3.79         0.76
-      1      0.008       3.79         0.76   
-  done · converged · 5 iters · reduced χ² 2.69 · wR(F²) 8.75 % · 0.05 s
+      1      0.080       3.79         0.76   
+  done · converged · 3 iters · reduced χ² 2.69 · wR(F²) 8.75 % · 0.33 s
 
   per-bank wR(F²) (%):   heidi_2k5 13.01   heidi_300k 6.15   heidi_55k 3.79
 
@@ -1001,7 +981,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   scale           experiments[heidi_2k5].linked_structures[cosio_2k5].scale          15.915       15.935     0.056   0.1% ↑
   x11             experiments[heidi_300k].extinction.coefficient_11                   0.117        0.117     0.014   
   x12             experiments[heidi_300k].extinction.coefficient_12                  -0.076       -0.076     0.037   0.2% ↓
-  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.1% ↓
+  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.2% ↓
   x22             experiments[heidi_300k].extinction.coefficient_22                   0.283        0.283     0.016   0.1% ↓
   x23             experiments[heidi_300k].extinction.coefficient_23                    0.14         0.14      0.12   2.0% ↑
   x33             experiments[heidi_300k].extinction.coefficient_33                   1.156        1.156     0.078   
@@ -1010,7 +990,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   x12             experiments[heidi_55k].extinction.coefficient_12                    0.186        0.186     0.059   0.2% ↑
   x13             experiments[heidi_55k].extinction.coefficient_13                    0.191        0.191     0.048   0.1% ↓
   x22             experiments[heidi_55k].extinction.coefficient_22                    0.068        0.068     0.067   0.6% ↑
-  x23             experiments[heidi_55k].extinction.coefficient_23                    0.078        0.078     0.082   
+  x23             experiments[heidi_55k].extinction.coefficient_23                    0.078        0.078     0.082   0.1% ↑
   x33             experiments[heidi_55k].extinction.coefficient_33                    1.356        1.356     0.054   
   scale           experiments[heidi_55k].linked_structures[cosio_55k].scale          16.018       16.018     0.065   
   x               structures[cosio_2k5].atom_sites[Co2].fract_x                     0.27597      0.27598   0.00021   
@@ -1026,7 +1006,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_2k5].atom_sites[Si].fract_z                      0.42838      0.42787   0.00026   0.1% ↓
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_11                0.00671      0.00671   0.00025   0.1% ↓
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_12               -9.00e-4      -9.0e-4    2.0e-4   0.4% ↑
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.8% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.9% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_22                0.00412      0.00412   0.00022   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_23               -5.10e-4      -5.1e-4    1.9e-4   0.6% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_33                0.00410      0.00410   0.00019   0.1% ↑
@@ -1035,7 +1015,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_22                0.00539      0.00539   0.00022   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_33                0.00524      0.00524   0.00021   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_11                 0.00639      0.00639   0.00012   0.1% ↓
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.1% ↓
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.3% ↓
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_22                 0.00586      0.00586   0.00011   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_33                 0.00307     0.003074  0.000087   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_11                 0.00413      0.00413   0.00011   
@@ -1045,11 +1025,11 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_11                 0.00714     0.007137  0.000084   
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00190     0.001897  0.000066   
   U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_13                 2.39e-4      2.39e-4   0.69e-4   0.1% ↑
-  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00536     0.005365  0.000077   
+  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00537     0.005366  0.000077   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_23                -3.57e-4     -3.57e-4   0.56e-4   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_33                 0.00521     0.005205  0.000062   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_11                 0.00386      0.00386   0.00015   
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.0% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.1% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_22                 0.00396      0.00396   0.00014   0.1% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_33                 0.00278      0.00278   0.00012   0.1% ↑
   x               structures[cosio_300k].atom_sites[Co2].fract_x                    0.27656     0.276559  0.000091   
@@ -1065,7 +1045,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_300k].atom_sites[Si].fract_z                     0.42815     0.428146  0.000093   
   U₁₁, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_11                 0.00244      0.00244   0.00015   0.2% ↑
   U₁₂, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_12                -1.50e-4      -1.5e-4    1.1e-4   1.3% ↑
-  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_13                 5.00e-5         5e-5     11e-5   4.2% ↑
+  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_13                 5.00e-5         5e-5     11e-5   4.3% ↑
   U₂₂, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_22                 0.00101      0.00101   0.00024   0.3% ↑
   U₂₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_23                -1.20e-4      -1.2e-4    1.3e-4   3.5% ↓
   U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_33                 0.00167      0.00167   0.00015   0.1% ↑
@@ -1088,9 +1068,9 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₂₃, Å²         structures[cosio_55k].atom_site_aniso[O3].adp_23                 -1.57e-4     -1.57e-4   0.45e-4   
   U₃₃, Å²         structures[cosio_55k].atom_site_aniso[O3].adp_33                  0.00308     0.003080  0.000052   
   U₁₁, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_11                  0.00181     0.001810  0.000090   
-  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_13                 -3.60e-5      -3.6e-5    6.9e-5   0.2% ↓
+  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_13                 -3.60e-5      -3.6e-5    6.9e-5   0.3% ↓
   U₂₂, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_22                  0.00112      0.00112   0.00015   0.1% ↑
-  U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_33                  0.00154     0.001540  0.000092   
+  U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_33                  0.00154     0.001541  0.000092   
   x               structures[cosio_55k].atom_sites[Co2].fract_x                     0.27602     0.276023  0.000055   
   z               structures[cosio_55k].atom_sites[Co2].fract_z                     0.99134      0.99134   0.00013   
   x               structures[cosio_55k].atom_sites[O1].fract_x                      0.09184     0.091844  0.000027   
@@ -1104,8 +1084,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_55k].atom_sites[Si].fract_z                      0.42823     0.428231  0.000071   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -1138,34 +1118,32 @@ _extinction.coefficient_23 0()
 edi fit: project sc-neut-cwl_cosio-heidi, 1424 pts fitted / 1424 loaded, 18 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         13.01         7.12
-      1      0.005      11.97         6.02   15.4% ↓
-      2      0.009      11.88         5.93   1.4% ↓
-      3      0.015      11.88         5.93   
-      4      0.019      11.88         5.93   
+      1      0.118      11.88         5.93   16.6% ↓
+      2      0.134      11.88         5.93   
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.15         0.50
-      1      0.013       6.15         0.50   
+      1      0.086       6.15         0.50   
 edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          3.79         0.76
-      1      0.010       3.79         0.76   
-  done · converged · 6 iters · reduced χ² 2.32 · wR(F²) 8.12 % · 0.07 s
+      1      0.080       3.79         0.76   
+  done · converged · 4 iters · reduced χ² 2.32 · wR(F²) 8.12 % · 0.35 s
 
   per-bank wR(F²) (%):   heidi_2k5 11.88   heidi_300k 6.15   heidi_55k 3.79
 
   refined parameters (110 free):
   name            parameter                                                           start        value      s.u.   change
-  x11             experiments[heidi_2k5].extinction.coefficient_11                        0        0.209     0.037   
+  x11             experiments[heidi_2k5].extinction.coefficient_11                        0        0.210     0.037   
   x12             experiments[heidi_2k5].extinction.coefficient_12                        0         0.03      0.14   
   x13             experiments[heidi_2k5].extinction.coefficient_13                        0        -0.28      0.12   
   x22             experiments[heidi_2k5].extinction.coefficient_22                        0         0.29      0.18   
   x23             experiments[heidi_2k5].extinction.coefficient_23                        0         0.07      0.20   
   x33             experiments[heidi_2k5].extinction.coefficient_33                        0         1.38      0.14   
-  scale           experiments[heidi_2k5].linked_structures[cosio_2k5].scale          15.935       16.961     0.093   6.4% ↑
+  scale           experiments[heidi_2k5].linked_structures[cosio_2k5].scale          15.935       16.962     0.093   6.4% ↑
   x11             experiments[heidi_300k].extinction.coefficient_11                   0.117        0.117     0.014   
   x12             experiments[heidi_300k].extinction.coefficient_12                  -0.076       -0.076     0.037   0.2% ↓
-  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.1% ↓
+  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.2% ↓
   x22             experiments[heidi_300k].extinction.coefficient_22                   0.283        0.283     0.016   0.1% ↓
   x23             experiments[heidi_300k].extinction.coefficient_23                    0.14         0.14      0.12   2.0% ↑
   x33             experiments[heidi_300k].extinction.coefficient_33                   1.156        1.156     0.078   
@@ -1174,7 +1152,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   x12             experiments[heidi_55k].extinction.coefficient_12                    0.186        0.186     0.059   0.2% ↑
   x13             experiments[heidi_55k].extinction.coefficient_13                    0.191        0.191     0.048   0.1% ↓
   x22             experiments[heidi_55k].extinction.coefficient_22                    0.068        0.068     0.067   0.6% ↑
-  x23             experiments[heidi_55k].extinction.coefficient_23                    0.078        0.078     0.082   
+  x23             experiments[heidi_55k].extinction.coefficient_23                    0.078        0.078     0.082   0.1% ↑
   x33             experiments[heidi_55k].extinction.coefficient_33                    1.356        1.356     0.054   
   scale           experiments[heidi_55k].linked_structures[cosio_55k].scale          16.018       16.018     0.065   
   x               structures[cosio_2k5].atom_sites[Co2].fract_x                     0.27598      0.27586   0.00019   
@@ -1183,14 +1161,14 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_2k5].atom_sites[O1].fract_z                      0.76714      0.76724   0.00017   
   x               structures[cosio_2k5].atom_sites[O2].fract_x                      0.44854     0.448518  0.000074   
   z               structures[cosio_2k5].atom_sites[O2].fract_z                      0.21563      0.21592   0.00018   0.1% ↑
-  x               structures[cosio_2k5].atom_sites[O3].fract_x                      0.16449     0.164473  0.000053   
+  x               structures[cosio_2k5].atom_sites[O3].fract_x                      0.16449     0.164472  0.000053   
   y               structures[cosio_2k5].atom_sites[O3].fract_y                      0.03338      0.03331   0.00013   0.2% ↓
   z               structures[cosio_2k5].atom_sites[O3].fract_z                      0.28157      0.28143   0.00012   0.1% ↓
   x               structures[cosio_2k5].atom_sites[Si].fract_x                      0.09485      0.09480   0.00012   0.1% ↓
   z               structures[cosio_2k5].atom_sites[Si].fract_z                      0.42787      0.42809   0.00023   0.1% ↑
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_11                0.00671      0.00671   0.00025   0.1% ↓
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_12               -9.00e-4      -9.0e-4    2.0e-4   0.4% ↑
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.8% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.9% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_22                0.00412      0.00412   0.00022   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_23               -5.10e-4      -5.1e-4    1.9e-4   0.6% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_33                0.00410      0.00410   0.00019   0.1% ↑
@@ -1199,7 +1177,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_22                0.00539      0.00539   0.00022   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_33                0.00524      0.00524   0.00021   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_11                 0.00639      0.00639   0.00012   0.1% ↓
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.1% ↓
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.3% ↓
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_22                 0.00586      0.00586   0.00011   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_33                 0.00307     0.003074  0.000087   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_11                 0.00413      0.00413   0.00011   
@@ -1209,11 +1187,11 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_11                 0.00714     0.007137  0.000084   
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00190     0.001897  0.000066   
   U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_13                 2.39e-4      2.39e-4   0.69e-4   0.1% ↑
-  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00536     0.005365  0.000077   
+  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00537     0.005366  0.000077   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_23                -3.57e-4     -3.57e-4   0.56e-4   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_33                 0.00521     0.005205  0.000062   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_11                 0.00386      0.00386   0.00015   
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.0% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.1% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_22                 0.00396      0.00396   0.00014   0.1% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_33                 0.00278      0.00278   0.00012   0.1% ↑
   x               structures[cosio_300k].atom_sites[Co2].fract_x                    0.27656     0.276559  0.000091   
@@ -1229,7 +1207,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_300k].atom_sites[Si].fract_z                     0.42815     0.428146  0.000093   
   U₁₁, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_11                 0.00244      0.00244   0.00015   0.2% ↑
   U₁₂, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_12                -1.50e-4      -1.5e-4    1.1e-4   1.3% ↑
-  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_13                 5.00e-5         5e-5     11e-5   4.2% ↑
+  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_13                 5.00e-5         5e-5     11e-5   4.3% ↑
   U₂₂, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_22                 0.00101      0.00101   0.00024   0.3% ↑
   U₂₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_23                -1.20e-4      -1.2e-4    1.3e-4   3.5% ↓
   U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_33                 0.00167      0.00167   0.00015   0.1% ↑
@@ -1252,9 +1230,9 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₂₃, Å²         structures[cosio_55k].atom_site_aniso[O3].adp_23                 -1.57e-4     -1.57e-4   0.45e-4   
   U₃₃, Å²         structures[cosio_55k].atom_site_aniso[O3].adp_33                  0.00308     0.003080  0.000052   
   U₁₁, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_11                  0.00181     0.001810  0.000090   
-  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_13                 -3.60e-5      -3.6e-5    6.9e-5   0.2% ↓
+  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_13                 -3.60e-5      -3.6e-5    6.9e-5   0.3% ↓
   U₂₂, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_22                  0.00112      0.00112   0.00015   0.1% ↑
-  U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_33                  0.00154     0.001540  0.000092   
+  U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_33                  0.00154     0.001541  0.000092   
   x               structures[cosio_55k].atom_sites[Co2].fract_x                     0.27602     0.276023  0.000055   
   z               structures[cosio_55k].atom_sites[Co2].fract_z                     0.99134      0.99134   0.00013   
   x               structures[cosio_55k].atom_sites[O1].fract_x                      0.09184     0.091844  0.000027   
@@ -1268,8 +1246,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_55k].atom_sites[Si].fract_z                      0.42823     0.428231  0.000071   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 
@@ -1300,33 +1278,31 @@ The same for every other row (4 more).
 edi fit: project sc-neut-cwl_cosio-heidi, 1424 pts fitted / 1424 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         11.88         6.05
-      1      0.011      10.52         4.74   21.6% ↓
-      2      0.020      10.52         4.74   0.1% ↓
-      3      0.028      10.52         4.74   
+      1      0.188      10.52         4.74   21.7% ↓
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.15         0.50
-      1      0.013       6.15         0.50   
+      1      0.080       6.15         0.50   
 edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          3.79         0.76
-      1      0.010       3.79         0.76   
-  done · converged · 5 iters · reduced χ² 1.92 · wR(F²) 7.36 % · 0.09 s
+      1      0.077       3.79         0.76   
+  done · converged · 3 iters · reduced χ² 1.92 · wR(F²) 7.36 % · 0.41 s
 
   per-bank wR(F²) (%):   heidi_2k5 10.52   heidi_300k 6.15   heidi_55k 3.79
 
   refined parameters (138 free):
   name            parameter                                                           start        value      s.u.   change
-  x11             experiments[heidi_2k5].extinction.coefficient_11                    0.209        0.077     0.032   63.0% ↓
-  x12             experiments[heidi_2k5].extinction.coefficient_12                     0.03         0.19      0.11   527.0% ↑
-  x13             experiments[heidi_2k5].extinction.coefficient_13                    -0.28       -0.206     0.095   26.5% ↑
+  x11             experiments[heidi_2k5].extinction.coefficient_11                     0.21        0.077     0.032   63.3% ↓
+  x12             experiments[heidi_2k5].extinction.coefficient_12                     0.03         0.19      0.11   527.7% ↑
+  x13             experiments[heidi_2k5].extinction.coefficient_13                    -0.28       -0.206     0.095   26.4% ↑
   x22             experiments[heidi_2k5].extinction.coefficient_22                     0.29         0.16      0.16   45.3% ↓
-  x23             experiments[heidi_2k5].extinction.coefficient_23                     0.07         0.15      0.17   115.5% ↑
+  x23             experiments[heidi_2k5].extinction.coefficient_23                     0.07         0.15      0.17   115.7% ↑
   x33             experiments[heidi_2k5].extinction.coefficient_33                     1.38         1.10      0.13   20.0% ↓
-  scale           experiments[heidi_2k5].linked_structures[cosio_2k5].scale          16.961        16.15      0.17   4.8% ↓
+  scale           experiments[heidi_2k5].linked_structures[cosio_2k5].scale          16.962        16.15      0.17   4.8% ↓
   x11             experiments[heidi_300k].extinction.coefficient_11                   0.117        0.117     0.014   
   x12             experiments[heidi_300k].extinction.coefficient_12                  -0.076       -0.076     0.037   0.2% ↓
-  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.1% ↓
+  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.2% ↓
   x22             experiments[heidi_300k].extinction.coefficient_22                   0.283        0.283     0.016   0.1% ↓
   x23             experiments[heidi_300k].extinction.coefficient_23                    0.14         0.14      0.12   2.0% ↑
   x33             experiments[heidi_300k].extinction.coefficient_33                   1.156        1.156     0.078   
@@ -1335,7 +1311,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   x12             experiments[heidi_55k].extinction.coefficient_12                    0.186        0.186     0.059   0.2% ↑
   x13             experiments[heidi_55k].extinction.coefficient_13                    0.191        0.191     0.048   0.1% ↓
   x22             experiments[heidi_55k].extinction.coefficient_22                    0.068        0.068     0.067   0.6% ↑
-  x23             experiments[heidi_55k].extinction.coefficient_23                    0.078        0.078     0.082   
+  x23             experiments[heidi_55k].extinction.coefficient_23                    0.078        0.078     0.082   0.1% ↑
   x33             experiments[heidi_55k].extinction.coefficient_33                    1.356        1.356     0.054   
   scale           experiments[heidi_55k].linked_structures[cosio_55k].scale          16.018       16.018     0.065   
   U₁₁, Å²         structures[cosio_2k5].atom_site_aniso[Co1].adp_11                 0.00300      0.00207   0.00038   30.8% ↓
@@ -1346,12 +1322,12 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₃₃, Å²         structures[cosio_2k5].atom_site_aniso[Co1].adp_33                 0.00300      0.00161   0.00037   46.4% ↓
   U₁₁, Å²         structures[cosio_2k5].atom_site_aniso[Co2].adp_11                 0.00300      0.00215   0.00040   28.2% ↓
   U₁₃, Å²         structures[cosio_2k5].atom_site_aniso[Co2].adp_13                 0.00000       1.3e-4    3.1e-4   
-  U₂₂, Å²         structures[cosio_2k5].atom_site_aniso[Co2].adp_22                 0.00300       7.0e-4    7.2e-4   76.6% ↓
+  U₂₂, Å²         structures[cosio_2k5].atom_site_aniso[Co2].adp_22                 0.00300       7.0e-4    7.2e-4 ! 76.6% ↓
   U₃₃, Å²         structures[cosio_2k5].atom_site_aniso[Co2].adp_33                 0.00300      0.00210   0.00037   29.9% ↓
   U₁₁, Å²         structures[cosio_2k5].atom_site_aniso[O1].adp_11                  0.00300      0.00355   0.00019   18.4% ↑
   U₁₃, Å²         structures[cosio_2k5].atom_site_aniso[O1].adp_13                  0.00000         3e-5     15e-5   
   U₂₂, Å²         structures[cosio_2k5].atom_site_aniso[O1].adp_22                  0.00300      0.00280   0.00039   6.7% ↓
-  U₃₃, Å²         structures[cosio_2k5].atom_site_aniso[O1].adp_33                  0.00300      0.00192   0.00019   36.2% ↓
+  U₃₃, Å²         structures[cosio_2k5].atom_site_aniso[O1].adp_33                  0.00300      0.00191   0.00019   36.2% ↓
   U₁₁, Å²         structures[cosio_2k5].atom_site_aniso[O2].adp_11                  0.00300      0.00211   0.00019   29.6% ↓
   U₁₃, Å²         structures[cosio_2k5].atom_site_aniso[O2].adp_13                  0.00000       1.2e-4    1.6e-4   
   U₂₂, Å²         structures[cosio_2k5].atom_site_aniso[O2].adp_22                  0.00300      0.00291   0.00038   2.9% ↓
@@ -1379,7 +1355,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_2k5].atom_sites[Si].fract_z                      0.42809      0.42831   0.00019   0.1% ↑
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_11                0.00671      0.00671   0.00025   0.1% ↓
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_12               -9.00e-4      -9.0e-4    2.0e-4   0.4% ↑
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.8% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.9% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_22                0.00412      0.00412   0.00022   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_23               -5.10e-4      -5.1e-4    1.9e-4   0.6% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_33                0.00410      0.00410   0.00019   0.1% ↑
@@ -1388,7 +1364,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_22                0.00539      0.00539   0.00022   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_33                0.00524      0.00524   0.00021   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_11                 0.00639      0.00639   0.00012   0.1% ↓
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.1% ↓
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.3% ↓
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_22                 0.00586      0.00586   0.00011   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_33                 0.00307     0.003074  0.000087   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_11                 0.00413      0.00413   0.00011   
@@ -1398,11 +1374,11 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_11                 0.00714     0.007137  0.000084   
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00190     0.001897  0.000066   
   U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_13                 2.39e-4      2.39e-4   0.69e-4   0.1% ↑
-  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00536     0.005365  0.000077   
+  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00537     0.005366  0.000077   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_23                -3.57e-4     -3.57e-4   0.56e-4   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_33                 0.00521     0.005205  0.000062   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_11                 0.00386      0.00386   0.00015   
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.0% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.1% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_22                 0.00396      0.00396   0.00014   0.1% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_33                 0.00278      0.00278   0.00012   0.1% ↑
   x               structures[cosio_300k].atom_sites[Co2].fract_x                    0.27656     0.276559  0.000091   
@@ -1418,7 +1394,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_300k].atom_sites[Si].fract_z                     0.42815     0.428146  0.000093   
   U₁₁, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_11                 0.00244      0.00244   0.00015   0.2% ↑
   U₁₂, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_12                -1.50e-4      -1.5e-4    1.1e-4   1.3% ↑
-  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_13                 5.00e-5         5e-5     11e-5   4.2% ↑
+  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_13                 5.00e-5         5e-5     11e-5   4.3% ↑
   U₂₂, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_22                 0.00101      0.00101   0.00024   0.3% ↑
   U₂₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_23                -1.20e-4      -1.2e-4    1.3e-4   3.5% ↓
   U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_33                 0.00167      0.00167   0.00015   0.1% ↑
@@ -1441,9 +1417,9 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₂₃, Å²         structures[cosio_55k].atom_site_aniso[O3].adp_23                 -1.57e-4     -1.57e-4   0.45e-4   
   U₃₃, Å²         structures[cosio_55k].atom_site_aniso[O3].adp_33                  0.00308     0.003080  0.000052   
   U₁₁, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_11                  0.00181     0.001810  0.000090   
-  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_13                 -3.60e-5      -3.6e-5    6.9e-5   0.2% ↓
+  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_13                 -3.60e-5      -3.6e-5    6.9e-5   0.3% ↓
   U₂₂, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_22                  0.00112      0.00112   0.00015   0.1% ↑
-  U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_33                  0.00154     0.001540  0.000092   
+  U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_33                  0.00154     0.001541  0.000092   
   x               structures[cosio_55k].atom_sites[Co2].fract_x                     0.27602     0.276023  0.000055   
   z               structures[cosio_55k].atom_sites[Co2].fract_z                     0.99134      0.99134   0.00013   
   x               structures[cosio_55k].atom_sites[O1].fract_x                      0.09184     0.091844  0.000027   
@@ -1457,9 +1433,11 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_55k].atom_sites[Si].fract_z                      0.42823     0.428231  0.000071   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
+  - !       a poorly determined or strongly correlated parameter:
+      structures[cosio_2k5].atom_site_aniso[Co2].adp_22: s.u. larger than the value
 ```
 
 ## 2.5 K: the magnetic moments
@@ -1490,20 +1468,18 @@ Co2 0 0() 0 0,My,0
 edi fit: project sc-neut-cwl_cosio-heidi, 1424 pts fitted / 1424 loaded, 50 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         10.52         4.76
-      1      0.024       9.16         3.60   24.2% ↓
-      2      0.045       3.94         0.67   81.5% ↓
-      3      0.066       3.77         0.61   8.2% ↓
-      4      0.086       3.77         0.61   
-      5      0.108       3.77         0.61   
+      1      0.200       3.77         0.61   87.1% ↓
+      2      0.230       3.77         0.61   
+      3      0.261       3.77         0.61   
 edi fit: project sc-neut-cwl_cosio-heidi, 1624 pts fitted / 1624 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.15         0.50
-      1      0.011       6.15         0.50   
+      1      0.084       6.15         0.50   
 edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          3.79         0.76
-      1      0.009       3.79         0.76   
-  done · converged · 7 iters · reduced χ² 0.62 · wR(F²) 4.18 % · 0.18 s
+      1      0.082       3.79         0.76   
+  done · converged · 5 iters · reduced χ² 0.62 · wR(F²) 4.18 % · 0.49 s
 
   per-bank wR(F²) (%):   heidi_2k5 3.77   heidi_300k 6.15   heidi_55k 3.79
 
@@ -1518,7 +1494,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   scale           experiments[heidi_2k5].linked_structures[cosio_2k5].scale           16.15       16.067     0.060   0.5% ↓
   x11             experiments[heidi_300k].extinction.coefficient_11                   0.117        0.117     0.014   
   x12             experiments[heidi_300k].extinction.coefficient_12                  -0.076       -0.076     0.037   0.2% ↓
-  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.1% ↓
+  x13             experiments[heidi_300k].extinction.coefficient_13                    -0.1       -0.100     0.053   0.2% ↓
   x22             experiments[heidi_300k].extinction.coefficient_22                   0.283        0.283     0.016   0.1% ↓
   x23             experiments[heidi_300k].extinction.coefficient_23                    0.14         0.14      0.12   2.0% ↑
   x33             experiments[heidi_300k].extinction.coefficient_33                   1.156        1.156     0.078   
@@ -1527,7 +1503,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   x12             experiments[heidi_55k].extinction.coefficient_12                    0.186        0.186     0.059   0.2% ↑
   x13             experiments[heidi_55k].extinction.coefficient_13                    0.191        0.191     0.048   0.1% ↓
   x22             experiments[heidi_55k].extinction.coefficient_22                    0.068        0.068     0.067   0.6% ↑
-  x23             experiments[heidi_55k].extinction.coefficient_23                    0.078        0.078     0.082   
+  x23             experiments[heidi_55k].extinction.coefficient_23                    0.078        0.078     0.082   0.1% ↑
   x33             experiments[heidi_55k].extinction.coefficient_33                    1.356        1.356     0.054   
   scale           experiments[heidi_55k].linked_structures[cosio_55k].scale          16.018       16.018     0.065   
   U₁₁, Å²         structures[cosio_2k5].atom_site_aniso[Co1].adp_11                 0.00207      0.00196   0.00014   5.5% ↓
@@ -1535,15 +1511,15 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₁₃, Å²         structures[cosio_2k5].atom_site_aniso[Co1].adp_13                 2.00e-5         1e-5     11e-5   37.7% ↓
   U₂₂, Å²         structures[cosio_2k5].atom_site_aniso[Co1].adp_22                 0.00159      0.00152   0.00027   4.1% ↓
   U₂₃, Å²         structures[cosio_2k5].atom_site_aniso[Co1].adp_23                 7.00e-5         2e-5     14e-5   69.9% ↓
-  U₃₃, Å²         structures[cosio_2k5].atom_site_aniso[Co1].adp_33                 0.00161      0.00153   0.00013   5.1% ↓
+  U₃₃, Å²         structures[cosio_2k5].atom_site_aniso[Co1].adp_33                 0.00161      0.00153   0.00013   5.2% ↓
   U₁₁, Å²         structures[cosio_2k5].atom_site_aniso[Co2].adp_11                 0.00215      0.00198   0.00015   8.0% ↓
   U₁₃, Å²         structures[cosio_2k5].atom_site_aniso[Co2].adp_13                 1.30e-4       1.1e-4    1.1e-4   13.7% ↓
   U₂₂, Å²         structures[cosio_2k5].atom_site_aniso[Co2].adp_22                 7.00e-4       6.7e-4    2.6e-4   4.1% ↓
   U₃₃, Å²         structures[cosio_2k5].atom_site_aniso[Co2].adp_33                 0.00210      0.00204   0.00014   2.7% ↓
   U₁₁, Å²         structures[cosio_2k5].atom_site_aniso[O1].adp_11                  0.00355     0.003457  0.000069   2.6% ↓
-  U₁₃, Å²         structures[cosio_2k5].atom_site_aniso[O1].adp_13                  3.00e-5       4.1e-5    5.3e-5   37.3% ↑
+  U₁₃, Å²         structures[cosio_2k5].atom_site_aniso[O1].adp_13                  3.00e-5       4.1e-5    5.3e-5   37.2% ↑
   U₂₂, Å²         structures[cosio_2k5].atom_site_aniso[O1].adp_22                  0.00280      0.00279   0.00014   0.3% ↓
-  U₃₃, Å²         structures[cosio_2k5].atom_site_aniso[O1].adp_33                  0.00192     0.001863  0.000069   3.0% ↓
+  U₃₃, Å²         structures[cosio_2k5].atom_site_aniso[O1].adp_33                  0.00191     0.001863  0.000069   2.5% ↓
   U₁₁, Å²         structures[cosio_2k5].atom_site_aniso[O2].adp_11                  0.00211     0.002032  0.000067   3.7% ↓
   U₁₃, Å²         structures[cosio_2k5].atom_site_aniso[O2].adp_13                  1.20e-4      1.15e-4   0.56e-4   3.8% ↓
   U₂₂, Å²         structures[cosio_2k5].atom_site_aniso[O2].adp_22                  0.00291      0.00293   0.00014   0.7% ↑
@@ -1575,7 +1551,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_2k5].atom_sites[Si].fract_z                      0.42831     0.428332  0.000068   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_11                0.00671      0.00671   0.00025   0.1% ↓
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_12               -9.00e-4      -9.0e-4    2.0e-4   0.4% ↑
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.8% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_13                8.00e-5         8e-5     18e-5   1.9% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_22                0.00412      0.00412   0.00022   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_23               -5.10e-4      -5.1e-4    1.9e-4   0.6% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co1].adp_33                0.00410      0.00410   0.00019   0.1% ↑
@@ -1584,7 +1560,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_22                0.00539      0.00539   0.00022   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Co2].adp_33                0.00524      0.00524   0.00021   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_11                 0.00639      0.00639   0.00012   0.1% ↓
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.1% ↓
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_13                 3.90e-5       3.9e-5    8.0e-5   1.3% ↓
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_22                 0.00586      0.00586   0.00011   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O1].adp_33                 0.00307     0.003074  0.000087   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O2].adp_11                 0.00413      0.00413   0.00011   
@@ -1594,11 +1570,11 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_11                 0.00714     0.007137  0.000084   
   U₁₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_12                 0.00190     0.001897  0.000066   
   U₁₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_13                 2.39e-4      2.39e-4   0.69e-4   0.1% ↑
-  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00536     0.005365  0.000077   
+  U₂₂, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_22                 0.00537     0.005366  0.000077   
   U₂₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_23                -3.57e-4     -3.57e-4   0.56e-4   
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[O3].adp_33                 0.00521     0.005205  0.000062   
   U₁₁, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_11                 0.00386      0.00386   0.00015   
-  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.0% ↑
+  U₁₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_13                 1.80e-4       1.8e-4    1.1e-4   2.1% ↑
   U₂₂, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_22                 0.00396      0.00396   0.00014   0.1% ↓
   U₃₃, Å²         structures[cosio_300k].atom_site_aniso[Si].adp_33                 0.00278      0.00278   0.00012   0.1% ↑
   x               structures[cosio_300k].atom_sites[Co2].fract_x                    0.27656     0.276559  0.000091   
@@ -1614,7 +1590,7 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_300k].atom_sites[Si].fract_z                     0.42815     0.428146  0.000093   
   U₁₁, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_11                 0.00244      0.00244   0.00015   0.2% ↑
   U₁₂, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_12                -1.50e-4      -1.5e-4    1.1e-4   1.3% ↑
-  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_13                 5.00e-5         5e-5     11e-5   4.2% ↑
+  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_13                 5.00e-5         5e-5     11e-5   4.3% ↑
   U₂₂, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_22                 0.00101      0.00101   0.00024   0.3% ↑
   U₂₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_23                -1.20e-4      -1.2e-4    1.3e-4   3.5% ↓
   U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Co1].adp_33                 0.00167      0.00167   0.00015   0.1% ↑
@@ -1637,9 +1613,9 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   U₂₃, Å²         structures[cosio_55k].atom_site_aniso[O3].adp_23                 -1.57e-4     -1.57e-4   0.45e-4   
   U₃₃, Å²         structures[cosio_55k].atom_site_aniso[O3].adp_33                  0.00308     0.003080  0.000052   
   U₁₁, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_11                  0.00181     0.001810  0.000090   
-  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_13                 -3.60e-5      -3.6e-5    6.9e-5   0.2% ↓
+  U₁₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_13                 -3.60e-5      -3.6e-5    6.9e-5   0.3% ↓
   U₂₂, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_22                  0.00112      0.00112   0.00015   0.1% ↑
-  U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_33                  0.00154     0.001540  0.000092   
+  U₃₃, Å²         structures[cosio_55k].atom_site_aniso[Si].adp_33                  0.00154     0.001541  0.000092   
   x               structures[cosio_55k].atom_sites[Co2].fract_x                     0.27602     0.276023  0.000055   
   z               structures[cosio_55k].atom_sites[Co2].fract_z                     0.99134      0.99134   0.00013   
   x               structures[cosio_55k].atom_sites[O1].fract_x                      0.09184     0.091844  0.000027   
@@ -1653,8 +1629,8 @@ edi fit: project sc-neut-cwl_cosio-heidi, 1465 pts fitted / 1465 loaded, 46 free
   z               structures[cosio_55k].atom_sites[Si].fract_z                      0.42823     0.428231  0.000071   
 
   - start   the value before the fit
-  - value   the fitted value
-  - s.u.    its standard uncertainty
+  - value   the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest
+  - s.u.    its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix
   - change  how far the fit moved it, in % of the start: ↑ up, ↓ down
 ```
 

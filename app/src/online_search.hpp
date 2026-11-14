@@ -215,6 +215,7 @@ private:
     void fetch(const QUrl& url, Bytes done);
     void withIndex(const QStringList& bases, const std::function<void(const edi::online::Index*, const QString& error, bool unreachable)>& done);
     void fetchFrom(const QStringList& bases, const QString& path, Bytes done);
+    void fetchChecked(const QStringList& bases, const QString& path, long long bytes, const QString& digest, const QString& name, Bytes done);
     void finish(std::vector<edi::online::Entry> entries);
     void refreshSources();
     void refreshFields();

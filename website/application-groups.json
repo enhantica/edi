@@ -5,7 +5,9 @@
     ],
     "categories": [
       "metadata",
-      "experiment_type"
+      "experiment_type",
+      "parent_space_group",
+      "save_data"
     ],
     "app_groups": []
   },
@@ -730,7 +732,7 @@
       },
       {
         "page": "application/analysis/pattern-updates.md",
-        "title": "Pattern updates during a scan",
+        "title": "Pattern updates",
         "tab": "Settings",
         "icon": "chart-line",
         "components": [

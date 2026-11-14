@@ -1,5 +1,5 @@
 {
-    "description": "Find the experiment wish_1_10 in the EasyDiffraction collection",
+    "description": "Find the experiment",
     "fit_phase": "",
     "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
@@ -8,7 +8,7 @@
     ],
     "id": "experiment-web-0",
     "image": "experiment-web-0.webp",
-    "image_sha256": "7b1b675f335deb417678330a308e0f66983e5862bca8624412f20a33693e4a9c",
+    "image_sha256": "b7a79efd07c37e263bca76b2f45f5278d645f35755b15fc516a6709c7dcdb1b6",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -60,17 +60,17 @@
         },
         "OnlineLoadDialog": {
             "bounds": [
-                280,
+                74,
                 191,
-                921,
+                1332,
                 419
             ],
             "enabled": true,
             "label": "Load experiment from web",
             "visible_bounds": [
-                280,
+                74,
                 191,
-                921,
+                1332,
                 419
             ]
         },
@@ -208,22 +208,6 @@
                 35
             ]
         },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
-            ]
-        },
         "appBar.tab.analysis": {
             "bounds": [
                 812.359375,
@@ -359,253 +343,6 @@
                 35
             ]
         },
-        "chart": {
-            "bounds": [
-                0,
-                119,
-                770,
-                639
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                0,
-                119,
-                770,
-                639
-            ]
-        },
-        "chart.frame.main": {
-            "bounds": [
-                96,
-                196,
-                646,
-                493
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                96,
-                196,
-                646,
-                493
-            ]
-        },
-        "chart.measured": {
-            "bounds": [
-                96,
-                196,
-                646,
-                493
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                96,
-                196,
-                646,
-                493
-            ]
-        },
-        "chart.pointer": {
-            "bounds": [
-                96,
-                196,
-                646,
-                493
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                96,
-                196,
-                646,
-                493
-            ]
-        },
-        "chart.toolbar.hover": {
-            "bounds": [
-                481.25,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "comment-alt",
-            "label": "",
-            "visible_bounds": [
-                481.25,
-                133,
-                35,
-                35
-            ]
-        },
-        "chart.toolbar.includedRange": {
-            "bounds": [
-                519.75,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "eraser",
-            "label": "",
-            "visible_bounds": [
-                519.75,
-                133,
-                35,
-                35
-            ]
-        },
-        "chart.toolbar.legend": {
-            "bounds": [
-                442.75,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "align-left",
-            "label": "",
-            "visible_bounds": [
-                442.75,
-                133,
-                35,
-                35
-            ]
-        },
-        "chart.toolbar.measuredStyle": {
-            "bounds": [
-                279.5,
-                133,
-                149.25,
-                35
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                279.5,
-                133,
-                149.25,
-                35
-            ]
-        },
-        "chart.toolbar.pan": {
-            "bounds": [
-                607.25,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "arrows-alt",
-            "label": "",
-            "visible_bounds": [
-                607.25,
-                133,
-                35,
-                35
-            ]
-        },
-        "chart.toolbar.reset": {
-            "bounds": [
-                684.25,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "home",
-            "label": "",
-            "visible_bounds": [
-                684.25,
-                133,
-                35,
-                35
-            ]
-        },
-        "chart.toolbar.subtractBackground": {
-            "bounds": [
-                558.25,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "chart-area",
-            "label": "",
-            "visible_bounds": [
-                558.25,
-                133,
-                35,
-                35
-            ]
-        },
-        "chart.toolbar.xaxis": {
-            "bounds": [
-                169.75,
-                133,
-                106.25,
-                35
-            ],
-            "enabled": false,
-            "label": "",
-            "visible_bounds": [
-                169.75,
-                133,
-                106.25,
-                35
-            ]
-        },
-        "chart.toolbar.yscale": {
-            "bounds": [
-                50,
-                133,
-                116.25,
-                35
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                50,
-                133,
-                116.25,
-                35
-            ]
-        },
-        "chart.toolbar.zoom": {
-            "bounds": [
-                645.75,
-                133,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "expand",
-            "label": "",
-            "visible_bounds": [
-                645.75,
-                133,
-                35,
-                35
-            ]
-        },
-        "chart.view.main": {
-            "bounds": [
-                0,
-                196,
-                770,
-                533
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                0,
-                196,
-                770,
-                533
-            ]
-        },
         "experiments.create": {
             "bounds": [
                 1016,
@@ -690,28 +427,76 @@
                 194
             ]
         },
+        "group.experiments.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
+            ]
+        },
         "label": {
             "ambiguous": true
         },
-        "mainArea.experiment.tab.chart": {
+        "mainArea.divider": {
             "bounds": [
-                0,
+                770,
                 77,
-                57.765625,
-                42
+                1,
+                681
             ],
             "enabled": true,
-            "label": "Pattern",
+            "label": "",
             "visible_bounds": [
-                0,
+                770,
                 77,
-                57.765625,
+                1,
+                681
+            ]
+        },
+        "mainArea.emptyState": {
+            "bounds": [
+                281,
+                389,
+                207.21875,
+                58
+            ],
+            "enabled": false,
+            "label": "No pattern",
+            "visible_bounds": [
+                281,
+                389,
+                207.21875,
+                58
+            ]
+        },
+        "mainArea.tab.correlations": {
+            "bounds": [
+                126.640625,
+                77,
+                86.15625,
+                42
+            ],
+            "enabled": false,
+            "label": "Correlations",
+            "visible_bounds": [
+                126.640625,
+                77,
+                86.15625,
                 42
             ]
         },
-        "mainArea.experiment.tab.map": {
+        "mainArea.tab.map": {
             "bounds": [
-                118.34375,
+                273.375,
                 77,
                 39.5625,
                 42
@@ -719,15 +504,31 @@
             "enabled": false,
             "label": "Map",
             "visible_bounds": [
-                118.34375,
+                273.375,
                 77,
                 39.5625,
                 42
             ]
         },
-        "mainArea.experiment.tab.stacked": {
+        "mainArea.tab.pattern": {
             "bounds": [
+                68.875,
+                77,
                 57.765625,
+                42
+            ],
+            "enabled": false,
+            "label": "Pattern",
+            "visible_bounds": [
+                68.875,
+                77,
+                57.765625,
+                42
+            ]
+        },
+        "mainArea.tab.stacked": {
+            "bounds": [
+                212.796875,
                 77,
                 60.578125,
                 42
@@ -735,64 +536,80 @@
             "enabled": false,
             "label": "Stacked",
             "visible_bounds": [
-                57.765625,
+                212.796875,
                 77,
                 60.578125,
                 42
             ]
         },
+        "mainArea.tab.structure": {
+            "bounds": [
+                0,
+                77,
+                68.875,
+                42
+            ],
+            "enabled": true,
+            "label": "Structure",
+            "visible_bounds": [
+                0,
+                77,
+                68.875,
+                42
+            ]
+        },
         "onlineLoad.choice.radiation": {
             "bounds": [
-                308,
+                102,
                 350,
-                279,
+                416,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                308,
+                102,
                 350,
-                279,
+                416,
                 35
             ]
         },
         "onlineLoad.choice.technique": {
             "bounds": [
-                601,
+                532,
                 350,
-                279,
+                416,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                601,
+                532,
                 350,
-                279,
+                416,
                 35
             ]
         },
         "onlineLoad.clear": {
             "bounds": [
-                454.5,
+                317,
                 399,
-                132.5,
+                201,
                 39
             ],
             "enabled": true,
             "icon": "eraser",
             "label": "Clear",
             "visible_bounds": [
-                454.5,
+                317,
                 399,
-                132.5,
+                201,
                 39
             ]
         },
         "onlineLoad.close": {
             "bounds": [
-                1123.8125,
+                1328.8125,
                 577,
                 49.1875,
                 19
@@ -801,15 +618,31 @@
             "icon": "times",
             "label": "Close",
             "visible_bounds": [
-                1123.8125,
+                1328.8125,
                 577,
                 49.1875,
                 19
             ]
         },
+        "onlineLoad.content": {
+            "bounds": [
+                102,
+                252,
+                1276,
+                344
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                102,
+                252,
+                1276,
+                344
+            ]
+        },
         "onlineLoad.count": {
             "bounds": [
-                308,
+                102,
                 452,
                 42.125,
                 19
@@ -817,7 +650,7 @@
             "enabled": true,
             "label": "1 entry",
             "visible_bounds": [
-                308,
+                102,
                 452,
                 42.125,
                 19
@@ -825,178 +658,178 @@
         },
         "onlineLoad.field.elements": {
             "bounds": [
-                601,
+                532,
                 301,
-                279,
+                416,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                601,
+                532,
                 301,
-                279,
+                416,
                 35
             ]
         },
         "onlineLoad.field.formula": {
             "bounds": [
-                308,
+                102,
                 301,
-                279,
+                416,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                308,
+                102,
                 301,
-                279,
+                416,
                 35
             ]
         },
         "onlineLoad.field.id": {
             "bounds": [
-                601,
+                532,
                 252,
-                279,
+                416,
                 35
             ],
             "enabled": true,
             "label": "pd-neut-tof_ncaf-wish-wish_1_10",
             "visible_bounds": [
-                601,
+                532,
                 252,
-                279,
+                416,
                 35
             ]
         },
         "onlineLoad.field.instrument": {
             "bounds": [
-                894,
+                962,
                 350,
-                279,
+                416,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                894,
+                962,
                 350,
-                279,
+                416,
                 35
             ]
         },
         "onlineLoad.field.name": {
             "bounds": [
-                894,
+                962,
                 252,
-                279,
+                416,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                894,
+                962,
                 252,
-                279,
+                416,
                 35
             ]
         },
         "onlineLoad.id.0": {
             "bounds": [
-                342,
+                133,
                 524,
-                190,
+                215,
                 39
             ],
             "enabled": true,
             "label": "pd-neut-tof_ncaf-wish-wish_1_10",
             "visible_bounds": [
-                342,
+                133,
                 524,
-                190,
+                215,
                 39
             ]
         },
         "onlineLoad.reference.0": {
             "bounds": [
-                1101,
+                1291,
                 524,
-                65,
+                82,
                 39
             ],
             "enabled": true,
             "label": "WISH",
             "visible_bounds": [
-                1101,
+                1291,
                 524,
-                65,
+                82,
                 39
             ]
         },
         "onlineLoad.results": {
             "bounds": [
-                308,
+                102,
                 485,
-                865,
+                1276,
                 78
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                308,
+                102,
                 485,
-                865,
+                1276,
                 78
             ]
         },
         "onlineLoad.row.0": {
             "bounds": [
-                308,
+                102,
                 524,
-                865,
+                1276,
                 39
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                308,
+                102,
                 524,
-                865,
+                1276,
                 39
             ]
         },
         "onlineLoad.search": {
             "bounds": [
-                308,
+                102,
                 399,
-                132.5,
+                201,
                 39
             ],
             "enabled": true,
             "icon": "search",
             "label": "Search",
             "visible_bounds": [
-                308,
+                102,
                 399,
-                132.5,
+                201,
                 39
             ]
         },
         "onlineLoad.source": {
             "bounds": [
-                308,
+                102,
                 252,
-                279,
+                416,
                 35
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                308,
+                102,
                 252,
-                279,
+                416,
                 35
             ]
         },
@@ -1023,7 +856,7 @@
                 45.125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Extra",
             "visible_bounds": [
                 813.515625,
@@ -1055,7 +888,7 @@
                 38.6875,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Text",
             "visible_bounds": [
                 858.640625,
@@ -1135,7 +968,7 @@
             "bounds": [
                 862.253125,
                 772,
-                111,
+                103.375,
                 14
             ],
             "enabled": true,
@@ -1144,7 +977,7 @@
             "visible_bounds": [
                 862.253125,
                 772,
-                111,
+                103.375,
                 14
             ]
         },
@@ -1277,8 +1110,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "aa63f610f431f17ffb3a6c9babffe2a944dbec0459c786f5304a64e83fb003a1",
-    "source_revision": "a4b6be4f6926cc6b17811f3263d7a34afff75a6d",
+    "script_sha256": "8b6bd0111b5a30d7e3c9f01d4cf76f06bdd694be8b48589b540689ddaa9d68e1",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "state": {
         "experiments": 0,
         "fit_outcome": "",
@@ -1301,13 +1134,13 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.extras",
                 "label": "Extra"
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.text",
                 "label": "Text"
             },

@@ -9,15 +9,21 @@
 #endif
 #include "web_files.hpp"
 
+#include <QtGraphs/QValueAxis>
 #include <QMap>
 #include <QJsonArray>
 
 #include "app_build_info.hpp"
 #include "build_version.hpp"
+#include "edi/version.hpp"
 #include "example_list_model.hpp"
 #include "user_action_log.hpp"
 #include "web_files.hpp"
 #include "engine_setup.hpp"
+#include "pattern_chart_controller.hpp"
+#include "project_view_model.hpp"
+#include "edi/display.hpp"
+#include "edi/report.hpp"
 #include "edi/model.hpp"
 #include "edi/palette.hpp"
 #include "edi/assistant_files.hpp"
@@ -216,8 +222,26 @@ void ApplicationInfo::useDemoIdentity() { g_demo_identity = true; }
 
 bool ApplicationInfo::demoIdentity() { return g_demo_identity; }
 
+namespace {
+// The version the app shows: its own, or the release a published web app was archived as. The page passes that from
+// its build.json (EDI_RELEASE_VERSION, EDI_RELEASE_COMMIT), and it counts only for this very build, so a copy of one
+// release's page cannot name another build.
+QString shown_version() {
+    static const QString version = [] {
+        const QString release = qEnvironmentVariable("EDI_RELEASE_VERSION");
+        static const QRegularExpression calendar(QStringLiteral(R"(\A[0-9]{4}\.(0[1-9]|1[0-2])\.(0|[1-9][0-9]*)\z)"));
+        if (calendar.match(release).hasMatch() &&
+            qEnvironmentVariable("EDI_RELEASE_COMMIT") == QString::fromLatin1(edi::build_commit())) {
+            return release;
+        }
+        return QString::fromUtf8(edi_app::app_version());
+    }();
+    return version;
+}
+}  // namespace
+
 QString ApplicationInfo::version() const {
-    return g_demo_identity ? QStringLiteral("demo") : QString::fromUtf8(edi_app::app_version());
+    return g_demo_identity ? QStringLiteral("demo") : shown_version();
 }
 
 QString ApplicationInfo::releaseDate() const {
@@ -238,7 +262,7 @@ QList<Tutorial> ApplicationInfo::tutorials() const {
     };
     const auto step = [&text](const QJsonObject& object, const QString& page) {
         // A step's own page, else its tour page's: a step opening a page shows on the page before it.
-        return TutorialStep{text(object, "text"),
+        TutorialStep made{text(object, "text"),
                             object.contains(QStringLiteral("page")) ? text(object, "page") : page,
                             text(object, "target"),
                             text(object, "expected"),
@@ -249,6 +273,14 @@ QList<Tutorial> ApplicationInfo::tutorials() const {
                             text(object, "tab"),
                             text(object, "title"),
                             object.value(QStringLiteral("coversTarget")).toBool()};
+        for (const QJsonValue& path : object.value(QStringLiteral("expectFree")).toArray()) made.expectFree.append(path.toString());
+        for (const QJsonValue& path : object.value(QStringLiteral("expectWholeBackground")).toArray())
+            made.expectWholeBackground.append(path.toString());
+        for (const QJsonValue& site : object.value(QStringLiteral("expectSites")).toArray())
+            made.expectSites.append(site.toString());
+        made.expectChi2 = object.value(QStringLiteral("expectChi2")).toDouble(-1);
+        made.expectChi2Tolerance = object.value(QStringLiteral("expectChi2Tolerance")).toDouble(0.01);
+        return made;
     };
     // A step without its own tab is on the tab the last sidebar-tab step on its page opened, so it sets up the same
     // context on Next, Back or a jump.
@@ -356,7 +388,7 @@ QList<ChangeDay> ApplicationInfo::changes() const {
     if (given.isEmpty()) {
         QFile history(QStringLiteral(":/edi/releases.json"));
         if (history.open(QIODevice::ReadOnly)) {
-            const auto releases = edi_app::release_changes(history.readAll(), QString::fromUtf8(edi_app::app_version()), nullptr, true);
+            const auto releases = edi_app::release_changes(history.readAll(), shown_version(), nullptr, true);
             for (const auto& release : releases) {
                 const auto item = release.toMap();
                 days.append(ChangeDay{item.value(QStringLiteral("date")).toString(),
@@ -388,9 +420,15 @@ QList<ChangeDay> ApplicationInfo::changes() const {
 }
 
 Citation ApplicationInfo::citation() const {
-    // The top-level `key: "value"` lines and the authors' names of a CITATION.cff; nothing else is read.
+    // The top-level `key: "value"` lines and the authors of a CITATION.cff, each a `- name:` entity or a person's
+    // `given-names` and `family-names`; nothing else is read. The version and year are this build's own (Zenodo adds
+    // them to each release's record from the release).
     QMap<QString, QString> fields;
-    QStringList authors;
+    struct Author {
+        QString name, given, family;
+    };
+    QList<Author> authors;
+    bool in_authors = false;
     for (const QString& raw : read_resource(QStringLiteral(":/CITATION.cff")).split(QLatin1Char('\n'))) {
         const QString line = raw.trimmed();
         const auto value = [&](qsizetype colon) {
@@ -400,26 +438,56 @@ Citation ApplicationInfo::citation() const {
             }
             return text;
         };
-        if (line.startsWith(QLatin1String("- name:"))) {
-            authors.append(value(line.indexOf(QLatin1Char(':'))));
-        } else if (!raw.startsWith(QLatin1Char(' ')) && !line.startsWith(QLatin1Char('#'))) {
+        if (line.isEmpty() || line.startsWith(QLatin1Char('#'))) continue;
+        if (!raw.startsWith(QLatin1Char(' '))) {
             const qsizetype colon = line.indexOf(QLatin1Char(':'));
             if (colon > 0) {
                 fields.insert(line.left(colon), value(colon));
+                in_authors = line.left(colon) == QLatin1String("authors");
             }
+            continue;
+        }
+        if (!in_authors) continue;
+        QString entry = line;
+        if (entry.startsWith(QLatin1String("- "))) {
+            authors.append(Author{});
+            entry = entry.mid(2).trimmed();
+        }
+        const qsizetype colon = entry.indexOf(QLatin1Char(':'));
+        if (authors.isEmpty() || colon <= 0) continue;
+        const QString key = entry.left(colon);
+        QString text = entry.mid(colon + 1).trimmed();
+        if (text.size() >= 2 && text.startsWith(QLatin1Char('"')) && text.endsWith(QLatin1Char('"'))) text = text.mid(1, text.size() - 2);
+        if (key == QLatin1String("name")) authors.last().name = text;
+        else if (key == QLatin1String("given-names")) authors.last().given = text;
+        else if (key == QLatin1String("family-names")) authors.last().family = text;
+    }
+    // APA: a person as "Sazonov, A.", an entity by its name; BibTeX: "Sazonov, Andrew", an entity in double braces.
+    QStringList shown;
+    QStringList bibtex_names;
+    for (const Author& author : authors) {
+        if (!author.family.isEmpty()) {
+            QStringList initials;
+            for (const QString& part : author.given.split(QLatin1Char(' '), Qt::SkipEmptyParts)) initials.append(part.left(1) + QLatin1Char('.'));
+            shown.append(author.family + (initials.isEmpty() ? QString() : QStringLiteral(", ") + initials.join(QLatin1Char(' '))));
+            bibtex_names.append(author.family + (author.given.isEmpty() ? QString() : QStringLiteral(", ") + author.given));
+        } else if (!author.name.isEmpty()) {
+            shown.append(author.name);
+            bibtex_names.append(QLatin1Char('{') + author.name + QLatin1Char('}'));
         }
     }
-    const QString year = fields.value(QStringLiteral("date-released")).left(4);
+    const QString year = QString::fromUtf8(edi_app::app_date()).right(4);
+    const QString version = shown_version();
     const QString doi = fields.value(QStringLiteral("doi"));
     const QString doi_url = doi.isEmpty() ? QString() : QStringLiteral("https://doi.org/") + doi;
     const QString title = fields.value(QStringLiteral("title"));
-    const QString version = fields.value(QStringLiteral("version"));
-    const QString who = authors.join(QStringLiteral(", "));
+    const QString who = shown.size() > 1 ? shown.mid(0, shown.size() - 1).join(QStringLiteral(", ")) + QStringLiteral(", & ") + shown.last()
+                                         : shown.join(QString());
     const QString text = QStringLiteral("%1 (%2). %3 (version %4) [Computer software]. %5")
                              .arg(who, year, title, version, doi_url);
-    const QString bibtex = QStringLiteral("@software{easydiffraction,\n  author = {{%1}},\n  title = {%2},\n"
+    const QString bibtex = QStringLiteral("@software{easydiffraction,\n  author = {%1},\n  title = {%2},\n"
                                           "  year = {%3},\n  version = {%4},\n  doi = {%5},\n  url = {%6}\n}")
-                               .arg(who, title, year, version, doi, doi_url);
+                               .arg(bibtex_names.join(QStringLiteral(" and ")), title, year, version, doi, doi_url);
     return {text, bibtex, doi, doi_url};
 }
 
@@ -527,6 +595,14 @@ QColor ApplicationInfo::figureColour(const QString& scheme, int position, int co
     return QColor(QString::fromStdString(edi::figure_colour(colour_scheme(scheme),
                                                             static_cast<std::size_t>(std::max(position, 0)),
                                                             static_cast<std::size_t>(std::max(count, 1)), dark)));
+}
+
+QList<QColor> ApplicationInfo::paletteColours(const QString& scheme, bool dark) const {
+    QList<QColor> out;
+    for (std::size_t position = 0; position < edi::kPaletteColourCount; ++position) {
+        out.append(QColor(QString::fromStdString(edi::figure_colour(colour_scheme(scheme), position, edi::kPaletteColourCount, dark))));
+    }
+    return out;
 }
 
 QColor ApplicationInfo::calculationColour(const QString& scheme, bool dark) const {
@@ -665,6 +741,23 @@ QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fa
     return found.known ? QColor(found.color.r, found.color.g, found.color.b) : fallback;
 }
 
+QList<QColor> ApplicationInfo::momentColourSamples(const QString& colours, bool dark) const {
+    // The single grey and the greying are structure_scene.cpp's and structure_view_controller.cpp's.
+    const QColor single(dark ? QStringLiteral("#BDBDBD") : QStringLiteral("#616161"));
+    QList<QColor> out;
+    for (const char* symbol : {"Mn", "Fe", "Co", "Ni", "Cu", "Cr", "Gd", "Ho"}) {
+        const QColor own = elementColor(QString::fromLatin1(symbol), single);
+        if (colours == QLatin1String("single")) {
+            out.append(single);
+        } else if (colours == QLatin1String("atom")) {
+            out.append(own);
+        } else {
+            out.append(QColor((own.red() + 128) / 2, (own.green() + 128) / 2, (own.blue() + 128) / 2));
+        }
+    }
+    return out;
+}
+
 QColor ApplicationInfo::readableColour(const QColor& colour, const QList<QColor>& backgrounds) const {
     // A translucent background is taken as opaque: what shows through it is the same theme's background.
     std::vector<std::string> hexes;
@@ -699,24 +792,75 @@ void ApplicationInfo::setMessageLevel(const QString& level) const {
     }
 }
 
-bool ApplicationInfo::saveImage(const QVariant& image, const QUrl& file) const {
+namespace {
+
+QImage croppedImage(const QVariant& image, double cut) {
     const QImage picture = image.value<QImage>();
+    if (picture.isNull() || cut <= 0 || cut >= 1) return picture;
+    const int top = static_cast<int>(std::lround(cut * picture.height()));
+    return picture.copy(0, top, picture.width(), picture.height() - top);
+}
+
+}  // namespace
+
+bool ApplicationInfo::saveImage(const QVariant& image, const QUrl& file, double cut) const {
+    const QImage picture = croppedImage(image, cut);
     return !picture.isNull() && picture.save(file.toLocalFile(), "PNG");
 }
 
-bool ApplicationInfo::downloadImage(const QVariant& image, const QString& name) const {
-    const QImage picture = image.value<QImage>();
+bool ApplicationInfo::downloadImage(const QVariant& image, const QString& name, double cut) const {
+    const QImage picture = croppedImage(image, cut);
     QByteArray data;
     QBuffer buffer(&data);
     if (picture.isNull() || !buffer.open(QIODevice::WriteOnly) || !picture.save(&buffer, "PNG")) return false;
     return edi_app::WebFiles::download(data, name);
 }
 
+QVariantList ApplicationInfo::sourceKindTags(const QStringList& kinds) const {
+    // The tones of the Examples list's tags.
+    static const QJsonObject tones = [] {
+        QFile file(QStringLiteral(":/edi/examples/tags.json"));
+        return file.open(QIODevice::ReadOnly) ? QJsonDocument::fromJson(file.readAll()).object().value("tones").toObject() : QJsonObject();
+    }();
+    struct Kind {
+        const char* token;
+        QString label;
+        QString icon;
+        const char* tone;
+    };
+    // The icons of the app bar's Project, Structure and Experiment pages and of the Measured data group.
+    const Kind known[] = {{"structure", tr("Structures"), QStringLiteral("layer-group"), "structure"},
+                          {"experiment", tr("Experiments"), QStringLiteral("microscope"), "technique"},
+                          {"data", tr("Measured data"), QString::fromStdString(edi::category_icon("data")), "neutral"},
+                          {"project", tr("Projects"), QStringLiteral("archive"), "mode"}};
+    QVariantList tags;
+    for (const QString& kind : kinds) {
+        for (const Kind& k : known) {
+            if (kind != QLatin1String(k.token)) continue;
+            const QJsonObject tone = tones.value(QLatin1String(k.tone)).toObject();
+            tags.append(QVariantMap{{"label", k.label}, {"icon", k.icon}, {"light", tone.value("light").toString()},
+                                    {"dark", tone.value("dark").toString()}});
+        }
+    }
+    return tags;
+}
+
+QUrl ApplicationInfo::imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const {
+    const QUrl remembered(stored);
+    if (!stored.isEmpty() && remembered.isLocalFile() && QFileInfo(remembered.toLocalFile()).isDir()) return remembered;
+    if (ownPlace && !projectPath.isEmpty()) {
+        const QString reports = QDir(projectPath).filePath(QStringLiteral("reports"));
+        if (QDir().mkpath(reports)) return QUrl::fromLocalFile(reports);
+    }
+    const QString pictures = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+    return QUrl::fromLocalFile(pictures.isEmpty() ? QDir::homePath() : pictures);
+}
+
 QString ApplicationInfo::diagnostics() const {
     QStringList lines;
     const auto add = [&lines](const QString& name, const QString& value) { lines.append(name + QStringLiteral(": ") + value); };
     add(QStringLiteral("EasyDiffraction"),
-        QString::fromUtf8(edi_app::app_version()) + QStringLiteral(" (") + QString::fromUtf8(edi_app::app_date()) +
+        shown_version() + QStringLiteral(" (") + QString::fromUtf8(edi_app::app_date()) +
             QStringLiteral(")"));
     add(QStringLiteral("crysta"), QStringLiteral(EDI_APP_CRYSTA_VERSION));
     add(QStringLiteral("crysta SDK commit"), QStringLiteral(EDI_APP_CRYSTA_COMMIT));
@@ -3983,10 +4127,33 @@ void ApplicationInfo::parameterSliderPressed(bool destroying) const {
     }
     if (!panelUsageTruth(panelUsageContextRead(f, "pressed"))) projectInvoke(f, "sliderRow", "updateLimits");
 }
+namespace {
+// A power of ten as a display writes it, "×10⁻⁵".
+QString powerOfTen(int power) {
+    static const QString digits = QStringLiteral("\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079");
+    QString exponent = power < 0 ? QStringLiteral("\u207B") : QString();
+    for (const QChar digit : QString::number(std::abs(power))) exponent += digits.at(digit.digitValue());
+    return QStringLiteral("\u00D710") + exponent;
+}
+
+bool finiteNumber(const QJSValue& value) { return value.isNumber() && std::isfinite(value.toNumber()); }
+
+// A number's text by the rule for numbers (owner records 2026-11-09 and 2026-11-11, item 6): a decimal when
+// 0.001 <= |x| < 1000 ("9.3e1" is 93), else three significant digits times a power of ten ("8.40×10⁻⁵"). A text that
+// is not a number, or is already written that way, is returned as it is.
+QString shownNumberText(const QString& text) {
+    bool ok = false;
+    const double number = text.trimmed().toDouble(&ok);
+    if (!ok || !std::isfinite(number)) return text;
+    return QString::fromStdString(edi::table_number(number, text.trimmed().toStdString(), true));
+}
+}  // namespace
+
 QJSValue ApplicationInfo::parameterBound(const QJSValue& value) const {
     const auto f = panelUsageEngine(this);
     if (value.strictlyEquals(QJSValue(qInf()))) return QJSValue(QStringLiteral("inf"));
     if (value.strictlyEquals(QJSValue(-qInf()))) return QJSValue(QStringLiteral("-inf"));
+    if (finiteNumber(value)) return QJSValue(shownNumberText(QString::number(value.toNumber(), 'g', 6)));
     return panelUsageGlobalCall(f, "String", {value});
 }
 QJSValue ApplicationInfo::formShownValue(const QJSValue& uid, const QJSValue& value, bool omitNaN) const {
@@ -4110,27 +4277,13 @@ void parameterTextRefit(const PanelUsageFrame& f, bool scalable, bool textCell =
         return data && !data->isQueuedForDeletion;
     };
     if (!current()) return;
-    const auto math = panelUsageContextRead(f, "Math");
-    const auto width = panelUsageNumber(f, panelUsageContextRead(f, "width"));
-    const auto implicit = panelUsageNumber(f, panelUsageContextRead(f, "implicitWidth"));
-    if (!width || !implicit) return;
-    const auto absolute = panelUsageMemberCall(f, math, "abs", {QJSValue(*width - *implicit)});
-    const auto sized = assistantRelation(f, absolute, QJSValue(0.5), 2);
-    bool full = (scalable && panelUsageTruth(panelUsageContextRead(f, "fitDigits"))) || !sized;
-    if (!full) full = textCell ? !panelUsageTruth(panelUsageContextRead(f, "numeric"))
-                              : panelUsageContextRead(f, "item").isNull();
-    QJSValue shown;
-    if (full) shown = panelUsageContextRead(f, textCell ? "written" : "valueText");
-    else {
-        const auto formatter = panelUsageContextRead(f, "NumberText");
-        QJSValueList args;
-        if (textCell) {
-            for (const char* name : {"written", "room", "metrics"}) args.append(panelUsageContextRead(f, name));
-        } else {
-            for (const char* name : {"valueText", "room", "shownMetrics", "narrowText"}) args.append(panelUsageContextRead(f, name));
-        }
-        shown = panelUsageMemberCall(f, formatter, "fitted", args);
-    }
+    (void)scalable;
+    // The text never depends on the cell's width (owner record 2026-11-11, item 6). A number in a text cell shows by
+    // the rule for numbers while it is not being edited, and as written while it is.
+    QJSValue shown = panelUsageContextRead(f, textCell ? "written" : "valueText");
+    if (textCell && panelUsageTruth(panelUsageContextRead(f, "numeric")) &&
+        !panelUsageTruth(panelUsageContextRead(f, "activeFocus")))
+        shown = panelUsageMemberCall(f, panelUsageContextRead(f, "NumberText"), "compact", {shown});
     if (current()) panelUsageContextWrite(f, "shownValue", shown);
 }
 } // namespace
@@ -4243,6 +4396,25 @@ QJSValue ApplicationInfo::takeStructureWebIntent(const QJSValue& request) const 
     if (!consentFieldEquals(f, original, "project", project)
         || !pickerSessionProject(f, original)) return consentNull();
     return original;
+}
+void ApplicationInfo::chooseDatasetFolder(QObject* picker, QObject* project, QObject* experiment) const {
+    auto* owner = qobject_cast<edi_app::ProjectViewModel*>(project);
+    auto* target = qobject_cast<edi_app::ExperimentViewModel*>(experiment);
+    if (!picker || !owner || !target || owner->listingDatasetFolder()) return;
+    dataset_folder_picker_ = picker;
+    dataset_folder_project_ = owner;
+    dataset_folder_experiment_ = target;
+    QMetaObject::invokeMethod(picker, "open", Qt::QueuedConnection);
+}
+void ApplicationInfo::acceptDatasetFolder(QObject* picker, QObject* currentProject, const QUrl& folder) const {
+    if (picker != dataset_folder_picker_) return;
+    const QPointer<QObject> owner = std::exchange(dataset_folder_project_, {});
+    const QPointer<QObject> target = std::exchange(dataset_folder_experiment_, {});
+    dataset_folder_picker_.clear();
+    if (owner && owner == currentProject && target) {
+        auto* project = qobject_cast<edi_app::ProjectViewModel*>(owner.data());
+        if (project) project->loadDatasetFolder(qobject_cast<edi_app::ExperimentViewModel*>(target.data()), folder);
+    }
 }
 void ApplicationInfo::chooseExperimentData(const QJSValue& experiment) const {
     const auto f = panelUsageEngine(this);
@@ -4446,10 +4618,10 @@ void ApplicationInfo::resetPreferences() const {
         {"engineThreads", QJSValue(0)}, {"scanWorkers", QJSValue(1)}, {"loggingLevel", QJSValue(QStringLiteral("Warning"))}, {"scanPatternUpdates", QJSValue(2)}, {"analysisShowNotMeasured", QJSValue(true)},
         {"analysisShowBySymmetry", QJSValue(false)}, {"analysisShowByConstraint", QJSValue(false)}, {"analysisShowFixedSettings", QJSValue(false)},
         {"showFitResults", QJSValue(true)}, {"scanRenderer", QJSValue(QStringLiteral("auto"))}, {"newProjectSuRule", QJSValue(QStringLiteral("iucr_99"))},
-        {"newReportLibraries", QJSValue(QStringLiteral("online"))}, {"colourScheme", QJSValue(QStringLiteral("earth"))}, {"patternYScale", QJSValue(QStringLiteral("linear"))},
+        {"newReportLibraries", QJSValue(QStringLiteral("online"))}, {"colourScheme", QJSValue(QStringLiteral("main"))}, {"patternYScale", QJSValue(QStringLiteral("linear"))},
         {"structureCurves", QJSValue(true)}, {"patternLegendShown", QJSValue(false)}, {"patternHoverShown", QJSValue(true)},
         {"patternMeasuredStyle", QJSValue(QStringLiteral("band"))}, {"patternPointerMode", QJSValue(QStringLiteral("zoom"))},
-        {"scanStackedPalette", QJSValue(QString{})}, {"scanMapColours", QJSValue(QStringLiteral("blue-red"))}, {"scanMapSmooth", QJSValue(true)},
+        {"scanMapColours", QJSValue(QStringLiteral("blue-red"))}, {"scanMapSmooth", QJSValue(true)},
         {"scanStackedReversed", QJSValue(false)}, {"scanStackedLegendShown", QJSValue(false)}, {"chartIncludedOnly", QJSValue(false)},
         {"chartSubtractBackground", QJSValue(false)}, {"singleCrystalQuantity", QJSValue(QStringLiteral("f_squared"))},
         {"chartHighlightSelected", QJSValue(true)}, {"chartHiddenRange", QJSValue(QStringLiteral("keep"))}, {"textShow", QJSValue(QStringLiteral("editable"))}
@@ -4459,7 +4631,8 @@ void ApplicationInfo::resetPreferences() const {
 void ApplicationInfo::applyPreferences() const {
     const auto f = panelUsageEngine(this);
     auto globals = assistantContextField(f, "EaGlobals", "Vars");
-    assistantMemberWrite(f, globals, "autoCollapseSideBarGroups", assistantContextField(f, "preferences", "autoCollapse"));
+    // The app folds its sidebar groups itself, leaving pinned ones open (SideBarGroup).
+    assistantMemberWrite(f, globals, "autoCollapseSideBarGroups", QJSValue(false));
     projectInvoke(f, "ApplicationInfo", "setEngineThreads", {assistantContextField(f, "preferences", "engineThreads")});
     projectInvoke(f, "ApplicationInfo", "setScanWorkers", {assistantContextField(f, "preferences", "scanWorkersApplied")});
     globals = assistantContextField(f, "EaGlobals", "Vars");
@@ -4472,21 +4645,6 @@ void ApplicationInfo::preferencesColourChanged() const {
     const auto value = panelUsageContextRead(f, "colourScheme");
     const auto offered = projectInvoke(f, "ApplicationInfo", "colourSchemeOrDefault", {value});
     if (!assistantSameName(f, offered, "colourScheme")) panelUsageContextWrite(f, "colourScheme", offered);
-}
-void ApplicationInfo::preferencesStackedPaletteChanged() const {
-    const auto f = panelUsageEngine(this);
-    auto array = panelUsageContextRead(f, "Array");
-    auto values = assistantContextField(f, "ApplicationInfo", "colourSchemes");
-    const auto first = panelUsageMemberCall(f, array, "from", {values});
-    array = panelUsageContextRead(f, "Array");
-    values = assistantContextField(f, "ApplicationInfo", "scanColourMaps");
-    const auto second = panelUsageMemberCall(f, array, "from", {values});
-    const auto offered = panelUsageMemberCall(f, first, "concat", {second});
-    if (!panelUsageContextRead(f, "scanStackedPalette").strictlyEquals(QJSValue(QString{}))) {
-        const auto chosen = panelUsageContextRead(f, "scanStackedPalette");
-        const auto index = panelUsageMemberCall(f, offered, "indexOf", {chosen});
-        if (assistantRelation(f, index, QJSValue(0), 0)) panelUsageContextWrite(f, "scanStackedPalette", QJSValue(QString{}));
-    }
 }
 void ApplicationInfo::preferencesLegacyPaletteChanged() const {
     const auto f = panelUsageEngine(this);
@@ -6183,7 +6341,8 @@ bool tableFreshPad(QQuickItem* cell, int column, const QString& kind, const Tabl
     if (rightAligned && column >= 0 && static_cast<std::size_t>(column) < in.wideEdges.size() && in.wideEdges[static_cast<std::size_t>(column)])
         right += in.fontPixelSize;
     naturalRight = right;
-    if (column == in.fillerIndex) right += in.fillerWidth;
+    // A text cell takes the spare width as room for its text; a number keeps it as padding, by its neighbours.
+    if (column == in.fillerIndex && kind != QLatin1String("text")) right += in.fillerWidth;
     cell->setProperty("rightPadding", right);
     auto* indicator = kind == QLatin1String("check") ? cell->property("indicator").value<QQuickItem*>() : nullptr;
     if (indicator != nullptr) {
@@ -6383,7 +6542,8 @@ QJSValue ApplicationInfo::tablePadForFiller(const QJSValue& cell, const QJSValue
     if (rightAligned && panelUsageTruth(textIndex(f, panelUsageContextRead(f, "wideEdges"), column)))
         right = panelUsageAdd(f, right, panelUsageRead(f, assistantContextField(f, "EaStyle", "Sizes"), "fontPixelSize"));
     const auto naturalRight = right;
-    right = panelUsageAdd(f, right, assistantSameName(f, column, "fillerIndex") ? panelUsageContextRead(f, "fillerWidth") : QJSValue(0));
+    const bool text = kind.strictlyEquals(QJSValue(QStringLiteral("text")));
+    right = panelUsageAdd(f, right, !text && assistantSameName(f, column, "fillerIndex") ? panelUsageContextRead(f, "fillerWidth") : QJSValue(0));
     if (!panelUsageTruth(projectCall(f, owns))) return {};
     // A view's cell already padded so is left as it is: its rows are styled again whenever rows come and go.
     if (!fresh) {
@@ -6508,7 +6668,7 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
     // The reads keep the script order: the fitted widths and their length first, then the columns, each read once,
     // so a value a getter replaces on the way is the one returned.
     const auto fittedValue = panelUsageContextRead(f, "fittedWidths");
-    if (panelUsageTruth(panelUsageContextRead(f, "equalColumns"))) return panelUsageContextRead(f, "columns");
+    const bool equal = panelUsageTruth(panelUsageContextRead(f, "equalColumns"));
     const auto length = panelUsageRead(f, fittedValue, "length");
     if (!consentFieldEquals(f, panelUsageContextRead(f, "columns"), "length", length)) return panelUsageContextRead(f, "columns");
     const auto columnsValue = panelUsageContextRead(f, "columns");
@@ -6517,6 +6677,9 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
     for (std::size_t index = 0; index < fitted.size(); ++index) fitted[index] = fittedValue.property(static_cast<quint32>(index)).toNumber();
     const auto columns = tableNumbers(columnsValue);
     if (!panelUsageReady(f) || fitted.size() != columns.size()) return columnsValue;
+    // Fixed widths only (a table that sets its own): nothing to work out, and no read of the rows, which come and go as
+    // the widths change.
+    if (std::find(columns.cbegin(), columns.cend(), -1.0) == columns.cend()) return columnsValue;
     const double width = panelUsageContextRead(f, "width").toNumber();
     const double share = panelUsageContextRead(f, "maximumTextColumnShare").toNumber();
     const double padding = panelUsageContextRead(f, "autoColumnPadding").toNumber();
@@ -6536,26 +6699,46 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
     const std::size_t count = columns.size();
     std::vector<bool> fits(count);
     int fitting = 0;
-    double fixed = 0, texts = 0;
+    double fixed = 0, texts = 0, shrinkable = 0;
     const double cap = std::max(0.0, width * share);
     const double textLimit = std::max(0.0, cap - padding);
     for (std::size_t index = 0; index < count; ++index) {
         fits[index] = columns[index] == -1;
-        if (fits[index]) { ++fitting; texts += capped(fitted[index], index, textLimit); }
-        else if (columns[index] > 0) fixed += columns[index];
+        if (fits[index]) {
+            ++fitting;
+            const double text = capped(fitted[index], index, textLimit);
+            texts += text;
+            if (index < caps.size() && caps[index]) shrinkable += text;
+        } else if (columns[index] > 0) fixed += columns[index];
     }
     const double gaps = static_cast<double>(count) - 1;
     const double room = width - fixed - spacing * gaps - border * 2 - rowPadding * 2;
-    const double margin = fitting > 0 ? std::max(0.0, std::min(padding, (room - texts) / fitting)) : 0;
-    const double scale = texts > room && texts > 0 ? std::max(0.0, room) / texts : 1;
-    const double spread = !spreadColumns.empty() ? std::max(0.0, room - texts - margin * fitting) / static_cast<double>(spreadColumns.size()) : 0;
     std::vector<double> widths(count);
+    if (equal) {
+        // Equal flex columns, each at least as wide as the widest of their texts: a wider row scrolls sideways.
+        double widest = 0;
+        for (std::size_t index = 0; index < count; ++index)
+            if (fits[index]) widest = std::max(widest, fitted[index]);
+        const double each = fitting > 0 ? std::floor(std::max(std::max(0.0, room) / fitting, widest)) : 0;
+        for (std::size_t index = 0; index < count; ++index) widths[index] = fits[index] ? each : columns[index];
+        auto result = f->newArray(static_cast<uint>(count));
+        for (std::size_t index = 0; index < count; ++index) result.setProperty(static_cast<quint32>(index), widths[index]);
+        return result;
+    }
+    const double margin = fitting > 0 ? std::max(0.0, std::min(padding, (room - texts) / fitting)) : 0;
+    // A row too narrow narrows only its text columns, down to a few characters and an ellipsis each; a number, a selector or an icon
+    // keeps its whole width, and a row still too wide scrolls sideways.
+    // A name keeps its start and an ellipsis.
+    const double textFloor = 5 * panelUsageRead(f, sizes, "fontPixelSize").toNumber();
+    const double textScale = texts > room && shrinkable > 0 ? std::clamp((room - (texts - shrinkable)) / shrinkable, 0.0, 1.0) : 1;
+    const double spread = !spreadColumns.empty() ? std::max(0.0, room - texts - margin * fitting) / static_cast<double>(spreadColumns.size()) : 0;
     for (std::size_t index = 0; index < count; ++index) {
         if (!fits[index]) { widths[index] = columns[index]; continue; }
         const bool spreads = std::find(spreadColumns.cbegin(), spreadColumns.cend(), static_cast<double>(index)) != spreadColumns.cend();
-        const double text = capped(fitted[index], index, textLimit);
+        double text = capped(fitted[index], index, textLimit);
+        if (index < caps.size() && caps[index]) text = std::max(std::min(text, textFloor), text * textScale);
         // The cap bounds a column's own text; the spare width a spread column is given comes on top of it, as on main.
-        widths[index] = capped(std::floor(text * scale + margin), index, cap) + (spreads ? std::floor(spread) : 0);
+        widths[index] = capped(std::floor(text + margin), index, cap) + (spreads ? std::floor(spread) : 0);
     }
     if (fillerIndex >= 0 && static_cast<std::size_t>(fillerIndex) < count) {
         double used = 0;
@@ -6730,7 +6913,7 @@ QJSValue ApplicationInfo::tableFitColumns(const QJSValue& rows, const QJSValue& 
                 if (rightAligned && static_cast<std::size_t>(index) < freshInputs.wideEdges.size() && freshInputs.wideEdges[static_cast<std::size_t>(index)])
                     right += freshInputs.fontPixelSize;
                 const double naturalRight = right;
-                if (index == freshInputs.fillerIndex) right += freshInputs.fillerWidth;
+                if (index == freshInputs.fillerIndex && kind != QLatin1String("text")) right += freshInputs.fillerWidth;
                 const QString styled = kind + QLatin1Char(':') + QJSValue(right).toString();
                 if (kind != QLatin1String("check") && base.property(QStringLiteral("styled")).toString() == styled) continue;
                 base.setProperty(QStringLiteral("styled"), styled);
@@ -6886,8 +7069,12 @@ void ApplicationInfo::tableMeasureRows(int run, int from) const {
     }
     const auto measuring = panelUsageContextRead(f, "measuringRows");
     assistantMemberWrite(f, measuring, "model", panelUsageContextRead(f, "model")); if (!editorLife(f, life) || !panelUsageReady(f)) return;
-    const int total = panelUsageRead(f, measuring, "count").toInt();
     const int atOnce = panelUsageContextRead(f, "measuredAtOnce").toInt();
+    // A table of a scan's datasets can hold a million rows (edi ADR-0026: views make only what is on screen). Above
+    // 1000 rows the columns fit the first measuredAtOnce rows, so a refit, which every changed row asks for, costs the
+    // same however long the table is.
+    const int modelRows = panelUsageRead(f, measuring, "count").toInt();
+    const int total = modelRows > 1000 ? std::min(modelRows, atOnce) : modelRows;
     QElapsedTimer started; started.start();
     const auto rows = f->newArray(); const auto host = panelUsageContextRead(f, "measuringHost");
     int next = from;
@@ -7693,13 +7880,6 @@ QJSValue ApplicationInfo::preferenceColourTitles() const {
     const auto f = panelUsageEngine(this);
     return panelUsageMemberCall(f, panelUsageContextRead(f, "choices"), "map", {projectGuardedClosure(f, 177, 1)});
 }
-QJSValue ApplicationInfo::preferenceStackedChoices() const {
-    const auto f = panelUsageEngine(this); const auto array = panelUsageContextRead(f, "Array");
-    const auto schemes = panelUsageMemberCall(f, array, "from", {assistantContextField(f, "ApplicationInfo", "colourSchemes")});
-    const auto second = panelUsageContextRead(f, "Array");
-    const auto maps = panelUsageMemberCall(f, second, "from", {assistantContextField(f, "ApplicationInfo", "scanColourMaps")});
-    return panelUsageMemberCall(f, schemes, "concat", {maps});
-}
 QJSValue ApplicationInfo::preferenceEngineThreads() const {
     const auto f = panelUsageEngine(this);
     if (!panelUsageTruth(assistantContextField(f, "ApplicationInfo", "engineThreadsSelectable")))
@@ -7729,7 +7909,7 @@ void ApplicationInfo::preferenceActivated(const QJSValue& index, int setting) co
         const char* text = setting == 6 ? (alternate ? "Left" : "Right") : setting == 7 ? (alternate ? "iucr_99" : "iucr_19") : (alternate ? "embedded" : "online");
         assistantMemberWrite(f, preferences, property, QJSValue(QString::fromLatin1(text))); return;
     }
-    const char* property = setting == 1 ? "colourScheme" : setting == 2 ? "scanStackedPalette" : setting == 3 ? "scanMapColours"
+    const char* property = setting == 1 ? "colourScheme" : setting == 3 ? "scanMapColours"
         : setting == 4 ? "chartHiddenRange" : setting == 5 ? "textShow" : "scanRenderer";
     const char* source = setting == 1 ? "schemes" : setting == 10 ? "values" : "choices";
     assistantMemberWrite(f, preferences, property, textIndex(f, panelUsageContextRead(f, source), index));
@@ -7786,6 +7966,74 @@ QJSValue numberProcedureCallback(const PanelUsageFrame& f, uint operation,
 
 QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJSValue& value, const QJSValue& second,
     const QJSValue& third, const QJSValue& fourth) const {
+    // A value and its s.u. as every display shows them, whatever the cell's width or whether the value is free: the
+    // project's s.u. rule rounds them, and the rule for numbers writes them (edi::table_value_su).
+    const auto shownPair = [&](const QJSValue& number, const QJSValue& su, const QJSValue& digits) -> std::pair<QString, QString> {
+        if (!finiteNumber(number)) return {number.toString(), QString()};
+        const double x = number.toNumber();
+        if (finiteNumber(su) && su.toNumber() > 0.0) {
+            QString valueText, suText;
+            const QJSValue ruled = numberPresentationRaw(NumberRuled, number, su, QJSValue(), QJSValue());
+            if (panelUsageTruth(ruled)) {
+                const auto f = panelUsageEngine(this);
+                valueText = panelUsageRead(f, ruled, "value").toString();
+                suText = panelUsageRead(f, ruled, "su").toString();
+            } else {
+                valueText = numberPresentationRaw(NumberRounded, number, su, QJSValue(qInf()), digits).toString();
+                suText = QString::number(su.toNumber(), 'e', 0);
+            }
+            const auto [v, e] = edi::table_value_su(x, valueText.toStdString(), suText.toStdString(), true);
+            return {QString::fromStdString(v), QString::fromStdString(e)};
+        }
+        const QString plain = numberPresentationRaw(NumberRounded, number, QJSValue(), QJSValue(qInf()), digits).toString();
+        return {QString::fromStdString(edi::table_number(x, plain.toStdString(), true)), QString()};
+    };
+    // An s.u. beside its value, or alone without a usable value.
+    const auto shownSu = [&](const QJSValue& su, const QJSValue& number) -> QJSValue {
+        if (!finiteNumber(su) || su.toNumber() <= 0.0) return QJSValue(QString());
+        if (finiteNumber(number)) return QJSValue(shownPair(number, su, QJSValue()).second);
+        return QJSValue(shownNumberText(QString::number(su.toNumber(), 'g', 1)));
+    };
+    // Axis labels, each tick written on its own by the rule (pattern_chart_controller.hpp: axis_labels).
+    if (operation == NumberAxisFormat) {
+        std::vector<double> ticks;
+        const int count = value.property(QStringLiteral("length")).toInt();
+        for (int i = 0; i < count; ++i) {
+            const QJSValue tick = value.property(static_cast<quint32>(i));
+            if (finiteNumber(tick)) ticks.push_back(tick.toNumber());
+        }
+        return QJSValue(edi_app::axis_labels_text(edi_app::axis_labels(ticks)));
+    }
+    if (operation == NumberAxisTick) {
+        if (!finiteNumber(value)) return QJSValue(value.toString());
+        return QJSValue(edi_app::axis_label(value.toNumber(), edi_app::axis_labels_from_text(second.toString())));
+    }
+    if (operation == NumberAxisStep) {
+        // value: [low, high, ticks wanted]; second: the axis' length in pixels; third: the labels' font; fourth:
+        // whether the axis is horizontal.
+        const double low = value.property(0).toNumber(), high = value.property(1).toNumber();
+        const QFont font = third.toVariant().value<QFont>();
+        const int target = value.property(2).isNumber() ? std::max(2, value.property(2).toInt()) : 5;
+        return QJSValue(edi_app::labelled_step(low, high, second.toNumber(), font, fourth.toBool(), target));
+    }
+    switch (operation) {
+    case NumberParameter:
+    case NumberNarrowParameter: return QJSValue(shownPair(value, second, third).first);
+    case NumberRounded: return QJSValue(shownPair(value, second, fourth).first);
+    case NumberError: return shownSu(value, third);
+    case NumberOwnUncertainty: return shownSu(value, second);
+    case NumberCompact:
+    case NumberWrittenNarrow: return value.isString() ? QJSValue(shownNumberText(value.toString())) : value;
+    case NumberFitted: return value;
+    case NumberAxisFormat:
+    case NumberAxisTick:
+    case NumberAxisStep: return QJSValue();  // answered above
+    default: return numberPresentationRaw(operation, value, second, third, fourth);
+    }
+}
+
+QJSValue ApplicationInfo::numberPresentationRaw(NumberOperation operation, const QJSValue& value, const QJSValue& second,
+    const QJSValue& third, const QJSValue& fourth) const {
     const auto f = panelUsageEngine(this);
     const auto read = [&](const QJSValue& object, const char* name) { return panelUsageRead(f, object, name); };
     const auto call = [&](const QJSValue& object, const char* name, const QJSValueList& args = QJSValueList()) { return panelUsageMemberCall(f, object, name, args); };
@@ -7829,6 +8077,12 @@ QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJ
         return add(sign, rest);
     }
     if (operation == NumberParameter) {
+        // A value without an uncertainty, as the parameter tables write it everywhere (owner record 2026-11-09): a
+        // decimal when 0.001 <= |x| < 1000, else scientific notation with three significant digits (1.00e3).
+        const bool uncertain = numberType(f, second) && numberFinite(f, second) && relation(second, QJSValue(0), 1);
+        if (!uncertain && numberType(f, value) && numberFinite(f, value) && !value.strictlyEquals(QJSValue(0)) &&
+            (relation(numberAbs(f, value), QJSValue(1000), 2) || relation(numberAbs(f, value), QJSValue(0.001), 0)))
+            return numberReplaceExponent(f, call(value, "toExponential", {QJSValue(2)}));
         if (panelUsageTruth(named("scientific", {value}))) return numberReplaceExponent(f, call(value, "toExponential", {QJSValue(3)}));
         const auto text = named("ruled", {value, second});
         return panelUsageTruth(text) ? read(text, "value") : named("rounded", {value, second, panelUsageContextRead(f, "Infinity"), third});
@@ -7915,8 +8169,11 @@ QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJ
             if (numberFinite(f, tick)) largest = numberMath(f, "max", [&] { return QJSValueList{largest, numberAbs(f, tick)}; });
             return panelUsageReady(f);
         });
+        // Outside 0.001 to 1000 every tick of a linear axis shares the largest tick's power of ten.
         QJSValue power(0);
-        if (panelUsageTruth(second) && panelUsageTruth(named("scientific", {largest}))) power = named("scientificExponent", {largest});
+        const double top = largest.toNumber();
+        if (panelUsageTruth(second) && std::isfinite(top) && top != 0.0 && (top >= 1000.0 || top < 0.001))
+            power = QJSValue(static_cast<int>(std::floor(std::log10(top))));
         auto literal = panelUsageLiteral(f); panelUsageWrite(f, literal.value, "shared", second); panelUsageWrite(f, literal.value, "power", power);
         panelUsageWrite(f, literal.value, "decimals", QJSValue(0)); const auto format = panelUsageComplete(f, literal);
         if (!panelUsageTruth(second)) return format;
@@ -7944,14 +8201,22 @@ QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJ
     if (operation == NumberAxisTick) {
         if (!numberType(f, value) || !numberFinite(f, value)) return numberString(f, value);
         if (!panelUsageTruth(read(second, "shared"))) {
-            if (panelUsageTruth(named("scientific", {value}))) return numberReplaceExponent(f, named("exponent", {value, QJSValue(4)}));
+            const double tick = std::fabs(value.toNumber());
+            if (tick != 0.0 && (tick >= 1000.0 || tick < 0.001)) {
+                // A decade of a logarithmic axis: its mantissa without trailing zeros, "10⁵" written "1×10⁵".
+                const int power = static_cast<int>(std::floor(std::log10(tick)));
+                QString mantissa = QString::number(value.toNumber() / std::pow(10.0, power), 'f', 3);
+                while (mantissa.endsWith(u'0')) mantissa.chop(1);
+                if (mantissa.endsWith(u'.')) mantissa.chop(1);
+                return QJSValue(mantissa + powerOfTen(power));
+            }
             return numberString(f, named("Number", {call(value, "toPrecision", {QJSValue(6)})}));
         }
         const auto scaled = div(value, numberPower(f, [&] { return read(second, "power"); }));
         const auto text = call(scaled, "toFixed", {read(second, "decimals")});
         if (named("Number", {text}).strictlyEquals(QJSValue(0)))
             return !read(second, "power").strictlyEquals(QJSValue(0)) ? zeroText : call(QJSValue(0), "toFixed", {read(second, "decimals")});
-        if (!read(second, "power").strictlyEquals(QJSValue(0))) { const auto prefix = add(text, e); return add(prefix, read(second, "power")); }
+        if (!read(second, "power").strictlyEquals(QJSValue(0))) return QJSValue(text.toString() + powerOfTen(read(second, "power").toInt()));
         return text;
     }
     if (operation == NumberDecimal) {
@@ -8706,8 +8971,37 @@ void patternSetMargin(const PanelUsageFrame& f, const QJSValue& view, const QJSV
 }
 } // namespace
 
+namespace {
+std::optional<std::vector<double>> numericPatternTicks(const PanelUsageFrame& f, const QJSValue& axis) {
+    if (!qobject_cast<QValueAxis*>(axis.toQObject())) return std::nullopt;
+    // Read through the wrapper so QML still captures each axis property as a binding dependency.
+    const double high = panelUsageRead(f, axis, "max").toNumber();
+    const double low = panelUsageRead(f, axis, "min").toNumber();
+    const double interval = panelUsageRead(f, axis, "tickInterval").toNumber();
+    const double anchor = panelUsageRead(f, axis, "tickAnchor").toNumber();
+    std::vector<double> ticks;
+    const double span = high - low;
+    if (!(interval > 0.0) || !(span > 0.0) || !std::isfinite(span) || !std::isfinite(anchor) || !std::isfinite(interval)) return ticks;
+    const double first = std::ceil((low - anchor) / interval - 1e-9);
+    for (int index = 0; index < 64; ++index) {
+        const double value = anchor + (first + index) * interval;
+        if (!std::isfinite(value) || (value - low) / span > 1 + 1e-9) break;
+        ticks.push_back(value);
+    }
+    return ticks;
+}
+QJSValue numericPatternTickArray(const PanelUsageFrame& f, const std::vector<double>& ticks) {
+    auto out = f->newArray(static_cast<uint>(ticks.size()));
+    for (uint index = 0; index < ticks.size(); ++index) out.setProperty(index, ticks[index]);
+    return out;
+}
+} // namespace
+
 QJSValue ApplicationInfo::patternTickValues(const QJSValue& axis) const {
-    const auto f = panelUsageEngine(this); const auto out = controlEmptyArray(f);
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageReady(f)) return {};
+    if (const auto ticks = numericPatternTicks(f, axis)) return numericPatternTickArray(f, *ticks);
+    const auto out = controlEmptyArray(f);
     const auto high = panelUsageRead(f, axis, "max"), low = panelUsageRead(f, axis, "min"); const auto span = viewArithmetic(f, high, low, 0);
     if (!assistantRelation(f, panelUsageRead(f, axis, "tickInterval"), QJSValue(0), 1) || !assistantRelation(f, span, QJSValue(0), 1)) return out;
     const auto first = numberMath(f, "ceil", [&] {
@@ -8735,7 +9029,18 @@ QJSValue ApplicationInfo::patternGridTicks(const QJSValue& axis) const {
     return panelUsageMemberCall(f, ticks, "map", {panelUsageClosure(f, 241, {axis}, 1)});
 }
 QJSValue ApplicationInfo::patternYLabelText(const QJSValue& text, const QJSValue& axis, const QJSValue& scale, const QJSValue& format) const {
-    const auto f = panelUsageEngine(this); const auto shown = panelUsageGlobalCall(f, "Number", {text}); auto display = panelUsageContextRead(f, "NaN");
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageReady(f)) return {};
+    if (const auto ticks = numericPatternTicks(f, axis)) {
+        const double shown = text.toNumber();
+        if (!std::isfinite(shown) || ticks->empty()) return text;
+        double display = ticks->front();
+        for (const double value : *ticks)
+            if (std::abs(value - shown) < std::abs(display - shown)) display = value;
+        const auto original = projectInvoke(f, "controller", "originalValue", {QJSValue(display), scale});
+        return panelUsageMemberCall(f, panelUsageContextRead(f, "NumberText"), "axisTick", {original, format});
+    }
+    const auto shown = panelUsageGlobalCall(f, "Number", {text}); auto display = panelUsageContextRead(f, "NaN");
     panelUsageEach(f, panelUsageGlobalCall(f, "tickValues", {axis}), [&](const QJSValue& value) {
         bool nearer = panelUsageTruth(panelUsageGlobalCall(f, "isNaN", {display}));
         if (!nearer) {
@@ -9281,8 +9586,11 @@ QJSValue ApplicationInfo::singlePart(const QJSValue& x, const QJSValue& y, const
 void ApplicationInfo::singleDrawModel(const QJSValue& model, const QJSValue& usedLayer, const QJSValue& leftOutLayer) const {
     const auto f = panelUsageEngine(this);
     if (!panelUsageTruth(model) || !panelUsageTruth(assistantContextField(f, "chart", "shown")) || !panelUsageTruth(panelUsageRead(f, model, "calculatedShown"))) { singleEmptyPoints(f, usedLayer); singleEmptyPoints(f, leftOutLayer); return; }
-    const auto x = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "calculated" : "calculatedF");
-    const auto y = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measured" : "measuredF");
+    // Reflections calculated without measured ones: the calculated value against sin(θ)/λ.
+    const bool simulated = panelUsageTruth(panelUsageRead(f, model, "simulated"));
+    const char* calculated = panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "calculated" : "calculatedF";
+    const auto x = panelUsageRead(f, model, simulated ? "positions" : calculated);
+    const auto y = panelUsageRead(f, model, simulated ? calculated : panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measured" : "measuredF");
     const auto su = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measuredSu" : "measuredFSu");
     const auto used = panelUsageGlobalCall(f, "part", {x, y, su, panelUsageRead(f, model, "used"), QJSValue(true)});
     const auto left = panelUsageGlobalCall(f, "part", {x, y, su, panelUsageRead(f, model, "used"), QJSValue(false)});
@@ -9331,8 +9639,10 @@ QJSValue ApplicationInfo::singleNearest(const QJSValue& px, const QJSValue& py) 
     for (double m = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(m), panelUsageRead(f, assistantContextField(f, "chart", "models"), "length"), 0); ++m) {
         const auto model = textIndex(f, assistantContextField(f, "chart", "models"), QJSValue(m));
         if (!panelUsageTruth(panelUsageRead(f, model, "calculatedShown")) || panelUsageTruth(panelUsageMemberCall(f, assistantContextField(f, "chart", "hiddenModels"), "includes", {model}))) continue;
-        const auto mx = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "calculated" : "calculatedF");
-        const auto my = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measured" : "measuredF");
+        const bool simulated = panelUsageTruth(panelUsageRead(f, model, "simulated"));
+        const char* calculated = panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "calculated" : "calculatedF";
+        const auto mx = panelUsageRead(f, model, simulated ? "positions" : calculated);
+        const auto my = panelUsageRead(f, model, simulated ? calculated : panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measured" : "measuredF");
         for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, mx, "length"), 0); ++i) {
             const auto x = textIndex(f, mx, QJSValue(i)), xLow = assistantContextField(f, "axisX", "min");
             const auto xShare = viewArithmetic(f, viewArithmetic(f, x, xLow, 0), span, 2);
@@ -9439,12 +9749,6 @@ void scanWant(const PanelUsageFrame& f) {
 }
 } // namespace
 
-QJSValue ApplicationInfo::scanStackedPalette() const {
-    const auto f = panelUsageEngine(this); const auto stored = !assistantContextField(f, "Preferences", "scanStackedPalette").strictlyEquals(QJSValue(QStringLiteral("")))
-        ? assistantContextField(f, "Preferences", "scanStackedPalette") : assistantContextField(f, "Preferences", "colourScheme");
-    if (assistantRelation(f, panelUsageMemberCall(f, panelUsageContextRead(f, "stackedChoices"), "indexOf", {stored}), QJSValue(0), 2)) return stored;
-    const auto actor = panelUsageContextRead(f, "ApplicationInfo"); return panelUsageMemberCall(f, actor, "colourSchemeOrDefault", {assistantContextField(f, "Preferences", "colourScheme")});
-}
 QJSValue ApplicationInfo::chartCapitalised(const QJSValue& text) const { const auto f = panelUsageEngine(this); return chartCapitalisedValue(f, text); }
 void ApplicationInfo::scanSetZoom(const QJSValue& x, const QJSValue& y) const {
     const auto f = panelUsageEngine(this); panelUsageContextWrite(f, "settingZoom", QJSValue(true)); panelUsageContextWrite(f, "zoomX", x); panelUsageContextWrite(f, "zoomY", y);
@@ -9673,14 +9977,6 @@ QJSValue ApplicationInfo::digitTextRuns() const {
 QJSValue ApplicationInfo::digitRunIsDigit(const QJSValue& text) const {
     const auto f = panelUsageEngine(this); return panelUsageDeferredMemberCall(f, panelRegex(f, QStringLiteral("^[0-9]$")), "test", [&] { return QJSValueList({text}); });
 }
-QJSValue ApplicationInfo::palettePositions() const {
-    const auto f = panelUsageEngine(this); const auto kinds = controlEmptyArray(f), project = assistantContextField(f, "Session", "project");
-    if (panelUsageTruth(project)) {
-        panelUsageEach(f, panelUsageRead(f, project, "experimentColourPositions"), [&](const QJSValue& position) { textIndexWrite(f, kinds, position, QJSValue(QStringLiteral("experiment"))); return panelUsageReady(f); });
-        panelUsageEach(f, panelUsageRead(f, project, "structureColourPositions"), [&](const QJSValue& position) { textIndexWrite(f, kinds, position, QJSValue(QStringLiteral("structure"))); return panelUsageReady(f); });
-    }
-    return kinds;
-}
 QJSValue ApplicationInfo::nameBlockIcon(const QJSValue& kind) const {
     return QJSValue(kind.strictlyEquals(QJSValue(QStringLiteral("structure"))) ? QStringLiteral("layer-group") : kind.strictlyEquals(QJSValue(QStringLiteral("experiment"))) ? QStringLiteral("microscope") : kind.strictlyEquals(QJSValue(QStringLiteral("parameter"))) ? QStringLiteral("chart-line") : QString());
 }
@@ -9797,6 +10093,11 @@ void ApplicationInfo::workingAnimation(bool started) const {
 }
 
 namespace {
+// A local path as a field shows it: the home folder as "~".
+QString homeShortened(const QString& path) {
+    const QString home = QDir::homePath();
+    return path.startsWith(home + QLatin1Char('/')) ? QStringLiteral("~") + path.mid(home.size()) : path;
+}
 QJSValue recentLabel(const PanelUsageFrame& f, const char* source, const QJSValue& name) {
     const auto format = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(source))});
     return panelUsageDeferredMemberCall(f, format, "arg", [&] { return QJSValueList({name}); });
@@ -9816,7 +10117,7 @@ QJSValue recentRowCallback(const PanelUsageFrame& f, uint operation,
     const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& arg) {
     if (operation == 320) return QJSValue(assistantRelation(f, panelUsageRead(f, arg(0), "length"), QJSValue(0), 1));
     if (operation == 321) {
-        const auto path = arg(0); auto row = panelUsageLiteral(f); panelUsageWrite(f, row.value, "path", path); panelUsageWrite(f, row.value, "label", path); panelUsageWrite(f, row.value, "inBrowser", QJSValue(false));
+        const auto path = arg(0); auto row = panelUsageLiteral(f); panelUsageWrite(f, row.value, "path", path); panelUsageWrite(f, row.value, "label", QJSValue(homeShortened(path.toString()))); panelUsageWrite(f, row.value, "inBrowser", QJSValue(false));
         panelUsageWrite(f, row.value, "available", panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "Session"), "projectDirectoryExists", [&] { return QJSValueList({path}); })); return panelUsageComplete(f, row);
     }
     if (operation == 322) return QJSValue(!arg(0).strictlyEquals(saved(0)));
@@ -10000,31 +10301,6 @@ void ApplicationInfo::searchPositionPopup(const QJSValue& opening) const {
     else panelUsageDeferredMemberCall(f, list, "positionViewAtIndex", [&] {
         return QJSValueList{numberMath(f, "max", [&] { return QJSValueList{QJSValue(0), panelUsageRead(f, component, "currentIndex")}; }), assistantContextField(f, "ListView", "Contain")};
     });
-}
-QJSValue ApplicationInfo::searchMeasuredWidth(bool optionsOnly) const {
-    const auto f = panelUsageEngine(this); QJSValue widest(0);
-    if (!optionsOnly) widest = panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "optionMetrics"), "advanceWidth", [&] { return QJSValueList{panelUsageContextRead(f, "displayText")}; });
-    for (double index = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(index), panelUsageContextRead(f, "count"), 0); ++index)
-        widest = numberMath(f, "max", [&] {
-            return QJSValueList{widest, panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "optionMetrics"), "advanceWidth", [&] { return QJSValueList{panelUsageGlobalCall(f, "textAt", {QJSValue(index)})}; })};
-        });
-    if (optionsOnly) {
-        const auto measured = numberMath(f, "ceil", [&] { return QJSValueList{widest}; }); const auto pixels = panelUsageRead(f, panelUsageContextRead(f, "font"), "pixelSize");
-        return panelUsageAdd(f, measured, viewArithmetic(f, pixels, QJSValue(3), 1));
-    }
-    QJSValue label(0);
-    if (panelUsageTruth(panelUsageContextRead(f, "contentItemLabel"))) {
-        const auto left = assistantContextField(f, "contentItemLabel", "leftPadding"), right = assistantContextField(f, "contentItemLabel", "rightPadding"); label = panelUsageAdd(f, left, right);
-    }
-    QJSValue besides = label;
-    if (panelUsageTruth(panelUsageContextRead(f, "contentItem"))) {
-        const auto implicit = assistantContextField(f, "contentItem", "implicitWidth");
-        const auto measured = panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "optionMetrics"), "advanceWidth", [&] { return QJSValueList{panelUsageContextRead(f, "displayText")}; }); besides = viewArithmetic(f, implicit, measured, 0);
-    }
-    const auto fit = numberMath(f, "ceil", [&] {
-        const auto spacing = numberMath(f, "max", [&] { return QJSValueList{label, besides}; }); const auto first = panelUsageAdd(f, widest, spacing);
-        const auto pixels = panelUsageRead(f, panelUsageContextRead(f, "font"), "pixelSize"); return QJSValueList{panelUsageAdd(f, first, viewArithmetic(f, pixels, QJSValue(0.5), 1))};
-    }); const auto left = panelUsageAdd(f, fit, panelUsageContextRead(f, "leftPadding")); return panelUsageAdd(f, left, panelUsageContextRead(f, "rightPadding"));
 }
 QJSValue ApplicationInfo::searchAnyMatch() const {
     const auto f = panelUsageEngine(this); if (panelUsageContextRead(f, "filter").strictlyEquals(QJSValue(QStringLiteral("")))) return QJSValue(true);
@@ -10239,6 +10515,8 @@ void ApplicationInfo::spaceGroupNumberCommit(const QJSValue& text) const {
 }
 QJSValue ApplicationInfo::reflectionShown(const QJSValue& uid, const QJSValue& value, bool residual) const {
     const auto f = panelUsageEngine(this); if (value.isUndefined() || panelUsageTruth(panelUsageGlobalCall(f, "isNaN", {value}))) return QJSValue(QStringLiteral(""));
+    if (residual && finiteNumber(value))
+        return QJSValue(QString::fromStdString(edi::table_number(value.toNumber(), QString::number(value.toNumber(), 'f', 2).toStdString(), true)));
     return residual ? panelUsageMemberCall(f, value, "toFixed", {QJSValue(2)}) : projectInvoke(f, "Session", "display", {uid, value});
 }
 void ApplicationInfo::placeReflectionTable() const {
@@ -10723,7 +11001,18 @@ void ApplicationInfo::createProjectDialogEvent(int kind) const {
 void ApplicationInfo::openProjectChoice() const {
     const auto f = panelUsageEngine(this);
     if (panelUsageTruth(assistantContextField(f, "WebFiles", "available"))) projectInvoke(f, "Session", "openWebProject", {panelUsageTruth(panelUsageContextRead(f, "zip")) ? QJSValue(QStringLiteral("file")) : QJSValue(QStringLiteral("folder"))});
-    else if (panelUsageTruth(panelUsageContextRead(f, "zip"))) projectInvoke(f, "openZipDialog", "open"); else projectInvoke(f, "openFolderDialog", "open");
+    else {
+        const char* name = panelUsageTruth(panelUsageContextRead(f, "zip")) ? "openZipDialog" : "openFolderDialog";
+        const auto picker = panelUsageContextRead(f, name);
+        pending_project_picker_ = consentQtObject(f, picker) ? picker.toQObject() : nullptr;
+    }
+}
+void ApplicationInfo::openProjectPicker() const {
+    // A native panel opens after the choice popup has closed and its script callback has returned (ADR-0052).
+    const QPointer<QObject> picker = std::exchange(pending_project_picker_, {});
+    if (picker) {
+        QMetaObject::invokeMethod(picker, "open", Qt::QueuedConnection);
+    }
 }
 void ApplicationInfo::askOpenProjectChoice() const { const auto f = panelUsageEngine(this); const auto state = panelUsageContextRead(f, "AppState"); panelUsageMemberCall(f, state, "afterChanges", {projectGuardedClosure(f, 388)}); }
 void ApplicationInfo::windowSaveChoiceOpened() const {

@@ -53,7 +53,7 @@
  {
   "id": "structure-web-0",
   "page": "structure",
-  "description": "Find the structure tb2ti2o7 in the EasyDiffraction collection",
+  "description": "Find the structure",
   "actions": [
    "appBar.tab.structure",
    "sideBar.tab.basic",
@@ -91,7 +91,7 @@
  {
   "id": "experiment-web-0",
   "page": "experiment",
-  "description": "Find the experiment heidi in the EasyDiffraction collection",
+  "description": "Find the experiment",
   "actions": [
    "appBar.tab.experiment",
    "sideBar.tab.basic",
@@ -153,9 +153,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Linked structures",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:experiment.linked_structures[tb2ti2o7].scale"
   ],
   "highlights": [
    "group.parameters"
@@ -190,9 +188,7 @@
    "reveal:parameters.category",
    "parameters.category",
    "choose:Atomic coordinates",
-   "parameters.freeHeader",
-   "parameters.freeHeader.free",
-   "parameters.clearFilters"
+   "tick:structure.atom_sites[O1].fract_x"
   ],
   "highlights": [
    "group.parameters"
@@ -296,7 +292,7 @@
   "page": "analysis",
   "description": "Inspect the correlations",
   "actions": [
-   "mainArea.analysis.tab.correlations"
+   "mainArea.tab.correlations"
   ],
   "highlights": [
    "workflow.analysis.mainContent"
@@ -309,7 +305,7 @@
   "page": "report",
   "description": "Review the report",
   "actions": [
-   "mainArea.analysis.tab.fitting",
+   "mainArea.tab.pattern",
    "appBar.tab.report",
    "sideBar.tab.basic"
   ],

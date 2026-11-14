@@ -4,6 +4,7 @@
 import argparse
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 from package import (
     ASSISTANT_COMPONENT,
@@ -32,16 +33,18 @@ def check(tools: Path, output: Path) -> None:
     marker = stage / (
         'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
         if SYSTEM == 'macos'
-        else 'bin/edi_app' + SUFFIX
+        else 'bin/EasyDiffraction' + SUFFIX
     )
     marker.parent.mkdir(parents=True)
     marker.write_text('first marker\n')
     assistant_marker = stage / ASSISTANT_RUNTIME / 'assistant.txt'
     assistant_marker.parent.mkdir(parents=True)
     assistant_marker.write_text('optional assistant marker\n')
-    offline = package_app(stage, tools, output / 'offline', '2026.11.0')
-    marker.write_text('second marker\n')
     repository = (output / 'online/repository').as_uri() + '/'
+    # Substitute only the endpoint; install and maintenance use the real embedded configuration.
+    with patch('package.repository_urls', return_value=(repository,)):
+        offline = package_app(stage, tools, output / 'offline', '2026.11.0')
+    marker.write_text('second marker\n')
     online = package_app(stage, tools, output / 'online', '2026.11.1', repository)
     (output / 'isolated home').mkdir()
     for kind, bootstrap in [('offline', offline), ('online', online)]:
@@ -56,7 +59,6 @@ def check(tools: Path, output: Path) -> None:
 def exercise(
     kind: str, bootstrap: Path, output: Path, marker: Path, assistant_marker: Path
 ) -> None:
-    repository = (output / 'online/repository').as_uri() + '/'
     env = clean_environment(output / 'isolated home' / kind)
     executable = installer_command(
         unpack_installer(bootstrap.with_suffix('.zip'), output / kind / 'unzipped')
@@ -93,14 +95,12 @@ def exercise(
                 user_file = target / 'user-project.edi'
                 user_file.write_text('keep the project\n')
                 run(
-                    [maintenance, '--set-temp-repository', repository, 'check-updates'],
+                    [maintenance, 'check-updates'],
                     **options,
                 )
                 run(
                     [
                         maintenance,
-                        '--set-temp-repository',
-                        repository,
                         '--accept-licenses',
                         '--default-answer',
                         '--confirm-command',
@@ -114,8 +114,6 @@ def exercise(
                     raise RuntimeError('In-place update changed an unrelated user file')
             maintenance_args = [
                 maintenance,
-                '--set-temp-repository',
-                repository,
                 '--accept-licenses',
                 '--default-answer',
                 '--confirm-command',

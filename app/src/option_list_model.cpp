@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "option_list_model.hpp"
 
+#include <QPointer>
 #include <cstddef>
 #include <stdexcept>
 
@@ -23,11 +24,17 @@ void OptionListModel::setOptions(const std::vector<std::string>& tokens, const s
         return;
     }
     const bool count_changed = next.size() != tokens_.size();
+    const QPointer<OptionListModel> self(this);
     beginResetModel();  // an option set changes only when the block's type does
+    if (!self) return;
     tokens_ = next;
     labels_ = next_labels;
     default_token_ = next_default;
     endResetModel();
+    if (!self) return;
+    ++revision_;
+    emit revisionChanged();
+    if (!self) return;
     if (count_changed) {
         emit countChanged();
     }

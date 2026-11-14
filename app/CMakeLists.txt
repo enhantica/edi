@@ -24,7 +24,8 @@ if(EDI_APP_ASSISTANT)
         src/assistant_work_report.hpp src/assistant_work_report.cpp
         src/assistant_history.hpp src/assistant_history.cpp
         src/assistant_markdown.hpp src/assistant_markdown.cpp
-        src/assistant_skill_import.hpp src/assistant_skill_import.cpp)
+        src/assistant_skill_import.hpp src/assistant_skill_import.cpp
+        src/assistant_thread_settings.hpp src/assistant_thread_settings.cpp)
     set(EDI_APP_ASSISTANT_QML
         qml/Components/AssistantPanel.qml
         qml/Components/AssistantWorking.qml
@@ -92,6 +93,7 @@ qt_add_qml_module(edi_app_module
     DEPENDENCIES QtGraphs QtQuick3D
     SOURCES
         src/app_info.hpp src/app_info.cpp
+        src/combo_box_metrics.hpp src/combo_box_metrics.cpp
         src/assistant_message_presentation.hpp
         src/assistant_values.hpp
         src/assistant_panel_presentation.hpp
@@ -131,6 +133,7 @@ qt_add_qml_module(edi_app_module
         src/measured_layer.hpp src/measured_layer.cpp
         src/evolution_view_model.hpp src/evolution_view_model.cpp
         src/scan_view_model.hpp src/scan_view_model.cpp
+        src/scan_draw_rows.hpp
         src/scan_layer.hpp src/scan_layer.cpp
         src/scan_lines.hpp src/scan_lines.cpp
         src/rendering_info.hpp src/rendering_info.cpp
@@ -169,6 +172,9 @@ qt_add_qml_module(edi_app_module
         qml/Components/ComboCell.qml
         qml/Components/CrashDialog.qml
         qml/Components/DiagnosticsDialog.qml
+        qml/Components/InfoDialog.qml
+        qml/Components/TagChip.qml
+        qml/Components/TagRowsWidth.qml
         qml/Components/FeedbackDialog.qml
         qml/Components/EmptyStateLabel.qml
         qml/Components/DataTable.qml
@@ -189,6 +195,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/IconLine.qml
         qml/Components/IconTabButton.qml
         qml/Components/MainAreaBlockSelector.qml
+        qml/Components/MainView.qml
         qml/Components/NumberLabel.qml
         qml/Components/ParameterCell.qml
         qml/Components/ParameterField.qml
@@ -431,6 +438,23 @@ endif()
 qt_add_executable(edi_app main.cpp)
 target_link_libraries(edi_app PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Svg)
 set_target_properties(edi_app PROPERTIES MACOSX_BUNDLE FALSE WIN32_EXECUTABLE TRUE)
+if(NOT EMSCRIPTEN)
+    qt_add_executable(edi_scan_refresh_tests EXCLUDE_FROM_ALL tests/scan_refresh_tests.cpp
+        src/scan_view_model.hpp src/scan_view_model.cpp src/scan_session.hpp src/scan_session.cpp)
+    target_link_libraries(edi_scan_refresh_tests PRIVATE edi_core Qt6::Core Qt6::Gui Qt6::Qml Qt6::Concurrent Qt6::Test)
+    target_include_directories(edi_scan_refresh_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_compile_definitions(edi_scan_refresh_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    set_target_properties(edi_scan_refresh_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE
+        QT_QML_MODULE_NO_IMPORT_SCAN TRUE)
+    qt_add_executable(edi_scan_save_tests EXCLUDE_FROM_ALL tests/scan_save_tests.cpp)
+    target_link_libraries(edi_scan_save_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS} Qt6::Test)
+    target_include_directories(edi_scan_save_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_compile_definitions(edi_scan_save_tests PRIVATE EDI_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+    set_target_properties(edi_scan_save_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+    if(TARGET edi_assistant_native)
+        target_link_libraries(edi_scan_save_tests PRIVATE edi_assistant_native)
+    endif()
+endif()
 if(WIN32)
     enable_language(RC)
     file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/edi-app-icon.rc"
@@ -451,6 +475,8 @@ if(EMSCRIPTEN)
     # writeFile); the stubs stand in for the socket library a WasmFS link leaves out.
     target_sources(edi_app PRIVATE src/wasmfs_socket_stubs.cpp)
     target_link_options(edi_app PRIVATE -sWASMFS -sFORCE_FILESYSTEM)
+    # The start page passes the release version as environment variables, and qtloader needs ENV for that.
+    set_target_properties(edi_app PROPERTIES QT_WASM_EXTRA_EXPORTED_METHODS "ENV")
 endif()
 
 # The measured-layer benchmark (edi ADR-0017 §15): test tooling, never part of the host. It reads the
@@ -499,6 +525,10 @@ add_dependencies(edi_app_tests edi_app_build_commit)
 # The app names it too: its test observers report the build they observe.
 target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_app edi_app_build_commit)
+if(TARGET edi_scan_save_tests)
+    target_sources(edi_scan_save_tests PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
+    add_dependencies(edi_scan_save_tests edi_app_build_commit)
+endif()
 # The benchmarks link the app module, whose assistant code names the build as well.
 foreach(bench edi_app_chart_bench edi_app_scan_bench)
     target_sources(${bench} PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
@@ -541,6 +571,15 @@ endif()
 if(EDI_DEPLOY_APP AND UNIX AND NOT APPLE)
     set_target_properties(edi_app PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 endif()
+# The installed Windows and Linux program is EasyDiffraction, as the macOS bundle is; builds for development keep edi_app.
+if(EDI_DEPLOY_APP AND NOT APPLE AND NOT EMSCRIPTEN)
+    set_target_properties(edi_app PROPERTIES OUTPUT_NAME EasyDiffraction)
+endif()
+# The icon of the Linux menu and desktop entries the installer writes.
+if(EDI_DEPLOY_APP AND UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
+    install(FILES resources/logo/App.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons RENAME EasyDiffraction.png
+            COMPONENT desktop)
+endif()
 install(TARGETS edi_app BUNDLE DESTINATION . COMPONENT desktop RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         COMPONENT desktop)
 if(NOT EMSCRIPTEN)
@@ -553,6 +592,27 @@ if(NOT EMSCRIPTEN)
         BASE "${smoke_project}" FILES ${smoke_files})
 endif()
 install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT desktop)
+
+# The EasyDiffraction data collection (enhantica/edi-data, about 14 MB), installed with the desktop app as its offline
+# copy: the built-in source's last location, read when the online ones are out (edi ADR-0068). The online collection
+# stays the source of updates. Empty installs none.
+set(EDI_BUNDLED_COLLECTION "" CACHE PATH "A copy of the edi-data collection to install as the app's offline copy")
+if(EDI_BUNDLED_COLLECTION AND NOT EMSCRIPTEN)
+    if(NOT EXISTS "${EDI_BUNDLED_COLLECTION}/index.json")
+        message(FATAL_ERROR "EDI_BUNDLED_COLLECTION ${EDI_BUNDLED_COLLECTION} has no index.json")
+    endif()
+    if(APPLE AND EDI_DEPLOY_APP)
+        set(edi_collection_destination EasyDiffraction.app/Contents/Resources/collection)
+        set(edi_collection_from_binary ../Resources/collection)
+    else()
+        set(edi_collection_destination ${CMAKE_INSTALL_DATADIR}/edi/collection)
+        set(edi_collection_from_binary ../${CMAKE_INSTALL_DATADIR}/edi/collection)
+    endif()
+    install(DIRECTORY "${EDI_BUNDLED_COLLECTION}/" DESTINATION ${edi_collection_destination} COMPONENT desktop
+            PATTERN ".git" EXCLUDE PATTERN ".github" EXCLUDE)
+    set_property(SOURCE src/online_sources.cpp APPEND PROPERTY COMPILE_DEFINITIONS
+                 "EDI_APP_BUNDLED_COLLECTION=\"${edi_collection_from_binary}\"")
+endif()
 
 if(TARGET edi_assistant_native AND EDI_APP_ASSISTANT)
     target_link_libraries(edi_app_module PRIVATE edi_assistant_native)
@@ -625,6 +685,9 @@ if(NOT EMSCRIPTEN)
     add_dependencies(edi_assistant_lifetime_host edi_assistant_guard edi_assistant_lifetime_fixture)
     if(EDI_DEPLOY_APP AND UNIX AND NOT APPLE)
         set_target_properties(edi_assistant_guard PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
+    elseif(EDI_DEPLOY_APP AND APPLE)
+        # Beside the app in Contents/MacOS: Qt and libc++ are in the bundle's Frameworks.
+        set_target_properties(edi_assistant_guard PROPERTIES INSTALL_RPATH "@executable_path/../Frameworks")
     endif()
     install(TARGETS edi_assistant_guard RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT desktop)
 endif()

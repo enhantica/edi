@@ -8,6 +8,7 @@
 #include <QJSValue>
 #include <QVariantMap>
 #include <QObject>
+#include <QPointer>
 #include <QPoint>
 #include <QString>
 #include <QList>
@@ -74,6 +75,14 @@ struct TutorialStep {
     Q_PROPERTY(QString tab MEMBER tab CONSTANT)
     // A step about a whole area that names nothing in it (the files step): its callout may sit over the area.
     Q_PROPERTY(bool coversTarget MEMBER coversTarget CONSTANT)
+    // A fit step's expectations, for a replay to check: the parameters free before the fit (their table paths) and
+    // the reduced chi2 the fit reaches, within its tolerance; empty and negative when the manifest gives none.
+    Q_PROPERTY(QStringList expectFree MEMBER expectFree CONSTANT)
+    // Backgrounds the stage frees whole: their points outside the measured range, which no fit lists, may be free too.
+    Q_PROPERTY(QStringList expectWholeBackground MEMBER expectWholeBackground CONSTANT)
+    Q_PROPERTY(QStringList expectSites MEMBER expectSites CONSTANT)
+    Q_PROPERTY(double expectChi2 MEMBER expectChi2 CONSTANT)
+    Q_PROPERTY(double expectChi2Tolerance MEMBER expectChi2Tolerance CONSTANT)
 
    public:
     QString text;
@@ -87,6 +96,12 @@ struct TutorialStep {
     QString tab;
     QString title;
     bool coversTarget = false;
+    QStringList expectFree;
+    QStringList expectWholeBackground;
+    // A built structure's sites when this step starts, "label type x y z" each (the replay's check).
+    QStringList expectSites;
+    double expectChi2 = -1;
+    double expectChi2Tolerance = 0.01;
 };
 
 // A built-in tutorial, as app/tutorials/manifest.json gives it (ADR-0064).
@@ -193,7 +208,8 @@ class ApplicationInfo : public QObject {
         NumberFitted,
         NumberOwnUncertainty,
         NumberExponent,
-        NumberWrittenNarrow
+        NumberWrittenNarrow,
+        NumberAxisStep
     };
     Q_ENUM(NumberOperation)
     enum FitOutcomeOperation { FitIcon, FitRing, FitWord, FitMeaning, FitColor, FitTextColor };
@@ -213,8 +229,8 @@ class ApplicationInfo : public QObject {
     QString version() const;
     QString releaseDate() const;
     QString homepageUrl() const { return QStringLiteral("https://easydiffraction.org"); }
-    QString docsUrl() const { return QStringLiteral("https://enhantica.github.io/edi/"); }
-    QString changesUrl() const { return QStringLiteral("https://enhantica.github.io/edi/changelog/"); }
+    QString docsUrl() const { return QStringLiteral("https://easydiffraction.org/"); }
+    QString changesUrl() const { return QStringLiteral("https://easydiffraction.org/changelog/"); }
     QString issuesUrl() const { return QStringLiteral("https://github.com/enhantica/edi/issues"); }
     QString contactUrl() const { return QStringLiteral("https://easydiffraction.org/#contact"); }
     // The licence texts are bundled in the app's resources, so the About window shows them without a network:
@@ -246,8 +262,12 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void setMessageLevel(const QString& level) const;
     // Save image on a chart or the structure view: the grabbed image (ItemGrabResult.image) as a PNG file on the
     // desktop, or handed to the browser to download as `name`.
-    Q_INVOKABLE bool saveImage(const QVariant& image, const QUrl& file) const;
-    Q_INVOKABLE bool downloadImage(const QVariant& image, const QString& name) const;
+    // A grabbed image saved as PNG, less the top `cut` of its height (the toolbar's band, as a fraction).
+    Q_INVOKABLE bool saveImage(const QVariant& image, const QUrl& file, double cut = 0) const;
+    Q_INVOKABLE bool downloadImage(const QVariant& image, const QString& name, double cut = 0) const;
+    // Where Save image starts: the folder last saved to while it exists; else the project's reports folder, made
+    // when missing, for a project with a place of its own; else the pictures folder.
+    Q_INVOKABLE QUrl imageFolder(const QString& stored, const QString& projectPath, bool ownPlace) const;
 #if EDI_APP_ASSISTANT
     /// Original Panel projection/selection on the current QML thread; no cache or canonical lookup.
     /// Borrows actual Panel/engine values; original JS errors remain pending except the projection's explicit catch.
@@ -419,6 +439,8 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE bool chooseStructureFile() const;
     Q_INVOKABLE QJSValue takeStructureWebIntent(const QJSValue& request) const;
     Q_INVOKABLE void chooseExperimentData(const QJSValue& experiment) const;
+    Q_INVOKABLE void chooseDatasetFolder(QObject* picker, QObject* project, QObject* experiment) const;
+    Q_INVOKABLE void acceptDatasetFolder(QObject* picker, QObject* currentProject, const QUrl& folder) const;
     Q_INVOKABLE void formFilesOpened(const QJSValue& request, const QJSValue& files, bool experiments) const;
     Q_INVOKABLE void formFilesCancelled(const QJSValue& request, bool experiments) const;
     Q_INVOKABLE void acceptExperimentDataFile() const;
@@ -435,7 +457,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void resetPreferences() const;
     Q_INVOKABLE void applyPreferences() const;
     Q_INVOKABLE void preferencesColourChanged() const;
-    Q_INVOKABLE void preferencesStackedPaletteChanged() const;
     Q_INVOKABLE void preferencesLegacyPaletteChanged() const;
     Q_INVOKABLE void persistPreference(int kind) const;
     Q_INVOKABLE QJSValue preferenceItemsUnder(const QJSValue& item, const QJSValue& wanted) const;
@@ -612,11 +633,14 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void preferenceCompleteSourceSelection(bool web, bool accepted) const;
     Q_INVOKABLE void preferenceRetireSourceSelection(const QJSValue& token, bool web) const;
     Q_INVOKABLE QJSValue preferenceColourTitles() const;
-    Q_INVOKABLE QJSValue preferenceStackedChoices() const;
     Q_INVOKABLE QJSValue preferenceEngineThreads() const;
     Q_INVOKABLE void preferenceActivated(const QJSValue& index, int setting) const;
     /// NumberText presentation; project uncertainty formatting remains ProjectViewModel/core-owned.
     Q_INVOKABLE QJSValue numberPresentation(NumberOperation operation, const QJSValue& value, const QJSValue& second,
+                                          const QJSValue& third, const QJSValue& fourth) const;
+    // The plain-syntax helpers numberPresentation builds on; the displayed texts go through edi::table_number and
+    // edi::table_value_su, the one rule for numbers.
+    QJSValue numberPresentationRaw(NumberOperation operation, const QJSValue& value, const QJSValue& second,
                                           const QJSValue& third, const QJSValue& fourth) const;
     /// Report preview/export procedures retain ReportViewModel as data and publication authority.
     Q_INVOKABLE void saveReportPreview() const;
@@ -710,7 +734,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void singleHoverRead(const QJSValue& px, const QJSValue& py) const;
     Q_INVOKABLE void singlePointer(const QJSValue& mouse, int event) const;
     /// Scan view state/lifecycle and input procedures; ScanViewModel and ScanLayer own data and presentation.
-    Q_INVOKABLE QJSValue scanStackedPalette() const;
     Q_INVOKABLE QJSValue chartCapitalised(const QJSValue& text) const;
     Q_INVOKABLE void scanSetZoom(const QJSValue& x, const QJSValue& y) const;
     Q_INVOKABLE void scanResetZoom() const;
@@ -732,7 +755,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue digitCellWidth() const;
     Q_INVOKABLE QJSValue digitTextRuns() const;
     Q_INVOKABLE QJSValue digitRunIsDigit(const QJSValue& text) const;
-    Q_INVOKABLE QJSValue palettePositions() const;
     Q_INVOKABLE QJSValue nameBlockIcon(const QJSValue& kind) const;
     Q_INVOKABLE QJSValue nameParameterIcon(const QJSValue& name) const;
     Q_INVOKABLE QJSValue nameSegments(const QJSValue& item) const;
@@ -762,7 +784,6 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void tableRowDestroyed() const;
     /// Searchable popup filtering, geometry and existing opening/request lifecycle.
     Q_INVOKABLE void searchPositionPopup(const QJSValue& opening) const;
-    Q_INVOKABLE QJSValue searchMeasuredWidth(bool optionsOnly) const;
     Q_INVOKABLE QJSValue searchAnyMatch() const;
     Q_INVOKABLE QJSValue searchFolded(const QJSValue& text) const;
     Q_INVOKABLE void searchPlacePopup(const QJSValue& opening) const;
@@ -845,6 +866,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void createProjectClicked() const;
     Q_INVOKABLE void createProjectDialogEvent(int kind) const;
     Q_INVOKABLE void openProjectChoice() const;
+    Q_INVOKABLE void openProjectPicker() const;
     Q_INVOKABLE void askOpenProjectChoice() const;
     Q_INVOKABLE void windowSaveChoiceOpened() const;
     Q_INVOKABLE QJSValue windowUnsavedText() const;
@@ -954,6 +976,8 @@ class ApplicationInfo : public QObject {
     // reads as edi::colour_scheme_or_default does), `count` one past the last position in use, in the theme:
     // edi::figure_colour. The calculated curve's colour in the palette and theme: edi::role_colour.
     Q_INVOKABLE QColor figureColour(const QString& scheme, int position, int count, bool dark) const;
+    // The palette's eleven figure colours in their order, in the theme: the strip under Preferences' Palette.
+    Q_INVOKABLE QList<QColor> paletteColours(const QString& scheme, bool dark) const;
     Q_INVOKABLE QColor calculationColour(const QString& scheme, bool dark) const;
     // How many colours a palette lists (edi::kPaletteColourCount), and whether it keeps its first two for experiments.
     Q_PROPERTY(int paletteColourCount READ paletteColourCount CONSTANT)
@@ -961,6 +985,17 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE bool reservesExperimentColours(const QString& scheme) const;
     // A local file's path as the app shows it, and the URL of the folder it is in (the Preferences' settings file).
     Q_INVOKABLE QString localPath(const QUrl& file) const { return QDir::toNativeSeparators(file.toLocalFile()); }
+    // The same path as a field shows it: the home folder as "~".
+    Q_INVOKABLE QString shownPath(const QUrl& file) const {
+        const QString path = QDir::toNativeSeparators(file.toLocalFile());
+        const QString home = QDir::toNativeSeparators(QDir::homePath());
+        return path.startsWith(home + QDir::separator()) ? QStringLiteral("~") + path.mid(home.size()) : path;
+    }
+    // An online source's kinds as tags (Preferences' online sources): one {label, icon, light, dark} per kind, in the
+    // order given, with the icon the app uses for that kind and a tone of app/examples/tags.json.
+    Q_INVOKABLE QVariantList sourceKindTags(const QStringList& kinds) const;
+    // A local path given as text, shown as shownPath shows it.
+    Q_INVOKABLE QString shownLocalPath(const QString& path) const { return shownPath(QUrl::fromLocalFile(path)); }
     Q_INVOKABLE QUrl folderOf(const QUrl& file) const {
         return QUrl::fromLocalFile(QFileInfo(file.toLocalFile()).absolutePath());
     }
@@ -1007,9 +1042,16 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void restoreWindowGeometry(QObject* window, QObject* settings) const;
     Q_INVOKABLE QColor elementColor(const QString& typeSymbol, const QColor& fallback,
                                     const QString& scheme = QStringLiteral("jmol")) const;
+    // The colours the strip under Preferences' moment arrows selector shows for `colours` ("atom", "greyed" or
+    // "single"): a few magnetic elements' colours as the structure view draws their arrows (edi ADR-0078).
+    Q_INVOKABLE QList<QColor> momentColourSamples(const QString& colours, bool dark) const;
     // `colour` as drawn flat on any of `backgrounds`: its lightness moved to 2:1 contrast on each, its hue kept (edi
     // ADR-0047).
     Q_INVOKABLE QColor readableColour(const QColor& colour, const QList<QColor>& backgrounds) const;
+   private:
+    mutable QPointer<QObject> pending_project_picker_;
+    mutable QPointer<QObject> dataset_folder_picker_, dataset_folder_project_, dataset_folder_experiment_;
+
 };
 
 #endif  // EDI_APP_APP_INFO_HPP

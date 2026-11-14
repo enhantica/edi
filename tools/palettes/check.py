@@ -17,10 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PALETTES = ROOT / 'data' / 'palettes'
 # In edi::ColourScheme's order, as cmake/edi_core_sources.cmake embeds them.
 NAMES = {
-    'earth': 'Earth',
-    'classic': 'Classic',
-    'soft': 'Soft',
-    'natural': 'Natural',
+    'main': 'Main',
     'colour-blind-safe': 'Colour-blind safe',
 }
 ROLES = ['figure'] * 11 + ['total_calculation', 'background', 'difference']
@@ -52,7 +49,7 @@ def provenance_rows(text: str, title: str) -> list[tuple[str, int, str, str]]:
 def main() -> int:
     found = sorted(path.stem for path in PALETTES.glob('*.tsv'))
     if found != sorted(NAMES):
-        print(f'data/palettes holds {found}, not the five palettes {sorted(NAMES)}')
+        print(f'data/palettes holds {found}, not the two palettes {sorted(NAMES)}')
         return 1
     provenance = (PALETTES / 'PROVENANCE.md').read_text(encoding='utf-8')
     for stem, title in NAMES.items():
@@ -67,7 +64,7 @@ def main() -> int:
         if provenance_rows(provenance, title) != rows:
             print(f'{stem}.tsv and PROVENANCE.md list different colours for {title}')
             return 1
-    print('data/palettes: five palettes, each equal to PROVENANCE.md')
+    print('data/palettes: two palettes, each equal to PROVENANCE.md')
     return 0
 
 

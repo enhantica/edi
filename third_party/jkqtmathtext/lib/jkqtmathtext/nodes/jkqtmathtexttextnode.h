@@ -1,4 +1,4 @@
-﻿/*
+/*
     Copyright (c) 2008-2026 Jan W. Krieger (<jan@jkrieger.de>)
     with contributions from: Razi Alavizadeh
 

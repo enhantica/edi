@@ -72,6 +72,11 @@ def main() -> None:
         extract(download, Path(scratch) / 'site')
         if not (Path(scratch) / 'site/index.html').is_file():
             raise RuntimeError('The web app artifact has no start page')
+        # The release it is archived as, which the page passes to the app.
+        build = Path(scratch) / 'site/build.json'
+        folders = json.loads(build.read_text(encoding='utf-8'))
+        folders['release'] = {'version': release['version'], 'commit': release['commit']}
+        build.write_text(json.dumps(folders, indent=2) + '\n', encoding='utf-8')
         name = f'EasyDiffraction-{release["version"]}-webapp.zip'
         write_archive(Path(scratch) / 'site', args.publication / 'assets' / name)
     print(name)

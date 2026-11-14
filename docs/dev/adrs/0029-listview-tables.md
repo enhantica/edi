@@ -385,3 +385,17 @@ padding of the same declared native cells.
 
 Measuring each column's width from the model's data at the cell font, with no row made to measure it, is planned as
 separate work. Until it lands, the measurement above stands.
+
+
+## Closed menus and stable role metadata
+
+The parameter table's Free/Fixed header menu reads its row membership only while open. A closed popup must not
+scan every parameter on an experiment-selection notification. Opening still reads the current filtered rows,
+and the existing property dependencies keep Free/Fixed counts current while it stays open. Explicit actions
+still re-read the rows they act on.
+
+RowTableModel builds its immutable role-name map once alongside its role list. Returning the map shares Qt's
+copy-on-write storage; callers changing a returned map cannot alter the model's roles. This removes repeated
+UTF-8 conversion and hash allocation from parameter lookup and every other table consumer. The native role-map
+fixture checks shared immutable storage and mutation isolation, and the real popup check visits rows only while
+open. The NCAF switching replay exposed both paths; no chart-style change is involved.

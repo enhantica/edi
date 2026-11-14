@@ -166,7 +166,7 @@ def write_metadata(
             'Version': version,
             'Title': 'EasyDiffraction installer',
             'Publisher': 'EasyScience',
-            'ProductUrl': 'https://enhantica.github.io/edi/',
+            'ProductUrl': 'https://easydiffraction.org/',
             'TargetDir': '/Applications/EasyDiffraction'
             if SYSTEM == 'macos'
             else '@HomeDir@/EasyDiffraction',
@@ -227,8 +227,10 @@ def write_metadata(
             'Default': 'true',
             'ForcedInstallation': 'true',
             'RequiresAdminRights': 'false',
+            'Script': 'installscript.qs',
         },
     )
+    shutil.copy2(ROOT / 'tools/installer/installscript.qs', meta / 'installscript.qs')
     licenses = ET.SubElement(root.getroot(), 'Licenses')
     ET.SubElement(
         licenses,
@@ -538,6 +540,9 @@ def prepare_installer_source(
     (data / 'payload-manifest.json').write_text(
         json.dumps(payload_manifest(data), indent=2) + '\n'
     )
+    if repository_url is None:
+        repository_url, *default_mirrors = repository_urls(channel)
+        mirrors = tuple(default_mirrors)
     write_metadata(
         config, meta, version, repository_url, mirrors, enable_mirrors=channel == 'stable'
     )
@@ -560,7 +565,7 @@ def package_app(
         / (
             'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
             if SYSTEM == 'macos'
-            else 'bin/edi_app' + SUFFIX
+            else 'bin/EasyDiffraction' + SUFFIX
         )
     ).is_file():
         raise RuntimeError('Stage does not contain the native application')
@@ -602,7 +607,7 @@ def package_app(
             *template_args,
             '--compression',
             '1',
-            '--online-only' if repository_url else '--offline-only',
+            '--online-only' if repository_url else '--hybrid',
             '-c',
             source / 'config/config.xml',
             '-p',
@@ -791,14 +796,14 @@ def exercise_installer(
     app = target / (
         'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
         if SYSTEM == 'macos'
-        else 'bin/edi_app' + SUFFIX
+        else 'bin/EasyDiffraction' + SUFFIX
     )
     try:
         verify_installed_payload(target, with_assistant=with_assistant)
         app = target / (
             'EasyDiffraction.app/Contents/MacOS/EasyDiffraction'
             if SYSTEM == 'macos'
-            else 'bin/edi_app' + SUFFIX
+            else 'bin/EasyDiffraction' + SUFFIX
         )
         with (output / 'app.log').open('w') as log:
             run(

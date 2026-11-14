@@ -7,7 +7,7 @@
     ],
     "id": "project-created",
     "image": "project-created.webp",
-    "image_sha256": "ad25fab7fa76be76cdee5321fa1cf17e048a9c1a1d08b67f7f2388752546fa63",
+    "image_sha256": "f43d176232d1647b8b6d4f970a80b67e3c1f208bbdc8faecbb18af2c418c19d5",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -191,22 +191,6 @@
                 35
             ]
         },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
-            ]
-        },
         "appBar.tab.analysis": {
             "bounds": [
                 812.359375,
@@ -359,6 +343,22 @@
                 42
             ]
         },
+        "group.examples.pin": {
+            "bounds": [
+                1433.2261363926236,
+                272.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                274,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.getStarted": {
             "bounds": [
                 770,
@@ -376,6 +376,22 @@
                 155
             ]
         },
+        "group.getStarted.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
+            ]
+        },
         "group.recentProjects": {
             "bounds": [
                 770,
@@ -390,6 +406,22 @@
                 770,
                 316,
                 710,
+                42
+            ]
+        },
+        "group.recentProjects.pin": {
+            "bounds": [
+                1433.2261363926236,
+                314.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                316,
+                44.54772721475251,
                 42
             ]
         },
@@ -469,7 +501,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-zBCjbu/pd-neut-cwl_hs-hrpt",
+            "label": "/tmp/EasyDiffraction-tnJsak/pd-neut-cwl_hs-hrpt",
             "visible_bounds": [
                 183.4,
                 330.40000000000003,
@@ -599,7 +631,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -837,8 +869,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "75435642b7b9365c4c4c9bf84fe9a09af0b77dabedc637cf4af8cfc96fd8544c",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "ab5f251feaf22540a33c33563fae712cfb2580ee179f693c7517d2a74e1c77fa",
+    "source_revision": "00b29514389e67e0b2ddc0994d95f4a678012f8b",
     "state": {
         "experiments": 0,
         "fit_outcome": "",
@@ -873,7 +905,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

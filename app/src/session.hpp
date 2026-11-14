@@ -433,7 +433,7 @@ class Session : public QObject {
     int project_messages_ = 0;  // the keys of the project's messages
     QString opened_example_;
     QString opened_archive_;
-    QString colour_scheme_ = QStringLiteral("earth");
+    QString colour_scheme_ = QStringLiteral("main");
     // The .zip the project was saved as: its location, rewritten by every Save from the working folder.
     QString archive_location_;
     // A question belongs to the save operation that asked it; its answer makes that operation and runs it.

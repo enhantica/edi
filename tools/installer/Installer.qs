@@ -1,6 +1,19 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-function Controller() {}
+// macOS refuses to start a downloaded program that still carries the quarantine flag from the
+// browser, the bundled assistant runtime included, so it is cleared on everything installed.
+function clearQuarantine() {
+    if (systemInfo.kernelType !== "darwin")
+        return;
+    var target = installer.value("TargetDir");
+    if (target !== "")
+        installer.execute("/usr/bin/xattr", ["-r", "-d", "com.apple.quarantine", target]);
+}
+
+function Controller() {
+    installer.installationFinished.connect(clearQuarantine);
+    installer.updateFinished.connect(clearQuarantine);
+}
 
 var wordmark = "";
 

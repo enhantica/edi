@@ -76,7 +76,7 @@ EaElements.ParamTextField {
     onFontChanged: refit()
 
     // The value as edited: the same text, so a field left as it was changes nothing.
-    readonly property string editText: written ? item.fileValue : item !== null ? NumberText.full(item.value) : value
+    readonly property string editText: written ? item.fileEditValue : item !== null ? NumberText.full(item.value) : value
 
     // A value too wide uses the same significant-digit scientific spelling as a
     // table cell; the full native token remains the edit/menu/hover value.

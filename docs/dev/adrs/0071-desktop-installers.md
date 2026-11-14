@@ -365,3 +365,17 @@ The macOS application and bootstrap use the same padded ICNS asset. The
 transparent canvas keeps the blue mark clear of the Dock's running indicator.
 
 The running macOS application uses its bundle icon for the Dock.
+
+
+## Offline installation with maintenance updates
+
+Offline downloads bundle all components and use IFW's `--hybrid` mode. They embed the same
+channel-specific primary and mirror repositories as online downloads, so the installed Maintenance
+Tool can update or add components without manually adding a repository. Initial installation uses
+the bundled payload. Offline packaging does not generate or publish an online repository.
+
+The local marker-component protocol gate embeds its local fixture repository in the offline
+installer and checks updates and optional-component changes without a temporary repository override.
+This exercises the installed default configuration while keeping public servers out of the check.
+
+- [Qt: offline installers and later updates](https://doc.qt.io/qtinstallerframework/ifw-offline-installers.html)

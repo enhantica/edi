@@ -24,7 +24,7 @@ Visually, in a browser or on your desktop
 
 <!-- interface-preview:guide-application -->
 <figure class="ed-interface-preview" data-interface-hero>
-<a class="gui-image-link" href="../assets/gui/y2o3/13-analysis-basic.png?v=d21425890a21" data-gui-dark="70046ce6fa52" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: EasyDiffraction graphical application"><svg class="gui-capture" viewBox="0 0 1480 800" width="1480" height="800" role="img" aria-label="EasyDiffraction graphical application"><title>EasyDiffraction graphical application</title><defs><clipPath id="interface-13-analysis-basic"><rect y="0" width="1480" height="800" rx="17.76" /></clipPath></defs><image href="../assets/gui/y2o3/13-analysis-basic.png?v=d21425890a21" data-gui-dark="70046ce6fa52" width="1480" height="800" clip-path="url(#interface-13-analysis-basic)" /><rect class="gui-image-frame" y="0" width="1480" height="800" rx="17.76" /></svg></a>
+<a class="gui-image-link" href="../assets/gui/y2o3/13-analysis-basic.webp?v=65f5003e591a" data-gui-dark="757c9b745834" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: EasyDiffraction graphical application"><svg class="gui-capture" viewBox="0 0 1480 800" width="1480" height="800" role="img" aria-label="EasyDiffraction graphical application"><title>EasyDiffraction graphical application</title><defs><clipPath id="interface-13-analysis-basic"><rect y="0" width="1480" height="800" rx="17.76" /></clipPath></defs><image href="../assets/gui/y2o3/13-analysis-basic.webp?v=65f5003e591a" data-gui-dark="757c9b745834" width="1480" height="800" clip-path="url(#interface-13-analysis-basic)" /><rect class="gui-image-frame" y="0" width="1480" height="800" rx="17.76" /></svg></a>
 </figure>
 <!-- /interface-preview -->
 
@@ -94,9 +94,12 @@ From a terminal or shell script
 
 A **structure** describes the crystalline material. An **experiment** describes how its pattern is measured or simulated, including instrumental effects and background. The **analysis** joins them: calculate a prediction, select parameters that may vary, and fit against observations when those observations are available.
 
-The [Concept](concepts.md) page explains where this analysis sits after acquisition and reduction. The [analysis workflow](analysis-workflow/index.md) follows a project from its inputs to an assessed result and report.
+[From measurement to analysis](concepts.md) explains where this analysis sits after acquisition and reduction.
 
 ## Follow the workflow
+
+Each stage has its own page; the [analysis workflow](analysis-workflow/index.md) follows a project from its inputs to
+an assessed result and a report.
 
 <!-- workflow-diagram -->
 <ol class="ed-workflow-diagram" aria-label="Analysis workflow">
@@ -108,13 +111,12 @@ The [Concept](concepts.md) page explains where this analysis sits after acquisit
 </ol>
 <!-- /workflow-diagram -->
 
-The [workflow overview](analysis-workflow/index.md) connects these stages.
-
 ## Start from a reproducible example
 
 An [example project](tutorials/index.md) includes structures, experiments and starting conditions together. Use an example that matches your intended measurement, and read its provenance and reference comparison before treating it as a template for new work.
 
-For your own analysis, retain the source of the structure and data, experimental conditions, fitting choices and software version. These two outputs serve different purposes: a report communicates the result to others, while the complete project is what you reopen to continue the analysis.
+For your own analysis, keep the source of the structure and data, the experimental conditions, the fitting choices and
+the software version. A report tells others about the result; the saved project is what you reopen to continue.
 
 ## Understand the physics
 

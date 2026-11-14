@@ -85,7 +85,7 @@ p.dataset.guiParts).length===1 && p.hasAttribute('data-gui-inset')),
         direction['sameWidth'] and direction['centered'] and direction['rectangles'], direction
     )
     require(
-        '11-experiment-basic.png' in direction['image']
+        '11-experiment-basic.webp' in direction['image']
         and direction['color'] == direction['pageBackground']
         and 0 < direction['opacity'] < 1,
         direction,
@@ -167,7 +167,7 @@ return {label:label.textContent.trim(), title:svg.querySelector('title').textCon
             elif mode:
                 require(selected['title'].endswith(selected['label']), selected)
             if group == 4 and mode == 2:
-                require('guide-analysis-correlations.png' in selected['image'], selected)
+                require('guide-analysis-correlations.webp' in selected['image'], selected)
                 browser.shot(output / f'{browser.kind}-{width}-correlations.png')
         require(max(image_positions) - min(image_positions) < 1, (group, image_positions))
         require(len(set(descriptions)) == modes, (group, descriptions))

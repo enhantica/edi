@@ -8,25 +8,18 @@ import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
 
-// The Analysis page (easydiffractionbeta Pages/Analysis): the chart's place in the main area, with the
-// experiment selector in its tab bar; the parameter table and Fitting in Main; the analysis block's `.edi`
-// categories in Extra (packet §2b (iv), §15.6); analysis.edi in Text.
+// The Analysis page (easydiffractionbeta Pages/Analysis): the parameter table and Fitting in Main; the analysis block's
+// `.edi` categories in Extra (packet §2b (iv), §15.6); analysis.edi in Text. The views are the window's one main view
+// beside it (MainView).
 WorkflowPage {
     id: page
 
     readonly property ProjectViewModel project: Session.project
     readonly property AnalysisViewModel analysis: project ? project.analysis : null
     readonly property ExperimentViewModel experiment: project ? project.currentExperiment : null
-    // The Stacked and Map tabs: a scan, or a joint fit of several experiments.
-    readonly property bool patternViews: project !== null && (project.scan || project.scanViews.joint)
-    // A project of several single crystals: the Stacked tab draws all of them on one F²calc-against-F²meas chart, and
-    // there is no Map.
-    readonly property bool singleCrystals: project !== null && project.singleCrystalExperiments.length > 1
     readonly property bool scanMode: project !== null && project.fit.scanMode
     // Some experiment holds measured data: without any there is nothing to fit, and what only a fit uses is hidden.
     readonly property bool measured: project !== null && project.fit.measured
-    // Leaving the scan modes hides Evolution: a page showing it goes back to the pattern.
-    onScanModeChanged: ApplicationInfo.finishUiEvent(3, undefined)
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
@@ -42,91 +35,6 @@ WorkflowPage {
         })
 
     pageName: "analysis"
-    defaultInfo: project ? "" : qsTr("No analysis done")
-    mainTabs: [
-        IconTabButton {
-            objectName: "mainArea.analysis.tab.fitting"
-            // The view's name, text only (edi ADR-0017 §2).
-            text: qsTr("Pattern")
-        },
-        // The last fit's parameter correlations for the shown experiment (diffraction-lib's correlation heatmap),
-        // before Evolution: every fit has them (owner, 2026-10-11).
-        IconTabButton {
-            objectName: "mainArea.analysis.tab.correlations"
-            text: qsTr("Correlations")
-            enabled: page.measured
-        },
-        // A fitted parameter across a scan's datasets (edi ADR-0017 §19). Shown only in the sequential and
-        // independent fitting modes, and enabled in a scan project (edi ADR-0046).
-        IconTabButton {
-            objectName: "mainArea.analysis.tab.evolution"
-            text: qsTr("Evolution")
-            visible: page.scanMode
-            // The base tab's own width, and none while hidden, so the tab bar keeps no gap for it.
-            width: visible ? Math.max(implicitBackgroundWidth + leftInset + rightInset, implicitContentWidth + leftPadding + rightPadding) : 0
-            enabled: page.project !== null && page.project.scan
-        },
-        // Every pattern of a scan, or every experiment of a joint fit, one above another, and the same as a 2D map
-        // (edi ADR-0041; the joint fit's, the owner, 2026-10-22).
-        IconTabButton {
-            objectName: "mainArea.analysis.tab.stacked"
-            text: qsTr("Stacked")
-            enabled: page.patternViews || page.singleCrystals
-        },
-        IconTabButton {
-            objectName: "mainArea.analysis.tab.map"
-            text: qsTr("Map")
-            enabled: page.patternViews && !page.singleCrystals
-        }
-    ]
-    mainItems: [
-        ProjectPatternChart {
-            id: chartView
-            experiment: page.project ? page.project.currentExperiment : null
-            axisProject: page.project
-            settingsPage: "pattern"
-            shown: page.current && SwipeView.isCurrentItem
-        },
-        CorrelationChart {
-            id: correlationChart
-            project: page.project
-            shown: page.current && SwipeView.isCurrentItem
-        },
-        EvolutionChart {
-            id: evolutionChart
-            project: page.project
-            shown: page.current && SwipeView.isCurrentItem
-        },
-        Item {
-            id: stackedTab
-
-            readonly property bool shown: page.current && SwipeView.isCurrentItem
-
-            ScanViewChart {
-                id: stackedChart
-                anchors.fill: parent
-                visible: !page.singleCrystals
-                project: page.project
-                mode: "stacked"
-                shown: stackedTab.shown && !page.singleCrystals
-            }
-            SingleCrystalChart {
-                id: stackedCrystals
-                objectName: "singleCrystal.stacked"
-                anchors.fill: parent
-                visible: page.singleCrystals
-                stackedExperiments: page.singleCrystals ? page.project.singleCrystalExperiments : []
-                project: page.project
-                shown: stackedTab.shown && page.singleCrystals
-            }
-        },
-        ScanViewChart {
-            id: mapChart
-            project: page.project
-            mode: "map"
-            shown: page.current && SwipeView.isCurrentItem
-        }
-    ]
     extrasEnabled: analysis !== null
     textEnabled: analysis !== null
     basicItem: Component {
@@ -180,24 +88,6 @@ WorkflowPage {
     }
     // The same selector as the Experiment page's, over the one current experiment the project holds, so
     // choosing here or there is one choice (edi ADR-0017 §7).
-    blockSelectorShown: true
-    // The row ends where the shown chart's toolbar does, so the two share one centre.
-    blockSelectorRightInset: stackedTab.SwipeView.isCurrentItem ? (page.singleCrystals ? stackedCrystals.toolbarRightInset : stackedChart.toolbarRightInset) : mapChart.SwipeView.isCurrentItem ? mapChart.toolbarRightInset : correlationChart.SwipeView.isCurrentItem ? correlationChart.toolbarRightInset : chartView.toolbarRightInset
-    blocks: project ? project.experiments : null
-    blocksTextRole: "label"
-    blockKind: "experiment"
-    blockOutcomeRole: "fitOutcome"
-    blockCurrentOutcome: experiment ? experiment.fitOutcome : ""
-    blockTemplateRole: project !== null && project.scan ? "isTemplate" : ""
-    blockCurrentTemplate: project !== null && project.scan && project.currentExperimentIndex === project.templateIndex
-    blockIndex: project ? project.currentExperimentIndex : -1
-    onBlockActivated: index => page.project.currentExperimentIndex = index
-    Connections {
-        target: AppState
-        function onEvolutionRequested() {
-            page.showMainTab(2);
-        }
-    }
     continueText: qsTr("Continue")
     onContinueClicked: AppState.open(AppState.Page.Report)
 

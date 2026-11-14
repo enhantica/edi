@@ -3,12 +3,15 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 
+import QtQuick.Controls
+
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
 // What a page runs with, read-only, on its Settings tab: the count is this machine's Performance preference, never
-// saved in a project, and the link opens Preferences on that tab (the owner, 2026-11-04). The Analysis page shows how
+// saved in a project, and the link at its right opens Preferences on that tab (the owner, 2026-11-04, 2026-11-10). The Analysis page shows how
 // many scan files are fitted at once, the Experiment page how many threads a calculation runs on.
 SideBarGroup {
     id: group
@@ -25,21 +28,40 @@ SideBarGroup {
     title: qsTr("Performance")
     icon: "tachometer-alt"
 
-    // A plain Text, so the link runs the app's own action rather than going to the browser.
-    Text {
-        objectName: "performance.line"
-        width: EaStyle.Sizes.sideBarContentWidth
-        wrapMode: Text.WordWrap
-        textFormat: Text.StyledText
-        font.family: EaStyle.Fonts.fontFamily
-        font.pixelSize: EaStyle.Sizes.fontPixelSize
-        color: EaStyle.Colors.themeForeground
-        linkColor: EaStyle.Colors.themeAccent
-        text: (group.shows === "parallelFits" ? qsTr("Parallel fits: %1").arg(Preferences.scanWorkersApplied) : qsTr("Threads per calculation: %1").arg(group.threads)) + ` (<a href="preferences">${qsTr("Preferences")}</a>)`
-        onLinkActivated: Preferences.openPerformance()
+    // The value on the left and, at the right end, a light link with the Preferences icon that opens that tab (the
+    // owner, 2026-11-10: better than a link inside the sentence).
+    // One text line high, the link's button no taller than its text, so both sit on the same line and nothing is cut
+    // at the group's top (owner record 2026-11-11, item 3).
+    Item {
+        implicitWidth: EaStyle.Sizes.sideBarContentWidth
+        implicitHeight: Math.max(line.implicitHeight, link.contentItem.implicitHeight)
+        width: implicitWidth
+        height: implicitHeight
 
-        HoverHandler {
-            cursorShape: parent.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
+        EaElements.Label {
+            id: line
+
+            objectName: "performance.line"
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width - link.width - EaStyle.Sizes.fontPixelSize
+            elide: Text.ElideRight
+            text: group.shows === "parallelFits" ? qsTr("Parallel fits: %1").arg(Preferences.scanWorkersApplied) : qsTr("Threads per calculation: %1").arg(group.threads)
+        }
+        IconLink {
+            id: link
+
+            objectName: "performance.preferences"
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            height: parent.height
+            topInset: 0
+            bottomInset: 0
+            topPadding: 0
+            bottomPadding: 0
+            fontIcon: "cog"
+            text: qsTr("Preferences")
+            onClicked: Preferences.openPerformance()
+            ToolTip.text: qsTr("Change it on the Performance tab of Preferences, for this computer")
         }
     }
 }

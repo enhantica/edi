@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "edi/report.hpp"
 
+#include "crysta/dictionary_items.hpp"
+#include "edi/report_model.hpp"
+
 #include "crysta/fit_report.hpp"
 #include "edi/categories.hpp"
 #include "edi/display.hpp"
@@ -167,7 +170,7 @@ std::string iteration_header(const std::string& variant) {
 // shared by the streaming progress line and the `full` parameter table — and it is public so the
 // contract can be exercised on constructed values rather than only on whatever a live fit happens
 // to produce.
-std::string format_change(double current, double previous) {
+std::string change_percent(double current, double previous) {
     // A percentage of zero is undefined, not infinite, and a non-finite operand cannot yield a
     // meaningful one either. Both blank rather than rendering a number a reader would trust.
     if (previous == 0.0 || !std::isfinite(previous) || !std::isfinite(current)) {
@@ -179,11 +182,16 @@ std::string format_change(double current, double previous) {
     if (std::fabs(percent) < 0.05) {
         return {};  // immaterial — show nothing rather than noise
     }
-    const char* arrow = percent < 0.0 ? "\u2193" : "\u2191";
     if (std::fabs(percent) >= 1000.0) {
-        return table_number(std::fabs(percent), {}, false) + " % " + arrow;
+        return table_number(std::fabs(percent), {}, false) + " %";
     }
-    return fixed(std::fabs(percent), 1) + "% " + arrow;
+    return fixed(std::fabs(percent), 1) + "%";
+}
+
+std::string format_change(double current, double previous) {
+    const std::string percent = change_percent(current, previous);
+    if (percent.empty()) return {};
+    return percent + (current < previous ? " \u2193" : " \u2191");
 }
 
 namespace {
@@ -231,10 +239,75 @@ std::string shifted(const std::string& text, int shift) {
     return sign + left + (right.empty() ? std::string() : "." + right);
 }
 
+// "6.33e-3" as the decimal "0.00633", keeping its digits; any other text is returned as it is.
+std::string expanded(const std::string& text) {
+    const std::size_t e = text.find_first_of("eE");
+    if (e == std::string::npos || e == 0) return text;
+    const std::string mantissa = text.substr(0, e);
+    const std::string power = text.substr(e + 1);
+    const std::size_t start = !mantissa.empty() && (mantissa[0] == '-' || mantissa[0] == '+') ? 1 : 0;
+    if (start >= mantissa.size() || mantissa.find_first_not_of("0123456789.", start) != std::string::npos) return text;
+    const std::size_t digits = !power.empty() && (power[0] == '-' || power[0] == '+') ? 1 : 0;
+    if (digits >= power.size() || power.find_first_not_of("0123456789", digits) != std::string::npos) return text;
+    return shifted(mantissa, -std::stoi(power));
+}
+
+// A decimal text without the zeros that end its fraction ("0.500" is "0.5").
+std::string trimmed(std::string text) {
+    if (text.find('.') == std::string::npos) return text;
+    text.erase(text.find_last_not_of('0') + 1);
+    if (!text.empty() && text.back() == '.') text.pop_back();
+    return text;
+}
+
+// A decimal text cut to `decimals` places, for digits known to be zeros.
+std::string cut(const std::string& text, int decimals) {
+    const std::size_t dot = text.find('.');
+    if (dot == std::string::npos) return text;
+    return decimals <= 0 ? text.substr(0, dot) : text.substr(0, std::min(text.size(), dot + 1 + decimals));
+}
+
+// The power of ten of the last digit a whole-number s.u. text keeps: its last nonzero digit, or one place lower for an
+// s.u. starting with 1 (written with two digits). Nothing for a text with a fraction.
+std::optional<int> whole_su_place(const std::string& su) {
+    if (su.empty() || su.find('.') != std::string::npos) return std::nullopt;
+    const std::size_t first = su.find_first_of("123456789");
+    if (first == std::string::npos) return std::nullopt;
+    const std::size_t last = su.find_last_of("123456789");
+    int place = static_cast<int>(su.size() - 1 - last);
+    if (su[first] == '1' && first == last) place = std::max(0, place - 1);
+    return place;
+}
+
+// An s.u. shown alone: a decimal inside the range, else in its own power of ten with its own digits ("0.00025" is
+// "2.5×10⁻⁴", "1600" is "1.6×10³").
+std::string su_alone(const std::string& su, bool display) {
+    char* end = nullptr;
+    const double number = su.empty() ? 0.0 : std::strtod(su.c_str(), &end);
+    if (su.empty() || end == su.c_str() || *end != '\0' || number == 0.0 || in_decimal_range(number)) return su;
+    const int power = power_of(number);
+    std::string mantissa = shifted(su, power);
+    if (const std::optional<int> place = whole_su_place(su); place.has_value()) mantissa = cut(mantissa, power - *place);
+    return mantissa + exponent_text(power, display);
+}
+
 }  // namespace
 
 std::string table_number(double value, const std::string& decimal, bool display) {
-    if (in_decimal_range(value)) return decimal;
+    if (!std::isfinite(value)) return decimal;
+    if (in_decimal_range(value)) {
+        const bool exponent = decimal.find_first_of("eE") != std::string::npos;
+        std::string text = exponent ? trimmed(expanded(decimal)) : decimal;
+        // A format that rounds a nonzero value to zero ("0.00") shows its first three significant digits instead.
+        char* end = nullptr;
+        const double shown = text.empty() ? 0.0 : std::strtod(text.c_str(), &end);
+        if (value != 0.0 && (text.empty() || shown == 0.0)) {
+            char digits[32];
+            std::snprintf(digits, sizeof(digits), "%.3g", value);
+            text = trimmed(expanded(digits));
+        }
+        return text;
+    }
     const int power = power_of(value);
     char mantissa[32];
     std::snprintf(mantissa, sizeof(mantissa), "%.2f", value / std::pow(10.0, power));
@@ -247,20 +320,31 @@ std::string table_number(double value, const std::string& decimal, bool display)
 
 std::pair<std::string, std::string> table_value_su(double value, const std::string& value_text,
                                                    const std::string& su_text, bool display) {
-    if (in_decimal_range(value) || value_text.find_first_of("eE") != std::string::npos) return {value_text, su_text};
+    if (!std::isfinite(value)) return {value_text, su_text};
+    const std::string number = expanded(value_text), su = expanded(su_text);
+    if (in_decimal_range(value)) return {number, display ? su_alone(su, display) : su};
     const int power = power_of(value);
     const std::string exponent = exponent_text(power, display);
-    return {shifted(value_text, power) + exponent, su_text.empty() ? su_text : shifted(su_text, power) + exponent};
+    std::string shown = shifted(number, power);
+    std::string shown_su = su.empty() ? su : shifted(su, power);
+    // A whole-number pair keeps the digits down to the s.u.'s last one, not the zeros after it.
+    if (const std::optional<int> place = whole_su_place(su);
+        place.has_value() && number.find('.') == std::string::npos) {
+        shown = cut(shown, power - *place);
+        shown_su = cut(shown_su, power - *place);
+    }
+    return {shown + exponent, shown_su.empty() ? shown_su : shown_su + exponent};
 }
 
 std::string table_text(double value, const std::string& text, bool display) {
-    if (in_decimal_range(value)) return text;
     const std::size_t bracket = text.find('(');
+    const std::string number = expanded(text.substr(0, bracket));
+    const std::string rest = bracket == std::string::npos ? std::string() : text.substr(bracket);
+    if (in_decimal_range(value)) return bracket == std::string::npos ? table_number(value, text, display) : number + rest;
     // Without an s.u. the value alone decides, whatever notation the text came in ("1.8652e-10").
     if (bracket == std::string::npos) return table_number(value, text, display);
-    if (text.find_first_of("eE") != std::string::npos) return text;
     const int power = power_of(value);
-    return shifted(text.substr(0, bracket), power) + text.substr(bracket) + exponent_text(power, display);
+    return shifted(number, power) + rest + exponent_text(power, display);
 }
 
 std::string display_exponents(const std::string& text) {
@@ -619,6 +703,9 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
     // project's rule. Without it, the item is read off the path, with the default rule and the items' base entries.
     std::map<std::string, std::string> variants;
     std::map<std::string, std::string> uids;
+    // Each result path's parameter, for its correlation mark (su_marks).
+    std::map<std::string, const Parameter*> parameters;
+    std::unordered_map<const Parameter*, SuMarks> marks;
     std::string rule = kDefaultSuRule;
     if (project != nullptr) {
         rule = project->su_rule;
@@ -654,8 +741,10 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
             }
             return keys;
         };
+        marks = su_marks(*project);
         for (const ParameterEntry& entry : entries) {
             for (const std::string& key : keys_of(entry)) {
+                parameters.emplace(key, entry.parameter);
                 if (const auto found = by_parameter.find(entry.parameter); found != by_parameter.end()) {
                     variants.emplace(key, found->second);
                 }
@@ -671,6 +760,8 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
     };
     std::vector<Row> rows;
     bool any_undefined = false;
+    // The flagged rows' reasons, as notes under the table: the app shows these s.u. values red (edi ADR-0085).
+    std::vector<std::string> flagged;
     int name_width = kNameWidth;
     int path_width = kLabelWidth;
     // std::map iterates sorted by identity path, which is the stable display order.
@@ -706,10 +797,21 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
         }
         name_width = std::max(name_width, shown_width(name) + 1);
         path_width = std::max(path_width, shown_width(path) + 1);
+        std::string reasons;
+        const crysta::DictionaryItem* item = uid.empty() ? nullptr : crysta::find_dictionary_item(uid);
+        if (item != nullptr && !item->near_zero && std::isfinite(su) && su > 0.0 && std::fabs(su) > std::fabs(value)) {
+            reasons = su_poor_text();
+        }
+        if (const auto parameter = parameters.find(path); parameter != parameters.end()) {
+            if (const auto mark = marks.find(parameter->second); mark != marks.end() && !mark->second.partner.empty()) {
+                reasons += (reasons.empty() ? "" : "; ") + su_correlated_text(mark->second);
+            }
+        }
+        if (!reasons.empty()) flagged.push_back(path + ": " + reasons);
         rows.push_back({name, path,
                         (in_decimal_range(start) ? number_of(uid, start, 13, variant)
                                                  : padded_left(table_number(start, {}, false), 13)) +
-                            value_cell + su_cell + "   " + format_change(value, start)});
+                            value_cell + su_cell + (reasons.empty() ? "   " : " ! ") + format_change(value, start)});
     }
     out << "  ";
     append_padded(out, "name", name_width);
@@ -730,14 +832,18 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
     if (any_undefined) {
         out << "  - " << kUndefinedSu << ' ' << kUndefinedSuNote << '\n';
     }
+    if (!flagged.empty()) {
+        out << "  - !       a poorly determined or strongly correlated parameter:\n";
+        for (const std::string& line : flagged) out << "      " << line << '\n';
+    }
     return out.str();
 }
 
 const std::vector<std::pair<std::string, std::string>>& fitted_columns() {
     static const std::vector<std::pair<std::string, std::string>> columns{
         {"start", "the value before the fit"},
-        {"value", "the fitted value"},
-        {"s.u.", "its standard uncertainty"},
+        {"value", "the fitted value, where the least-squares fit ends: the weighted sum of squared residuals is smallest"},
+        {"s.u.", "its standard uncertainty, the square root of its diagonal element of the fit's covariance matrix"},
         {"change", "how far the fit moved it, in % of the start: \xE2\x86\x91 up, \xE2\x86\x93 down"},
     };
     return columns;

@@ -2,13 +2,12 @@
 import QtQuick
 import QtQuick.Controls
 
-import EasyApplication.Gui.Style as EaStyle
-import EasyApplication.Gui.Elements as EaElements
-
 import edi.app
 
-// How to cite (Home): the citation as text and its DOI, both from CITATION.cff, copied as text or as BibTeX.
-AppDialog {
+// How to cite (Home), an information window (InfoDialog): the citation from CITATION.cff in the text panel, and the
+// bottom row's DOI link, with the external-resource icon, then Copy as text and Copy as BibTeX, left of Close (the
+// owner, 2026-11-10).
+InfoDialog {
     id: dialog
 
     property var citation: ({})
@@ -16,48 +15,31 @@ AppDialog {
     objectName: "citation"
     title: qsTr("How to cite")
     standardButtons: Dialog.Close
-    contentWidth: AppSizes.messagesDialogContentWidth
-    contentHeight: column.implicitHeight
+    textObjectName: "citation.text"
+    text: citation.text ?? ""
 
     onAboutToShow: citation = ApplicationInfo.citation()
 
-    Column {
-        id: column
-
-        width: dialog.contentWidth
-        spacing: EaStyle.Sizes.fontPixelSize
-
-        EaElements.Label {
-            objectName: "citation.text"
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: dialog.citation.text ?? ""
-        }
-        EaElements.Label {
+    actions: [
+        InfoDialog.InfoButton {
             objectName: "citation.doi"
-            width: parent.width
-            wrapMode: Text.WordWrap
-            textFormat: Text.StyledText
-            // The base label opens its https link in the browser.
-            text: dialog.citation.doiUrl ? `DOI: <a href="${dialog.citation.doiUrl}">${dialog.citation.doi}</a>` : ""
+            visible: (dialog.citation.doiUrl ?? "") !== ""
+            fontIcon: "external-link-alt"
+            text: qsTr("DOI")
+            ToolTip.text: dialog.citation.doiUrl ?? ""
+            onClicked: Qt.openUrlExternally(dialog.citation.doiUrl)
+        },
+        InfoDialog.InfoButton {
+            objectName: "citation.copy.text"
+            fontIcon: "copy"
+            text: qsTr("Copy as text")
+            onClicked: ApplicationInfo.copyText(dialog.citation.text ?? "")
+        },
+        InfoDialog.InfoButton {
+            objectName: "citation.copy.bibtex"
+            fontIcon: "copy"
+            text: qsTr("Copy as BibTeX")
+            onClicked: ApplicationInfo.copyText(dialog.citation.bibtex ?? "")
         }
-        Row {
-            spacing: EaStyle.Sizes.fontPixelSize
-
-            EaElements.SideBarButton {
-                objectName: "citation.copy.text"
-                width: (column.width - parent.spacing) / 2
-                fontIcon: "copy"
-                text: qsTr("Copy as text")
-                onClicked: ApplicationInfo.copyText(dialog.citation.text ?? "")
-            }
-            EaElements.SideBarButton {
-                objectName: "citation.copy.bibtex"
-                width: (column.width - parent.spacing) / 2
-                fontIcon: "copy"
-                text: qsTr("Copy as BibTeX")
-                onClicked: ApplicationInfo.copyText(dialog.citation.bibtex ?? "")
-            }
-        }
-    }
+    ]
 }

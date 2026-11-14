@@ -169,11 +169,11 @@
             "scene": "group-form-factors"
         }
     ],
-    "binary_sha256": "28e3d9673280410e17dec8acb2916048b0ae606f1dd9b2fa42f1609b162c72fb",
+    "binary_sha256": "930017e29ba7c0ffac4bfbdbf09a5bea4beb135a2c33f624ca74e8fc4fe8d6bf",
     "dependencies": [
         {
             "file": "inputs/analysis/analysis.edi",
-            "sha256": "87aed0d15aea1ac6ce289611341709557ca4ef11344a3bab5fcc9c152ea3b1a4"
+            "sha256": "fc3edb415512ca536353f603603646ad83eddedd88d50a81019b54e4e165a616"
         }
     ],
     "error": "",
@@ -233,7 +233,7 @@
             ]
         }
     },
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "inputs": {
         "experiment": {
             "file": "inputs/experiments/d20.edi",
@@ -241,7 +241,7 @@
         },
         "structure": {
             "file": "inputs/structures/cosio.edi",
-            "sha256": "37983b2243d249186d235bc0eb2b3d5acf78edb0872ddbd0f5314ef39c252443"
+            "sha256": "6221e1604607d65988c9eaefee54aa246caef1e86b57ea75fed6e66b53ff29c2"
         }
     },
     "logical_size": [
@@ -252,7 +252,7 @@
         {
             "description": "Open the example project",
             "id": "group-open",
-            "image": "group-open.png",
+            "image": "group-open.webp",
             "metadata": "group-open.json",
             "page": "project",
             "sidebar": "",
@@ -261,7 +261,7 @@
         {
             "description": "Read the magnetic space group",
             "id": "group-space-group-magn",
-            "image": "group-space-group-magn.png",
+            "image": "group-space-group-magn.webp",
             "metadata": "group-space-group-magn.json",
             "page": "structure",
             "sidebar": "",
@@ -270,7 +270,7 @@
         {
             "description": "Edit the propagation vectors",
             "id": "group-propagation",
-            "image": "group-propagation.png",
+            "image": "group-propagation.webp",
             "metadata": "group-propagation.json",
             "page": "structure",
             "sidebar": "",
@@ -279,7 +279,7 @@
         {
             "description": "Set the magnetic moments",
             "id": "group-moments",
-            "image": "group-moments.png",
+            "image": "group-moments.webp",
             "metadata": "group-moments.json",
             "page": "structure",
             "sidebar": "",
@@ -288,7 +288,7 @@
         {
             "description": "Read the symmetry operators",
             "id": "group-symop",
-            "image": "group-symop.png",
+            "image": "group-symop.webp",
             "metadata": "group-symop.json",
             "page": "structure",
             "sidebar": "",
@@ -297,7 +297,7 @@
         {
             "description": "Read the magnetic operators",
             "id": "group-magn-operators",
-            "image": "group-magn-operators.png",
+            "image": "group-magn-operators.webp",
             "metadata": "group-magn-operators.json",
             "page": "structure",
             "sidebar": "",
@@ -306,7 +306,7 @@
         {
             "description": "Read every atom in the cell",
             "id": "group-expanded-atoms",
-            "image": "group-expanded-atoms.png",
+            "image": "group-expanded-atoms.webp",
             "metadata": "group-expanded-atoms.json",
             "page": "structure",
             "sidebar": "",
@@ -315,7 +315,7 @@
         {
             "description": "Read every moment in the cell",
             "id": "group-expanded-moments",
-            "image": "group-expanded-moments.png",
+            "image": "group-expanded-moments.webp",
             "metadata": "group-expanded-moments.json",
             "page": "structure",
             "sidebar": "",
@@ -324,7 +324,7 @@
         {
             "description": "Read the bonds",
             "id": "group-bonds",
-            "image": "group-bonds.png",
+            "image": "group-bonds.webp",
             "metadata": "group-bonds.json",
             "page": "structure",
             "sidebar": "",
@@ -333,7 +333,7 @@
         {
             "description": "Set the magnetic form factors",
             "id": "group-form-factors",
-            "image": "group-form-factors.png",
+            "image": "group-form-factors.webp",
             "metadata": "group-form-factors.json",
             "page": "structure",
             "sidebar": "",
@@ -342,7 +342,7 @@
     ],
     "schema": 1,
     "script_sha256": "3e0f9063e5fd3773de550ce84fd05a6b3c5986ae0d13ddaef80e9fc4fbb132f1",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "status": "complete",
     "workflow": "reference"
 }

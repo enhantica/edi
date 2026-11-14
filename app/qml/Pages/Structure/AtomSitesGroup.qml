@@ -35,7 +35,7 @@ Column {
     DataTable {
         id: table
         objectName: "atomSites.list"
-        defaultInfoText: qsTr("No atom sites defined")
+        defaultInfoText: qsTr("No atom sites yet")
         sourceModel: group.sites
 
         // Equal-width numeric columns, the one exception to the table rule (the owner, 2026-10-24).

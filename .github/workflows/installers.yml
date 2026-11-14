@@ -160,6 +160,26 @@ jobs:
       - name: Set up the Windows compiler
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+      # The compiler cache, kept per platform between runs: a re-run of the same or a nearby commit compiles only
+      # what changed. ccache hands back the object the compiler wrote for the same input, so the release bytes
+      # do not depend on it. Keyed on the packaging lock, which fixes the compilers; restored from the newest entry.
+      - name: Turn on the compiler cache
+        shell: bash
+        run: |
+          {
+            echo "CCACHE_DIR=${{ runner.temp }}/edi-ccache"
+            echo "CCACHE_MAXSIZE=2G"
+            echo "CCACHE_COMPILERCHECK=content"
+            echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
+            echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+          } >>"$GITHUB_ENV"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/edi-ccache
+          key: ccache-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-installer-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/installer/pixi.lock') }}-
+            ccache-installer-${{ runner.os }}-${{ runner.arch }}-
       - name: Acquire source-bound release inputs
         if: inputs.release_plan_run != ''
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/release/download_plan.py" --repo "$GITHUB_REPOSITORY" --run "$PREPARE_RUN" --output "$EDI_RELEASE_PLAN"
@@ -223,8 +243,13 @@ jobs:
           printf '%s\n' "$CRYSTA_SOURCE_COMMIT" >.crysta/CRYSTA_SOURCE_SHA
       - name: Check engine compiler portability before the full build
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --check-compiler --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
+      - name: Fetch the data collection for the offline copy
+        run: git clone --depth 1 https://github.com/enhantica/edi-data "${{ github.workspace }}/.edi-data"
       - name: Build crysta, desktop bundle and release CLI
-        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer"
+        run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer" --collection "${{ github.workspace }}/.edi-data"
+      - name: Compiler cache hits
+        if: always()
+        run: pixi run --manifest-path tools/installer/pixi.toml ccache --show-stats
       - name: Check assistant process-family shutdown on this platform
         shell: bash
         run: |

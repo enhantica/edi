@@ -18,6 +18,8 @@ from pathlib import Path
 import edi
 import pytest
 
+from tests.fixtures.scan_csv import CONDITION_COLUMNS, legacy_scan
+
 ROOT = Path(__file__).resolve().parents[3]
 CORPUS_ROOT = Path(
     os.environ.get('EDI_CRYSTA_CORPUS_ROOT', ROOT / 'build/crysta-src/tests/fitting')
@@ -195,6 +197,9 @@ def _run_cli(project_dir: Path, *options: str) -> subprocess.CompletedProcess[st
 _RESULT_SOURCE_BY_FIELD = {
     'correlations': 'analysis.edi _fit_parameter_correlation rows, computed by crysta',
     'banks': 'not applicable to a sequential terminal result',
+    'stopping_rule': 'fit_result.stopping_rule when captured; unavailable otherwise',
+    'stopping_value': 'fit_result.stopping_value when captured; unavailable otherwise',
+    'last_shift_su': 'fit_result.last_shift_su when captured; unavailable otherwise',
     'converged': 'fit_result.success',
     'fitting_time': 'unavailable: no solve ran',
     'iterations': 'fit_result.iterations',
@@ -333,6 +338,7 @@ def test_completed_resume_partitions_terminal_outcome_on_cli(
 
 
 def _prepare_cause_ledger(project_dir, terminal, live_cause, ledger, max_iterations):
+    legacy_scan(project_dir)
     provenance = project_dir / 'analysis/results-provenance.csv'
     recorded = list(csv.DictReader(io.StringIO(provenance.read_text())))
     expected_reason = 'max_iter_exhausted' if live_cause == 'max-iter' else 'no_accepted_step'
@@ -348,7 +354,7 @@ def _prepare_cause_ledger(project_dir, terminal, live_cause, ledger, max_iterati
         # row, or re-inferring from the current bound, must fail this identity-based witness.
         others = [dict(row) for row in recorded if row is not terminal_ledger]
         for row in others:
-            row['termination'] = 'converged'
+            row['termination'] = 'chi_converged'
         _write_cause_rows(provenance, [terminal_ledger, *others])
         csv_path = project_dir / 'analysis/results.csv'
         csv_rows = list(csv.DictReader(io.StringIO(csv_path.read_text())))
@@ -368,6 +374,22 @@ def _write_cause_rows(path, rows):
         writer.writerows(rows)
 
 
+def _assert_resumed_stop_metrics(outcome, terminal):
+    expected_rule = terminal.get('fit_result.stopping_rule', '')
+    if expected_rule in {'?', '.'}:
+        expected_rule = ''
+    assert outcome.stopping_rule == expected_rule, (
+        'Resume recovers the captured stopping rule; legacy rows leave it unavailable'
+    )
+    for field in ('stopping_value', 'last_shift_su'):
+        captured = terminal.get('fit_result.' + field, 'nan')
+        expected = float('nan') if captured in {'', '?', '.'} else float(captured)
+        actual = getattr(outcome, field)
+        assert (math.isnan(expected) and math.isnan(actual)) or actual == expected, (
+            'Resume retains each captured stop metric or reports unavailable: ' + field
+        )
+
+
 @pytest.mark.parametrize('ledger', ['recorded', 'legacy'])
 @pytest.mark.parametrize('live_cause', ['max-iter', 'no-step'])
 def test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python(
@@ -383,7 +405,7 @@ def test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python(
     fieldnames, _reference_rows = _reference_header_and_ascending_rows()
     with (project_dir / 'analysis' / 'results.csv').open(newline='', encoding='utf-8') as stream:
         reader = csv.DictReader(stream)
-        assert reader.fieldnames == fieldnames, (
+        assert reader.fieldnames == [*fieldnames, *CONDITION_COLUMNS], (
             ' edi cause honesty must retain the frozen diffraction-lib column identities'
         )
         assert len(fieldnames) == 83, (
@@ -425,6 +447,7 @@ def test_completed_resume_recovers_recorded_cause_or_legacy_unknown_on_python(
     assert math.isnan(outcome.rwp), (
         ' edi Python resume must mark unavailable Rwp as NaN, never measured-looking zero'
     )
+    _assert_resumed_stop_metrics(outcome, terminal)
     assert outcome.fitting_time is None, (
         ' edi Python resume must report no fitting time because no solve ran'
     )
@@ -466,7 +489,7 @@ def test_completed_resume_cli_recovers_recorded_cause_or_legacy_unknown(
     fieldnames, _reference_rows = _reference_header_and_ascending_rows()
     with (project_dir / 'analysis' / 'results.csv').open(newline='', encoding='utf-8') as stream:
         reader = csv.DictReader(stream)
-        assert reader.fieldnames == fieldnames, (
+        assert reader.fieldnames == [*fieldnames, *CONDITION_COLUMNS], (
             ' CLI cause honesty must retain frozen diffraction-lib column identities'
         )
         assert len(fieldnames) == 83, (

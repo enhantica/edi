@@ -1,13 +1,13 @@
 {
     "description": "Inspect the scan in the stacked view",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "workflow.experiment.mainContent"
     ],
     "id": "joint-experiment-stacked",
-    "image": "joint-experiment-stacked.png",
-    "image_sha256": "ad3c770eb94e29efb94583dadf52b308965219ac9ae0db25fbfb67be1aa69125",
+    "image": "joint-experiment-stacked.webp",
+    "image_sha256": "4591bf2f9beee4c999dfb5e3e17cb20779eaff2637da9e93c2235a83b6d4bbe0",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -89,43 +89,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -134,7 +100,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -186,6 +152,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -328,7 +311,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -337,7 +320,7 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -821,6 +804,22 @@
                 42
             ]
         },
+        "group.background.pin": {
+            "bounds": [
+                1433.2261363926236,
+                490.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                492,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.excluded_region": {
             "bounds": [
                 770,
@@ -835,6 +834,22 @@
                 770,
                 618,
                 710,
+                42
+            ]
+        },
+        "group.excluded_region.pin": {
+            "bounds": [
+                1433.2261363926236,
+                616.7261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                618,
+                44.54772721475251,
                 42
             ]
         },
@@ -855,6 +870,22 @@
                 373
             ]
         },
+        "group.experiments.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
+            ]
+        },
         "group.instrument": {
             "bounds": [
                 770,
@@ -869,6 +900,22 @@
                 770,
                 534,
                 710,
+                42
+            ]
+        },
+        "group.instrument.pin": {
+            "bounds": [
+                1433.2261363926236,
+                532.7261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                534,
+                44.54772721475251,
                 42
             ]
         },
@@ -889,6 +936,22 @@
                 42
             ]
         },
+        "group.linked_structure.pin": {
+            "bounds": [
+                1433.2261363926236,
+                658.7261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                660,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.peak": {
             "bounds": [
                 770,
@@ -903,6 +966,22 @@
                 770,
                 576,
                 710,
+                42
+            ]
+        },
+        "group.peak.pin": {
+            "bounds": [
+                1433.2261363926236,
+                574.7261363926237,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                576,
+                44.54772721475251,
                 42
             ]
         },
@@ -975,25 +1054,41 @@
                 35
             ]
         },
-        "mainArea.experiment.tab.chart": {
+        "mainArea.divider": {
             "bounds": [
-                0,
+                770,
                 77,
-                57.09375,
+                1,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                1,
+                681
+            ]
+        },
+        "mainArea.tab.correlations": {
+            "bounds": [
+                125.96875,
+                77,
+                86.15625,
                 42
             ],
             "enabled": true,
-            "label": "Pattern",
+            "label": "Correlations",
             "visible_bounds": [
-                0,
+                125.96875,
                 77,
-                57.09375,
+                86.15625,
                 42
             ]
         },
-        "mainArea.experiment.tab.map": {
+        "mainArea.tab.map": {
             "bounds": [
-                117.6875,
+                272.71875,
                 77,
                 39.5625,
                 42
@@ -1001,15 +1096,31 @@
             "enabled": true,
             "label": "Map",
             "visible_bounds": [
-                117.6875,
+                272.71875,
                 77,
                 39.5625,
                 42
             ]
         },
-        "mainArea.experiment.tab.stacked": {
+        "mainArea.tab.pattern": {
             "bounds": [
+                68.875,
+                77,
                 57.09375,
+                42
+            ],
+            "enabled": true,
+            "label": "Pattern",
+            "visible_bounds": [
+                68.875,
+                77,
+                57.09375,
+                42
+            ]
+        },
+        "mainArea.tab.stacked": {
+            "bounds": [
+                212.125,
                 77,
                 60.59375,
                 42
@@ -1017,9 +1128,25 @@
             "enabled": true,
             "label": "Stacked",
             "visible_bounds": [
-                57.09375,
+                212.125,
                 77,
                 60.59375,
+                42
+            ]
+        },
+        "mainArea.tab.structure": {
+            "bounds": [
+                0,
+                77,
+                68.875,
+                42
+            ],
+            "enabled": true,
+            "label": "Structure",
+            "visible_bounds": [
+                0,
+                77,
+                68.875,
                 42
             ]
         },
@@ -1056,22 +1183,6 @@
             ]
         },
         "scanView.stacked.layer": {
-            "bounds": [
-                101,
-                283.5,
-                641,
-                396.5
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                101,
-                283.5,
-                641,
-                396.5
-            ]
-        },
-        "scanView.stacked.layer.gpuLines": {
             "bounds": [
                 101,
                 283.5,
@@ -1201,7 +1312,7 @@
         },
         "scanView.stacked.toolbar.highlight": {
             "bounds": [
-                425.5,
+                400.5,
                 220.5,
                 35,
                 35
@@ -1210,7 +1321,7 @@
             "icon": "highlighter",
             "label": "",
             "visible_bounds": [
-                425.5,
+                400.5,
                 220.5,
                 35,
                 35
@@ -1218,7 +1329,7 @@
         },
         "scanView.stacked.toolbar.hover": {
             "bounds": [
-                271.5,
+                246.5,
                 220.5,
                 35,
                 35
@@ -1227,7 +1338,7 @@
             "icon": "comment-alt",
             "label": "",
             "visible_bounds": [
-                271.5,
+                246.5,
                 220.5,
                 35,
                 35
@@ -1235,7 +1346,7 @@
         },
         "scanView.stacked.toolbar.includedRange": {
             "bounds": [
-                348.5,
+                323.5,
                 220.5,
                 35,
                 35
@@ -1244,7 +1355,7 @@
             "icon": "eraser",
             "label": "",
             "visible_bounds": [
-                348.5,
+                323.5,
                 220.5,
                 35,
                 35
@@ -1252,7 +1363,7 @@
         },
         "scanView.stacked.toolbar.legend": {
             "bounds": [
-                233,
+                208,
                 220.5,
                 35,
                 35
@@ -1261,7 +1372,7 @@
             "icon": "align-left",
             "label": "",
             "visible_bounds": [
-                233,
+                208,
                 220.5,
                 35,
                 35
@@ -1269,7 +1380,7 @@
         },
         "scanView.stacked.toolbar.reset": {
             "bounds": [
-                502.5,
+                477.5,
                 220.5,
                 35,
                 35
@@ -1278,7 +1389,7 @@
             "icon": "home",
             "label": "",
             "visible_bounds": [
-                502.5,
+                477.5,
                 220.5,
                 35,
                 35
@@ -1286,7 +1397,7 @@
         },
         "scanView.stacked.toolbar.reverse": {
             "bounds": [
-                310,
+                285,
                 220.5,
                 35,
                 35
@@ -1295,7 +1406,7 @@
             "icon": "exchange-alt",
             "label": "",
             "visible_bounds": [
-                310,
+                285,
                 220.5,
                 35,
                 35
@@ -1317,6 +1428,39 @@
                 35
             ]
         },
+        "scanView.stacked.toolbar.save": {
+            "bounds": [
+                516,
+                220.5,
+                45.5,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                516,
+                220.5,
+                45.5,
+                35
+            ]
+        },
+        "scanView.stacked.toolbar.save.button": {
+            "bounds": [
+                526.5,
+                220.5,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "camera",
+            "label": "",
+            "visible_bounds": [
+                526.5,
+                220.5,
+                35,
+                35
+            ]
+        },
         "scanView.stacked.toolbar.spacing": {
             "bounds": [
                 491.75,
@@ -1335,7 +1479,7 @@
         },
         "scanView.stacked.toolbar.subtractBackground": {
             "bounds": [
-                387,
+                362,
                 220.5,
                 35,
                 35
@@ -1344,7 +1488,7 @@
             "icon": "chart-area",
             "label": "",
             "visible_bounds": [
-                387,
+                362,
                 220.5,
                 35,
                 35
@@ -1384,7 +1528,7 @@
         },
         "scanView.stacked.toolbar.zoom": {
             "bounds": [
-                464,
+                439,
                 220.5,
                 35,
                 35
@@ -1393,7 +1537,7 @@
             "icon": "expand",
             "label": "",
             "visible_bounds": [
-                464,
+                439,
                 220.5,
                 35,
                 35
@@ -1515,17 +1659,17 @@
         },
         "statusBar.fit": {
             "bounds": [
-                1053,
+                1061,
                 769,
-                413,
+                405,
                 19
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                1053,
+                1061,
                 769,
-                413,
+                405,
                 19
             ]
         },
@@ -1564,7 +1708,7 @@
         },
         "statusBar.fit.outcome": {
             "bounds": [
-                1071,
+                1079,
                 769,
                 82,
                 19
@@ -1573,7 +1717,7 @@
             "icon": "check-circle",
             "label": "",
             "visible_bounds": [
-                1071,
+                1079,
                 769,
                 82,
                 19
@@ -1584,17 +1728,17 @@
         },
         "statusBar.fit.values": {
             "bounds": [
-                1170,
+                1178,
                 770,
-                227,
+                219,
                 18.109375
             ],
             "enabled": true,
-            "label": "12 0.53s 242.73→1.96",
+            "label": "9 0.85s 242.73→1.96",
             "visible_bounds": [
-                1170,
+                1178,
                 770,
-                227,
+                219,
                 18.109375
             ]
         },
@@ -1761,8 +1905,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "1fdf9a347ebf5fa2074751c3860def0b4aab36927d01eae438795c67ea5d7dd3",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "4507e1db0b5ab3c28a5c62a4da2f63b27e5fb9e6a583b0ba99d40520a3c70c4e",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 2,
         "fit_outcome": "success",

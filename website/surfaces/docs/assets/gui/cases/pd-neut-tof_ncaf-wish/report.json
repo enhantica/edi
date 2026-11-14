@@ -7,7 +7,7 @@
     ],
     "id": "report",
     "image": "report.webp",
-    "image_sha256": "5c8f18b4a9b9c730b638378bb2e1e3279d7f494985c93b1feb131c28d0c8a039",
+    "image_sha256": "c4790c4d850bd504c05e5d4c7e1bbda8faa05a30b74b95d4a146a254ca4b2837",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -191,22 +191,6 @@
                 35
             ]
         },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
-            ]
-        },
         "appBar.tab.analysis": {
             "bounds": [
                 812.359375,
@@ -359,6 +343,22 @@
                 42
             ]
         },
+        "group.reportContents.pin": {
+            "bounds": [
+                1433.2261363926236,
+                366.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                368,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.reportExport": {
             "bounds": [
                 770,
@@ -374,6 +374,22 @@
                 119,
                 710,
                 249
+            ]
+        },
+        "group.reportExport.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
             ]
         },
         "label": {
@@ -579,7 +595,7 @@
                 45.125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Extra",
             "visible_bounds": [
                 813.515625,
@@ -595,7 +611,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -747,7 +763,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "5 11s 10.43→9.50",
+            "label": "2 13s 10.43→9.50",
             "visible_bounds": [
                 1197,
                 770,
@@ -918,8 +934,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "aa63f610f431f17ffb3a6c9babffe2a944dbec0459c786f5304a64e83fb003a1",
-    "source_revision": "a4b6be4f6926cc6b17811f3263d7a34afff75a6d",
+    "script_sha256": "8b6bd0111b5a30d7e3c9f01d4cf76f06bdd694be8b48589b540689ddaa9d68e1",
+    "source_revision": "56514c281a33e77881a06b35966fafc3319b51d3",
     "state": {
         "experiments": 5,
         "fit_outcome": "success",
@@ -942,7 +958,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.extras",
                 "label": "Extra"
             },
@@ -954,7 +970,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

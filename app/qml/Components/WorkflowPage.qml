@@ -26,18 +26,21 @@ EaComponents.ContentPage {
     // Retained offscreen pages keep their tree/state but cannot acquire input focus.
     enabled: current
     readonly property Item assistantOverlayHost: sideBar.parent
+    // The main area's place in the page: the Structure, Experiment and Analysis pages leave it to the window's one
+    // main view, drawn over it (MainView).
+    readonly property Item mainArea: mainContent.parent
     property alias mainTabs: mainContent.tabs
     property alias mainItems: mainContent.items
     property alias basicItem: basicLoader.sourceComponent
-    property alias extrasItem: extrasLoader.sourceComponent
-    property alias textItem: textLoader.sourceComponent
+    property Component extrasItem: null
+    property Component textItem: null
     // The page's Settings tab (edi ADR-0031 §2): its view options, kept in the app's settings under the page's name,
-    // never in the project. A page with none has the tab disabled, as an empty Extra tab is.
+    // never in the project.
     property Component settingsItem: null
     property bool extrasEnabled: false
     property bool textEnabled: false
-    // Why the Extra and Text tabs are off: the page has nothing of its own yet.
-    readonly property string emptyReason: qsTr("Nothing to show yet: start in the Main tab")
+    // Every page shows all four tabs (the owner, 2026-11-10). A tab whose content waits for the page's first block
+    // says so; a tab the page has no groups for yet asks for ideas, with a link to the feedback form (TabNote below).
     property alias continueText: sideBar.continueButton.text
     property bool continueVisible: true
     // Continue and its fade, while AppState shows the Continue area at all.
@@ -91,6 +94,18 @@ EaComponents.ContentPage {
     // the sidebar, and only their anchors change — nothing is mirrored, so text, icons and number order stay.
     function placeSideBar() {
         ApplicationInfo.placeWorkflowSidebar();
+        followOwnBorder();
+    }
+    // Hides the sidebar's own border, the base's thin child beside it, while the one main view draws a fixed one: the
+    // page's border would slide with the page and pass under the main view.
+    property bool ownBorderHidden: false
+    function followOwnBorder() {
+        const host = sideBar.parent;
+        for (let index = 0; host && index < host.children.length; ++index) {
+            const child = host.children[index];
+            if (child !== sideBar && child.width === EaStyle.Sizes.borderThickness)
+                child.visible = Qt.binding(() => !page.ownBorderHidden);
+        }
     }
 
     Connections {
@@ -111,13 +126,13 @@ EaComponents.ContentPage {
         target: textLoader.item
         property: "shown"
         value: page.current && textLoader.SwipeView.isCurrentItem
-        when: textLoader.item !== null
+        when: textLoader.item !== null && page.textItem !== null && page.textEnabled
     }
     Binding {
         target: textLoader.item
         property: "blockIndex"
         value: page.blockIndex
-        when: textLoader.item !== null
+        when: textLoader.item !== null && page.textItem !== null && page.textEnabled
     }
     // The run log's line for a sidebar tab chosen on the shown page.
     Connections {
@@ -183,21 +198,15 @@ EaComponents.ContentPage {
             EaElements.TabButton {
                 objectName: "sideBar.tab.extras"
                 text: qsTr("Extra")
-                enabled: page.extrasEnabled
-                ToolTip.text: enabled ? "" : page.emptyReason
             },
             EaElements.TabButton {
                 id: textTabButton
                 objectName: "sideBar.tab.text"
                 text: qsTr("Text")
-                enabled: page.textEnabled
-                ToolTip.text: enabled ? "" : page.emptyReason
             },
             EaElements.TabButton {
                 objectName: "sideBar.tab.settings"
                 text: qsTr("Settings")
-                enabled: page.settingsItem !== null
-                ToolTip.text: enabled ? "" : qsTr("This page has no settings")
             }
         ]
 
@@ -207,17 +216,19 @@ EaComponents.ContentPage {
             },
             Loader {
                 id: extrasLoader
+                sourceComponent: page.extrasItem === null ? inviteNote : page.extrasEnabled ? page.extrasItem : waitingNote
             },
             // Text is loaded only while its tab is shown, a block's text can be the whole data loop, or while it
             // holds an edit not yet applied, until the user discards it.
             Loader {
                 id: textLoader
                 active: SwipeView.isCurrentItem || page.textDirty
+                sourceComponent: page.textItem === null ? inviteNote : page.textEnabled ? page.textItem : waitingNote
                 onItemChanged: ApplicationInfo.workflowTextItemChanged()
             },
             Loader {
                 id: settingsLoader
-                sourceComponent: page.settingsItem
+                sourceComponent: page.settingsItem ?? inviteNote
             }
         ]
 
@@ -241,6 +252,38 @@ EaComponents.ContentPage {
             property: "bottomMargin"
             when: textLoader.SwipeView.isCurrentItem
             value: page.continueShown ? -(sideBar.continueButton.height + sideBar.continueButton.anchors.bottomMargin) : 0
+        }
+    }
+
+    // An empty tab's line, where a group's content starts, in the minor text colour.
+    component TabNote: Text {
+        x: EaStyle.Sizes.fontPixelSize
+        topPadding: EaStyle.Sizes.fontPixelSize
+        width: EaStyle.Sizes.sideBarContentWidth
+        wrapMode: Text.WordWrap
+        textFormat: Text.StyledText
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        color: EaStyle.Colors.themeForegroundMinor
+        linkColor: EaStyle.Colors.themeAccent
+
+        HoverHandler {
+            cursorShape: parent.hoveredLink !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
+        }
+    }
+    Component {
+        id: waitingNote
+        TabNote {
+            objectName: "sideBar.note.waiting"
+            text: qsTr("Nothing to show yet: start in the Main tab")
+        }
+    }
+    Component {
+        id: inviteNote
+        TabNote {
+            objectName: "sideBar.note.invite"
+            text: qsTr("Nothing here yet. What would you like this tab to hold? <a href=\"idea\">Share your idea</a>")
+            onLinkActivated: AppState.feedbackRequested("idea", "")
         }
     }
 }

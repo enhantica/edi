@@ -119,13 +119,15 @@ void ScanViewModel::clear() {
 }
 
 void ScanViewModel::setScan(const ScanSession* session, const edi::Project* project, const QString& extracted_title) {
-    readConversion(project);
+    const bool conversion_changed = readConversion(project);
     // Results read again over the same files (after a run or an undo) leave what was read: the patterns are the same.
     if (!joint_ && session != nullptr && project != nullptr && session->datasets().files == files_ &&
         session->datasets().directory == directory_ && extracted_title == extracted_title_ && !files_.empty()) {
-        placeAxis();
-        ++revision_;
-        emit revisionChanged();
+        if (conversion_changed) {
+            placeAxis();
+            ++revision_;
+            emit revisionChanged();
+        }
         return;
     }
     clear();
@@ -372,7 +374,8 @@ void ScanViewModel::deliver(std::size_t first, std::vector<Read>& done) {
         value_texts_[dataset] = read.value_text;
     }
     placeRange();
-    placeRows();
+    // File-index rows and labels stay fixed while batches arrive; extracted values reorder them once at the end.
+    if (loaded_ == count()) placeRows();
     emit loadedChanged();
     ++revision_;
     emit revisionChanged();
@@ -499,12 +502,12 @@ void ScanViewModel::setIncludedOnly(bool on) {
     }
 }
 
-double ScanViewModel::widestRowText(const QList<bool>& shown, const QFont& font) const {
+double ScanViewModel::widestRowText(const QList<int>& shown, const QFont& font) const {
     const QFontMetricsF metrics(font);
     double widest = 0.0;
-    for (qsizetype i = 0; i < shown.size() && i < row_texts_.size(); ++i) {
-        if (shown.at(i)) {
-            widest = std::max(widest, metrics.horizontalAdvance(row_texts_.at(i)));
+    for (const int dataset : shown) {
+        if (dataset >= 0 && dataset < row_texts_.size()) {
+            widest = std::max(widest, metrics.horizontalAdvance(row_texts_.at(dataset)));
         }
     }
     return widest;
@@ -577,14 +580,21 @@ void ScanViewModel::placePattern(Pattern& pattern) {
 
 void ScanViewModel::placeRange() {
     double low = std::numeric_limits<double>::infinity(), high = -low;
-    for (const Pattern& pattern : patterns_) {
-        for (const double x : pattern.shown) {
-            const bool excluded = included_only_ && excludedAt(pattern, x);
-            if (std::isfinite(x) && !excluded) {
-                low = std::min(low, x);
-                high = std::max(high, x);
+    for (Pattern& pattern : patterns_) {
+        if (pattern.range_generation != pattern.generation || pattern.range_included != included_only_) {
+            pattern.range_low = std::numeric_limits<double>::infinity();
+            pattern.range_high = -pattern.range_low;
+            for (const double x : pattern.shown) {
+                if (std::isfinite(x) && !(included_only_ && excludedAt(pattern, x))) {
+                    pattern.range_low = std::min(pattern.range_low, x);
+                    pattern.range_high = std::max(pattern.range_high, x);
+                }
             }
+            pattern.range_generation = pattern.generation;
+            pattern.range_included = included_only_;
         }
+        low = std::min(low, pattern.range_low);
+        high = std::max(high, pattern.range_high);
     }
     if (!(high > low)) {
         low = 0.0;

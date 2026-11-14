@@ -35,10 +35,15 @@ EaElements.ComboBox {
     }
     // In a table, as wide as its widest option (or what it shows), a small gap and the arrow, the arrow right after
     // the text (the owner, 2026-10-27); a wider column keeps the space after it.
-    readonly property real fittedWidth: ApplicationInfo.searchMeasuredWidth(false)
-    readonly property real optionWidth: ApplicationInfo.searchMeasuredWidth(true)
-    FontMetrics {
-        id: optionMetrics
+    readonly property real fittedWidth: Math.ceil(Math.max(widthMetrics.optionTextWidth, widthMetrics.displayTextWidth) + Math.max(contentItemLabel ? contentItemLabel.leftPadding + contentItemLabel.rightPadding : 0, contentItem ? contentItem.implicitWidth - widthMetrics.displayTextWidth : 0) + font.pixelSize * 0.5) + leftPadding + rightPadding
+    readonly property real optionWidth: Math.ceil(Math.max(widthMetrics.optionTextWidth, widthMetrics.displayTextWidth)) + font.pixelSize * 3
+    ComboBoxMetrics {
+        id: widthMetrics
+        comboBox: control
+        model: control.model
+        count: control.count
+        textRole: control.textRole
+        displayText: control.displayText
         font.family: control.listFontFamily
         font.pixelSize: control.font.pixelSize
     }

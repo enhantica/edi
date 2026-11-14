@@ -56,7 +56,7 @@ struct ScanParameterColumns {
 /// What `analysis/results.csv` records, checked, with one small entry per dataset: no row's parameter cells are kept
 /// (`read_scan_row` reads one row at its offset). The header must be crysta's: `file_path`,
 /// `fit_result.reduced_chi_square`, `fit_result.success`, `fit_result.iterations`, one column per extract rule's
-/// target in rule order, then each parameter's value and `.uncertainty`, every name once. Every complete row must
+/// target in rule order, then each parameter's value and `.uncertainty`, and optional fit-condition columns, every name once. Every complete row must
 /// have the header's width, name a file of the scan once, and carry finite numbers (uncertainties not negative). A
 /// last line without its line break is a row still being written and is left out. Anything else refuses the whole
 /// file: `error` says why and no row is kept.
@@ -67,7 +67,7 @@ struct ScanResultIndex {
         bool converged = false;
         int iterations = 0;
         std::vector<std::string> extracted;  ///< the extract rules' cells, in rule order
-        std::string termination;  ///< why its fit stopped, from crysta's ledger; empty when not recorded
+        std::string termination;  ///< why its fit stopped, from the result row, or a legacy ledger; empty when not recorded
         /// From crysta's `analysis/scan-notes.csv`: the file's rows skipped for a negative intensity, whether the
         /// whole file was skipped for having no intensity above zero (it then has no row), and why its fit refused
         /// (its row is a failed one, with `nan` where the fit produced nothing).

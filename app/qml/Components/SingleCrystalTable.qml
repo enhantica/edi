@@ -27,8 +27,8 @@ DataTable {
     // sorted column with its direction. A column of a `.edi` item is titled by the item's dictionary label and units
     // (edi ADR-0051), with the label and the `.edi` name as its tooltip, as HeaderLabel titles one.
     component SortTitle: EaComponents.ListViewLabel {
-        elide: Text.ElideRight
         id: title
+        elide: Text.ElideRight
 
         required property string role
         property string uid: ""
@@ -58,7 +58,7 @@ DataTable {
 
     objectName: "singleCrystal.reflections"
     maxRowCountShow: spareHeight > 0 ? Math.max(5, Math.floor((spareHeight - (headerItem ? headerItem.height : 0) - AppSizes.groupContentSpacing) / tableRowHeight - 0.5)) : EaStyle.Sizes.tableMaxRowCountShow
-    defaultInfoText: qsTr("No reflections")
+    defaultInfoText: qsTr("No reflections yet")
     sourceModel: experiment ? experiment.singleCrystalReflections : null
 
     // The Miller indices are short integers, so their columns are narrow and the numbers keep their room.

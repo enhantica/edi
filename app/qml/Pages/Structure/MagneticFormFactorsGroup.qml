@@ -26,7 +26,7 @@ Column {
     function landeText(value) {
         if (typeof value !== "number" || !isFinite(value) || value === -1)
             return "—";
-        return Number((2 / (1 + value)).toPrecision(4)).toString();
+        return NumberText.compact(Number((2 / (1 + value)).toPrecision(4)).toString());
     }
 
     spacing: AppSizes.groupContentSpacing
@@ -34,7 +34,7 @@ Column {
     DataTable {
         id: table
         objectName: "magneticFormFactors.list"
-        defaultInfoText: qsTr("No magnetic atom types")
+        defaultInfoText: qsTr("No magnetic atom types yet")
         sourceModel: group.formFactors
 
         columns: [numberColumnWidth, group.typeWidth, group.typeWidth, -1, group.coefficientWidth, group.coefficientWidth, group.coefficientWidth]

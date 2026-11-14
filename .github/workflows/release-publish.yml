@@ -39,12 +39,12 @@ jobs:
       - uses: actions/cache/restore@v4
         with:
           path: crysta-sdk-archives
-          key: crysta-sdk-linux-64-${{ steps.crysta.outputs.sha }}
+          key: crysta-sdk-v2-linux-64-${{ steps.crysta.outputs.sha }}
           fail-on-cache-miss: true
       - uses: actions/cache/restore@v4
         with:
           path: crysta-sdk-archives
-          key: crysta-sdk-osx-arm64-${{ steps.crysta.outputs.sha }}
+          key: crysta-sdk-v2-osx-arm64-${{ steps.crysta.outputs.sha }}
           fail-on-cache-miss: true
       - name: Attach the crysta SDKs
         env:
@@ -84,3 +84,20 @@ jobs:
         run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main -f component=docs
         env:
           GH_TOKEN: ${{ github.token }}
+      # app.easydiffraction.org carries released web apps only: this release's own archive, whose build.json names it.
+      - name: Mint a token for edi-sites
+        id: sites-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.ENHANTICA_APP_ID }}
+          private-key: ${{ secrets.ENHANTICA_APP_KEY }}
+          owner: enhantica
+          repositories: edi-sites
+      - name: Put the released web app on app.easydiffraction.org
+        env:
+          SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
+        run: |
+          rm -rf released-webapp
+          mkdir released-webapp
+          unzip -q publication/assets/EasyDiffraction-*-webapp.zip -d released-webapp
+          bash tools/ci/push_deploy_branch.sh released-webapp/webapp deploy-app

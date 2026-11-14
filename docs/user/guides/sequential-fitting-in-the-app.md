@@ -116,12 +116,10 @@ With only the included range shown, the intensity range leaves the excluded poin
 Stacked and the Map's colours.
 
 The colours of experiments, structures and Stacked lines come from the **Palette** in Preferences, Appearance:
-Earth (the default), Classic, Soft, Natural or Colour-blind safe. Under the choice, the palette's eleven colours show
-in the order new blocks take them: a colour the open project uses shows its block's icon, a free one a square, and
-the calculated curve's colour, the same in every palette, shows as the calculator icon. Each new experiment or
-structure takes the next free colour; in Earth the first two are kept for experiments. A scan with more files than
-the palette has colours runs from its first colour to its second. Saved reports and pictures always use the light
-theme's colours.
+Main (the default) or Colour-blind safe. The strip under the choice shows the palette's colours: two for experiments,
+three for structures, then six that further experiments and structures share. A scan of up to eight files takes the
+experiment colours and the shared ones; with more files, they shade evenly from the first experiment colour to the
+second. Saved reports and pictures always use the light theme's colours.
 
 ## Examples and saving
 

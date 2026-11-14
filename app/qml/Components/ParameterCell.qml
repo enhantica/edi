@@ -97,13 +97,15 @@ EaComponents.ListViewParameter {
         font.pixelSize: cell.scaledPixelSize
         font.bold: cell.fit && cell.enabled
     }
+    // Measured at the full size: a width that followed the smaller text would change the room it is made smaller for.
+    implicitWidth: implicitBackgroundWidth + leftInset + rightInset || (fitDigits ? Math.ceil(fullMetrics.advanceWidth(valueText)) : contentWidth) + leftPadding + rightPadding
     font.pixelSize: fitDigits && scaledPixelSize > 1 && scaledPixelSize < EaStyle.Sizes.fontPixelSize && scaledMetrics.advanceWidth(fullText) > room ? scaledPixelSize - 1 : scaledPixelSize
     readonly property bool overflows: contentWidth > width - leftPadding - rightPadding
     horizontalAlignment: overflows ? Text.AlignLeft : columnAlignment
     clip: true
 
     // The value as edited: the same text, so a cell left as it was changes nothing.
-    readonly property string editText: written ? item.fileValue : item !== null ? NumberText.full(item.value) : value
+    readonly property string editText: written ? item.fileEditValue : item !== null ? NumberText.full(item.value) : value
 
     onActiveFocusChanged: ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterCellEditor)
     onTextChanged: ApplicationInfo.editorTextChanged()
@@ -122,6 +124,9 @@ EaComponents.ListViewParameter {
             EaElements.ToolTip {
                 text: cell.helpToolTip && cell.ToolTip.text !== "" ? cell.ToolTip.text : cell.shownValue !== cell.valueText ? (cell.written ? cell.valueText : NumberText.plainFull(cell.item.value)) : cell.contentWidth > cell.width ? cell.text : cell.item !== null ? cell.item.toolTip : ""
                 requested: cell.hovered && !cell.activeFocus && !cell.warned
+                // The value in full, where the cell shows it shortened or cut short, is data; the help text follows the
+                // tooltip level.
+                data: !(cell.helpToolTip && cell.ToolTip.text !== "") && (cell.shownValue !== cell.valueText || cell.contentWidth > cell.width)
             }
         }
     }

@@ -1,0 +1,180 @@
+{
+    "actions": [
+        {
+            "action": "platform:light",
+            "scene": "home"
+        },
+        {
+            "action": "theme:light",
+            "scene": "home"
+        },
+        {
+            "action": "home.start",
+            "scene": "example-open"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "example-open"
+        },
+        {
+            "action": "reveal:group.examples",
+            "scene": "example-open"
+        },
+        {
+            "action": "expand:group.examples",
+            "scene": "example-open"
+        },
+        {
+            "action": "reveal:examples.search",
+            "scene": "example-open"
+        },
+        {
+            "action": "fill:examples.search=pd-neut-cwl_lbco_simulation",
+            "scene": "example-open"
+        },
+        {
+            "action": "reveal:examples.open.pd-neut-cwl_lbco_simulation",
+            "scene": "example-open"
+        },
+        {
+            "action": "examples.open.pd-neut-cwl_lbco_simulation",
+            "scene": "example-open"
+        },
+        {
+            "action": "pin-time:01 Jan 2026 12:00:00",
+            "scene": "example-open"
+        },
+        {
+            "action": "appBar.tab.analysis",
+            "scene": "calculated"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "calculated"
+        },
+        {
+            "action": "mainArea.tab.pattern",
+            "scene": "calculated"
+        },
+        {
+            "action": "appBar.tab.report",
+            "scene": "report"
+        },
+        {
+            "action": "sideBar.tab.basic",
+            "scene": "report"
+        }
+    ],
+    "binary_sha256": "b7471f0548485453f6649f08ecbb7a1c61592b1985624bbbf3d8c05d2c0a0f68",
+    "dependencies": [
+        {
+            "file": "inputs/analysis/analysis.edi",
+            "sha256": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3"
+        }
+    ],
+    "error": "",
+    "example": "pd-neut-cwl_lbco_simulation",
+    "fixture": {
+        "detail": "Cubic perovskite · Simulated pattern without measured data",
+        "id": "pd-neut-cwl_lbco_simulation",
+        "origin": "HRPT @ PSI",
+        "samples": [
+            "La₀.₅Ba₀.₅CoO₃ [Pm-3m]"
+        ],
+        "searchAliases": [
+            "pd-neut-cwl_lbco_simulation",
+            "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI",
+            "Cubic perovskite · Simulated pattern without measured data"
+        ],
+        "sources": [
+            "docs/user/cli/pd-neut-cwl_lbco_simulation/project/project.edi",
+            "docs/user/cli/pd-neut-cwl_lbco_simulation/project/analysis/analysis.edi",
+            "docs/user/cli/pd-neut-cwl_lbco_simulation/project/experiments/hrpt.edi",
+            "docs/user/cli/pd-neut-cwl_lbco_simulation/project/structures/lbco.edi"
+        ],
+        "values": {
+            "beamMode": [
+                "constant wavelength"
+            ],
+            "dimensionality": [
+                "1d"
+            ],
+            "facilities": [
+                "PSI"
+            ],
+            "fittingMode": [
+                "single"
+            ],
+            "instruments": [
+                "HRPT"
+            ],
+            "polarisation": [
+                "unpolarised"
+            ],
+            "probe": [
+                "neutron"
+            ],
+            "purpose": [
+                "simulation"
+            ],
+            "sampleForm": [
+                "powder"
+            ],
+            "scatteringType": [
+                "bragg"
+            ],
+            "structure": [
+                "crystal"
+            ]
+        }
+    },
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
+    "inputs": {
+        "experiment": {
+            "file": "inputs/experiments/hrpt.edi",
+            "sha256": "3491e99022654c2952382e3b61193674ee9c76a6f92750454dc8444016023dda"
+        },
+        "structure": {
+            "file": "inputs/structures/lbco.edi",
+            "sha256": "c4cd9712556b9d39513b186e86d5c87a04455111c0e34ca064875e36ba5eabff"
+        }
+    },
+    "logical_size": [
+        1480,
+        800
+    ],
+    "scenes": [
+        {
+            "description": "Open the example from Examples",
+            "id": "example-open",
+            "image": "example-open.webp",
+            "metadata": "example-open.json",
+            "page": "project",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "See the calculated pattern",
+            "id": "calculated",
+            "image": "calculated.webp",
+            "metadata": "calculated.json",
+            "page": "analysis",
+            "sidebar": "",
+            "status": "captured"
+        },
+        {
+            "description": "Review the report",
+            "id": "report",
+            "image": "report.webp",
+            "metadata": "report.json",
+            "page": "report",
+            "sidebar": "Main",
+            "status": "captured"
+        }
+    ],
+    "schema": 1,
+    "script_sha256": "3d7ad4a0b581891f865877fd2589d7763747dd762fdf56e6bebe23af8b880ed5",
+    "source_revision": "8f0914aa02b645f54fcb52551c4a72a47dc551ea",
+    "status": "complete",
+    "workflow": "tutorial"
+}

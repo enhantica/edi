@@ -29,18 +29,34 @@ def screenshot_radius(width: int) -> float:
     return width * float(match[1]) / 100
 
 
+def webp_size(data: bytes, filename: str) -> tuple[int, int]:
+    """A WebP image's width and height from its first chunk: lossy, lossless or extended."""
+    chunk = data[12:16]
+    if chunk == b'VP8X':
+        return 1 + int.from_bytes(data[24:27], 'little'), 1 + int.from_bytes(data[27:30], 'little')
+    if chunk == b'VP8 ':
+        width = int.from_bytes(data[26:28], 'little') & 0x3FFF
+        return width, int.from_bytes(data[28:30], 'little') & 0x3FFF
+    if chunk == b'VP8L':
+        bits = int.from_bytes(data[21:25], 'little')
+        return (bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1
+    raise ValueError(f'Unreadable WebP preview: {filename}')
+
+
 def preview(filename: str, description: str, crop_top: int = 0) -> str:
     source = DOCS / 'assets' / filename
     data = source.read_bytes()
     if data[:8] == b'\x89PNG\r\n\x1a\n':
         width, height = struct.unpack('!II', data[16:24])
+    elif data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        width, height = webp_size(data, filename)
     elif source.suffix == '.svg':
         root = ElementTree.fromstring(data)
         if root.tag != '{http://www.w3.org/2000/svg}svg':
             raise ValueError(f'Invalid generated SVG: {filename}')
         width, height = int(root.attrib['width']), int(root.attrib['height'])
     else:
-        raise ValueError(f'Preview must be PNG or generated SVG: {filename}')
+        raise ValueError(f'Preview must be PNG, WebP or generated SVG: {filename}')
     if width <= 0 or height <= 0:
         raise ValueError(f'Invalid preview size: {filename}')
     if not 0 <= crop_top < height:
@@ -154,6 +170,38 @@ def render_interface_links() -> None:
         path.write_text(''.join(parts))
 
 
+def download_buttons(family: str, entries: list[dict]) -> list[str]:
+    """The download buttons of a distribution family, disabled until a release links them.
+
+    The desktop installers show one online button per platform; a button's third line
+    names its kind and, once a release is read, its size (render_downloads).
+    The command line has one kind.
+    """
+    kinds = ('online',) if family == 'desktop' else (None,)
+    buttons = []
+    for kind in kinds:
+        for entry in entries:
+            label = html.escape(entry['platform'], quote=True)
+            requirements = html.escape(entry['requirements'], quote=True)
+            platform = html.escape(entry['artifact_platform'], quote=True)
+            kind_attr = f' data-download-kind="{kind}"' if kind else ''
+            kind_line = (
+                f'<small data-download-size="{platform}-{kind}">{kind.capitalize()}</small>'
+                if kind
+                else ''
+            )
+            named = f', {kind}' if kind else ''
+            buttons.append(
+                f'<a class="md-button" data-download-platform="{platform}"{kind_attr} '
+                'aria-disabled="true" '
+                f'aria-label="Download for {label}, {requirements}{named}">'
+                f'{platform_icon(entry["icon"])}'
+                f'<span class="ed-download-label">{label}<small>{requirements}</small>'
+                f'{kind_line}</span></a>'
+            )
+    return buttons
+
+
 def render() -> None:
     capture = DOCS / 'assets/interfaces/capture.json'
     if capture.exists():
@@ -165,7 +213,7 @@ def render() -> None:
     for name, image, title, crop in [
         (
             'application',
-            'gui/y2o3/13-analysis-basic.png',
+            'gui/y2o3/13-analysis-basic.webp',
             'EasyDiffraction graphical application',
             0,
         ),
@@ -178,7 +226,11 @@ def render() -> None:
     # The User guide's How you want to work table shows each interface's screenshot under its row.
     guide = DOCS / 'user-guide/index.md'
     for name, image, title in [
-        ('application', 'gui/y2o3/13-analysis-basic.png', 'EasyDiffraction graphical application'),
+        (
+            'application',
+            'gui/y2o3/13-analysis-basic.webp',
+            'EasyDiffraction graphical application',
+        ),
         ('python', 'interfaces/python-notebook.png', 'EasyDiffraction in a Jupyter notebook'),
         ('cli', 'interfaces/command-line.png', 'EasyDiffraction command-line session'),
     ]:
@@ -192,24 +244,13 @@ def render() -> None:
         source = DOCS / filename
         if not source.exists():
             continue
-        buttons = []
-        for entry in releases['desktop']:
-            label = html.escape(entry['platform'], quote=True)
-            requirements = html.escape(entry['requirements'], quote=True)
-            platform = html.escape(entry['artifact_platform'], quote=True)
-            icon = platform_icon(entry['icon'])
-            buttons.append(
-                f'<a class="md-button" data-download-platform="{platform}" '
-                'aria-disabled="true" '
-                f'aria-label="Download for {label}, {requirements}">{icon}'
-                f'<span class="ed-download-label">{label}<small>{requirements}</small>'
-                '</span></a>'
-            )
+        buttons = download_buttons(family, releases['desktop'])
+        rows = ' ed-downloads--kinds' if family == 'desktop' else ''
         replace_marker(
             source,
             'distribution',
             family,
-            '<div class="ed-downloads">' + '\n'.join(buttons) + '</div>',
+            f'<div class="ed-downloads{rows}">' + '\n'.join(buttons) + '</div>',
         )
     render_interface_links()
 

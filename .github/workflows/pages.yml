@@ -27,8 +27,9 @@ env:
 
 jobs:
   # The crysta SDK, built once per crysta commit (edi ADR-0083).
+  # A stable release builds the web app again at its tag, so it shows the release's version (edi ADR-0017 §1).
   crysta-sdk:
-    if: github.event_name != 'release'
+    if: github.event_name != 'release' || !github.event.release.prerelease
     uses: ./.github/workflows/crysta-sdk.yml
     secrets: inherit
 
@@ -71,7 +72,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/edi-releases.json"
-          pixi run site-build --require-outputs --base-url https://enhantica.github.io/edi/ --github-releases "$RUNNER_TEMP/edi-releases.json"
+          pixi run site-build --require-outputs --base-url https://easydiffraction.org/ --github-releases "$RUNNER_TEMP/edi-releases.json"
       - name: Place the public site at the root
         run: |
           for path in dev webapp; do
@@ -90,11 +91,15 @@ jobs:
   wasm:
     needs: crysta-sdk
     name: build WebAssembly
-    if: github.event.pull_request.head.repo.fork == false && github.repository == 'enhantica/edi' && github.event_name != 'release' && (github.event_name != 'workflow_dispatch' || inputs.component != 'docs')
+    if: github.event.pull_request.head.repo.fork == false && github.repository == 'enhantica/edi' && (github.event_name != 'release' || !github.event.release.prerelease) && (github.event_name != 'workflow_dispatch' || inputs.component != 'docs')
     environment: crysta-sdk
     runs-on: *linux
     steps:
+      # With the tags, so the app names the release it is or follows (cmake/build_version.cmake).
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
       - uses: ./.github/actions/setup-pixi
       - uses: ./.github/actions/crysta-sdk
         with:
@@ -211,10 +216,9 @@ jobs:
           private-key: ${{ secrets.ENHANTICA_APP_KEY }}
           owner: enhantica
           repositories: edi-sites
-      # The web app alone for app.easydiffraction.org, and the whole site for easydiffraction.org.
-      - name: Update the deploy-app and deploy-docs branches
+      # The whole site for easydiffraction.org, its web app a preview of main; app.easydiffraction.org takes only a
+      # release's own web app, from release-publish.yml.
+      - name: Update the deploy-docs branch
         env:
           SITES_TOKEN: ${{ steps.sites-token.outputs.token }}
-        run: |
-          bash tools/ci/push_deploy_branch.sh site/webapp deploy-app
-          bash tools/ci/push_deploy_branch.sh site deploy-docs
+        run: bash tools/ci/push_deploy_branch.sh site deploy-docs

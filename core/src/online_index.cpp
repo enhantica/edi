@@ -279,11 +279,14 @@ std::vector<const Entry*> search(const Index& index, const std::string& kind, co
         return true;
     };
     std::vector<const Entry*> by_elements;  // formula matches by elements only, listed after the exact ones
+    std::vector<const Entry*> by_id;        // the entry the whole id names, listed first
     const std::string wanted_group = lower(without_spaces(query.space_group));
     const std::string wanted_id = lower(trimmed(query.id));
     for (const Entry& entry : index.entries) {
         if (entry.kind != kind) continue;
-        if (!wanted_id.empty() && lower(entry.id) != wanted_id) continue;
+        // Part of an id finds every entry whose id holds it, as the other text fields search; the entry the
+        // whole id names is listed first.
+        if (!contains_ci(entry.id, trimmed(query.id))) continue;
         if (!contains_ci(entry.name, trimmed(query.name))) continue;
         bool exact_formula = true;
         if (!wanted_formula.empty() && entry.formula != wanted_formula) {
@@ -295,9 +298,11 @@ std::vector<const Entry*> search(const Index& index, const std::string& kind, co
         if (!contains_ci(entry.radiation, trimmed(query.radiation))) continue;
         if (!contains_ci(entry.technique, trimmed(query.technique))) continue;
         if (!contains_ci(entry.instrument, trimmed(query.instrument))) continue;
-        (exact_formula ? found : by_elements).push_back(&entry);
+        if (!wanted_id.empty() && lower(entry.id) == wanted_id) by_id.push_back(&entry);
+        else (exact_formula ? found : by_elements).push_back(&entry);
     }
     found.insert(found.end(), by_elements.begin(), by_elements.end());
+    found.insert(found.begin(), by_id.begin(), by_id.end());
     return found;
 }
 

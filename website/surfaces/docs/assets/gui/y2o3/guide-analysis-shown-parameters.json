@@ -1,13 +1,13 @@
 {
     "description": "Choose which parameter groups appear in the table",
     "fit_phase": "",
-    "gui_components_revision": "10dc5828020c90666a1ef015835475936d56e819",
+    "gui_components_revision": "e7e096ff8c6e4ed7395af1d7e937f211bb582ae4",
     "highlights": [
         "group.shownParameters"
     ],
     "id": "guide-analysis-shown-parameters",
-    "image": "guide-analysis-shown-parameters.png",
-    "image_sha256": "8a5349d1345bd7d62d29c82f12b0fa559f2cf867788d1c9415b2d0a33afb413c",
+    "image": "guide-analysis-shown-parameters.webp",
+    "image_sha256": "0da87187a46e53795f1972bd88eaeaef3507be7addc60563f6970f72715477cc",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -153,43 +153,9 @@
                 77
             ]
         },
-        "appBar.button.bug": {
-            "bounds": [
-                1431,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "bug",
-            "label": "",
-            "visible_bounds": [
-                1431,
-                21,
-                35,
-                35
-            ]
-        },
-        "appBar.button.help": {
-            "bounds": [
-                1396,
-                21,
-                35,
-                35
-            ],
-            "enabled": true,
-            "icon": "question-circle",
-            "label": "",
-            "visible_bounds": [
-                1396,
-                21,
-                35,
-                35
-            ]
-        },
         "appBar.button.preferences": {
             "bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -198,7 +164,7 @@
             "icon": "cog",
             "label": "",
             "visible_bounds": [
-                1361,
+                1431,
                 21,
                 35,
                 35
@@ -250,6 +216,23 @@
             "label": "",
             "visible_bounds": [
                 14,
+                21,
+                35,
+                35
+            ]
+        },
+        "appBar.button.toolTips": {
+            "bounds": [
+                1396,
+                21,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "comment",
+            "label": "",
+            "visible_bounds": [
+                1396,
                 21,
                 35,
                 35
@@ -392,7 +375,7 @@
         },
         "assistant.toggle": {
             "bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
@@ -401,13 +384,13 @@
             "icon": "robot",
             "label": "",
             "visible_bounds": [
-                1326,
+                1361,
                 21,
                 35,
                 35
             ]
         },
-        "correlations": {
+        "chart": {
             "bounds": [
                 0,
                 168,
@@ -423,536 +406,448 @@
                 590
             ]
         },
-        "correlations.cell.0.0": {
+        "chart.band": {
+            "ambiguous": true
+        },
+        "chart.bragg.label": {
             "bounds": [
-                169,
+                38.734375,
+                547,
+                51.265625,
+                18
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                38.734375,
+                547,
+                51.265625,
+                18
+            ]
+        },
+        "chart.frame.bragg": {
+            "bounds": [
+                96,
+                542,
+                646,
+                28
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                96,
+                542,
+                646,
+                28
+            ]
+        },
+        "chart.frame.main": {
+            "bounds": [
+                96,
                 245,
-                91,
-                91
+                646,
+                283
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                169,
+                96,
                 245,
-                91,
-                91
+                646,
+                283
             ]
         },
-        "correlations.cell.0.1": {
+        "chart.frame.residual": {
             "bounds": [
-                260,
+                96,
+                584,
+                646,
+                105
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                96,
+                584,
+                646,
+                105
+            ]
+        },
+        "chart.measured": {
+            "bounds": [
+                96,
                 245,
-                91,
-                91
+                646,
+                283
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                260,
+                96,
                 245,
-                91,
-                91
+                646,
+                283
             ]
         },
-        "correlations.cell.0.2": {
+        "chart.pointer": {
             "bounds": [
-                351,
+                96,
                 245,
-                91,
-                91
+                646,
+                283
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                351,
+                96,
                 245,
-                91,
-                91
+                646,
+                283
             ]
         },
-        "correlations.cell.0.3": {
+        "chart.pointer.bragg": {
             "bounds": [
-                442,
-                245,
-                91,
-                91
+                96,
+                542,
+                646,
+                28
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                442,
-                245,
-                91,
-                91
+                96,
+                542,
+                646,
+                28
             ]
         },
-        "correlations.cell.0.4": {
+        "chart.pointer.residual": {
             "bounds": [
-                533,
-                245,
-                91,
-                91
+                96,
+                584,
+                646,
+                105
             ],
             "enabled": true,
             "label": "",
             "visible_bounds": [
-                533,
-                245,
-                91,
-                91
+                96,
+                584,
+                646,
+                105
             ]
         },
-        "correlations.cell.1.0": {
+        "chart.title.residual": {
             "bounds": [
-                169,
-                336,
-                91,
-                91
+                15.5,
+                601.765625,
+                19,
+                69.46875
             ],
             "enabled": true,
-            "label": "",
+            "label": "<font color=\"#618ec8\">meas</font> − <font color=\"#e5533d\">calc</font>",
             "visible_bounds": [
-                169,
-                336,
-                91,
-                91
+                15.5,
+                601.765625,
+                19,
+                69.46875
             ]
         },
-        "correlations.cell.1.1": {
+        "chart.title.x": {
             "bounds": [
-                260,
-                336,
-                91,
-                91
+                394.2578125,
+                722,
+                49.484375,
+                20
             ],
             "enabled": true,
-            "label": "",
+            "label": "2θ (deg)",
             "visible_bounds": [
-                260,
-                336,
-                91,
-                91
+                394.2578125,
+                722,
+                49.484375,
+                20
             ]
         },
-        "correlations.cell.1.2": {
+        "chart.title.y": {
             "bounds": [
-                351,
-                336,
-                91,
-                91
+                15.5,
+                342.453125,
+                19,
+                88.09375
             ],
             "enabled": true,
-            "label": "",
+            "label": "<font color=\"#618ec8\">meas</font>, <font color=\"#e5533d\">calc</font>, <font color=\"#8a8a8a\">bkg</font>",
             "visible_bounds": [
-                351,
-                336,
-                91,
-                91
+                15.5,
+                342.453125,
+                19,
+                88.09375
             ]
         },
-        "correlations.cell.1.3": {
+        "chart.toolbar.hover": {
             "bounds": [
-                442,
-                336,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                442,
-                336,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.1.4": {
-            "bounds": [
-                533,
-                336,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                533,
-                336,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.2.0": {
-            "bounds": [
-                169,
-                427,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                169,
-                427,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.2.1": {
-            "bounds": [
-                260,
-                427,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                260,
-                427,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.2.2": {
-            "bounds": [
-                351,
-                427,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                351,
-                427,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.2.3": {
-            "bounds": [
-                442,
-                427,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                442,
-                427,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.2.4": {
-            "bounds": [
-                533,
-                427,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                533,
-                427,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.3.0": {
-            "bounds": [
-                169,
-                518,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                169,
-                518,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.3.1": {
-            "bounds": [
-                260,
-                518,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                260,
-                518,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.3.2": {
-            "bounds": [
-                351,
-                518,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                351,
-                518,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.3.3": {
-            "bounds": [
-                442,
-                518,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                442,
-                518,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.3.4": {
-            "bounds": [
-                533,
-                518,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                533,
-                518,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.4.0": {
-            "bounds": [
-                169,
-                609,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                169,
-                609,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.4.1": {
-            "bounds": [
-                260,
-                609,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                260,
-                609,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.4.2": {
-            "bounds": [
-                351,
-                609,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                351,
-                609,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.4.3": {
-            "bounds": [
-                442,
-                609,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                442,
-                609,
-                91,
-                91
-            ]
-        },
-        "correlations.cell.4.4": {
-            "bounds": [
-                533,
-                609,
-                91,
-                91
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                533,
-                609,
-                91,
-                91
-            ]
-        },
-        "correlations.grid": {
-            "bounds": [
-                169,
-                245,
-                455,
-                455
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                169,
-                245,
-                455,
-                455
-            ]
-        },
-        "correlations.pointer": {
-            "bounds": [
-                169,
-                245,
-                455,
-                455
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                169,
-                245,
-                455,
-                455
-            ]
-        },
-        "correlations.toolbar.fullMatrix": {
-            "bounds": [
-                578.28125,
+                414.25,
                 182,
                 35,
                 35
             ],
             "enabled": true,
-            "icon": "th",
+            "icon": "comment-alt",
             "label": "",
             "visible_bounds": [
-                578.28125,
+                414.25,
                 182,
                 35,
                 35
             ]
         },
-        "correlations.toolbar.level": {
+        "chart.toolbar.includedRange": {
             "bounds": [
-                157,
-                182,
-                181.203125,
-                35
-            ],
-            "enabled": true,
-            "icon": "filter",
-            "label": "",
-            "visible_bounds": [
-                157,
-                182,
-                181.203125,
-                35
-            ]
-        },
-        "correlations.toolbar.level.number": {
-            "bounds": [
-                298.203125,
-                191,
-                26,
-                19
-            ],
-            "enabled": true,
-            "label": "0.85",
-            "visible_bounds": [
-                298.203125,
-                191,
-                26,
-                19
-            ]
-        },
-        "correlations.toolbar.names": {
-            "bounds": [
-                539.78125,
+                491.25,
                 182,
                 35,
                 35
             ],
             "enabled": true,
-            "icon": "font",
+            "icon": "eraser",
             "label": "",
             "visible_bounds": [
-                539.78125,
+                491.25,
                 182,
                 35,
                 35
             ]
         },
-        "correlations.toolbar.parameters": {
+        "chart.toolbar.legend": {
             "bounds": [
-                341.703125,
+                375.75,
                 182,
-                184.078125,
+                35,
                 35
             ],
             "enabled": true,
-            "icon": "list-ol",
+            "icon": "align-left",
             "label": "",
             "visible_bounds": [
-                341.703125,
+                375.75,
                 182,
-                184.078125,
+                35,
                 35
             ]
         },
-        "correlations.toolbar.parameters.number": {
+        "chart.toolbar.measuredStyle": {
             "bounds": [
-                451.015625,
-                191,
-                23,
-                19
+                259.5,
+                182,
+                102.25,
+                35
             ],
             "enabled": true,
-            "label": "5",
+            "label": "",
             "visible_bounds": [
-                451.015625,
-                191,
-                23,
-                19
+                259.5,
+                182,
+                102.25,
+                35
+            ]
+        },
+        "chart.toolbar.pan": {
+            "bounds": [
+                578.75,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "arrows-alt",
+            "label": "",
+            "visible_bounds": [
+                578.75,
+                182,
+                35,
+                35
+            ]
+        },
+        "chart.toolbar.reset": {
+            "bounds": [
+                655.75,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "home",
+            "label": "",
+            "visible_bounds": [
+                655.75,
+                182,
+                35,
+                35
+            ]
+        },
+        "chart.toolbar.save": {
+            "bounds": [
+                694.25,
+                182,
+                45.5,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                694.25,
+                182,
+                45.5,
+                35
+            ]
+        },
+        "chart.toolbar.save.button": {
+            "bounds": [
+                704.75,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "camera",
+            "label": "",
+            "visible_bounds": [
+                704.75,
+                182,
+                35,
+                35
+            ]
+        },
+        "chart.toolbar.structureCurves": {
+            "bounds": [
+                452.75,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "layer-group",
+            "label": "",
+            "visible_bounds": [
+                452.75,
+                182,
+                35,
+                35
+            ]
+        },
+        "chart.toolbar.subtractBackground": {
+            "bounds": [
+                529.75,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "chart-area",
+            "label": "",
+            "visible_bounds": [
+                529.75,
+                182,
+                35,
+                35
+            ]
+        },
+        "chart.toolbar.xaxis": {
+            "bounds": [
+                149.75,
+                182,
+                106.25,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                149.75,
+                182,
+                106.25,
+                35
+            ]
+        },
+        "chart.toolbar.yscale": {
+            "bounds": [
+                30,
+                182,
+                116.25,
+                35
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                30,
+                182,
+                116.25,
+                35
+            ]
+        },
+        "chart.toolbar.zoom": {
+            "bounds": [
+                617.25,
+                182,
+                35,
+                35
+            ],
+            "enabled": true,
+            "icon": "expand",
+            "label": "",
+            "visible_bounds": [
+                617.25,
+                182,
+                35,
+                35
+            ]
+        },
+        "chart.view.bragg": {
+            "bounds": [
+                0,
+                542,
+                770,
+                28
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                542,
+                770,
+                28
+            ]
+        },
+        "chart.view.main": {
+            "bounds": [
+                0,
+                245,
+                770,
+                323
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                245,
+                770,
+                323
+            ]
+        },
+        "chart.view.residual": {
+            "bounds": [
+                0,
+                584,
+                770,
+                145
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                0,
+                584,
+                770,
+                145
             ]
         },
         "group.patternUpdates": {
@@ -969,6 +864,22 @@
                 770,
                 238,
                 710,
+                42
+            ]
+        },
+        "group.patternUpdates.pin": {
+            "bounds": [
+                1433.2261363926236,
+                236.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                238,
+                44.54772721475251,
                 42
             ]
         },
@@ -989,72 +900,24 @@
                 119
             ]
         },
+        "group.shownParameters.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
+            ]
+        },
         "label": {
             "ambiguous": true
-        },
-        "mainArea.analysis.tab.correlations": {
-            "bounds": [
-                57.09375,
-                77,
-                86.484375,
-                42
-            ],
-            "enabled": true,
-            "label": "Correlations",
-            "visible_bounds": [
-                57.09375,
-                77,
-                86.484375,
-                42
-            ]
-        },
-        "mainArea.analysis.tab.fitting": {
-            "bounds": [
-                0,
-                77,
-                57.09375,
-                42
-            ],
-            "enabled": true,
-            "label": "Pattern",
-            "visible_bounds": [
-                0,
-                77,
-                57.09375,
-                42
-            ]
-        },
-        "mainArea.analysis.tab.map": {
-            "bounds": [
-                204.15625,
-                77,
-                39.5625,
-                42
-            ],
-            "enabled": false,
-            "label": "Map",
-            "visible_bounds": [
-                204.15625,
-                77,
-                39.5625,
-                42
-            ]
-        },
-        "mainArea.analysis.tab.stacked": {
-            "bounds": [
-                143.578125,
-                77,
-                60.578125,
-                42
-            ],
-            "enabled": false,
-            "label": "Stacked",
-            "visible_bounds": [
-                143.578125,
-                77,
-                60.578125,
-                42
-            ]
         },
         "mainArea.blocks": {
             "bounds": [
@@ -1120,6 +983,102 @@
                 133,
                 35,
                 35
+            ]
+        },
+        "mainArea.divider": {
+            "bounds": [
+                770,
+                77,
+                1,
+                681
+            ],
+            "enabled": true,
+            "label": "",
+            "visible_bounds": [
+                770,
+                77,
+                1,
+                681
+            ]
+        },
+        "mainArea.tab.correlations": {
+            "bounds": [
+                126.640625,
+                77,
+                86.15625,
+                42
+            ],
+            "enabled": true,
+            "label": "Correlations",
+            "visible_bounds": [
+                126.640625,
+                77,
+                86.15625,
+                42
+            ]
+        },
+        "mainArea.tab.map": {
+            "bounds": [
+                273.375,
+                77,
+                39.5625,
+                42
+            ],
+            "enabled": false,
+            "label": "Map",
+            "visible_bounds": [
+                273.375,
+                77,
+                39.5625,
+                42
+            ]
+        },
+        "mainArea.tab.pattern": {
+            "bounds": [
+                68.875,
+                77,
+                57.765625,
+                42
+            ],
+            "enabled": true,
+            "label": "Pattern",
+            "visible_bounds": [
+                68.875,
+                77,
+                57.765625,
+                42
+            ]
+        },
+        "mainArea.tab.stacked": {
+            "bounds": [
+                212.796875,
+                77,
+                60.578125,
+                42
+            ],
+            "enabled": false,
+            "label": "Stacked",
+            "visible_bounds": [
+                212.796875,
+                77,
+                60.578125,
+                42
+            ]
+        },
+        "mainArea.tab.structure": {
+            "bounds": [
+                0,
+                77,
+                68.875,
+                42
+            ],
+            "enabled": true,
+            "label": "Structure",
+            "visible_bounds": [
+                0,
+                77,
+                68.875,
+                42
             ]
         },
         "sideBar.tab.basic": {
@@ -1313,7 +1272,7 @@
                 18.109375
             ],
             "enabled": true,
-            "label": "3 0.026s 3.58→2.28",
+            "label": "1 0.097s 3.58→2.28",
             "visible_bounds": [
                 1186,
                 770,
@@ -1484,8 +1443,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "1cb340ee573a7427de05017e95ae8f9d2bd187692e7f1e0b8bbb7fd2fef66be6",
-    "source_revision": "d9bdcd31727bd388c3f41482e59982f942fbf161",
+    "script_sha256": "a0cd8f7d599e386e3db4cf752e3ae7050f99ce60356dedf20f4c9a1fbb3ecee3",
+    "source_revision": "9045d5d22d8f07b00ffd58c1610ec4b02b2beba5",
     "state": {
         "experiments": 1,
         "fit_outcome": "success",

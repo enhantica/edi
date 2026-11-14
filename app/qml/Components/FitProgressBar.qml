@@ -102,7 +102,10 @@ Item {
         font.pixelSize: bar.pixelSize
     }
     Text {
-        x: Math.round((bar.width - width) / 2)
+        x: bar.height / 2
+        width: Math.max(0, bar.width - bar.height)
+        elide: Text.ElideRight
+        horizontalAlignment: Text.AlignHCenter
         y: bar.textBaseline - baselineOffset
         font.family: bar.fontFamily
         font.pixelSize: bar.pixelSize
@@ -115,7 +118,10 @@ Item {
         clip: true
 
         Text {
-            x: Math.round((bar.width - width) / 2)
+            x: bar.height / 2
+            width: Math.max(0, bar.width - bar.height)
+            elide: Text.ElideRight
+            horizontalAlignment: Text.AlignHCenter
             y: bar.textBaseline - baselineOffset
             font.family: bar.fontFamily
             font.pixelSize: bar.pixelSize

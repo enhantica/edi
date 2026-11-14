@@ -17,6 +17,7 @@ if [ -f "$ARCHIVE" ]; then
   tar -xzf "$ARCHIVE" -C "$SRC"
 elif [ -n "${CRYSTA_SRC:-}" ] && git -C "$CRYSTA_SRC" cat-file -e "${SHA}^{commit}" 2>/dev/null; then
   git -C "$CRYSTA_SRC" archive "$SHA" | tar -x -C "$SRC"
+  python3 "$ROOT/tools/ci/crysta_source_receipt.py" "$CRYSTA_SRC" "$SHA" "$SRC/runner-source-objects.json"
 else
   echo "ERROR: crysta $SHA's source is neither in $ARCHIVE nor in CRYSTA_SRC (a crysta checkout holding it)" >&2
   exit 1

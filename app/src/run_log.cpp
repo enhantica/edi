@@ -446,7 +446,7 @@ RunLog::Header run_log_header() {
         QStringLiteral("logging level ") + value("develop/loggingLevel", QStringLiteral("Info")),
         QStringLiteral("threads per calculation ") + (threads > 0 ? QString::number(threads) : QStringLiteral("Auto")),
         QStringLiteral("parallel fits ") + value("develop/scanWorkers", 1),
-        QStringLiteral("colour scheme ") + value("Appearance/colourScheme", QStringLiteral("earth")),
+        QStringLiteral("colour scheme ") + value("Appearance/colourScheme", QStringLiteral("main")),
         QStringLiteral("sidebar ") + value("Edi.Preferences/sideBarSide", QStringLiteral("Right")),
         QStringLiteral("tooltips ") + toolTipLevel};
     return {

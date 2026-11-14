@@ -47,7 +47,7 @@ EaElements.ParamComboBox {
     displayText: resolved !== "" && token === "auto" ? `${currentText} <font color="${EaStyle.Colors.themeForegroundDisabled}">· ${resolved}</font>` : currentText
     valueRole: "token"
     enabled: writable && options !== null && options.count > 0
-    currentIndex: options ? options.indexOf(token) : -1
+    currentIndex: options && options.revision >= 0 ? options.indexOf(token) : -1
     // Why the selector is disabled and what enables it, shown instead of its help while it is.
     property string disabledReason: ""
     // The base combo box shows it, and not while its list is open; while refused, the warning below shows instead.
@@ -67,6 +67,6 @@ EaElements.ParamComboBox {
     Component.onCompleted: FieldTitles.align(selector)
 
     onActivated: index => ApplicationInfo.activateSelector(index, () => {
-            currentIndex = Qt.binding(() => options ? options.indexOf(selector.token) : -1);
+            currentIndex = Qt.binding(() => options && options.revision >= 0 ? options.indexOf(selector.token) : -1);
         })
 }

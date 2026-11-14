@@ -151,6 +151,10 @@ def structure_facts(text: str) -> dict:
     return facts
 
 
+# The facts an experiment file states about itself.
+FILE_FACTS = {'radiation', 'technique', 'instrument', 'facility'}
+
+
 def experiment_facts(text: str) -> dict:
     facts = {}
     probe = cif_value(text, '_experiment_type.radiation_probe')
@@ -162,7 +166,8 @@ def experiment_facts(text: str) -> dict:
         facts['technique'] = ' '.join(part for part in (form, mode) if part)
     for tag, key in (('_instrument.name', 'instrument'), ('_instrument.facility', 'facility')):
         value = cif_value(text, tag)
-        if value:
+        # '?' (unknown) and '.' (not applicable) are no name.
+        if value and value not in {'?', '.'}:
             facts[key] = value
     return facts
 
@@ -270,6 +275,19 @@ def tutorial_cases(metadata: dict) -> dict:
     }
 
 
+# A value's free mark: `()`, or the s.u. in brackets that marks it free with its uncertainty.
+FREE_MARK = re.compile(r'(?<=[0-9.])\(\d*\)')
+
+
+def starting_model(source: Path, target: Path) -> None:
+    """A structure or experiment as a starting model: its values with nothing marked free.
+
+    Loading one from the collection adds a starting point to a project; which parameters to fit
+    is the user's choice (the owner, 2026-11-11). The project archives keep their marks.
+    """
+    target.write_text(FREE_MARK.sub('', source.read_text(encoding='utf-8')), encoding='utf-8')
+
+
 def populate(output: Path) -> int:
     metadata = json.loads(METADATA.read_text())['examples']
     metadata = {**metadata, **tutorial_cases(metadata)}
@@ -310,7 +328,7 @@ def populate(output: Path) -> int:
         count += 1
         for structure in sorted((project / 'structures').glob('*.edi')):
             target = output / 'structures' / f'{example}-{structure.stem}.edi'
-            shutil.copyfile(structure, target)
+            starting_model(structure, target)
             write_sidecar(
                 target,
                 {
@@ -323,7 +341,7 @@ def populate(output: Path) -> int:
             count += 1
         for experiment in sorted((project / 'experiments').glob('*.edi')):
             target = output / 'experiments' / f'{example}-{experiment.stem}.edi'
-            shutil.copyfile(experiment, target)
+            starting_model(experiment, target)
             # The structures it links, by their entry ids: Load from the web brings them with it.
             linked = [
                 f'{example}-{name}'
@@ -416,7 +434,10 @@ def entries_of(output: Path) -> list[dict]:
                 'doi',
                 'structures',
             ):
-                value = meta.get(key, facts.get(key))
+                # What a file says of itself (the X-ray half of a neutron and X-ray case) wins
+                # over the case's description.
+                own = key in FILE_FACTS and facts.get(key)
+                value = facts[key] if own else meta.get(key, facts.get(key))
                 if value not in (None, '', []):
                     entry[key] = value
             entry['files'] = [

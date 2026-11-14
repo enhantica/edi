@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_view_model.hpp"
+#include "assistant_file_primitives.hpp"
 #include "assistant_history.hpp"
 #include "assistant_history_lookup.hpp"
 #include "assistant_data.hpp"
@@ -9,9 +10,11 @@
 #include "app_build_info.hpp"
 #ifndef __EMSCRIPTEN__
 #include "assistant_runtime_config.hpp"
+#include "assistant_thread_settings.hpp"
 #endif
 #include "edi/version.hpp"
 #include <QSysInfo>
+#include <QDebug>
 
 #include <QFile>
 #include <QCoreApplication>
@@ -218,16 +221,7 @@ struct LocalInputSource {
     int descriptor=-1;
     struct stat identity{};
     ~LocalInputSource(){if(descriptor>=0)::close(descriptor);}
-    static bool same(const struct stat& a,const struct stat& b) noexcept {
-#if defined(Q_OS_MACOS)
-        const bool time=a.st_mtimespec.tv_sec==b.st_mtimespec.tv_sec && a.st_mtimespec.tv_nsec==b.st_mtimespec.tv_nsec &&
-            a.st_ctimespec.tv_sec==b.st_ctimespec.tv_sec && a.st_ctimespec.tv_nsec==b.st_ctimespec.tv_nsec;
-#else
-        const bool time=a.st_mtim.tv_sec==b.st_mtim.tv_sec && a.st_mtim.tv_nsec==b.st_mtim.tv_nsec &&
-            a.st_ctim.tv_sec==b.st_ctim.tv_sec && a.st_ctim.tv_nsec==b.st_ctim.tv_nsec;
-#endif
-        return a.st_dev==b.st_dev && a.st_ino==b.st_ino && a.st_mode==b.st_mode && a.st_size==b.st_size && time;
-    }
+    static bool same(const struct stat& a,const struct stat& b) noexcept {return assistant_files::same_file_bytes(a,b);}
     bool current() const noexcept {
         try {
             if(descriptor<0)return false;
@@ -389,16 +383,7 @@ struct SkillDirectory {
     SkillDirectory(const SkillDirectory&)=delete;
     SkillDirectory& operator=(const SkillDirectory&)=delete;
 };
-static bool same_skill_stat(const struct stat& a,const struct stat& b) {
-#if defined(Q_OS_DARWIN)
-    const bool times=a.st_mtimespec.tv_sec==b.st_mtimespec.tv_sec && a.st_mtimespec.tv_nsec==b.st_mtimespec.tv_nsec &&
-        a.st_ctimespec.tv_sec==b.st_ctimespec.tv_sec && a.st_ctimespec.tv_nsec==b.st_ctimespec.tv_nsec;
-#else
-    const bool times=a.st_mtim.tv_sec==b.st_mtim.tv_sec && a.st_mtim.tv_nsec==b.st_mtim.tv_nsec &&
-        a.st_ctim.tv_sec==b.st_ctim.tv_sec && a.st_ctim.tv_nsec==b.st_ctim.tv_nsec;
-#endif
-    return a.st_dev==b.st_dev && a.st_ino==b.st_ino && a.st_mode==b.st_mode && a.st_size==b.st_size && times;
-}
+static bool same_skill_stat(const struct stat& a,const struct stat& b) {return assistant_files::same_file_bytes(a,b);}
 static QString skill_directory_identity(int fd) {
     struct stat info{};
     if(fd<0 || ::fstat(fd,&info) || !S_ISDIR(info.st_mode))throw std::runtime_error("Skill source is not a directory");
@@ -1901,11 +1886,15 @@ struct AssistantViewModel::State {
         }
         throw std::runtime_error("The selected model has no supported default effort");
     }
-    static bool readonly_policy(const QJsonValue& value) {
-        if (!value.isObject()) return false;
-        const auto policy = value.toObject();
-        return policy.size()==2 && policy.value("type")=="readOnly" &&
-            policy.value("networkAccess").isBool() && !policy.value("networkAccess").toBool();
+    // The first field of a thread's reported settings that differs from what was asked (assistant_thread_settings.hpp);
+    // extra sandbox fields, which Windows replies carry, are allowed and written to the run log.
+    QString thread_settings_mismatch(const QJsonObject& actual, const QString& wanted_model, const QString& wanted_effort,
+                                     const QString& effort_key, const QString& sandbox_key) const {
+        QStringList extra;
+        const QString field=edi_app::thread_settings_mismatch(actual,{generic_workspace,wanted_model,wanted_effort},effort_key,sandbox_key,&extra);
+        if(field.isEmpty() && !extra.isEmpty())
+            qWarning().noquote() << "assistant: read-only sandbox carries extra fields:" << extra.join(QStringLiteral(", "));
+        return field;
     }
     bool policy_current() const {
         return generic_policy_epoch!=UINT64_MAX && generic_policy_verified && !generic_thread.isEmpty() && generic_policy_model==model &&
@@ -14079,10 +14068,10 @@ struct AssistantViewModel::State {
             QStringList found;found.reserve(generic_skill_paths.size());
             for (const auto& entry : result.value("data").toArray()) {
                 const auto group = entry.toObject();
-                if (group.value("cwd") != generic_workspace) continue;
+                if (!edi_app::same_path(group.value("cwd"), generic_workspace)) continue;
                 reason_code = "SKILL_DISCOVERY";
                 if (!group.value("errors").isArray()) throw std::runtime_error("Agent skill discovery reported an error");
-                const auto ownedRoot = QDir::cleanPath(generic_workspace);
+                const auto ownedRoot = edi_app::comparable_path(generic_workspace);
                 for (const auto& value : group.value("errors").toArray()) {
                     const auto failure = value.toObject();
                     const auto path_value = failure.value("path");
@@ -14090,7 +14079,7 @@ struct AssistantViewModel::State {
                         throw std::runtime_error("Agent skill discovery error is malformed");
                     const auto error_path=path_value.toString();
                     if(error_path.isEmpty() || !QDir::isAbsolutePath(error_path))throw std::runtime_error("Agent skill discovery error is malformed");
-                    const auto failedPath = QDir::cleanPath(error_path);
+                    const auto failedPath = edi_app::comparable_path(error_path);
                     if (failedPath == ownedRoot || failedPath.startsWith(ownedRoot + '/'))
                         throw std::runtime_error("Bundled skill discovery reported an error");
                     // A valid error for an unrelated global/plugin skill is
@@ -14103,7 +14092,7 @@ struct AssistantViewModel::State {
                     const auto offered_path=skill.value("path");
                     if(!offered_path.isString())throw std::runtime_error("Agent skill path is malformed");
                     const auto original_path=std::find_if(generic_skill_paths.cbegin(),generic_skill_paths.cend(),[&](const QString& expected){
-                        return QAnyStringView(expected)==offered_path.toStringView();
+                        return edi_app::same_path(offered_path,expected);
                     });
                     if(original_path==generic_skill_paths.cend())continue;
                     // Only required Edi paths are decoded. Unrelated provider
@@ -14177,11 +14166,12 @@ struct AssistantViewModel::State {
             generic_start_thread();
         } else if (method == "thread/start" || method == "thread/resume") {
             reason_code = "THREAD_POLICY";
-            if (result.value("cwd") != generic_workspace || result.value("modelProvider") != "openai" ||
-                result.value("model") != generic_settings_model || result.value("reasoningEffort") != generic_settings_effort ||
-                result.value("approvalPolicy") != "never" || result.value("approvalsReviewer") != "user" ||
-                !readonly_policy(result.value("sandbox")))
+            // The code names the field that differs (THREAD_POLICY_CWD, THREAD_POLICY_SANDBOX_NETWORK, ...).
+            if (const auto field=thread_settings_mismatch(result,generic_settings_model,generic_settings_effort,
+                                                          QStringLiteral("reasoningEffort"),QStringLiteral("sandbox")); !field.isEmpty()) {
+                reason_code = edi_app::thread_policy_code(field);
                 throw std::runtime_error("Agent effective read-only policy or actual model settings could not be verified");
+            }
             reason_code = "THREAD_EPHEMERAL";
             const auto thread = result.value("thread").toObject();
             if (!thread.value("ephemeral").isBool() || thread.value("ephemeral").toBool())
@@ -14649,10 +14639,8 @@ struct AssistantViewModel::State {
             if (!generic_authenticated || generic_retiring || generic_revoke_pending || generic_blocked ||
                 generic_thread.isEmpty() || params.value("threadId")!=generic_thread) return;
             const auto settings=params.value("threadSettings").toObject();
-            if (settings.value("cwd")!=generic_workspace || settings.value("modelProvider")!="openai" ||
-                settings.value("model")!=model || settings.value("effort")!=effective_effort() ||
-                settings.value("approvalPolicy")!="never" || settings.value("approvalsReviewer")!="user" ||
-                !readonly_policy(settings.value("sandboxPolicy")))
+            if (const auto field=thread_settings_mismatch(settings,model,effective_effort(),QStringLiteral("effort"),
+                                                          QStringLiteral("sandboxPolicy")); !field.isEmpty())
                 throw std::runtime_error("The thread's effective settings changed outside its admitted read-only policy");
             diagnostic.stage = "THREAD_SETTINGS_PUBLISH";
             invalidate_policy();

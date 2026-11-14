@@ -22,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'website'))
 
-from app_groups import Parameter, groups, load_case  # noqa: E402
+from app_groups import Parameter, forget, groups, load_case  # noqa: E402
 from render_cli_tutorials import stages  # noqa: E402
 
 # The case that also shows loading measured data from a file on disk (owner record 2026-11-08).
@@ -94,13 +94,8 @@ def unique_name(expression: str, named: dict[str, str]) -> str:
 
 
 def free(path: str) -> list[str]:
-    return [
-        'reveal:parameters.nameFilter',
-        'fill:parameters.nameFilter=' + path,
-        'parameters.freeHeader',
-        'parameters.freeHeader.free',
-        'parameters.clearFilters',
-    ]
+    """One parameter freed in its own row: its Free box ticked."""
+    return ['tick:' + path]
 
 
 def adp_types(case: str, kind: str) -> list[str]:
@@ -195,17 +190,36 @@ def by_category(
     """The actions that set `paths` to `state`: a category, or a one-word part of one."""
     chosen = [as_parameter(path, roots) for path in paths]
     now = {as_parameter(path, roots) for path in free_now}
+    # How many blocks of each block's kind the project holds.
+    structures = [item.name for item in project.structures]
+    experiments = [item.name for item in project.experiments]
+    kinds = {name: len(structures) for name in structures} | {
+        name: len(experiments) for name in experiments
+    }
     actions = []
     for group in groups(project, chosen, now, fixing=state == 'fixed'):
+        if not group.part and len([p for p in chosen if group.block in {'', p.block}]) < 2:
+            # Free · all (Fixed · all) on one row: a row is ticked on its own.
+            raise SystemExit(f'{group.title}: a whole-category action on one row; tick it')
         if group.part:
-            # A part no word selects: its rows one by one, as the page names it in words.
+            # Part of a category: the category shown, then each of its rows ticked (or cleared).
+            # The datablock is chosen only where another block of its kind shows the category too:
+            # a project's one experiment holds every experiment category alone.
+            block = group.block if several and kinds.get(group.block, 2) > 1 else ''
+            if block:
+                actions += ['reveal:parameters.datablock', 'parameters.datablock']
+                actions += ['choose:' + block]
+            actions += ['reveal:parameters.category', 'parameters.category']
+            actions += ['choose:' + group.title]
             for row in group.rows:
                 path = next(p for p in paths if as_parameter(p, roots) == row)
                 actions += free(path) if state == 'free' else fix(path)
+            # A datablock filter hides the other blocks' categories from the next action.
+            if block:
+                actions += ['parameters.clearFilters']
             continue
-        actions += set_category(
-            group.title, state, group.block if several else '', group.word, group.unword
-        )
+        block = group.block if several and kinds.get(group.block, 2) > 1 else ''
+        actions += set_category(group.title, state, block, group.word, group.unword)
     return actions
 
 
@@ -219,13 +233,8 @@ LINKED = 'Linked structures'
 
 
 def fix(path: str) -> list[str]:
-    return [
-        'reveal:parameters.nameFilter',
-        'fill:parameters.nameFilter=' + path,
-        'parameters.freeHeader',
-        'parameters.freeHeader.fixed',
-        'parameters.clearFilters',
-    ]
+    """One parameter fixed in its own row: its Free box cleared."""
+    return ['untick:' + path]
 
 
 def estimate(args: str) -> list[str]:
@@ -324,7 +333,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
         step(
             'structure-cell',
             'structure',
-            'Set the space group and the cell',
+            'Space group and cell',
             actions,
             ['group.space_group', 'group.cell'],
         )
@@ -333,7 +342,10 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
     sites = _calls(source, 'create')
     sites = [site for site in sites if 'type_symbol' in site]
     for row, site in enumerate(sites):
-        actions += ['atomSites.append', f'fill:atomSite.label.{row}={site["id"]}', 'key:Return']
+        # A created structure starts with one site (ProjectViewModel::createStructure): the first
+        # site is that one edited, each later one appended with +.
+        actions += ['atomSites.append'] if row else []
+        actions += [f'fill:atomSite.label.{row}={site["id"]}', 'key:Return']
         actions += [f'atomSite.typeSymbol.{row}', 'type:' + site['type_symbol'], 'key:Return']
         if site.get('wyckoff_letter'):
             # A special position's coordinates follow from its letter; `b:` finds `1b: ½, ½, ½`.
@@ -369,7 +381,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
         step(
             'experiment-created',
             'experiment',
-            'Create the experiment and choose its type',
+            'Create the experiment',
             actions,
             ['experimentType'],
         )
@@ -380,7 +392,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
         step(
             'data-web',
             'experiment',
-            'Find the measured data in the EasyDiffraction collection',
+            'Find the measured data',
             actions,
             ['onlineLoad.field.id', 'onlineLoad.results'],
         ),
@@ -404,7 +416,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
         step(
             'experiment-instrument',
             'experiment',
-            'Set the wavelength, 2θ zero and peak widths',
+            'Instrument and peak widths',
             actions,
             ['group.instrument', 'group.peak'],
         )
@@ -430,7 +442,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
         step(
             'experiment-background',
             'experiment',
-            'Add the background points and excluded regions',
+            'Background and excluded regions',
             actions,
             ['excludedRegions.list'],
         )
@@ -446,7 +458,7 @@ def by_hand_steps(source: str) -> list[dict]:  # noqa: PLR0915 - one setup, step
         step(
             'experiment-linked',
             'experiment',
-            'Link the structure to the experiment',
+            'Link the structure',
             actions,
             ['linkedStructure.list', 'workflow.experiment.mainContent'],
         )
@@ -524,7 +536,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
                 'calculated',
                 'analysis',
                 'See the calculated pattern',
-                ['appBar.tab.analysis', 'sideBar.tab.basic', 'mainArea.analysis.tab.fitting'],
+                ['appBar.tab.analysis', 'sideBar.tab.basic', 'mainArea.tab.pattern'],
                 ['workflow.analysis.mainContent'],
             )
             shot(
@@ -568,7 +580,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
                 shot(
                     f'structure-web-{index}',
                     'structure',
-                    f'Find the structure {name} in the EasyDiffraction collection',
+                    'Find the structure',
                     [
                         'appBar.tab.structure',
                         'sideBar.tab.basic',
@@ -595,7 +607,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
                 shot(
                     f'experiment-web-{index}',
                     'experiment',
-                    f'Find the experiment {name} in the EasyDiffraction collection',
+                    'Find the experiment',
                     [
                         'appBar.tab.experiment',
                         'sideBar.tab.basic',
@@ -686,7 +698,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
         shot(
             'relations-start',
             'analysis',
-            'Add the relations the project starts with',
+            'Add the relations',
             add_relations(aliases, constraints),
             ['group.constraint'] if constraints else ['group.alias'],
             'Extra',
@@ -744,6 +756,49 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
     # The minimizer settings the case's project declares: descent, tolerance, rule and iterations.
     analysis = PROJECTS / case / 'project/analysis/analysis.edi'
     declared = analysis.read_text(encoding='utf-8') if analysis.exists() else ''
+    # A joint fit's weights, where the project declares any other than the app's default of 1: the
+    # reduced chi2 scales with them.
+    weights = {}
+    table = re.search(r'(?ms)^_joint_fit\.weight\n(.*?)(?:^\s*$|\Z)', declared)
+    for line in table[1].splitlines() if table else []:
+        parts = line.split()
+        if len(parts) == 2:
+            weights[parts[0]] = parts[1]
+    if any(float(weight) != 1.0 for weight in weights.values()):
+        order = [name for name in experiments if name in weights]
+        shot(
+            'joint-weights',
+            'analysis',
+            'Weigh the experiments',
+            [
+                'appBar.tab.analysis',
+                'sideBar.tab.extras',
+                'reveal:group.joint_fit',
+                'expand:group.joint_fit',
+                *[f'fill:jointFit.weight.{row}={weights[name]}' for row, name in enumerate(order)],
+            ],
+            ['group.joint_fit'],
+            'Extra',
+            phase='setup',
+        )
+    # A single-crystal fit's reflection cutoff: the reduced chi2 counts only the kept reflections.
+    cutoff = re.search(r'(?m)^_refine_ls\.threshold_sigma (\S+)$', declared)
+    if cutoff:
+        shot(
+            'reflection-cutoff',
+            'analysis',
+            'Reflection cutoff',
+            [
+                'appBar.tab.analysis',
+                'sideBar.tab.extras',
+                'reveal:group.refine_ls',
+                'expand:group.refine_ls',
+                f'fill:refine_ls.thresholdSigma={cutoff[1]}',
+            ],
+            ['group.refine_ls'],
+            'Extra',
+            phase='setup',
+        )
     rule = re.search(r'(?m)^_minimizer\.stop_rules "?(\w+)"?$', declared)
     bound = re.search(r'(?m)^_minimizer\.max_iterations (\d+)$', declared)
     descent = re.search(r'(?m)^_minimizer\.descent (\w+)$', declared)
@@ -783,6 +838,10 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
         'Main',
         phase='setup',
     )
+    # The first Analysis step (owner, 2026-11-12): what a loaded entry marks free is cleared
+    # before any relation, weight or minimizer setting.
+    first = next(i for i, step in enumerate(steps) if step['page'] == 'analysis')
+    steps.insert(first, steps.pop())
 
     fits = free_lists(case)
     project = load_case(case)
@@ -804,6 +863,24 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             exp_root[named[var]]
             for var in re.findall(r'^for \w+ in (\w+)\.background:$', edits, flags=re.MULTILINE)
         ]
+        # An estimate replaces the background's points: the new ones start fixed and the old ones
+        # are gone, so neither counts as already free.
+        for var in re.findall(r'^(\w+)\.background\.auto_estimate\(', edits, flags=re.MULTILINE):
+            points = re.escape(exp_root[named[var]]) + r'background\['
+            previous = {path for path in previous if not re.match(points, path)}
+        # A stage that changes the sites' displacement type changes what the table offers: the
+        # categories are judged on the project as the stage leaves it.
+        for _var, kind in re.findall(
+            r"^for (\w+) in (?:\w+)\.atom_sites:\n\s+\1\.adp_type = '(\w+)'$",
+            edits,
+            flags=re.MULTILINE,
+        ):
+            for structure in project.structures:
+                for site in structure.atom_sites:
+                    site.adp_type = kind
+            forget(project)
+            # The switch leaves no displacement free, here as on the command line.
+            previous = {path for path in previous if not re.search(r'\.adp_(iso|\d\d)$', path)}
         filters, rest = grouped(paths - previous, loops)
         fix_filters, fix_rest = grouped(previous - paths, list(exp_root.values()))
         # One experiment: its background is the whole Background category. A loop over every
@@ -826,7 +903,17 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             (BACKGROUND, r'\.background\[\d+\]\.coef$', r'^for \w+ in \w+\.background_terms:$'),
         ):
             members = {path for path in rest if re.search(in_group, path)}
-            if members and re.search(loop, edits, flags=re.MULTILINE):
+            # A loop is its whole category only when it sets every row the category shows; a loop
+            # with a condition (only Pb and S) is rows ticked one by one (by_category).
+            whole = members and all(
+                not group.part
+                for group in groups(
+                    project,
+                    [as_parameter(path, roots) for path in members],
+                    {as_parameter(path, roots) for path in previous},
+                )
+            )
+            if whole and re.search(loop, edits, flags=re.MULTILINE):
                 owners = {
                     match[1]
                     for match in (
@@ -882,7 +969,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             shot(
                 'group-free-all',
                 'analysis',
-                'Free all from the Free column header',
+                'Free all from the header',
                 ['parameters.freeHeader'],
                 ['parameters.freeHeader'],
                 'Main',
@@ -965,14 +1052,14 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
         'correlations',
         'analysis',
         'Inspect the correlations',
-        ['mainArea.analysis.tab.correlations'],
+        ['mainArea.tab.correlations'],
         ['workflow.analysis.mainContent'],
     )
     shot(
         'report',
         'report',
         'Review the report',
-        ['mainArea.analysis.tab.fitting', 'appBar.tab.report', 'sideBar.tab.basic'],
+        ['mainArea.tab.pattern', 'appBar.tab.report', 'sideBar.tab.basic'],
         ['workflow.report.mainContent'],
         'Main',
     )

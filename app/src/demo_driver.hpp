@@ -96,6 +96,13 @@ class DemoDriver : public QObject {
     void settle_then(std::function<void()> next);
     // Waits until the fit has ended or, with `files`, until a running scan has fitted that many files.
     void wait_fit_then(std::function<void()> next, int waited_ms = 0, int files = -1);
+    // Presses only the status bar's Next until the running tutorial's last step; fails on a step Next cannot leave.
+    void tutorial_next_then(std::function<void()> next, int step = -1, int waited_ms = 0, int clicked_ms = -1);
+    // A fit step of a tutorial replay: the free set before the fit and the fit's outcome after it, each checked
+    // against the step's expectFree and expectChi2 when the manifest gives them. False after a mismatch (failed).
+    bool tutorial_fit_check(QObject* panel, int step);
+    int fit_free_reported_ = -1, fit_result_reported_ = -1, sites_reported_ = -1, step_checked_ = -1, shot_step_ = -1;
+    bool fit_seen_running_ = false;
     void fail(const QString& message);
     void timed_fit_then(std::function<void()> next, int files, int stop_after);
     bool timed_reset();
@@ -137,6 +144,8 @@ class DemoDriver : public QObject {
     QString loaded_cli_project_;
     bool documentation_ = false;
     bool documentation_skip_ = false;
+    // A simulation's tutorial: calculated without measured data, so its Analysis and Report show no fit.
+    bool documentation_simulation_ = false;
     QString documentation_script_;
     QString documentation_example_;
     QString documentation_workflow_;

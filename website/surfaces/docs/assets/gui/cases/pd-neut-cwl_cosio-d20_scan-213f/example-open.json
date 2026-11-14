@@ -7,7 +7,7 @@
     ],
     "id": "example-open",
     "image": "example-open.webp",
-    "image_sha256": "b5b00f65772722e6b43b240e1dc5150ca16a450216987586829b2994a9723978",
+    "image_sha256": "53ca977fd567dc40cceb4715d33f880ec357e7d734be7305151494aa88bc8ff4",
     "items": {
         "ApplicationWindow": {
             "bounds": [
@@ -191,22 +191,6 @@
                 35
             ]
         },
-        "appBar.separator": {
-            "bounds": [
-                1354,
-                33,
-                1,
-                12
-            ],
-            "enabled": true,
-            "label": "",
-            "visible_bounds": [
-                1354,
-                33,
-                1,
-                12
-            ]
-        },
         "appBar.tab.analysis": {
             "bounds": [
                 812.359375,
@@ -359,6 +343,22 @@
                 42
             ]
         },
+        "group.examples.pin": {
+            "bounds": [
+                1433.2261363926236,
+                272.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                274,
+                44.54772721475251,
+                42
+            ]
+        },
         "group.getStarted": {
             "bounds": [
                 770,
@@ -376,6 +376,22 @@
                 155
             ]
         },
+        "group.getStarted.pin": {
+            "bounds": [
+                1433.2261363926236,
+                117.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                119,
+                44.54772721475251,
+                43.273863607376256
+            ]
+        },
         "group.recentProjects": {
             "bounds": [
                 770,
@@ -390,6 +406,22 @@
                 770,
                 316,
                 710,
+                42
+            ]
+        },
+        "group.recentProjects.pin": {
+            "bounds": [
+                1433.2261363926236,
+                314.72613639262374,
+                44.54772721475251,
+                44.54772721475251
+            ],
+            "enabled": true,
+            "label": "thumbtack",
+            "visible_bounds": [
+                1433.2261363926236,
+                316,
+                44.54772721475251,
                 42
             ]
         },
@@ -420,7 +452,7 @@
                 19
             ],
             "enabled": true,
-            "label": ".",
+            "label": "",
             "visible_bounds": [
                 183.4,
                 253.70000000000002,
@@ -485,7 +517,7 @@
                 19
             ],
             "enabled": true,
-            "label": "/tmp/EasyDiffraction-ILxAZb/mw9rs3jp/pd-neut-cwl_cosio-d20_scan-213f.zip",
+            "label": "/tmp/EasyDiffraction-VKwPHq/mwd96b1o/pd-neut-cwl_cosio-d20_scan-213f.zip",
             "visible_bounds": [
                 183.4,
                 347.40000000000003,
@@ -631,7 +663,7 @@
                 62.8125,
                 42
             ],
-            "enabled": false,
+            "enabled": true,
             "label": "Settings",
             "visible_bounds": [
                 897.328125,
@@ -952,8 +984,8 @@
     ],
     "qt_version": "6.11.2",
     "schema": 1,
-    "script_sha256": "6ceb2d1c2ae7720a86cf741e1106662c75235d9ed44dcc3f6531fc58a4aae227",
-    "source_revision": "28abfa98bba6543199911e9da82d9a9b38eee1b0",
+    "script_sha256": "4ed87aa2c1110f649f100f5d768ba3491d0786e7649fdc72014f7b7adec617a8",
+    "source_revision": "00b29514389e67e0b2ddc0994d95f4a678012f8b",
     "state": {
         "experiments": 1,
         "fit_outcome": "",
@@ -988,7 +1020,7 @@
             },
             {
                 "checked": false,
-                "enabled": false,
+                "enabled": true,
                 "id": "sideBar.tab.settings",
                 "label": "Settings"
             }

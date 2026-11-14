@@ -115,9 +115,10 @@ SideBarGroup {
                     objectName: `recentProjects.path.${row.index}`
                     text: row.label
                     horizontalAlignment: Text.AlignLeft
-                    // Cut at the start, so the project's own folder at the end stays readable; the tooltip has it all.
-                    elide: Text.ElideLeft
-                    ToolTip.text: row.label
+                    // Cut in the middle, so the start and the project's own folder stay readable; the tooltip has the
+                    // whole path.
+                    elide: Text.ElideMiddle
+                    ToolTip.text: row.path
                 }
                 // Found or missing on disk as an icon, the word in its tooltip, as the experiments' fit column.
                 IconCell {

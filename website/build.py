@@ -201,9 +201,14 @@ def _write_redirects(root: Path, base_url: str) -> None:
         )
 
 
+# The hosts the docs are published on, whose /dev/ path is the contributor documentation.
+DOCS_HOSTS = {'easydiffraction.org', 'www.easydiffraction.org', 'enhantica.github.io'}
+
+
 def _check_links(root: Path, base_url: str | None) -> None:
     prefix = urlsplit(base_url).path.rstrip('/') if base_url else ''
     errors = []
+    dev_links = []
 
     class Links(HTMLParser):
         def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -213,6 +218,18 @@ def _check_links(root: Path, base_url: str | None) -> None:
                 if key not in {'href', 'src'} or not value:
                     continue
                 parsed = urlsplit(value)
+                # The public site does not link to the contributor docs (owner, 2026-11-10): no
+                # page outside dev/ points into /dev/, on this site's hosts or by a relative path.
+                public = self.file.relative_to(root).parts[:1] != ('dev',)
+                local = (self.file.parent / unquote(parsed.path)).resolve()
+                into_dev = (parsed.netloc in DOCS_HOSTS and '/dev/' in parsed.path + '/') or (
+                    not parsed.scheme
+                    and not parsed.netloc
+                    and parsed.path
+                    and local.is_relative_to(root / 'dev')
+                )
+                if public and into_dev:
+                    dev_links.append(f'{self.file.relative_to(root)}: {value}')
                 if parsed.scheme or parsed.netloc or not parsed.path:
                     continue
                 path = unquote(parsed.path)
@@ -234,7 +251,12 @@ def _check_links(root: Path, base_url: str | None) -> None:
         parser.feed(file.read_text(encoding='utf-8'))
     if errors:
         raise SystemExit('Broken generated links/assets:\n' + '\n'.join(errors[:10]))
+    if dev_links:
+        raise SystemExit(
+            'Public pages linking into the contributor docs (/dev/):\n' + '\n'.join(dev_links[:10])
+        )
     print('Generated internal links and assets: PASS', flush=True)
+    print('No public page links into /dev/: PASS', flush=True)
 
 
 def _render_sources() -> None:

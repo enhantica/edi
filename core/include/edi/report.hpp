@@ -79,6 +79,9 @@ std::string error_report(VerbosityEnum verbosity);
 //   * the arrow follows the SIGN of the change, not its magnitude;
 //   * a change of 1000 % or more is written in scientific notation (table_number), "7.45e9 % ↑".
 std::string format_change(double current, double previous);
+// The same change without its arrow ("1.3%"), for a form that draws the direction itself: the app's table and the HTML
+// tables draw it as an icon.
+std::string change_percent(double current, double previous);
 
 // The s.u. cell of a parameter whose s.u. the fit could not compute, and the note that explains it.
 inline constexpr std::string_view kUndefinedSu = "undefined";

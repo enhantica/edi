@@ -1,0 +1,8 @@
+# What a stage's fit result means when it ends outside a parameter's bounds, shown on that stage's Fit results step.
+# Keyed by case, then stage number. The numbers are the case's Command line page's.
+pd-neut-cwl_yalo3-al2o3-spodi:
+  6: Al1 in the minor Al₂O₃ phase ends at a slightly negative B iso, −0.37 with an s.u. of 0.25. The few weak Al₂O₃ peaks cannot pin it down, and within about 1.5 s.u. it is zero. A negative displacement is not physical; in your own work, fix it or tie it to the other atoms of that phase.
+pd-neut-tof_cecoal-polaris:
+  7: Al3's occupancy ends at 1.020 with an s.u. of 0.008, a little above a full site, because it moves with the site's displacement. A site cannot be more than full, so in your own work keep it fixed at 1.
+sc-neut-cwl_pr2nio4-5c2:
+  3: Freed on its own, Od's displacement goes negative, −0.34 with an s.u. of 0.48, larger than the value. This interstitial oxygen fills only part of its site, so its displacement is barely determined yet; the next stage frees every displacement together and it settles at 2.57.

@@ -9,8 +9,13 @@ hide:
 
 Work with Python objects in scripts and notebooks, with direct access to parameters, data arrays and results.
 
+## Set up Python
+
+Install the `easydiffraction` package in a Python environment.
+
 [Set up Python](setup.md){ .md-button .md-button--primary }
-[Run a notebook example](tutorials/index.md){ .md-button }
+
+## Scripts and notebooks
 
 <!-- interface-preview:python -->
 <figure class="ed-interface-preview" data-interface-hero>
@@ -18,12 +23,15 @@ Work with Python objects in scripts and notebooks, with direct access to paramet
 </figure>
 <!-- /interface-preview -->
 
-Both approaches use the same Python API.
+Both use the same Python API:
 
-- :simple-python: **Python scripts** combine `edi` with your own data preparation and analysis tools.
-- :simple-jupyter: **Jupyter notebooks** run code one cell at a time and keep plots and results alongside it.
+- **Python scripts** combine `edi` with your own data preparation and analysis tools.
+- **Jupyter notebooks** run code one cell at a time and keep plots and results beside it.
 
-[Python API reference](reference.md){ .md-button }
-[Download the example notebook](../assets/interfaces/fit.ipynb){ .md-button }
+To try it, download the [example notebook](../assets/interfaces/fit.ipynb) and the
+[example project](../assets/interfaces/example-project.zip) it opens.
 
-[Download the example project](../assets/interfaces/example-project.zip) to run the notebook.
+## Next steps
+
+- Run a [notebook tutorial](tutorials/index.md).
+- Look up a call in the [Python quick reference](reference.md).
