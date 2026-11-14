@@ -361,3 +361,11 @@ before injecting every point, then require the successful control and complete
 failure coverage. The former fixed budget depended on the standard library's
 allocation behavior and could exhaust before success on MSVC. Storage, lifetime,
 source and ownership assertions remain identical at every injected failure.
+
+
+The shared Pixi environment explicitly enables Python UTF-8 mode on every native
+platform, independent of the runner's legacy locale. Catalogue JSON/YAML/project
+text readers and writers also name UTF-8 at their file boundary. The real record
+CLI is exercised under an uncoerced C locale with Unicode titles retained. This
+extends the existing native consumer environment and catalogue paths; it adds no
+Windows-specific test invocation or alternate data format.

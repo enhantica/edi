@@ -154,7 +154,7 @@ def main() -> None:
             + '\n',
         )
     if args.check:
-        committed = json.loads(CATALOG.read_text())
+        committed = json.loads(CATALOG.read_text(encoding='utf-8'))
         if committed != generated or list(committed['examples']) != list(generated['examples']):
             parser.exit(
                 1,
@@ -163,7 +163,9 @@ def main() -> None:
             )
         print('Example metadata matches all bundled source project records')
     else:
-        CATALOG.write_text(json.dumps(generated, ensure_ascii=False, indent=2) + '\n')
+        CATALOG.write_text(
+            json.dumps(generated, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+        )
 
 
 if __name__ == '__main__':

@@ -58,10 +58,10 @@ def tags(root: Path, case: str) -> list[dict[str, str]] | None:
     Each is ``{facet, value, label}``: the facets and labels of ``tags.json``, the values the
     catalogue derives from the case's project (``tools/dev/example_metadata.py``).
     """
-    entry = json.loads((root / CATALOGUE).read_text())['examples'].get(case)
+    entry = json.loads((root / CATALOGUE).read_text(encoding='utf-8'))['examples'].get(case)
     if entry is None:
         return None
-    vocabulary = json.loads((root / TAGS).read_text())['tags']
+    vocabulary = json.loads((root / TAGS).read_text(encoding='utf-8'))['tags']
     values = entry.get('values', {})
     return [
         {'facet': facet, 'value': value, 'label': known.get(value, {}).get('label', '')}
@@ -111,7 +111,9 @@ def record(root: Path, row: dict, order: int) -> dict:
     project = folder / 'project'
     expected_path = folder / 'expected.json'
     provenance = folder / 'PROVENANCE.md'
-    expected = json.loads(expected_path.read_text()) if expected_path.is_file() else {}
+    expected = (
+        json.loads(expected_path.read_text(encoding='utf-8')) if expected_path.is_file() else {}
+    )
     structure_from = 'hand' if row.get('structure-by-hand') is True else 'collection'
     case_tags = tags(root, case)
     return {
@@ -135,7 +137,7 @@ def record(root: Path, row: dict, order: int) -> dict:
         'data': [
             f'{case}-{f.stem}-data'
             for f in sorted((project / 'experiments').glob('*.edi'))
-            if '_data.intensity_meas' in f.read_text(errors='replace')
+            if '_data.intensity_meas' in f.read_text(encoding='utf-8')
         ],
         # How every interface's tutorial gets its inputs (the owner, 2026-11-08): the structure
         # built by hand or loaded from the collection's CIF; the data from the collection, and for
@@ -227,13 +229,13 @@ def problems(root: Path = ROOT) -> list[str]:
         )
     # The app's Examples list is the catalogue: exactly the cases, tagged from the one registry.
     # The source, facility and instrument are never tags (owner record 2026-11-09).
-    listed = list(json.loads((root / CATALOGUE).read_text())['examples'])
+    listed = list(json.loads((root / CATALOGUE).read_text(encoding='utf-8'))['examples'])
     ids = [built['id'] for built in built_records]
     out.extend(
         f'{CATALOGUE}: lists {extra}, which is not a case' for extra in listed if extra not in ids
     )
     out.extend(f'{CATALOGUE}: does not list the case {case}' for case in ids if case not in listed)
-    facets = json.loads((root / TAGS).read_text())['tags']
+    facets = json.loads((root / TAGS).read_text(encoding='utf-8'))['tags']
     out.extend(
         f'{TAGS}: {facet} is a tag facet, but it is never a tag'
         for facet in ('source', 'facilities', 'instruments')

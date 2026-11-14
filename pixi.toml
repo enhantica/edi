@@ -21,6 +21,7 @@ platforms = [
 requires-pixi = "==0.76.2"
 
 [activation.env]
+PYTHONUTF8 = "1"
 # The crysta commit edi builds (edi ADR-0083): its CI packs that commit's SDK once per platform
 # (.github/workflows/crysta-sdk.yml) and every job and product uses it. `pixi run crysta-sdk-pin <sha>`
 # moves it.
