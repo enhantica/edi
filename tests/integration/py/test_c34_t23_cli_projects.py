@@ -31,6 +31,7 @@ from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical
 from tests.fixtures.cwl_family.historical import original_tokens
 from tests.fixtures.example_catalogue.retained_bytes import retained_bytes
 from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
+from tests.fixtures.metadata_transition import retired_source_fields
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -214,9 +215,13 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
                     for line in expected_lines
                 ]
             contents = path.read_bytes()
+            declared = retired_source_fields.previous_bytes(
+                (live_directory / name).relative_to(ROOT).as_posix(),
+                (live_directory / name).read_bytes(),
+            )
             assert [
                 line.strip()
-                for line in contents.decode().splitlines()
+                for line in declared.decode().splitlines()
                 if line.startswith('_minimizer.stop_rule ')
             ] == ['_minimizer.stop_rule shift_su'], (
                 'Each retained seed declares the owner-selected Shift/s.u. rule exactly once'

@@ -101,3 +101,14 @@ within their sections. SVG badge observers compare both visible and accessible
 labels, coloured backgrounds and the exact shared font icon's nested view box and
 path digest. External symbols, extra paths, altered glyphs and changed badge counts
 refuse, just as they do for inline symbol markup.
+
+
+Historical seed inventories retain their original complete blob identities across
+the already committed release regression retake. A source-only archive binds
+whole before/after documents and preserves every independent physical reference
+and tolerance. Its one explicitly source-described engine-iteration retag is
+narrowly validated; it cannot authorize changing another reference or file.
+The later CoSiO2K changed-input epoch is outside this projection. These witnesses
+prove archived source retention and make no new fit correctness claim. The seed
+stop-rule witness reads its complete live source epoch before the older byte
+projection, so it does not demand a later field in a pre-field archived document.

@@ -6,13 +6,18 @@ import json
 import zipfile
 from pathlib import Path
 
-from tests.fixtures.metadata_transition import retired_source_fields, task_inputs
+from tests.fixtures.metadata_transition import (
+    release_pin_bytes,
+    retired_source_fields,
+    task_inputs,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).parent
 
 
 def previous_bytes(name, data):
+    data = release_pin_bytes.previous_bytes(name, data)
     data = retired_source_fields.previous_bytes(name, data)
     data = task_inputs.previous_bytes(name, data)
     rows = json.loads((HERE / 'sources.json').read_text())['files']
