@@ -27,8 +27,16 @@ from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = tomllib.loads((ROOT / 'pixi.toml').read_text())
 CHECKS = ('app-lint', 'app-format-check', 'app-test', 'app-ui-test', 'group-app')
+SCAN_CHECKS = ('app-test-scan-refresh', 'app-test-scan-save')
 # Local aggregators omit both app tiers; desktop CI runs them on schedule/manual only.
 AUTOMATIC_CHECKS = ('app-lint', 'app-format-check', 'group-app')
+
+
+def copy_app_expectations(tmp_path):
+    # The Qt runner's declared committed expectations, not unrelated scientific
+    # fixtures. This orchestration witness substitutes the runner itself.
+    for relative in ('tests/fixtures/e04_t1/reference', 'tests/fixtures/e04_t2'):
+        shutil.copytree(ROOT / relative, tmp_path / relative)
 
 
 def tasks():
@@ -133,7 +141,7 @@ def test_qt_check_reads_committed_expectations_without_python_or_build(tmp_path)
     (cases / 'tst_witness.qml').write_text('// collection witness\n')
     # Copy committed reference files only: this test never manufactures app values.
 
-    shutil.copytree(ROOT / 'tests/fixtures', tmp_path / 'tests/fixtures')
+    copy_app_expectations(tmp_path)
     run = subprocess.run(
         ['bash', 'tools/ci/app-test.sh'],
         cwd=tmp_path,
@@ -193,7 +201,10 @@ def test_ci_job_names_state_area_and_platform_and_share_matrices():
 
     public = public_profile(jobs())
     required = {
-        'pin currency',
+        'crysta-sdk',
+        'native · Windows',
+        'core · Windows',
+        'cli-python · Windows',
         'native · Linux',
         'native · macOS',
         'core · Linux',
@@ -494,7 +505,7 @@ def sequence_sandbox(tmp_path, *, copy_fixtures=True):
         ])
     )
     if copy_fixtures:
-        shutil.copytree(ROOT / 'tests/fixtures', tmp_path / 'tests/fixtures')
+        copy_app_expectations(tmp_path)
     return env
 
 
@@ -515,7 +526,7 @@ def calls(tmp_path):
     return path.read_text().splitlines() if path.exists() else []
 
 
-@pytest.mark.parametrize('name', CHECKS)
+@pytest.mark.parametrize('name', [*CHECKS, *SCAN_CHECKS])
 def test_standalone_step_builds_first_every_time(tmp_path, name):
     env = sequence_sandbox(tmp_path)
     for _ in range(2):
@@ -536,7 +547,7 @@ def test_standalone_step_builds_first_every_time(tmp_path, name):
         )
 
 
-@pytest.mark.parametrize('name', [*CHECKS, 'app-build-recovery'])
+@pytest.mark.parametrize('name', [*CHECKS, *SCAN_CHECKS, 'app-build-recovery'])
 def test_standalone_failed_build_prevents_checks(tmp_path, name):
     env = sequence_sandbox(tmp_path)
     result = run_task(tmp_path, {**env, 'E04_BUILD_RC': '23'}, name)
@@ -592,8 +603,8 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event
     # Actions stringifies YAML env values (EDI_NATIVE_ARTIFACT is declared as 1).
     env.update({key: str(value) for key, value in job.get('env', {}).items()})
     nightly_condition = (
-        "${{ !cancelled() && (github.event_name == 'schedule' || "
-        "github.event_name == 'workflow_dispatch') }}"
+        "${{ (!cancelled() && (github.event_name == 'schedule' || "
+        "github.event_name == 'workflow_dispatch')) && steps.inputs.outputs.run == 'true' }}"
     )
     for step in job['steps']:
         cmd = step.get('run', '')
@@ -613,13 +624,16 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event
             if not enabled:
                 continue
         elif re.search(r'\bgroup-app(?:\s|$)', cmd):
-            assert active(step, event) == (event != 'pull_request'), (
-                'The app group runs on push, nightly and full manual, and skips PRs'
-            )
+            assert active(step, event, outputs={('inputs', 'run'): 'true'}) == (
+                event != 'pull_request'
+            ), 'The app group runs on push, nightly and full manual, and skips PRs'
             if event == 'pull_request':
                 continue
         else:
-            assert condition is None, (
+            assert (
+                str(condition).removeprefix('${{').removesuffix('}}').strip()
+                == "steps.inputs.outputs.run == 'true'"
+            ), (
                 'Build and ordinary app checks remain unconditional within the desktop job; '
                 f'platform={platform}, command={cmd}, actual condition={condition!r}'
             )

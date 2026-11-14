@@ -431,8 +431,8 @@ def assert_local_app_checks(manifest):
 
 
 NIGHTLY_APP_CONDITION = (
-    "${{ !cancelled() && (github.event_name == 'schedule' || "
-    "github.event_name == 'workflow_dispatch') }}"
+    "${{ (!cancelled() && (github.event_name == 'schedule' || "
+    "github.event_name == 'workflow_dispatch')) && steps.inputs.outputs.run == 'true' }}"
 )
 APP_GROUP_TITLE = "The app group's Python tests (tests/integration/app)"
 APP_TIER_STEPS = (
@@ -479,9 +479,9 @@ def assert_nightly_app_steps(job):
     from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
 
     for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-        assert active(groups[0], event) == (event != 'pull_request'), (
-            'owner decision: app group skips PRs and runs on push, nightly and full dispatch'
-        )
+        assert active(groups[0], event, outputs={('inputs', 'run'): 'true'}) == (
+            event != 'pull_request'
+        ), 'owner decision: app group skips PRs and runs on push, nightly and full dispatch'
     titles = [step.get('name') for step in job['steps']]
     assert titles.index(APP_GROUP_TITLE) < titles.index(APP_TIER_STEPS[0][0]), (
         'owner decision: group-app runs before Qt Quick Test so a Qt Quick failure cannot skip '

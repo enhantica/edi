@@ -57,6 +57,10 @@ def run(name, extra=(), environment=None, inherited=None):
             run(dep['task'], environment=dep.get('environment'), inherited=selected)
     env = {**os.environ, 'PIXI_ENVIRONMENT_NAME': selected, **spec.get('env', {})}
     cmd = spec.get('cmd', '')
+    if name.startswith('app-test-scan-') and isinstance(cmd, str) and 'cmake' in cmd:
+        with Path(env['E04_CALLS']).open('a', encoding='utf-8') as stream:
+            stream.write('check:' + name + '\n')
+        return
     if cmd:
         if isinstance(cmd, list):
             subprocess.run([*cmd, *extra], env=env, check=True)
