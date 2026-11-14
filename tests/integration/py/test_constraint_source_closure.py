@@ -118,21 +118,31 @@ def test_wyckoff_letter_change_renews_completed_coordinates(tmp_path, entry):
 @pytest.mark.parametrize('entry', ['stored', 'window'])
 def test_out_of_range_relation_refuses_before_any_dependent_write(tmp_path, entry, capfd):
     """Finite range exits warn and keep; only nonfinite completion refuses atomically."""
+    target_name = 'range_notice_' + entry
     aliases = [
         ('a', 'phase.atom_site.A.adp_iso'),
         ('b', 'phase.atom_site.B.fract_y'),
-        ('c', 'phase.atom_site.B.occupancy'),
+        (target_name, 'phase.atom_site.B.occupancy'),
     ]
-    project = engine.Project.load(MATERIALIZE(tmp_path, aliases, ['b = 2*a+.1', 'c = a']))
+    project = engine.Project.load(
+        MATERIALIZE(tmp_path, aliases, ['b = 2*a+.1', target_name + ' = a'])
+    )
     project.analysis.calculate()
     structure = project.structure
-    first, second = project.analysis.aliases['b'].param, project.analysis.aliases['c'].param
+    first, second = (
+        project.analysis.aliases['b'].param,
+        project.analysis.aliases[target_name].param,
+    )
     source = project.analysis.aliases['a'].param.value
-    project.analysis.constraints['b'].expression = 'b = 3*a+.1'
-    project.analysis.constraints['c'].expression = 'c = 2'
+    original_values = (first.value, second.value)
     capfd.readouterr()
     with warnings.catch_warnings(record=True) as messages:
         warnings.simplefilter('always')
+        project.analysis.constraints['b'].expression = 'b = 3*a+.1'
+        project.analysis.constraints[target_name].expression = target_name + ' = 2'
+        assert (first.value, second.value) == original_values, (
+            'Declaring relations may warn early but must not write their dependent values'
+        )
         _ = structure.expanded_atom_sites if entry == 'stored' else structure.geometry()
     diagnostics = capfd.readouterr().err + '\n'.join(str(item.message) for item in messages)
     assert (first.value, second.value) == pytest.approx((3 * source + 0.1, 2), abs=2e-13), (
@@ -143,7 +153,7 @@ def test_out_of_range_relation_refuses_before_any_dependent_write(tmp_path, entr
 
     before = [(p.value, p.free, p.start_value) for p in (first, second)]
     project.analysis.constraints['b'].expression = 'b = 4*a+.1'
-    project.analysis.constraints['c'].expression = 'c = sqrt(-1)'
+    project.analysis.constraints[target_name].expression = target_name + ' = sqrt(-1)'
     with pytest.raises((ValueError, RuntimeError), match=r'(?i)non.finite|sqrt|domain'):
         _ = structure.expanded_atom_sites if entry == 'stored' else structure.geometry()
     assert [(p.value, p.free, p.start_value) for p in (first, second)] == before, (
