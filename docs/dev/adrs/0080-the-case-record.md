@@ -142,3 +142,12 @@ The projected document still has to recover the original whole-file hash.
 Nonzero, free, duplicated or unexpectedly emitted retired scalars refuse, and
 changes to active coefficients remain visible to the unchanged hash witness.
 No reference, tolerance, regression hash or actual saved output is rewritten.
+
+
+The retained screenshot inventory follows the original single-crystal rename
+record, rather than expanding when source-only catalogue witnesses are added.
+New cases still run their real input/display checks; new rendered image pins
+require an actual capture with provenance. Existing image subjects and bytes
+remain required. Structure-chip observers use the owner-declared full labels
+“Crystal structure” and “Magnetic structure”, and include the added magnetic
+CoSiO HEIDI case in their independent membership set.

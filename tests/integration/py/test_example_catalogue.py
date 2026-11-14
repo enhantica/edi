@@ -166,7 +166,9 @@ def test_committed_data_has_a_source_and_content_digest(case):
             ), 'Every committed dataset must be named with its actual content digest'
 
 
-@pytest.mark.parametrize(('value', 'label'), [('crystal', 'Crystal'), ('magnetic', 'Magnetic')])
+@pytest.mark.parametrize(
+    ('value', 'label'), [('crystal', 'Crystal structure'), ('magnetic', 'Magnetic structure')]
+)
 def test_magnetic_structure_tag_registry_defines_labels_icons_and_tones(value, label):
     registry = json.loads((ROOT / 'app/examples/tags.json').read_text())
     family = registry['tags'].get('structure', {})
@@ -184,7 +186,11 @@ def test_magnetic_structure_tag_registry_defines_labels_icons_and_tones(value, l
 
 def test_magnetic_structure_membership_and_filter_counts_have_independent_expectations():
     examples = json.loads((ROOT / 'app/examples/metadata.json').read_text())['examples']
-    known = {'pd-neut-cwl_cosio-d20_2k', 'pd-neut-cwl_cosio-d20_scan-213f'}
+    known = {
+        'pd-neut-cwl_cosio-d20_2k',
+        'pd-neut-cwl_cosio-d20_scan-213f',
+        'sc-neut-cwl_cosio-heidi',
+    }
     assert 'pd-neut-cwl_cosio-d20_2k' in examples, (
         'The low-temperature magnetic example appears in Examples'
     )

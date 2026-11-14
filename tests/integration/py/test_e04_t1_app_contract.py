@@ -698,7 +698,8 @@ def test_one_shared_labelled_regression_baseline_and_pairs():
     } <= {p.name for p in numbered}, (
         'gate 7: capture About and the stable TOF report while retaining the monospace Text tabs'
     )
-    # New catalogue images await the UI tier; retain the historical image inventory.
+    # New input/UI witnesses do not mint image pins. The retained rename record
+    # binds the original three single-crystal screenshot subjects.
     registry = json.loads(
         (ROOT / 'tests/fixtures/example_catalogue/retained-projects.json').read_text()
     )
@@ -709,10 +710,16 @@ def test_one_shared_labelled_regression_baseline_and_pairs():
         .split('var frozen = ', 1)[1]
         .removesuffix(';\n')
     )
+    registry = set(
+        json.loads(
+            (ROOT / 'tests/fixtures/example_catalogue/single-crystal-renames.json').read_text()
+        )['ids'].values()
+    )
     retained_single_crystal = {
         row['id']
         for row in oracle['projects']
-        if any(
+        if row['id'] in registry
+        and any(
             case['project'] == row['path'] and case.get('singleCrystal')
             for case in oracle['corpus']
         )
