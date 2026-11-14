@@ -149,7 +149,11 @@ def prove_import() -> None:
     path = os.pathsep.join(filter(None, [str(ROOT / 'lib'), os.environ.get('PYTHONPATH')]))
     unselected = ('EDI_USE_CONSUMER_BUILD', 'CRYSTA_CONSUMER_SRC')
     env = {name: value for name, value in os.environ.items() if name not in unselected}
-    env |= {'PYTHONPATH': path, 'EDI_EXTENSION_DIR': str(TREE / 'python' / 'edi')}
+    env |= {
+        'PYTHONPATH': path,
+        'EDI_EXTENSION_DIR': str(TREE / 'python' / 'edi'),
+        'PYTHONIOENCODING': 'utf-8',
+    }
     r = subprocess.run(
         [sys.executable, '-c', code],
         cwd=ROOT,
