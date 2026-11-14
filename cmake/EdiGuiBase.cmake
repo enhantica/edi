@@ -169,8 +169,7 @@ qt_add_resources(edi_gui_style "edi_fonts"
           "${PROJECT_SOURCE_DIR}/app/resources/fonts/Noto_Sans/NotoSans-Light.ttf"
           "${PROJECT_SOURCE_DIR}/app/resources/fonts/Noto_Sans_Mono/NotoSansMono-Regular.ttf"
           "${PROJECT_SOURCE_DIR}/app/resources/fonts/Baloo_2/Baloo2-Regular.ttf"
-          "${PROJECT_SOURCE_DIR}/app/resources/fonts/Baloo_2/Baloo2-SemiBold.ttf"
-          "${PROJECT_SOURCE_DIR}/app/resources/fonts/Baloo_2/Baloo2-Variable.ttf")
+          "${PROJECT_SOURCE_DIR}/app/resources/fonts/Baloo_2/Baloo2-SemiBold.ttf")
 
 set(EDI_GUI_BASE_TARGETS edi_gui_style edi_gui_globals edi_gui_logic edi_gui_animations
     edi_gui_maintenance edi_gui_elements edi_gui_components)

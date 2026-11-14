@@ -117,7 +117,7 @@ The desktop app links these as shared libraries; the web build compiles Qt's own
 | PT Sans, PT Mono |  | OFL-1.1 | bundled | bundled | — | — | interface fonts, bundled |
 | Encode Sans |  | OFL-1.1 | bundled | bundled | — | — | fit summary arrow, bundled |
 | Noto Sans, Noto Sans Mono |  | OFL-1.1 | bundled | bundled | — | — | interface fonts, bundled |
-| Baloo 2 |  | OFL-1.1 | bundled | bundled | — | — | the wordmark font, bundled: Regular, SemiBold and the variable-weight file (weights 400 to 800, google/fonts ofl/baloo2) for the Home intro |
+| Baloo 2 |  | OFL-1.1 | bundled | bundled | — | — | the wordmark font, bundled |
 | Font Awesome Free |  | OFL-1.1 AND CC-BY-4.0 | bundled | bundled | — | — | icons: the font under OFL-1.1, the icon designs under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); seven designs also draw the HTML report's structure view buttons |
 
 ## Acknowledgements

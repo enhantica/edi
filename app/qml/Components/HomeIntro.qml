@@ -8,7 +8,7 @@ import edi.app
 
 // The intro at start (the owner, 2026-11-14), after the 2020 app's Home page (easyDiffraction 0.x, Home.qml): over a
 // plain backdrop, "Making diffraction data analysis easy" fades in, every word but "easy" and "diffraction" fades out,
-// and those two move to their places in the Home wordmark, "easy" lightening to its logo weight on the way. The
+// and those two move to their places in the Home wordmark, "easy" cross-fading to its logo face on the way. The
 // round mark then rolls in from beyond the left edge, very fast at first and braking hard like a sports car, its inner circles
 // shown as a 24 fps film shows a wheel, so they seem to turn backwards while it clearly rolls forwards. Last,
 // the backdrop fades, so the rest of the window fades in around the landed wordmark. Skip jumps to the end; Disable
@@ -50,7 +50,7 @@ Item {
 
     readonly property real pixelSize: wordmark ? wordmark.namePixelSize : 40
     readonly property real lineBaseline: height / 2
-    // The line is laid out with "easy" at its first weight, so nothing shifts while it lightens during the move.
+    // The line is laid out with "easy" in SemiBold, so nothing shifts when it turns Regular during the move.
     readonly property real lineWidth: making.implicitWidth + diffraction.implicitWidth + middle.implicitWidth + boldEasy.advanceWidth
     TextMetrics {
         id: boldEasy
@@ -103,22 +103,16 @@ Item {
         onWheel: wheel => wheel.accepted = true
     }
 
-    // "easy" and "diffraction" in Baloo 2 SemiBold (600), the other words Regular (400). Nothing changes while the other
-    // words fade; during the move "easy" lightens to the logo's Regular, "diffraction" keeping 600 (the owner,
-    // 2026-11-14).
-    // At either end of its weight change a word is drawn in the very face the Home logo uses (Wordmark: Baloo 2
-    // Regular, SemiBold), so the hand-over to the logo cannot be seen; only in between in the variable face.
+    // "easy" and "diffraction" in Baloo 2 SemiBold, the other words Regular, the very faces the Home logo uses
+    // (Wordmark), so every frame and the hand-over match it on every platform. Nothing changes while the other words
+    // fade; during the move "easy" cross-fades from SemiBold to the logo's Regular, "diffraction" staying SemiBold
+    // (the owner, 2026-11-14).
     component Word: EaElements.Label {
-        property real weight: 400
-        readonly property bool regular: weight <= 400
-        readonly property bool semiBold: weight >= 600
+        property bool bold: false
 
-        font.family: regular ? EaStyle.Fonts.baloo2Regular.name : semiBold ? EaStyle.Fonts.baloo2SemiBold.name : EaStyle.Fonts.baloo2Variable.name
-        font.styleName: regular ? "Regular" : semiBold ? "SemiBold" : ""
+        font.family: bold ? EaStyle.Fonts.baloo2SemiBold.name : EaStyle.Fonts.baloo2Regular.name
+        font.styleName: bold ? "SemiBold" : "Regular"
         font.pixelSize: intro.pixelSize
-        font.variableAxes: regular || semiBold ? ({}) : ({
-                    "wght": weight
-                })
     }
 
     Word {
@@ -134,7 +128,7 @@ Item {
         x: startX + (intro.diffractionEnd.x - startX) * intro.move
         y: intro.lineBaseline - baselineOffset + (intro.diffractionEnd.y - intro.lineBaseline + baselineOffset) * intro.move
         opacity: intro.wordsIn
-        weight: 600
+        bold: true
         text: ApplicationInfo.nameSuffixForLogo
     }
     Word {
@@ -144,13 +138,21 @@ Item {
         opacity: intro.wordsIn * intro.othersOut
         text: qsTr(" data analysis ")
     }
+    // "easy" twice, overlaid and left-aligned: SemiBold fading out and Regular fading in over the middle of the move.
+    readonly property real easyLight: Math.min(1, Math.max(0, (move - 0.2) / 0.6))
     Word {
         id: easy
         readonly property real startX: middle.x + middle.implicitWidth
         x: startX + (intro.easyEnd.x - startX) * intro.move
         y: intro.lineBaseline - baselineOffset + (intro.easyEnd.y - intro.lineBaseline + baselineOffset) * intro.move
-        opacity: intro.wordsIn
-        weight: 600 - 200 * intro.move
+        opacity: intro.wordsIn * (1 - intro.easyLight)
+        bold: true
+        text: ApplicationInfo.namePrefixForLogo
+    }
+    Word {
+        x: easy.x
+        y: intro.lineBaseline - baselineOffset + (intro.easyEnd.y - intro.lineBaseline + baselineOffset) * intro.move
+        opacity: intro.wordsIn * intro.easyLight
         text: ApplicationInfo.namePrefixForLogo
     }
 
