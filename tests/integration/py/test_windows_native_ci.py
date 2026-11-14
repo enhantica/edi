@@ -74,3 +74,44 @@ def test_windows_checkout_uses_the_existing_installer_reserved_path_policy():
         actual = windows_checkout(jobs()[name]['steps'])
         assert actual['with'] == original['with']
         assert actual['if'] == original['if']
+
+
+def sdk_include_boundary(relative, source):
+    import re  # noqa: PLC0415 - one mechanical include boundary, no C++ execution
+
+    shared = r'(?m)^\s*#\s*include\s*"windows_sdk.hpp"\s*$'
+    for match in re.finditer(
+        r'(?m)^\s*#\s*include\s*[<"](windows|winhttp|winsock2)\.h[>"]', source, re.IGNORECASE
+    ):
+        if relative == 'core/src/windows_sdk.hpp':
+            continue
+        assert re.search(shared, source[: match.start()]), (
+            'Native Windows headers enter through the existing macro-sanitizing wrapper: '
+            + relative
+        )
+
+
+def test_all_product_windows_sdk_imports_use_the_existing_sanitized_boundary():
+    for folder in ('cli', 'core/src', 'app/src'):
+        for path in (ROOT / folder).rglob('*'):
+            if path.is_file() and path.suffix in {'.cpp', '.hpp', '.h'}:
+                sdk_include_boundary(
+                    path.relative_to(ROOT).as_posix(), path.read_text(encoding='utf-8')
+                )
+
+
+@pytest.mark.parametrize(
+    'source',
+    [
+        '#include <windows.h>\n',
+        '#include <Windows.h>\n',
+        '// #include "windows_sdk.hpp"\n#include <windows.h>\n',
+        '#include <winhttp.h>\n',
+        '#include <winsock2.h>\n',
+        '#include <windows.h>\n#include "windows_sdk.hpp"\n',
+    ],
+)
+def test_unsanitized_windows_sdk_import_cannot_bypass_the_boundary(source):
+    sdk_include_boundary('cli/positive.cpp', '#include "windows_sdk.hpp"\n#include <windows.h>\n')
+    with pytest.raises(AssertionError, match='existing macro-sanitizing wrapper'):
+        sdk_include_boundary('cli/counterfactual.cpp', source)

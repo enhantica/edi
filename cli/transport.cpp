@@ -5,7 +5,7 @@
 #include <string>
 
 #if defined(_WIN32)
-#include <windows.h>
+#include "windows_sdk.hpp"
 #include <winhttp.h>
 #else
 #include <dlfcn.h>

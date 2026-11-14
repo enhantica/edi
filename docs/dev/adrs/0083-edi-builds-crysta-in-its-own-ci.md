@@ -257,3 +257,10 @@ extension and executable checks. This corrects the obsolete release-only expecta
 changing CLI output. Native compiler caches save after an attempted build even when a later
 packaging/test check fails, following the existing app and SDK cache policy. SDK archive
 cache identity and qualification remain unchanged by these consumer repairs.
+
+
+The native CLI uses the existing `core/src/windows_sdk.hpp` import boundary for
+Windows APIs, including its performance observer build. That wrapper already removes
+GDI's `ERROR` macro before it can replace the public fit-status enum. CLI entry points
+and transport code share that boundary; direct SDK imports cannot bypass it. The
+Windows native compile and the importer census gate this existing portability rule.
