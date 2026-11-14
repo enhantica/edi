@@ -284,6 +284,7 @@ def visible_flag_edits(project, filename, excerpt=None, schemas=()):  # noqa: PL
         begin = loops[-1]
         # The abbreviation follows the last displayed loop, not preceding complete
         # scalar or loop edits in the same fence.
+        all_changed = set(changed)
         in_loop = [
             (row, flags) for row, flags in zip(changed, columns, strict=True) if row > begin
         ]
@@ -381,10 +382,16 @@ def visible_flag_edits(project, filename, excerpt=None, schemas=()):  # noqa: PL
                 'Gate 5: an abbreviated non-atomic value edit has one uniform new-marker pattern'
             )
             selected = dict.fromkeys(rows, new_columns)
+        extra = (
+            named_form_factor_rows(project, before)
+            if headers and headers[0].startswith('_atom_site_moment.') and 'j2' in scope
+            else {}
+        )
+        extra = {row: column for row, column in extra.items() if row not in all_changed}
         assert set(changed) <= set(rows), (
             'Gate 5: each shown new-marker row belongs to the declared independent subset'
         )
-        assert len(rows) == len(changed) + int(omitted[0]), (
+        assert len(rows) + len(extra) == len(changed) + int(omitted[0]), (
             'Gate 5: the stated omitted-line count equals the rest of the identified loop: '
             + filename
             + ' / shown='
@@ -394,6 +401,11 @@ def visible_flag_edits(project, filename, excerpt=None, schemas=()):  # noqa: PL
             + ' actual='
             + str(len(rows))
         )
+        for row, column in extra.items():
+            tokens = shlex.split(lines[row], comments=True)
+            if not re.search(r'\([^)]*\)$', tokens[column]):
+                tokens[column] += '()'
+            lines[row] = ' '.join(tokens)
         if semantic and adp_type is not None:
             assert '_atom_site.adp_type' in headers, (
                 'Gate 5: the written displacement choice names an actual type column'
@@ -410,6 +422,37 @@ def visible_flag_edits(project, filename, excerpt=None, schemas=()):  # noqa: PL
                     tokens[column] += '()'
             lines[row] = ' '.join(tokens)
     path.write_text('\n'.join(lines) + '\n')
+
+
+def named_form_factor_rows(project, lines):
+    """An explicitly named j2 term may follow complete scalar and moment rows."""
+    import edi  # noqa: PLC0415
+
+    model = edi.Project.load(str(project))
+    block_name = next(line.strip()[5:] for line in lines if line.strip().startswith('data_'))
+    block = next(block for block in model.structures if block.name == block_name)
+    result = {}
+    for begin, line in enumerate(lines):
+        if line.strip() != 'loop_':
+            continue
+        header_end = begin + 1
+        while header_end < len(lines) and lines[header_end].strip().startswith('_'):
+            header_end += 1
+        headers = [line.strip() for line in lines[begin + 1 : header_end]]
+        if '_magnetic_form_factor.j2_coefficient' not in headers:
+            continue
+        column = headers.index('_magnetic_form_factor.j2_coefficient')
+        for row in range(header_end, len(lines)):
+            if lines[row].strip().startswith(('_', 'loop_', 'data_')):
+                break
+            tokens = shlex.split(lines[row], comments=True)
+            if not tokens:
+                continue
+            parameter = block.magnetic_form_factor[tokens[0]].j2_coefficient
+            if not parameter.symmetry_constrained and not parameter.user_constrained:
+                result[row] = column
+    assert result, 'Gate 5: the explicitly named j2 remainder has an independent actual member'
+    return result
 
 
 def eligible_site_columns(project, before, rows, headers, columns, *, adp_type=None, scope=''):

@@ -616,6 +616,7 @@ def prose_cycles(source, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - 
     members = dict(population or {})
     active, previous, explicitly_fixed = set(), set(), set()
     pending_constraints = 0
+    seen_constraints = set()
     context = heading = ''
     cycles = []
 
@@ -627,13 +628,24 @@ def prose_cycles(source, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - 
         if lower.startswith('#'):
             context = heading = lower.lstrip('# ')
             if context == 'add the relations' and model is not None:
-                pending_constraints = len({
-                    str(row.expression) for row in model.analysis.constraints
-                })
+                declared = {
+                    re.sub(r'\s+', '', str(row.expression)) for row in model.analysis.constraints
+                }
+                pending_constraints += len(declared - seen_constraints)
+                seen_constraints.update(declared)
             continue
+        expressions = {
+            re.sub(r'\s+', '', expression)
+            for expression in re.findall(
+                r'\b[A-Za-z_]\w*\s*=\s*[A-Za-z_]\w*\b',
+                paragraph,
+            )
+        }
+        pending_constraints += len(expressions - seen_constraints)
+        seen_constraints.update(expressions)
         if re.search(r'\bfix\s+(?:all|every)\s+param', lower):
             active.clear()
-        if re.search(r'\bconstrain\s+.+?\bfollow\b', lower, re.DOTALL):
+        if not expressions and re.search(r'\bconstrain\s+.+?\bfollow\b', lower, re.DOTALL):
             pending_constraints += 1
             if 'displacement' in lower:
                 explicitly_fixed.add('isotropic displacement')

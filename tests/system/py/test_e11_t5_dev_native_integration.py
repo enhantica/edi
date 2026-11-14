@@ -2839,6 +2839,10 @@ def focused_editor_input_observation(tmp_path_factory):
         actor.command('manual_ime', preedit='', commit='observer_input')
         genuine = actor.last['ui']['ui_sequence']
         actor.command('clear_ui_sequence')
+        actor.command('manual_text', text='K')
+        genuine_keys = actor.last['ui']['ui_sequence']
+        key_text = actor.command('focused_input')['reply']['text']
+        actor.command('clear_ui_sequence')
         qml(actor, '(' + control_expression('createProject.name') + ').text="property_control"')
         property_only = actor.last['ui']['ui_sequence']
         actor.command('manual_key', key='escape')
@@ -2850,7 +2854,12 @@ def focused_editor_input_observation(tmp_path_factory):
                 )
             )
         )
-        return {'genuine': genuine, 'property_only': property_only}
+        return {
+            'genuine': genuine,
+            'genuine_keys': genuine_keys,
+            'key_text': key_text,
+            'property_only': property_only,
+        }
     finally:
         actor.close()
 
@@ -2867,6 +2876,18 @@ def test_original_focused_editor_input_observer_rejects_property_only_edits(
     ), (
         'The passive original-owner observer receives actual focused-editor IME input '
         'inside the ordinary Create dialog'
+    )
+    assert observation['key_text'] == 'observer_inputK', (
+        'The real original Name editor receives the explicitly window-delivered key text'
+    )
+    assert any(
+        e['kind'] == 'key_press'
+        and e.get('focus') == 'createProject.name'
+        and e.get('dialog_visible')
+        for e in observation['genuine_keys']
+    ), (
+        'The passive observer retains genuine window-delivered keys '
+        'reaching its original focused editor'
     )
     assert not any(
         e['kind'] in {'key_press', 'input_method'} for e in observation['property_only']

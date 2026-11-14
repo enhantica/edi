@@ -1,5 +1,6 @@
 """Independent controls for literal tutorial instructions and origin observation."""
 
+from collections import UserDict
 from types import SimpleNamespace
 
 import pytest
@@ -324,3 +325,79 @@ def test_cli_magnetic_remainder_preserves_each_sites_independent_components(tmp_
     path.write_text(initial)
     with pytest.raises(AssertionError, match='shown atomic marker'):
         visible_flag_edits(tmp_path, path.name, excerpt.replace('Co2 0 2()', 'Co2 0() 2()'))
+
+
+def test_prose_initial_expression_list_is_observed_once_and_deletion_stays_visible():
+    written = (
+        "## The example's constraints\n\nThe example keeps **a = b**, **c = d**.\n\n"
+        'Free the scale.\n\nPress Fit.\n\nThe retained relation is **a = b**.\n\n'
+        'Free the cell.\n\nPress Fit again.'
+    )
+    cycles = prose_cycles(written)
+    assert [cycle['constraints'] for cycle in cycles] == [2, 0], (
+        'A visible initial expression list counts each relation once and excludes later references'
+    )
+    changed = prose_cycles(written.replace(', **c = d**', ''))
+    assert [cycle['constraints'] for cycle in changed] == [1, 0], (
+        'Removing one actually written relation changes the observed initial constraint count'
+    )
+
+
+def test_prose_constraint_identity_keeps_alias_case_and_ignores_spacing():
+    class Population(UserDict):
+        pass
+
+    population = Population({'sample.scale': ('scale', 'sample')})
+    population.project = SimpleNamespace(
+        analysis=SimpleNamespace(constraints=[SimpleNamespace(expression='A=B')])
+    )
+    written = '## Add the relations\n\nKeep A = B.\n\nFree the scale.\n\nPress Fit.'
+    assert prose_cycles(written, population)[0]['constraints'] == 1, (
+        'Spacing alone cannot count the same initial relation twice'
+    )
+    assert prose_cycles(written.replace('A = B', 'a = b'), population)[0]['constraints'] == 2, (
+        'Different case-sensitive alias identities remain distinct written relations'
+    )
+
+
+def test_cli_named_form_factor_remainder_keeps_its_distinct_loop_and_value(tmp_path, monkeypatch):
+    import edi  # noqa: PLC0415 - exported native type is only needed by this observer control
+
+    parameter = SimpleNamespace(symmetry_constrained=False, user_constrained=False)
+    block = SimpleNamespace(
+        name='sample',
+        atom_sites=dict.fromkeys(['Co1', 'Co2'], SimpleNamespace()),
+        atom_site_moment={
+            name: SimpleNamespace(crystalaxis_y=parameter) for name in ['Co1', 'Co2']
+        },
+        magnetic_form_factor={'Co': SimpleNamespace(j2_coefficient=parameter)},
+    )
+    monkeypatch.setattr(
+        edi.Project, 'load', staticmethod(lambda _path: SimpleNamespace(structures=[block]))
+    )
+    path = tmp_path / 'sample.edi'
+    initial = (
+        'data_sample\nloop_\n_magnetic_form_factor.type_symbol\n'
+        '_magnetic_form_factor.j2_coefficient\nCo 0.037\n'
+        'loop_\n_atom_site_moment.label\n_atom_site_moment.crystalaxis_y\nCo1 1.2\nCo2 2.3\n'
+    )
+    path.write_text(initial)
+    excerpt = (
+        '# tutorial-scope: Free the moments and the j2 term.\n'
+        'Co1 1.2()\nCo2 2.3()\n… and 1 more lines\n'
+    )
+    visible_flag_edits(tmp_path, path.name, excerpt)
+    assert 'Co 0.037()\n' in path.read_text() and path.read_text().endswith(
+        'Co1 1.2()\nCo2 2.3()\n'
+    ), 'The named j2 remainder reaches its own loop and preserves all three numeric values'
+    path.write_text(initial)
+    with pytest.raises(AssertionError, match='stated omitted-line count'):
+        visible_flag_edits(tmp_path, path.name, excerpt.replace(' and the j2 term', ''))
+
+    block.atom_sites['Co3'] = SimpleNamespace()
+    block.atom_site_moment['Co3'] = SimpleNamespace(crystalaxis_y=parameter)
+    path.write_text(initial + 'Co3 3.4\n')
+    visible_flag_edits(tmp_path, path.name, excerpt.replace('Co1 1.2()', 'Co 0.037()\nCo1 1.2()'))
+    assert path.read_text().endswith('Co1 1.2()\nCo2 2.3()\nCo3 3.4()\n'), (
+        'An already explicit j2 row cannot be counted again as an omitted row of the final table'
+    )

@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T22:33:58Z
+# measured_utc = 2026-11-14T22:53:21Z
 #
-# Recorded from: measured test run (7 node(s) measured once, 176370 banked, 0 stale row(s) dropped)
-# Collected tests: 245176; with a reported duration: 77172
+# Recorded from: measured test run (5 node(s) measured once, 176375 banked, 0 stale row(s) dropped)
+# Collected tests: 245179; with a reported duration: 77172
 # Module-scoped fixture costs recorded: 194
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245176
+# inventory_python = 245179
 # inventory_cpp = 402
-# inventory_measured = 176377
+# inventory_measured = 176380
 # inventory_unmeasured = 69201
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85909
+# inventory_pr_python = 85912
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -170328,6 +170328,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_notebook_contra
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_first_terms_scope_keeps_higher_coefficients_fixed_and_count_exact
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_historical_columns_keep_free_marks_on_their_original_named_member
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_magnetic_remainder_preserves_each_sites_independent_components
+0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_named_form_factor_remainder_keeps_its_distinct_loop_and_value
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_origin_is_the_actual_operand_relative_to_the_launch_directory[folder with spaces]
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_origin_is_the_actual_operand_relative_to_the_launch_directory[sample]
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_cli_origin_is_the_actual_operand_relative_to_the_launch_directory[temperature-55K]
@@ -170336,6 +170337,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_notebook_contra
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_current_recipe_row_actions_are_scientific_and_misspellings_refuse[untick:structure.atom_sites.A.adp_iso]
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_explicit_headerless_reset_changes_only_its_unique_complete_row
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_named_relation_prose_completes_only_its_explicit_alias_endpoints
+0.000	tests/integration/py/test_tutorial_observer_controls.py::test_prose_constraint_identity_keeps_alias_case_and_ignores_spacing
+0.000	tests/integration/py/test_tutorial_observer_controls.py::test_prose_initial_expression_list_is_observed_once_and_deletion_stays_visible
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_visible_setup_is_executable_once_and_keeps_its_new_file_bytes
 0.000	tests/integration/py/test_tutorial_observer_controls.py::test_written_member_subgroups_keep_repeated_category_releases_and_block_scope
 0.030	tests/integration/py/test_tutorial_observer_controls.py::test_written_table_context_disambiguates_identical_keys_without_changing_other_loops
@@ -230404,7 +230407,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e11_t5_dev_native_inte
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_e11_t5_dev_native_integration.py::test_original_estimate_member_survives_ordinary_selection_callback_before_effect[on]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_e11_t5_dev_native_integration.py::test_original_failed_native_save_cannot_authorize_its_proposed_folder_link[off]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_e11_t5_dev_native_integration.py::test_original_failed_native_save_cannot_authorize_its_proposed_folder_link[on]
-0.004	tests/system/py/test_e11_t5_dev_native_integration.py::test_original_focused_editor_input_observer_rejects_property_only_edits
+0.002	tests/system/py/test_e11_t5_dev_native_integration.py::test_original_focused_editor_input_observer_rejects_property_only_edits
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_e11_t5_dev_native_integration.py::test_original_issued_usage_deadline_disposition_retires_intent_without_replay_or_late_overwrite
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_e11_t5_dev_native_integration.py::test_original_iucr_literal_meaning_distinguishes_one_lost_uncertainty_digit
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_e11_t5_dev_native_integration.py::test_original_owner_normal_math_reply_renders_every_formula_and_table_at_actual_dpr[dpr1]
@@ -245712,7 +245715,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 4.456	tests/system/py/test_e05_t1_background_provenance.py
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
-# module-cost: 8.266	tests/system/py/test_e11_t5_dev_native_integration.py
+# module-cost: 9.678	tests/system/py/test_e11_t5_dev_native_integration.py
 # module-cost: 226.993	tests/system/py/test_element_contrast.py
 # module-cost: 0.919	tests/system/py/test_experiment_create_and_replace.py
 # module-cost: 687.412	tests/system/py/test_fast_chart_fit_timing.py
@@ -245802,7 +245805,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 39.089	tests/system/py/test_tutorial_notebook_pipeline.py
 # module-cost: 52.271	tests/system/py/test_tutorial_official_site.py
 # module-cost: 5.339	tests/system/py/test_tutorial_project_ownership.py
-# module-cost: 60.542	tests/system/py/test_tutorial_recipe_preservation.py
+# module-cost: 73.691	tests/system/py/test_tutorial_recipe_preservation.py
 # module-cost: 85.543	tests/system/py/test_tutorial_screenshot_pages.py
 # module-cost: 77.682	tests/system/py/test_tutorial_subset_catalogue.py
 # module-cost: 139.961	tests/system/py/test_user_action_logging.py
