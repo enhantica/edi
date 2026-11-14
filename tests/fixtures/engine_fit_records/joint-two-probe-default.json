@@ -1,0 +1,177 @@
+{
+  "provenance": {
+    "claim": "Pinned crysta CLI parity regression pin, not an independent physics oracle",
+    "engine_sha": "2b6b981e21194f9a76074742dd0e148736ca4d9b",
+    "cli_sha256": "f44c05c211bc19d71eeb84986ede681aedcdd05ab7601170658c1cebb8c3aaa4",
+    "invocation": [
+      "fit",
+      "tests/fitting/ncaf-wish-3bank-s5/project",
+      "--dry",
+      "--verbosity",
+      "full"
+    ],
+    "input_sha256": {
+      "analysis/analysis.edi": "bc78689c1a4491d308a0611490dceed83edb4898244ae092ec555ee91a548484",
+      "experiments/wish_2_9.edi": "154185dfc346a51dced96d185a3208e7c1f7b0bab2cd38dfce47a67c01c1366a",
+      "experiments/wish_4_7.edi": "7bfbb7bb59ee07bf71ca49ad868b54e6dd42f0068642ba943cf908ecfbc343d2",
+      "experiments/wish_5_6.edi": "7de5a093aaa611c24ef219c9d0919106b5aebc3df1a28b76e76f5157803786f6",
+      "project.edi": "d4e1907d79a8210eef08856b7d16c00ac7b782f1a9b82101c75eadc8e573de86",
+      "structures/ncaf.edi": "1f231ef2dc1ec210d95b9f52452dacb6102b7c515b6af603f205199a3aaf0e1d"
+    },
+    "decision": "C06-T8 default two-probe policy (crysta edab5435); same minimum",
+    "historical_record_sha256": "c3b8cae7e3b0dda42e08a2e1eec4f1d54a27bf490ccb03fe986979a256d6cbd8",
+    "fullprof_expected_sha256": "06ec6c27ab6060ac762f00b8f0f4465d9a5349d663ca17a9e23ec9e5221e1d0c",
+    "fullprof_files_sha256": {
+      "PROVENANCE.md": "e88a128ce5e3c68ae35c97f0e970d36b65145604c8c8d40b27df9f05c4a3edbe",
+      "ncaf_3bank_s5.out": "437c76122f087d6a154784deba36245e6d30f4302dd4d58f9f9edc5145c3c10f",
+      "ncaf_3bank_s5.pcr": "5781c4595bcc7b4a7a6afd8ef485a781263194f8f793814c0bf2d5e8595fccba",
+      "ncaf_3bank_s5.sum": "7f5984217d644613cfdf94ca57c08c310d9a682fecc5eb5e0e457c4260575ddb",
+      "ncaf_3bank_s5_1.prf": "80f0adb13c6f46a3561eaf30294822e4bdc7c169fb63e82c8ff3dabb581e892e"
+    },
+    "independent_checks": {
+      "n_free": {
+        "actual": 102.0,
+        "reference": 102.0,
+        "bound": 0
+      },
+      "param.Ca1.fract_x.value": {
+        "actual": 0.4666692212,
+        "reference": 0.46668,
+        "bound": 0.00046
+      },
+      "param.Ca1.fract_x.uncertainty": {
+        "actual": 0.0002603605487,
+        "reference": 0.00046,
+        "bound": 0.000276
+      },
+      "param.Ca1.adp_iso.value": {
+        "actual": 0.9667630513,
+        "reference": 0.968,
+        "bound": 0.135
+      },
+      "param.Ca1.adp_iso.uncertainty": {
+        "actual": 0.07646365819,
+        "reference": 0.135,
+        "bound": 0.081
+      },
+      "param.Al1.fract_x.value": {
+        "actual": 0.2531903332,
+        "reference": 0.25316,
+        "bound": 0.00075
+      },
+      "param.Al1.fract_x.uncertainty": {
+        "actual": 0.0004234636115,
+        "reference": 0.00075,
+        "bound": 0.00045
+      },
+      "param.Al1.adp_iso.value": {
+        "actual": 0.6248296884,
+        "reference": 0.636,
+        "bound": 0.133
+      },
+      "param.Al1.adp_iso.uncertainty": {
+        "actual": 0.07499385488,
+        "reference": 0.133,
+        "bound": 0.0798
+      },
+      "param.Na1.fract_x.value": {
+        "actual": 0.08537945819,
+        "reference": 0.0854,
+        "bound": 0.00041
+      },
+      "param.Na1.fract_x.uncertainty": {
+        "actual": 0.0002362891849,
+        "reference": 0.00041,
+        "bound": 0.00024599999999999996
+      },
+      "param.Na1.adp_iso.value": {
+        "actual": 2.369604021,
+        "reference": 2.377,
+        "bound": 0.252
+      },
+      "param.Na1.adp_iso.uncertainty": {
+        "actual": 0.1423036945,
+        "reference": 0.252,
+        "bound": 0.1512
+      },
+      "param.F1.fract_x.value": {
+        "actual": 0.138081311,
+        "reference": 0.13811,
+        "bound": 0.0003
+      },
+      "param.F1.fract_x.uncertainty": {
+        "actual": 0.0001699804661,
+        "reference": 0.0003,
+        "bound": 0.00017999999999999998
+      },
+      "param.F2.fract_z.value": {
+        "actual": 0.1867751366,
+        "reference": 0.1868,
+        "bound": 0.00033
+      },
+      "param.F2.fract_z.uncertainty": {
+        "actual": 0.0001864245754,
+        "reference": 0.00033,
+        "bound": 0.000198
+      },
+      "param.F3.fract_x.value": {
+        "actual": 0.4610413697,
+        "reference": 0.46104,
+        "bound": 0.00018
+      },
+      "param.F3.fract_x.uncertainty": {
+        "actual": 0.0001050271057,
+        "reference": 0.00018,
+        "bound": 0.00010800000000000001
+      },
+      "param.wish_5_6.scale.value": {
+        "actual": 37.9932702,
+        "reference": 38.176,
+        "bound": 1.165
+      },
+      "param.wish_5_6.scale.uncertainty": {
+        "actual": 0.6594889125,
+        "reference": 1.165,
+        "bound": 0.699
+      },
+      "param.wish_4_7.scale.value": {
+        "actual": 36.74307098,
+        "reference": 36.9241,
+        "bound": 0.9801
+      },
+      "param.wish_4_7.scale.uncertainty": {
+        "actual": 0.5515650202,
+        "reference": 0.9801,
+        "bound": 0.5880599999999999
+      },
+      "param.wish_2_9.scale.value": {
+        "actual": 36.93928737,
+        "reference": 37.0097,
+        "bound": 1.067
+      },
+      "param.wish_2_9.scale.uncertainty": {
+        "actual": 0.6003752935,
+        "reference": 1.067,
+        "bound": 0.6402
+      },
+      "bank.wish_5_6.rwp": {
+        "actual": 0.07895924078,
+        "reference": 0.0792,
+        "bound": 0.003960000000000001
+      },
+      "bank.wish_4_7.rwp": {
+        "actual": 0.07695851429,
+        "reference": 0.0777,
+        "bound": 0.0038850000000000004
+      },
+      "bank.wish_2_9.rwp": {
+        "actual": 0.04808967483,
+        "reference": 0.0481,
+        "bound": 0.002405
+      }
+    },
+    "previous_policy_record_sha256": "8098d214ab64a8e1b67a7b81b279921def3c5b713eaeae9a469182b0224374de",
+    "previous_policy": "Explicit ladder, seven iterations; complete record retained"
+  },
+  "record": "schema=9\nrecord=fit\nstatus=done\nmode=joint\nconverged=true\nn_points_loaded=12323\nn_points_fitted=7533\nn_free=102\niterations=4\nreduced_chi_square=14.13451059\nrwp=0.07257054916\nstopping_rule=chi_square_change\nstopping_value=5.167768934e-07\nlast_shift_su=0.04704843242\ncutoff_policy=off\ndescent=multistart_prune\nfast_descent=false\nlinear_snap=false\nguarded_linear_snap=false\nlinear_snap_attempts=0\nlinear_snap_rejections=0\nlinear_snap_guard_residual_evaluations=0\nmultistart_prune=true\nmultistart_probes_started=2\nmultistart_probes_pruned=1\nmultistart_probe_iterations=6\nmultistart_survivor=ladder\nunevaluable_trials=0\nterminal_unevaluable_trials=0\nnonfinite_trials=0\nterminal_nonfinite_trials=0\nbound_active_columns=none\nzero_jacobian_columns=none\nbank.wish_2_9.n_points=2509\nbank.wish_2_9.rwp=0.04808967483\nbank.wish_2_9.chi_square=9992.249196\nbank.wish_4_7.n_points=2498\nbank.wish_4_7.rwp=0.07695851429\nbank.wish_4_7.chi_square=44832.14067\nbank.wish_5_6.n_points=2526\nbank.wish_5_6.rwp=0.07895924078\nbank.wish_5_6.chi_square=50209.15834\niter.1.rwp=0.07257220773\niter.1.reduced_chi_square=14.13515667\niter.1.unevaluable_trials=0\niter.2.rwp=0.07257073672\niter.2.reduced_chi_square=14.13458365\niter.2.unevaluable_trials=0\niter.3.rwp=0.07257056792\niter.3.reduced_chi_square=14.1345179\niter.3.unevaluable_trials=0\niter.4.rwp=0.07257054916\niter.4.reduced_chi_square=14.13451059\niter.4.unevaluable_trials=0\nparam.Al1.adp_iso.value=0.6248296884\nparam.Al1.adp_iso.uncertainty=0.07499385488\nparam.Al1.fract_x.value=0.2531903332\nparam.Al1.fract_x.uncertainty=0.0004234636115\nparam.Ca1.adp_iso.value=0.9667630513\nparam.Ca1.adp_iso.uncertainty=0.07646365819\nparam.Ca1.fract_x.value=0.4666692212\nparam.Ca1.fract_x.uncertainty=0.0002603605487\nparam.F1.adp_iso.value=0.7718212207\nparam.F1.adp_iso.uncertainty=0.05371379946\nparam.F1.fract_x.value=0.138081311\nparam.F1.fract_x.uncertainty=0.0001699804661\nparam.F1.fract_y.value=0.3053807924\nparam.F1.fract_y.uncertainty=0.0001626757813\nparam.F1.fract_z.value=0.119326981\nparam.F1.fract_z.uncertainty=0.0001856811115\nparam.F2.adp_iso.value=1.382838528\nparam.F2.adp_iso.uncertainty=0.06309761167\nparam.F2.fract_x.value=0.3617520682\nparam.F2.fract_x.uncertainty=0.0002339263343\nparam.F2.fract_y.value=0.3636627335\nparam.F2.fract_y.uncertainty=0.0001982935894\nparam.F2.fract_z.value=0.1867751366\nparam.F2.fract_z.uncertainty=0.0001864245754\nparam.F3.adp_iso.value=0.8028086894\nparam.F3.adp_iso.uncertainty=0.07553977969\nparam.F3.fract_x.value=0.4610413697\nparam.F3.fract_x.uncertainty=0.0001050271057\nparam.Na1.adp_iso.value=2.369604021\nparam.Na1.adp_iso.uncertainty=0.1423036945\nparam.Na1.fract_x.value=0.08537945819\nparam.Na1.fract_x.uncertainty=0.0002362891849\nparam.wish_2_9.abscor1.value=0.0008708404184\nparam.wish_2_9.abscor1.uncertainty=0.002757694534\nparam.wish_2_9.background[0].value=321.5025018\nparam.wish_2_9.background[0].uncertainty=10.70446532\nparam.wish_2_9.background[10].value=225.7978376\nparam.wish_2_9.background[10].uncertainty=4.323538098\nparam.wish_2_9.background[11].value=218.8222687\nparam.wish_2_9.background[11].uncertainty=5.831649753\nparam.wish_2_9.background[12].value=220.5016984\nparam.wish_2_9.background[12].uncertainty=8.875388812\nparam.wish_2_9.background[13].value=215.6877846\nparam.wish_2_9.background[13].uncertainty=15.52553833\nparam.wish_2_9.background[14].value=189.8434107\nparam.wish_2_9.background[14].uncertainty=41.49498933\nparam.wish_2_9.background[1].value=342.0469304\nparam.wish_2_9.background[1].uncertainty=6.207285794\nparam.wish_2_9.background[2].value=276.9016651\nparam.wish_2_9.background[2].uncertainty=3.806020466\nparam.wish_2_9.background[3].value=264.1772537\nparam.wish_2_9.background[3].uncertainty=3.684624958\nparam.wish_2_9.background[4].value=258.9070811\nparam.wish_2_9.background[4].uncertainty=2.678982442\nparam.wish_2_9.background[5].value=253.4071629\nparam.wish_2_9.background[5].uncertainty=2.23574083\nparam.wish_2_9.background[6].value=236.7057181\nparam.wish_2_9.background[6].uncertainty=2.090526907\nparam.wish_2_9.background[7].value=227.7194472\nparam.wish_2_9.background[7].uncertainty=1.934396976\nparam.wish_2_9.background[8].value=221.1576431\nparam.wish_2_9.background[8].uncertainty=2.349842684\nparam.wish_2_9.background[9].value=220.1203927\nparam.wish_2_9.background[9].uncertainty=3.106514037\nparam.wish_2_9.broad_gauss_sigma_1.value=102.8045015\nparam.wish_2_9.broad_gauss_sigma_1.uncertainty=19.3830627\nparam.wish_2_9.broad_gauss_sigma_2.value=21.79918974\nparam.wish_2_9.broad_gauss_sigma_2.uncertainty=1.31625038\nparam.wish_2_9.broad_lorentz_gamma_1.value=2.955599895\nparam.wish_2_9.broad_lorentz_gamma_1.uncertainty=0.6609889368\nparam.wish_2_9.calib_d_to_tof_linear.value=10386.54703\nparam.wish_2_9.calib_d_to_tof_linear.uncertainty=0.8891647654\nparam.wish_2_9.calib_d_to_tof_offset.value=17.36587164\nparam.wish_2_9.calib_d_to_tof_offset.uncertainty=3.172541041\nparam.wish_2_9.decay_beta_0.value=0.005500045974\nparam.wish_2_9.decay_beta_0.uncertainty=6.909608475e-05\nparam.wish_2_9.decay_beta_1.value=0.07631509286\nparam.wish_2_9.decay_beta_1.uncertainty=0.00267793716\nparam.wish_2_9.rise_alpha_0.value=0.154320214\nparam.wish_2_9.rise_alpha_0.uncertainty=0.0495179156\nparam.wish_2_9.rise_alpha_1.value=-0.1957781102\nparam.wish_2_9.rise_alpha_1.uncertainty=0.0890688296\nparam.wish_2_9.scale.value=36.93928737\nparam.wish_2_9.scale.uncertainty=0.6003752935\nparam.wish_4_7.abscor1.value=0.002549686566\nparam.wish_4_7.abscor1.uncertainty=0.001714561503\nparam.wish_4_7.background[0].value=503.2656052\nparam.wish_4_7.background[0].uncertainty=14.18799161\nparam.wish_4_7.background[10].value=260.7176293\nparam.wish_4_7.background[10].uncertainty=2.759239794\nparam.wish_4_7.background[11].value=256.0267297\nparam.wish_4_7.background[11].uncertainty=3.283081243\nparam.wish_4_7.background[12].value=246.2599794\nparam.wish_4_7.background[12].uncertainty=3.478110351\nparam.wish_4_7.background[13].value=264.0534963\nparam.wish_4_7.background[13].uncertainty=3.280339224\nparam.wish_4_7.background[14].value=250.9251309\nparam.wish_4_7.background[14].uncertainty=3.548700719\nparam.wish_4_7.background[15].value=257.4847959\nparam.wish_4_7.background[15].uncertainty=4.270879174\nparam.wish_4_7.background[16].value=257.5607895\nparam.wish_4_7.background[16].uncertainty=5.364108021\nparam.wish_4_7.background[17].value=253.9666813\nparam.wish_4_7.background[17].uncertainty=7.059090954\nparam.wish_4_7.background[18].value=259.5549694\nparam.wish_4_7.background[18].uncertainty=12.67724612\nparam.wish_4_7.background[19].value=237.9121558\nparam.wish_4_7.background[19].uncertainty=33.84757223\nparam.wish_4_7.background[1].value=386.6604361\nparam.wish_4_7.background[1].uncertainty=6.698992815\nparam.wish_4_7.background[2].value=382.340752\nparam.wish_4_7.background[2].uncertainty=5.773605454\nparam.wish_4_7.background[3].value=374.4200249\nparam.wish_4_7.background[3].uncertainty=4.930846578\nparam.wish_4_7.background[4].value=340.746319\nparam.wish_4_7.background[4].uncertainty=4.378764708\nparam.wish_4_7.background[5].value=329.8468644\nparam.wish_4_7.background[5].uncertainty=3.815758705\nparam.wish_4_7.background[6].value=305.0205306\nparam.wish_4_7.background[6].uncertainty=3.721268941\nparam.wish_4_7.background[7].value=354.3302349\nparam.wish_4_7.background[7].uncertainty=4.400035534\nparam.wish_4_7.background[8].value=317.3462783\nparam.wish_4_7.background[8].uncertainty=3.48985667\nparam.wish_4_7.background[9].value=291.0238831\nparam.wish_4_7.background[9].uncertainty=2.919896092\nparam.wish_4_7.broad_gauss_sigma_1.value=28.8983701\nparam.wish_4_7.broad_gauss_sigma_1.uncertainty=6.017793491\nparam.wish_4_7.broad_gauss_sigma_2.value=18.70276785\nparam.wish_4_7.broad_gauss_sigma_2.uncertainty=1.228284439\nparam.wish_4_7.calib_d_to_tof_linear.value=18662.03933\nparam.wish_4_7.calib_d_to_tof_linear.uncertainty=0.4773414445\nparam.wish_4_7.calib_d_to_tof_offset.value=-18.91606899\nparam.wish_4_7.calib_d_to_tof_offset.uncertainty=0.8062804006\nparam.wish_4_7.decay_beta_0.value=0.006616573551\nparam.wish_4_7.decay_beta_0.uncertainty=3.836898019e-05\nparam.wish_4_7.decay_beta_1.value=0.01181095248\nparam.wish_4_7.decay_beta_1.uncertainty=0.0003760849268\nparam.wish_4_7.rise_alpha_0.value=-0.01292009735\nparam.wish_4_7.rise_alpha_0.uncertainty=0.001082521052\nparam.wish_4_7.rise_alpha_1.value=0.1256744455\nparam.wish_4_7.rise_alpha_1.uncertainty=0.003604939836\nparam.wish_4_7.scale.value=36.74307098\nparam.wish_4_7.scale.uncertainty=0.5515650202\nparam.wish_5_6.abscor1.value=0.006424080826\nparam.wish_5_6.abscor1.uncertainty=0.001906957778\nparam.wish_5_6.background[0].value=430.8512006\nparam.wish_5_6.background[0].uncertainty=13.3892246\nparam.wish_5_6.background[10].value=323.1934415\nparam.wish_5_6.background[10].uncertainty=3.211978154\nparam.wish_5_6.background[11].value=284.731007\nparam.wish_5_6.background[11].uncertainty=3.153335962\nparam.wish_5_6.background[12].value=272.8932848\nparam.wish_5_6.background[12].uncertainty=3.307097435\nparam.wish_5_6.background[13].value=257.6233811\nparam.wish_5_6.background[13].uncertainty=3.347244176\nparam.wish_5_6.background[14].value=259.7291485\nparam.wish_5_6.background[14].uncertainty=3.468409395\nparam.wish_5_6.background[15].value=261.5849007\nparam.wish_5_6.background[15].uncertainty=3.699839043\nparam.wish_5_6.background[16].value=262.3517322\nparam.wish_5_6.background[16].uncertainty=4.455413312\nparam.wish_5_6.background[17].value=263.3688675\nparam.wish_5_6.background[17].uncertainty=5.461431964\nparam.wish_5_6.background[18].value=268.3425431\nparam.wish_5_6.background[18].uncertainty=5.250046714\nparam.wish_5_6.background[19].value=268.7786454\nparam.wish_5_6.background[19].uncertainty=6.672364211\nparam.wish_5_6.background[1].value=395.2573755\nparam.wish_5_6.background[1].uncertainty=9.08778391\nparam.wish_5_6.background[20].value=262.092316\nparam.wish_5_6.background[20].uncertainty=14.41379083\nparam.wish_5_6.background[2].value=445.7232706\nparam.wish_5_6.background[2].uncertainty=11.6342794\nparam.wish_5_6.background[3].value=464.0885995\nparam.wish_5_6.background[3].uncertainty=8.880362943\nparam.wish_5_6.background[4].value=376.3934289\nparam.wish_5_6.background[4].uncertainty=5.566453694\nparam.wish_5_6.background[5].value=377.563194\nparam.wish_5_6.background[5].uncertainty=5.00536286\nparam.wish_5_6.background[6].value=369.2736956\nparam.wish_5_6.background[6].uncertainty=4.256099814\nparam.wish_5_6.background[7].value=337.6581477\nparam.wish_5_6.background[7].uncertainty=3.708201812\nparam.wish_5_6.background[8].value=326.1910957\nparam.wish_5_6.background[8].uncertainty=3.358681825\nparam.wish_5_6.background[9].value=308.2141652\nparam.wish_5_6.background[9].uncertainty=3.287496762\nparam.wish_5_6.broad_gauss_sigma_2.value=15.90603901\nparam.wish_5_6.broad_gauss_sigma_2.uncertainty=0.7405814852\nparam.wish_5_6.calib_d_to_tof_linear.value=20774.67035\nparam.wish_5_6.calib_d_to_tof_linear.uncertainty=0.4026066035\nparam.wish_5_6.calib_d_to_tof_offset.value=-16.7752643\nparam.wish_5_6.calib_d_to_tof_offset.uncertainty=0.6496215229\nparam.wish_5_6.decay_beta_0.value=0.006843519219\nparam.wish_5_6.decay_beta_0.uncertainty=3.413290112e-05\nparam.wish_5_6.decay_beta_1.value=0.007859429113\nparam.wish_5_6.decay_beta_1.uncertainty=0.0002423475497\nparam.wish_5_6.rise_alpha_0.value=-0.01059336187\nparam.wish_5_6.rise_alpha_0.uncertainty=0.0009479512498\nparam.wish_5_6.rise_alpha_1.value=0.1121585998\nparam.wish_5_6.rise_alpha_1.uncertainty=0.00232618796\nparam.wish_5_6.scale.value=37.9932702\nparam.wish_5_6.scale.uncertainty=0.6594889125\n"
+}
