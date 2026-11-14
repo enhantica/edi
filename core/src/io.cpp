@@ -338,6 +338,10 @@ std::vector<Token> tokenize(const std::string& text, const std::string& where) {
             std::string token;
             bool closed = false;
             while (index < size) {
+                // CRLF is one physical line ending inside a CIF text field.
+                if (text[index] == '\r' && index + 1 < size && text[index + 1] == '\n') {
+                    ++index;
+                }
                 if (text[index] == '\n' && index + 1 < size && text[index + 1] == ';') {
                     index += 2;  // closing newline + ';'
                     closed = true;

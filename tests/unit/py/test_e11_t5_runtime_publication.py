@@ -271,6 +271,15 @@ file(WRITE "${CMAKE_BINARY_DIR}/accepted" "original function returned")
                 command, env=env, capture_output=True, text=True, check=False, timeout=15
             )
         except subprocess.TimeoutExpired as error:
+            for name, value in [('stdout', error.stdout), ('stderr', error.stderr)]:
+                text = value.decode(errors='replace') if isinstance(value, bytes) else value or ''
+                (log / name).write_text(text, encoding='utf-8', newline='\n')
+            trace_path = log / 'trace.jsonl'
+            trace_tail = (
+                trace_path.read_text(errors='replace')[-6000:]
+                if trace_path.is_file()
+                else '<no trace>'
+            )
             after_inputs = {name: _inventory(Path(name)) for name in before_inputs}
             (log / 'PRESERVATION.json').write_text(
                 json.dumps(
@@ -293,7 +302,8 @@ file(WRITE "${CMAKE_BINARY_DIR}/accepted" "original function returned")
             )
             pytest.fail(
                 'Missing/nonregular/symlink input must refuse before a blocking read; '
-                f'the unchanged five-second configure observation expired: {error}'
+                f'the unchanged bounded configure observation expired: {error}\n'
+                f'Last actual CMake trace bytes:\n{trace_tail}'
             )
         (log / 'stdout').write_text(run.stdout)
         (log / 'stderr').write_text(run.stderr)

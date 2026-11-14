@@ -77,7 +77,7 @@ def tutorials(case: str) -> dict[str, str]:
         'python': f'docs/user/tutorials/{case}.ipynb',
         'app': case,
         'app_docs': f'website/surfaces/docs/application/tutorials/cases/{case}.md',
-        'cli_docs': f'{CLI_DIR}/{case}/index.md',
+        'cli_docs': f'{CLI_DIR.as_posix()}/{case}/index.md',
     }
 
 

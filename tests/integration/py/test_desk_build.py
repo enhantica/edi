@@ -166,7 +166,8 @@ endfunction()
 """)
     program = tmp_path / 'observe.cmake'
     program.write_text(
-        f'set(CMAKE_MODULE_PATH "{modules}")\ninclude("{ROOT / "cmake/EdiGuiBase.cmake"}")\n'
+        f'set(CMAKE_MODULE_PATH "{modules.as_posix()}")\n'
+        f'include("{(ROOT / "cmake/EdiGuiBase.cmake").as_posix()}")\n'
     )
     result = subprocess.run(
         ['cmake', '-P', str(program)],

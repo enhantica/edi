@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import signal
 import subprocess
@@ -136,11 +137,25 @@ def test_timeout_stops_the_build_descendant_and_preserves_output(tmp_path, paren
 
 
 def test_completed_build_retains_its_failure_output():
-    completed = build_probe.build_host([
-        sys.executable,
-        '-c',
-        'import sys; print("configure refused"); sys.exit(7)',
-    ])
+    from tests.fixtures.plain_data.windows_job import compiler_bootstrap  # noqa: PLC0415
+
+    command = [sys.executable, '-c', 'import sys; print("configure refused"); sys.exit(7)']
+    for release, expected in [('1', 7), ('', 125)]:
+        control = subprocess.run(
+            [sys.executable, '-c', compiler_bootstrap(), json.dumps(command)],
+            input=release,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=3,
+        )
+        assert control.returncode == expected, (
+            'The Windows bootstrap retains quoted command status and refuses before release'
+        )
+        assert ('configure refused' in control.stdout) == bool(release), (
+            'Only the admitted compiler command reaches execution and retains its actual output'
+        )
+    completed = build_probe.build_host(command)
     assert completed.returncode == 7 and 'configure refused' in completed.stdout, (
         'Native host build must retain the actual configure or compile refusal and its output'
     )

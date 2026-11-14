@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.26)
+project(fraction_display_observer LANGUAGES CXX)
+find_package(crysta CONFIG REQUIRED)
+add_executable(fraction ../table_display/fraction_bridge.cpp)
+target_compile_features(fraction PRIVATE cxx_std_20)
+target_include_directories(fraction PRIVATE "${EDI_INCLUDE}")
+target_link_libraries(fraction PRIVATE "${EDI_CORE}" crysta::crysta)

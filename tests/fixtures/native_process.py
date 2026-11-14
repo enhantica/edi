@@ -76,3 +76,50 @@ def python_program(path, source):
     )
     path.chmod(0o755)
     return path
+
+
+def fixture_shell(directory, command):
+    """Put the actual fixture directory first after Bash's own native startup edits."""
+    prefix = (
+        'fixture_bin="$(cd -- "$1" && pwd -P)"; shift; export PATH="$fixture_bin:$PATH"; hash -r; '
+    )
+    return [
+        environment_bash(),
+        '-eu',
+        '-c',
+        prefix + command,
+        'fixture-shell',
+        Path(directory).as_posix(),
+    ]
+
+
+def native_static_library(path):
+    """Keep the actual consumer archive in its native spelling and configuration."""
+    path = Path(path)
+    if os.name != 'nt':
+        return path
+    stem = path.name.removeprefix('lib').removesuffix('.a')
+    native = path if path.suffix.casefold() == '.lib' else path.with_name(stem + '.lib')
+    return next(
+        (p for p in [native, native.parent / 'Release' / native.name] if p.is_file()), native
+    )
+
+
+def fresh_pixi_environment():
+    """Let a new Pixi environment supply its own paths without repeating the active prefix."""
+    environment = os.environ.copy()
+    if os.name != 'nt':
+        return environment
+    prefix = Path(sys.prefix).resolve()
+    kept, seen = [], set()
+    for entry in environment.get('PATH', '').split(os.pathsep):
+        if not entry:
+            continue
+        path = Path(entry)
+        key = os.path.normcase(os.path.normpath(entry))
+        if path.is_relative_to(prefix) or key in seen:
+            continue
+        seen.add(key)
+        kept.append(entry)
+    environment['PATH'] = os.pathsep.join(kept)
+    return environment

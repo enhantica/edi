@@ -20,7 +20,12 @@ import pytest
 import yaml
 
 from tests.fixtures.e09_t75_commands import assert_no_swallowed_refusal, checked_program
-from tests.fixtures.native_process import environment_bash, fixture_program, python_program
+from tests.fixtures.native_process import (
+    environment_bash,
+    fixture_program,
+    fixture_shell,
+    python_program,
+)
 from tests.system.py.test_e09_t75_pin_currency import currency_world
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -309,7 +314,10 @@ emit_curl(data)
     if prepare_only:
         return env, repo, sdk
     result = subprocess.run(
-        [environment_bash(), '-eu', '-c', command_override]
+        fixture_shell(
+            binpath,
+            'test "$(command -v curl)" = "$fixture_bin/curl" || exit 64; ' + command_override,
+        )
         if command_override is not None
         else [environment_bash(), str(repo / 'tools/ci/build-crysta.sh')],
         cwd=repo,

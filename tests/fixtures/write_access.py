@@ -47,7 +47,7 @@ def unwritable_directory(directory):
             if os.name == 'nt':
                 acl(directory.name, '/inheritancelevel:r')
                 acl(directory.name, '/grant:r', '*' + sid + ':(RX)')
-                acl(directory.name, '/deny', '*' + sid + ':(WD,AD,WA,WE)')
+                acl(directory.name, '/deny', '*' + sid + ':(WD,AD,WA,WEA)')
             else:
                 directory.chmod(0o555)
             for kind in ['file', 'directory']:

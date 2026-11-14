@@ -83,7 +83,17 @@ def test_c11_t56_datablock_bytes_match_pre_fix_regression_pins(
 ):
     record_property('weight_fraction_before', 'absent column in immutable datablock hashes')
     record_property('weight_fraction_after', 'checked unity column; original hashes retained')
-    identity.require_datablock_regression_pins(tmp_path / 'control')
+    stage = identity._stage_committed_corpus_project
+
+    def exported_source(destination):
+        folder = stage(destination)
+        for path in (folder / 'structures').glob('*.edi'):
+            path.write_bytes(path.read_bytes().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n'))
+        return folder
+
+    with monkeypatch.context() as patch:
+        patch.setattr(identity, '_stage_committed_corpus_project', exported_source)
+        identity.require_datablock_regression_pins(tmp_path / 'control')
     saved = tmp_path / 'control/saved'
     record_property('carried_computed_columns', json.dumps(check_computed(saved, identity.edi)))
     check_geometry((saved / 'structures/si.edi').read_bytes())

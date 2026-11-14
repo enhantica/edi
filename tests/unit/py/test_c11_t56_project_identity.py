@@ -856,10 +856,10 @@ def require_datablock_regression_pins(tmp_path: Path) -> None:
             #  now retains the two source-declared _geom inputs. Keep
             # the old regression hash as a byte oracle for every other field.
             original = (source / relative_path).read_bytes()
-            assert original.count(b'_geom.min_bond_distance_cutoff 0.\n') == 1, (
-                ' the source structure declares one minimum bond cutoff'
-            )
-            assert original.count(b'_geom.bond_distance_inc 0.25\n') == 1, (
+            assert (
+                len(re.findall(rb'(?m)^_geom\.min_bond_distance_cutoff 0\.\r?\n', original)) == 1
+            ), ' the source structure declares one minimum bond cutoff'
+            assert len(re.findall(rb'(?m)^_geom\.bond_distance_inc 0\.25\r?\n', original)) == 1, (
                 ' the source structure declares one bond distance increment'
             )
             block = b'_geom.min_bond_distance_cutoff 0\n_geom.bond_distance_inc 0.25\n'

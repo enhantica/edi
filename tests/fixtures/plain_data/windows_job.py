@@ -129,11 +129,7 @@ def build_host(command, timeout):
     process = None
     released = False
     # The bootstrap waits before creating any compiler descendant; membership is established first.
-    bootstrap = (
-        'import json,os,sys; args=json.loads(sys.argv[1]); '
-        'ready=sys.stdin.buffer.read(1); '
-        'sys.exit(125) if ready!=b"1" else os.execvp(args[0],args)'
-    )
+    bootstrap = compiler_bootstrap()
     try:
         process = subprocess.Popen(
             [sys.executable, '-c', bootstrap, json.dumps([os.fspath(a) for a in command])],
@@ -161,3 +157,12 @@ def build_host(command, timeout):
             process.kill()
             process.communicate(timeout=5)
         job.close()
+
+
+def compiler_bootstrap():
+    """Preserve argv quoting and exit status after the parent admits job membership."""
+    return (
+        'import json,subprocess,sys; args=json.loads(sys.argv[1]); '
+        'ready=sys.stdin.buffer.read(1); '
+        'sys.exit(125 if ready!=b"1" else subprocess.call(args))'
+    )

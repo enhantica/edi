@@ -75,6 +75,7 @@ def test_catalogue_projection_refuses_every_retained_input_escape(
             native.test_native_fixture_is_bound_to_the_committed_nontrivial_project()
 
     observe()
+    native_corpus_transport_control(tmp_path, monkeypatch, observe, channel)
     if damage == 'descriptor':
         target = project / 'project.edi' if channel in {'scan', 'native'} else experiment
         tag = '_metadata.title' if target.name == 'project.edi' else '_experiment_type.sample_form'
@@ -101,3 +102,22 @@ def test_catalogue_projection_refuses_every_retained_input_escape(
         )
     with pytest.raises((AssertionError, ValueError) if channel == 'native' else AssertionError):
         observe()
+
+
+def native_corpus_transport_control(tmp_path, monkeypatch, observe, channel):
+    if channel != 'agreement':
+        return
+    source_case = support.corpus_case_dir('yap-spodi-3k')
+    transported = tmp_path / 'native-corpus'
+    shutil.copytree(source_case, transported)
+    for path in (transported / 'project').rglob('*.edi'):
+        path.write_bytes(path.read_bytes().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n'))
+    with monkeypatch.context() as patch:
+        patch.setattr(support, 'corpus_case_dir', lambda _case: transported)
+        observe()
+        changed = next((transported / 'project').rglob('*.dat'), None)
+        if changed is None:
+            changed = next((transported / 'project/experiments').glob('*.edi'))
+        changed.write_bytes(changed.read_bytes() + b'\n# unexpected source byte\n')
+        with pytest.raises(AssertionError, match='delivered data and recipe'):
+            observe()

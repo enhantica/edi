@@ -4,10 +4,12 @@ import hashlib
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import native_executable, native_static_library
 from tests.fixtures.table_display import gui_base
 from tests.integration.py.test_scan_app_contract import javascript, property_value
 from tests.integration.py.test_table_display import run_functions
@@ -203,32 +205,40 @@ def fraction_bridge(tmp_path_factory):
     cache = (build / 'CMakeCache.txt').read_text()
     sdk = re.search(r'^crysta_DIR:PATH=(.+)$', cache, re.MULTILINE)[1]
     compiler = re.search(r'^CMAKE_CXX_COMPILER:FILEPATH=(.+)$', cache, re.MULTILINE)[1]
-    prefix = Path(sdk).parents[2]
-    native = tmp_path / 'fraction'
-    openmp = re.findall(r'^OpenMP_\w+_LIBRARY:FILEPATH=(.+)$', cache, re.MULTILINE)
-    command = [
-        compiler,
-        '-std=c++20',
-        '-O0',
-        '-I' + str(ROOT / 'core/include'),
-        '-I' + str(prefix / 'include'),
-        str(ROOT / 'tests/fixtures/table_display/fraction_bridge.cpp'),
-        str(build / 'core/libedi_core.a'),
-        str(prefix / 'lib/libcrysta_core.a'),
-        '-L' + str(Path(sys.prefix) / 'lib'),
-        '-Wl,-rpath,' + str(Path(sys.prefix) / 'lib'),
-        *openmp,
-        '-lsleef',
-        '-pthread',
-        '-o',
-        str(native),
+    core = native_static_library(build / 'core/libedi_core.a')
+    assert core.is_file(), 'The display bridge must link the actual prepared native Edi core'
+    output = tmp_path / 'build'
+    commands = [
+        [
+            'cmake',
+            '-S',
+            str(ROOT / 'tests/fixtures/fraction_display_native'),
+            '-B',
+            str(output),
+            '-G',
+            'Ninja',
+            '-DCMAKE_BUILD_TYPE=Release',
+            '-DCMAKE_CXX_COMPILER=' + compiler,
+            '-Dcrysta_DIR=' + sdk,
+            '-DEDI_INCLUDE=' + str(ROOT / 'core/include'),
+            '-DEDI_CORE=' + str(core),
+        ],
+        ['cmake', '--build', str(output), '--config', 'Release', '--parallel', '2'],
     ]
-    result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=20)
-    assert result.returncode == 0, (
-        'The fraction witness links the actual consumer core and its declared SDK: '
-        + result.stdout
-        + result.stderr
-    )
+    deadline = time.monotonic() + 20
+    for command in commands:
+        remaining = deadline - time.monotonic()
+        assert remaining > 0, 'The native display bridge retains its original total build budget'
+        result = subprocess.run(
+            command, capture_output=True, text=True, check=False, timeout=remaining
+        )
+        assert result.returncode == 0, (
+            'The fraction witness links the actual consumer core and its declared SDK: '
+            + result.stdout
+            + result.stderr
+        )
+    native = native_executable(output / 'fraction')
+    assert native.is_file(), 'The display bridge requires its real compiled native executable'
     return native
 
 

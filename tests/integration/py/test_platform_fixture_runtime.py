@@ -49,7 +49,9 @@ def test_windows_shell_selects_git_bash_and_never_the_wsl_launcher(tmp_path, mon
 
 
 @pytest.mark.parametrize('shape', ['path', 'string'])
-def test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes(shape):
+def test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes(
+    shape, monkeypatch
+):
     records = json.loads(
         (ROOT / 'tests/fixtures/example_catalogue/retention-adaptations.json').read_text()
     )['files']
@@ -58,6 +60,14 @@ def test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_ch
     windows = PureWindowsPath(name)
     key = windows if shape == 'path' else str(windows)
     raw = (ROOT / name).read_bytes()
+    from tools.checks import case_records  # noqa: PLC0415 - exercise path serialization separately
+
+    with monkeypatch.context() as patch:
+        patch.setattr(case_records, 'CLI_DIR', PureWindowsPath('docs/user/cli'))
+        assert (
+            case_records.tutorials('authored-case')['cli_docs']
+            == 'docs/user/cli/authored-case/index.md'
+        ), 'Windows interface records use portable repository paths instead of native separators'
     assert retained_bytes(key, raw) == row['before'].encode('utf-8'), (
         'Windows path transport must reach the same whole-file reviewed '
         'source adaptation as POSIX keys'
@@ -82,13 +92,47 @@ def test_windows_native_consumer_uses_release_executable_and_honours_exact_overr
     assert consumer.native_consumers.__wrapped__() == binary, (
         'The Windows multi-config consumer uses its native executable suffix and Release directory'
     )
+    prefix = tmp_path / 'old environment'
+    needed = tmp_path / 'compiler tools'
+    environment = {
+        'PATH': os.pathsep.join([str(prefix), str(prefix / 'Scripts'), str(needed), str(needed)]),
+        'KEEP': 'unchanged',
+    }
+    monkeypatch.setattr(
+        native_process,
+        'os',
+        SimpleNamespace(name='nt', environ=environment, pathsep=os.pathsep, path=os.path),
+    )
+    monkeypatch.setattr(native_process, 'sys', SimpleNamespace(prefix=str(prefix)))
+    cleaned = native_process.fresh_pixi_environment()
+    assert cleaned == {'PATH': str(needed), 'KEEP': 'unchanged'}, (
+        'Fresh Pixi activation removes old prefix and duplicate paths but keeps compiler tools'
+    )
+    assert environment['PATH'].count(str(needed)) == 2, (
+        'Preparing the child activation must leave the original parent environment untouched'
+    )
+    library = binary.parent / 'edi_core.lib'
+    library.write_bytes(b'authored archive-path control, not compiled content')
+    assert (
+        native_process.native_static_library(library.parent.parent / 'libedi_core.a') == library
+    ), 'The Windows native archive uses its .lib name in the actual Release configuration'
+    assert native_process.native_static_library(library) == library, (
+        'Selecting an already native library path preserves its exact filename'
+    )
     consumer.os.environ['EDI_MAGNETIC_INTEGRATION_TEST_EXE'] = str(tmp_path / 'missing.exe')
     with pytest.raises(AssertionError, match='missing downstream consumer is a failure'):
         consumer.native_consumers.__wrapped__()
 
 
 def test_authored_python_spy_reaches_declared_and_refused_argv_without_an_ambient_tool(tmp_path):
-    program = tmp_path / 'fixture-read'
+    directory = tmp_path / 'fixture commands'
+    directory.mkdir()
+    program = directory / 'fixture-read'
+    ambient = tmp_path / 'ambient'
+    ambient.mkdir()
+    foreign = ambient / 'fixture-read'
+    foreign.write_text('#!/bin/sh\nexit 91\n', newline='\n')
+    foreign.chmod(0o755)
     native_process.python_program(
         program,
         'import sys\nprint("FIXTURE_ARGV", repr(sys.argv[1:]))\n'
@@ -96,8 +140,13 @@ def test_authored_python_spy_reaches_declared_and_refused_argv_without_an_ambien
     )
     for arguments, expected in [(['--declared', 'value with spaces'], 0), (['--unknown'], 64)]:
         result = subprocess.run(
-            [native_process.environment_bash(), str(program), *arguments],
-            env=os.environ.copy(),
+            native_process.fixture_shell(
+                directory,
+                'test "$(command -v fixture-read)" = "$fixture_bin/fixture-read" || exit 92; '
+                'fixture-read "$@"',
+            )
+            + arguments,
+            env={**os.environ, 'PATH': str(ambient) + os.pathsep + os.environ['PATH']},
             capture_output=True,
             text=True,
             check=False,

@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T14:29:43Z
+# measured_utc = 2026-11-14T16:32:41Z
 #
-# Recorded from: measured test run (65 node(s) measured once, 176303 banked, 0 stale row(s) dropped)
-# Collected tests: 245156; with a reported duration: 77164
+# Recorded from: measured test run (74 node(s) measured once, 176274 banked, 0 stale row(s) dropped)
+# Collected tests: 245156; with a reported duration: 77167
 # Module-scoped fixture costs recorded: 191
 #
 # Breaches are decided PER TIER against the table
@@ -1984,7 +1984,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.042	tests/integration/py/test_c11_t57_minimizer_roundtrip.py::test_loader_legal_type_survives_repeated_save[literal-backslash]
 0.051	tests/integration/py/test_c11_t57_minimizer_roundtrip.py::test_loader_legal_type_survives_repeated_save[literal-dot]
 0.042	tests/integration/py/test_c11_t57_minimizer_roundtrip.py::test_loader_legal_type_survives_repeated_save[literal-question]
-0.042	tests/integration/py/test_c11_t57_minimizer_roundtrip.py::test_loader_legal_type_survives_repeated_save[multiline]
+0.300	tests/integration/py/test_c11_t57_minimizer_roundtrip.py::test_loader_legal_type_survives_repeated_save[multiline]
 0.044	tests/integration/py/test_c11_t57_minimizer_roundtrip.py::test_loader_legal_type_survives_repeated_save[padded-whitespace]
 0.042	tests/integration/py/test_c11_t57_minimizer_roundtrip.py::test_loader_legal_type_survives_repeated_save[single-quoted-empty]
 0.042	tests/integration/py/test_c11_t57_minimizer_roundtrip.py::test_loader_legal_type_survives_repeated_save[text-field]
@@ -3349,19 +3349,19 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::t
 0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_reference_retains_its_actual_f_squared_fit_report[sc-neut-cwl_pr2nio4-5c2]
 0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_reference_retains_its_actual_f_squared_fit_report[sc-neut-cwl_tb2ti2o7-heidi]
 0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_reference_retains_its_actual_f_squared_fit_report[sc-neut-tof_taurine-senju]
-0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-agreement]
+0.040	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-agreement]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-native]
 0.630	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-scan]
-0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[descriptor-agreement]
+0.040	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[descriptor-agreement]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[descriptor-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[descriptor-native]
 0.810	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[descriptor-scan]
-0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[inventory-agreement]
+0.060	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[inventory-agreement]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[inventory-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[inventory-native]
 0.930	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[inventory-scan]
-0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-agreement]
+0.040	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-agreement]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-native]
 0.490	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[science-scan]
@@ -163856,7 +163856,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::tes
 0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[science]
 0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_refuses_nonpresentation_and_wrong_old_witnesses[unexpected-field]
 0.000	tests/integration/py/test_descriptive_oracle_adaptation.py::test_descriptive_adaptation_retains_every_scientific_display_and_inventory_witness
-0.220	tests/integration/py/test_desk_build.py::test_default_gui_fetch_uses_pinned_archive_with_digest_and_deadline
+0.010	tests/integration/py/test_desk_build.py::test_default_gui_fetch_uses_pinned_archive_with_digest_and_deadline
 0.120	tests/integration/py/test_desk_build.py::test_failed_configure_preserves_attempt_for_next_no_export_build
 0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[digest]
 0.000	tests/integration/py/test_desk_build.py::test_gui_archive_observer_refuses_url_digest_and_deadline_escapes[duplicate]
@@ -164091,36 +164091,36 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_e04_t11_science_i
 0.110	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_strict_names_do_not_mask_unrelated_spans[ordinary-indexed-expression]
 0.110	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_strict_names_do_not_mask_unrelated_spans[ordinary-string-marker]
 0.130	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_strict_names_do_not_mask_unrelated_spans[ordinary-unrelated-node-string]
-0.210	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-decoded-member-SUBCASE]
-0.230	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-decoded-member-TEST_CASE]
+0.270	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-decoded-member-SUBCASE]
+0.200	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-decoded-member-TEST_CASE]
 0.220	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-decoded-member-TEST_SUITE]
 0.210	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-decoded-member-pytest-parameter]
-0.210	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-decoded-member-runtime-node]
-0.210	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-ordinary-SUBCASE]
-0.270	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-ordinary-TEST_CASE]
-0.210	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-ordinary-TEST_SUITE]
-0.240	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-ordinary-pytest-parameter]
+0.190	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-decoded-member-runtime-node]
+0.250	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-ordinary-SUBCASE]
+0.250	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-ordinary-TEST_CASE]
+0.290	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-ordinary-TEST_SUITE]
+0.270	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-ordinary-pytest-parameter]
 0.210	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[pr-ordinary-runtime-node]
-0.180	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-decoded-member-SUBCASE]
-0.220	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-decoded-member-TEST_CASE]
-0.230	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-decoded-member-TEST_SUITE]
-0.210	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-decoded-member-pytest-parameter]
+0.290	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-decoded-member-SUBCASE]
+0.250	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-decoded-member-TEST_CASE]
+0.290	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-decoded-member-TEST_SUITE]
+0.280	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-decoded-member-pytest-parameter]
 0.210	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-decoded-member-runtime-node]
-0.200	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-ordinary-SUBCASE]
-0.220	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-ordinary-TEST_CASE]
-0.240	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-ordinary-TEST_SUITE]
-0.230	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-ordinary-pytest-parameter]
-0.220	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-ordinary-runtime-node]
-0.230	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-decoded-member-SUBCASE]
-0.240	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-decoded-member-TEST_CASE]
-0.240	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-decoded-member-TEST_SUITE]
-0.230	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-decoded-member-pytest-parameter]
-0.220	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-decoded-member-runtime-node]
-0.240	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-ordinary-SUBCASE]
-0.240	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-ordinary-TEST_CASE]
-0.210	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-ordinary-TEST_SUITE]
-0.248	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-ordinary-pytest-parameter]
-0.210	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-ordinary-runtime-node]
+0.280	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-ordinary-SUBCASE]
+0.270	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-ordinary-TEST_CASE]
+0.270	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-ordinary-TEST_SUITE]
+0.200	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-ordinary-pytest-parameter]
+0.260	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[push-ordinary-runtime-node]
+0.200	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-decoded-member-SUBCASE]
+0.270	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-decoded-member-TEST_CASE]
+0.270	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-decoded-member-TEST_SUITE]
+0.250	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-decoded-member-pytest-parameter]
+0.370	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-decoded-member-runtime-node]
+0.460	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-ordinary-SUBCASE]
+0.230	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-ordinary-TEST_CASE]
+0.300	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-ordinary-TEST_SUITE]
+0.253	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-ordinary-pytest-parameter]
+0.240	tests/integration/py/test_e04_t12_name_allowance.py::test_e04_t12_supported_test_names_remain_public_compatible[root-ordinary-runtime-node]
 0.200	tests/integration/py/test_e04_t12_public_content.py::test_e04_t12_all_commits_in_the_range_are_checked
 0.350	tests/integration/py/test_e04_t12_public_content.py::test_e04_t12_commit_metadata_escapes_are_refused[issue-id]
 0.380	tests/integration/py/test_e04_t12_public_content.py::test_e04_t12_commit_metadata_escapes_are_refused[lane-id]
@@ -165617,8 +165617,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::test_tof_capability_load_keeps_value_and_uncertainty[abscor2]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::test_tof_capability_load_keeps_value_and_uncertainty[calib_d_to_tof_reciprocal]
 0.100	tests/integration/py/test_fittability_loading.py::test_wavelength_can_fit_when_dispersion_is_explicitly_none
-0.120	tests/integration/py/test_fittability_saved_bytes.py::test_main_fitted_descriptor_bytes_regression_pin[iucr_19-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project]
-0.120	tests/integration/py/test_fittability_saved_bytes.py::test_main_fitted_descriptor_bytes_regression_pin[iucr_99-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project]
+0.350	tests/integration/py/test_fittability_saved_bytes.py::test_main_fitted_descriptor_bytes_regression_pin[iucr_19-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project]
+0.340	tests/integration/py/test_fittability_saved_bytes.py::test_main_fitted_descriptor_bytes_regression_pin[iucr_99-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-app/examples/pd-xray-cwl_lif/project]
 0.020	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-docs/user/cli/pd-neut-cwl_cosio-d20/project]
 0.100	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project]
@@ -165954,8 +165954,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py:
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[single]
 0.010	tests/integration/py/test_free_header_declaration.py::test_analysis_free_header_declares_the_owner_radio_popup
 0.350	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t4_existing_tof_writer_goldens_remain_byte_exact
-0.310	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t56_datablock_bytes_match_pre_fix_regression_pins
-0.050	tests/integration/py/test_fullprof_public_logs.py::test_authoring_capture_scrubs_paths_and_preserves_program_evidence
+0.990	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t56_datablock_bytes_match_pre_fix_regression_pins
+0.040	tests/integration/py/test_fullprof_public_logs.py::test_authoring_capture_scrubs_paths_and_preserves_program_evidence
 0.030	tests/integration/py/test_fullprof_public_logs.py::test_every_committed_fullprof_log_is_scrubbed_and_its_receipt_matches
 0.014	tests/integration/py/test_historical_correlation_rename.py::test_removed_rows_keep_both_historical_endpoints_on_block_rename[category-experiment-link-remove-compact]
 0.016	tests/integration/py/test_historical_correlation_rename.py::test_removed_rows_keep_both_historical_endpoints_on_block_rename[category-experiment-link-remove-public]
@@ -166088,31 +166088,31 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_ionic_xray_factors.py::t
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[line-segment]
 0.000	tests/integration/py/test_legacy_project_load.py::test_old_engine_start_state_is_refused_with_its_name[polynomial]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-reorder-record]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-reorder-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-reorder-rows]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-replace-record]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-replace-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[alias-replace-rows]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-undo-record]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-undo-rows]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-write-undo-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-write-undo-record]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[clear-write-undo-rows]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[coefficient-write-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[coefficient-write-record]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[coefficient-write-rows]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[file-switch-record]
-0.030	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[file-switch-rows]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[name-rename-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[file-switch-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[file-switch-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[name-rename-record]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[name-rename-rows]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[owner-replace-record]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[owner-replace-rows]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[repeat-record]
-0.024	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[repeat-rows]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[replace-undo-record]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[replace-undo-rows]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[same-value-write-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[owner-replace-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[owner-replace-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[repeat-record]
+0.014	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[repeat-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[replace-undo-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[replace-undo-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[same-value-write-record]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[same-value-write-rows]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[second-coefficient-write-record]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[second-coefficient-write-record]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[second-coefficient-write-rows]
 0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[tail-alias-replace-record]
-0.020	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[tail-alias-replace-rows]
+0.010	tests/integration/py/test_loaded_correlation_cache.py::test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_writes[tail-alias-replace-rows]
 0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_consumer_stages_only_a_missing_app_gui_prerequisite[cold-app]
 0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_consumer_stages_only_a_missing_app_gui_prerequisite[core]
 0.000	tests/integration/py/test_locked_gui_fixture.py::test_locked_consumer_stages_only_a_missing_app_gui_prerequisite[explicit-app]
@@ -167795,7 +167795,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.000	tests/integration/py/test_plain_data.py::test_plain_data_rows_and_named_upstream_differences[tof/unsorted_duplicates]
 0.000	tests/integration/py/test_plain_data_build.py::test_build_passes_a_numeric_budget_to_cmake[False]
 0.000	tests/integration/py/test_plain_data_build.py::test_build_passes_a_numeric_budget_to_cmake[True]
-0.020	tests/integration/py/test_plain_data_build.py::test_completed_build_retains_its_failure_output
+0.150	tests/integration/py/test_plain_data_build.py::test_completed_build_retains_its_failure_output
 0.000	tests/integration/py/test_plain_data_build.py::test_invalid_worker_budget_refuses_before_build[-1]
 0.000	tests/integration/py/test_plain_data_build.py::test_invalid_worker_budget_refuses_before_build[0]
 0.000	tests/integration/py/test_plain_data_build.py::test_invalid_worker_budget_refuses_before_build[2.5]
@@ -167840,7 +167840,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::te
 0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[False]
 0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[True]
 0.060	tests/integration/py/test_platform_fixture_runtime.py::test_authored_python_spy_reaches_declared_and_refused_argv_without_an_ambient_tool
-0.010	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[path]
+0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[path]
 0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[string]
 0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_native_consumer_uses_release_executable_and_honours_exact_override
 0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_node_uses_the_interpreter_environment_root
@@ -170676,8 +170676,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_webp.py::test_t
 0.000	tests/integration/py/test_wasm_ci_inputs.py::test_shared_cache_rejects_missing_save_wrong_identity_and_bypassed_validation
 0.100	tests/integration/py/test_wasm_ci_inputs.py::test_survey_browser_checks_run_after_the_shared_chrome_toolchain_is_installed
 0.060	tests/integration/py/test_wasm_ci_inputs.py::test_wasm_change_filter_covers_every_shared_build_input_and_rejects_omissions
-0.018	tests/integration/py/test_weight_fraction_app.py::test_linked_structure_table_displays_weight_fraction_without_an_editor
-0.210	tests/integration/py/test_weight_fraction_app.py::test_single_fraction_cell_renders_unity_and_preserves_multiphase_formatting
+0.823	tests/integration/py/test_weight_fraction_app.py::test_linked_structure_table_displays_weight_fraction_without_an_editor
+0.290	tests/integration/py/test_weight_fraction_app.py::test_single_fraction_cell_renders_unity_and_preserves_multiphase_formatting
 0.020	tests/integration/py/test_weight_fraction_app.py::test_weight_fraction_role_and_menu_preserve_live_uncertainty_and_single_phase_unity
 0.070	tests/integration/py/test_weight_fractions.py::test_derived_weight_fraction_and_su_are_written_to_edi[False]
 0.050	tests/integration/py/test_weight_fractions.py::test_derived_weight_fraction_and_su_are_written_to_edi[True]
@@ -245638,10 +245638,10 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 1.250	tests/integration/app/test_tooltip_delay.py
 # module-cost: 3.111	tests/integration/py/test_compiler_launcher_probes.py
 # module-cost: 1.522	tests/integration/py/test_cosio_heidi_collection.py
-# module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
-# module-cost: 0.254	tests/integration/py/test_e09_t75_sdk_consumer.py
+# module-cost: 0.357	tests/integration/py/test_e04_t12_name_allowance.py
+# module-cost: 0.146	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 0.574	tests/integration/py/test_independent_experiments.py
-# module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
+# module-cost: 30.446	tests/integration/py/test_loaded_correlation_cache.py
 # module-cost: 0.191	tests/integration/py/test_native_serialized_source_admission.py
 # module-cost: 14.337	tests/integration/py/test_parameter_table_notation.py
 # module-cost: 0.956	tests/integration/py/test_plain_data_picker.py
@@ -245651,8 +245651,8 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 7.014	tests/integration/py/test_scan_undefined_magnetic_su.py
-# module-cost: 0.120	tests/integration/py/test_tutorial_case_records.py
-# module-cost: 1.002	tests/integration/py/test_weight_fraction_app.py
+# module-cost: 0.197	tests/integration/py/test_tutorial_case_records.py
+# module-cost: 2.667	tests/integration/py/test_weight_fraction_app.py
 # module-cost: 2.769	tests/system/py/test_adoption_listener_boundaries.py
 # module-cost: 11.310	tests/system/py/test_app_minimum.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py

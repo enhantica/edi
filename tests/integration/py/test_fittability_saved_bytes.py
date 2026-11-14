@@ -1,9 +1,11 @@
 """Main regression pins: exact inputs and numeric fitted outputs at parity precision."""
 
+import base64
 import importlib
 import json
 import re
 import warnings
+import zlib
 from decimal import Decimal
 from pathlib import Path
 
@@ -197,5 +199,10 @@ def test_main_fitted_descriptor_bytes_regression_pin(tmp_path, case, rule):
     assert actual == REFERENCE['fit_projects'][case][rule], (
         'The fitted crystal-radius regression preserves every saved path and non-fitted byte '
         'under both s.u. rules, with checked fitted numbers, clocks and hash-verified '
-        'category movement and description spelling'
+        'category movement and description spelling; canonical experiment zlib/base64: '
+        + (
+            base64.b64encode(zlib.compress(experiment)).decode()
+            if actual != REFERENCE['fit_projects'][case][rule]
+            else ''
+        )
     )
