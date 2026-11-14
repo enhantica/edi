@@ -32,7 +32,12 @@ EaComponents.ApplicationWindow {
     // with it. The bar keeps its height.
     property real trafficLightsLeft: -1
     function setUpMergedTitleBar() {
-        if (!mergedTitleBar || Qt.platform.os !== "osx")
+        if (!mergedTitleBar)
+            return;
+        // Our left and right buttons sit 6 px lower, clear of the system buttons; the page tabs stay.
+        appBar.children[0].anchors.verticalCenterOffset = 6;
+        appBar.children[2].anchors.verticalCenterOffset = 6;
+        if (Qt.platform.os !== "osx")
             return;
         const left = appBar.children[0];
         const base = left.anchors.leftMargin;
