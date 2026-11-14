@@ -159,12 +159,15 @@ project.display.pattern('heidi_300k')
 # Larson's anisotropic extinction, its six coefficients starting at zero.
 
 # %%
-experiment_300k.extinction.coefficient_11.free = True
-experiment_300k.extinction.coefficient_22.free = True
-experiment_300k.extinction.coefficient_33.free = True
-experiment_300k.extinction.coefficient_12.free = True
-experiment_300k.extinction.coefficient_13.free = True
-experiment_300k.extinction.coefficient_23.free = True
+for parameter in (
+    experiment_300k.extinction.coefficient_11,
+    experiment_300k.extinction.coefficient_22,
+    experiment_300k.extinction.coefficient_33,
+    experiment_300k.extinction.coefficient_12,
+    experiment_300k.extinction.coefficient_13,
+    experiment_300k.extinction.coefficient_23,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -210,12 +213,15 @@ project.display.pattern('heidi_55k')
 # Co1's tensor would stop being positive definite, so the extinction comes before them here.
 
 # %%
-experiment_55k.extinction.coefficient_11.free = True
-experiment_55k.extinction.coefficient_22.free = True
-experiment_55k.extinction.coefficient_33.free = True
-experiment_55k.extinction.coefficient_12.free = True
-experiment_55k.extinction.coefficient_13.free = True
-experiment_55k.extinction.coefficient_23.free = True
+for parameter in (
+    experiment_55k.extinction.coefficient_11,
+    experiment_55k.extinction.coefficient_22,
+    experiment_55k.extinction.coefficient_33,
+    experiment_55k.extinction.coefficient_12,
+    experiment_55k.extinction.coefficient_13,
+    experiment_55k.extinction.coefficient_23,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -280,12 +286,15 @@ project.display.pattern('heidi_2k5')
 # ### 2.5 K: extinction
 
 # %%
-experiment_2k5.extinction.coefficient_11.free = True
-experiment_2k5.extinction.coefficient_22.free = True
-experiment_2k5.extinction.coefficient_33.free = True
-experiment_2k5.extinction.coefficient_12.free = True
-experiment_2k5.extinction.coefficient_13.free = True
-experiment_2k5.extinction.coefficient_23.free = True
+for parameter in (
+    experiment_2k5.extinction.coefficient_11,
+    experiment_2k5.extinction.coefficient_22,
+    experiment_2k5.extinction.coefficient_33,
+    experiment_2k5.extinction.coefficient_12,
+    experiment_2k5.extinction.coefficient_13,
+    experiment_2k5.extinction.coefficient_23,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -328,10 +337,13 @@ project.display.pattern('heidi_2k5')
 # magnetic intensity has no slope, so the fit starts them at 1 μB and says so.
 
 # %%
-structure_2k5.atom_site_moment['Co1'].crystalaxis_x.free = True
-structure_2k5.atom_site_moment['Co1'].crystalaxis_y.free = True
-structure_2k5.atom_site_moment['Co1'].crystalaxis_z.free = True
-structure_2k5.atom_site_moment['Co2'].crystalaxis_y.free = True
+for parameter in (
+    structure_2k5.atom_site_moment['Co1'].crystalaxis_x,
+    structure_2k5.atom_site_moment['Co1'].crystalaxis_y,
+    structure_2k5.atom_site_moment['Co1'].crystalaxis_z,
+    structure_2k5.atom_site_moment['Co2'].crystalaxis_y,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()

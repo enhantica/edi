@@ -163,10 +163,13 @@ project.display.pattern('p021')
 # The Gaussian widths and the Lorentzian X.
 
 # %%
-experiment.peak.broad_gauss_u.free = True
-experiment.peak.broad_gauss_v.free = True
-experiment.peak.broad_gauss_w.free = True
-experiment.peak.broad_lorentz_x.free = True
+for parameter in (
+    experiment.peak.broad_gauss_u,
+    experiment.peak.broad_gauss_v,
+    experiment.peak.broad_gauss_w,
+    experiment.peak.broad_lorentz_x,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()

@@ -121,10 +121,13 @@ project.display.pattern('d20')
 # fits a peak asymmetry; this case's profile has none.
 
 # %%
-experiment.peak.broad_gauss_u.free = True
-experiment.peak.broad_gauss_v.free = True
-experiment.peak.broad_gauss_w.free = True
-experiment.peak.broad_lorentz_y.free = True
+for parameter in (
+    experiment.peak.broad_gauss_u,
+    experiment.peak.broad_gauss_v,
+    experiment.peak.broad_gauss_w,
+    experiment.peak.broad_lorentz_y,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()

@@ -128,10 +128,13 @@ project.display.pattern('hrpt')
 # the Lorentzian Y where this profile has η₀.
 
 # %%
-experiment.peak.broad_gauss_u.free = True
-experiment.peak.broad_gauss_v.free = True
-experiment.peak.broad_gauss_w.free = True
-experiment.peak.mixing_eta_0.free = True
+for parameter in (
+    experiment.peak.broad_gauss_u,
+    experiment.peak.broad_gauss_v,
+    experiment.peak.broad_gauss_w,
+    experiment.peak.mixing_eta_0,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -179,10 +182,13 @@ project.display.pattern('hrpt')
 # Last, the four Bérar-Baldinozzi asymmetry terms.
 
 # %%
-experiment.peak.asym_beba_a0.free = True
-experiment.peak.asym_beba_b0.free = True
-experiment.peak.asym_beba_a1.free = True
-experiment.peak.asym_beba_b1.free = True
+for parameter in (
+    experiment.peak.asym_beba_a0,
+    experiment.peak.asym_beba_b0,
+    experiment.peak.asym_beba_a1,
+    experiment.peak.asym_beba_b1,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()

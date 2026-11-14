@@ -229,10 +229,13 @@ project.display.pattern('d20')
 # Last, the moments: Co1 in any direction, Co2 along b.
 
 # %%
-structure.atom_site_moment['Co1'].crystalaxis_x.free = True
-structure.atom_site_moment['Co1'].crystalaxis_y.free = True
-structure.atom_site_moment['Co1'].crystalaxis_z.free = True
-structure.atom_site_moment['Co2'].crystalaxis_y.free = True
+for parameter in (
+    structure.atom_site_moment['Co1'].crystalaxis_x,
+    structure.atom_site_moment['Co1'].crystalaxis_y,
+    structure.atom_site_moment['Co1'].crystalaxis_z,
+    structure.atom_site_moment['Co2'].crystalaxis_y,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()

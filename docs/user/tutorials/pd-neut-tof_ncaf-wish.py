@@ -347,21 +347,27 @@ project.display.pattern('wish_1_10')
 # height.
 
 # %%
-wish_1_10.linked_structures['ncaf'].scale.free = True
-wish_1_10.instrument.calib_d_to_tof_offset.free = True
-wish_1_10.instrument.calib_d_to_tof_linear.free = True
-wish_2_9.linked_structures['ncaf'].scale.free = True
-wish_2_9.instrument.calib_d_to_tof_offset.free = True
-wish_2_9.instrument.calib_d_to_tof_linear.free = True
-wish_3_8.linked_structures['ncaf'].scale.free = True
-wish_3_8.instrument.calib_d_to_tof_offset.free = True
-wish_3_8.instrument.calib_d_to_tof_linear.free = True
-wish_4_7.linked_structures['ncaf'].scale.free = True
-wish_4_7.instrument.calib_d_to_tof_offset.free = True
-wish_4_7.instrument.calib_d_to_tof_linear.free = True
-wish_5_6.linked_structures['ncaf'].scale.free = True
-wish_5_6.instrument.calib_d_to_tof_offset.free = True
-wish_5_6.instrument.calib_d_to_tof_linear.free = True
+for parameter in (
+    wish_1_10.linked_structures['ncaf'].scale,
+    wish_2_9.linked_structures['ncaf'].scale,
+    wish_3_8.linked_structures['ncaf'].scale,
+    wish_4_7.linked_structures['ncaf'].scale,
+    wish_5_6.linked_structures['ncaf'].scale,
+):
+    parameter.free = True
+for parameter in (
+    wish_1_10.instrument.calib_d_to_tof_offset,
+    wish_1_10.instrument.calib_d_to_tof_linear,
+    wish_2_9.instrument.calib_d_to_tof_offset,
+    wish_2_9.instrument.calib_d_to_tof_linear,
+    wish_3_8.instrument.calib_d_to_tof_offset,
+    wish_3_8.instrument.calib_d_to_tof_linear,
+    wish_4_7.instrument.calib_d_to_tof_offset,
+    wish_4_7.instrument.calib_d_to_tof_linear,
+    wish_5_6.instrument.calib_d_to_tof_offset,
+    wish_5_6.instrument.calib_d_to_tof_linear,
+):
+    parameter.free = True
 
 # %%
 project.display.parameters.free()
@@ -430,22 +436,25 @@ project.display.pattern('wish_5_6')
 # instrument values.
 
 # %%
-wish_2_9.peak.rise_alpha_0.free = True
-wish_2_9.peak.rise_alpha_1.free = True
-wish_2_9.peak.decay_beta_0.free = True
-wish_2_9.peak.decay_beta_1.free = True
-wish_3_8.peak.rise_alpha_0.free = True
-wish_3_8.peak.rise_alpha_1.free = True
-wish_3_8.peak.decay_beta_0.free = True
-wish_3_8.peak.decay_beta_1.free = True
-wish_4_7.peak.rise_alpha_0.free = True
-wish_4_7.peak.rise_alpha_1.free = True
-wish_4_7.peak.decay_beta_0.free = True
-wish_4_7.peak.decay_beta_1.free = True
-wish_5_6.peak.rise_alpha_0.free = True
-wish_5_6.peak.rise_alpha_1.free = True
-wish_5_6.peak.decay_beta_0.free = True
-wish_5_6.peak.decay_beta_1.free = True
+for parameter in (
+    wish_2_9.peak.rise_alpha_0,
+    wish_2_9.peak.rise_alpha_1,
+    wish_2_9.peak.decay_beta_0,
+    wish_2_9.peak.decay_beta_1,
+    wish_3_8.peak.rise_alpha_0,
+    wish_3_8.peak.rise_alpha_1,
+    wish_3_8.peak.decay_beta_0,
+    wish_3_8.peak.decay_beta_1,
+    wish_4_7.peak.rise_alpha_0,
+    wish_4_7.peak.rise_alpha_1,
+    wish_4_7.peak.decay_beta_0,
+    wish_4_7.peak.decay_beta_1,
+    wish_5_6.peak.rise_alpha_0,
+    wish_5_6.peak.rise_alpha_1,
+    wish_5_6.peak.decay_beta_0,
+    wish_5_6.peak.decay_beta_1,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -460,13 +469,16 @@ project.display.pattern('wish_2_9')
 # The Gaussian width terms the banks' data determine.
 
 # %%
-wish_2_9.peak.broad_gauss_sigma_1.free = True
-wish_2_9.peak.broad_gauss_sigma_2.free = True
-wish_3_8.peak.broad_gauss_sigma_1.free = True
-wish_3_8.peak.broad_gauss_sigma_2.free = True
-wish_4_7.peak.broad_gauss_sigma_1.free = True
-wish_4_7.peak.broad_gauss_sigma_2.free = True
-wish_5_6.peak.broad_gauss_sigma_2.free = True
+for parameter in (
+    wish_2_9.peak.broad_gauss_sigma_1,
+    wish_2_9.peak.broad_gauss_sigma_2,
+    wish_3_8.peak.broad_gauss_sigma_1,
+    wish_3_8.peak.broad_gauss_sigma_2,
+    wish_4_7.peak.broad_gauss_sigma_1,
+    wish_4_7.peak.broad_gauss_sigma_2,
+    wish_5_6.peak.broad_gauss_sigma_2,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -508,10 +520,13 @@ project.display.pattern('wish_5_6')
 # Banks 2-9 to 5-6 each fit their absorption.
 
 # %%
-wish_2_9.absorption.abscor1.free = True
-wish_3_8.absorption.abscor1.free = True
-wish_4_7.absorption.abscor1.free = True
-wish_5_6.absorption.abscor1.free = True
+for parameter in (
+    wish_2_9.absorption.abscor1,
+    wish_3_8.absorption.abscor1,
+    wish_4_7.absorption.abscor1,
+    wish_5_6.absorption.abscor1,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()

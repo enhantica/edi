@@ -113,11 +113,14 @@ project.display.pattern('spodi')
 # Both phases' cells and scales, and the zero shift, put the peaks of both phases in place.
 
 # %%
-yalo3.cell.length_a.free = True
-yalo3.cell.length_b.free = True
-yalo3.cell.length_c.free = True
-alumina.cell.length_a.free = True
-alumina.cell.length_c.free = True
+for parameter in (
+    yalo3.cell.length_a,
+    yalo3.cell.length_b,
+    yalo3.cell.length_c,
+    alumina.cell.length_a,
+    alumina.cell.length_c,
+):
+    parameter.free = True
 experiment.linked_structures['YAlO3'].scale.free = True
 experiment.linked_structures['Al2O3'].scale.free = True
 experiment.instrument.calib_twotheta_offset.free = True
@@ -149,10 +152,13 @@ project.display.pattern('spodi')
 # The Gaussian widths and the mixing η₀.
 
 # %%
-experiment.peak.broad_gauss_u.free = True
-experiment.peak.broad_gauss_v.free = True
-experiment.peak.broad_gauss_w.free = True
-experiment.peak.mixing_eta_0.free = True
+for parameter in (
+    experiment.peak.broad_gauss_u,
+    experiment.peak.broad_gauss_v,
+    experiment.peak.broad_gauss_w,
+    experiment.peak.mixing_eta_0,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -167,10 +173,13 @@ project.display.pattern('spodi')
 # The four Bérar-Baldinozzi asymmetry terms.
 
 # %%
-experiment.peak.asym_beba_a0.free = True
-experiment.peak.asym_beba_b0.free = True
-experiment.peak.asym_beba_a1.free = True
-experiment.peak.asym_beba_b1.free = True
+for parameter in (
+    experiment.peak.asym_beba_a0,
+    experiment.peak.asym_beba_b0,
+    experiment.peak.asym_beba_a1,
+    experiment.peak.asym_beba_b1,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -185,15 +194,18 @@ project.display.pattern('spodi')
 # The coordinates the symmetry leaves free in both phases.
 
 # %%
-yalo3.atom_sites['Y'].fract_x.free = True
-yalo3.atom_sites['Y'].fract_y.free = True
-yalo3.atom_sites['O1'].fract_x.free = True
-yalo3.atom_sites['O1'].fract_y.free = True
-yalo3.atom_sites['O2'].fract_x.free = True
-yalo3.atom_sites['O2'].fract_y.free = True
-yalo3.atom_sites['O2'].fract_z.free = True
-alumina.atom_sites['Al1'].fract_z.free = True
-alumina.atom_sites['O1'].fract_x.free = True
+for parameter in (
+    yalo3.atom_sites['Y'].fract_x,
+    yalo3.atom_sites['Y'].fract_y,
+    yalo3.atom_sites['O1'].fract_x,
+    yalo3.atom_sites['O1'].fract_y,
+    yalo3.atom_sites['O2'].fract_x,
+    yalo3.atom_sites['O2'].fract_y,
+    yalo3.atom_sites['O2'].fract_z,
+    alumina.atom_sites['Al1'].fract_z,
+    alumina.atom_sites['O1'].fract_x,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()

@@ -181,13 +181,16 @@ experiment.linked_structures['latp'].scale.free = True
 experiment.linked_structures['alpo4_c2221'].scale.free = True
 experiment.linked_structures['alpo4_p63mc'].scale.free = True
 experiment.instrument.calib_twotheta_offset.free = True
-latp.cell.length_a.free = True
-latp.cell.length_c.free = True
-c2221.cell.length_a.free = True
-c2221.cell.length_b.free = True
-c2221.cell.length_c.free = True
-p63mc.cell.length_a.free = True
-p63mc.cell.length_c.free = True
+for parameter in (
+    latp.cell.length_a,
+    latp.cell.length_c,
+    c2221.cell.length_a,
+    c2221.cell.length_b,
+    c2221.cell.length_c,
+    p63mc.cell.length_a,
+    p63mc.cell.length_c,
+):
+    parameter.free = True
 
 # %%
 project.display.parameters.free()
@@ -217,10 +220,13 @@ project.display.pattern('bm01')
 # ### Peak widths
 
 # %%
-experiment.peak.broad_gauss_u.free = True
-experiment.peak.broad_gauss_v.free = True
-experiment.peak.broad_gauss_w.free = True
-experiment.peak.mixing_eta_0.free = True
+for parameter in (
+    experiment.peak.broad_gauss_u,
+    experiment.peak.broad_gauss_v,
+    experiment.peak.broad_gauss_w,
+    experiment.peak.mixing_eta_0,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -249,14 +255,17 @@ project.display.pattern('bm01')
 # The main phase's free coordinates; Al's follows Ti's.
 
 # %%
-latp.atom_sites['Ti1'].fract_z.free = True
-latp.atom_sites['P1'].fract_x.free = True
-latp.atom_sites['O1'].fract_x.free = True
-latp.atom_sites['O1'].fract_y.free = True
-latp.atom_sites['O1'].fract_z.free = True
-latp.atom_sites['O2'].fract_x.free = True
-latp.atom_sites['O2'].fract_y.free = True
-latp.atom_sites['O2'].fract_z.free = True
+for parameter in (
+    latp.atom_sites['Ti1'].fract_z,
+    latp.atom_sites['P1'].fract_x,
+    latp.atom_sites['O1'].fract_x,
+    latp.atom_sites['O1'].fract_y,
+    latp.atom_sites['O1'].fract_z,
+    latp.atom_sites['O2'].fract_x,
+    latp.atom_sites['O2'].fract_y,
+    latp.atom_sites['O2'].fract_z,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -269,10 +278,13 @@ project.display.pattern('bm01')
 # ### LATP displacements
 
 # %%
-latp.atom_sites['Ti1'].adp_iso.free = True
-latp.atom_sites['P1'].adp_iso.free = True
-latp.atom_sites['O1'].adp_iso.free = True
-latp.atom_sites['O2'].adp_iso.free = True
+for parameter in (
+    latp.atom_sites['Ti1'].adp_iso,
+    latp.atom_sites['P1'].adp_iso,
+    latp.atom_sites['O1'].adp_iso,
+    latp.atom_sites['O2'].adp_iso,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()

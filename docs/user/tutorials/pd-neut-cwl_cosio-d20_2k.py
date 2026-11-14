@@ -117,7 +117,9 @@ project.display.pattern('d20')
 # The first stage frees the phase scale, the 2θ zero shift, the three cell lengths and the magnetic
 # model: the moment components the magnetic space group allows (Co1 in any direction, Co2 only
 # along b) and the j2 term of the Co²⁺ form factor, which sets how the magnetic intensities fall
-# with angle.
+# with angle. They are freed together because at 2 K many peaks are purely magnetic: the scale
+# fitted alone would also absorb the error of the starting moments in those peaks, while freed
+# with the moments it follows the nuclear peaks and the moments follow the magnetic ones.
 
 # %%
 experiment.linked_structures['cosio'].scale.free = True
@@ -125,10 +127,13 @@ experiment.instrument.calib_twotheta_offset.free = True
 structure.cell.length_a.free = True
 structure.cell.length_b.free = True
 structure.cell.length_c.free = True
-structure.atom_site_moment['Co1'].crystalaxis_x.free = True
-structure.atom_site_moment['Co1'].crystalaxis_y.free = True
-structure.atom_site_moment['Co1'].crystalaxis_z.free = True
-structure.atom_site_moment['Co2'].crystalaxis_y.free = True
+for parameter in (
+    structure.atom_site_moment['Co1'].crystalaxis_x,
+    structure.atom_site_moment['Co1'].crystalaxis_y,
+    structure.atom_site_moment['Co1'].crystalaxis_z,
+    structure.atom_site_moment['Co2'].crystalaxis_y,
+):
+    parameter.free = True
 structure.magnetic_form_factor['Co'].j2_coefficient.free = True
 
 # %%
@@ -162,7 +167,9 @@ project.display.pattern('d20')
 #
 # The third stage frees the atoms: each site's isotropic displacement (Co2's follows Co1's by the
 # project's constraint) and the coordinates the symmetry leaves free. Co1 sits on a centre of
-# symmetry, so it has none; the other sites lie on the mirror plane, except O3.
+# symmetry, so it has none; the other sites lie on the mirror plane, except O3. Both are freed in
+# one stage because positions and displacements change the same peak intensities: fitted apart,
+# the one freed first would absorb the error of the other.
 
 # %%
 for site in structure.atom_sites:
@@ -183,10 +190,13 @@ project.display.pattern('d20')
 # The fourth stage frees the peak profile: the Gaussian widths U, V and W and the Lorentzian Y.
 
 # %%
-experiment.peak.broad_gauss_u.free = True
-experiment.peak.broad_gauss_v.free = True
-experiment.peak.broad_gauss_w.free = True
-experiment.peak.broad_lorentz_y.free = True
+for parameter in (
+    experiment.peak.broad_gauss_u,
+    experiment.peak.broad_gauss_v,
+    experiment.peak.broad_gauss_w,
+    experiment.peak.broad_lorentz_y,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()

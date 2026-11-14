@@ -256,14 +256,17 @@ project.display.pattern('expt_n2')
 # Each bank's widths.
 
 # %%
-bank_s2.peak.broad_gauss_sigma_0.free = True
-bank_s2.peak.broad_gauss_sigma_1.free = True
-bank_s2.peak.broad_gauss_sigma_2.free = True
-bank_s2.peak.broad_lorentz_gamma_0.free = True
-bank_n2.peak.broad_gauss_sigma_0.free = True
-bank_n2.peak.broad_gauss_sigma_1.free = True
-bank_n2.peak.broad_gauss_sigma_2.free = True
-bank_n2.peak.broad_lorentz_gamma_0.free = True
+for parameter in (
+    bank_s2.peak.broad_gauss_sigma_0,
+    bank_s2.peak.broad_gauss_sigma_1,
+    bank_s2.peak.broad_gauss_sigma_2,
+    bank_s2.peak.broad_lorentz_gamma_0,
+    bank_n2.peak.broad_gauss_sigma_0,
+    bank_n2.peak.broad_gauss_sigma_1,
+    bank_n2.peak.broad_gauss_sigma_2,
+    bank_n2.peak.broad_lorentz_gamma_0,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()

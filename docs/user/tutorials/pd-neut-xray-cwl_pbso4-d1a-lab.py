@@ -173,14 +173,17 @@ project.display.pattern('lab')
 # ### Peak widths
 
 # %%
-d1a.peak.broad_gauss_u.free = True
-d1a.peak.broad_gauss_v.free = True
-d1a.peak.broad_gauss_w.free = True
-d1a.peak.mixing_eta_0.free = True
-lab.peak.broad_gauss_u.free = True
-lab.peak.broad_gauss_v.free = True
-lab.peak.broad_gauss_w.free = True
-lab.peak.mixing_eta_0.free = True
+for parameter in (
+    d1a.peak.broad_gauss_u,
+    d1a.peak.broad_gauss_v,
+    d1a.peak.broad_gauss_w,
+    d1a.peak.mixing_eta_0,
+    lab.peak.broad_gauss_u,
+    lab.peak.broad_gauss_v,
+    lab.peak.broad_gauss_w,
+    lab.peak.mixing_eta_0,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
@@ -198,10 +201,13 @@ project.display.pattern('lab')
 # The D1A pattern's four Bérar-Baldinozzi terms.
 
 # %%
-d1a.peak.asym_beba_a0.free = True
-d1a.peak.asym_beba_b0.free = True
-d1a.peak.asym_beba_a1.free = True
-d1a.peak.asym_beba_b1.free = True
+for parameter in (
+    d1a.peak.asym_beba_a0,
+    d1a.peak.asym_beba_b0,
+    d1a.peak.asym_beba_a1,
+    d1a.peak.asym_beba_b1,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()

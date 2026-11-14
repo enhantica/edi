@@ -144,10 +144,13 @@ project.display.pattern('lab')
 # ### Peak widths
 
 # %%
-lab.peak.broad_gauss_u.free = True
-lab.peak.broad_gauss_v.free = True
-lab.peak.broad_gauss_w.free = True
-lab.peak.mixing_eta_0.free = True
+for parameter in (
+    lab.peak.broad_gauss_u,
+    lab.peak.broad_gauss_v,
+    lab.peak.broad_gauss_w,
+    lab.peak.mixing_eta_0,
+):
+    parameter.free = True
 
 # %%
 project.analysis.fit()
