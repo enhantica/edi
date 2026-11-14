@@ -3,6 +3,7 @@
 import copy
 import json
 import math
+import shutil
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -15,12 +16,123 @@ from tests.system.py import test_e04_t11_wasm_fit as wasm_fit
 ROOT = Path(__file__).resolve().parents[3]
 
 
+def tree_bytes(root):
+    return {
+        path.relative_to(root): path.read_bytes()
+        for path in sorted(root.rglob('*'))
+        if path.is_file()
+    }
+
+
+def immutable_sha(path, real, digests):
+    path = Path(path)
+    if path not in digests:
+        return real(path)
+    data = path.read_bytes()
+    if data not in digests[path]:
+        digests[path][data] = real(path)
+    return digests[path][data]
+
+
+@pytest.fixture(scope='module', autouse=True)
+def _immutable_sources():
+    real = SimpleNamespace(
+        inputs=written.inputs,
+        document=written.document,
+        candidates=written.raw_candidates,
+        sha=written.sha,
+    )
+    admitted = real.inputs(ROOT, 'ncaf')
+    fixture, old, source, names, banks = admitted
+    source_bytes = tree_bytes(source)
+    dependencies = [
+        *sorted((ROOT / 'tests/fixtures/e04_t11_wasm/catalogue_scientific').glob('ncaf-*')),
+        iteration_domains.HERE / 'iteration-domains.json',
+        *[
+            ROOT / 'tests/fixtures' / name
+            for name in (
+                'table_display/metadata-inputs.json',
+                'table_display/metadata-inputs.zip',
+                'metadata_transition/retired-source-fields.json',
+                'metadata_transition/retired-source-fields.zip',
+                'metadata_transition/sources.json',
+                'metadata_transition/sources.zip',
+                'metadata_transition/task-inputs.json',
+                'metadata_transition/task-inputs.zip',
+            )
+        ],
+    ]
+    dependency_bytes = {path: path.read_bytes() for path in dependencies}
+    candidates = real.candidates(*admitted[:2], names, banks, source)
+    immutable = copy.deepcopy((fixture, old, names, banks))
+    immutable_json = json.dumps(immutable, sort_keys=True, allow_nan=False)
+    candidate_snapshot = copy.deepcopy(candidates)
+    cache = SimpleNamespace(
+        documents={},
+        digests={
+            path: {path.read_bytes(): real.sha(path)}
+            for path in (
+                *dependency_bytes,
+                *(source / name for name in source_bytes),
+                Path(written.edi._edi.__file__),
+            )
+        },
+    )
+
+    def inputs(root, case):
+        if (root, case) != (ROOT, 'ncaf'):
+            return real.inputs(root, case)
+        if tree_bytes(source) != source_bytes or any(
+            path.read_bytes() != data for path, data in dependency_bytes.items()
+        ):
+            raise ValueError('Shared source setup no longer has its authenticated input bytes')
+        return admitted
+
+    def document(path, name):
+        if path.parent != source and source not in path.parents:
+            return real.document(path, name)
+        key = path, name, path.read_bytes()
+        if key not in cache.documents:
+            cache.documents[key] = real.document(path, name)
+        return cache.documents[key]
+
+    def raw_candidates(actual_fixture, actual_old, actual_names, actual_banks, actual_source):
+        same_objects = all(
+            actual is expected
+            for actual, expected in zip(
+                (actual_fixture, actual_old, actual_names, actual_banks),
+                (fixture, old, names, banks),
+                strict=True,
+            )
+        )
+        if same_objects and actual_source == source and tree_bytes(source) == source_bytes:
+            return candidates
+        return real.candidates(
+            actual_fixture, actual_old, actual_names, actual_banks, actual_source
+        )
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(written, 'inputs', inputs)
+        patch.setattr(written, 'document', document)
+        patch.setattr(written, 'raw_candidates', raw_candidates)
+        patch.setattr(written, 'sha', lambda path: immutable_sha(path, real.sha, cache.digests))
+        yield
+    assert (fixture, old, names, banks) == immutable and json.dumps(
+        (fixture, old, names, banks), sort_keys=True, allow_nan=False
+    ) == immutable_json, (
+        'Shared authenticated source setup cannot be altered by a protocol control'
+    )
+    assert candidates == candidate_snapshot, (
+        'Shared semantic candidates retain every authenticated column and storage identity'
+    )
+
+
 def report_text(record):
     return '\n'.join(key + '=' + value for key, value in record.items())
 
 
 @pytest.fixture(scope='module')
-def historical():
+def historical(_immutable_sources):
     fixture, old, source, names, banks = written.inputs(ROOT, 'ncaf')
     candidates = written.raw_candidates(fixture, old, names, banks, source)
     selected = {column: next(iter(paths)) for column, paths in candidates.items()}
@@ -205,23 +317,29 @@ def test_loaded_snapshot_cannot_hide_retuning_type_aliases_or_missing_original_s
         qualify(historical, current=current if phase == 'current' else None, loaded=loaded)
 
 
-def test_current_raw_population_matches_every_full_report_field(historical, current):
+def test_current_default_wrapper_retains_complete_raw_population(historical, current):
     assert len(qualify(historical, current=current)) == 193, (
         'Current-default checks retain all semantic raw value and SU identities'
     )
-    for field in ('values', 'uncertainty'):
-        for path in current.raw[field]:
-            raw = {**current.raw, field: {**current.raw[field]}}
-            raw[field][path] += max(abs(raw[field][path]) * 1e-5, 1e-4)
-            with pytest.raises(ValueError, match=r'.+'):
-                solver_vehicles.current(
-                    historical.fixture,
-                    historical.old,
-                    raw,
-                    report_text(current.record),
-                    historical.selected,
-                    current.expected,
-                )
+
+
+@pytest.mark.parametrize('column', range(193))
+@pytest.mark.parametrize('field', ['values', 'uncertainty'])
+def test_current_raw_population_matches_every_full_report_field(
+    historical, current, column, field
+):
+    path = historical.selected[column]
+    raw = {**current.raw, field: {**current.raw[field]}}
+    raw[field][path] += max(abs(raw[field][path]) * 1e-5, 1e-4)
+    with pytest.raises(ValueError, match=r'.+'):
+        solver_vehicles.current(
+            historical.fixture,
+            historical.old,
+            raw,
+            report_text(current.record),
+            historical.selected,
+            current.expected,
+        )
 
 
 @pytest.mark.parametrize('field', ['values', 'uncertainty'])
@@ -418,10 +536,10 @@ def test_capture_uses_two_fresh_projects_and_never_carries_historical_settings_i
     )
 
 
-@pytest.fixture
-def capsule(historical, current, tmp_path):
+@pytest.fixture(scope='module', autouse=True)
+def capsule_template(historical, current, tmp_path_factory):
     """A literal metadata envelope deliberately stops before real array validation."""
-    reference = tmp_path / 'protocol-envelope'
+    reference = tmp_path_factory.mktemp('solver-protocol') / 'protocol-envelope'
     (reference / 'historical').mkdir(parents=True)
     project = reference / 'project'
     (project / 'analysis').mkdir(parents=True)
@@ -473,7 +591,16 @@ def capsule(historical, current, tmp_path):
         ),
     }
     (reference / 'result.json').write_text(json.dumps(result))
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(written, 'validate_arrays', array_boundary)
+        with pytest.raises(ReachedArrayValidationError):
+            written.admit(ROOT, 'ncaf', reference)
     return reference
+
+
+@pytest.fixture
+def capsule(capsule_template, tmp_path):
+    return Path(shutil.copytree(capsule_template, tmp_path / 'protocol-envelope'))
 
 
 def array_boundary(*_args):
@@ -516,8 +643,6 @@ def test_admission_requires_both_real_qualifiers_before_ordinary_arrays(capsule,
 )
 def test_capture_custody_cannot_skip_or_resign_a_failed_vehicle(capsule, monkeypatch, escape):
     monkeypatch.setattr(written, 'validate_arrays', array_boundary)
-    with pytest.raises(ReachedArrayValidationError):
-        written.admit(ROOT, 'ncaf', capsule)
     result_path, producer_path = capsule / 'result.json', capsule / 'producer.json'
     result = json.loads(result_path.read_text())
     producer = json.loads(producer_path.read_text())
@@ -535,7 +660,11 @@ def test_capture_custody_cannot_skip_or_resign_a_failed_vehicle(capsule, monkeyp
         'current-loaded-alias',
     }:
         name = alter_capture(capsule, escape)
-        result['captures'][name] = written.sha(capsule / name)
+        digest = written.sha(capsule / name)
+        assert digest != result['captures'][name], (
+            'Every changed dynamic capture must receive its fresh actual byte digest'
+        )
+        result['captures'][name] = digest
     else:
         if escape == 'solver-hash':
             producer['solver_checker_sha256'] = '0' * 64
@@ -543,7 +672,11 @@ def test_capture_custody_cannot_skip_or_resign_a_failed_vehicle(capsule, monkeyp
             name = 'expected.json' if escape == 'expected-hash' else 'PROVENANCE.md'
             producer['current_files'][name] = '0' * 64
         producer_path.write_text(json.dumps(producer))
-        result['producer_sha256'] = written.sha(producer_path)
+        digest = written.sha(producer_path)
+        assert digest != result['producer_sha256'], (
+            'A changed producer envelope must receive its fresh actual byte digest'
+        )
+        result['producer_sha256'] = digest
     result_path.write_text(json.dumps(result))
     with pytest.raises((ValueError, OSError)):
         written.admit(ROOT, 'ncaf', capsule)
@@ -658,3 +791,39 @@ def test_wasm_orchestration_checks_historical_vehicle_before_current_default(
             'current-parity-checked',
         ]
     ), 'A refused historical vehicle cannot be replaced by current backend parity'
+
+
+def test_source_setup_cache_cannot_admit_changed_or_foreign_input(
+    historical, tmp_path, monkeypatch
+):
+    path = historical.source / 'analysis/analysis.edi'
+    before = written.document(path, 'analysis/analysis.edi').find_value(
+        '_minimizer.max_iterations'
+    )
+    original = path.read_bytes()
+    original_digest = written.sha(path)
+    changed = original.replace(b'_minimizer.max_iterations 1000', b'_minimizer.max_iterations 999')
+    assert changed != original and before == '1000', (
+        'The cached positive control authenticates the actual original solver declaration'
+    )
+    read_bytes, read_text = Path.read_bytes, Path.read_text
+
+    def changed_bytes(actual):
+        return changed if actual == path else read_bytes(actual)
+
+    def changed_text(actual, *args, **kwargs):
+        return changed.decode() if actual == path else read_text(actual, *args, **kwargs)
+
+    monkeypatch.setattr(Path, 'read_bytes', changed_bytes)
+    monkeypatch.setattr(Path, 'read_text', changed_text)
+    assert written.sha(path) != original_digest, (
+        'Changed immutable source bytes must invalidate the cached real digest'
+    )
+    assert (
+        written.document(path, 'analysis/analysis.edi').find_value('_minimizer.max_iterations')
+        == '999'
+    ), 'Changed source bytes must reach the real CIF parser after cache population'
+    with pytest.raises((AssertionError, ValueError)):
+        written.inputs(ROOT, 'ncaf')
+    with pytest.raises(FileNotFoundError):
+        written.inputs(tmp_path, 'ncaf')
