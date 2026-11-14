@@ -15,7 +15,7 @@ import yaml
 from tests.fixtures import cif_import_cases as case
 from tests.fixtures.cif_import_baseline.generate_metadata import scalars
 from tests.fixtures.cif_import_baseline.generate_readers import source_path
-from tests.fixtures.metadata_transition.task_inputs import previous_bytes
+from tests.fixtures.metadata_transition.source_bytes import previous_bytes
 
 BASE = Path(__file__).resolve().parents[2] / 'fixtures/cif_import_baseline'
 PINS = json.loads((BASE / 'metadata-before.json').read_text())

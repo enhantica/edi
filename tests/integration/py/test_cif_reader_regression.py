@@ -95,6 +95,13 @@ def test_reader_regression_pin_population_is_not_empty():
     assert reader_values(SILICON + '/structures/lbco.edi', unrelated, unrelated) == unrelated, (
         'An orbit transition must not alter another structure in the same project'
     )
+    retired = {'_absorption_abscor2': ['0'], '_absorption_abscor1': ['0.25']}
+    assert reader_values('retired-zero.edi', retired, retired) == {
+        '_absorption_abscor1': ['0.25']
+    }, 'Only the retired exact-zero field leaves; active absorption values remain exact'
+    for changed in (['1'], ['0', '0']):
+        with pytest.raises(ValueError, match='fixed-zero'):
+            reader_values('changed.edi', {'_absorption_abscor2': changed}, retired)
     before = b'Si Si 0 0 0 a 8 1 0.5 Biso\n'
     after = b'Si Si 0.25 0.25 0.25 a 8 1 0.5 Biso\n'
     assert restore_representative(after, SILICON) == before, (

@@ -49,6 +49,11 @@ def orbit_transition(case):
 
 def reader_values(path, expected, frozen):
     expected = {name: list(values) for name, values in expected.items()}
+    retired = expected.pop('_absorption_abscor2', None)
+    if retired is not None and retired != ['0']:
+        raise ValueError(
+            'Only the retired fixed-zero absorption coefficient may leave a reader pin'
+        )
     transition = task_inputs.rows().get(path)
     if transition is not None and transition['source_commit'] == 'b9bdbf9a2':
         values = []
