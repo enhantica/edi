@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.metadata_transition import pin_sources
 from tests.fixtures.metadata_transition import release_pin_bytes as source
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -25,7 +26,7 @@ def test_complete_release_source_pairs_retain_their_archived_byte_identities():
             after = archive.read(row['after_sha256'])
             assert hashlib.sha256(before).hexdigest() == row['before_sha256']
             assert hashlib.sha256(after).hexdigest() == row['after_sha256']
-            assert (ROOT / name).read_bytes() == after
+            assert pin_sources.previous_bytes(name, (ROOT / name).read_bytes()) == after
             assert source.previous_bytes(name, after) == before
             assert source.previous_bytes(name, before) == before
             source.validate(json.loads(before), json.loads(after), name)

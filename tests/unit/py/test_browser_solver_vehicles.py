@@ -56,6 +56,10 @@ def _immutable_sources():
             for name in (
                 'table_display/metadata-inputs.json',
                 'table_display/metadata-inputs.zip',
+                'metadata_transition/pin-sources.json',
+                'metadata_transition/pin-sources.zip',
+                'metadata_transition/release-pins.json',
+                'metadata_transition/release-pins.zip',
                 'metadata_transition/retired-source-fields.json',
                 'metadata_transition/retired-source-fields.zip',
                 'metadata_transition/sources.json',

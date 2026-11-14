@@ -7,6 +7,7 @@ import zipfile
 from pathlib import Path
 
 from tests.fixtures.metadata_transition import (
+    pin_sources,
     release_pin_bytes,
     retired_source_fields,
     task_inputs,
@@ -17,6 +18,7 @@ HERE = Path(__file__).parent
 
 
 def previous_bytes(name, data):
+    data = pin_sources.previous_bytes(name, data)
     data = release_pin_bytes.previous_bytes(name, data)
     data = retired_source_fields.previous_bytes(name, data)
     data = task_inputs.previous_bytes(name, data)

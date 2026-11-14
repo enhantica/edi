@@ -99,7 +99,7 @@ def pin(expected: dict) -> dict | None:
         return None
     values = {
         name: quantity['value']
-        for name, quantity in expected.get('quantities', {}).items()
+        for name, quantity in expected.get('calc', expected).get('quantities', {}).items()
         if quantity.get('kind') == 'regression-pin'
     }
     return {**source, 'values': values}
@@ -137,7 +137,10 @@ def record(root: Path, row: dict, order: int) -> dict:
         'data': [
             f'{case}-{f.stem}-data'
             for f in sorted((project / 'experiments').glob('*.edi'))
-            if '_data.intensity_meas' in f.read_text(encoding='utf-8')
+            if any(
+                tag in f.read_text(encoding='utf-8')
+                for tag in ('_data.intensity_meas', '_refln.intensity_meas')
+            )
         ],
         # How every interface's tutorial gets its inputs (the owner, 2026-11-08): the structure
         # built by hand or loaded from the collection's CIF; the data from the collection, and for

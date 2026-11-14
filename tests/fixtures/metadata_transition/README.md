@@ -41,3 +41,14 @@ The later CoSiO2K input/parameter-count change is excluded from this projection.
 The seed gate checks the declared stop rule against the complete archived live
 source before comparing an older reconstructed tree: the earlier source predates
 that declaration. Every other original seed blob remains independently pinned.
+
+
+`pin_sources` fills the catalogue's missing source metadata using the last Edi
+commit that contains each identical existing expected document at baseline398a48e.
+It records `kind: committed-document`, the original document hash and its commit
+subject. This is explicitly an archival source identity: no fit, original engine
+binary or independent correctness claim is invented. Complete source documents
+are archived before a surgical `source.pins` insertion. Their values, reference
+classifications, tolerances and every original byte remain unchanged. The byte
+adapter removes only that exact, source-bound metadata before older inventories
+are checked. Simulation records expose their existing `calc.quantities` pins.

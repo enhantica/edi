@@ -112,3 +112,23 @@ The later CoSiO2K changed-input epoch is outside this projection. These witnesse
 prove archived source retention and make no new fit correctness claim. The seed
 stop-rule witness reads its complete live source epoch before the older byte
 projection, so it does not demand a later field in a pre-field archived document.
+
+
+Existing cases whose pin metadata was omitted gain an archival document identity:
+`source.pins.kind` is `committed-document`, `commit` names the Edi commit containing
+the identical prior expected document, and `record_sha256` binds that document.
+The reason identifies its published source and points to the unchanged authored
+provenance for the calculation conditions. No fit is rerun or original engine
+binary identity inferred. The source-only before/after archive and mutation
+controls retain every reference, tolerance, regression value and original byte.
+Simulation records read their existing `calc.quantities`; fitted records keep
+root quantities. Missing provenance continues to refuse future partial records.
+
+
+The measured-data field and collection producer also cover embedded single-crystal
+observations. Existing supplied reflection files are copied byte for byte; other
+measured `_refln` tables export their original h, k, l, intensity and uncertainty
+tokens to a CIF reflection asset, omitting calculated columns. Powder x/y/s.u.
+export retains its existing spelling. Both geometries use the same asset-id and
+sidecar writer. A data-free simulation exports no measurement asset. Malformed
+row cardinality refuses instead of manufacturing observations.

@@ -1,6 +1,12 @@
 {
   "schema": 1,
   "source": {
+    "pins": {
+      "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+      "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+      "kind": "committed-document",
+      "record_sha256": "1f54d7fa911d3bc58e75ba953140b8197b202c7b04d730a8b14b6f237a2d7178"
+    },
     "engine": "FullProf 8.40 (references); edi (regression pins)",
     "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-tof_ferrite-austenite-beer/reference.json",
     "provenance": "PROVENANCE.md"
