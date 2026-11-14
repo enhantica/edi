@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T02:34:23Z
+# measured_utc = 2026-11-14T02:45:29Z
 #
-# Recorded from: measured test run (31 node(s) measured once, 175887 banked, 0 stale row(s) dropped)
-# Collected tests: 244802; with a reported duration: 77072
+# Recorded from: measured test run (3 node(s) measured once, 175918 banked, 0 stale row(s) dropped)
+# Collected tests: 244805; with a reported duration: 77074
 # Module-scoped fixture costs recorded: 190
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 244802
+# inventory_python = 244805
 # inventory_cpp = 402
-# inventory_measured = 175918
+# inventory_measured = 175921
 # inventory_unmeasured = 69286
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85535
+# inventory_pr_python = 85538
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -1813,6 +1813,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.010	tests/integration/py/test_browser_toolbar_names.py::test_published_stale_actor_preimage_is_rejected[e04_t11_browser.mjs]
 0.010	tests/integration/py/test_browser_toolbar_names.py::test_published_stale_actor_preimage_is_rejected[project_archive_browser.mjs]
 0.010	tests/integration/py/test_browser_toolbar_names.py::test_published_stale_actor_preimage_is_rejected[project_browser_storage.mjs]
+0.000	tests/integration/py/test_bundled_display_fonts.py::test_cpp_adjacent_tokens_do_not_extend_hex_escapes_or_redecode_backslashes
 0.060	tests/integration/py/test_bundled_display_fonts.py::test_default_label_formatter_alphabet_has_no_missing_glyphs
 0.060	tests/integration/py/test_bundled_display_fonts.py::test_display_census_includes_literals_escapes_and_formatter_domain
 0.000	tests/integration/py/test_bundled_display_fonts.py::test_each_recorded_display_site_has_a_real_glyph_in_its_rendering_face[Baloo 2]
@@ -243213,7 +243214,9 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c11_t51_cli_vocabulary.py::test
 0.010	tests/unit/py/test_c11_t56_project_identity.py::test_c11_t56_semantically_invalid_datetime_refuses_at_record_boundary[year-zero-last_modified]
 0.010	tests/unit/py/test_c11_t56_project_identity.py::test_c11_t56_valid_leap_day_datetime_remains_materializable[created]
 0.010	tests/unit/py/test_c11_t56_project_identity.py::test_c11_t56_valid_leap_day_datetime_remains_materializable[last_modified]
+0.010	tests/unit/py/test_c11_t62_reference_selection.py::test_exported_source_never_borrows_the_enclosing_repository_identity
 0.006	tests/unit/py/test_c11_t62_reference_selection.py::test_fit_policy_uses_the_same_corpus_as_the_loaded_engine
+0.040	tests/unit/py/test_c11_t62_reference_selection.py::test_real_checkout_uses_git_and_refuses_a_broken_git_identity
 0.000	tests/unit/py/test_c11_t62_reference_selection.py::test_reference_prefix_matches_loaded_artifact_and_rejects_stale_cli[ci-consumer]
 0.000	tests/unit/py/test_c11_t62_reference_selection.py::test_reference_prefix_matches_loaded_artifact_and_rejects_stale_cli[ci]
 0.010	tests/unit/py/test_c12_t3_space_group_code_wiring.py::test_c12_t3_ambiguous_name_without_code_keeps_both_candidates
