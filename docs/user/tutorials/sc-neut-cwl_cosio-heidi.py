@@ -349,8 +349,16 @@ project.display.pattern('heidi_2k5')
 project.display.structure('cosio_2k5')
 
 # %% [markdown]
+# ## Report
+#
+# The HTML report plots the measured against the calculated intensities of each experiment and
+# lists the structures, the experiments and the fit. Open it in a browser.
+
+# %%
+project.report.save_html('sc-neut-cwl_cosio-heidi.html')
+
+# %% [markdown]
 # ## Save the project
 
 # %%
 project.save_as('sc-neut-cwl_cosio-heidi')
-project.report.save_html('sc-neut-cwl_cosio-heidi.html')
