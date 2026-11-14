@@ -2,49 +2,103 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit the high-entropy perovskite La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃, seven cations on one site, to
+synchrotron X-ray powder data from P02.1 at PETRA III.
+
+It builds the catalogue case `pd-xray-cwl_lam7o3-p021` step by step: the same project the command
+line fits and the app's Examples open. The seven metals sharing one site have one displacement,
+held by constraints.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-xray-cwl_lam7o3-p021/structures pd-xray-cwl_lam7o3-p021/experiments pd-xray-cwl_lam7o3-p021/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-xray-cwl_lam7o3-p021
+_metadata.title "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃ [Pnma] · P02.1 @ PETRA III"
+_metadata.description "High-entropy perovskite · Seven cations on one site · Synchrotron X-ray"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-xray-cwl_lam7o3-p021
+    edi download-data pd-xray-cwl_lam7o3-p021-lam7o3
+    mv data/pd-xray-cwl_lam7o3-p021-lam7o3.edi pd-xray-cwl_lam7o3-p021/structures/lam7o3.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-xray-cwl_lam7o3-p021
+    python -m edi download-data pd-xray-cwl_lam7o3-p021-lam7o3
+    mv data/pd-xray-cwl_lam7o3-p021-lam7o3.edi pd-xray-cwl_lam7o3-p021/structures/lam7o3.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/p021.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-xray-cwl_lam7o3-p021-p021
+    mv data/pd-xray-cwl_lam7o3-p021-p021.edi pd-xray-cwl_lam7o3-p021/experiments/p021.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-xray-cwl_lam7o3-p021-p021
+    mv data/pd-xray-cwl_lam7o3-p021-p021.edi pd-xray-cwl_lam7o3-p021/experiments/p021.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.04
-_peak.broad_gauss_v -0.01
-_peak.broad_gauss_w 0.001
-_peak.broad_lorentz_x 0.1
-2.0 2.0033379 300
-2.3 2.297792 300
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.descent fast_descent
+
+_fitting_mode.type single
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_Ti lam7o3.atom_site.Ti.adp_iso
+biso_Cr lam7o3.atom_site.Cr.adp_iso
+biso_Mn lam7o3.atom_site.Mn.adp_iso
+biso_Fe lam7o3.atom_site.Fe.adp_iso
+biso_Co lam7o3.atom_site.Co.adp_iso
+biso_Ni lam7o3.atom_site.Ni.adp_iso
+biso_Cu lam7o3.atom_site.Cu.adp_iso
+biso_O1 lam7o3.atom_site.O1.adp_iso
+biso_O2 lam7o3.atom_site.O2.adp_iso
+
+loop_
+_constraint.id
+_constraint.expression
+1 "biso_Cr = biso_Ti"
+2 "biso_Mn = biso_Ti"
+3 "biso_Fe = biso_Ti"
+4 "biso_Co = biso_Ti"
+5 "biso_Ni = biso_Ti"
+6 "biso_Cu = biso_Ti"
+7 "biso_O2 = biso_O1"
+
+_edi.schema_version 3
 ```
-
-The same for every other row (19 more).
-
-In `structures/lam7o3.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 5.5
-_cell.length_b 7.7
-_cell.length_c 5.5
-La La 0.48 0.25 0 c 4 1 0.5 Biso
-Ti Ti 0 0 0 a 4 0.14286 0.5 Biso
-```
-
-The same for every other row (2 more).
 
 ## Scale, 2θ zero and cell
 

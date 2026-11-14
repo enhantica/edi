@@ -2,9 +2,12 @@
 
 import ast
 
+from tests.fixtures.example_catalogue.tutorial_assets import assets
+from tests.fixtures.tutorial_cases.install_cell import python_syntax
+
 
 def load_paths(source):
-    tree = ast.parse(source)
+    tree = ast.parse(python_syntax(source))
     paths = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
@@ -78,3 +81,26 @@ def _download_path(tree, load, argument):
         )
     ), 'A tutorial must load the result of its own explicitly named collection download'
     return '../cli/' + value.args[0].value + '/project'
+
+
+def assert_case_downloads(stem, code, root):
+    """Require the case project or every declared asset to reach its model consumer."""
+    paths = load_paths(code)
+    if paths:
+        assert paths == [f'../cli/{stem}/project'], 'The tutorial loads its own project download'
+        return
+    project = root / 'docs/user/cli' / stem / 'project'
+    assert project.is_dir(), 'A model-building tutorial must identify a real declared case'
+    required = {
+        stem + '-' + path.stem + '-data'
+        for path in (project / 'experiments').glob('*.edi')
+        if any(
+            field in path.read_text()
+            for field in ('_data.intensity_meas', '_refln.intensity_meas')
+        )
+    }
+    if stem != 'pd-neut-cwl_lbco-hrpt':
+        required.update(stem + '-' + path.stem for path in (project / 'structures').glob('*.edi'))
+    assert set(assets(code)) == required, (
+        'Every declared model/data asset must be downloaded and consumed'
+    )

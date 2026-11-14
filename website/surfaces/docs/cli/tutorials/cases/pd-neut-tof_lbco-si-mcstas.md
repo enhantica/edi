@@ -2,51 +2,79 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit two phases, La₀.₅Ba₀.₅CoO₃ and silicon, to a time-of-flight pattern simulated with McStas.
+
+It builds the catalogue case `pd-neut-tof_lbco-si-mcstas` step by step: the same project the
+command line fits and the app's Examples open.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-tof_lbco-si-mcstas/structures pd-neut-tof_lbco-si-mcstas/experiments pd-neut-tof_lbco-si-mcstas/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-tof_lbco-si-mcstas
+_metadata.title "La₀.₅Ba₀.₅CoO₃ [Pm-3m] / Silicon [Fd-3m] · McStas simulation"
+_metadata.description "2 phases · Simulated TOF pattern · Jorgensen profile"
+_metadata.authors .
+```
+
+## Define the structures
+
+Download the structures from EasyDiffraction's collection into `structures`. Each CIF gives its space group, cell and atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-tof_lbco-si-mcstas
+    edi download-data pd-neut-tof_lbco-si-mcstas-lbco
+    mv data/pd-neut-tof_lbco-si-mcstas-lbco.edi pd-neut-tof_lbco-si-mcstas/structures/lbco.edi
+    edi download-data pd-neut-tof_lbco-si-mcstas-si
+    mv data/pd-neut-tof_lbco-si-mcstas-si.edi pd-neut-tof_lbco-si-mcstas/structures/si.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-tof_lbco-si-mcstas
+    python -m edi download-data pd-neut-tof_lbco-si-mcstas-lbco
+    mv data/pd-neut-tof_lbco-si-mcstas-lbco.edi pd-neut-tof_lbco-si-mcstas/structures/lbco.edi
+    python -m edi download-data pd-neut-tof_lbco-si-mcstas-si
+    mv data/pd-neut-tof_lbco-si-mcstas-si.edi pd-neut-tof_lbco-si-mcstas/structures/si.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/mcstas.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_peak.rise_alpha_1 0.01
-_peak.decay_beta_0 0.006
-_peak.decay_beta_1 0.004
-_peak.broad_gauss_sigma_0 50000
-_peak.broad_gauss_sigma_1 -50000
-_peak.broad_gauss_sigma_2 20000
-1 45000 0.23
-2 50000 0.23
-```
+    ```console
+    edi download-data pd-neut-tof_lbco-si-mcstas-mcstas
+    mv data/pd-neut-tof_lbco-si-mcstas-mcstas.edi pd-neut-tof_lbco-si-mcstas/experiments/mcstas.edi
+    ```
 
-The same for every other row (13 more).
+=== "Python package"
 
-In `structures/lbco.edi`, remove the `()` from every value; they now read:
+    ```console
+    python -m edi download-data pd-neut-tof_lbco-si-mcstas-mcstas
+    mv data/pd-neut-tof_lbco-si-mcstas-mcstas.edi pd-neut-tof_lbco-si-mcstas/experiments/mcstas.edi
+    ```
 
-```edi
-_cell.length_a 3.8909
-Co Co 0.5 0.5 0.5 b 1 1 0.5 Biso
-O O 0 0.5 0.5 c 3 1 0.5 Biso
-```
-
-In `structures/si.edi`, remove the `()` from every value; they now read:
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_cell.length_a 5.43
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+_fitting_mode.type single
+
+_edi.schema_version 3
 ```
 
 ## Scales and cells

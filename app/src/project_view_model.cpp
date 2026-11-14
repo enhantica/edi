@@ -2262,7 +2262,7 @@ void ProjectViewModel::downloadCollectionData() {
     });
 }
 
-void ProjectViewModel::loadDatasetFolder(ExperimentViewModel* experiment, const QUrl& folder) {
+void ProjectViewModel::loadDatasetFolder(ExperimentViewModel* experiment, const QUrl& folder, bool copy) {
     if (retired_ || listing_dataset_folder_ || !experiment_models_.contains(experiment)) return;
     const QPointer<ProjectViewModel> self(this);
     const QPointer<ExperimentViewModel> target(experiment);
@@ -2274,14 +2274,14 @@ void ProjectViewModel::loadDatasetFolder(ExperimentViewModel* experiment, const 
     listing_dataset_folder_ = true;
     emit listingDatasetFolderChanged();
     if (!self || retired_ || !target) return;
-    run_in_background([self, target, folder] {
+    run_in_background([self, target, folder, copy] {
         const QDir directory(folder.toLocalFile());
         const QStringList names = directory.entryList(
             {"*.xye", "*.xy", "*.dat", "*.txt", "*.csv"}, QDir::Files, QDir::Name);
         QList<QUrl> files;
         files.reserve(names.size());
         for (const QString& name : names) files.append(QUrl::fromLocalFile(directory.filePath(name)));
-        QMetaObject::invokeMethod(QCoreApplication::instance(), [self, target, files = std::move(files)] {
+        QMetaObject::invokeMethod(QCoreApplication::instance(), [self, target, files = std::move(files), copy] {
             if (!self || self->retired_) return;
             self->listing_dataset_folder_ = false;
             emit self->listingDatasetFolderChanged();
@@ -2291,7 +2291,7 @@ void ProjectViewModel::loadDatasetFolder(ExperimentViewModel* experiment, const 
                 if (self && !self->retired_) emit self->refused(self->last_error_);
                 return;
             }
-            self->loadDatasets(target, files, true, false);
+            self->loadDatasets(target, files, true, copy);
         }, Qt::QueuedConnection);
     });
 }
@@ -2484,14 +2484,29 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         qCInfo(lcApp, "%d datasets linked as a scan in %s", static_cast<int>(files.size()), qPrintable(parent));
         return true;
     }
-    if (project.path.empty() || !QFileInfo(QString::fromStdString(project.path)).isDir())
-        return refuse(tr("Save the project first, or keep the data linked: copied files go into the project's folder"));
-    const QDir root(QString::fromStdString(project.path));
+    QString directory = QString::fromStdString(project.path.empty() ? project.scan_data_root : project.path);
+    QString freshRoot;
+    if (directory.isEmpty()) {
+        try {
+            freshRoot = QString::fromStdString(edi::fresh_archive_directory("scan-data"));
+            directory = freshRoot;
+        } catch (const std::exception& error) {
+            return refuse(tr("A working folder for the datasets could not be made: %1").arg(QString::fromUtf8(error.what())));
+        }
+    }
+    if (!QFileInfo(directory).isDir()) return refuse(tr("The project's data folder is unavailable"));
+    const QDir root(directory);
     QString folder = QStringLiteral("scans/") + QString::fromStdString(source.name.value());
     for (int n = 2; root.exists(folder); ++n) folder = QStringLiteral("scans/%1_%2").arg(QString::fromStdString(source.name.value())).arg(n);
-    if (!root.mkpath(folder)) return refuse(tr("The folder %1 could not be made in the project").arg(folder));
     const QString target = root.filePath(folder);
-    const auto discard = [&] { QDir(target).removeRecursively(); };
+    const auto discard = [&] {
+        if (!freshRoot.isEmpty()) edi::remove_archive_directory(freshRoot.toStdString());
+        else QDir(target).removeRecursively();
+    };
+    if (!root.mkpath(folder)) {
+        discard();
+        return refuse(tr("The folder %1 could not be made in the project").arg(folder));
+    }
     QStringList names;
     for (const QUrl& file : files) {
         const QString name = fileName(file);
@@ -2513,6 +2528,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         next.experiments.assign(std::move(held));
         next.adopt_experiments();
         next.sequential_fit.data_dir = folder.toStdString();
+        if (next.path.empty()) next.scan_data_root = directory.toStdString();
         next.fitting_mode = "single";  // a single fit until the user switches (the owner, 2026-11-04)
         next.sequential_fit.file_pattern = "*";
         next.sequential_fit.reverse = false;

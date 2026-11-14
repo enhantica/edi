@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from tests.fixtures.metadata_transition.source_bytes import previous_bytes
+from tests.fixtures.path_keys import repository_key
 
 HERE = Path(__file__).parent
 
@@ -12,7 +13,7 @@ HERE = Path(__file__).parent
 def retained_bytes(relative, data):
     data = previous_bytes(relative, data)
     entries = json.loads((HERE / 'retention-adaptations.json').read_text())['files']
-    row = entries.get(str(relative))
+    row = entries.get(repository_key(relative))
     if row is None:
         return data
     before, after = row['before'].encode(), row['after'].encode()

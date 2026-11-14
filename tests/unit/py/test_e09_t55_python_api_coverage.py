@@ -211,7 +211,7 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
             return object()
 
     analysis = ScanAnalysis()
-    project = SimpleNamespace(analysis=analysis)
+    project = SimpleNamespace(analysis=analysis, fitting_mode='sequential', _scan_declared=True)
     metric_contexts = []
     rendered_variants = []
 
@@ -228,11 +228,25 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
         'PROGRESS 1/2 · previous-file-with-a-long-name',
         'PROGRESS 2/2',
     )
-    monkeypatch.setattr(
-        cli.edi,
-        'scan_progress_line',
-        lambda **values: progress_lines[values['completed'] - 1],
-    )
+    headings = []
+    rows = []
+    rewrites = []
+
+    def heading(*values):
+        headings.append(values)
+        return 'SCAN HEADER'
+
+    def row(*values):
+        rows.append(values)
+        return progress_lines[values[0] - 1]
+
+    def rewrite(line, previous_width, columns):
+        rewrites.append((line, previous_width, columns))
+        return '\r' + line + ' ' * max(0, previous_width - len(line))
+
+    monkeypatch.setattr(cli.edi._edi, '_scan_progress_heading', heading)
+    monkeypatch.setattr(cli.edi._edi, '_scan_progress_row', row)
+    monkeypatch.setattr(cli.edi._edi, '_scan_progress_rewrite', rewrite)
     monkeypatch.setattr(
         cli.edi,
         'scan_summary',
@@ -250,9 +264,10 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
         )
         == 0
     ), 'the non-TTY compact scan route must complete'
-    assert capsys.readouterr().out == f'{progress_lines[0]}\n{progress_lines[1]}\nSUMMARY 1/1\n', (
-        'compact scan output must route one core-rendered line per completion and its summary'
-    )
+    assert (
+        capsys.readouterr().out
+        == f'SCAN HEADER\n{progress_lines[0]}\n{progress_lines[1]}\nSUMMARY 1/1\n'
+    ), 'compact scan output must route one core-rendered line per completion and its summary'
 
     full_clock = iter((0.0, 3.0, 8.0))
     assert (
@@ -265,7 +280,7 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
         == 0
     ), 'the non-TTY FULL scan route must complete'
     assert capsys.readouterr().out == (
-        f'ITER 1\n{progress_lines[0]}\nITER 2\n{progress_lines[1]}\nSUMMARY 1/1\n'
+        f'SCAN HEADER\nITER 1\n{progress_lines[0]}\nITER 2\n{progress_lines[1]}\nSUMMARY 1/1\n'
     ), 'FULL scan output must retain scan-level iteration diagnostics before each completion'
 
     terminal = TerminalCapture()
@@ -281,7 +296,7 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
         == 0
     ), 'the TTY compact scan route must complete'
     assert terminal.getvalue() == (
-        '\r'
+        'SCAN HEADER\n\r'
         + progress_lines[0]
         + '\r'
         + progress_lines[1]
@@ -307,6 +322,20 @@ def test_cli_scan_branch_routes_events_and_each_emission_policy(
     assert rendered_variants == ['single crystal'] * 2, (
         'Each FULL scan iteration carries the selected sample-form display context'
     )
+
+    assert headings == [
+        ('scan', True, 2, False, 0),
+        ('scan', True, 2, False, 0),
+        ('scan', True, 2, False, 80),
+    ], 'Each emitting channel names the scan once and supplies its actual terminal width'
+    expected_rows = [(1, 2, 3.0, 1, 1, 0, 1.0), (2, 2, 8.0, 2, 1, 1, 2.0)]
+    assert rows == [(*values, columns) for columns in (0, 0, 80) for values in expected_rows], (
+        'All policies render the same incremental counters, timing and fit metric'
+    )
+    assert rewrites == [
+        (progress_lines[0], 0, 80),
+        (progress_lines[1], len(progress_lines[0]), 80),
+    ], 'Only compact TTY output delegates predecessor erasure to the bounded core renderer'
 
 
 def test_cli_run_fit_routing_and_error_record_are_python_api_contracts(

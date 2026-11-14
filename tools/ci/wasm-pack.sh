@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: BSD-3-Clause
-# Pack the web app's site (edi ADR-0023): both wasm builds (tools/ci/wasm-build.sh), the start page, the
+# Pack the web app's site (edi ADR-0023): the multithread wasm build (tools/ci/wasm-build.sh), the start page, the
 # service-worker shim, the README naming the hosting requirement and the licence texts, into build/wasm/site
 # and one archive, build/wasm/edi-webapp.zip, laid out to be unpacked as the site's folder
 # (`app.easydiffraction.org/`). Prints each build's size.
@@ -31,12 +31,12 @@ mkdir -p "$SITE"
 {
   echo "EasyDiffraction web app"
   echo "edi: $(git describe --tags --always --dirty 2>/dev/null || echo unknown)"
-  echo "Qt: $EDI_WASM_QT (wasm_multithread, wasm_singlethread); Emscripten: $EDI_WASM_EMSDK"
+  echo "Qt: $EDI_WASM_QT (wasm_multithread); Emscripten: $EDI_WASM_EMSDK"
   echo "Size optimization: $SIZE_MODE"
 } >"$SITE/BUILD-INFO.txt"
 NODE="$(ls "$EDI_WASM_TOOLCHAIN/emsdk-$EDI_WASM_EMSDK"/node/*/bin/node 2>/dev/null | head -n 1)"
 [ -x "$NODE" ] || { echo "wasm-pack: no Node.js in the Emscripten toolchain — run: pixi run -e app wasm-toolchain" >&2; exit 1; }
-for build in multithread singlethread; do
+for build in multithread; do
   app="$OUT/$build/app/app"
   for file in edi_app.js edi_app.wasm qtloader.js CRYSTA_SOURCE_SHA; do
     [ -f "$app/$file" ] || { echo "wasm-pack: $app/$file is missing — run: pixi run -e app wasm-build $build" >&2; exit 1; }
@@ -67,7 +67,7 @@ for build in multithread singlethread; do
   gz=$(gzip -9 -c "$SITE/$folder/edi_app.wasm" | wc -c)
   echo "$build ($folder/): crysta $(cat "$app/CRYSTA_SOURCE_SHA"); edi_app.wasm $raw bytes ($gz gzip -9)" >>"$SITE/BUILD-INFO.txt"
 done
-printf '{"multithread": "%s", "singlethread": "%s"}\n' "$folder_multithread" "$folder_singlethread" >"$SITE/build.json"
+printf '{"multithread": "%s"}\n' "$folder_multithread" >"$SITE/build.json"
 cp app/web/index.html app/web/coi-serviceworker.js app/web/README.md app/web/logo.svg app/web/logo-dark.svg \
   app/web/mark.svg app/web/name.svg app/web/name-dark.svg app/web/splash.css "$SITE/"
 cp -R app/web/LICENSES "$SITE/LICENSES"

@@ -6,16 +6,25 @@ import json
 import zipfile
 from pathlib import Path
 
-from tests.fixtures.metadata_transition import task_inputs
+from tests.fixtures.metadata_transition import (
+    pin_sources,
+    release_pin_bytes,
+    retired_source_fields,
+    task_inputs,
+)
+from tests.fixtures.path_keys import repository_key
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).parent
 
 
 def previous_bytes(name, data):
+    data = pin_sources.previous_bytes(name, data)
+    data = release_pin_bytes.previous_bytes(name, data)
+    data = retired_source_fields.previous_bytes(name, data)
     data = task_inputs.previous_bytes(name, data)
     rows = json.loads((HERE / 'sources.json').read_text())['files']
-    row = rows.get(str(name))
+    row = rows.get(repository_key(name))
     if row is None:
         return data
     if hashlib.sha256(data).hexdigest() == row['before_sha256']:

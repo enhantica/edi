@@ -1,14 +1,14 @@
 # ADR-0023 — The app as a WebAssembly site
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-03
-- **Implementation:** 🟡 Partially implemented — the toolchain, both builds, the start page, the browser's file and
-  settings access, and the site archive are built; publishing on GitHub Pages waits for edi to be public
+- **Amended:** 2026-11-13 — ship only the multithreaded build; retire the blocking serial fallback.
+- **Implementation:** Toolchain, threaded app, file/settings access and site archive are implemented.
 - **Priority:** High
-- **Forward constraint (binding on new features):** the app builds for both Qt wasm kits from the one source tree. Work
-  the app starts goes through `edi::work::Worker` (ADR-0020), which runs it on the owner thread in the single-thread
-  build, so nothing in the app may wait for a job; a file the user opens or saves goes through `WebFiles` in the
-  browser; a new Qt module the app links joins `EDI_WASM_QT_MODULES`.
+- **Forward constraint (binding on new features):** the app builds with Qt's multithreaded wasm kit
+  from the same source tree as desktop. Work runs through `edi::work::Worker` (ADR-0020),
+  preserving asynchronous publication. Browser file access uses `WebFiles`; new linked Qt modules
+  join `EDI_WASM_QT_MODULES`.
 
 ## Context
 
@@ -24,9 +24,9 @@ thread in the single-thread kit, the cross-origin isolation the threaded kit nee
 
 ### 1. The toolchain
 
-Qt `6.11.2`'s `wasm_multithread` and `wasm_singlethread` kits, installed by aqtinstall (`3.3.0`, pinned in pixi.toml's
+Qt `6.11.2`'s `wasm_multithread` kit, installed by aqtinstall (`3.3.0`, pinned in pixi.toml's
 app feature) with the modules the app links (`EDI_WASM_QT_MODULES`); conda-forge has no Qt for wasm. Emscripten
-exactly `4.0.7`, from emsdk's git tag: it is the kits' `QT_EMCC_RECOMMENDED_VERSION`, and `wasm_check_emsdk_pin`
+exactly `4.0.7`, from emsdk's git tag: it is the kit's `QT_EMCC_RECOMMENDED_VERSION`, and `wasm_check_emsdk_pin`
 refuses any other pairing. Eigen `3.4.0` at a pinned sha256, the release crysta's own fallback fetches; the
 environment's Eigen 5 is refused by crysta's `find_package(Eigen3 3.3)`. The host Qt (`QT_HOST_PATH`) is the app
 environment's, which must be the same Qt version. All of it is in `tools/ci/wasm-env.sh`; `pixi run -e app
@@ -35,29 +35,33 @@ wasm-toolchain` installs it once into `~/.cache/edi-wasm` (`EDI_WASM_TOOLCHAIN`)
 ### 2. crysta for the browser
 
 crysta builds its C++ package with Emscripten: no Python extension, no process-defaults constructor, JavaScript
-exceptions (the kits' model), `-pthread` for the threaded kit, serial (no OpenMP, no SLEEF).
-`tools/ci/wasm-build.sh` compiles it per kit from the source of the pinned SDK (`build/crysta-src`, ADR-0017), so the
+exceptions (the kit's model), `-pthread`, the native thread pool and required WebAssembly SIMD/SLEEF,
+without OpenMP. `tools/ci/wasm-build.sh` compiles it from the source of the pinned SDK (`build/crysta-src`, ADR-0017), so the
 browser computes with the crysta the desktop app links. This is the second place edi compiles crysta, after the
 ThreadSanitizer tree, and for the same reason: the SDK is a native build. Amends ADR-0017 ("no path compiles crysta").
 
-### 3. Two builds
+### 3. One multithreaded build
 
-- **Multithreaded:** every library with `-pthread`; the calculation worker keeps its thread, with an 8 MiB stack
-  against Emscripten's 64 KiB default.
-- **Single-thread:** the worker runs each job on the owner thread, in its turn among the calls it posts there
-  (`EDI_WORKER_OWNER_THREAD`, set by the build). Every guarantee of ADR-0020 §1 holds; the page does not repaint
-  while a calculation or a fit runs. An unthreaded Emscripten build without the switch does not compile.
-- Both builds give the main thread an 8 MiB stack (Qt's kits set 5 MiB), where the single-thread build fits.
-- Nothing the app needs may wait for a thread pool: the single-thread build has none. Qt Quick 3D's procedural
-  meshes (`SphereGeometry`, `CylinderGeometry`, `ConeGeometry`) build asynchronously on one by default
-  (`QtConcurrent::run`), so in that build the structure view's spheres, bonds, cell and axis arrows never got a mesh
-  and only the shared sites (edi's own geometry) and the labels drew (owner, 2026-10-03). In the browser they build
-  synchronously (`asynchronous: Qt.platform.os !== "wasm"`, ADR-0017 §16).
+The owner retired the single-threaded browser target on 2026-11-13. Current mainstream
+browsers support WebAssembly threads; a separate build that performs fits on the page
+thread no longer forms part of the supported product. A browser must allow shared memory
+and cross-origin isolation. Failure to meet those requirements is a visible startup error.
+
+Every linked library uses `-pthread`; the calculation worker keeps its own thread and the
+engine keeps its parallel fill pool. SIMD remains required. Both the main stack and calculation
+worker stack retain their existing sizes. The build installs only `wasm_multithread`, compiles
+one engine/app graph, and packs one content-named app folder. An explicit `multithread`
+build argument still omits packing; removed/unknown targets refuse before compilation.
+The owner-thread executor remains an internal test capability, not a browser product variant.
+
+Quick 3D browser meshes retain their existing synchronous construction; removing the serial
+target does not change scene rendering or introduce an unrelated geometry change.
 
 ### 4. The start page and hosting
 
-`app/web/index.html` loads the multithreaded build when the page is cross-origin isolated, else the single-thread
-one; `?build=` forces either. While the build loads, the page shows the full logo (the mark and the
+`app/web/index.html` loads the multithreaded build only after proving cross-origin isolation
+and `SharedArrayBuffer` availability. `?build=multithread` remains valid but cannot bypass
+those requirements; any other requested build produces an explanatory startup error. While the build loads, the page shows the full logo (the mark and the
 "easydiffraction" name, glyph outlines generated by `app/web/make_logo.py`) as a splash whose mark turns as
 EasyDiffractionBeta's loading window turns it (`Easing.OutInElastic`, six turns in 2 s; still under
 `prefers-reduced-motion`); a message shows it still (owner, 2026-10-03). The mark turns as an HTML element over
@@ -71,20 +75,23 @@ system's), before anything is drawn, so the splash matches the app (owner, 2026-
 and Brave). A host may keep scripts cached for days while it serves a large `.wasm` fresh (the owner's host: `.js`
 `max-age=604800`, `.wasm` as `text/plain` with no cache header), so a new upload under the same file names paired
 the previous build's `edi_app.js` with the new `edi_app.wasm`. Each build's files now sit in a folder named by a
-hash of their contents (`multithread-<hash>/`), `build.json` names the two folders, and the page fetches it with
+hash of their contents (`multithread-<hash>/`), `build.json` names the multithread folder, and the page fetches it with
 `cache: "no-store"`: a cached page still loads the current pair, and two builds never share a file's address.
 `tools/ci/wasm_import_check.mjs` refuses, at pack time, a folder whose script does not provide every function its
 module imports. The page also downloads and compiles the module itself, once (streamed when the host labels it
 `application/wasm`, else from its bytes; Emscripten's own path downloads it a second time after a refused
-streaming compile), and a multithreaded build that fails before it starts gives way to the single-thread build. A host without COOP/COEP headers (GitHub Pages) gets them from `coi-serviceworker.js`
-(v0.1.7, MIT, vendored unchanged): a page that is not isolated registers it and reloads under it, and loads the
-single-thread build only when the page that reload brings is still not isolated; any later load that is not isolated
-(a cache-bypassing reload, a worker in a stale state) tries again the same way. The page sets the shim's COEP mode to
-`require-corp` in every browser: every file is same-origin, and the shim's default for browsers other than Chrome and
-Firefox, `credentialless`, leaves Safari without isolation on every load after the first. Where a service worker
-cannot run, the single-thread build loads, and a start that fails names the build it chose and why. The page keeps why
-it chose a build in `window.ediBuildInfo`, which the app's diagnostics view (Preferences, Develop) shows. The site is one folder: the page, both builds, the shim, a README naming the
-hosting requirement, `BUILD-INFO.txt` and the licence texts (`tools/ci/wasm-pack.sh`, `build/wasm/edi-webapp.zip`).
+streaming compile). Startup/download/compile failures stay visible; there is no serial retry.
+A host without COOP/COEP headers (GitHub Pages) gets them from `coi-serviceworker.js`
+(v0.1.7, MIT, vendored unchanged). A non-isolated page registers it and reloads once.
+If that reload still lacks isolation, startup refuses. A later visit may retry a stale worker.
+The shim uses `require-corp` in every browser, preserving the Safari-compatible mode.
+Missing secure context, shared memory, required session storage or service-worker access
+produces a message explaining the unmet requirement; server-provided headers avoid the
+shim/storage requirement. Service-worker activation has a bounded wait and a visible error.
+
+`window.ediBuildInfo` retains the selected build, reason and content-named deployment for
+the app's diagnostics. The site contains the page, one build, shim, hosting README,
+`BUILD-INFO.txt` and licence texts (`build/wasm/edi-webapp.zip`).
 A dispatch of `pages.yml` may name a crysta commit (`crysta_commit`): the web app is then built from that commit's
 source instead of the pinned SDK's, to preview crysta work no SDK carries yet, and the notebooks are published
 unexecuted, since the native build would use the pin (owner, 2026-10-23).
@@ -105,6 +112,21 @@ unexecuted, since the native build would use the pin (owner, 2026-10-23).
   folder on the user's disk. To open it again the user unpacks it. The archive stores no folder entries and its files
   as `rw-r--r--`, so an unzip tool, macOS's included, makes folders that open (owner, 2026-10-23). Data files are asked
   for as files: one structure file, as on the desktop, or several experiment files.
+- **Dataset folders:** the Experiment Load menu exposes the same folder action on desktop and
+  web. The web route extends the existing directory-upload request owner in `WebFiles`;
+  project-folder requests still validate `project.edi`, while dataset-folder requests return
+  the uploaded directory to the existing dataset loader. The loader selects the same supported
+  powder data files and starts with a single template fit. Browser uploads are copied into
+  the project, since their temporary memory paths cannot be reopened after reloading the page.
+  Desktop selection keeps its existing linked-data default. A partial upload is a failure,
+  not an incomplete successful selection. Replies retain the request and original-project
+  checks; starting another form request disarms the old reply before installing new context.
+- **File filters:** `WebFiles.openFiles` accepts comma-separated extensions, as the page's
+  inputs already declare them, and converts their separator to Qt's space-separated name
+  filters at the Qt boundary. Qt turns each extension into one File System Access API type
+  entry on Chromium; passing a combined comma token there rejects before the picker opens.
+  Safari's HTML input route accepts commas, which previously hid the mismatch. One and
+  several file selections use the same conversion; the chooser is still Qt's.
 - **Requests and their answers.** A browser file chooser answers later, or never when it is dismissed, so each
   request (a folder, data files) has an id and exactly one answer carrying it: the files, a failure, or a
   cancellation. One request is active at a time, as the browser shows one chooser: a new request cancels the one
@@ -132,7 +154,7 @@ is edi's own few lines of page script), the code behind
 
 ### 6. CI
 
-The `app · WebAssembly` job installs the toolchain (cached on the runner), builds both kits, packs the site and
+The `app · WebAssembly` job installs the toolchain (cached on the runner), builds the multithread kit, packs the site and
 uploads it as the `edi-webapp` artifact; the browser checks run on it. The site check runs on every pull request. The
 parallel engine check, with its speed ratio, takes about 20 minutes and runs on main pushes, the nightly run and
 dispatch.
@@ -147,7 +169,7 @@ and the shim's MIT licence. edi's source stays BSD 3-Clause.
 
 The web app carries no AI assistant (the owner, 2026-11-04): the build option `EDI_APP_ASSISTANT`, on for the
 desktop and off under Emscripten, leaves the assistant's C++ (`assistant_*`, `codex_agent`), its QML components
-and its resources out of both kits; nothing stands in for them. The AI button stays, and on the web it opens a short
+and its resources out of the browser build; nothing stands in for them. The AI button stays, and on the web it opens a short
 popup instead of the panel: the assistant is available in the desktop app with the user's ChatGPT account, with a
 link to download it. `tools/ci/wasm-assistant-check.sh` runs after every kit links and fails the build if the linked
 `edi_app.wasm`, its loader or a data file still holds an assistant symbol, component or resource.
@@ -155,7 +177,8 @@ link to download it. `tools/ci/wasm-assistant-check.sh` runs after every kit lin
 ## Consequences
 
 - The owner can test the app in a browser from one archive; every later app change is built for the browser too.
-- The single-thread build trades a responsive page for running anywhere; the start page prefers the threaded build.
+- The hosted app requires browser threads and cross-origin isolation. It refuses unsupported environments
+  instead of running calculations on the page thread; only one binary/toolchain target is shipped.
 - Each Qt bump moves three pins together (the app environment's Qt, the kits, Emscripten), refused if they disagree.
 - The private Qt APIs can change between Qt versions; a bump that breaks them fails to compile, never silently.
 - Results are not byte-identical to the native build (no OpenMP, no SLEEF, a different libm); the browser checks
@@ -165,8 +188,8 @@ link to download it. `tools/ci/wasm-assistant-check.sh` runs after every kit lin
 
 | Alternative | Verdict |
 |---|---|
-| Only the single-thread build | Rejected (owner): every calculation freezes the page. |
-| Only the multithreaded build | Rejected (owner): it does not start where cross-origin isolation is unavailable. |
+| Single-threaded compatibility fallback | Retired (owner, 2026-11-13): fitting blocks the page; current supported browsers offer threads. |
+| Only the multithreaded build | Accepted (owner, 2026-11-13): require isolation and show a startup error where unavailable. |
 | A crysta wasm SDK published by crysta's CI | Deferred: it would give crysta's CI the whole toolchain for one consumer; compiling the pinned source keeps the computation pinned. |
 | QtWidgets' `QFileDialog::getOpenFileContent` / `saveFileContent` | Rejected: links QtWidgets into the browser build for two calls. |
 | IndexedDB (IDBFS) for the settings | Rejected: asynchronous, so the app would wait for it before loading QML; one local-storage key is synchronous. |
@@ -179,12 +202,12 @@ The normal WASM builder creates and resolves each kit's output directory with
 `pwd -P` before inspecting its native-build key or passing any graph/install path
 to CMake. A workspace may keep `build/wasm` on another filesystem through a
 symlink; CMake and automoc must use the same physical graph root when deriving
-source-header paths. Both kit modes, native-prefix identity keys, compiler flags,
+source-header paths. The multithread kit, native-prefix identity keys, compiler flags,
 source selection and the logical output locations used by the packer stay the
 same. Existing caches are neither rewritten nor deleted to disguise another
 graph identity: a cache created with a different spelling may refuse a genuine
 reconfigure, which must be retained and handled explicitly. This path correction
-is not evidence of either kit compiling, linking or passing browser checks.
+is not evidence of the kit compiling, linking or passing browser checks.
 
 ## Desktop download page link
 
@@ -195,7 +218,7 @@ The style regression checks its normal and hover colours in both themes.
 
 ## Parallel website publication
 
-The Pages workflow builds documentation and both WebAssembly kits in independent
+The Pages workflow builds documentation and the WebAssembly app in independent
 jobs at the same revision. Each uploads a named artifact; an assembly job downloads
 both, checks the existing reserved `/webapp/` boundary and uploads one Pages artifact.
 Deployment waits for successful assembly. The site therefore retains its documentation,
@@ -224,20 +247,20 @@ This supersedes the earlier combined-deployment design.
 
 ## Size qualification
 
-Keep the two-kit build and complete feature surface while reducing delivery size. Measure an
+Keep the supported multithread build and complete feature surface while reducing delivery size. Measure an
 immutable source pair with the same Qt/Emscripten kits, browser, fixture inputs and compression
 command before changing a build option. Input-archive section totals describe code available to the
 linker; they are not attribution of the final module after elimination and optimization. Record raw
 module bytes, compressed transfer bytes and actual startup, fitting and slider measurements separately.
 
 Try one change at a time on disposable copies. A smaller module alone does not admit a production
-change: both kits must build, independent numerical/browser checks must pass, and matched timings
+change: the multithread kit must build, independent numerical/browser checks must pass, and matched timings
 must support the agreed performance limit. Startup-only checks and exploratory GUI fits remain
 separate evidence. Do not regenerate an independent reference to make a candidate pass, remove a
 feature, substitute success labels or discard warnings from the captured logs.
 
 The first candidate is the pinned Binaryen tool's size optimization with explicit enabled features
-matching the linked module, including threads only for the multithread kit. It remains experimental
+matching the linked module, including threads for the multithread kit. It remains experimental
 until the complete checks pass. Static Qt control-style imports are another candidate to measure;
 Qt's [compile-time style selection](https://doc.qt.io/qt-6.11/qtquickcontrols-styles.html#compile-time-style-selection)
 can avoid runtime style deployment, but the current common controls and Material tooltip must keep
@@ -247,3 +270,100 @@ The packer accepts `EDI_WASM_OPTIMIZE_SIZE=1` for qualification builds. It proce
 copies of the linked modules, requires each copy to shrink, checks imports against
 its JavaScript loader, and hashes the final bytes for delivery. The default remains
 the ordinary build pending the full scientific and timing checks.
+
+
+## Shared caches for browser build workflows
+
+The full CI WebAssembly build and the Pages/release WebAssembly build use the same wasm-cache composite
+action for the existing pinned toolchain cache and ccache compiler outputs. This extends the first full-CI
+cache implementation to publication rather than maintaining divergent setup. Compiler entries are restored
+across runs; ccache checks actual compiler contents, inputs and flags, while namespace keys include platform,
+architecture, dependency lock, engine pin and browser toolchain pins. Toolchain installation still validates
+its existing receipts. Every build configures, links and packages its own source/version, then runs its owed
+checks; a cache hit never supplies qualification or skips a build/check step. CI cache access scopes remain
+GitHub's own. Native and browser object code are not interchangeable. The existing incremental CMake build
+directories remain local and are not restored as a substitute for compiler caching.
+
+
+### Browser loading qualification
+
+Changes to browser app inputs require the existing dedicated WebAssembly CI job on pull
+requests. It builds the multithread kit and runs both direct-header and service-worker
+isolation routes, plus explicit unsupported-environment refusal coverage with delivery and fit checks. Native tests remain independent; the browser
+job does not wait for their outcome. The Linux desktop job points to this one owner instead
+of compiling the same browser target again. CI and Pages restore the shared compiler and
+toolchain cache and save after an attempted build, including a later check failure.
+Qualified SDK admission and browser/runtime checks remain separate from cache reuse.
+
+Both regular and parallel browser checks use `wasm-written-reference.sh` to invoke the
+existing ordinary native Save observer for the declared LBCO/NCAF inputs. It verifies
+the actual imported native-module hash and current source commit before capture, and
+retains the independent raw anchors. Each run owns a fresh reference directory and
+passes it explicitly to the browser driver; a missing or invalid prerequisite refuses
+qualification instead of replacing the scientific reference.
+
+
+The browser's read-only control geometry hook maps the named item's declared width
+and height into the scene. TextInput overrides boundingRect with its text extent,
+which can be empty before typing; that content rectangle cannot describe the editor's
+pointer target. Existing visibility, uniqueness, enabled-state and viewport checks
+remain required before trusted input. No editor or chart layout is changed.
+
+The existing standalone Qt probe prerequisite also builds the source-qualified control
+geometry carrier before the app integration group. Native Qt verifies the provider's
+extent/refusal semantics; the packed browser checks still prove actual trusted input.
+Duplicate-control diagnostics preserve both the control name and the visible count.
+
+
+The catalogue's historical ladder captures retain their complete file hashes and
+original numerical bounds. Current multistart results report continuation iterations
+separately from probe work. Qualification authenticates the historical count across
+its retained raw, FULL report and saved records, then checks the current declared
+conditions, actual callback sequence and FULL report history. Terminal, native/WASM
+and ordinary-Save counts must agree exactly; probe work is compared separately.
+No historical count is substituted into a current Save, and reopen retains the whole
+fit record. Physical values and uncertainties still face their independent original
+checks. The same-input catalogue WASM CLI uses the explicitly admitted native-written
+reference in addition to the existing standalone backend-parity vehicle.
+
+
+The catalogue prerequisite executes two solver configurations on separate fresh loads
+of the exact authenticated project. The historical configuration declares ladder and
+chi-square-change stopping, matching the captured SDK's stopping semantics; it retains
+the source's iteration budget, tolerances, free set, mode and uncertainty rule. Every
+original raw value, uncertainty and global fit anchor, including the historical count,
+must pass at its original bound. The captured callback/FULL-report history confirms
+the actual conditions and zero multistart probe work. It is a live regression check,
+not merely authentication of old files. Historical observations are mandatory retained
+capture files, and admission replays them before accepting a current reference.
+
+The second load retains today's defaults without setters. It checks the existing CLI
+project reference quantities without changing their values or bounds, the original
+initial chi-square, every named raw parameter and uncertainty against the FULL report,
+and the declared current continuation/probe accounting. Ordinary Save, arrays and
+reopen compare against this current fit. The producer binds the historical files,
+current reference/provenance files, recorder and solver-checker hashes before fitting.
+These current observations never become new committed numerical goldens.
+
+The compiled multithread WASM CLI also runs both configurations: its historical copy
+adds only the two declared solver fields and compares every observable original
+parameter, uncertainty, final statistic and count directly to the frozen captures.
+It does not invent a pre-fit observation that the CLI does not emit. The untouched
+current copy compares its complete FULL-report parameter/uncertainty population,
+history and work with the admitted current native run. The GUI still fits its ordinary
+current defaults and proves Save/reopen; no raw GUI vector observation is claimed.
+A failure in either configuration refuses browser qualification. Solver settings are
+never searched or tuned to obtain a desired count or a passing result.
+
+Browser toolbar actors use the already published project action names: Save the
+project, Undo the last change, Redo the last undone change, and Clear: close the
+project and start again. The full actor still observes all four real accessible
+buttons, their rendered order, the close-project action and its guard. Save/archive
+and storage actors use the same published Save name. The source census rejects
+retired captions in every browser actor; published Main.qml supplies the independent
+caption reference, and the original published actor preimages are explicit negatives.
+
+Load-menu items explicitly expose their action text as their accessible name. Their icon-font
+labels and format/source hints remain visible content, not extra words in the action name.
+The same component owns structure, full-experiment and measured-data actions on desktop and
+in the browser. Browser actors retain exact action-name and native object-identity checks.

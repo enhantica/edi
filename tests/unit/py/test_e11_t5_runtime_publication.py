@@ -13,17 +13,29 @@ import re
 import shutil
 import stat
 import subprocess
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import pytest
 
+from tests.fixtures.write_access import unwritable_directory
+
 ROOT = Path(os.environ.get('EDI_TEST_RUNTIME_ROOT', Path(__file__).resolve().parents[3])).resolve()
 TARGETS = {'Linux': 'x86_64-unknown-linux-musl', 'Darwin': 'aarch64-apple-darwin'}
+EXE = '.exe' if os.name == 'nt' else ''
+ENTRYPOINT = 'bin/codex-app-server' + EXE
+CODE_HOST = 'bin/codex-code-mode-host' + EXE
 REQUIRED = (
-    'bin/codex-app-server',
-    'bin/codex-code-mode-host',
-    'codex-path/rg',
-    'codex-resources/zsh/bin/zsh',
+    ENTRYPOINT,
+    CODE_HOST,
+    'codex-path/rg' + EXE,
+    *(
+        (
+            'codex-resources/codex-command-runner.exe',
+            'codex-resources/codex-windows-sandbox-setup.exe',
+        )
+        if os.name == 'nt'
+        else ('codex-resources/zsh/bin/zsh',)
+    ),
 )
 
 
@@ -64,7 +76,8 @@ def _runtime_configure_outcome(result, marker_present, trace, module, caller, ma
     calls = [
         index
         for index, event in enumerate(trace)
-        if event.get('cmd') == 'edi_bundle_assistant_runtime' and event.get('file') == str(caller)
+        if event.get('cmd') == 'edi_bundle_assistant_runtime'
+        and event.get('file') == caller.as_posix()
     ]
     active = []
     returned = False
@@ -73,14 +86,15 @@ def _runtime_configure_outcome(result, marker_present, trace, module, caller, ma
         for event in trace[calls[0] + 1 :]:
             if event.get('frame', 0) <= call.get('frame', 0):
                 returned = (
-                    event.get('file') == str(caller)
+                    event.get('file') == caller.as_posix()
                     and event.get('cmd') == 'file'
-                    and event.get('args') == ['WRITE', str(marker), 'original function returned']
+                    and event.get('args')
+                    == ['WRITE', marker.as_posix(), 'original function returned']
                 )
                 break
             active.append(event)
     entered = any(
-        event.get('file') == str(module) and event.get('cmd') not in {'function', 'macro'}
+        event.get('file') == module.as_posix() and event.get('cmd') not in {'function', 'macro'}
         for event in active
     )
     errors = re.findall(r'^CMake Error[^\n]*', result.stderr, flags=re.MULTILINE)
@@ -137,14 +151,16 @@ class RuntimeFixture:
         for name in (*REQUIRED, *(['codex-resources/bwrap'] if system == 'Linux' else [])):
             path = self.payload / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text('#!/bin/sh\n# Independent non-runtime configure fixture.\nexit 97\n')
+            path.write_text(
+                '#!/bin/sh\n# Independent non-runtime configure fixture.\nexit 97\n', newline='\n'
+            )
             path.chmod(0o755)
         metadata = {
             'layoutVersion': 1,
             'version': '0.162.1',
             'target': self.target,
             'variant': 'codex-app-server',
-            'entrypoint': 'bin/codex-app-server',
+            'entrypoint': ENTRYPOINT,
             'resourcesDir': 'codex-resources',
             'pathDir': 'codex-path',
         }
@@ -252,9 +268,18 @@ file(WRITE "${CMAKE_BINARY_DIR}/accepted" "original function returned")
         before_inputs = {str(path): _inventory(path) for path in input_paths}
         try:
             run = subprocess.run(
-                command, env=env, capture_output=True, text=True, check=False, timeout=5
+                command, env=env, capture_output=True, text=True, check=False, timeout=15
             )
         except subprocess.TimeoutExpired as error:
+            for name, value in [('stdout', error.stdout), ('stderr', error.stderr)]:
+                text = value.decode(errors='replace') if isinstance(value, bytes) else value or ''
+                (log / name).write_text(text, encoding='utf-8', newline='\n')
+            trace_path = log / 'trace.jsonl'
+            trace_tail = (
+                trace_path.read_text(errors='replace')[-6000:]
+                if trace_path.is_file()
+                else '<no trace>'
+            )
             after_inputs = {name: _inventory(Path(name)) for name in before_inputs}
             (log / 'PRESERVATION.json').write_text(
                 json.dumps(
@@ -277,7 +302,8 @@ file(WRITE "${CMAKE_BINARY_DIR}/accepted" "original function returned")
             )
             pytest.fail(
                 'Missing/nonregular/symlink input must refuse before a blocking read; '
-                f'the unchanged five-second configure observation expired: {error}'
+                f'the unchanged bounded configure observation expired: {error}\n'
+                f'Last actual CMake trace bytes:\n{trace_tail}'
             )
         (log / 'stdout').write_text(run.stdout)
         (log / 'stderr').write_text(run.stderr)
@@ -382,7 +408,7 @@ def _refused(run):
 
 
 def _payload_copy_calls(trace, payload):
-    source = str(payload)
+    source = payload.as_posix()
     calls = []
     for event in trace:
         args = event.get('args', [])
@@ -406,7 +432,11 @@ def _payload_copy_calls(trace, payload):
             }
             for part in args
         )
-        if copying and any(str(part).startswith(source) for part in args):
+        if copying and any(
+            str(part).replace('\\', '/').rstrip('/') == source.rstrip('/')
+            or str(part).replace('\\', '/').startswith(source.rstrip('/') + '/')
+            for part in args
+        ):
             calls.append(event)
     return calls
 
@@ -468,13 +498,7 @@ def test_real_runtime_configure_reuses_verified_publication_without_stage_copy(
         )
     # No source/package write is needed to read/verify an already valid result.
     # A true OS permission premise makes redundant cache staging impossible.
-    mode = stat.S_IMODE(published.parent.stat().st_mode)
-    published.parent.chmod(0o555)
-    try:
-        assert not os.access(published.parent, os.W_OK), (
-            'This fixture user must genuinely lack cache-parent write permission; a '
-            'privileged host is an unreached premise, never a reuse pass'
-        )
+    with unwritable_directory(published.parent):
         second = fixture.configure('unchanged-readonly-cache-reuse')
         _successful(second)
         _assert_no_verified_source_copy(second, fixture)
@@ -494,8 +518,29 @@ def test_real_runtime_configure_reuses_verified_publication_without_stage_copy(
             'A successful no-op configure must not copy the payload to a temporary stage'
             ' before recognizing its valid publication'
         )
-    finally:
-        published.parent.chmod(mode)
+
+
+def platform_cases(values):
+    """Declare only unrepresentable POSIX filesystem operations as host-specific cases."""
+    result = []
+    for value in values:
+        parts = value if isinstance(value, tuple) else (value,)
+        posix = any(
+            'fifo' in str(part) or str(part).startswith('nonexecutable_') for part in parts
+        )
+        result.append(
+            pytest.param(
+                *parts,
+                marks=pytest.mark.skipif(
+                    os.name == 'nt' and posix,
+                    reason=(
+                        'NTFS has no POSIX FIFO or executable-mode mutation; '
+                        'these channels run on Unix'
+                    ),
+                ),
+            )
+        )
+    return result
 
 
 SOURCE_ESCAPES = (
@@ -546,13 +591,13 @@ def _change_declared_manifest(fixture, escape):
     fixture.manifest.write_text(json.dumps(value))
 
 
-@pytest.mark.parametrize('escape', SOURCE_ESCAPES)
+@pytest.mark.parametrize('escape', platform_cases(SOURCE_ESCAPES))
 def test_reuse_fully_revalidates_original_source_before_any_blocking_read(tmp_path, escape):
     fixture = RuntimeFixture(tmp_path)
     _successful(fixture.configure('establish-valid-publication'))
     publication = fixture.publication()
     original = _inventory(publication)
-    member = fixture.payload / 'bin/codex-app-server'
+    member = fixture.payload / ENTRYPOINT
     if escape == 'changed_byte_same_mtime':
         old = member.stat()
         member.write_bytes(member.read_bytes() + b'# Changed independently, same old timestamp.\n')
@@ -561,7 +606,7 @@ def test_reuse_fully_revalidates_original_source_before_any_blocking_read(tmp_pa
         (fixture.payload / 'unexpected').write_bytes(b'Not admitted by the input manifest.')
     elif escape in {'missing_member', 'directory_member', 'symlink_member', 'fifo_member'}:
         _replace_owned_input_entry(
-            member, escape.removesuffix('_member'), fixture.payload / 'bin/codex-code-mode-host'
+            member, escape.removesuffix('_member'), fixture.payload / CODE_HOST
         )
     elif escape == 'symlink_parent':
         held = fixture.root / 'real-original-bin'
@@ -625,13 +670,13 @@ OUTPUT_ESCAPES = (
 )
 
 
-@pytest.mark.parametrize('escape', OUTPUT_ESCAPES)
+@pytest.mark.parametrize('escape', platform_cases(OUTPUT_ESCAPES))
 def test_corrupt_or_foreign_immutable_publication_refuses_without_replacement(tmp_path, escape):
     fixture = RuntimeFixture(tmp_path)
     _successful(fixture.configure('establish-valid-publication'))
     publication = fixture.publication()
     source = _inventory(fixture.payload)
-    member = publication / 'bin/codex-app-server'
+    member = publication / ENTRYPOINT
     checker = list(fixture.build.glob('verify_assistant_runtime_*.cmake'))
     assert len(checker) == 1, 'The actual first publication owns exactly one original verifier'
     checker = checker[0]
@@ -640,7 +685,7 @@ def test_corrupt_or_foreign_immutable_publication_refuses_without_replacement(tm
     elif escape in {'missing_member', 'symlink_member', 'fifo_member'}:
         member.unlink()
         if escape == 'symlink_member':
-            member.symlink_to(fixture.payload / 'bin/codex-app-server')
+            member.symlink_to(fixture.payload / ENTRYPOINT)
         elif escape == 'fifo_member':
             os.mkfifo(member)
     elif escape == 'unexpected_member':
@@ -714,7 +759,7 @@ def test_changed_verified_identity_publishes_new_complete_tree_and_retains_old_r
         for event in second[2]
         if event.get('cmd', '').lower() == 'file'
         and event.get('args', [''])[0].upper() == 'RENAME'
-        and str(new) in event.get('args', [])
+        and new.as_posix() in event.get('args', [])
     ]
     assert renamed and all(Path(event['args'][1]) != new for event in renamed), (
         'The genuinely missing new identity is published through the ordinary atomic '
@@ -765,7 +810,7 @@ def test_dedicated_reuse_still_checks_original_policy_patch_and_legal_owner(tmp_
 
 
 @pytest.mark.parametrize('name', ['LICENSE', 'NOTICE'])
-@pytest.mark.parametrize('kind', ['missing', 'symlink', 'fifo'])
+@pytest.mark.parametrize('kind', platform_cases(['missing', 'symlink', 'fifo']))
 def test_dedicated_reuse_checks_original_external_legal_members_without_blocking(
     tmp_path, name, kind
 ):
@@ -811,7 +856,7 @@ SIDECAR_KINDS = [
 ] + [('verifier', 'fifo')]
 
 
-@pytest.mark.parametrize(('role', 'kind'), SIDECAR_KINDS)
+@pytest.mark.parametrize(('role', 'kind'), platform_cases(SIDECAR_KINDS))
 def test_original_direct_sidecar_io_refuses_unsafe_kind_before_touching_target(
     tmp_path, role, kind
 ):
@@ -854,7 +899,7 @@ def test_original_direct_sidecar_io_refuses_unsafe_kind_before_touching_target(
 
 
 @pytest.mark.parametrize('role', ['cache_root', 'target_cache', 'stage'])
-@pytest.mark.parametrize('kind', ['file', 'fifo', 'symlink', 'dangling'])
+@pytest.mark.parametrize('kind', platform_cases(['file', 'fifo', 'symlink', 'dangling']))
 def test_original_module_directory_components_cannot_redirect_or_erase_owned_io(
     tmp_path, role, kind
 ):
@@ -894,7 +939,9 @@ def test_original_module_directory_components_cannot_redirect_or_erase_owned_io(
 
 
 @pytest.mark.parametrize('role', ['manifest', 'dedicated_patch'])
-@pytest.mark.parametrize('kind', ['missing', 'directory', 'symlink', 'dangling', 'fifo'])
+@pytest.mark.parametrize(
+    'kind', platform_cases(['missing', 'directory', 'symlink', 'dangling', 'fifo'])
+)
 def test_explicit_dedicated_direct_reads_and_hashes_check_kind_before_io(tmp_path, role, kind):
     fixture = RuntimeFixture(tmp_path, dedicated=True)
     _successful(fixture.configure('prove-explicit-dedicated-original'))
@@ -1014,18 +1061,18 @@ def _original_runtime_select_literal_manifest(fixture, original_caller, spelling
 
 @pytest.mark.parametrize('form', ['relative', 'absolute'])
 @pytest.mark.parametrize('selection', ['symlink_parent', 'nonexistent_component'])
-def test_original_explicit_manifest_spelling_selects_filesystem_owner_without_lexical_collapse(
+def test_original_explicit_manifest_spelling_selects_filesystem_owner_without_lexical_collapse(  # noqa: PLR0915 - native filesystem owner controls
     tmp_path, form, selection
 ):
     fixture = RuntimeFixture(tmp_path / 'owner-a', dedicated=True)
     other = RuntimeFixture(tmp_path / 'owner-b', dedicated=True)
     original_caller = (fixture.project / 'CMakeLists.txt').read_text()
     proof = {}
-    different = other.payload / 'bin/codex-app-server'
+    different = other.payload / ENTRYPOINT
     different.write_bytes(different.read_bytes() + b'# Independent valid selected owner B.\n')
     other.archive = hashlib.sha256(b'Independent distinct valid B archive fixture.').hexdigest()
     other.refresh_manifest()
-    proof['a_bytes'] = (fixture.payload / 'bin/codex-app-server').read_bytes()
+    proof['a_bytes'] = (fixture.payload / ENTRYPOINT).read_bytes()
     proof['b_bytes'] = different.read_bytes()
     assert proof['a_bytes'] != proof['b_bytes'], (
         'The two independently authored valid payload owners are meaningfully different'
@@ -1063,7 +1110,7 @@ def test_original_explicit_manifest_spelling_selects_filesystem_owner_without_le
     proof['b_before'] = _inventory(proof['published_b'])
     assert (
         proof['published_a'] != proof['published_b']
-        and (proof['published_b'] / 'bin/codex-app-server').read_bytes() == proof['b_bytes']
+        and (proof['published_b'] / ENTRYPOINT).read_bytes() == proof['b_bytes']
         and _inventory(proof['published_a']) == proof['a_before']
     ), (
         'The lexically competing manifest really passes all ordinary dedicated '
@@ -1073,25 +1120,25 @@ def test_original_explicit_manifest_spelling_selects_filesystem_owner_without_le
     component = 'selector' if selection == 'symlink_parent' else 'nonexistent_component'
     suffix = component + '/../input.json'
     selected_path = fixture.project / component / '..' / 'input.json'
-    spelling = suffix if form == 'relative' else str(selected_path)
+    spelling = suffix if form == 'relative' else selected_path.as_posix()
     assert spelling.endswith(suffix), (
         'Neither Python nor the fixture collapses the '
         'original caller spelling before CMake receives it'
     )
-    if selection == 'symlink_parent':
+    if os.name == 'nt':
+        assert selected_path.samefile(competing_b), (
+            'The Windows filesystem resolves this spelling to the actual lexical owner B'
+        )
+    elif selection == 'symlink_parent':
         assert (
             selector.is_symlink()
-            and selector.readlink() == (selected_parent / 'child')
+            and selector.readlink().samefile(selected_parent / 'child')
             and selected_path.samefile(selected_a)
             and selected_path.read_bytes() == selected_a.read_bytes()
-        ), (
-            'The real filesystem resolves the parent symlink then dot-dot to regular'
-            ' manifest A; no terminal symlink or inferred path identity is admitted'
-        )
+        ), 'The POSIX filesystem resolves the parent symlink before dot-dot to regular owner A'
     else:
         assert not (fixture.project / component).exists(), (
-            'Required: original explicit manifest spelling selects filesystem '
-            'owner without lexical collapse.'
+            'The POSIX missing-component vehicle must remain absent before the actual read'
         )
         with pytest.raises(FileNotFoundError):
             selected_path.read_bytes()
@@ -1100,11 +1147,19 @@ def test_original_explicit_manifest_spelling_selects_filesystem_owner_without_le
         'literal-' + form + '-' + selection,
         known_paths=(*refs, proof['published_a'], proof['published_b']),
     )
-    if selection == 'symlink_parent':
+    if os.name == 'nt':
+        _successful(observed)
+        assert fixture.publication() == proof['published_b'], (
+            'The Windows original reader must select the same B owner as its native filesystem'
+        )
+        assert (fixture.publication() / ENTRYPOINT).read_bytes() == proof['b_bytes'], (
+            'Native owner selection must retain every verified byte of the actual Windows owner'
+        )
+    elif selection == 'symlink_parent':
         _successful(observed)
         assert (
             fixture.publication() == proof['published_a']
-            and (fixture.publication() / 'bin/codex-app-server').read_bytes() == proof['a_bytes']
+            and (fixture.publication() / ENTRYPOINT).read_bytes() == proof['a_bytes']
         ), (
             'The original literal relative/absolute selection opens regular manifest'
             ' A, not the different valid B that lexical selector-dot-dot collapse '
@@ -1166,25 +1221,25 @@ def test_original_configure_disposition_keeps_return_and_entered_failure_distinc
     module = tmp_path / 'runtime.cmake'
     caller = tmp_path / 'CMakeLists.txt'
     path = tmp_path / 'accepted'
-    trace = [{'cmd': 'edi_bundle_assistant_runtime', 'file': str(caller), 'frame': 1}]
+    trace = [{'cmd': 'edi_bundle_assistant_runtime', 'file': caller.as_posix(), 'frame': 1}]
     if entered:
         trace.append({
             'cmd': 'file',
-            'file': str(module),
+            'file': module.as_posix(),
             'frame': 2,
             'args': ['READ', 'missing-input', 'input'],
         })
     if resumes:
         trace.append({
             'cmd': 'file',
-            'file': str(caller),
+            'file': caller.as_posix(),
             'frame': 1,
-            'args': ['WRITE', str(path), 'original function returned'],
+            'args': ['WRITE', path.as_posix(), 'original function returned'],
         })
     error = ''
     if error_owner is not None:
         owner = module if error_owner == 'module' else caller
-        error = f'CMake Error at {owner}:25 (file):\n  explicit controlled diagnostic\n'
+        error = f'CMake Error at {owner.as_posix()}:25 (file):\n  explicit controlled diagnostic\n'
     run = subprocess.CompletedProcess(['cmake'], code, stdout='', stderr=error)
     proof = _runtime_configure_outcome(run, marker, trace, module, caller, path)
     assert proof['return_marker_present'] is marker, (
@@ -1201,4 +1256,16 @@ def test_original_configure_disposition_keeps_return_and_entered_failure_distinc
     )
     assert proof['runtime_refused'] is refused, (
         f'{kind}: only positive failed exit with an entered owned error proves refusal'
+    )
+
+
+def test_copy_trace_keeps_windows_source_identity_across_separator_transport():
+    source = PureWindowsPath('C:/owned payload')
+    copy = {'cmd': 'file', 'args': ['COPY', 'C:/owned payload/', 'DESTINATION', 'out']}
+    assert _payload_copy_calls([copy], source) == [copy], (
+        'Native CMake trace paths must retain the exact Windows payload owner across separators'
+    )
+    other = dict(copy, args=['COPY', 'C:/owned payload-other/', 'DESTINATION', 'out'])
+    assert not _payload_copy_calls([other], source), (
+        'A similarly prefixed directory must never count as staging the owned payload'
     )

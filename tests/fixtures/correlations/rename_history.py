@@ -59,7 +59,8 @@ def seed(directory, kind, namespace='ordinary'):
             + '\nloop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_11\n'
             '_atom_site_aniso.adp_22\n_atom_site_aniso.adp_33\n'
             '_atom_site_aniso.adp_12\n_atom_site_aniso.adp_13\n'
-            '_atom_site_aniso.adp_23\nA .3 .4 .5 .01 .02 .03\n'
+            '_atom_site_aniso.adp_23\nA .3 .4 .5 .01 .02 .03\n',
+            newline='\n',
         )
     bank = directory / 'experiments/bank.edi'
     if kind == 'texture-remove':
@@ -68,15 +69,19 @@ def seed(directory, kind, namespace='ordinary'):
             '_preferred_orientation.march_r\n'
             '_preferred_orientation.march_random_fract\n'
             '_preferred_orientation.index_h\n_preferred_orientation.index_k\n'
-            '_preferred_orientation.index_l\nphase .73 .2 0 0 1\n'
+            '_preferred_orientation.index_l\nphase .73 .2 0 0 1\n',
+            newline='\n',
         )
     structure_name, experiment_name = owners(namespace)
-    structure.write_text(structure.read_text().replace('data_phase', 'data_' + structure_name, 1))
+    structure.write_text(
+        structure.read_text().replace('data_phase', 'data_' + structure_name, 1), newline='\n'
+    )
     bank.write_text(
         bank
         .read_text()
         .replace('data_bank', 'data_' + experiment_name, 1)
-        .replace('phase ', structure_name + ' ')
+        .replace('phase ', structure_name + ' '),
+        newline='\n',
     )
     return directory
 
@@ -150,7 +155,7 @@ def frozen_loop(namespace):
 def literal_source(directory):
     shutil.copytree(ROOT.parent / 'loop_parameter_ids/line-segment', directory)
     path = directory / 'structures/phase.edi'
-    path.write_text(path.read_text().replace('data_phase', 'data_structure', 1))
+    path.write_text(path.read_text().replace('data_phase', 'data_structure', 1), newline='\n')
     bank = directory / 'experiments/bank.edi'
-    bank.write_text(bank.read_text().replace('phase ', 'structure '))
+    bank.write_text(bank.read_text().replace('phase ', 'structure '), newline='\n')
     return directory

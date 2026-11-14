@@ -77,10 +77,74 @@ and report functions as the Python entry point. Its version is the prepared
 release version. The Windows, macOS and Linux ZIPs each contain the executable
 and its license notices, with separate online installer assets for the GUI.
 
-Release builds use a static crysta core with the standard thread pool and
-scalar math. That keeps the CLI usable without OpenMP or a vector math
-runtime. Linux links the compiler runtimes statically and keeps the system
-C library as the platform boundary. Windows uses the static compiler runtime.
+Release builds link the same accelerated native SDK as the desktop and Python wheel. The
+archive carries the required SDK runtime libraries beside the executable, with relative loader
+paths. Linux keeps the C++ runtime static and the system C library as the platform boundary;
+Windows uses the SDK's release DLL runtime. The wheel also keeps its existing private static
+C++ runtime on Linux to protect processes that have already loaded a different C++ runtime.
 Qualification runs the extracted executable and checks its dependencies,
 version and fit against a saved project. The public download page exposes
 only CLI ZIPs present in published GitHub releases.
+
+
+## Process performance selections
+
+The standalone fit command and Python fit entry expose the existing app Performance selections as
+--threads auto|N and --parallel-fits N. Python calc also accepts --threads. Both hosts forward to the
+existing edi/threading.hpp setters before loading/fitting/calculating; Python uses private binding
+forwards used by its real CLI, with no additional public Python settings surface. The first implementation
+is the app Preferences calculation/scan fields and the existing shared engine policy. No scheduling,
+thread pool or project-state implementation is duplicated.
+
+Defaults are Auto and one scan fit at a time on every invocation. Explicit counts are positive decimal
+integers representable by the engine's count type; malformed, zero, missing and overflowing input is a
+usage error before a fit. Both space and equals forms are supported. Settings apply to this process and
+are not saved as project preferences or minimizer conditions. Existing output channels are unchanged.
+
+The engine owns the interaction: parallel scan files each run on one thread. Sequential files grouped
+for parallel fitting start from the preceding group's result, so choosing more than one parallel fit can
+change the starting values and fitted results. The default one-at-a-time choice retains the strict
+predecessor chain. The CLI help and fit guide state this same behavior as the app/core contract.
+
+
+The native artifact source inventory includes the existing compiled acceptance-fixture tree and native
+integration sources as well as unit/probe sources. This covers the first single-crystal observer and the
+new CLI performance observer together, including future fixture directories, so an uncommitted observer
+input cannot be treated as the committed native build. The native artifact transport now binds the
+current SDK manifest/library and Python ABI before reuse (ADR-0083).
+
+
+## Bounded scan progress rows
+
+Both CLI hosts use one private core table projection: a heading line (`Sequential fit:` or
+`Independent fit:` and the project), a blank line, the column names, then one row per completed
+file, rewritten in place on a terminal. The columns are Progress, Completed, OK, Failed, Elapsed,
+Estimated, chi2, chi2 range and File. Progress is a bar of ten block characters, a space and the
+percentage right-aligned in six characters, e.g. `██████░░░░  9.5%`. Completed, OK and Failed are
+right-aligned and reserve their width from the total file count from the first row (the count
+type's maximum width for an unknown total), so no column moves as counts grow. Elapsed,
+Estimated, chi2 and chi2 range are right-aligned and as wide as their headings; Elapsed names
+“this run” on resume, and Estimated uses only the completions covered by that clock. chi2 is the
+last completed fit's and chi2 range the lowest and highest so far, e.g. `0.07-1.10`, in the fit
+tables' number format. File, last and left-aligned, names the last finished file without its
+extension. Unknown totals have no percentage or estimate. The final row is the scan's summary: it
+keeps the last file and chi2 and the final range, leaves Estimated empty, and no summary line
+follows it; a run that fits no new file prints that row once. The original public
+scan_progress_line remains available for callers and shares the duration/ETA calculation.
+
+TTY hosts read the actual terminal width on each event, leaving its last column unused to prevent
+automatic wrapping. The File column takes what the other columns leave: a long name is shortened
+in the middle with `…`, down to twelve characters, then File is dropped, then chi2 range, chi2 and
+Estimated in that order; Progress and Completed always stay and the row never wraps. Which columns
+show depends on the width only, so the heading and every row keep the same columns. Widths are
+counted in characters, not bytes, because the bar's blocks and the ellipsis are one column but
+several UTF-8 bytes; the rewrite bounds both the row and its clearing spaces after a resize the
+same way. Redirected output retains one complete row per completion. The private functions are
+host plumbing, outside the public Python surface. Machine records and saved scientific values are
+unaffected.
+
+Manual Undo output takes its version header from the linked engine's existing error-record
+emitter, through the same private header validator used by the descent-listing comparison.
+The helper refuses malformed, missing, unterminated or duplicate headers. Crysta's own manual
+Undo emitter uses kFitReportSchema directly. There is no separately maintained version literal;
+restored-parameter fields, dry mode, quiet mode and persistence rules remain unchanged.

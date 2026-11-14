@@ -53,8 +53,12 @@
     "app/qml/Components/StatusBar.qml",
     "app/qml/Pages/Experiment/ExperimentsGroup.qml",
     "app/qml/Pages/Experiment/ReflectionsGroup.qml",
+    "app/src/analysis_view_model.cpp",
+    "app/src/app_info.cpp",
     "app/src/demo_driver.cpp",
     "app/src/experiment_models.cpp",
+    "app/src/pattern_chart_controller.cpp",
+    "core/src/report_html.cpp",
     "core/src/report_model.cpp",
     "core/src/safe_names.cpp"
    ],
@@ -66,6 +70,10 @@
    "code": "U+00B3",
    "font": "PT Sans",
    "sites": [
+    "app/src/app_info.cpp",
+    "app/src/demo_driver.cpp",
+    "app/src/pattern_chart_controller.cpp",
+    "core/src/report_html.cpp",
     "core/src/safe_names.cpp"
    ],
    "drawn_by": "PT Sans",
@@ -104,7 +112,9 @@
     "app/qml/Components/AssistantMessage.qml",
     "app/qml/Components/AssistantSkillsDialog.qml",
     "app/qml/Components/AssistantTrial.qml",
+    "app/qml/Components/ScanViewChart.qml",
     "app/qml/Components/SelectorField.qml",
+    "app/qml/Components/TutorialPanel.qml",
     "app/qml/Globals/FitOutcomes.qml",
     "app/qml/Pages/Analysis/FreeHeaderMenu.qml",
     "app/qml/Pages/Experiment/ExperimentsGroup.qml",
@@ -129,6 +139,10 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
+    "app/src/app_info.cpp",
+    "app/src/demo_driver.cpp",
+    "app/src/pattern_chart_controller.cpp",
+    "core/src/report_html.cpp",
     "core/src/safe_names.cpp"
    ],
    "drawn_by": "PT Sans",
@@ -180,8 +194,11 @@
    "code": "U+00D7",
    "font": "PT Sans",
    "sites": [
+    "app/src/app_info.cpp",
     "app/src/demo_driver.cpp",
-    "app/src/structure_view_controller.cpp"
+    "app/src/pattern_chart_controller.cpp",
+    "app/src/structure_view_controller.cpp",
+    "core/src/report_html.cpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400
@@ -330,7 +347,9 @@
    "font": "PT Sans",
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
-    "app/qml/Components/StatusBar.qml"
+    "app/qml/Components/StatusBar.qml",
+    "app/src/analysis_view_model.cpp",
+    "core/src/report_model.cpp"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -427,6 +446,7 @@
     "app/qml/Components/OnlineLoadDialog.qml",
     "app/qml/Components/StatusBar.qml",
     "app/qml/Components/StatusBarFitButton.qml",
+    "app/qml/Components/TutorialPanel.qml",
     "app/qml/Main.qml",
     "app/qml/Pages/Experiment/ExperimentsGroup.qml",
     "app/qml/Pages/Project/BlockNames.qml",
@@ -443,11 +463,86 @@
    "weight": 400
   },
   {
+   "char": "⁰",
+   "code": "U+2070",
+   "font": "PT Sans",
+   "sites": [
+    "app/src/app_info.cpp",
+    "app/src/demo_driver.cpp",
+    "app/src/pattern_chart_controller.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
    "char": "⁴",
    "code": "U+2074",
    "font": "PT Sans",
    "sites": [
-    "crysta:data/dictionary/parameters.yaml"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/src/app_info.cpp",
+    "app/src/demo_driver.cpp",
+    "app/src/pattern_chart_controller.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "⁵",
+   "code": "U+2075",
+   "font": "PT Sans",
+   "sites": [
+    "app/src/app_info.cpp",
+    "app/src/demo_driver.cpp",
+    "app/src/pattern_chart_controller.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "⁶",
+   "code": "U+2076",
+   "font": "PT Sans",
+   "sites": [
+    "app/src/app_info.cpp",
+    "app/src/demo_driver.cpp",
+    "app/src/pattern_chart_controller.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "⁷",
+   "code": "U+2077",
+   "font": "PT Sans",
+   "sites": [
+    "app/src/app_info.cpp",
+    "app/src/demo_driver.cpp",
+    "app/src/pattern_chart_controller.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "⁸",
+   "code": "U+2078",
+   "font": "PT Sans",
+   "sites": [
+    "app/src/app_info.cpp",
+    "app/src/demo_driver.cpp",
+    "app/src/pattern_chart_controller.cpp"
+   ],
+   "drawn_by": "Noto Sans",
+   "weight": 400
+  },
+  {
+   "char": "⁹",
+   "code": "U+2079",
+   "font": "PT Sans",
+   "sites": [
+    "app/src/app_info.cpp",
+    "app/src/demo_driver.cpp",
+    "app/src/pattern_chart_controller.cpp"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -457,7 +552,11 @@
    "code": "U+207B",
    "font": "PT Sans",
    "sites": [
-    "crysta:data/dictionary/parameters.yaml"
+    "crysta:data/dictionary/parameters.yaml",
+    "app/src/app_info.cpp",
+    "app/src/demo_driver.cpp",
+    "app/src/pattern_chart_controller.cpp",
+    "core/src/report_html.cpp"
    ],
    "drawn_by": "Noto Sans",
    "weight": 400
@@ -604,6 +703,16 @@
    "weight": 400
   },
   {
+   "char": "↑",
+   "code": "U+2191",
+   "font": "PT Sans",
+   "sites": [
+    "core/src/report_html.cpp"
+   ],
+   "drawn_by": "Noto Sans Mono",
+   "weight": 400
+  },
+  {
    "char": "→",
    "code": "U+2192",
    "font": "Encode Sans",
@@ -614,6 +723,16 @@
     "app/src/fit_view_model.cpp"
    ],
    "drawn_by": "Encode Sans",
+   "weight": 400
+  },
+  {
+   "char": "↓",
+   "code": "U+2193",
+   "font": "PT Sans",
+   "sites": [
+    "core/src/report_html.cpp"
+   ],
+   "drawn_by": "Noto Sans Mono",
    "weight": 400
   },
   {
@@ -667,6 +786,16 @@
    "sites": [
     "crysta:data/dictionary/parameters.yaml",
     "app/qml/Pages/Experiment/ReflectionsGroup.qml"
+   ],
+   "drawn_by": "Noto Sans Mono",
+   "weight": 400
+  },
+  {
+   "char": "▾",
+   "code": "U+25BE",
+   "font": "PT Sans",
+   "sites": [
+    "app/qml/Components/TutorialPanel.qml"
    ],
    "drawn_by": "Noto Sans Mono",
    "weight": 400

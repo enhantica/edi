@@ -88,7 +88,6 @@ CwlTchPseudoVoigt.show_supported	other-public
 CwlTchPseudoVoigt.type	other-public
 CylinderHewatAbsorption	other-public
 CylinderHewatAbsorption.abscor1	other-public
-CylinderHewatAbsorption.abscor2	other-public
 CylinderHewatAbsorption.mu_r	other-public
 CylinderHewatAbsorption.parameters	other-public
 CylinderHewatAbsorption.type	other-public
@@ -817,3 +816,18 @@ download_data	other-public
 download_tutorial	other-public
 list_data	other-public
 list_tutorials	other-public
+
+# Additive model state and presentation/logging controls.
+Analysis.stop_rules	other-public
+BraggPdExperiment.data_range	other-public
+FitResultBase.last_shift_su	other-public
+FitResultBase.stopping_rule	other-public
+FitResultBase.stopping_value	other-public
+LeastSquaresFitResult.last_shift_su	other-public
+LeastSquaresFitResult.stopping_rule	other-public
+LeastSquaresFitResult.stopping_value	other-public
+PdExperimentBase.data_range	other-public
+Project.display	other-public
+Project.stop_rules	other-public
+log_level	other-public
+set_log_level	other-public

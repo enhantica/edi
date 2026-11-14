@@ -2,51 +2,77 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit PbSO₄ to the Rietveld round robin's laboratory X-ray pattern, with the Cu K&alpha; doublet
+and Bérar-Baldinozzi asymmetry.
+
+It builds the catalogue case `pd-xray-cwl_pbso4-lab` step by step: the same project the command
+line fits and the app's Examples open.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-xray-cwl_pbso4-lab/structures pd-xray-cwl_pbso4-lab/experiments pd-xray-cwl_pbso4-lab/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-xray-cwl_pbso4-lab
+_metadata.title "PbSO₄ [Pnma] · Laboratory X-ray"
+_metadata.description "Rietveld round-robin data · Cu Kα doublet · Bérar-Baldinozzi asymmetry"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-xray-cwl_pbso4-lab
+    edi download-data pd-xray-cwl_pbso4-lab-pbso4
+    mv data/pd-xray-cwl_pbso4-lab-pbso4.edi pd-xray-cwl_pbso4-lab/structures/pbso4.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-xray-cwl_pbso4-lab
+    python -m edi download-data pd-xray-cwl_pbso4-lab-pbso4
+    mv data/pd-xray-cwl_pbso4-lab-pbso4.edi pd-xray-cwl_pbso4-lab/structures/pbso4.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/lab.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.02
-_peak.broad_gauss_v -0.02
-_peak.broad_gauss_w 0.008
-_peak.mixing_eta_0 0.5
-_peak.asym_beba_a0 0
-_peak.asym_beba_b0 0
-1 0 140
-2 1 0
-```
+    ```console
+    edi download-data pd-xray-cwl_pbso4-lab-lab
+    mv data/pd-xray-cwl_pbso4-lab-lab.edi pd-xray-cwl_pbso4-lab/experiments/lab.edi
+    ```
 
-The same for every other row (5 more).
+=== "Python package"
 
-In `structures/pbso4.edi`, remove the `()` from every value; they now read:
+    ```console
+    python -m edi download-data pd-xray-cwl_pbso4-lab-lab
+    mv data/pd-xray-cwl_pbso4-lab-lab.edi pd-xray-cwl_pbso4-lab/experiments/lab.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_cell.length_a 8.47
-_cell.length_b 5.39
-_cell.length_c 6.95
-Pb Pb 0.19 0.25 0.17 c 4 1 0.5 Biso
-S S 0.07 0.25 0.68 c 4 1 0.5 Biso
-```
+_minimizer.type crysta
+_minimizer.max_iterations 1000
 
-The same for every other row (3 more).
+_fitting_mode.type single
+
+_edi.schema_version 3
+```
 
 ## Scale and 2θ zero
 

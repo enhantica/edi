@@ -24,7 +24,7 @@ own="build/test-durations-$part.json"
 if [ -f "$recorded" ]; then cp "$recorded" "$own"; else echo '{}' > "$own"; fi
 set --
 if [ "${EDI_RUN_NIGHTLY_ONLY:-false}" != true ]; then
-  nightly="$(python -c 'import json; print("\n".join(json.load(open("tests/test-groups.json"))["groups"]["nightly-only"]["paths"]))')"
+  nightly="$(python -c 'import json, sys; sys.stdout.reconfigure(newline="\n"); print("\n".join(json.load(open("tests/test-groups.json"))["groups"]["nightly-only"]["paths"]))')"
   [ -n "$nightly" ] || { echo "system-tests-part: the nightly-only group names no files" >&2; exit 2; }
   while IFS= read -r path; do set -- "$@" "--ignore=$path"; done <<< "$nightly"
 fi

@@ -15,9 +15,7 @@
 // This test-only translation unit includes the adapter implementation so it can mutate the V1
 // boundary and inspect the persistent engine parameter. It never links edi_core, so no production
 // definition is duplicated in the executable.
-#define private public
 #include "edi/model.hpp"
-#undef private
 #include "edi/io.hpp"
 #include "../../../core/src/adapter.cpp"
 

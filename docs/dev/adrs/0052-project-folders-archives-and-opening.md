@@ -409,3 +409,47 @@ save records that actual write before sealing its carried-file receipt, so its o
 an unexpected added file. Existing carried files still undergo the ordinary receipt checks.
 
 - [Qt QFileDialog native platform behavior](https://doc.qt.io/qt-6/qfiledialog.html)
+
+
+Historical saved-byte checks validate later declared stop-rule sets before their
+older layout comparison. They retain the original whole-file hashes and reject
+changed, duplicate, unknown or mixed stop declarations. Projection removes only
+the independently checked later field; it neither substitutes numerical output
+nor asserts fitting-policy equivalence.
+
+
+Browser creation qualification follows the existing unsaved-changes guard before
+entering a new project name. It observes either the real guarded action or the
+rendered name input, uses the actual Discard pointer when guarded and requires
+the guard to retire before continuing. No test setter clears the current project
+or bypasses the guard; malformed, ambiguous and out-of-viewport controls still
+refuse. The prior native-picker case intentionally leaves an edited project,
+which makes this transition part of the sequential browser test lifecycle.
+
+
+The same browser guard handoff applies to both Create and Open. Routing tests
+leave edited projects behind after real import/cancellation/Undo actions; the
+next Open must resolve the genuine unsaved-changes prompt before expecting its
+Folder/Zip choice. One shared observer handles both actions, gives the guard
+priority over underlying controls and rejects unexpected geometry errors. No
+chooser event can be used as evidence that an unresolved guard was bypassed.
+
+
+The browser request observer waits for the selected Project page's actual group
+to enter the viewport after tab selection, before using its controls. Screenshot
+stability alone can precede the start of a page transition. Trusted pointers still
+use the unchanged fresh geometry, container and viewport refusal checks. Runtime
+exceptions retain the current action in their evidence; no exception is filtered
+or cleared when a scenario advances.
+
+
+Load-menu section titles own a named, nonfocusable accessible Heading; their
+painted label is ignored to avoid duplicating that name. The shared component
+covers all Load menus. Qt 6.11's WebAssembly menu-accessibility handler focuses
+its first accessible child on PopupMenuStart, so an unnamed generic heading can
+leave that child without an HTML element. The title remains noninteractive and
+real menu items retain their ordinary keyboard/chooser behavior. Actual browser
+qualification continues to reject every runtime exception.
+
+Pinned upstream source:
+[Qt 6.11.2 QWasmAccessibility](https://github.com/qt/qtbase/blob/v6.11.2/src/plugins/platforms/wasm/qwasmaccessibility.cpp).

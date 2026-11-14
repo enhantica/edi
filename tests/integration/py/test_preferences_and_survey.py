@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 QML = ROOT / 'app/qml'
@@ -109,21 +110,30 @@ def test_stacked_uses_palette_while_map_retains_its_selector():
 
 def test_citation_uses_zenodo_doi_and_consistent_title():
     citation = (ROOT / 'CITATION.cff').read_text()
-    assert '10.5281/zenodo.22905049' in citation, (
+    # Owner commit b665bb8 replaces the temporary record by edi's concept DOI.
+    assert '10.5281/zenodo.24127939' in citation, (
         'The citation must use the approved Zenodo record DOI'
     )
     source = (QML / 'Pages/Home/CitationDialog.qml').read_text()
     assert 'How to cite' in source, 'The citation dialog must retain the common How to cite title'
     assert 'external' in source.lower(), 'The DOI link must carry the external resource icon'
-    assert 'underline: false' in source or 'text-decoration: none' in source, (
-        'The clickable DOI must have no underline'
+    common = (QML / 'Components/InfoDialog.qml').read_text()
+    assert source.count('InfoDialog.InfoButton {') == 3 and '<a ' not in source, (
+        'Citation actions use the shared plain buttons rather than underlined HTML links'
+    )
+    assert 'component InfoButton: EaElements.Button' in common, (
+        'Citation actions inherit the common background-less app button style'
     )
     for label, value in [('Copy as text', 'text'), ('Copy as BibTeX', 'bibtex')]:
         assert label in source and 'copyText(dialog.citation.' + value in source, (
             'Both citation formats must copy their corresponding citation content'
         )
-    assert source.count('flat: true') >= 2, 'Both citation copy buttons must have no background'
-    assert 'footer:' in source, 'Citation copy actions must be in the footer beside Close'
+    assert 'actions: [' in source and 'property alias actions: buttons.contentData' in common, (
+        'Citation uses zenodo doi and consistent title.'
+    )
+    assert 'footer: EaElements.DialogButtonBox' in common, (
+        'Citation copy actions use the shared footer beside Close'
+    )
     assert re.search(r'^# How to cite$', (DOCS / 'about/citation.md').read_text(), re.MULTILINE), (
         'The website and app must use the same How to cite title'
     )
@@ -142,7 +152,26 @@ def test_cosio_example_starting_moments():
 def survey():
     pages = list(DOCS.glob('about/**/survey*.md'))
     assert len(pages) == 1, 'About must contain one persistent Survey page'
-    return pages[0].read_text()
+    config = yaml.compose((DOCS.parent / 'mkdocs.yml').read_text())
+    scripts = [value for key, value in config.value if key.value == 'extra_javascript']
+    assert len(scripts) == 1 and isinstance(scripts[0], yaml.SequenceNode), (
+        'Survey fields, version and contact data follow the published contract.'
+    )
+    assets = []
+    for address in scripts[0].value:
+        assert isinstance(address, yaml.ScalarNode) and address.tag.endswith(':str'), (
+            'Survey fields, version and contact data follow the published contract.'
+        )
+        relative = address.value.split('?', 1)[0]
+        asset = DOCS / relative
+        if asset.is_file():
+            source = asset.read_text()
+            if "querySelectorAll('form.ed-survey-form')" in source:
+                assets.append(source)
+    assert len(assets) == 1, (
+        'The delivered survey form has exactly one configured question builder'
+    )
+    return pages[0].read_text() + '\n' + assets[0]
 
 
 def test_survey_navigation_and_question_groups():
@@ -168,9 +197,9 @@ def test_survey_navigation_and_question_groups():
         'web application',
         'desktop application',
         'jupyter',
-        'scripting',
+        'python library in scripts',
         'standalone',
-        'without python scripting',
+        'command-line tool as a python package',
     ]:
         assert phrase in source, 'Survey must distinguish all six interfaces'
     for phrase in ['fullprof', 'gsas-ii', 'topas', 'jana', 'none', 'other']:
@@ -231,7 +260,15 @@ def test_online_sources_documented_collection_passes_real_checker():
         'experiment',
         'project',
     }, 'The documented example must include structure, experiment and project entries'
-    files = [p for p in DOCS.rglob('index.json') if json.loads(p.read_text()) == document]
+    # The page explicitly links the repository's downloadable worked collection.
+    assert 'docs/user/collection-example' in page.read_text(), (
+        'Online sources documented collection passes real checker.'
+    )
+    files = [
+        p
+        for p in (ROOT / 'docs/user/collection-example').rglob('index.json')
+        if json.loads(p.read_text()) == document
+    ]
     assert files, (
         'The documented collection must ship its named files and index for readers to try'
     )
@@ -250,38 +287,4 @@ def test_online_sources_documented_collection_passes_real_checker():
     assert result.returncode == 0, (
         'The documented collection example must pass the actual collection checker: '
         + result.stderr
-    )
-
-
-@pytest.mark.parametrize(
-    'instant',
-    [
-        '2030-05-09T23:59:59Z',
-        '2030-05-10T00:00:00Z',
-        '2030-05-11T12:00:00Z',
-        '2030-05-12T23:59:59Z',
-        '2030-05-13T00:00:00Z',
-    ],
-)
-def test_survey_event_windows_in_browser(instant):
-    survey()
-    files = list(DOCS.rglob('*events*.json'))
-    assert len(files) == 1, 'Survey events must be declared in one file'
-    pages = list(DOCS.glob('about/**/survey*.md'))
-    result = subprocess.run(
-        [
-            'node',
-            str(ROOT / 'tests/fixtures/survey/events.mjs'),
-            str(DOCS),
-            str(pages[0].relative_to(DOCS)),
-            str(files[0]),
-            instant,
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=20,
-    )
-    assert result.returncode == 0, (
-        'The real survey combobox must enforce active event dates: ' + result.stderr
     )

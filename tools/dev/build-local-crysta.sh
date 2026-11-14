@@ -4,10 +4,10 @@
 #
 #   bash tools/dev/build-local-crysta.sh <caller> <crysta-checkout>
 #
-# app-with-crysta and notebooks-run-with-crysta share this step. crysta's engine is built from the checkout as
-# it is, in crysta's own `cpp-toolchain` pixi environment; its tests are not run. The prefix records the
-# checkout's commit in `.crysta-sha`. CI and releases always use the pinned SDK (ADR-0017), so this refuses in
-# CI. See docs/dev/local-crysta.md.
+# app-with-crysta, cli-with-crysta and notebooks-run-with-crysta share this step. crysta's engine is built
+# from the checkout as it is, in crysta's own `cpp-toolchain` pixi environment; its tests are not run. The
+# prefix records the checkout's commit in `.crysta-sha`. CI and releases always use the pinned SDK
+# (ADR-0017), so this refuses in CI. See docs/dev/local-crysta.md.
 set -euo pipefail
 caller="${1:?usage: build-local-crysta.sh <caller> <crysta-checkout>}"
 [ -z "${CI:-}" ] || { echo "$caller: local development only; CI links the pinned crysta SDK" >&2; exit 1; }

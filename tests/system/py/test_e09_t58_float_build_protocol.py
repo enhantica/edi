@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 from edi import verification
 
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py import test_e09_t75_sdk_consumer as sdk_fixture
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -106,7 +107,9 @@ class _BuildHarness:
         binaries.mkdir()
         for name in ('git', 'cmake', 'cc', 'c++'):
             executable = binaries / name
-            executable.write_text(f'#!{sys.executable}\n{TOOL_DOUBLE}', encoding='utf-8')
+            executable.write_text(
+                f'#!{sys.executable}\n{TOOL_DOUBLE}', encoding='utf-8', newline='\n'
+            )
             executable.chmod(0o755)
         self.env = os.environ.copy()
         for name in (
@@ -194,7 +197,7 @@ class _BuildHarness:
             else:
                 self.env.pop('CRYSTA_SDK_DIR', None)
         return subprocess.run(
-            ['bash', str(self.edi / 'tools/ci' / script), *args],
+            [environment_bash(), str(self.edi / 'tools/ci' / script), *args],
             cwd=self.edi,
             env=self.env,
             capture_output=True,

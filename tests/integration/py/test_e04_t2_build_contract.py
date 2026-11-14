@@ -22,13 +22,22 @@ from tests.fixtures.background_estimate import manual_bytes as estimate_bytes
 from tests.fixtures.cwl_family.historical import original_tokens
 from tests.fixtures.e09_t75_workflow import active
 from tests.fixtures.metadata_transition.source_bytes import read_previous
+from tests.fixtures.native_process import environment_bash, fixture_program
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = tomllib.loads((ROOT / 'pixi.toml').read_text())
 CHECKS = ('app-lint', 'app-format-check', 'app-test', 'app-ui-test', 'group-app')
+SCAN_CHECKS = ('app-test-scan-refresh', 'app-test-scan-save')
 # Local aggregators omit both app tiers; desktop CI runs them on schedule/manual only.
 AUTOMATIC_CHECKS = ('app-lint', 'app-format-check', 'group-app')
+
+
+def copy_app_expectations(tmp_path):
+    # The Qt runner's declared committed expectations, not unrelated scientific
+    # fixtures. This orchestration witness substitutes the runner itself.
+    for relative in ('tests/fixtures/e04_t1/reference', 'tests/fixtures/e04_t2'):
+        shutil.copytree(ROOT / relative, tmp_path / relative)
 
 
 def tasks():
@@ -65,13 +74,16 @@ def sandbox(tmp_path):
     bin_dir.mkdir()
     for name in ('pixi', 'python', 'python3', 'cmake', 'ninja', 'git', 'curl', 'wget'):
         spy = bin_dir / name
-        spy.write_text('#!/bin/sh\nprintf "%s\\n" "' + name + ' $*" >> "$E04_CALLS"\nexit 97\n')
+        spy.write_text(
+            '#!/bin/sh\nprintf "%s\\n" "' + name + ' $*" >> "$E04_CALLS"\nexit 97\n', newline='\n'
+        )
         spy.chmod(0o755)
     return {
         **os.environ,
         'PATH': str(bin_dir) + os.pathsep + os.environ['PATH'],
         'E04_CALLS': str(tmp_path / 'calls'),
         'EDI_APP_TEST_RUNNER': '',
+        'FIXTURE_NATIVE_BASH': environment_bash(),
     }
 
 
@@ -81,10 +93,10 @@ def test_app_run_launches_existing_binary_without_build_or_network(tmp_path):
     env = sandbox(tmp_path)
     binary = tmp_path / 'build/app/app/edi_app'
     binary.parent.mkdir(parents=True)
-    binary.write_text('#!/bin/sh\necho LAUNCHED\n')
+    binary.write_text('#!/bin/sh\necho LAUNCHED\n', newline='\n')
     binary.chmod(0o755)
     run = subprocess.run(
-        ['bash', '-c', command('app-run')],
+        [environment_bash(), '-c', command('app-run')],
         cwd=tmp_path,
         env=env,
         capture_output=True,
@@ -104,7 +116,7 @@ def test_app_run_missing_binary_is_one_line_hint(tmp_path):
     assert 'app-run' in tasks(), 'note 15: app-run exists independently of app-build'
     env = sandbox(tmp_path)
     run = subprocess.run(
-        ['bash', '-c', command('app-run')],
+        [environment_bash(), '-c', command('app-run')],
         cwd=tmp_path,
         env=env,
         capture_output=True,
@@ -125,7 +137,9 @@ def test_qt_check_reads_committed_expectations_without_python_or_build(tmp_path)
     env = sandbox(tmp_path)
     runner = tmp_path / 'build/app/app/edi_app_tests'
     runner.parent.mkdir(parents=True)
-    runner.write_text('#!/bin/sh\necho "Totals: 1 passed, 0 failed, 0 skipped, 0 blacklisted"\n')
+    runner.write_text(
+        '#!/bin/sh\necho "Totals: 1 passed, 0 failed, 0 skipped, 0 blacklisted"\n', newline='\n'
+    )
     runner.chmod(0o755)
     env['EDI_APP_TEST_RUNNER'] = str(runner)
     cases = tmp_path / 'tests/unit/app'
@@ -133,9 +147,9 @@ def test_qt_check_reads_committed_expectations_without_python_or_build(tmp_path)
     (cases / 'tst_witness.qml').write_text('// collection witness\n')
     # Copy committed reference files only: this test never manufactures app values.
 
-    shutil.copytree(ROOT / 'tests/fixtures', tmp_path / 'tests/fixtures')
+    copy_app_expectations(tmp_path)
     run = subprocess.run(
-        ['bash', 'tools/ci/app-test.sh'],
+        [environment_bash(), 'tools/ci/app-test.sh'],
         cwd=tmp_path,
         env=env,
         capture_output=True,
@@ -193,7 +207,10 @@ def test_ci_job_names_state_area_and_platform_and_share_matrices():
 
     public = public_profile(jobs())
     required = {
-        'pin currency',
+        'crysta-sdk',
+        'native · Windows',
+        'core · Windows',
+        'cli-python · Windows',
         'native · Linux',
         'native · macOS',
         'core · Linux',
@@ -352,7 +369,7 @@ def test_crysta_build_and_prefix_are_isolated_by_environment(tmp_path):
     locations = []
     for environment in ('default', 'app'):
         run = subprocess.run(
-            ['bash', '-x', 'tools/ci/build-crysta.sh'],
+            [environment_bash(), '-x', 'tools/ci/build-crysta.sh'],
             cwd=tmp_path,
             env={
                 **env,
@@ -437,11 +454,12 @@ def sequence_sandbox(tmp_path, *, copy_fixtures=True):
     env['CONDA_PREFIX'] = str(tmp_path / 'prefix')
     env['PIXI_ENVIRONMENT_NAME'] = 'default'
     env['PYTHONPATH'] = ''
+    env['FIXTURE_NATIVE_BASH'] = environment_bash()
 
     def script(path, body):
         target = tmp_path / path
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text('#!/bin/bash\nset -eu\n' + body + '\n')
+        target.write_text('#!/bin/bash\nset -eu\n' + body + '\n', newline='\n')
         target.chmod(0o755)
 
     for task in ('app-build', 'core-build'):
@@ -450,14 +468,14 @@ def sequence_sandbox(tmp_path, *, copy_fixtures=True):
             'if [ "$#" -ne 0 ]; then echo query >> "$E04_CALLS"; exit 97; fi\n'
             f'echo build:{task} >> "$E04_CALLS"\nexit "${{E04_BUILD_RC:-0}}"',
         )
-    script('bin/pixi', f'exec {shlex.quote(sys.executable)} task_spy.py "$@"')
+    script('bin/pixi', f'exec {shlex.quote(Path(sys.executable).as_posix())} task_spy.py "$@"')
     script(
         'bin/python',
         'if [ "${1:-}" = -m ] && [ "${2:-}" = pytest ]; then\n'
         'echo check:group-app >> "$E04_CALLS"\nexit 0\nfi\n'
         'if [ "${1:-}" = tests/integration/cmake/check_gui_base.py ]; then\n'
         'echo check:gui-base >> "$E04_CALLS"\nexit "${BASE_CHECK_RC:-0}"\nfi\n'
-        f'exec {shlex.quote(sys.executable)} "$@"',
+        f'exec {shlex.quote(Path(sys.executable).as_posix())} "$@"',
     )
     shutil.copyfile(tmp_path / 'bin/python', tmp_path / 'bin/python3')
     script('prefix/lib/qt6/bin/qmllint', 'echo check:app-lint >> "$E04_CALLS"')
@@ -494,13 +512,13 @@ def sequence_sandbox(tmp_path, *, copy_fixtures=True):
         ])
     )
     if copy_fixtures:
-        shutil.copytree(ROOT / 'tests/fixtures', tmp_path / 'tests/fixtures')
+        copy_app_expectations(tmp_path)
     return env
 
 
 def run_task(tmp_path, env, name):
     return subprocess.run(
-        [str(tmp_path / 'bin/pixi'), 'run', name],
+        [*fixture_program(tmp_path / 'bin/pixi'), 'run', name],
         cwd=tmp_path,
         env=env,
         capture_output=True,
@@ -515,7 +533,7 @@ def calls(tmp_path):
     return path.read_text().splitlines() if path.exists() else []
 
 
-@pytest.mark.parametrize('name', CHECKS)
+@pytest.mark.parametrize('name', [*CHECKS, *SCAN_CHECKS])
 def test_standalone_step_builds_first_every_time(tmp_path, name):
     env = sequence_sandbox(tmp_path)
     for _ in range(2):
@@ -536,7 +554,7 @@ def test_standalone_step_builds_first_every_time(tmp_path, name):
         )
 
 
-@pytest.mark.parametrize('name', [*CHECKS, 'app-build-recovery'])
+@pytest.mark.parametrize('name', [*CHECKS, *SCAN_CHECKS, 'app-build-recovery'])
 def test_standalone_failed_build_prevents_checks(tmp_path, name):
     env = sequence_sandbox(tmp_path)
     result = run_task(tmp_path, {**env, 'E04_BUILD_RC': '23'}, name)
@@ -592,8 +610,8 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event
     # Actions stringifies YAML env values (EDI_NATIVE_ARTIFACT is declared as 1).
     env.update({key: str(value) for key, value in job.get('env', {}).items()})
     nightly_condition = (
-        "${{ !cancelled() && (github.event_name == 'schedule' || "
-        "github.event_name == 'workflow_dispatch') }}"
+        "${{ (!cancelled() && (github.event_name == 'schedule' || "
+        "github.event_name == 'workflow_dispatch')) && steps.inputs.outputs.run == 'true' }}"
     )
     for step in job['steps']:
         cmd = step.get('run', '')
@@ -613,13 +631,16 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event
             if not enabled:
                 continue
         elif re.search(r'\bgroup-app(?:\s|$)', cmd):
-            assert active(step, event) == (event != 'pull_request'), (
-                'The app group runs on push, nightly and full manual, and skips PRs'
-            )
+            assert active(step, event, outputs={('inputs', 'run'): 'true'}) == (
+                event != 'pull_request'
+            ), 'The app group runs on push, nightly and full manual, and skips PRs'
             if event == 'pull_request':
                 continue
         else:
-            assert condition is None, (
+            assert (
+                str(condition).removeprefix('${{').removesuffix('}}').strip()
+                == "steps.inputs.outputs.run == 'true'"
+            ), (
                 'Build and ordinary app checks remain unconditional within the desktop job; '
                 f'platform={platform}, command={cmd}, actual condition={condition!r}'
             )
@@ -629,7 +650,7 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event
             **{key: str(value) for key, value in step.get('env', {}).items()},
         }
         result = subprocess.run(
-            ['bash', '-c', cmd],
+            [environment_bash(), '-c', cmd],
             cwd=tmp_path,
             env=step_env,
             capture_output=True,
@@ -716,7 +737,7 @@ def test_dispatcher_skip_deps_keeps_checker_and_environment(tmp_path, options, s
             'depends-on = [{ task = "app-build", environment = "app" }] }\n'
         )
         result = subprocess.run(
-            [str(tmp_path / 'bin/pixi'), 'run', *flags, task],
+            [*fixture_program(tmp_path / 'bin/pixi'), 'run', *flags, task],
             cwd=tmp_path,
             env={**env, 'E04_BUILD_RC': '23'},
             capture_output=True,

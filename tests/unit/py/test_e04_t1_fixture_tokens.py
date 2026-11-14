@@ -3,6 +3,8 @@
 import runpy
 from pathlib import Path
 
+import pytest
+
 GENERATOR = runpy.run_path(
     str(Path(__file__).resolve().parents[2] / 'fixtures/e04_t1/generate.py')
 )
@@ -68,3 +70,27 @@ def test_app_text_oracle_preserves_carriage_return_field_separators(tmp_path):
         {'index': 0, 'values': [12.125, 0.25, 0.5]},
         {'index': 1, 'values': [13.875, 9.0, 3.0]},
     ], 'scan points skip negative intensity and follow the independent Poisson uncertainty rule'
+
+
+def test_scan_source_oracle_uses_folder_declaration_in_every_fitting_mode(tmp_path):
+    modes = ('single', 'joint', 'sequential', 'independent')
+    for mode in modes:
+        assert GENERATOR['scan_inputs'](tmp_path, {'_fitting_mode.type': mode}) == [], (
+            'Scan source oracle uses folder declaration in every fitting mode.'
+        )
+    folder = tmp_path / 'scan'
+    folder.mkdir()
+    (folder / '01.txt').write_text('12 31 2\n13 44 3\n')
+    declaration = {'_sequential_fit.data_dir': 'scan', '_sequential_fit.file_pattern': '*.txt'}
+    reference = GENERATOR['scan_inputs'](tmp_path, declaration)
+    assert len(reference) == 1 and reference[0]['samples'][0]['values'] == [12, 31, 2], (
+        'Scan source oracle uses folder declaration in every fitting mode.'
+    )
+    for mode in modes:
+        assert (
+            GENERATOR['scan_inputs'](tmp_path, {**declaration, '_fitting_mode.type': mode})
+            == reference
+        ), 'Scan source oracle uses folder declaration in every fitting mode.'
+    for key, value in declaration.items():
+        with pytest.raises(ValueError, match='declared data directory and file pattern'):
+            GENERATOR['scan_inputs'](tmp_path, {key: value})

@@ -30,7 +30,7 @@ def fingerprint(root):
         *root.glob('docs/user/cli/*/project/**/*'),
     })
     return {
-        str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+        path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in paths
         if path.is_file()
     }
@@ -38,7 +38,7 @@ def fingerprint(root):
 
 def fixture_fingerprint(root):
     return {
-        str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+        path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in sorted(root.rglob('*'))
         if path.is_file() and path.suffix in {'.cpp', '.hpp', '.py', '.txt'}
     }
@@ -46,7 +46,7 @@ def fixture_fingerprint(root):
 
 def fingerprint_headers(root):
     return {
-        str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+        path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in sorted(root.rglob('*.hpp'))
     }
 
@@ -58,7 +58,7 @@ def sdk_inputs(sdk, engine_source):
     if identity != manifest['source_sha']:
         raise RuntimeError('App receipts require the selected SDK manifest and linked identity')
     sources = {
-        str(path.relative_to(engine_source)): hashlib.sha256(path.read_bytes()).hexdigest()
+        path.relative_to(engine_source).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
         for part in ('src', 'include', 'data', 'cmake', 'lib')
         for path in sorted((engine_source / part).rglob('*'))
         if path.is_file()

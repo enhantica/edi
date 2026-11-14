@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: BSD-3-Clause
-# The WebAssembly toolchain (edi ADR-0023): Emscripten, Qt's two wasm kits and the checks' browser,
+# The WebAssembly toolchain (edi ADR-0023): Emscripten, Qt's multithreaded wasm kit and the checks' browser,
 # installed once into a cache outside the workspace and reused by every build after.
 #
 #   Emscripten  exactly EDI_WASM_EMSDK (Qt's QT_EMCC_RECOMMENDED_VERSION for the kits; another version is fatal
 #               to qt-cmake), from emsdk's git tag of the same name.
-#   Qt          EDI_WASM_QT's wasm_multithread and wasm_singlethread kits through aqtinstall (pinned in pixi.toml's
+#   Qt          EDI_WASM_QT's wasm_multithread kit through aqtinstall (pinned in pixi.toml's
 #               app feature), with the modules the app links. conda-forge has no Qt for wasm.
 #
 # The host Qt the kits need (QT_HOST_PATH) is the app environment's own, so this runs in it:
@@ -38,7 +38,7 @@ fi
 
 # --- Qt's wasm kits -----------------------------------------------------------------------------------
 QT="$EDI_WASM_TOOLCHAIN/qt"
-for kit in wasm_multithread wasm_singlethread; do
+for kit in wasm_multithread; do
   id="$EDI_WASM_QT $kit $EDI_WASM_QT_MODULES"
   if [ "$(cat "$QT/$EDI_WASM_QT/$kit/.edi-installed" 2>/dev/null)" != "$id" ]; then
     rm -rf "${QT:?}/$EDI_WASM_QT/$kit"
@@ -84,8 +84,8 @@ fi
 bash "$ROOT/tools/ci/wasm-webkit.sh"
 
 # The pin is enforced where it bites: the kit's own recommended Emscripten must be the one installed.
-for kit in wasm_multithread wasm_singlethread; do
+for kit in wasm_multithread; do
   wasm_check_emsdk_pin "$QT/$EDI_WASM_QT/$kit"
 done
-echo "wasm-toolchain: Emscripten $EDI_WASM_EMSDK and Qt $EDI_WASM_QT (multithread, singlethread) in $EDI_WASM_TOOLCHAIN"
-du -sh "$EMSDK" "$EIGEN" "$CHROME" "$(wasm_playwright_dir)" "$QT/$EDI_WASM_QT/wasm_multithread" "$QT/$EDI_WASM_QT/wasm_singlethread"
+echo "wasm-toolchain: Emscripten $EDI_WASM_EMSDK and Qt $EDI_WASM_QT (multithread) in $EDI_WASM_TOOLCHAIN"
+du -sh "$EMSDK" "$EIGEN" "$CHROME" "$(wasm_playwright_dir)" "$QT/$EDI_WASM_QT/wasm_multithread"

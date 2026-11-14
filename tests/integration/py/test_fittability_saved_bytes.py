@@ -1,9 +1,11 @@
 """Main regression pins: exact inputs and numeric fitted outputs at parity precision."""
 
+import base64
 import importlib
 import json
 import re
 import warnings
+import zlib
 from decimal import Decimal
 from pathlib import Path
 
@@ -15,8 +17,18 @@ from tests.fixtures.cif_import_baseline.canonical_positions import (
     SILICON,
     restore_representative,
 )
-from tests.fixtures.fittability.saved_reference import fingerprints, fit_snapshot, snapshot, staged
-from tests.fixtures.project_categories.historical_bytes import check_project_spacing, prior_digest
+from tests.fixtures.fittability.saved_reference import (
+    fingerprints,
+    fit_snapshot,
+    historical_solver_record,
+    snapshot,
+    staged,
+)
+from tests.fixtures.project_categories.historical_bytes import (
+    check_project_spacing,
+    native_edi_bytes,
+    prior_digest,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 API = 'edi'
@@ -89,7 +101,7 @@ def test_main_saved_bytes_regression_pin(tmp_path, case, rule):
             order_reference=REFERENCE['projects'][case][rule],
             source=ROOT / case,
         )
-        saved = (tmp_path / 'saved/experiments/dream.edi').read_bytes()
+        saved = native_edi_bytes((tmp_path / 'saved/experiments/dream.edi').read_bytes())
         fixed = b'_peak.broad_lorentz_gamma_1 0.1\n'
         assert saved.count(fixed) == 1, (
             'The saved unsupported Lorentzian coefficient has exactly one fixed spelling'
@@ -122,12 +134,14 @@ def test_main_saved_bytes_regression_pin(tmp_path, case, rule):
 @pytest.mark.parametrize('case', tuple(REFERENCE['fit_projects']))
 @pytest.mark.parametrize('rule', ['iucr_19', 'iucr_99'])
 def test_main_fitted_descriptor_bytes_regression_pin(tmp_path, case, rule):
+    observed = {}
     actual = fit_snapshot(
         importlib.import_module(API),
         corpus_case_dir('single-crystal-page-cwl-tbti-isotropic-extinction') / 'project',
         tmp_path,
         rule,
         order_reference=REFERENCE['fit_projects'][case][rule],
+        observed=observed,
     )
     check_project_spacing(tmp_path / 'saved')
 
@@ -140,7 +154,9 @@ def test_main_fitted_descriptor_bytes_regression_pin(tmp_path, case, rule):
         assert len(matches) == 1, 'The frozen main save contains exactly one fitted numeric row'
         return [token.encode() for token in matches[0]]
 
-    analysis = (tmp_path / 'saved/analysis/analysis.edi').read_bytes()
+    analysis = historical_solver_record(
+        native_edi_bytes((tmp_path / 'saved/analysis/analysis.edi').read_bytes()), observed
+    )
     for name in (
         'reduced_chi_square',
         'objective_value',
@@ -170,7 +186,7 @@ def test_main_fitted_descriptor_bytes_regression_pin(tmp_path, case, rule):
         REFERENCE['fit_projects'][case][rule]['analysis/analysis.edi'],
         name='analysis/analysis.edi',
     )
-    experiment = (tmp_path / 'saved/experiments/experiment.edi').read_bytes()
+    experiment = native_edi_bytes((tmp_path / 'saved/experiments/experiment.edi').read_bytes())
     for prefix in ('_extinction.domain_radius ', '_extinction.crystal_radius ', 'structure '):
         experiment = _pin_fitted_line(
             experiment, prefix.encode(), pinned('experiments/experiment.edi', prefix)
@@ -183,5 +199,10 @@ def test_main_fitted_descriptor_bytes_regression_pin(tmp_path, case, rule):
     assert actual == REFERENCE['fit_projects'][case][rule], (
         'The fitted crystal-radius regression preserves every saved path and non-fitted byte '
         'under both s.u. rules, with checked fitted numbers, clocks and hash-verified '
-        'category movement and description spelling'
+        'category movement and description spelling; canonical experiment zlib/base64: '
+        + (
+            base64.b64encode(zlib.compress(experiment)).decode()
+            if actual != REFERENCE['fit_projects'][case][rule]
+            else ''
+        )
     )

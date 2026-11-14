@@ -221,6 +221,15 @@ project.display.fit.correlations()
 project.display.structure('cosio')
 
 # %% [markdown]
+# ## Report
+#
+# The HTML report draws the measured, calculated and difference patterns with the reflection
+# positions, and lists the structures, the experiments and the fit. Open it in a browser.
+
+# %%
+project.report.save_html('pd-neut-cwl_cosio-d20.html')
+
+# %% [markdown]
 # ## Save the project
 
 # %%

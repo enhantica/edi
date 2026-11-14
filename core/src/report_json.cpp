@@ -914,6 +914,12 @@ Value browser_structure(const ReportStructure& structure, const std::vector<Scen
     if (!scene.current || drawing.spheres.size() + drawing.shared.size() == 0) return Object{{"empty", true}};
     // The toolbar's choices, as the app's Structure view offers them: the colour schemes, then the atoms.
     Object variants; Array schemes, atoms;
+    // Raw v1 carries the base scene/drawing, not cached alternatives (ADR-0036).
+    if (structure.variants.empty()) {
+        schemes.emplace_back(Object{{"token", "current"}, {"name", "Current view"}});
+        atoms.emplace_back(Object{{"token", "all"}, {"short", "Current"}, {"name", "Current view"}});
+        variants.emplace_back("current", Object{{"all", browser_variant(scene, drawing, structure.labels)}});
+    }
     for (const ReportStructure::Variant& variant : structure.variants) {
         const char* scheme = variant.colours == ColorScheme::Vesta ? "vesta" : "jmol";
         const auto [token, short_name] = atom_choice(variant.atoms);
@@ -935,7 +941,7 @@ Value browser_structure(const ReportStructure& structure, const std::vector<Scen
         if (std::any_of(styles.begin(), styles.end(), [&](const auto& item) { return item.first == style.key; })) continue;
         styles.emplace_back(style.key, Object{{"key", style.key}, {"light", style.light}, {"dark", style.dark}, {"value", style.value}});
     }
-    const bool moments = std::any_of(structure.variants.begin(), structure.variants.end(), [](const auto& variant) { return !variant.drawing.moments.empty(); });
+    const bool moments = structure.variants.empty() ? !drawing.moments.empty() : std::any_of(structure.variants.begin(), structure.variants.end(), [](const auto& variant) { return !variant.drawing.moments.empty(); });
     return Object{{"empty", false}, {"variants", std::move(variants)}, {"schemes", std::move(schemes)}, {"atoms", std::move(atoms)},
         {"cell", instances_json(cell)}, {"styles", std::move(styles)},
         {"controls", Object{{"atoms", !scene.atoms.empty()}, {"labels", !scene.atoms.empty() && !structure.labels.empty()}, {"bonds", !scene.atoms.empty() && !scene.bonds.empty()}, {"moments", moments}}}};

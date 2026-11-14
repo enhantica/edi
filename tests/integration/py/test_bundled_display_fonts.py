@@ -20,7 +20,7 @@ TOKENS = re.compile(
 ESCAPES = re.compile(r'\\(?:u([\da-fA-F]{4})|U([\da-fA-F]{8})|x([\da-fA-F]+)|(.))')
 
 
-def decode_cpp_literal(value):
+def cpp_literal_bytes(value):
     # C++ \x escapes denote bytes in an ordinary UTF-8 string, whereas
     # QML/JavaScript \x escapes denote Unicode code points.
     raw = bytearray()
@@ -36,7 +36,11 @@ def decode_cpp_literal(value):
         start = escape.end()
     raw.extend(value[start:].encode('utf-8'))
     # A dynamic UTF-8 prefix is bytes, not an independently displayed glyph.
-    return raw.decode('utf-8', errors='ignore')
+    return bytes(raw)
+
+
+def decode_cpp_literal(value):
+    return cpp_literal_bytes(value).decode('utf-8', errors='ignore')
 
 
 def literals(text, *, cpp=False):
@@ -46,6 +50,7 @@ def literals(text, *, cpp=False):
         match = tokens[index]
         index += 1
         value = match.group()
+        joined = None
         if cpp and value.startswith('"'):
             end = match.end()
             while index < len(tokens):
@@ -60,9 +65,15 @@ def literals(text, *, cpp=False):
                 gap = re.sub(r'//[^\n]*|/\*[\s\S]*?\*/', '', text[end : tokens[following].start()])
                 if gap.strip():
                     break
-                value = value[:-1] + tokens[following].group()[1:]
+                # End each hexadecimal escape at its source token boundary, then
+                # join bytes before decoding UTF-8 (a glyph can span literals).
+                held = joined if joined is not None else cpp_literal_bytes(value)
+                joined = held[:-1] + cpp_literal_bytes(tokens[following].group())[1:]
                 end = tokens[following].end()
                 index = following + 1
+        if joined is not None:
+            yield match.start(), joined.decode('utf-8', errors='ignore')
+            continue
         if value.startswith(('//', '/*')):
             continue
         if cpp and value.startswith('R"'):
@@ -326,4 +337,13 @@ def test_structure_legend_uses_the_atom_table_icon_pipeline():
     )
     assert 'structureViewOptions.colorScheme' in colors, (
         'The table element colour must follow the selected structure-view scheme'
+    )
+
+
+def test_cpp_adjacent_tokens_do_not_extend_hex_escapes_or_redecode_backslashes():
+    assert list(literals(r'"\xC3\x97" "10"', cpp=True)) == [(0, '"\u00d710"')], (
+        'Cpp adjacent tokens do not extend hex escapes or redecode backslashes.'
+    )
+    assert list(literals(r'"\\x41" /* boundary */ "42"', cpp=True)) == [(0, '"\\x4142"')], (
+        'Cpp adjacent tokens do not extend hex escapes or redecode backslashes.'
     )

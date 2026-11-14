@@ -46,16 +46,15 @@ node --experimental-websocket tests/system/manual/web_parallel.mjs \
   <unpacked-site> <persistent-output> <pinned-chrome>
 ```
 
-This executes both corpus cases on the singlethread, direct-isolation and
-service-worker routes through the existing browser driver. Every route checks
+This executes both corpus cases on the direct-isolation and service-worker routes through the existing browser driver. Every route checks
 its kit, isolation, SharedArrayBuffer, Develop diagnostics and native numerical
-reference. It records the NCAF fit durations and requires the multithread kit to
-be at least 1.4 times faster on the same browser executable and runner exposing
+reference. It records the NCAF fit durations and requires the parallel policy on the identical multithread binary to
+be at least 1.4 times faster than an explicitly selected single worker on the same browser executable and runner exposing
 at least four cores. Only this speed gate uses a duration threshold.
 
 The matrix also runs `tests/system/manual/web_parallel_routes.mjs` in WebKit
 against the shipped site: initial load, reload, a second page in the same browser
-context and its reload, for each of the three routes. Every load observes the
+context and its reload, for each of the two routes. Every load observes the
 completed wasm request, isolation and SharedArrayBuffer. Controlled shim documents
 must receive COEP `require-corp`; Chromium cannot stand in for this regression.
 Rendered UI and fitted-result checks remain in the existing full browser matrix;
@@ -76,13 +75,12 @@ check accepts the same module path as its third argument.
 Gate 9's before/after web-to-desktop ratio and the measured native exceptions,
 mimalloc, LTO and relaxed-SIMD trials belong in the packet's results with each
 run's provenance. The approximate 1.5x target is reported, not asserted here;
-gate 4 retains its authorized 1.4x multithread-to-singlethread floor. Native fit
+gate 4 retains its authorized 1.4x parallel-to-one-worker floor on the same shipped kit. Native fit
 captures and cross-platform numeric tolerances remain unchanged.
 
 The diagnostics text contract adds `Engine backend`, `Engine workers`, and
 `WebAssembly SIMD`, retaining the existing ideal-thread, OpenMP-team and browser
-core labels. The isolated kits report a std::thread pool with multiple workers
-and SIMD enabled; the singlethread kit reports serial, one worker and SIMD off.
+core labels. Both isolation routes report the std::thread pool and SIMD enabled. The speed baseline selects one worker through the real Performance preferences and requires diagnostics to confirm it; the parallel run selects Auto and requires multiple workers. Scientific and responsiveness checks run for both selections.
 
 The separate executed-body witness lives in crysta's visible
 `tests/fixtures/web_parallel` builders and hidden browser driver. Build it from
@@ -134,7 +132,7 @@ The wasm accessibility layer need not mirror that role into the browser DOM;
 the check reads live native progress through `window.ediFitProgress()` instead.
 No test-generated label or completed-results substitute is admitted.
 
-Install `window.ediFitProgress()` in both kits alongside the existing page
+Install `window.ediFitProgress()` in the sole kit alongside the existing page
 bridges. Every call returns (or resolves to) a fresh object with:
 
 - `text`: the actual QML `statusBar.fit.progress` item's current `text` property.
@@ -176,7 +174,7 @@ prints the browser value, native value and tolerance. Real Analysis controls,
 fit, project save, Reset and reopen remain required for both cases.
 
 The native file controls also need `window.ediControlGeometry(objectName)` in
-both kits, installed alongside the existing main-thread page bridges. Qt can
+the sole kit, installed alongside the existing main-thread page bridges. Qt can
 retain an old AX rectangle after the empty-table layout changes: the observed
 Structure Load proxy still placed its center at y=187.5 while the actual drawn
 button was at y=280 in the fixed 1280x768 viewport. This reader replaces the

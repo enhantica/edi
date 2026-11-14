@@ -56,7 +56,9 @@ def poisoned_project(directory, style, layout):
 
 def snapshot(directory):
     return {
-        str(p.relative_to(directory)): p.read_bytes() for p in directory.rglob('*') if p.is_file()
+        p.relative_to(directory).as_posix(): p.read_bytes()
+        for p in directory.rglob('*')
+        if p.is_file()
     }
 
 

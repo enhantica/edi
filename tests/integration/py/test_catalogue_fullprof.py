@@ -73,7 +73,7 @@ def test_fullprof_reference_binds_all_committed_start_inputs_and_outputs(case):
         'Reference provenance must name FullProf and the exact unmodified start'
     )
     project = ROOT / record['start_project']
-    inputs = {str(p.relative_to(project)): sha256(p) for p in sorted(project.rglob('*.edi'))}
+    inputs = {p.relative_to(project).as_posix(): sha256(p) for p in sorted(project.rglob('*.edi'))}
     assert record['project_sha256'] == inputs, (
         'Every structure, experiment, free flag and constraint must match the referenced start'
     )
@@ -353,7 +353,7 @@ def assert_cli_expectations(case, expected):
     if case in SINGLE_CRYSTAL:
         assert_single_crystal_expectations(case, expected, source)
         return
-    assert expected.get('template', False) == '_scan' in case, (
+    assert expected.get('template', False) == ('_scan' in case), (
         'A scan compares its template single fit; ordinary cases cannot substitute a template'
     )
     assert source['converged'], 'A nonconvergent external attempt cannot supply minimum references'

@@ -141,6 +141,13 @@ struct AbsorptionNode {
 struct ScDataRangeNode {
     edi::ExperimentBase* experiment;
 };
+// A powder's calculation range (diffraction-lib CwlPdDataRange / TofPdDataRange): the grid of an
+// experiment without measured data, else the measured pattern's own range, read-only.
+struct PdDataRangeNode {
+    edi::ExperimentBase* experiment;
+};
+struct CwlPdDataRangeNode : PdDataRangeNode {};
+struct TofPdDataRangeNode : PdDataRangeNode {};
 struct ScReflnView {
     edi::ExperimentBase* experiment;
     explicit ScReflnView(edi::ExperimentBase* experiment) : experiment(experiment) {}

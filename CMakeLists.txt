@@ -6,6 +6,27 @@ cmake_minimum_required(VERSION 3.24)
 # (`pixi run core-build`); the app host is built only when EDI_BUILD_APP=ON and Qt6 is
 # present. The app surface waits on gui-components G01–G04 (ADR-0005 / D4), so E01 does not
 # build it — this is reviewable scaffolding that activates at E04 (desktop) / E07 (WASM).
+# Resolve the default cache launcher before compiler probes (ADR-0083).
+if(CMAKE_HOST_WIN32)
+    foreach(_cache_language C CXX)
+        if(DEFINED CMAKE_${_cache_language}_COMPILER_LAUNCHER)
+            set(_cache_launcher "${CMAKE_${_cache_language}_COMPILER_LAUNCHER}")
+        else()
+            set(_cache_launcher "$ENV{CMAKE_${_cache_language}_COMPILER_LAUNCHER}")
+        endif()
+        if(_cache_launcher STREQUAL "ccache")
+            find_program(_cache_executable NAMES ccache REQUIRED NO_CACHE
+                HINTS "$ENV{CONDA_PREFIX}/Library/bin")
+            set(CMAKE_${_cache_language}_COMPILER_LAUNCHER "${_cache_executable}")
+        endif()
+        list(APPEND CMAKE_TRY_COMPILE_PLATFORM_VARIABLES
+            CMAKE_${_cache_language}_COMPILER_LAUNCHER)
+    endforeach()
+    unset(_cache_language)
+    unset(_cache_launcher)
+    unset(_cache_executable)
+endif()
+
 project(edi LANGUAGES C CXX)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)

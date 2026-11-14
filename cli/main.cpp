@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <algorithm>
 #include <chrono>
+#include <charconv>
 #include <cmath>
 #include <filesystem>
 #include <iostream>
@@ -13,8 +14,13 @@
 
 #ifdef _WIN32
 #include <io.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include "windows_sdk.hpp"
 #else
 #include <unistd.h>
+#include <sys/ioctl.h>
 #endif
 
 #include "edi/io.hpp"
@@ -22,14 +28,29 @@
 #include "edi/project_archive.hpp"
 #include "edi/report.hpp"
 #include "edi/selectors.hpp"
+#include "edi/threading.hpp"
 #include "edi/version.hpp"
 #include "downloads.hpp"
+#include "scan_progress.hpp"
 
 namespace {
 
 constexpr std::string_view usage =
     "Usage: edi fit PROJECT [--dry | --output DIRECTORY] "
-    "[--verbosity off|compact|full] [--report human|machine] [--log-level error|warning|info|debug]\n";
+    "[--verbosity off|compact|full] [--report human|machine] [--log-level error|warning|info|debug] "
+    "[--threads auto|N] [--parallel-fits N]\n"
+    "  --threads: threads per calculation (default: auto).\n"
+    "  --parallel-fits: scan files fitted together (default: 1); each uses one thread.\n"
+    "    In a sequential scan, files in a group start from the preceding group's result.\n";
+
+int positive_count(std::string_view value, std::string_view option) {
+    int count = 0;
+    const auto [end, error] = std::from_chars(value.data(), value.data() + value.size(), count);
+    if (error != std::errc{} || end != value.data() + value.size() || count < 1) {
+        throw std::invalid_argument(std::string(option) + " requires a positive integer");
+    }
+    return count;
+}
 
 bool stdout_is_terminal() {
 #ifdef _WIN32
@@ -37,6 +58,18 @@ bool stdout_is_terminal() {
 #else
     return isatty(STDOUT_FILENO) != 0;
 #endif
+}
+
+std::size_t terminal_columns() {
+#ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO info{};
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info))
+        return static_cast<std::size_t>(info.srWindow.Right - info.srWindow.Left + 1);
+#else
+    winsize size{};
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &size) == 0 && size.ws_col > 0) return size.ws_col;
+#endif
+    return 80;
 }
 
 // The scan's counts and reduced chi-square range, folded once per committed row: the resumed rows
@@ -123,6 +156,8 @@ void fit(const std::string& source, const std::string& output, bool dry,
     const bool in_place = scan && !scan_rows && stdout_is_terminal();
     std::size_t last_width = 0;
     bool live = false;
+    double last_chi2 = std::numeric_limits<double>::quiet_NaN();
+    std::string last_file;
     if (human && !scan) {
         on_start = [&](const edi::FitPreamble& preamble) {
             std::cout << edi::stream_header(preamble, name, variant) << std::flush;
@@ -140,21 +175,24 @@ void fit(const std::string& source, const std::string& output, bool dry,
             total = preamble.total_files;
             for (const auto& row : preamble.completed_rows) tally.add(row);
             tally.prior = tally.completed;
+            std::cout << edi::detail::scan_progress_heading(name, project.fitting_mode == "sequential",
+                                                            total, tally.prior > 0, in_place ? terminal_columns() : 0)
+                      << '\n' << std::flush;
         };
         on_file_complete = [&](const edi::ScanFileRecord& record) {
             tally.add(record);
             elapsed =
                 std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-            const std::string line = edi::scan_progress_line(
+            const std::size_t columns = in_place ? terminal_columns() : 0;
+            last_chi2 = record.reduced_chi_square;
+            last_file = record.file_name;
+            const std::string line = edi::detail::scan_progress_row(
                 tally.completed, total, elapsed, tally.completed - tally.prior, tally.ok,
-                tally.completed - tally.ok, record.file_name, record.reduced_chi_square);
+                tally.completed - tally.ok, record.reduced_chi_square, tally.chi2_min, tally.chi2_max,
+                record.file_name, columns);
             if (in_place) {
-                // A shorter line must cover the one it replaces: \r moves the cursor and erases
-                // nothing.
-                std::cout << '\r' << line
-                          << std::string(last_width > line.size() ? last_width - line.size() : 0,
-                                         ' ');
-                last_width = line.size();
+                std::cout << edi::detail::scan_progress_rewrite(line, last_width, columns);
+                last_width = edi::detail::scan_progress_width(line);
                 live = true;
             } else {
                 std::cout << line << '\n';
@@ -181,10 +219,16 @@ void fit(const std::string& source, const std::string& output, bool dry,
     if (machine) {
         std::cout << edi::machine_report(project, result, verbosity);
     } else if (human && scan) {
-        if (live) std::cout << '\n';
-        std::cout << edi::scan_summary(total.value_or(tally.completed), tally.ok,
-                                       tally.completed - tally.ok, tally.chi2_min, tally.chi2_max,
-                                       elapsed, tally.completed - tally.prior);
+        // The last row is the scan's summary, every column filled; a run that fitted no new file prints
+        // that row once from what the earlier runs left.
+        if (tally.completed == tally.prior) {
+            std::cout << edi::detail::scan_progress_row(tally.completed, total, elapsed, 0, tally.ok,
+                                                        tally.completed - tally.ok, last_chi2, tally.chi2_min,
+                                                        tally.chi2_max, last_file, in_place ? terminal_columns() : 0)
+                      << '\n';
+        } else if (live) {
+            std::cout << '\n';
+        }
     } else if (human) {
         std::cout << edi::summary_line(result, variant);
         if (verbosity == edi::VerbosityEnum::FULL) {
@@ -239,20 +283,33 @@ int main(int argc, char** argv) {
     std::string source;
     std::string output;
     auto verbosity = edi::VerbosityEnum::COMPACT;
+    int threads = 0;
+    int parallel_fits = 1;
     try {
         if (argc < 3 || std::string_view(argv[1]) != "fit") {
             throw std::invalid_argument("expected a fit or download command");
         }
         for (int i = 2; i < argc; ++i) {
-            const std::string_view argument = argv[i];
+            std::string_view argument = argv[i];
+            std::optional<std::string_view> inline_value;
+            if (argument.starts_with("--threads=") || argument.starts_with("--parallel-fits=")) {
+                const auto separator = argument.find('=');
+                inline_value = argument.substr(separator + 1);
+                argument = argument.substr(0, separator);
+            }
             if (argument == "--dry") {
                 dry = true;
-            } else if (argument == "--output" || argument == "--verbosity" || argument == "--report") {
-                if (++i == argc || std::string_view(argv[i]).starts_with("--")) {
+            } else if (argument == "--output" || argument == "--verbosity" || argument == "--report" ||
+                       argument == "--threads" || argument == "--parallel-fits") {
+                if (!inline_value && (++i == argc || std::string_view(argv[i]).starts_with("--"))) {
                     throw std::invalid_argument("missing value for " + std::string(argument));
                 }
-                const std::string_view value = argv[i];
-                if (argument == "--output") {
+                const std::string_view value = inline_value ? *inline_value : argv[i];
+                if (argument == "--threads") {
+                    threads = value == "auto" ? 0 : positive_count(value, argument);
+                } else if (argument == "--parallel-fits") {
+                    parallel_fits = positive_count(value, argument);
+                } else if (argument == "--output") {
                     output = value;
                 } else if (argument == "--verbosity" && value == "off") {
                     verbosity = edi::VerbosityEnum::OFF;
@@ -279,6 +336,8 @@ int main(int argc, char** argv) {
         return 2;
     }
     try {
+        edi::set_engine_threads(threads);
+        edi::set_scan_workers(parallel_fits);
         fit(source, output, dry, verbosity, machine);
     } catch (const std::exception& error) {
         std::cerr << "edi fit: " << error.what() << '\n';

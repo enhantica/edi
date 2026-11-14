@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -386,7 +387,8 @@ void allocation_commit_points(Collection initial, Key key, int first, int last) 
         INFO("allocation commit entry ", mode);
         bool completed = false;
         unsigned failures = 0;
-        for (long fail_at = 0; fail_at < 512; ++fail_at) {
+        long allocations = 0;
+        for (long fail_at = -1; fail_at <= allocations; ++fail_at) {
             Collection target;
             Collection moved_storage;
             if (mode == 2 || mode == 5 || mode == 7) {
@@ -413,7 +415,8 @@ void allocation_commit_points(Collection initial, Key key, int first, int last) 
             if constexpr (requires { typename Stored::element_type; })
                 for (auto& item : target) held.push_back(item);
             bool failed = false;
-            c13_t12_fault::remaining = fail_at;
+            c13_t12_fault::remaining =
+                fail_at < 0 ? std::numeric_limits<long>::max() : fail_at;
             c13_t12_fault::calls = 0;
             try {
                 if (mode == 0 || mode >= 7)
@@ -429,6 +432,11 @@ void allocation_commit_points(Collection initial, Key key, int first, int last) 
                 throw;
             }
             c13_t12_fault::remaining = -1;
+            if (fail_at < 0) {
+                REQUIRE_FALSE_MESSAGE(failed, "The unfaulted allocation control must complete");
+                allocations = static_cast<long>(c13_t12_fault::calls);
+                REQUIRE_MESSAGE(allocations > 0, "The control must reach an allocation");
+            }
             if (failed) {
                 ++failures;
                 std::vector<const void*> remaining_addresses;
@@ -442,7 +450,7 @@ void allocation_commit_points(Collection initial, Key key, int first, int last) 
                 for (auto& old : held)
                     CHECK_MESSAGE(key(object(old)).attached(),
                                   " allocation refusal preserves retained old-item ownership");
-            } else
+            } else if (fail_at >= 0)
                 completed = true;
             CHECK_MESSAGE(contents(source, key) == source_before,
                           " owner-copy allocation failure cannot change the source");
@@ -453,8 +461,9 @@ void allocation_commit_points(Collection initial, Key key, int first, int last) 
             checked_members(moved_storage, key);
             if (completed) break;
         }
-        CHECK_MESSAGE(failures > 0, " each allocation witness actually injects a failure");
-        CHECK_MESSAGE(completed, " bounded allocation sweep reaches the successful control");
+        CHECK_MESSAGE(failures == allocations,
+                      "Every allocation reached by the unfaulted control must be injected");
+        CHECK_MESSAGE(completed, "Measured allocation sweep reaches the successful control");
     }
 }
 

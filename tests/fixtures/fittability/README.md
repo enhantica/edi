@@ -41,3 +41,11 @@ visible generator and its strict capture requirements.
 A copied-helper update now validates every earlier transition in order and appends its new
 endpoint. It never rewrites an older transition. The checked stop-rule projection retains
 an omitted legacy chi-square value; an explicit Shift/s.u. input must still be written as such.
+
+
+The fitted-byte witness explicitly uses its original ladder/chi-square-change
+solver conditions. Its original iterations, fitted values, uncertainties and
+whole-file hashes stay unchanged. New stop-diagnostic scalars first have to
+match the real result at serialization precision, uniquely and finitely; only
+those later fields and the now-explicit historical solver selectors leave the
+in-memory historical comparison. The actual saved record is never rewritten.

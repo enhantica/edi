@@ -1,12 +1,16 @@
 """Gate 3: published upstream chapters and the owner's notebook presentation contract."""
 
 import ast
+import base64
+import copy
 import hashlib
 import json
 import re
 from functools import cache
 
 import pytest
+from bs4 import BeautifulSoup
+from defusedxml import ElementTree
 
 from tests.fixtures.tutorial_cases.contract import CASES as ALL_CASES
 from tests.fixtures.tutorial_cases.contract import ROOT, cases_for, read_records
@@ -110,7 +114,11 @@ def test_one_visible_font_derived_tag_cell_follows_the_case_title(case):
     title_parts(record)
     document = notebook(case)
     cells = document['cells']
-    titles = [index for index, cell in enumerate(cells) if re.match(r'^#\s+[^#]', text(cell))]
+    titles = [
+        index
+        for index, cell in enumerate(cells)
+        if cell['cell_type'] == 'markdown' and re.match(r'^#\s+[^#]', text(cell))
+    ]
     assert len(titles) == 1 and text(cells[titles[0]]).strip() == '# ' + record['title'], (
         'Gate 3: the notebook H1 is only the case title, with no source docstring title'
     )
@@ -119,6 +127,61 @@ def test_one_visible_font_derived_tag_cell_follows_the_case_title(case):
         'Gate 3: one tags cell sits directly after the title and before the description'
     )
     assert_tag_cell(cells[tagged[0]], record)
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'wrong-alt',
+        'wrong-label',
+        'wrong-glyph',
+        'external-symbol',
+        'missing-background',
+        'extra-icon',
+        'extra-badge',
+        'missing-badge',
+    ],
+)
+def test_vector_tag_observer_refuses_each_visible_identity_escape(damage):
+    case = 'pd-neut-cwl_lbco-hrpt'
+    record = record_for(case)
+    cell = next(copy.deepcopy(cell) for cell in notebook(case)['cells'] if chips(text(cell)))
+    assert_tag_cell(cell, record)
+    soup = BeautifulSoup(text(cell), 'html.parser')
+    image = soup.find('img')
+    if damage == 'wrong-alt':
+        image['alt'] = 'wrong label'
+    elif damage == 'extra-badge':
+        image.insert_after(copy.copy(image))
+    elif damage == 'missing-badge':
+        image.decompose()
+    else:
+        document = ElementTree.fromstring(base64.b64decode(image['src'].split(',', 1)[1]))
+        if damage == 'wrong-label':
+            next(
+                item for item in document.iter() if item.tag.endswith('}text')
+            ).text = 'wrong label'
+        elif damage == 'wrong-glyph':
+            next(item for item in document.iter() if item.tag.endswith('}path')).set(
+                'd', 'M0 0L1 1Z'
+            )
+        elif damage == 'external-symbol':
+            symbol = next(item for item in document.iter() if item.tag.endswith('}path'))
+            symbol.tag = '{http://www.w3.org/2000/svg}use'
+            symbol.set('href', 'https://example.invalid/font.svg#glyph')
+        elif damage == 'missing-background':
+            next(item for item in document if item.tag.endswith('}rect')).set('fill', 'none')
+        elif damage == 'extra-icon':
+            document.append(
+                ElementTree.fromstring('<path xmlns="http://www.w3.org/2000/svg" d="M0 0L1 1Z"/>')
+            )
+        image['src'] = (
+            'data:image/svg+xml;base64,'
+            + base64.b64encode(ElementTree.tostring(document)).decode()
+        )
+    cell['source'] = str(soup)
+    with pytest.raises(AssertionError):
+        assert_tag_cell(cell, record)
 
 
 @pytest.mark.parametrize('case', CASES)
@@ -131,10 +194,10 @@ def test_case_section_and_icon_follow_the_owner_rules(case):
     ), 'Gate 3/4: each case uses the declared section and shared section icon'
 
 
-def test_page_titles_are_unique_and_the_single_font_is_unchanged():
-    titles = [record_for(case)['title'] for case in ALL_CASES]
+def test_page_titles_are_unique_within_sections_and_the_single_font_is_unchanged():
+    titles = [(record_for(case)['section'], record_for(case)['title']) for case in ALL_CASES]
     assert len(titles) == len(set(titles)), (
-        'Gate 3/4: complete tutorial page titles are unique across cases'
+        'Gate 3/4: a tutorial title identifies its case within the declared section'
     )
     expected = json.loads((ROOT / 'tests/fixtures/tutorial_cases/glyphs.json').read_text())
     path = ROOT / 'website/surfaces/docs/assets/gui-icons/fontawesome-5-solid.otf'

@@ -3,12 +3,15 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
+
+from tests.fixtures.native_process import native_executable
 
 ROOT = Path(__file__).resolve().parents[3]
 WAIT_VARIABLES = ('OMP_WAIT_POLICY', 'GOMP_SPINCOUNT', 'KMP_BLOCKTIME')
@@ -42,6 +45,40 @@ if sys.platform == 'darwin':
         for index in range(process._dyld_image_count())
         if process._dyld_get_image_name(index)
     ]
+elif sys.platform == 'win32':
+    from ctypes import wintypes
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.GetCurrentProcess.restype = wintypes.HANDLE
+    kernel.K32EnumProcessModules.argtypes = [
+        wintypes.HANDLE, ctypes.POINTER(wintypes.HMODULE),
+        wintypes.DWORD, ctypes.POINTER(wintypes.DWORD),
+    ]
+    kernel.K32EnumProcessModules.restype = wintypes.BOOL
+    kernel.K32GetModuleFileNameExW.argtypes = [
+        wintypes.HANDLE, wintypes.HMODULE, wintypes.LPWSTR, wintypes.DWORD,
+    ]
+    kernel.K32GetModuleFileNameExW.restype = wintypes.DWORD
+    process = kernel.GetCurrentProcess()
+    capacity = 512
+    for _attempt in range(3):
+        modules = (wintypes.HMODULE * capacity)()
+        needed = wintypes.DWORD()
+        if not kernel.K32EnumProcessModules(
+            process, modules, ctypes.sizeof(modules), ctypes.byref(needed)
+        ):
+            raise ctypes.WinError(ctypes.get_last_error())
+        if needed.value <= ctypes.sizeof(modules):
+            break
+        capacity = needed.value // ctypes.sizeof(wintypes.HMODULE) + 16
+    else:
+        raise SystemExit('Loaded-module inventory did not stabilize inside its bounded snapshot')
+    loaded_images = []
+    for index in range(needed.value // ctypes.sizeof(wintypes.HMODULE)):
+        name = ctypes.create_unicode_buffer(32768)
+        size = kernel.K32GetModuleFileNameExW(process, modules[index], name, len(name))
+        if not size or size >= len(name):
+            raise SystemExit('Loaded-module inventory requires complete actual module paths')
+        loaded_images.append(name.value.replace(chr(92), '/'))
 elif sys.platform.startswith('linux'):
     loaded_images = []
     for line in open('/proc/self/maps', encoding='utf-8'):
@@ -56,6 +93,8 @@ for image in loaded_images:
     match = re.search(r'(?:^|/)lib(gomp|omp)(?:[.\-]|$)', image)
     if match:
         runtime_images.setdefault(f'lib{match.group(1)}', image)
+    elif re.search(r'(?:^|/)vcomp[0-9]+[.]dll$', image, re.IGNORECASE):
+        runtime_images.setdefault('vcomp', image)
 if len(runtime_images) != 1:
     raise SystemExit(
         'edi must expose exactly one loaded OpenMP runtime image through its linked crysta core; '
@@ -69,7 +108,16 @@ if not hasattr(runtime, 'omp_get_num_threads') or not hasattr(runtime, 'omp_get_
 runtime.omp_get_num_threads.restype = ctypes.c_int
 runtime.omp_get_max_threads.restype = ctypes.c_int
 seen = []
-if runtime_name == 'libgomp':
+if runtime_name == 'vcomp':
+    region = ctypes.CDLL(os.environ['EDI_OPENMP_REGION_OBSERVER'])
+    region.edi_observed_team.restype = ctypes.c_int
+    region.edi_observed_runtime.restype = ctypes.c_size_t
+    expected_runtime = ctypes.cast(runtime.omp_get_num_threads, ctypes.c_void_p).value
+    if region.edi_observed_runtime() != expected_runtime:
+        raise SystemExit('The observed region must use the exact OpenMP runtime loaded by edi')
+    def enter_region():
+        seen.append(region.edi_observed_team())
+elif runtime_name == 'libgomp':
     if not hasattr(runtime, 'GOMP_parallel'):
         raise SystemExit(f'the loaded GNU runtime has no GOMP_parallel: {runtime_image}')
     Callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
@@ -120,6 +168,46 @@ print(json.dumps({
 """
 
 
+@pytest.fixture(scope='module', autouse=True)
+def windows_openmp_region(tmp_path_factory):
+    """Compile a real public OpenMP region for the MSVC runtime inside the Python process."""
+    if sys.platform != 'win32':
+        yield
+        return
+    build = tmp_path_factory.mktemp('openmp-region')
+    source = ROOT / 'tests/fixtures/openmp_region'
+    cmake = shutil.which('cmake')
+    assert cmake, 'The native OpenMP region requires the locked CMake toolchain'
+    for command in [
+        [cmake, '-S', str(source), '-B', str(build)],
+        [cmake, '--build', str(build), '--config', 'Release', '--parallel', '2'],
+    ]:
+        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=30)
+        assert result.returncode == 0, (
+            'The real MSVC OpenMP region must compile and link before effect observations: '
+            + result.stdout
+            + result.stderr
+        )
+    library = next(
+        (
+            p
+            for p in [build / 'Release/edi_openmp_observer.dll', build / 'edi_openmp_observer.dll']
+            if p.is_file()
+        ),
+        None,
+    )
+    assert library, 'The compiled observer must supply its actual native OpenMP DLL'
+    previous = os.environ.get('EDI_OPENMP_REGION_OBSERVER')
+    os.environ['EDI_OPENMP_REGION_OBSERVER'] = str(library)
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop('EDI_OPENMP_REGION_OBSERVER', None)
+        else:
+            os.environ['EDI_OPENMP_REGION_OBSERVER'] = previous
+
+
 def _clean_environment(overrides: dict[str, str] | None = None) -> dict[str, str]:
     environment = os.environ.copy()
     for name in THREAD_VARIABLES:
@@ -132,7 +220,9 @@ def _clean_environment(overrides: dict[str, str] | None = None) -> dict[str, str
 
 
 def _wait_knob_spins(*, name: str, passive: bool, runtime: str) -> bool:
-    runtime_spin_knob = {'libgomp': 'GOMP_SPINCOUNT', 'libomp': 'KMP_BLOCKTIME'}[runtime]
+    runtime_spin_knob = {'libgomp': 'GOMP_SPINCOUNT', 'libomp': 'KMP_BLOCKTIME', 'vcomp': None}[
+        runtime
+    ]
     return not passive and name in {'OMP_WAIT_POLICY', runtime_spin_knob}
 
 
@@ -293,10 +383,16 @@ def test_c22_t22_edi_runtime_specific_wait_escape_keeps_spinning() -> None:
         )
 
     baseline = _probe(affinity=4)
-    runtime_spin_knob = {'libgomp': 'GOMP_SPINCOUNT', 'libomp': 'KMP_BLOCKTIME'}[
-        baseline['runtime']
-    ]
-    spin_value = {'GOMP_SPINCOUNT': '1000000000', 'KMP_BLOCKTIME': '200'}[runtime_spin_knob]
+    runtime_spin_knob = {
+        'libgomp': 'GOMP_SPINCOUNT',
+        'libomp': 'KMP_BLOCKTIME',
+        'vcomp': 'OMP_WAIT_POLICY',
+    }[baseline['runtime']]
+    spin_value = {
+        'GOMP_SPINCOUNT': '1000000000',
+        'KMP_BLOCKTIME': '200',
+        'OMP_WAIT_POLICY': 'active',
+    }[runtime_spin_knob]
     observed = _probe(affinity=4, overrides={runtime_spin_knob: spin_value})
     _assert_spinning(
         observed,
@@ -338,14 +434,18 @@ def test_c22_t22_edi_build_links_no_nested_blas_runtime() -> None:
         / 'build'
         / ('ci-consumer' if os.environ.get('EDI_USE_CONSUMER_BUILD') == '1' else 'ci')
     )
-    artifacts = [build / 'cli/easydiffraction']
+    artifacts = [native_executable(build / 'cli/easydiffraction')]
     artifacts.extend(path for path in (build / 'python/edi').glob('_edi*') if path.is_file())
     assert len(artifacts) >= 2, (
         'core-build must expose the edi CLI and extension for the nested-runtime inventory'
     )
     for artifact in artifacts:
         command = (
-            ['otool', '-L', str(artifact)] if sys.platform == 'darwin' else ['ldd', str(artifact)]
+            ['dumpbin', '/DEPENDENTS', str(artifact)]
+            if sys.platform == 'win32'
+            else ['otool', '-L', str(artifact)]
+            if sys.platform == 'darwin'
+            else ['ldd', str(artifact)]
         )
         completed = subprocess.run(
             command, check=False, capture_output=True, text=True, timeout=30

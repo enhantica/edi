@@ -16,6 +16,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
+
 
 def _repo_root() -> Path:
     result = subprocess.run(
@@ -184,6 +186,7 @@ def _worker_build_sandbox(root: Path) -> tuple[Path, Path, Path]:
         'mkdir -p build/shared-worker-artifact\n'
         'exit 91\n',
         encoding='utf-8',
+        newline='\n',
     )
     stand_in.chmod(0o755)
     return marker, shared, root / 'tools/ci/core-build.sh'
@@ -321,7 +324,8 @@ def _partition_transport(groups, omitted, *, core=False, weekly_omitted=True):
             '#!' + sys.executable + '\nimport json, subprocess, sys\n'
             'if sys.argv[1] == "-c":\n'
             '    sys.exit(subprocess.call([sys.executable, *sys.argv[1:]]))\n'
-            'print(json.dumps(sys.argv[1:]))\n'
+            'print(json.dumps(sys.argv[1:]))\n',
+            newline='\n',
         )
         shim.chmod(0o755)
         env = {
@@ -333,9 +337,9 @@ def _partition_transport(groups, omitted, *, core=False, weekly_omitted=True):
         }
         result = subprocess.run(
             (
-                ['/bin/bash', str(ROOT / 'tools/ci/core-tests.sh'), '--collect-only']
+                [environment_bash(), str(ROOT / 'tools/ci/core-tests.sh'), '--collect-only']
                 if core
-                else ['/bin/bash', str(ROOT / 'tools/ci/system-tests-part.sh'), '1', '3']
+                else [environment_bash(), str(ROOT / 'tools/ci/system-tests-part.sh'), '1', '3']
             ),
             cwd=replay,
             env=env,
@@ -401,7 +405,10 @@ def _assert_licence_delivery(jobs, active):
         )
         for event in ('push', 'schedule', 'workflow_dispatch'):
             for core_state in ('success', 'failure'):
-                context = {'states': {'changes': 'success', 'core': core_state}}
+                context = {
+                    'states': {'changes': 'success', 'core': core_state, 'crysta-sdk': 'success'},
+                    'outputs': {('inputs', 'run'): 'true'},
+                }
                 assert active(job, event, **context), (
                     'Delegated licence checks remain reachable on main, nightly '
                     'and full manual runs'
@@ -658,9 +665,18 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
             for platform in ('linux-64', 'osx-arm64'):
                 public_build_boundary(jobs, name, platform)
             for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-                assert active(jobs[name], event, states={'changes': 'success'}) == (
-                    name == 'core' or event != 'pull_request'
-                ), 'PRs execute core; full events also execute every system part'
+                assert active(
+                    jobs[name],
+                    event,
+                    states={
+                        'changes': 'success',
+                        'native': 'success',
+                        'app': 'success',
+                        'crysta-sdk': 'success',
+                    },
+                ) == (name == 'core' or event != 'pull_request'), (
+                    'PRs execute core; full events also execute every system part'
+                )
         durations = jobs['system-durations']
         assert (
             durations.get('if') == "github.event_name == 'push'" and durations['needs'] == 'system'

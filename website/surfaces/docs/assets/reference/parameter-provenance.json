@@ -1,10 +1,10 @@
 {
-  "edi_commit": "739f73f02ea3e54f403019bcab0e3d758f45fd6d",
+  "edi_commit": "5ae4c1c6232079ac75f244554dbe0b0ee2a0b157",
   "source_sha256": {
-    "app/qml/Globals/ParameterNames.qml": "407396165543b3c63436403db70c1ee3a741b3654ff4a1be05228db9baf3eb5b",
+    "app/src/app_info.cpp": "69af7c781414896d7a4315cf93e94d7f5b9a0ffc12186f79e9f31767b0b6fb85",
     "tools/docs/reference-metadata.cpp": "3577e74717c5f50744e47ba40afd743dc1434c634853a4386ddafea4d3131448",
-    "tools/docs/python-reference.py": "1ad05657a8a4303bcf2bcaf9b6aa467cd7c1e963a225dc782a23bdab0b8eb76d",
-    "data/category-census.json": "083ea42bf01cf0cd3178cd799fbd71db9c6971661d3306afa3f68a3c6d28bc01"
+    "tools/docs/python-reference.py": "060dfb492abdb8feeccf98e4fb3dbcaba979ad4d61832a5879ba4fd7c7c92acd",
+    "data/category-census.json": "b002c39b5839d3b20b805cd3493eba59c899563cfdfa67c0b7abbddc7b170744"
   },
-  "sdk_library_sha256": "ecc35a3277430a05d9a225efce4476609948974f9a3de4437c1ca123f3db3552"
+  "sdk_library_sha256": "13b1c03ea1555125540e50309180f801efa927fae288e4a1380332da1765a7e3"
 }

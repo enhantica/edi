@@ -2,46 +2,77 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit cubic Y₂O₃ to constant-wavelength neutron powder data from SPODI at FRM II, with anisotropic
+displacement tensors whose components the site symmetry ties together.
+
+It builds the catalogue case `pd-neut-cwl_y2o3-spodi` step by step: the same project the command
+line fits and the app's Examples open.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_y2o3-spodi/structures pd-neut-cwl_y2o3-spodi/experiments pd-neut-cwl_y2o3-spodi/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_y2o3-spodi
+_metadata.title "Y₂O₃ [Ia-3] · SPODI @ FRM II"
+_metadata.description "Anisotropic β tensors tied by site symmetry · Coordinates, profile and background"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_y2o3-spodi
+    edi download-data pd-neut-cwl_y2o3-spodi-y2o3
+    mv data/pd-neut-cwl_y2o3-spodi-y2o3.edi pd-neut-cwl_y2o3-spodi/structures/y2o3.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_y2o3-spodi
+    python -m edi download-data pd-neut-cwl_y2o3-spodi-y2o3
+    mv data/pd-neut-cwl_y2o3-spodi-y2o3.edi pd-neut-cwl_y2o3-spodi/structures/y2o3.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/spodi.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-cwl_y2o3-spodi-spodi
+    mv data/pd-neut-cwl_y2o3-spodi-spodi.edi pd-neut-cwl_y2o3-spodi/experiments/spodi.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-cwl_y2o3-spodi-spodi
+    mv data/pd-neut-cwl_y2o3-spodi-spodi.edi pd-neut-cwl_y2o3-spodi/experiments/spodi.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.04
-_peak.broad_gauss_v -0.07
-_peak.broad_gauss_w 0.1
-1 12.5856 6400
-2 19.4181 6400
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+_fitting_mode.type single
+
+_edi.schema_version 3
 ```
-
-The same for every other row (20 more).
-
-In `structures/y2o3.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 10.61
-Y1 Y -0.03 0 0.25 d 24 1 0.49982 beta
-O1 O 0.39 0.15 0.38 e 48 1 0.49982 beta
-```
-
-The same for every other row (3 more).
 
 ## Scale, 2θ zero and cell
 

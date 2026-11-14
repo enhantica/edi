@@ -13,6 +13,7 @@ from functools import partial
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e09_t75_sdk_consumer import consumer
 from tests.system.py.test_e09_t75_native_execution import restore
 from tests.system.py.test_e09_t75_sdk_update import update
@@ -47,7 +48,7 @@ def test_effective_pin_admission_agrees_through_each_public_consumer(
         path = repo / 'pixi.toml'
         path.write_text(transform(path.read_text()))
         args = (
-            ['bash', 'tools/ci/crysta-source.sh']
+            [environment_bash(), 'tools/ci/crysta-source.sh']
             if reader == 'pairing'
             else [sys.executable, 'tools/ci/crysta_sdk.py', 'fetch', '--platform', 'linux-64']
         )

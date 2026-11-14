@@ -6,6 +6,12 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. Its structure and experiment come from EasyDiffraction's collection with **Load ▾ From web…**, and each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+Fit cubic Y₂O₃ to constant-wavelength neutron powder data from SPODI at FRM II, with anisotropic
+displacement tensors whose components the site symmetry ties together.
+
+The project is the catalogue case `pd-neut-cwl_y2o3-spodi`, the one the command line and the
+app's Examples open.
+
 ## Create a project
 
 Press **Start** on Home, then **Create a new project**, and give it a name.

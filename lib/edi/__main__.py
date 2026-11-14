@@ -38,6 +38,7 @@ import argparse
 import contextlib
 import json
 import math
+import os
 import signal
 import sys
 import tempfile
@@ -46,7 +47,9 @@ from pathlib import Path
 from typing import Self
 
 import edi
+from edi import _edi as _native
 from edi import _project_output as _output
+from edi._machine_records import schema_line
 
 # One verbosity for both channels, so --verbosity means the same thing whichever --report is
 # chosen.
@@ -113,6 +116,38 @@ def take_log_level(argv: list[str]) -> tuple[str, list[str]]:
             kept.append(argument)
         index += 1
     return level, kept
+
+
+def _positive_count(value: str) -> int:
+    if not value.isascii() or not value.isdecimal():
+        raise argparse.ArgumentTypeError('requires a positive integer')
+    digits = value.lstrip('0')
+    if not digits or len(digits) > 10 or int(digits) > 2**31 - 1:
+        raise argparse.ArgumentTypeError('requires a positive integer within the supported range')
+    return int(digits)
+
+
+def _thread_count(value: str) -> int:
+    return 0 if value == 'auto' else _positive_count(value)
+
+
+def _add_performance_options(fit: argparse.ArgumentParser, calc: argparse.ArgumentParser) -> None:
+    for parser in (fit, calc):
+        parser.add_argument(
+            '--threads',
+            type=_thread_count,
+            default=0,
+            metavar='auto|N',
+            help='threads per calculation (default: auto)',
+        )
+    fit.add_argument(
+        '--parallel-fits',
+        type=_positive_count,
+        default=1,
+        metavar='N',
+        help='scan files fitted together (default: 1); each uses one thread and in a sequential '
+        "scan each group starts from the preceding group's result",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -184,6 +219,7 @@ def build_parser() -> argparse.ArgumentParser:
     # versioned record=calc machine record, byte-comparable with crysta's by construction
     # (both render through crysta's own emitter).
     calc = subcommands.add_parser('calc', help='forward-calculate a project directory')
+    _add_performance_options(fit, calc)
     calc.add_argument(
         'project',
         help='project directory (structures/, experiments/, analysis/) with embedded measured '
@@ -458,6 +494,15 @@ def _run_human(project: edi.Project, verbosity, project_name: str, *, clock=time
     return _exit_code(human_fit(project, verbosity, project_name, clock=clock))
 
 
+def _terminal_columns(*, tty: bool) -> int:
+    if not tty:
+        return 0
+    try:
+        return max(1, os.get_terminal_size(sys.stdout.fileno()).columns)
+    except (OSError, ValueError, AttributeError):
+        return 80
+
+
 def human_fit(
     project: edi.Project, verbosity, project_name: str, *, clock=time.monotonic, cancel=None
 ) -> edi.FitResultBase:
@@ -517,7 +562,7 @@ def human_fit(
         # `measured_completed`.
         # Prose note: this function must not contain the scan line's format literals — the core
         # owns every one of them — so the groups are described here by name, never quoted.
-        state = {'total': None, 'elapsed': 0.0}
+        state = {'total': None, 'elapsed': 0.0, 'chi2': float('nan'), 'file': ''}
         live = [False]
         last_width = [0]
         tally = _ScanTally()
@@ -527,15 +572,11 @@ def human_fit(
 
         def _emit_progress(line: str) -> None:
             if tty:
-                # An in-place rewrite must cover the PREVIOUS line's full width: `\r` moves the
-                # cursor, it erases nothing, so any SHORTER successor — the frozen 100 % line
-                # dropping eta/file/χ², a shorter file name — would leave the predecessor's
-                # tail visible (owner-measured on the 213-file scan: the stale ` · 2 fail ·
-                # <file> · χ² …` read as a doubled fail group). Space padding, not an ANSI
-                # erase, so a TTY that interprets no escape sequences still shows a clean line;
-                # every character this line emits is single-column, so its length is its width.
-                padding = ' ' * max(0, last_width[0] - len(line))
-                sys.stdout.write('\r' + line + padding)
+                sys.stdout.write(
+                    edi._edi._scan_progress_rewrite(
+                        line, last_width[0], _terminal_columns(tty=tty)
+                    )
+                )
                 last_width[0] = len(line)
                 live[0] = True
             else:
@@ -551,21 +592,42 @@ def human_fit(
             for row in getattr(preamble, 'completed_rows', []):
                 tally.add(row)
             prior[0] = tally.completed
+            sys.stdout.write(
+                edi._edi._scan_progress_heading(
+                    project_name,
+                    project.fitting_mode == 'sequential',
+                    state['total'],
+                    prior[0] > 0,
+                    _terminal_columns(tty=tty),
+                )
+                + '\n'
+            )
+            sys.stdout.flush()
+
+        def _row(chi2: float, file_name: str, measured: int) -> str:
+            return edi._edi._scan_progress_row(
+                tally.completed,
+                state['total'],
+                state['elapsed'],
+                measured,
+                tally.ok,
+                tally.failed,
+                chi2,
+                tally.chi2_min,
+                tally.chi2_max,
+                file_name,
+                _terminal_columns(tty=tty),
+            )
 
         def on_file_complete(record: object) -> None:
             tally.add(record)
-            state['elapsed'] = clock() - started
+            state['elapsed'], state['chi2'], state['file'] = (
+                clock() - started,
+                record.reduced_chi_square,
+                record.file_name,
+            )
             _emit_progress(
-                edi.scan_progress_line(
-                    completed=tally.completed,
-                    total_files=state['total'],
-                    elapsed_seconds=state['elapsed'],
-                    measured_completed=tally.completed - prior[0],
-                    ok_count=tally.ok,
-                    fail_count=tally.failed,
-                    file_name=record.file_name,
-                    reduced_chi_square=record.reduced_chi_square,
-                )
+                _row(record.reduced_chi_square, record.file_name, tally.completed - prior[0])
             )
 
         def on_scan_iteration(record: object) -> None:
@@ -591,24 +653,16 @@ def human_fit(
                 on_scan_start=on_scan_start,
                 on_file_complete=on_file_complete,
             )
-        if live[0]:
-            # Freeze the in-place line: the bar finishes at 100% and stays; the summary follows.
-            sys.stdout.write('\n')
-        # Every group below comes from the SAME fold — counts and χ² bounds alike — so the
-        # summary cannot report a χ² range over a narrower set than the files it counts.
-        # Failures are counted, never listed: the per-file outcome is in analysis/results.csv.
-        # `measured_completed` carries the one quantity that legitimately covers less: the
-        # clock.
+        # The last row is the scan's summary, every column filled (the core owns its format): the
+        # in-place line stays, and a run that fitted no new file prints that row once from what the
+        # earlier runs left.
+        fitted_none = tally.completed == prior[0]
         sys.stdout.write(
-            edi.scan_summary(
-                total_files=state['total'] if state['total'] is not None else tally.completed,
-                ok_count=tally.ok,
-                fail_count=tally.failed,
-                chi2_min=tally.chi2_min,
-                chi2_max=tally.chi2_max,
-                elapsed_seconds=state['elapsed'],
-                measured_completed=tally.completed - prior[0],
-            )
+            _row(state['chi2'], state['file'], 0) + '\n'
+            if fitted_none
+            else '\n'
+            if live[0]
+            else ''
         )
         skipped = _skipped_line(project)
         if skipped:
@@ -877,7 +931,7 @@ def run_undo(args: argparse.Namespace) -> int:
         return 0
     if args.report == 'machine':
         lines = [
-            'schema=8',
+            schema_line(edi.error_report(edi.VerbosityEnum.COMPACT)).removesuffix('\n'),
             'record=undo',
             f'was_no_op={"true" if was_no_op else "false"}',
             f'restored={len(restored)}',
@@ -993,6 +1047,9 @@ def main(argv: list[str] | None = None) -> int:
         build_parser().error(f"--log-level: '{level}' is not one of {', '.join(LOG_LEVELS)}")
     edi.set_log_level(level)
     args = build_parser().parse_args(argv)
+    if args.command in {'fit', 'calc'}:
+        _native._set_engine_threads(args.threads)
+        _native._set_scan_workers(getattr(args, 'parallel_fits', 1))
     # The commands without a fit record: an error is one stderr line beside the non-zero exit.
     plain = {'report': run_report, 'export': run_export, 'collection': run_collection}
     plain.update(

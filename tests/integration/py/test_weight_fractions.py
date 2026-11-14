@@ -9,13 +9,14 @@ import numpy as np
 import pytest
 
 from tests.fixtures.multiphase import support as case
+from tests.fixtures.project_categories.historical_bytes import native_edi_bytes
 from tests.fixtures.weight_fractions.single_phase_bytes import COLUMN, historical_single_fraction
 
 
 def weighted_project(path, *, free_scales=True):
     case.write_project(path)
     beta = path / 'structures/beta.edi'
-    beta.write_text(beta.read_text() + 'Y a Gd Biso 0.23 0.31 0.47 0.35 0.8\n')
+    beta.write_text(beta.read_text() + 'Y a Gd Biso 0.23 0.31 0.47 0.35 0.8\n', newline='\n')
     project = engine.Project.load(path)
     rows = case.links(project.experiments[0])
     for name, uncertainty in (('alpha', 0.03), ('beta', 0.012)):
@@ -170,7 +171,8 @@ _fit_parameter_correlation.parameter_unique_name_i
 _fit_parameter_correlation.parameter_unique_name_j
 _fit_parameter_correlation.correlation
 cross deterministic pattern.linked_structure.alpha.scale pattern.linked_structure.beta.scale {rho}
-"""
+""",
+        newline='\n',
     )
     project = engine.Project.load(tmp_path / 'seed')
     scales = (2.75, 0.375)
@@ -237,7 +239,7 @@ def check_correlation_omission(saved, rho, wanted, uncorrelated):
     )
     changed, count = re.subn(row, r'\g<1>0', text)
     assert count == 1, 'The covariance escape must zero the actual stored cross-scale coefficient'
-    path.write_text(changed)
+    path.write_text(changed, newline='\n')
     zeroed = fractions(engine.Project.load(saved))
     np.testing.assert_allclose(
         [item.uncertainty for item in zeroed],
@@ -306,7 +308,7 @@ def test_single_enabled_fraction_is_unity_in_memory_save_and_reopen(tmp_path, st
                 )
         destination = tmp_path / stage
         project.save_as(destination)
-        data = (destination / 'experiments/pattern.edi').read_bytes()
+        data = native_edi_bytes((destination / 'experiments/pattern.edi').read_bytes())
         legacy = historical_single_fraction('experiments/pattern.edi', data)
         assert COLUMN not in legacy, 'The historical byte view retains the pre-column schema'
         assert COLUMN in data, 'Every saved linked experiment gains the fraction column'
@@ -349,10 +351,13 @@ def test_three_enabled_fractions_keep_hill_howard_normalization_and_saved_values
     case.write_project(source)
     gamma = source / 'structures/gamma.edi'
     gamma.write_text(
-        (source / 'structures/alpha.edi').read_text().replace('data_alpha', 'data_gamma')
+        (source / 'structures/alpha.edi').read_text().replace('data_alpha', 'data_gamma'),
+        newline='\n',
     )
     path = source / 'experiments/pattern.edi'
-    path.write_text(path.read_text().replace('beta 0.375\n', 'beta 0.375\ngamma 1.25\n'))
+    path.write_text(
+        path.read_text().replace('beta 0.375\n', 'beta 0.375\ngamma 1.25\n'), newline='\n'
+    )
     project = engine.Project.load(source)
     amounts = [
         2.75 * math.prod(case.LENGTHS['alpha']),
@@ -369,7 +374,7 @@ def test_three_enabled_fractions_keep_hill_howard_normalization_and_saved_values
         err_msg='Three enabled structures retain normalized scale times cell mass times volume',
     )
     project.save_as(tmp_path / 'saved')
-    data = (tmp_path / 'saved/experiments/pattern.edi').read_bytes()
+    data = native_edi_bytes((tmp_path / 'saved/experiments/pattern.edi').read_bytes())
     assert historical_single_fraction('experiments/pattern.edi', data) == data, (
         'The single-structure adaptation leaves every byte of a multiphase saved experiment intact'
     )

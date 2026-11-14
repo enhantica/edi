@@ -38,21 +38,21 @@ export async function checkDesktopOnlyAssistant({send, evaluate, frame, click, o
 
   // A disabled AI tab must not become selected through real pointer input.
   await click(/^Application preferences$/, 'button', 'appBar.button.preferences');
-  await pointer(await waitControlGeometry(evaluate, frame, 'preferences.tab.prompts'));
-  await until(async () => (await read('preferences.tab.prompts')).checked === true,
-    'The actual Prompts tab must finish physical selection');
+  await pointer(await waitControlGeometry(evaluate, frame, 'preferences.tab.projects'));
+  await until(async () => (await read('preferences.tab.projects')).checked === true,
+    'The actual Projects tab must finish physical selection');
   const tab = await waitControlGeometry(
     evaluate, frame, 'preferences.tab.aiAssistance', {enabled:false});
   await retain('ai-tab-before-click', {tab, ax:await send('Accessibility.getFullAXTree')});
   assert.equal(tab.enabled, false, 'WASM AI preferences are disabled');
-  assert.equal(tab.checked, false, 'The disabled AI tab starts outside the selected Prompts page');
+  assert.equal(tab.checked, false, 'The disabled AI tab starts outside the selected Projects page');
   await pointer(tab);
   const after = await read('preferences.tab.aiAssistance');
-  const prompts = await read('preferences.tab.prompts');
-  await retain('ai-tab-after-click', {after, prompts, ax:await send('Accessibility.getFullAXTree')});
+  const projects = await read('preferences.tab.projects');
+  await retain('ai-tab-after-click', {after, projects, ax:await send('Accessibility.getFullAXTree')});
   assert.equal(after.enabled, false, 'Clicking cannot enable the WASM AI tab');
   assert.equal(after.checked, false, 'Clicking a disabled AI tab cannot select it');
-  assert.equal(prompts.checked, true, 'The ordinary previously selected preferences page survives');
+  assert.equal(projects.checked, true, 'The ordinary previously selected preferences page survives');
   await click(/^OK$/, 'button');
 
   // Exercise both Home and an ordinary empty Project workflow, without a provider.

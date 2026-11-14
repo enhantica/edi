@@ -15,6 +15,7 @@ import yaml
 
 from tests.fixtures.e09_t75_commands import assert_no_swallowed_refusal, checked_program
 from tests.fixtures.e09_t75_workflow import active, reached, workflow_cwd, workflow_env
+from tests.fixtures.native_process import environment_bash
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -356,9 +357,10 @@ if path == 'repos/enhantica/edi/actions/workflows/ci.yml/dispatches':
     save()
     sys.exit(0)
 fail()
-"""
+""",
+        newline='\n',
     )
-    gh.write_text(checked_program(gh.read_text(), 'gh'))
+    gh.write_text(checked_program(gh.read_text(), 'gh'), newline='\n')
     gh.chmod(0o755)
     g = binary / 'git'
     g.write_text(
@@ -510,9 +512,10 @@ if 'clone' in a:
 if 'pull' in a:
     fail()
 os.execv(d['git'], [d['git'], *a])
-"""
+""",
+        newline='\n',
     )
-    g.write_text(checked_program(g.read_text(), 'git'))
+    g.write_text(checked_program(g.read_text(), 'git'), newline='\n')
     g.chmod(0o755)
     env = {
         **os.environ,
@@ -564,7 +567,7 @@ os.execv(d['git'], [d['git'], *a])
                 ' update cannot hide a failed state transition'
             )
             result = subprocess.run(
-                ['bash', '-eu', '-o', 'pipefail', '-c', expand(step['run'])],
+                [environment_bash(), '-eu', '-o', 'pipefail', '-c', expand(step['run'])],
                 cwd=workflow_cwd(job, step, repo, expand),
                 env=workflow_env(job, step, env, expand),
                 text=True,

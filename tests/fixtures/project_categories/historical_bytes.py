@@ -9,6 +9,7 @@ import functools
 import hashlib
 import itertools
 import json
+import os
 from pathlib import Path
 
 
@@ -64,8 +65,13 @@ def layout(data):
     }
 
 
+def native_edi_bytes(data):
+    """Reverse only the Windows text-mode newline transport of EDI output."""
+    return data.replace(b'\r\n', b'\n') if os.linesep == '\r\n' else data
+
+
 def require_saved_spacing(data):
-    _, entries, separators, _ = units(data)
+    _, entries, separators, _ = units(native_edi_bytes(data))
     for index in range(1, len(entries)):
         previous, current = entries[index - 1][0], entries[index][0]
         same = (
@@ -183,6 +189,8 @@ def candidates(data, template=None, *, preferred=None):
 
 
 def prior_digest(data, expected, *, template=None, name=None):
+    if name is not None and name.endswith('.edi'):
+        data = native_edi_bytes(data)
     digest = hashlib.sha256(data).hexdigest()
     if digest == expected:
         return digest

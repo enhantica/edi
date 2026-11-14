@@ -21,7 +21,11 @@ import sys
 def declared(repo: str, sha: str, path: str, name: str) -> list[str]:
     """The tuple of paths `name` holds in the builder at `path`."""
     text = subprocess.run(
-        ['git', '-C', repo, 'show', f'{sha}:{path}'], capture_output=True, text=True, check=True
+        ['git', '-C', repo, 'show', f'{sha}:{path}'],
+        capture_output=True,
+        text=True,
+        encoding='utf-8',
+        check=True,
     ).stdout
     for node in ast.parse(text).body:
         if isinstance(node, ast.Assign) and any(
@@ -43,6 +47,7 @@ def main() -> int:
         ['git', '-C', repo, 'rev-parse', *[f'{sha}:{path}' for path in paths]],
         capture_output=True,
         text=True,
+        encoding='utf-8',
         check=True,
     ).stdout.split()
     with pathlib.Path(output).open('w', encoding='utf-8') as stream:

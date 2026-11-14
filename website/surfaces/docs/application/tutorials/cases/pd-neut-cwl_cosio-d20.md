@@ -6,6 +6,11 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. Its structure and experiment come from EasyDiffraction's collection with **Load ▾ From web…**, and each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+This tutorial fits the olivine Co₂SiO₄ to constant-wavelength neutron powder data measured on
+D20 at the ILL. Its structure and its measured pattern come from EasyDiffraction's collection;
+the tutorial describes the experiment, links the two and fits the coordinates, the
+displacements and the oxygen occupancies.
+
 ## Create a project
 
 Press **Start** on Home, then **Create a new project**, and give it a name.

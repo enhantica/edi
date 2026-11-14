@@ -44,8 +44,9 @@ artefacts read it instead of restating it, and a check can refuse a case that la
    | `tags` | the case's tags as the app's Examples list shows them, in its order: each a facet, value and label (`{facet, value, label}`), the facets and labels from `app/examples/tags.json` and the values the catalogue derives from the case's project (`app/examples/metadata.json`, `tools/dev/example_metadata.py`). The record is their one source: the app's Examples list and Tutorials dialog, the docs tutorial and examples pages and each notebook's header show exactly these, with the same names, colours and icons, and a check compares every surface with the record (the owner, 2026-11-08) |
 | `section`, `section_icon` | the tutorial section every interface groups the case under, and its Font Awesome icon, in this order (the owner, 2026-11-08): Getting started (`rocket`, the case whose structure is built by hand), Simulation (`calculator`), Multiple datasets (`layer-group`, a joint or scan fit), Single crystal (`cube`), else Powder (`chart-area`); the first rule that holds decides, from the record's own `structure_from` and `tags`. The overview pages, the navigation, the app's lists and the notebooks show these names and icons |
 | `structure_from`, `data_from` | the row's `structure-by-hand: true` (the structure is built step by step: `hand`; else loaded from the collection's CIF: `collection`) and `data-from-file: true` (the data also come from a file on the user's disk: `[collection, file]`; else `[collection]`), the same on every interface (the owner, 2026-11-08; the command line cannot build a structure yet, so its page loads the starting project there) |
+| `provenance` | the complete authored `PROVENANCE.md` text, including data-source and estimated-uncertainty disclosures; missing or empty provenance refuses the record check. Portable collection records retain that text unchanged |
 | `pin` | the `regression-pin` quantities of the case's `expected.json`, with its `source.pins` block: the edi commit the values came from and the reason they were last changed |
-   | `tutorials` | by the case id: `docs/user/tutorials/<id>.ipynb`, the app's built-in tutorial `<id>`, `docs/user/app/<id>.md`, `docs/user/cli/<id>/index.md` |
+   | `tutorials` | by the case id: `docs/user/tutorials/<id>.ipynb`, the app's built-in tutorial `<id>`, `website/surfaces/docs/application/tutorials/cases/<id>.md`, `docs/user/cli/<id>/index.md` |
 
    The pins are regression pins: they show that the three interfaces and later versions agree, not that the values
    are right. Correctness stays with the FullProf references in the same `expected.json` (ADR-0048 §10).
@@ -74,3 +75,109 @@ artefacts read it instead of restating it, and a check can refuse a case that la
 | A hand-written `case.json` per case | Rejected: it would restate the registry, the project and `expected.json`, and drift from them |
 | A new `case` kind in `index.json` | Rejected: ADR-0068's reader refuses an unknown kind, so every installed app would stop reading the index |
 | A separate pin file | Rejected: `expected.json` already holds the CLI's regression pins; the case pins extend it |
+
+### Catalogue addition coverage
+
+The later TbTi simulation and CoSiO HEiDi additions participate in the source-text
+and displayed-field app witnesses alongside the retained cases. Their source-only
+generators add input expectations without refreshing earlier measured or calculated
+values. The registry and app metadata preserve the independent current inventory
+order: simulations first, then powder fits/scans and the declared single-crystal
+cases. Source-hash transitions for the two CoSiO powder cases admit only the
+previously approved ADP free flags and removal of the retired stop-rule field;
+all prior experimental and displayed-value expectations remain exact.
+
+
+Application and Command line page renderers retain the authored Python tutorial's
+opening context before their interface instructions. This carries data limitations
+and uncertainty estimates into each published interface, rather than discarding them
+when writing stage screenshots or file-edit instructions. Existing numerical output
+blocks are retained when adding that context to committed pages.
+
+
+Presentation observers distinguish the notebook's markdown H1 from installation
+code comments. Titles use the declared sample/instrument form and identify cases
+within their sections. SVG badge observers compare both visible and accessible
+labels, coloured backgrounds and the exact shared font icon's nested view box and
+path digest. External symbols, extra paths, altered glyphs and changed badge counts
+refuse, just as they do for inline symbol markup.
+
+
+Historical seed inventories retain their original complete blob identities across
+the already committed release regression retake. A source-only archive binds
+whole before/after documents and preserves every independent physical reference
+and tolerance. Its one explicitly source-described engine-iteration retag is
+narrowly validated; it cannot authorize changing another reference or file.
+The later CoSiO2K changed-input epoch is outside this projection. These witnesses
+prove archived source retention and make no new fit correctness claim. The seed
+stop-rule witness reads its complete live source epoch before the older byte
+projection, so it does not demand a later field in a pre-field archived document.
+
+
+Existing cases whose pin metadata was omitted gain an archival document identity:
+`source.pins.kind` is `committed-document`, `commit` names the Edi commit containing
+the identical prior expected document, and `record_sha256` binds that document.
+The reason identifies its published source and points to the unchanged authored
+provenance for the calculation conditions. No fit is rerun or original engine
+binary identity inferred. The source-only before/after archive and mutation
+controls retain every reference, tolerance, regression value and original byte.
+Simulation records read their existing `calc.quantities`; fitted records keep
+root quantities. Missing provenance continues to refuse future partial records.
+
+
+The measured-data field and collection producer also cover embedded single-crystal
+observations. Existing supplied reflection files are copied byte for byte; other
+measured `_refln` tables export their original h, k, l, intensity and uncertainty
+tokens to a CIF reflection asset, omitting calculated columns. Powder x/y/s.u.
+export retains its existing spelling. Both geometries use the same asset-id and
+sidecar writer. A data-free simulation exports no measurement asset. Malformed
+row cardinality refuses instead of manufacturing observations.
+
+
+Saved-byte witnesses also retain the retired cylinder `abscor2` scalar only as
+an in-memory fixed-zero projection. The input must declare exactly one fixed
+zero (or equal its complete archived removal source); the current output must
+omit that scalar and retain cylinder absorption with its active coefficient.
+The projected document still has to recover the original whole-file hash.
+Nonzero, free, duplicated or unexpectedly emitted retired scalars refuse, and
+changes to active coefficients remain visible to the unchanged hash witness.
+No reference, tolerance, regression hash or actual saved output is rewritten.
+
+
+The retained screenshot inventory follows the original single-crystal rename
+record, rather than expanding when source-only catalogue witnesses are added.
+New cases still run their real input/display checks; new rendered image pins
+require an actual capture with provenance. Existing image subjects and bytes
+remain required. Structure-chip observers use the owner-declared full labels
+“Crystal structure” and “Magnetic structure”, and include the added magnetic
+CoSiO HEIDI case in their independent membership set.
+
+
+The production case check refuses missing pin provenance as well as missing
+source disclosures: each record must carry a complete commit identity, a
+nonempty reason and its declared regression values. The collection cannot
+silently publish a future partial case after the current annotations are added.
+
+
+Catalogue source identifiers use forward slashes on every host. Native Windows
+filesystem paths remain native while reading; serialization uses POSIX relative
+identifiers, so Windows regenerates the same metadata and collection references
+as Linux and macOS. Cross-platform controls exercise the real description builder
+with both path representations and compare every field to committed metadata.
+
+
+The native-written browser qualifier authenticates annotated expected documents
+through the same exact insertion-only provenance archive before checking its
+unchanged original reference hash. Its producer receipt still records the actual
+current file hash. Added documentary provenance cannot change quantities,
+tolerances or disclosures, nor conceal a changed or re-signed reference document.
+
+
+Overview observers validate the shared decorative glyph separately from the exact tag
+label and accessible text. The private-use font character must not become part of
+the label comparison. Both older qualified icon paths and current shared icon names
+retain the declared icon identity in navigation; the icon basename stays exact.
+The native catalogue snapshot is refreshed through the documented import command,
+including the existing single-crystal cases and full Crystal structure / Magnetic
+structure labels. Its receipt names the actual source commit and file hashes;
+no numerical or screenshot references are regenerated.

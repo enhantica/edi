@@ -1,9 +1,11 @@
 """The real SDK checker admits explicit local untested metadata without bypassing other checks."""
 
 import copy
+import json
 import shutil
 import subprocess
 import sys
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -46,12 +48,83 @@ def check(tmp_path, platform, tested=None, allow=None, *, ci=None, damage=None):
     return result
 
 
+def pinned_archive(tmp_path, platform, *, wrong_source=False):
+    prefix, repo, _, _, manifest = make(tmp_path, platform)
+    pin = manifest['source_sha']
+    if wrong_source:
+        manifest['source_sha'] = 'b8' * 20
+        manifest['identity'] = 'git:' + manifest['source_sha']
+    write_manifest(prefix, manifest)
+    (repo / 'pixi.toml').write_text('[activation.env]\nCRYSTA_COMMIT="' + pin + '"\n')
+    script = repo / 'tools/ci/crysta_sdk.py'
+    script.parent.mkdir(parents=True)
+    shutil.copy2(ROOT / 'tools/ci/crysta_sdk.py', script)
+    archives = tmp_path / 'archives'
+    archives.mkdir()
+    archive = archives / f'crysta-sdk-{pin}-{platform}.tar.gz'
+    with tarfile.open(archive, 'w:gz') as output:
+        for path in sorted(prefix.rglob('*')):
+            if path.is_file():
+                output.add(path, arcname=path.relative_to(prefix))
+    env = clean_env()
+    env['CRYSTA_SDK_ARCHIVES'] = str(archives)
+    if platform == 'osx-arm64':
+        env['MACOSX_DEPLOYMENT_TARGET'] = '11.0'
+    return script, prefix, repo, archive, env, pin
+
+
+def sdk_command(script, env, *args):
+    return subprocess.run(
+        [sys.executable, str(script), *args],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=5,
+    )
+
+
+def assert_pinned_fetch_identity(tmp_path, platform):
+    script, _prefix, repo, archive, env, pin = pinned_archive(tmp_path / 'matching', platform)
+    for cold in (True, False):
+        result = sdk_command(script, env, 'fetch', '--platform', platform)
+        assert result.returncode == 0 and f'build-{pin}' in result.stdout, (
+            'A cold or warm pinned fetch must consume the independently qualified pinned bytes'
+        )
+        if cold:
+            archive.unlink()
+    cached = repo / 'build/crysta-sdk' / f'{pin}-{platform}' / 'share/crysta-sdk/manifest.json'
+    changed = json.loads(cached.read_text())
+    changed['source_sha'] = 'b8' * 20
+    changed['identity'] = 'git:' + changed['source_sha']
+    cached.write_text(json.dumps(changed))
+    stale = sdk_command(script, env, 'fetch', '--platform', platform)
+    assert stale.returncode != 0, 'A warm cache cannot replace the requested source identity'
+
+    script, prefix, _repo, _archive, env, pin = pinned_archive(
+        tmp_path / 'wrong-archive', platform, wrong_source=True
+    )
+    diagnostic = sdk_command(script, env, 'check', '--sdk', str(prefix), '--platform', platform)
+    assert diagnostic.returncode == 0, (
+        'An explicitly supplied diagnostic candidate keeps its admitted unpinned behavior'
+    )
+    wrong = sdk_command(script, env, 'fetch', '--platform', platform)
+    assert wrong.returncode != 0, (
+        'A fully qualified foreign SDK under the requested archive filename must refuse '
+        'at pinned fetch before the consumer can configure'
+    )
+    assert pin in wrong.stderr and 'b8' * 20 in wrong.stderr, (
+        'A pinned-fetch refusal must name both requested and supplied source identities'
+    )
+
+
 @pytest.mark.parametrize('platform', ['linux-64', 'osx-arm64'])
 def test_a_fully_qualified_sdk_remains_accepted_without_an_override(tmp_path, platform):
     result = check(tmp_path, platform)
     assert result.returncode == 0, (
         'The independent SDK fixture otherwise meets every consumer check'
     )
+    assert_pinned_fetch_identity(tmp_path / 'pinned-fetch', platform)
 
 
 @pytest.mark.parametrize('platform', ['linux-64', 'osx-arm64'])

@@ -4,6 +4,7 @@ import "RenderedTable.js" as Render
 import QtTest
 import edi.app
 import EdiAcceptance 1.0
+import ReportAcceptance 1.0
 import "../../fixtures/e04_t1/oracle.js" as Oracle
 
 TestCase {
@@ -17,7 +18,7 @@ TestCase {
     }
 
     function initTestCase() {
-        failOnWarning(/.*/);
+        failOnWarning(Probe.softwareOffscreenWithoutGl() ? /\A(?!(?:QRhiGles2: Failed to create (?:temporary context|context)|window doesn\x27t exist\.)\z)[\s\S]*\z/ : /.*/);
         appWindow = application.createObject(null);
         verify(appWindow !== null, "I19: existing-project tests load production Main");
         verify(waitForRendering(appWindow.contentItem), "I19: the real window is ready for input");
@@ -56,8 +57,7 @@ TestCase {
         Ui.expandGroup(test, Probe, appWindow, "group.examples");
         tryVerify(() => visibleControl("examples.list") !== null, 2000, "The unfiltered catalogue is exposed after group expansion");
         const list = visibleControl("examples.list");
-        compare(list.count, appProjects().length,
-                "Every catalogue and declared app-only example reaches its row");
+        compare(list.count, appProjects().length, "Every catalogue and declared app-only example reaches its row");
         const index = Probe.rows(Session.examples).map(row => row.exampleId).indexOf(id);
         verify(index >= 0, "The requested example retains its own catalogue identity: " + id);
         list.positionViewAtIndex(index, ListView.Contain);
@@ -128,13 +128,25 @@ TestCase {
             verify(frozen !== undefined, "I19: selected experiment has an independent file oracle");
             if (frozen.singleCrystal) {
                 const reflections = Probe.rows(experiment.singleCrystalReflections);
-                compare(reflections.length, frozen.loops.refln.length, "I19: single crystals retain every independently authored reflection");
-                reflections.forEach((row, index) => {
-                    const saved = frozen.loops.refln[index];
-                    compare([row.h, row.k, row.l].join(" "), [saved.index_h.value, saved.index_k.value, saved.index_l.value].join(" "), "I19: single-crystal Miller indices retain their signed source order");
-                    compare(row.intensityMeas, saved.intensity_meas.value, "I19: measured F squared equals the saved reflection input");
-                    compare(row.intensityMeasSu, saved.intensity_meas_su.value, "I19: measured uncertainty equals the saved reflection input");
-                });
+                const declared = frozen.loops.refln || [];
+                compare(experiment.calculationOnly, declared.length === 0, "The declared reflection population distinguishes simulation from measured input");
+                if (declared.length) {
+                    compare(reflections.length, declared.length, "I19: single crystals retain every independently authored reflection");
+                    reflections.forEach((row, index) => {
+                        const saved = declared[index];
+                        compare([row.h, row.k, row.l].join(" "), [saved.index_h.value, saved.index_k.value, saved.index_l.value].join(" "), "I19: single-crystal Miller indices retain their signed source order");
+                        compare(row.intensityMeas, saved.intensity_meas.value, "I19: measured F squared equals the saved reflection input");
+                        compare(row.intensityMeasSu, saved.intensity_meas_su.value, "I19: measured uncertainty equals the saved reflection input");
+                    });
+                } else {
+                    compare(experiment.singleCrystalReflections.simulated, true, "The source without observations publishes generated reflections");
+                    verify(reflections.length > 0, "The simulation generates a nonempty reflection table");
+                    reflections.forEach(row => {
+                        verify(Number.isNaN(row.intensityMeas) && Number.isNaN(row.intensityMeasSu), "Generated reflections never acquire invented measurements or uncertainties");
+                        verify(Number.isFinite(row.intensityCalc) && row.intensityCalc >= 0, "The simulation publishes finite nonnegative calculated intensities");
+                        verify([row.h, row.k, row.l].every(Number.isInteger), "Generated Miller indices are integral");
+                    });
+                }
             } else {
                 compare(experiment.peakType, frozen.peakType, "I19: loaded powder profile is preserved");
                 const range = datasets.length ? datasets[i].range : frozen.range;
@@ -155,7 +167,17 @@ TestCase {
             }
             click("appBar.tab.experiment");
             click("sideBar.tab.text");
-            textVisible(frozen.singleCrystal ? "_refln.index_h" : "_peak.type", "I19: Experiment Text is populated by the loaded category");
+            if (frozen.singleCrystal) {
+                const show = visibleControl("text.show");
+                verify(show !== null, "Single-crystal input retains the actual text mode selector");
+                click("text.show");
+                tryCompare(show.popup, "opened", true, 1000, "Text choices open through actual input");
+                verify(SettingsProof.key(show, Qt.Key_End), "The text selector receives End in its real window");
+                verify(SettingsProof.key(show, Qt.Key_Return), "The text selector commits Everything through real input");
+                tryCompare(Preferences, "textShow", "everything", 1000, "Measured reflections appear under Everything");
+            }
+            const field = frozen.singleCrystal ? (frozen.loops.refln ? "_refln.index_h" : "_experiment_type.sample_form") : "_peak.type";
+            textVisible(field, "I19: Experiment Text is populated by the loaded category");
             click("sideBar.tab.basic");
             click("sideBar.tab.extras");
             click("appBar.tab.analysis");
@@ -190,7 +212,13 @@ TestCase {
         expected.experiments.forEach(name => {
             verify(text.includes(name), "The preview names every loaded experiment: " + name);
             const frozen = Oracle.frozen.corpus.find(c => c.project === expected.path && c.experiment === name);
-            if (frozen.singleCrystal) {
+            if (frozen.singleCrystal && !frozen.loops.refln) {
+                const reportExperiment = preview.model.experiments.find(row => row.id === name);
+                verify(reportExperiment !== undefined, "The simulation has its own report experiment");
+                const measured = reportExperiment.categories.find(row => row.id === "measured_reflections");
+                verify(measured !== undefined && measured.rows.some(row => /reflection/i.test(row.label) && Number(row.text) === 0), "The simulation report declares zero measured reflections");
+                verify(text.includes("Measured reflections"), "The rendered report distinguishes measurements from generated reflections");
+            } else if (frozen.singleCrystal) {
                 const reflection = frozen.loops.refln[0];
                 [frozen.loops.refln.length, Number(reflection.intensity_meas.value.toPrecision(6)), Number(reflection.intensity_meas_su.value.toPrecision(6))].forEach(value => verify(numbers.some(n => Math.abs(n - value) < 0.00005), "Preview reflection count, measured value and uncertainty agree with committed single-crystal data: " + name + " " + value));
             } else {
@@ -201,8 +229,7 @@ TestCase {
         verify(text.includes("crysta"), "The rendered Analysis software subsection names the effective engine");
     }
     function test_examples_registry_is_complete() {
-        same(Probe.rows(Session.examples).map(r => r.exampleId), appProjects().map(p => p.id),
-             "The app contains exactly the catalogue and declared app-only cases");
+        same(Probe.rows(Session.examples).map(r => r.exampleId), appProjects().map(p => p.id), "The app contains exactly the catalogue and declared app-only cases");
     }
     function test_every_example_opens_through_its_page_row_data() {
         return appProjects().map(p => ({

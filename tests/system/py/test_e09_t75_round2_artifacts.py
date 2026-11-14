@@ -16,13 +16,14 @@ import tarfile
 import pytest
 
 from tests.fixtures.e09_t75_commands import assert_no_swallowed_refusal
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e09_t75_sdk_consumer import consumer
 from tests.system.py.test_e09_t75_native_execution import restore
 
 
 def run_sdk(env, repo, sdk, route):
     if route.startswith('install-'):
-        argv = ['bash', 'tools/ci/build-crysta.sh']
+        argv = [environment_bash(), 'tools/ci/build-crysta.sh']
     else:
         argv = [sys.executable, 'tools/ci/crysta_sdk.py', route, '--platform', 'osx-arm64']
         if route == 'check':

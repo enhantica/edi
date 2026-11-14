@@ -6,30 +6,104 @@
 # Li and Ni mix between two sites, held to full occupancy by constraints, and the profile has
 # Finger-Cox-Jephcoat asymmetry.
 #
-# The project is the catalogue case `pd-neut-cwl_lmo-echidna`, the one the command line and the
-# app's Examples open. Li and Ni share their sites through five relations (displacements and
-# occupancies), kept from the start.
+# It builds the catalogue case `pd-neut-cwl_lmo-echidna` step by step: the same project the command
+# line fits and the app's Examples open. Li and Ni share their sites through five relations
+# (displacements and occupancies).
+
+# %% [markdown]
+# ## Import the library
 
 # %%
 import easydiffraction as edi
 
 # %% [markdown]
-# ## Load the project
+# ## Define the project
+#
+# A new project is empty: it holds no structure and no experiment until you add them.
 
 # %%
-project_path = edi.download_data('pd-neut-cwl_lmo-echidna', destination='data')
-project = edi.Project.load(project_path)
-structure = project.structures['lmo']
-experiment = project.experiments['echidna']
-project.display.constraints()
+project = edi.Project(name='pd-neut-cwl_lmo-echidna')
 
 # %% [markdown]
-# The project marks what its fit frees. The fit below frees it in stages, so start with all of it
-# fixed.
+# ## Define the structure
+#
+# Load the structure from EasyDiffraction's collection. Its CIF gives the space group, the cell and
+# the atom sites.
 
 # %%
-for parameter in project.free_parameters:
-    parameter.free = False
+path = edi.download_data('pd-neut-cwl_lmo-echidna-lmo', destination='data')
+project.structures.add_from_cif_path(path)
+structure = project.structures['lmo']
+
+# %%
+project.display.structure('lmo')
+
+# %% [markdown]
+# ## Define the experiment
+#
+# Create the experiment from the measured data in EasyDiffraction's collection, then describe the
+# instrument, the peak profile, the background and the structure it links.
+
+# %%
+data_path = edi.download_data('pd-neut-cwl_lmo-echidna-echidna-data', destination='data')
+project.experiments.add_from_data_path(
+    name='echidna',
+    data_path=data_path,
+    sample_form='powder',
+    beam_mode='constant wavelength',
+    radiation_probe='neutron',
+    scattering_type='bragg',
+)
+experiment = project.experiments['echidna']
+experiment.neutron_scattering_length = 'sears1992'
+experiment.peak.type = 'cwl-tch-pseudo-voigt-fcj'
+experiment.absorption.type = 'cylinder-hewat'
+experiment.instrument.name = 'ECHIDNA'
+experiment.instrument.facility = 'ANSTO'
+experiment.peak.broad_gauss_u = 0.1
+experiment.peak.broad_gauss_v = -0.3
+experiment.peak.broad_gauss_w = 0.4
+experiment.peak.broad_lorentz_y = 0.1
+experiment.peak.asym_fcj_1 = 0.08
+experiment.peak.asym_fcj_2 = 0.08
+experiment.peak.cutoff_fwhm = 12
+experiment.instrument.setup_wavelength = 1.6215
+experiment.instrument.calib_sample_displacement = 0
+experiment.instrument.calib_sample_transparency = 0
+experiment.absorption.mu_r = 0.3
+experiment.excluded_regions.create(start=0, end=12)
+experiment.excluded_regions.create(start=162, end=180)
+experiment.linked_structures.create(structure_id='lmo', scale=10)
+experiment.background.create(position=12, intensity=550.0)
+experiment.background.create(position=30, intensity=550.0)
+experiment.background.create(position=50, intensity=550.0)
+experiment.background.create(position=70, intensity=550.0)
+experiment.background.create(position=90, intensity=550.0)
+experiment.background.create(position=110, intensity=550.0)
+experiment.background.create(position=130, intensity=550.0)
+experiment.background.create(position=150, intensity=550.0)
+experiment.background.create(position=162, intensity=550.0)
+
+# %% [markdown]
+# The constraints the fit keeps, each between two named parameters (aliases).
+
+# %%
+project.analysis.aliases.create(id='biso_Li1', param=structure.atom_sites['Li1'].adp_iso)
+project.analysis.aliases.create(id='biso_Li2', param=structure.atom_sites['Li2'].adp_iso)
+project.analysis.aliases.create(id='biso_Ni1', param=structure.atom_sites['Ni1'].adp_iso)
+project.analysis.aliases.create(id='biso_Ni2', param=structure.atom_sites['Ni2'].adp_iso)
+project.analysis.aliases.create(id='occ_Li1', param=structure.atom_sites['Li1'].occupancy)
+project.analysis.aliases.create(id='occ_Li2', param=structure.atom_sites['Li2'].occupancy)
+project.analysis.aliases.create(id='occ_Ni1', param=structure.atom_sites['Ni1'].occupancy)
+project.analysis.aliases.create(id='occ_Ni2', param=structure.atom_sites['Ni2'].occupancy)
+project.analysis.constraints.create(id='1', expression='biso_Ni1 = biso_Li1')
+project.analysis.constraints.create(id='2', expression='biso_Li2 = biso_Ni2')
+project.analysis.constraints.create(id='3', expression='occ_Ni1 = 1 - occ_Li1')
+project.analysis.constraints.create(id='4', expression='occ_Li2 = 1 - occ_Li1')
+project.analysis.constraints.create(id='5', expression='occ_Ni2 = occ_Li1')
+
+# %%
+project.display.constraints()
 
 # %%
 project.display.pattern('echidna')
@@ -165,8 +239,16 @@ project.display.fit.correlations()
 project.display.structure('lmo')
 
 # %% [markdown]
+# ## Report
+#
+# The HTML report draws the measured, calculated and difference patterns with the reflection
+# positions, and lists the structures, the experiments and the fit. Open it in a browser.
+
+# %%
+project.report.save_html('pd-neut-cwl_lmo-echidna.html')
+
+# %% [markdown]
 # ## Save the project
 
 # %%
 project.save_as('pd-neut-cwl_lmo-echidna')
-project.report.save_html('pd-neut-cwl_lmo-echidna.html')

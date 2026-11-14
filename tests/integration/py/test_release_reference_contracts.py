@@ -102,7 +102,9 @@ def test_promotion_refuses_incomplete_or_ambiguous_evidence(release_modules, fau
         artifacts.append(copy.deepcopy(artifacts[2]))
     else:
         jobs[1]['conclusion'] = 'failure'
-    with pytest.raises(ValueError, match=r'qualify|missing|expired|ambiguous'):
+    with pytest.raises(
+        ValueError, match=r'qualify|missing|expired|ambiguous|no successful attempt'
+    ):
         promote.qualified_artifacts(run, artifacts, jobs)
 
 
@@ -221,10 +223,13 @@ def test_python_index_exposes_only_public_hash_bound_wheels(tmp_path):
         pages.check_package_index(tmp_path)
 
 
-def test_distribution_mirror_uses_the_declared_singular_host():
+def test_distribution_uses_the_official_primary_and_independent_pages_mirror():
     policy = json.loads((ROOT / 'data/distribution.json').read_text())
-    assert policy['mirror_bases'] == ['https://download.easydiffraction.org/'], (
-        'The optional download mirror must use the singular host chosen for distribution'
+    assert policy['primary_base'] == 'https://download.easydiffraction.org/', (
+        'Distribution uses the official primary and independent pages mirror.'
+    )
+    assert policy['mirror_bases'] == ['https://enhantica.github.io/edi-download/'], (
+        'The internal fallback must remain independent of the official primary host'
     )
 
 
@@ -261,7 +266,7 @@ def deliveries(tmp_path):
             'edi_commit': commit,
             'zip': archive.name,
             'zip_sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
-            'repository_url': f'https://enhantica.github.io/edi/repository/testing/{platform}/',
+            'repository_url': f'https://download.easydiffraction.org/repository/testing/{platform}/',
         }
         (folder / 'installer.json').write_text(json.dumps(metadata))
         (folder / 'qualification.json').write_text(

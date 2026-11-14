@@ -158,7 +158,8 @@ def test_source_metadata_archive_refuses_rebanked_whitelist_escapes(tmp_path, mo
     (tmp_path / 'metadata-inputs.json').write_text(
         json.dumps({
             'files': {name: [hashlib.sha256(data).hexdigest() for data in (before, after)]}
-        })
+        }),
+        newline='\n',
     )
     monkeypatch.setattr(metadata_bytes, 'HERE', tmp_path)
     with pytest.raises(AssertionError):
@@ -189,7 +190,7 @@ def test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_ca
     elif damage == 'missing':
         (source / 'analysis/analysis.edi').unlink()
     elif damage == 'extra':
-        (source / 'extra.edi').write_text('data_unreviewed\n')
+        (source / 'extra.edi').write_text('data_unreviewed\n', newline='\n')
     else:
         target = source / 'experiments/d20.edi'
         lines = target.read_bytes().splitlines(keepends=True)

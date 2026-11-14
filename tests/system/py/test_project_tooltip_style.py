@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
+
 ROOT = Path(__file__).resolve().parents[3]
 SCOPES = [
     'project',
@@ -30,7 +32,7 @@ def tooltip_receipts():
     assert binary.is_file(), 'Tooltip census requires the actual app test host'
     return subprocess.run(
         [
-            'bash',
+            environment_bash(),
             str(ROOT / 'tests/fixtures/scan_views/run.sh'),
             str(binary),
             '-input',

@@ -5,28 +5,59 @@
 # Fit the layered nickelate Pr₂NiO₄ to constant-wavelength neutron single-crystal data from 5C2 at
 # LLB, with anisotropic displacements.
 #
-# The project is the catalogue case `sc-neut-cwl_pr2nio4-5c2`, the one the command line and the
-# app's Examples open.
+# It builds the catalogue case `sc-neut-cwl_pr2nio4-5c2` step by step: the same project the command
+# line fits and the app's Examples open.
+
+# %% [markdown]
+# ## Import the library
 
 # %%
 import easydiffraction as edi
 
 # %% [markdown]
-# ## Load the project
+# ## Define the project
+#
+# A new project is empty: it holds no structure and no experiment until you add them.
 
 # %%
-project_path = edi.download_data('sc-neut-cwl_pr2nio4-5c2', destination='data')
-project = edi.Project.load(project_path)
-structure = project.structures['pr2nio4']
-experiment = project.experiments['llb_5c2']
+project = edi.Project(name='sc-neut-cwl_pr2nio4-5c2')
 
 # %% [markdown]
-# The project marks what its fit frees. The fit below frees it in stages, so start with all of it
-# fixed.
+# ## Define the structure
+#
+# Load the structure from EasyDiffraction's collection. Its CIF gives the space group, the cell and
+# the atom sites.
 
 # %%
-for parameter in project.free_parameters:
-    parameter.free = False
+path = edi.download_data('sc-neut-cwl_pr2nio4-5c2-pr2nio4', destination='data')
+project.structures.add_from_cif_path(path)
+structure = project.structures['pr2nio4']
+
+# %%
+project.display.structure('pr2nio4')
+
+# %% [markdown]
+# ## Define the experiment
+#
+# Create the experiment from the measured data in EasyDiffraction's collection, then describe the
+# instrument, the peak profile, the background and the structure it links.
+
+# %%
+data_path = edi.download_data('sc-neut-cwl_pr2nio4-5c2-llb_5c2-data', destination='data')
+project.experiments.add_from_data_path(
+    name='llb_5c2',
+    data_path=data_path,
+    sample_form='single crystal',
+    beam_mode='constant wavelength',
+    radiation_probe='neutron',
+    scattering_type='bragg',
+)
+experiment = project.experiments['llb_5c2']
+experiment.neutron_scattering_length = 'sears1992'
+experiment.instrument.name = '5C2'
+experiment.instrument.facility = 'LLB'
+experiment.instrument.setup_wavelength = 0.8302
+experiment.linked_structures.create(structure_id='pr2nio4', scale=4)
 
 # %%
 project.display.pattern('llb_5c2')
@@ -118,8 +149,16 @@ project.display.fit.correlations()
 project.display.structure('pr2nio4')
 
 # %% [markdown]
+# ## Report
+#
+# The HTML report draws the measured, calculated and difference patterns with the reflection
+# positions, and lists the structures, the experiments and the fit. Open it in a browser.
+
+# %%
+project.report.save_html('sc-neut-cwl_pr2nio4-5c2.html')
+
+# %% [markdown]
 # ## Save the project
 
 # %%
 project.save_as('sc-neut-cwl_pr2nio4-5c2')
-project.report.save_html('sc-neut-cwl_pr2nio4-5c2.html')

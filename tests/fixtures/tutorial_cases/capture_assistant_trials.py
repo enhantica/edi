@@ -13,10 +13,17 @@ def main():
     parser.add_argument('hub', type=Path)
     parser.add_argument('output', type=Path)
     parser.add_argument('--pending', action='store_true')
+    parser.add_argument('--source-document', type=Path)
     args = parser.parse_args()
     document = {'source': None, 'records': []}
     if not args.pending:
-        relative = 'knowledge/analysis/e04-t45-assistant-prompt-trials.md'
+        if (
+            args.source_document is None
+            or args.source_document.is_absolute()
+            or '..' in args.source_document.parts
+        ):
+            parser.error('a relative --source-document is required unless --pending')
+        relative = args.source_document.as_posix()
         source = subprocess.check_output(['git', '-C', str(args.hub), 'show', 'HEAD:' + relative])
         assert source == (args.hub / relative).read_bytes(), (
             'Trial evidence must be committed before export'
@@ -25,7 +32,7 @@ def main():
         records = [record for block in blocks for record in json.loads(block)]
         document = {
             'source': {
-                'path': relative,
+                'document': 'assistant-prompt-trials',
                 'sha256': hashlib.sha256(source).hexdigest(),
                 'commit': subprocess.check_output(
                     ['git', '-C', str(args.hub), 'rev-parse', 'HEAD'], text=True

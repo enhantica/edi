@@ -117,8 +117,8 @@ def test_estimated_uncertainty_is_disclosed_on_every_surface(surface):
     else:
         path = {
             'python': ROOT / 'docs/user/tutorials' / (CASE + '.py'),
-            'app': ROOT / 'docs/user/app' / (CASE + '.md'),
-            'command-line': ROOT / 'docs/user/cli' / CASE / 'index.md',
+            'app': ROOT / 'website/surfaces/docs/application/tutorials/cases' / (CASE + '.md'),
+            'command-line': ROOT / 'website/surfaces/docs/cli/tutorials/cases' / (CASE + '.md'),
         }[surface]
         assert path.is_file(), (
             'Unit 9: the three-temperature case has every declared tutorial surface'

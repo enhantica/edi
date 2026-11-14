@@ -19,8 +19,10 @@ def native_consumers():
         [Path(supplied)]
         if supplied
         else [
-            ROOT / 'build/ci/core/edi_integration_tests',
-            ROOT / 'build/ci-consumer/core/edi_integration_tests',
+            ROOT / build / 'core' / configuration / ('edi_integration_tests' + suffix)
+            for build in ['build/ci', 'build/ci-consumer']
+            for configuration in (['Release', ''] if os.name == 'nt' else [''])
+            for suffix in (['.exe'] if os.name == 'nt' else [''])
         ]
     )
     binary = next((path for path in candidates if path.is_file()), None)

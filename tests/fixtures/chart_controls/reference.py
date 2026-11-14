@@ -4,30 +4,25 @@ import json
 from pathlib import Path
 
 from tests.fixtures.approved_palettes.reference import gradient
+from tests.fixtures.chart_controls.generate_bragg import published_palettes
 
 OWNER = json.loads(Path(__file__).with_name('owner.json').read_text())
-SCHEMES = ['earth', 'classic', 'soft', 'natural', 'colourBlindSafe']
+SCHEMES = ['main', 'colourBlindSafe']
 PALETTES = [
     {**palette, 'scheme': scheme, 'default': index == 0}
-    for index, (palette, scheme) in enumerate(zip(OWNER['palettes'], SCHEMES, strict=True))
+    for index, (palette, scheme) in enumerate(zip(published_palettes(), SCHEMES, strict=True))
 ]
-_PREVIOUS = json.loads(
-    Path(__file__).parents[1].joinpath('approved_palettes/colours.json').read_text()
-)['palettes'][0]
 
 
-def role_colours(theme):
-    """The calc record replaces calc only; the existing role greys carry forward."""
-    return {
-        'total_calculation': OWNER['calc'][theme],
-        'background': _PREVIOUS[theme]['background'],
-        'difference': _PREVIOUS[theme]['difference'],
-    }
+def role_colours(theme, palette=None):
+    """Curve roles from the immutable published approval, per active palette."""
+    chosen = PALETTES[0] if palette is None else palette
+    return {role: values[theme] for role, values in chosen['roles'].items()}
 
 
 def assigned_structure(palette, place, experiments, structures, theme):
-    """Fresh projects assign experiments first, then structures, with Earth's reservation."""
-    first = max(experiments, 2 if palette['name'] == 'Earth' else 0)
+    """Both active palettes reserve two experiment colours before structure colours."""
+    first = max(experiments, 2)
     position, size = first + place, first + structures
     colours = palette[theme]
     if position < 11:

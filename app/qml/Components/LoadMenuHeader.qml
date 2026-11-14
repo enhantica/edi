@@ -11,6 +11,10 @@ Item {
     id: header
 
     property string text: ""
+
+    Accessible.role: Accessible.Heading
+    Accessible.name: header.text
+    Accessible.focusable: false
     // The menu's first title: no gap above it.
     property bool first: false
     property color color: EaStyle.Colors.themeForeground
@@ -21,6 +25,7 @@ Item {
 
     EaElements.Label {
         id: label
+        Accessible.ignored: true
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom

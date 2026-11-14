@@ -2,115 +2,103 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit Na₂Ca₃Al₂F₁₄ to time-of-flight neutron powder data from WISH at ISIS, all five detector bank
+pairs at once. Each bank has its own calibration and profile; the structure is shared.
+
+It builds the catalogue case `pd-neut-tof_ncaf-wish` step by step: the same project the command
+line fits and the app's Examples open.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-tof_ncaf-wish/structures pd-neut-tof_ncaf-wish/experiments pd-neut-tof_ncaf-wish/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-tof_ncaf-wish
+_metadata.title "Na₂Ca₃Al₂F₁₄ [I2₁3] · WISH @ ISIS"
+_metadata.description "All five detector bank pairs fitted jointly · Jorgensen–Von Dreele profile · Per-bank calibration"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-tof_ncaf-wish
+    edi download-data pd-neut-tof_ncaf-wish-ncaf
+    mv data/pd-neut-tof_ncaf-wish-ncaf.edi pd-neut-tof_ncaf-wish/structures/ncaf.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-tof_ncaf-wish
+    python -m edi download-data pd-neut-tof_ncaf-wish-ncaf
+    mv data/pd-neut-tof_ncaf-wish-ncaf.edi pd-neut-tof_ncaf-wish/structures/ncaf.edi
     ```
 
-## Start with nothing free
+## Define the experiments
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiments into `experiments`: each file declares its instrument, peak profile, background, the structures it links and its measured data.
 
-In `experiments/wish_1_10.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_instrument.calib_d_to_tof_offset 0
-_instrument.calib_d_to_tof_linear 4985.32
-2 7099.4761 210
-3 8008.2271 210
-```
+    ```console
+    edi download-data pd-neut-tof_ncaf-wish-wish_1_10
+    mv data/pd-neut-tof_ncaf-wish-wish_1_10.edi pd-neut-tof_ncaf-wish/experiments/wish_1_10.edi
+    edi download-data pd-neut-tof_ncaf-wish-wish_2_9
+    mv data/pd-neut-tof_ncaf-wish-wish_2_9.edi pd-neut-tof_ncaf-wish/experiments/wish_2_9.edi
+    edi download-data pd-neut-tof_ncaf-wish-wish_3_8
+    mv data/pd-neut-tof_ncaf-wish-wish_3_8.edi pd-neut-tof_ncaf-wish/experiments/wish_3_8.edi
+    edi download-data pd-neut-tof_ncaf-wish-wish_4_7
+    mv data/pd-neut-tof_ncaf-wish-wish_4_7.edi pd-neut-tof_ncaf-wish/experiments/wish_4_7.edi
+    edi download-data pd-neut-tof_ncaf-wish-wish_5_6
+    mv data/pd-neut-tof_ncaf-wish-wish_5_6.edi pd-neut-tof_ncaf-wish/experiments/wish_5_6.edi
+    ```
 
-The same for every other row (33 more).
+=== "Python package"
 
-In `experiments/wish_2_9.edi`, remove the `()` from every value; they now read:
+    ```console
+    python -m edi download-data pd-neut-tof_ncaf-wish-wish_1_10
+    mv data/pd-neut-tof_ncaf-wish-wish_1_10.edi pd-neut-tof_ncaf-wish/experiments/wish_1_10.edi
+    python -m edi download-data pd-neut-tof_ncaf-wish-wish_2_9
+    mv data/pd-neut-tof_ncaf-wish-wish_2_9.edi pd-neut-tof_ncaf-wish/experiments/wish_2_9.edi
+    python -m edi download-data pd-neut-tof_ncaf-wish-wish_3_8
+    mv data/pd-neut-tof_ncaf-wish-wish_3_8.edi pd-neut-tof_ncaf-wish/experiments/wish_3_8.edi
+    python -m edi download-data pd-neut-tof_ncaf-wish-wish_4_7
+    mv data/pd-neut-tof_ncaf-wish-wish_4_7.edi pd-neut-tof_ncaf-wish/experiments/wish_4_7.edi
+    python -m edi download-data pd-neut-tof_ncaf-wish-wish_5_6
+    mv data/pd-neut-tof_ncaf-wish-wish_5_6.edi pd-neut-tof_ncaf-wish/experiments/wish_5_6.edi
+    ```
 
-```edi
-_instrument.calib_d_to_tof_offset 0
-_instrument.calib_d_to_tof_linear 10389.9
-_peak.rise_alpha_0 0.053
-_peak.rise_alpha_1 0.031
-_peak.decay_beta_0 0.0061
-_peak.decay_beta_1 0.096
-_peak.broad_gauss_sigma_1 34
-_peak.broad_gauss_sigma_2 11
-_peak.broad_lorentz_gamma_1 1
-_absorption.abscor1 0
-1 7246.0732 220
-2 9265.5195 220
-```
-
-The same for every other row (21 more).
-
-In `experiments/wish_3_8.edi`, remove the `()` from every value; they now read:
-
-```edi
-_instrument.calib_d_to_tof_offset 0
-_instrument.calib_d_to_tof_linear 15105.5
-_peak.rise_alpha_0 -0.016
-_peak.rise_alpha_1 0.16
-_peak.decay_beta_0 0.0069
-_peak.decay_beta_1 0.032
-_peak.broad_gauss_sigma_1 30
-_peak.broad_gauss_sigma_2 8.3
-_absorption.abscor1 0
-1 9089.7529 240
-2 11580.4033 240
-```
-
-The same for every other row (21 more).
-
-In `experiments/wish_4_7.edi`, remove the `()` from every value; they now read:
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_instrument.calib_d_to_tof_offset 0
-_instrument.calib_d_to_tof_linear 18660.1
-_peak.rise_alpha_0 -0.015
-_peak.rise_alpha_1 0.16
-_peak.decay_beta_0 0.0074
-_peak.decay_beta_1 0.017
-_peak.broad_gauss_sigma_1 14
-_peak.broad_gauss_sigma_2 8.9
-_absorption.abscor1 0
-1 9089.7529 250
-2 10671.6523 250
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.chi_square_tolerance 0.0001
+
+_fitting_mode.type joint
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+wish_1_10 1
+wish_2_9 1
+wish_3_8 1
+wish_4_7 1
+wish_5_6 1
+
+_edi.schema_version 3
 ```
-
-The same for every other row (27 more).
-
-In `experiments/wish_5_6.edi`, remove the `()` from every value; they now read:
-
-```edi
-_instrument.calib_d_to_tof_offset 0
-_instrument.calib_d_to_tof_linear 20772.9
-_peak.rise_alpha_0 -0.012
-_peak.rise_alpha_1 0.14
-_peak.decay_beta_0 0.0077
-_peak.decay_beta_1 0.012
-_peak.broad_gauss_sigma_2 7.7
-_absorption.abscor1 0
-1 11136.874 260
-2 13313.3877 260
-```
-
-The same for every other row (27 more).
-
-In `structures/ncaf.edi`, remove the `()` from every value; they now read:
-
-```edi
-Ca1 Ca 0.47 0 0.25 b 12 1 0.5 Biso
-Al1 Al 0.25 0.25 0.25 a 8 1 0.5 Biso
-```
-
-The same for every other row (4 more).
 
 ## Scales and time-of-flight calibration
 

@@ -2,52 +2,78 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit herbertsmithite, ZnCu₃(OD)₆Cl₂, a deuterated kagome antiferromagnet, to constant-wavelength
+neutron powder data from HRPT at PSI, with a pseudo-Voigt profile and Bérar-Baldinozzi
+asymmetry.
+
+It builds the catalogue case `pd-neut-cwl_hs-hrpt` step by step: the same project the command
+line fits and the app's Examples open.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_hs-hrpt/structures pd-neut-cwl_hs-hrpt/experiments pd-neut-cwl_hs-hrpt/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_hs-hrpt
+_metadata.title "ZnCu₃(OD)₆Cl₂ [R-3m] · HRPT @ PSI"
+_metadata.description "Herbertsmithite · Deuterated kagome antiferromagnet · Bérar-Baldinozzi asymmetry"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_hs-hrpt
+    edi download-data pd-neut-cwl_hs-hrpt-hs
+    mv data/pd-neut-cwl_hs-hrpt-hs.edi pd-neut-cwl_hs-hrpt/structures/hs.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_hs-hrpt
+    python -m edi download-data pd-neut-cwl_hs-hrpt-hs
+    mv data/pd-neut-cwl_hs-hrpt-hs.edi pd-neut-cwl_hs-hrpt/structures/hs.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/hrpt.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.1
-_peak.broad_gauss_v -0.2
-_peak.broad_gauss_w 0.2
-_peak.mixing_eta_0 0.5
-_peak.asym_beba_a0 0
-_peak.asym_beba_b0 0
-_peak.asym_beba_a1 0
-_peak.asym_beba_b1 0
-1 4 460
-2 20 460
-```
+    ```console
+    edi download-data pd-neut-cwl_hs-hrpt-hrpt
+    mv data/pd-neut-cwl_hs-hrpt-hrpt.edi pd-neut-cwl_hs-hrpt/experiments/hrpt.edi
+    ```
 
-The same for every other row (9 more).
+=== "Python package"
 
-In `structures/hs.edi`, remove the `()` from every value; they now read:
+    ```console
+    python -m edi download-data pd-neut-cwl_hs-hrpt-hrpt
+    mv data/pd-neut-cwl_hs-hrpt-hrpt.edi pd-neut-cwl_hs-hrpt/experiments/hrpt.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_cell.length_a 6.85
-_cell.length_c 14.1
-Zn Zn 0 0 0.5 b 3 1 0.5 Biso
-Cu Cu 0.5 0 0 e 9 1 0.5 Biso
-```
+_minimizer.type crysta
+_minimizer.max_iterations 1000
 
-The same for every other row (3 more).
+_fitting_mode.type single
+
+_edi.schema_version 3
+```
 
 ## Cell, scale and 2θ zero
 

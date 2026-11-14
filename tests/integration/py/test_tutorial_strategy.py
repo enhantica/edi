@@ -6,7 +6,7 @@ import pytest
 
 from tests.fixtures.tutorial_cases.command_line import actions
 from tests.fixtures.tutorial_cases.contract import CASES, ROOT, interfaces_for
-from tests.fixtures.tutorial_cases.stages import observe
+from tests.fixtures.tutorial_cases.stages import app_population, observe
 from tests.fixtures.tutorial_cases.strategy import (
     app_labels,
     assert_app_group_actions,
@@ -52,7 +52,8 @@ def test_app_tutorial_uses_group_actions_and_actual_table_parameter_names(case, 
         assert path.is_file(), 'Gate 3/4: each declared case has a current app tutorial page'
         written = path.read_text()
     assert_app_group_actions(written)
-    assert_app_names(written, LABELS)
+    population = app_population(case)
+    assert_app_names(written, LABELS, population.table_names, population.datablock_names)
 
 
 @pytest.mark.parametrize('case', [case for case in CASES if 'cli' in interfaces_for(case)])
@@ -120,6 +121,17 @@ def test_strategy_observer_refuses_each_withdrawn_or_non_cumulative_route(escape
         )
     else:
         broken = GOOD + 'structure.cell.length_b.free = True\nproject.analysis.fit()\n'
+    if escape == 'late-alignment':
+        independent = "project.analysis.fitting_mode = 'independent'\n"
+        assert_strategy(
+            observe(
+                independent
+                + GOOD
+                + 'another_experiment.scale.free = True\nproject.analysis.fit()\n'
+            )
+        )
+        with pytest.raises(AssertionError, match='complete alignment'):
+            assert_strategy(observe(independent + broken))
     with pytest.raises(AssertionError, match='Gate 3/4:'):
         assert_strategy(observe(broken))
 
@@ -208,6 +220,22 @@ def test_group_action_observer_distinguishes_few_named_members_from_a_collection
 def test_app_name_observer_refuses_paths_and_invented_parameter_labels(name, style):
     assert_app_names('Free `U`, `V` and `W`.', LABELS)
     assert_app_names('Free `B iso`.', LABELS)
+    assert_app_names(
+        'Choose **spodi** in the datablock filter, then tick **Free** for **Peak mixing**.',
+        LABELS,
+        datablock_names={'spodi'},
+    )
+    with pytest.raises(AssertionError, match='actual project block'):
+        assert_app_names(
+            'Choose **invented** in the datablock filter, then tick **Free** for **Absorption**.',
+            LABELS,
+            datablock_names={'spodi'},
+        )
+    with pytest.raises(AssertionError, match='actual dictionary table label'):
+        assert_app_names('Free **spodi**.', LABELS, datablock_names={'spodi'})
+    assert_app_names('Free `Ba B iso`.', LABELS, {'Ba B iso'})
+    with pytest.raises(AssertionError, match='Gate 3/4:'):
+        assert_app_names('Free `Invented B iso`.', LABELS, {'Ba B iso'})
     subject = {
         'code': f'`{name}`',
         'bold': f'**{name}**',
@@ -216,3 +244,35 @@ def test_app_name_observer_refuses_paths_and_invented_parameter_labels(name, sty
     }[style]
     with pytest.raises(AssertionError, match='Gate 3/4:'):
         assert_app_names('Free ' + subject + '.', LABELS)
+
+
+@pytest.mark.parametrize('stage', ['first', 'later'])
+def test_combined_blocks_require_a_reason_in_their_own_stage(stage):
+    first = """# ### Alignment and magnetic moments
+# Free the scale, cell and magnetic moments together because their intensities are coupled.
+experiment.scale.free = True
+structure.cell.length_a.free = True
+structure.atom_site_moment['Co'].crystalaxis_y.free = True
+project.analysis.fit()
+"""
+    later = (
+        GOOD
+        + """# ### Atomic positions and displacements
+# Free coordinates and displacement together because separating them leaves a worse fit.
+structure.atom_sites['A'].fract_x.free = True
+structure.atom_sites['A'].adp_iso.free = True
+project.analysis.fit()
+"""
+    )
+    code = first if stage == 'first' else later
+    assert_strategy(observe(code))
+    missing = '\n'.join(line for line in code.splitlines() if 'because' not in line)
+    for mutation in [
+        missing,
+        missing.replace('# ###', '# Together because the earlier blocks need coupling.\n# ###'),
+        '# ### Earlier stage\n# Because coordinates and displacement couple in this earlier fit.\n'
+        + missing,
+        code + '# ### New stage without a new block\nproject.analysis.fit()\n',
+    ]:
+        with pytest.raises(AssertionError, match='Gate 3/4:'):
+            assert_strategy(observe(mutation))

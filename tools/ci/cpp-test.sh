@@ -36,9 +36,10 @@ if [ "${case_files:-0}" -lt 1 ]; then
     exit 1
 fi
 
+suffix="$(python -c 'import sys; print(".exe" if sys.platform == "win32" else "")')"
 log="$TREE/edi_tests.log"
 status=0
-"$TREE/core/edi_tests" >"$log" 2>&1 || status=$?
+"$TREE/core/edi_tests$suffix" >"$log" 2>&1 || status=$?
 cat "$log"
 if [ "$status" -ne 0 ]; then
     echo "cpp-test: edi_tests exited $status" >&2
@@ -55,10 +56,10 @@ fi
 echo "cpp-test: $ran C++ unit case(s) green"
 
 # The integration tier's native cases, when the tree built them.
-if [ -x "$TREE/core/edi_integration_tests" ]; then
+if [ -x "$TREE/core/edi_integration_tests$suffix" ]; then
     ilog="$TREE/edi_integration_tests.log"
     istatus=0
-    "$TREE/core/edi_integration_tests" >"$ilog" 2>&1 || istatus=$?
+    "$TREE/core/edi_integration_tests$suffix" >"$ilog" 2>&1 || istatus=$?
     cat "$ilog"
     if [ "$istatus" -ne 0 ]; then
         echo "cpp-test: edi_integration_tests exited $istatus" >&2

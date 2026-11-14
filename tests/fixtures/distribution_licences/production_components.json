@@ -2,13 +2,14 @@
   "basis": "Reviewed production inclusions, independent of the dependency overview. A new component needs an inclusion witness here as well as the delivered-file gate. Development tools and design or porting references are not inclusions.",
   "groups": [
     {
-      "witness": "core/CMakeLists.txt links the engine; its installed SDK includes the mathematical libraries and platform OpenMP runtime. lib/CMakeLists.txt builds the nanobind extension, including robin-map.",
+      "witness": "core/CMakeLists.txt links the engine; its installed SDK includes the mathematical libraries and platform OpenMP runtime. The macOS SDK and consumer locks select libcxx, and native packaging carries that LLVM C++ runtime (ADR-0017). lib/CMakeLists.txt builds the nanobind extension, including robin-map.",
       "components": [
         "crysta",
         "SLEEF",
         "Eigen",
         "libgomp",
         "llvm-openmp",
+        "libc++",
         "nanobind",
         "robin-map"
       ]

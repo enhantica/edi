@@ -10,15 +10,11 @@
                                   unpack into build/ci, give the unpacked files this restore's
                                   time, prove the import, compile nothing
 
-The bound fields are the run id, the checked-out commit and tree, the platform, the workspace path
-(every Linux output carries an absolute RPATH into the checkout's .pixi), the crysta pin in the
-committed pixi.toml, the crysta the tree linked and the tar's sha256. The linked crysta is the
-build this run takes: the committed pin, or, in a paired run whose pin is stale, the paired crysta
-branch's head as the packing job found it. A consumer builds the crysta the artifact linked
-(crysta_sdk.run_head), and restore proves that commit is the pin or a commit of the paired branch
-that crysta main lacks. run_attempt and job are recorded, not compared: a re-run of failed jobs
-keeps the successful build's artifact from the same run and commit. Every refusal exits 1 naming
-the missing artifact or the first mismatched value.
+The artifact binds this run, commit/tree, workspace, platform, locked Python ABI, and exact
+qualified SDK manifest/library. Every consumer validates those facts locally before restoring.
+Retry attempts may reuse a successful producer from the same run and source. Source drift,
+foreign SDKs, changed file modes/bytes and escaping archive paths all refuse; restore compiles
+nothing and proves the imported module's source identity before returning.
 """
 
 from __future__ import annotations
@@ -29,9 +25,11 @@ import json
 import os
 import platform
 import posixpath
+import re
 import shutil
 import subprocess
 import sys
+import sysconfig
 import tarfile
 import time
 from pathlib import Path
@@ -46,7 +44,26 @@ MARK = TREE / '.edi-native.json'
 TAR, MANIFEST = 'edi-native.tar', 'edi-native.json'
 # What the native build reads: the root CMakeLists.txt, its subdirectories core, cli and lib, and
 # the probe and test sources core/CMakeLists.txt names. A CMake source added elsewhere joins it.
-SOURCES = ('CMakeLists.txt', 'cmake', 'core', 'cli', 'lib', 'tests/unit/cpp', 'tools/probes')
+SOURCES = (
+    'CMakeLists.txt',
+    'pixi.toml',
+    'pixi.lock',
+    'pyproject.toml',
+    'data',
+    'tools/ci/crysta_sdk.py',
+    'tools/ci/core-build.sh',
+    'tools/ci/build-crysta.sh',
+    'tools/ci/edi_native.py',
+    'tools/ci/compiler_cache.py',
+    'cmake',
+    'core',
+    'cli',
+    'lib',
+    'tests/unit/cpp',
+    'tests/integration/cpp',
+    'tests/fixtures',
+    'tools/probes',
+)
 
 
 class RefusedError(Exception):
@@ -60,7 +77,9 @@ def refuse(message: str) -> NoReturn:
 
 def git(*args: str) -> str:
     """Return a git answer about this checkout; a failure refuses."""
-    r = subprocess.run(['git', *args], cwd=ROOT, capture_output=True, text=True, check=False)
+    r = subprocess.run(
+        ['git', *args], cwd=ROOT, capture_output=True, text=True, encoding='utf-8', check=False
+    )
     return r.stdout.strip() if r.returncode == 0 else refuse(f'git {" ".join(args)} failed')
 
 
@@ -71,54 +90,40 @@ def sdk_platform() -> str:
         os.environ.get('RUNNER_ARCH') or platform.machine()
     )
     table = {'linux-64': 'linux-64', 'linux-64-app': 'linux-64', 'osx-arm64': 'osx-arm64'}
-    table |= {'osx-arm64-app': 'osx-arm64'}
+    table |= {'osx-arm64-app': 'osx-arm64', 'win-64': 'win-64', 'win-64-app': 'win-64'}
+    table |= {'Windows-X64': 'win-64', 'Windows-AMD64': 'win-64'}
     table |= {'Linux-X64': 'linux-64', 'Linux-x86_64': 'linux-64'}
     table |= {'macOS-ARM64': 'osx-arm64', 'Darwin-arm64': 'osx-arm64'}
     return table.get(host) or refuse(f'no edi native platform for {host}')
 
 
-def crysta_pin(name: str) -> dict:
-    """The crysta pin the committed pixi.toml declares for ``name``, per crysta_sdk's contract."""
-    try:
-        return crysta_sdk.pin_fields(git('show', 'HEAD:pixi.toml'), name)
-    except crysta_sdk.RefusedError as refusal:
-        refuse(str(refusal))
-
-
-def crysta_tag(name: str) -> str | None:
-    """The crysta tag the committed pixi.toml pins for ``name``, read from its effective pin."""
-    return crysta_sdk.pin_tag(crysta_pin(name))
-
-
-def run_build(pin: str | None) -> str | None:
-    """The tag of the crysta build this run takes: ``pin``, or a paired run's branch head."""
-    try:
-        head = crysta_sdk.run_head()
-    except crysta_sdk.RefusedError as refusal:
-        refuse(str(refusal))
-    return f'build-{head}' if head and f'build-{head}' != pin else pin
-
-
-def paired(linked: object) -> bool:
-    """Whether ``linked`` is a commit this paired run may have built (crysta_sdk.paired_commit)."""
-    if not isinstance(linked, str) or len(linked) != 40:
-        return False
-    try:
-        return crysta_sdk.paired_commit(linked)
-    except crysta_sdk.RefusedError as refusal:
-        refuse(str(refusal))
-
-
 def observed() -> dict:
-    """Return this job's own values for every bound field."""
+    """Read the current run, source, ABI and qualified SDK identities independently."""
     name = sdk_platform()
+    run_id, workspace = os.environ.get('GITHUB_RUN_ID'), os.environ.get('GITHUB_WORKSPACE')
+    if not run_id or not workspace or Path(workspace).resolve() != ROOT.resolve():
+        refuse('native artifacts require this run and its exact checked-out workspace')
+    abi = sysconfig.get_config_var('SOABI')
+    if not isinstance(abi, str) or not abi:
+        refuse('the native Python interpreter has no declared SOABI')
+    pin = crysta_sdk.pinned(git('show', 'HEAD:pixi.toml'))
+    prefix = ROOT / 'build/crysta-prefix'
+    manifest_path = prefix / crysta_sdk.MANIFEST
+    manifest = crysta_sdk.check(prefix, name)
+    if manifest['source_sha'] != pin:
+        refuse('the native artifact requires the committed SDK pin, never a diagnostic override')
     return {
         'source_sha': git('rev-parse', 'HEAD'),
         'source_tree': git('rev-parse', 'HEAD^{tree}'),
-        'run_id': os.environ.get('GITHUB_RUN_ID'),
+        'run_id': run_id,
         'platform': name,
-        'workspace': os.environ.get('GITHUB_WORKSPACE'),
-    } | crysta_pin(name)
+        'workspace': workspace,
+        'python_abi': abi,
+        'pixi_lock_sha256': sha256(ROOT / 'pixi.lock'),
+        'crysta_source_sha': pin,
+        'crysta_sdk_sha256': sha256(manifest_path),
+        'crysta_library_sha256': sha256(prefix / crysta_sdk.tested_paths(name)[0]),
+    }
 
 
 def sha256(path: Path) -> str:
@@ -144,12 +149,17 @@ def prove_import() -> None:
     path = os.pathsep.join(filter(None, [str(ROOT / 'lib'), os.environ.get('PYTHONPATH')]))
     unselected = ('EDI_USE_CONSUMER_BUILD', 'CRYSTA_CONSUMER_SRC')
     env = {name: value for name, value in os.environ.items() if name not in unselected}
-    env |= {'PYTHONPATH': path, 'EDI_EXTENSION_DIR': str(TREE / 'python' / 'edi')}
+    env |= {
+        'PYTHONPATH': path,
+        'EDI_EXTENSION_DIR': str(TREE / 'python' / 'edi'),
+        'PYTHONIOENCODING': 'utf-8',
+    }
     r = subprocess.run(
         [sys.executable, '-c', code],
         cwd=ROOT,
         capture_output=True,
         text=True,
+        encoding='utf-8',
         check=False,
         env=env,
     )
@@ -162,23 +172,31 @@ def prove_import() -> None:
 
 
 def prove() -> None:
-    """The native job's proof: the extension imports at HEAD, the CLI answers, edi_tests exists."""
+    """Prove the imported source identity, CLI response and both declared test runners."""
     prove_import()
     cli = subprocess.run(
-        [str(TREE / 'cli' / 'easydiffraction'), '--version'],
+        [str(executable('cli/easydiffraction')), '--version'],
         capture_output=True,
         text=True,
+        encoding='utf-8',
         check=False,
     )
-    if cli.returncode or not cli.stdout.startswith('easydiffraction'):
+    if cli.returncode or not re.fullmatch(
+        r'(?:edi [^\s()]+|easydiffraction \(edi core [^\s()]+\))\n?', cli.stdout
+    ):
         refuse(f'the CLI gives no version line: {(cli.stdout + cli.stderr).strip()[:200]}')
     runnable()
 
 
+def executable(relative: str) -> Path:
+    """The same native target, with the host executable suffix."""
+    return TREE / (relative + ('.exe' if os.name == 'nt' else ''))
+
+
 def runnable() -> None:
-    """Refuse unless the CLI and the test runner are executable files."""
-    for rel in ('cli/easydiffraction', 'core/edi_tests'):
-        if not ((TREE / rel).is_file() and os.access(TREE / rel, os.X_OK)):
+    """Refuse unless the CLI and both declared test runners are executable files."""
+    for rel in ('cli/easydiffraction', 'core/edi_tests', 'core/edi_integration_tests'):
+        if not (executable(rel).is_file() and os.access(executable(rel), os.X_OK)):
             refuse(f'build/ci/{rel} is not built or not executable')
 
 
@@ -244,17 +262,17 @@ def stamp() -> None:
 
 def pack(out: Path) -> None:
     """Prove build/ci, then write edi-native.tar and the edi-native.json that binds it."""
+    if drift := source_drift():
+        refuse(f'the native producer source differs from HEAD: {drift[:3]}')
     prove()
-    pin, linked = crysta_tag(sdk_platform()), TREE / '.crysta-linked-sha'
-    linked = linked.read_text(encoding='utf-8').strip() if linked.is_file() else ''
-    built = run_build(pin)
-    if built != f'build-{linked}':  # F15: the label is the crysta the tree actually linked
-        what = f'the committed pin is {pin}' if built == pin else f'this paired run builds {built}'
-        refuse(f'build/ci linked crysta {linked or "(unrecorded)"}, but {what}')
+    mine = observed()
+    linked = (TREE / '.crysta-linked-sha').read_text(encoding='utf-8').strip()
+    if linked != mine['crysta_source_sha']:
+        refuse(f'build/ci linked crysta {linked}, not the committed SDK pin')
     out.mkdir(parents=True, exist_ok=True)
     with tarfile.open(out / TAR, 'w', format=tarfile.PAX_FORMAT) as tar:
         tar.add(TREE, arcname='build/ci')  # repo-relative members, restored at the checkout root
-    record = observed() | {
+    record = mine | {
         'run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
         'job': os.environ.get('GITHUB_JOB'),
         'sha256': sha256(out / TAR),
@@ -278,11 +296,8 @@ def restore(where: Path) -> None:
                 f"the native artifact's {field} is {record.get(field)!r}, this job's is {value!r}"
             )
     linked = record.get('crysta_linked_sha')
-    if linked != (crysta_tag(mine['platform']) or '')[6:] and not paired(linked):
-        refuse(
-            f'the native artifact linked crysta {linked!r}, not this pin'
-            ' nor a commit of the paired crysta branch'
-        )
+    if linked != mine['crysta_source_sha']:
+        refuse(f'the native artifact linked crysta {linked!r}, not the committed SDK pin')
     if not isinstance(record.get('files'), dict) or not record['files']:
         refuse('the native artifact records no file digests')
     # The artifact is HEAD's build. A checkout whose sources differ from HEAD in content is another
@@ -320,10 +335,10 @@ def main(argv: list[str]) -> int:
     sub.add_parser('pack').add_argument('--out', required=True, type=Path)
     sub.add_parser('restore')
     a = parser.parse_args(argv)
-    where = crysta_sdk.native_dir()
+    where = Path(os.environ.get('EDI_NATIVE_ARCHIVES') or ROOT / 'build/edi-native-artifact')
     try:
         pack(a.out) if a.cmd == 'pack' else restore(where)
-    except (RefusedError, OSError, KeyError, ValueError) as refusal:
+    except (RefusedError, crysta_sdk.RefusedError, OSError, KeyError, ValueError) as refusal:
         print(f'edi_native.py {a.cmd}: REFUSED — {refusal}', file=sys.stderr)
         return 1
     return 0

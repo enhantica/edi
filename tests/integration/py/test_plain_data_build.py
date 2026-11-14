@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import signal
 import subprocess
@@ -105,25 +106,56 @@ def test_timeout_stops_the_build_descendant_and_preserves_output(tmp_path, paren
             'Timeout control must reach a real build descendant before its deadline'
         )
         pid = int(pid_file.read_text())
-        completed = subprocess.run(
-            ['ps', '-o', 'stat=', '-p', str(pid)], capture_output=True, text=True, check=False
-        )
-        assert not completed.stdout.strip() or completed.stdout.strip().startswith('Z'), (
-            'Native build timeout must leave no running compiler child, '
-            'even after its parent exits'
-        )
+        if os.name == 'nt':
+            from tests.fixtures.plain_data.windows_job import process_running  # noqa: PLC0415
+
+            assert not process_running(pid), (
+                'The actual Windows compiler descendant must be stopped after its parent exits'
+            )
+        else:
+            completed = subprocess.run(
+                ['ps', '-o', 'stat=', '-p', str(pid)], capture_output=True, text=True, check=False
+            )
+            assert not completed.stdout.strip() or completed.stdout.strip().startswith('Z'), (
+                'Native build timeout must leave no running compiler child after parent exit'
+            )
     finally:
         if pid_file.exists():
-            with suppress(ProcessLookupError):
-                os.kill(int(pid_file.read_text()), signal.SIGKILL)
+            if os.name == 'nt':
+                from tests.fixtures.plain_data.windows_job import process_running  # noqa: PLC0415
+
+                if process_running(int(pid_file.read_text())):
+                    subprocess.run(
+                        ['taskkill', '/PID', pid_file.read_text(), '/T', '/F'],
+                        capture_output=True,
+                        check=False,
+                        timeout=5,
+                    )
+            else:
+                with suppress(ProcessLookupError):
+                    os.kill(int(pid_file.read_text()), signal.SIGKILL)
 
 
 def test_completed_build_retains_its_failure_output():
-    completed = build_probe.build_host([
-        sys.executable,
-        '-c',
-        'import sys; print("configure refused"); sys.exit(7)',
-    ])
+    from tests.fixtures.plain_data.windows_job import compiler_bootstrap  # noqa: PLC0415
+
+    command = [sys.executable, '-c', 'import sys; print("configure refused"); sys.exit(7)']
+    for release, expected in [('1', 7), ('', 125)]:
+        control = subprocess.run(
+            [sys.executable, '-c', compiler_bootstrap(), json.dumps(command)],
+            input=release,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=3,
+        )
+        assert control.returncode == expected, (
+            'The Windows bootstrap retains quoted command status and refuses before release'
+        )
+        assert ('configure refused' in control.stdout) == bool(release), (
+            'Only the admitted compiler command reaches execution and retains its actual output'
+        )
+    completed = build_probe.build_host(command)
     assert completed.returncode == 7 and 'configure refused' in completed.stdout, (
         'Native host build must retain the actual configure or compile refusal and its output'
     )

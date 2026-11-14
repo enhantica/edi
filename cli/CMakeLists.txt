@@ -41,3 +41,6 @@ if(NOT EDI_BUILD_APP)
     install(FILES ${PROJECT_SOURCE_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR})
     install(FILES ${EDI_CLI_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR}/licenses)
 endif()
+
+# Private human progress projection shared by the command-line hosts.
+target_include_directories(easydiffraction PRIVATE ${PROJECT_SOURCE_DIR}/core/src)

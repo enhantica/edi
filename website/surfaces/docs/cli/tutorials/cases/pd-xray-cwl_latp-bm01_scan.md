@@ -2,6 +2,13 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
+Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at ESRF,
+one after another, with linked displacement parameters.
+
+The project is the catalogue case `pd-xray-cwl_latp-bm01_scan`, the one the command line and the
+app's Examples open. Al shares Ti's site, coordinate and displacement, and the impurity phase's
+displacements are shared, from the start.
+
 ## Get the project
 
 === "Standalone executable"

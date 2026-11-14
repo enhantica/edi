@@ -141,6 +141,10 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Bonds](../physics/parameters.md#structure-view-bonds) | bonds |
     | [Cell](../physics/parameters.md#structure-view-cell) | cell |
     | [Axes](../physics/parameters.md#structure-view-axes) | axes |
+    | [Moments](../physics/parameters.md#structure-view-show-moments) | moments |
+    | [Moments as](../physics/parameters.md#structure-view-moment-form) | moments as |
+    | [Moment scale](../physics/parameters.md#structure-view-moment-scale) | moment scale |
+    | [Moment view](../physics/parameters.md#structure-view-moment-view) | Moment view |
 
     <span class="ed-reference-anchor" id="names-space-group-symop">**[<span class="ed-reference-icon" data-reference-category="space-group-symop" aria-hidden="true">&#62193;</span> Symmetry operator](../physics/parameters.md#space-group-symop)**</span>
 
@@ -153,7 +157,7 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | GUI name |
     | --- | --- |
     | [Source atom site](../physics/parameters.md#expanded-atom-site-atom-site-id) | site |
-    | [Generating symmetry operation](../physics/parameters.md#expanded-atom-site-site-symmetry) | symmetry |
+    | [Generating symmetry operation](../physics/parameters.md#expanded-atom-site-site-symmetry) | sym |
     | [Fractional x-coordinate](../physics/parameters.md#expanded-atom-site-fract-x) | x |
     | [Fractional y-coordinate](../physics/parameters.md#expanded-atom-site-fract-y) | y |
     | [Fractional z-coordinate](../physics/parameters.md#expanded-atom-site-fract-z) | z |
@@ -161,8 +165,8 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Cartesian y-coordinate](../physics/parameters.md#expanded-atom-site-cartn-y) | Y |
     | [Cartesian z-coordinate](../physics/parameters.md#expanded-atom-site-cartn-z) | Z |
     | [Occupancy](../physics/parameters.md#expanded-atom-site-occupancy) | occ |
-    | [Isotropic displacement U](../physics/parameters.md#expanded-atom-site-u-iso) | U iso |
-    | [Coincident-atom cluster](../physics/parameters.md#expanded-atom-site-cluster-id) | cluster |
+    | [Isotropic displacement U](../physics/parameters.md#expanded-atom-site-u-iso) | Uiso |
+    | [Coincident-atom cluster](../physics/parameters.md#expanded-atom-site-cluster-id) | pos |
 
     <span class="ed-reference-anchor" id="names-geom-bond">**[<span class="ed-reference-icon" data-reference-category="geom-bond" aria-hidden="true">&#63396;</span> Bond](../physics/parameters.md#geom-bond)**</span>
 
@@ -265,6 +269,10 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Bonds](../physics/parameters.md#structure-view-bonds) | <code>_structure_view.bonds</code> |
     | [Cell](../physics/parameters.md#structure-view-cell) | <code>_structure_view.cell</code> |
     | [Axes](../physics/parameters.md#structure-view-axes) | <code>_structure_view.axes</code> |
+    | [Moments](../physics/parameters.md#structure-view-show-moments) | <code>_structure_view.show_moments</code> |
+    | [Moments as](../physics/parameters.md#structure-view-moment-form) | <code>_structure_view.moment_form</code> |
+    | [Moment scale](../physics/parameters.md#structure-view-moment-scale) | <code>_structure_view.moment_scale</code> |
+    | [Moment view](../physics/parameters.md#structure-view-moment-view) | <code>_structure_view.moment_view</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="space-group-symop" aria-hidden="true">&#62193;</span> Symmetry operator](../physics/parameters.md#space-group-symop)**
 
@@ -389,6 +397,10 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Bonds](../physics/parameters.md#structure-view-bonds) | — |
     | [Cell](../physics/parameters.md#structure-view-cell) | — |
     | [Axes](../physics/parameters.md#structure-view-axes) | — |
+    | [Moments](../physics/parameters.md#structure-view-show-moments) | — |
+    | [Moments as](../physics/parameters.md#structure-view-moment-form) | — |
+    | [Moment scale](../physics/parameters.md#structure-view-moment-scale) | — |
+    | [Moment view](../physics/parameters.md#structure-view-moment-view) | — |
 
     **[<span class="ed-reference-icon" data-reference-category="space-group-symop" aria-hidden="true">&#62193;</span> Symmetry operator](../physics/parameters.md#space-group-symop)**
 
@@ -513,6 +525,10 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Bonds](../physics/parameters.md#structure-view-bonds) | <code>_edi_structure_view.bonds</code> |
     | [Cell](../physics/parameters.md#structure-view-cell) | <code>_edi_structure_view.cell</code> |
     | [Axes](../physics/parameters.md#structure-view-axes) | <code>_edi_structure_view.axes</code> |
+    | [Moments](../physics/parameters.md#structure-view-show-moments) | <code>_edi_structure_view.show_moments</code><details><summary>Accepted aliases</summary><code>_structure_view.show_moments</code></details> |
+    | [Moments as](../physics/parameters.md#structure-view-moment-form) | <code>_edi_structure_view.moment_form</code> |
+    | [Moment scale](../physics/parameters.md#structure-view-moment-scale) | <code>_edi_structure_view.moment_scale</code> |
+    | [Moment view](../physics/parameters.md#structure-view-moment-view) | <code>_edi_structure_view.moment_view</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="space-group-symop" aria-hidden="true">&#62193;</span> Symmetry operator](../physics/parameters.md#space-group-symop)**
 
@@ -589,6 +605,7 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Min](../physics/parameters.md#data-range-time-of-flight-min) | min |
     | [Max](../physics/parameters.md#data-range-time-of-flight-max) | max |
     | [Step](../physics/parameters.md#data-range-time-of-flight-step) | step |
+    | [Max sin θ/λ](../physics/parameters.md#data-range-sin-theta-over-lambda-max) | max sin θ/λ |
     | [Time of flight](../physics/parameters.md#data-range-time-of-flight) | TOF |
 
     <span class="ed-reference-anchor" id="names-background">**[<span class="ed-reference-icon" data-reference-category="background" aria-hidden="true">&#63550;</span> Background](../physics/parameters.md#background)**</span>
@@ -715,7 +732,6 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | GUI name |
     | --- | --- |
     | [ABSCOR1](../physics/parameters.md#absorption-abscor1) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#62992;</span> <span class="ed-reference-icon" aria-hidden="true">&#61507;</span> </span><span class="ed-icon-text">ABSCOR1</span></span> |
-    | [ABSCOR2](../physics/parameters.md#absorption-abscor2) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#62992;</span> <span class="ed-reference-icon" aria-hidden="true">&#61507;</span> </span><span class="ed-icon-text">ABSCOR2</span></span> |
     | [ΜR](../physics/parameters.md#absorption-mu-r) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#62992;</span> <span class="ed-reference-icon" aria-hidden="true">&#61507;</span> </span><span class="ed-icon-text">μR</span></span> |
     | [Type](../physics/parameters.md#absorption-type) | type |
 
@@ -751,6 +767,9 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | GUI name |
     | --- | --- |
     | [Measured-data filename](../physics/parameters.md#data-source-file-name) | data file |
+    | [Data path](../physics/parameters.md#data-source-path) | data path |
+    | [Collection entry](../physics/parameters.md#data-source-collection-id) | collection entry |
+    | [Data digest](../physics/parameters.md#data-source-digest) | data digest |
 
     <span class="ed-reference-anchor" id="names-data">**[<span class="ed-reference-icon" data-reference-category="data" aria-hidden="true">&#62263;</span> Measured data point](../physics/parameters.md#data)**</span>
 
@@ -782,6 +801,7 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | GUI name |
     | --- | --- |
     | [Structure calc](../physics/parameters.md#pd-calc-component-intensities-net) | structure calc |
+    | [Structure magnetic calc](../physics/parameters.md#pd-calc-component-intensities-magnetic) | structure magnetic calc |
 
     <span class="ed-reference-anchor" id="names-refln">**[<span class="ed-reference-icon" data-reference-category="refln" aria-hidden="true">&#61498;</span> Reflection](../physics/parameters.md#refln)**</span>
 
@@ -796,6 +816,8 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [F calc](../physics/parameters.md#refln-f-calc) | F calc |
     | [F meas](../physics/parameters.md#refln-f-meas) | F meas |
     | [F² calc](../physics/parameters.md#refln-f-squared-calc) | F² calc |
+    | [&#124;F_M⊥&#124;² calc](../physics/parameters.md#refln-f-m-perp-squared-calc) | &#124;F_M⊥&#124;² calc |
+    | [F² total calc](../physics/parameters.md#refln-f-squared-total-calc) | F² total calc |
     | [Measured intensity](../physics/parameters.md#refln-intensity-meas) | F² meas |
     | [Measured intensity uncertainty](../physics/parameters.md#refln-intensity-meas-su) | s.u. |
     | [Calculated intensity](../physics/parameters.md#refln-intensity-calc) | F² calc |
@@ -827,6 +849,7 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Min](../physics/parameters.md#data-range-time-of-flight-min) | <code>_data_range.time_of_flight_min</code> |
     | [Max](../physics/parameters.md#data-range-time-of-flight-max) | <code>_data_range.time_of_flight_max</code> |
     | [Step](../physics/parameters.md#data-range-time-of-flight-step) | <code>_data_range.time_of_flight_step</code> |
+    | [Max sin θ/λ](../physics/parameters.md#data-range-sin-theta-over-lambda-max) | <code>_data_range.sin_theta_over_lambda_max</code> |
     | [Time of flight](../physics/parameters.md#data-range-time-of-flight) | <code>_data_range.time_of_flight</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="background" aria-hidden="true">&#63550;</span> Background](../physics/parameters.md#background)**
@@ -953,7 +976,6 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | Edi name |
     | --- | --- |
     | [ABSCOR1](../physics/parameters.md#absorption-abscor1) | <code>_absorption.abscor1</code> |
-    | [ABSCOR2](../physics/parameters.md#absorption-abscor2) | <code>_absorption.abscor2</code> |
     | [ΜR](../physics/parameters.md#absorption-mu-r) | <code>_absorption.mu_r</code> |
     | [Type](../physics/parameters.md#absorption-type) | <code>_absorption.type</code> |
 
@@ -989,6 +1011,9 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | Edi name |
     | --- | --- |
     | [Measured-data filename](../physics/parameters.md#data-source-file-name) | <code>_data_source.file_name</code> |
+    | [Data path](../physics/parameters.md#data-source-path) | <code>_data_source.path</code> |
+    | [Collection entry](../physics/parameters.md#data-source-collection-id) | <code>_data_source.collection_id</code> |
+    | [Data digest](../physics/parameters.md#data-source-digest) | <code>_data_source.digest</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="data" aria-hidden="true">&#62263;</span> Measured data point](../physics/parameters.md#data)**
 
@@ -1020,6 +1045,7 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | Edi name |
     | --- | --- |
     | [Structure calc](../physics/parameters.md#pd-calc-component-intensities-net) | <code>_pd_calc.component_intensities_net</code> |
+    | [Structure magnetic calc](../physics/parameters.md#pd-calc-component-intensities-magnetic) | <code>_pd_calc.component_intensities_magnetic</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="refln" aria-hidden="true">&#61498;</span> Reflection](../physics/parameters.md#refln)**
 
@@ -1034,6 +1060,8 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [F calc](../physics/parameters.md#refln-f-calc) | <code>_refln.f_calc</code> |
     | [F meas](../physics/parameters.md#refln-f-meas) | <code>_refln.f_meas</code> |
     | [F² calc](../physics/parameters.md#refln-f-squared-calc) | <code>_refln.f_squared_calc</code> |
+    | [&#124;F_M⊥&#124;² calc](../physics/parameters.md#refln-f-m-perp-squared-calc) | <code>_refln.f_m_perp_squared_calc</code> |
+    | [F² total calc](../physics/parameters.md#refln-f-squared-total-calc) | <code>_refln.f_squared_total_calc</code> |
     | [Measured intensity](../physics/parameters.md#refln-intensity-meas) | <code>_refln.intensity_meas</code> |
     | [Measured intensity uncertainty](../physics/parameters.md#refln-intensity-meas-su) | <code>_refln.intensity_meas_su</code> |
     | [Calculated intensity](../physics/parameters.md#refln-intensity-calc) | <code>_refln.intensity_calc</code> |
@@ -1065,6 +1093,7 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Min](../physics/parameters.md#data-range-time-of-flight-min) | — |
     | [Max](../physics/parameters.md#data-range-time-of-flight-max) | — |
     | [Step](../physics/parameters.md#data-range-time-of-flight-step) | — |
+    | [Max sin θ/λ](../physics/parameters.md#data-range-sin-theta-over-lambda-max) | — |
     | [Time of flight](../physics/parameters.md#data-range-time-of-flight) | — |
 
     **[<span class="ed-reference-icon" data-reference-category="background" aria-hidden="true">&#63550;</span> Background](../physics/parameters.md#background)**
@@ -1191,7 +1220,6 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | Python name |
     | --- | --- |
     | [ABSCOR1](../physics/parameters.md#absorption-abscor1) | <code>project.experiments[0].absorption.abscor1</code> |
-    | [ABSCOR2](../physics/parameters.md#absorption-abscor2) | <code>project.experiments[0].absorption.abscor2</code> |
     | [ΜR](../physics/parameters.md#absorption-mu-r) | <code>project.experiments[0].absorption.mu_r</code> |
     | [Type](../physics/parameters.md#absorption-type) | <code>project.experiments[0].absorption.type</code> |
 
@@ -1227,6 +1255,9 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | Python name |
     | --- | --- |
     | [Measured-data filename](../physics/parameters.md#data-source-file-name) | — |
+    | [Data path](../physics/parameters.md#data-source-path) | — |
+    | [Collection entry](../physics/parameters.md#data-source-collection-id) | — |
+    | [Data digest](../physics/parameters.md#data-source-digest) | — |
 
     **[<span class="ed-reference-icon" data-reference-category="data" aria-hidden="true">&#62263;</span> Measured data point](../physics/parameters.md#data)**
 
@@ -1258,6 +1289,7 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | Python name |
     | --- | --- |
     | [Structure calc](../physics/parameters.md#pd-calc-component-intensities-net) | — |
+    | [Structure magnetic calc](../physics/parameters.md#pd-calc-component-intensities-magnetic) | — |
 
     **[<span class="ed-reference-icon" data-reference-category="refln" aria-hidden="true">&#61498;</span> Reflection](../physics/parameters.md#refln)**
 
@@ -1272,6 +1304,8 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [F calc](../physics/parameters.md#refln-f-calc) | — |
     | [F meas](../physics/parameters.md#refln-f-meas) | — |
     | [F² calc](../physics/parameters.md#refln-f-squared-calc) | — |
+    | [&#124;F_M⊥&#124;² calc](../physics/parameters.md#refln-f-m-perp-squared-calc) | — |
+    | [F² total calc](../physics/parameters.md#refln-f-squared-total-calc) | — |
     | [Measured intensity](../physics/parameters.md#refln-intensity-meas) | — |
     | [Measured intensity uncertainty](../physics/parameters.md#refln-intensity-meas-su) | — |
     | [Calculated intensity](../physics/parameters.md#refln-intensity-calc) | — |
@@ -1303,6 +1337,7 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Min](../physics/parameters.md#data-range-time-of-flight-min) | <code>_edi_data_range.time_of_flight_min</code><details><summary>Accepted aliases</summary><code>_pd_meas.time_of_flight_range_min</code></details> |
     | [Max](../physics/parameters.md#data-range-time-of-flight-max) | <code>_edi_data_range.time_of_flight_max</code><details><summary>Accepted aliases</summary><code>_pd_meas.time_of_flight_range_max</code></details> |
     | [Step](../physics/parameters.md#data-range-time-of-flight-step) | <code>_edi_data_range.time_of_flight_step</code> |
+    | [Max sin θ/λ](../physics/parameters.md#data-range-sin-theta-over-lambda-max) | <code>_edi_data_range.sin_theta_over_lambda_max</code><details><summary>Accepted aliases</summary><code>_refln.sin_theta_over_lambda_range_max</code></details> |
     | [Time of flight](../physics/parameters.md#data-range-time-of-flight) | <code>_edi_data_range.time_of_flight</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="background" aria-hidden="true">&#63550;</span> Background](../physics/parameters.md#background)**
@@ -1429,7 +1464,6 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | CIF name |
     | --- | --- |
     | [ABSCOR1](../physics/parameters.md#absorption-abscor1) | <code>_edi_absorption.abscor1</code> |
-    | [ABSCOR2](../physics/parameters.md#absorption-abscor2) | <code>_edi_absorption.abscor2</code> |
     | [ΜR](../physics/parameters.md#absorption-mu-r) | <code>_edi_absorption.mu_r</code><details><summary>Accepted aliases</summary><code>_easydiffraction_absorption.mu_r</code></details> |
     | [Type](../physics/parameters.md#absorption-type) | <code>_edi_absorption.type</code><details><summary>Accepted aliases</summary><code>_easydiffraction_absorption.type</code></details> |
 
@@ -1465,6 +1499,9 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | CIF name |
     | --- | --- |
     | [Measured-data filename](../physics/parameters.md#data-source-file-name) | <code>_edi_data_source.file_name</code> |
+    | [Data path](../physics/parameters.md#data-source-path) | <code>_edi_data_source.path</code> |
+    | [Collection entry](../physics/parameters.md#data-source-collection-id) | <code>_edi_data_source.collection_id</code> |
+    | [Data digest](../physics/parameters.md#data-source-digest) | <code>_edi_data_source.digest</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="data" aria-hidden="true">&#62263;</span> Measured data point](../physics/parameters.md#data)**
 
@@ -1496,6 +1533,7 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | CIF name |
     | --- | --- |
     | [Structure calc](../physics/parameters.md#pd-calc-component-intensities-net) | <code>_pd_calc.component_intensities_net</code> |
+    | [Structure magnetic calc](../physics/parameters.md#pd-calc-component-intensities-magnetic) | <code>_edi_pd_calc.component_intensities_magnetic</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="refln" aria-hidden="true">&#61498;</span> Reflection](../physics/parameters.md#refln)**
 
@@ -1510,6 +1548,8 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [F calc](../physics/parameters.md#refln-f-calc) | <code>_refln.F_calc</code><details><summary>Accepted aliases</summary><code>_refln_F_calc</code><br><code>_refln.f_calc</code></details> |
     | [F meas](../physics/parameters.md#refln-f-meas) | <code>_refln.F_meas</code><details><summary>Accepted aliases</summary><code>_refln_F_meas</code></details> |
     | [F² calc](../physics/parameters.md#refln-f-squared-calc) | <code>_refln.F_squared_calc</code><details><summary>Accepted aliases</summary><code>_refln_F_squared_calc</code><br><code>_refln.f_squared_calc</code></details> |
+    | [&#124;F_M⊥&#124;² calc](../physics/parameters.md#refln-f-m-perp-squared-calc) | <code>_edi_refln.f_m_perp_squared_calc</code> |
+    | [F² total calc](../physics/parameters.md#refln-f-squared-total-calc) | <code>_edi_refln.f_squared_total_calc</code> |
     | [Measured intensity](../physics/parameters.md#refln-intensity-meas) | <code>_refln.intensity_meas</code><details><summary>Accepted aliases</summary><code>_refln_intensity_meas</code></details> |
     | [Measured intensity uncertainty](../physics/parameters.md#refln-intensity-meas-su) | <code>_refln.intensity_meas_su</code><details><summary>Accepted aliases</summary><code>_refln_intensity_meas_su</code><br><code>_refln.intensity_sigma</code><br><code>_refln_intensity_sigma</code></details> |
     | [Calculated intensity](../physics/parameters.md#refln-intensity-calc) | <code>_refln.intensity_calc</code><details><summary>Accepted aliases</summary><code>_refln_intensity_calc</code></details> |
@@ -1562,6 +1602,72 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | --- | --- |
     | [X-axis](../physics/parameters.md#pattern-chart-x-axis) | x-axis |
 
+    <span class="ed-reference-anchor" id="names-evolution-chart">**[<span class="ed-reference-icon" data-reference-category="evolution-chart" aria-hidden="true">&#61953;</span> Evolution chart](../physics/parameters.md#evolution-chart)**</span>
+
+    | Parameter or field | GUI name |
+    | --- | --- |
+    | [Error bars](../physics/parameters.md#evolution-chart-error-bars) | Error bars |
+    | [Range](../physics/parameters.md#evolution-chart-range) | Range |
+
+    <span class="ed-reference-anchor" id="names-space-group-magn">**[<span class="ed-reference-icon" data-reference-category="space-group-magn" aria-hidden="true">&#61558;</span> Magnetic space group](../physics/parameters.md#space-group-magn)**</span>
+
+    | Parameter or field | GUI name |
+    | --- | --- |
+    | [BNS number](../physics/parameters.md#space-group-magn-number-bns) | BNS number |
+    | [BNS symbol](../physics/parameters.md#space-group-magn-name-bns) | BNS symbol |
+    | [UNI symbol](../physics/parameters.md#space-group-magn-name-uni) | UNI symbol |
+    | [OG number](../physics/parameters.md#space-group-magn-number-og) | OG number |
+    | [OG symbol](../physics/parameters.md#space-group-magn-name-og) | OG symbol |
+    | [Point group](../physics/parameters.md#space-group-magn-point-group-name-uni) | point group |
+    | [Point group number](../physics/parameters.md#space-group-magn-point-group-number-litvin) | point group number |
+
+    <span class="ed-reference-anchor" id="names-space-group-magn-transforms">**[<span class="ed-reference-icon" data-reference-category="space-group-magn-transforms" aria-hidden="true">&#62306;</span> Magnetic setting transform](../physics/parameters.md#space-group-magn-transforms)**</span>
+
+    | Parameter or field | GUI name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#space-group-magn-transforms-id) | id |
+    | [Transform](../physics/parameters.md#space-group-magn-transforms-pp-abc) | transform |
+    | [Setting](../physics/parameters.md#space-group-magn-transforms-source) | setting |
+
+    <span class="ed-reference-anchor" id="names-parent-space-group">**[<span class="ed-reference-icon" data-reference-category="parent-space-group" aria-hidden="true">&#63423;</span> Parent space group](../physics/parameters.md#parent-space-group)**</span>
+
+    | Parameter or field | GUI name |
+    | --- | --- |
+    | [Name](../physics/parameters.md#parent-space-group-name-h-m-alt) | name |
+    | [Space-group number](../physics/parameters.md#parent-space-group-it-number) | number |
+    | [To standard](../physics/parameters.md#parent-space-group-transform-pp-abc) | to standard |
+    | [To magnetic cell](../physics/parameters.md#parent-space-group-child-transform-pp-abc) | to magnetic cell |
+    | [Reference setting](../physics/parameters.md#parent-space-group-reference-setting) | reference setting |
+    | [Derived](../physics/parameters.md#parent-space-group-derived) | derived |
+
+    <span class="ed-reference-anchor" id="names-parent-propagation-vector">**[<span class="ed-reference-icon" data-reference-category="parent-propagation-vector" aria-hidden="true">&#62219;</span> Propagation vector](../physics/parameters.md#parent-propagation-vector)**</span>
+
+    | Parameter or field | GUI name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#parent-propagation-vector-id) | id |
+    | [K](../physics/parameters.md#parent-propagation-vector-kxkykz) | k |
+
+    <span class="ed-reference-anchor" id="names-atom-site-moment">**[<span class="ed-reference-icon" data-reference-category="atom-site-moment" aria-hidden="true">&#61732;</span> Magnetic moment](../physics/parameters.md#atom-site-moment)**</span>
+
+    | Parameter or field | GUI name |
+    | --- | --- |
+    | [Label](../physics/parameters.md#atom-site-moment-label) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#61732;</span> </span><span class="ed-icon-text">label</span></span> |
+    | [Mx](../physics/parameters.md#atom-site-moment-crystalaxis-x) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#61732;</span> </span><span class="ed-icon-text">Mx</span></span> |
+    | [My](../physics/parameters.md#atom-site-moment-crystalaxis-y) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#61732;</span> </span><span class="ed-icon-text">My</span></span> |
+    | [Mz](../physics/parameters.md#atom-site-moment-crystalaxis-z) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#61732;</span> </span><span class="ed-icon-text">Mz</span></span> |
+    | [Symmetry form](../physics/parameters.md#atom-site-moment-symmform) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#61732;</span> </span><span class="ed-icon-text">symmetry form</span></span> |
+
+    <span class="ed-reference-anchor" id="names-magnetic-form-factor">**[<span class="ed-reference-icon" data-reference-category="magnetic-form-factor" aria-hidden="true">&#62930;</span> Magnetic form factor](../physics/parameters.md#magnetic-form-factor)**</span>
+
+    | Parameter or field | GUI name |
+    | --- | --- |
+    | [Type](../physics/parameters.md#magnetic-form-factor-type-symbol) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#62930;</span> </span><span class="ed-icon-text">type</span></span> |
+    | [Ion](../physics/parameters.md#magnetic-form-factor-ion) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#62930;</span> </span><span class="ed-icon-text">ion</span></span> |
+    | [Approximation](../physics/parameters.md#magnetic-form-factor-approximation) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#62930;</span> </span><span class="ed-icon-text">approximation</span></span> |
+    | [C₂](../physics/parameters.md#magnetic-form-factor-j2-coefficient) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#62930;</span> </span><span class="ed-icon-text">C₂</span></span> |
+    | [C₄](../physics/parameters.md#magnetic-form-factor-j4-coefficient) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#62930;</span> </span><span class="ed-icon-text">C₄</span></span> |
+    | [C₆](../physics/parameters.md#magnetic-form-factor-j6-coefficient) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#62930;</span> </span><span class="ed-icon-text">C₆</span></span> |
+
     <span class="ed-reference-anchor" id="names-calculator">**[<span class="ed-reference-icon" data-reference-category="calculator" aria-hidden="true">&#61932;</span> Calculator](../physics/parameters.md#calculator)**</span>
 
     | Parameter or field | GUI name |
@@ -1575,7 +1681,10 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Minimizer](../physics/parameters.md#minimizer-type) | minimizer |
     | [Max iterations](../physics/parameters.md#minimizer-max-iterations) | max iterations |
     | [Descent](../physics/parameters.md#minimizer-descent) | descent |
-    | [Tolerance](../physics/parameters.md#minimizer-chi-square-tolerance) | tolerance |
+    | [Χ² change tolerance](../physics/parameters.md#minimizer-chi-square-tolerance) | χ² change tolerance |
+    | [Stop rules](../physics/parameters.md#minimizer-stop-rules) | stop rules |
+    | [Shift/s.u. tolerance](../physics/parameters.md#minimizer-shift-tolerance) | Shift/s.u. tolerance |
+    | [Magnetic moments near zero](../physics/parameters.md#minimizer-moments-near-zero) | magnetic moments near zero |
 
     <span class="ed-reference-anchor" id="names-fitting-mode">**[<span class="ed-reference-icon" data-reference-category="fitting-mode" aria-hidden="true">&#61918;</span> Fitting mode](../physics/parameters.md#fitting-mode)**</span>
 
@@ -1644,6 +1753,30 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Project saved](../physics/parameters.md#report-file-project-last-modified) | project saved |
     | [Digest](../physics/parameters.md#report-file-digest) | digest |
 
+    <span class="ed-reference-anchor" id="names-space-group-symop-magn-operation">**[<span class="ed-reference-icon" data-reference-category="space-group-symop-magn-operation" aria-hidden="true">&#62193;</span> Magnetic operator](../physics/parameters.md#space-group-symop-magn-operation)**</span>
+
+    | Parameter or field | GUI name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#space-group-symop-magn-operation-id) | id |
+    | [Operation](../physics/parameters.md#space-group-symop-magn-operation-xyz) | operation |
+
+    <span class="ed-reference-anchor" id="names-space-group-symop-magn-centering">**[<span class="ed-reference-icon" data-reference-category="space-group-symop-magn-centering" aria-hidden="true">&#61618;</span> Magnetic centring vector](../physics/parameters.md#space-group-symop-magn-centering)**</span>
+
+    | Parameter or field | GUI name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#space-group-symop-magn-centering-id) | id |
+    | [Operation](../physics/parameters.md#space-group-symop-magn-centering-xyz) | operation |
+
+    <span class="ed-reference-anchor" id="names-expanded-atom-site-moment">**[<span class="ed-reference-icon" data-reference-category="expanded-atom-site-moment" aria-hidden="true">&#61732;</span> Moment in the cell](../physics/parameters.md#expanded-atom-site-moment)**</span>
+
+    | Parameter or field | GUI name |
+    | --- | --- |
+    | [Site](../physics/parameters.md#expanded-atom-site-moment-atom-site-id) | site |
+    | [Sym](../physics/parameters.md#expanded-atom-site-moment-site-symmetry) | sym |
+    | [Mx](../physics/parameters.md#expanded-atom-site-moment-crystalaxis-x) | Mx |
+    | [My](../physics/parameters.md#expanded-atom-site-moment-crystalaxis-y) | My |
+    | [Mz](../physics/parameters.md#expanded-atom-site-moment-crystalaxis-z) | Mz |
+
     <span class="ed-reference-anchor" id="names-fit-parameter">**[<span class="ed-reference-icon" data-reference-category="fit-parameter" aria-hidden="true">&#61914;</span> Fit start value](../physics/parameters.md#fit-parameter)**</span>
 
     | Parameter or field | GUI name |
@@ -1679,6 +1812,9 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Profile](../physics/parameters.md#fit-result-profile-function) | profile |
     | [Background](../physics/parameters.md#fit-result-background-function) | background |
     | [Descent](../physics/parameters.md#fit-result-descent) | descent |
+    | [Stopped by](../physics/parameters.md#fit-result-stopping-rule) | stopped by |
+    | [Stopping value](../physics/parameters.md#fit-result-stopping-value) | stopping value |
+    | [Last largest shift/s.u.](../physics/parameters.md#fit-result-last-shift-su) | last largest shift/s.u. |
 
     <span class="ed-reference-anchor" id="names-fit-result-bank">**[<span class="ed-reference-icon" data-reference-category="fit-result-bank" aria-hidden="true">&#61452;</span> Experiment fit result](../physics/parameters.md#fit-result-bank)**</span>
 
@@ -1759,6 +1895,72 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | --- | --- |
     | [X-axis](../physics/parameters.md#pattern-chart-x-axis) | <code>_pattern_chart.x_axis</code> |
 
+    **[<span class="ed-reference-icon" data-reference-category="evolution-chart" aria-hidden="true">&#61953;</span> Evolution chart](../physics/parameters.md#evolution-chart)**
+
+    | Parameter or field | Edi name |
+    | --- | --- |
+    | [Error bars](../physics/parameters.md#evolution-chart-error-bars) | <code>_evolution_chart.error_bars</code> |
+    | [Range](../physics/parameters.md#evolution-chart-range) | <code>_evolution_chart.range</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="space-group-magn" aria-hidden="true">&#61558;</span> Magnetic space group](../physics/parameters.md#space-group-magn)**
+
+    | Parameter or field | Edi name |
+    | --- | --- |
+    | [BNS number](../physics/parameters.md#space-group-magn-number-bns) | <code>_space_group_magn.number_BNS</code> |
+    | [BNS symbol](../physics/parameters.md#space-group-magn-name-bns) | <code>_space_group_magn.name_BNS</code> |
+    | [UNI symbol](../physics/parameters.md#space-group-magn-name-uni) | <code>_space_group_magn.name_UNI</code> |
+    | [OG number](../physics/parameters.md#space-group-magn-number-og) | <code>_space_group_magn.number_OG</code> |
+    | [OG symbol](../physics/parameters.md#space-group-magn-name-og) | <code>_space_group_magn.name_OG</code> |
+    | [Point group](../physics/parameters.md#space-group-magn-point-group-name-uni) | <code>_space_group_magn.point_group_name_UNI</code> |
+    | [Point group number](../physics/parameters.md#space-group-magn-point-group-number-litvin) | <code>_space_group_magn.point_group_number_Litvin</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="space-group-magn-transforms" aria-hidden="true">&#62306;</span> Magnetic setting transform](../physics/parameters.md#space-group-magn-transforms)**
+
+    | Parameter or field | Edi name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#space-group-magn-transforms-id) | <code>_space_group_magn_transforms.id</code> |
+    | [Transform](../physics/parameters.md#space-group-magn-transforms-pp-abc) | <code>_space_group_magn_transforms.Pp_abc</code> |
+    | [Setting](../physics/parameters.md#space-group-magn-transforms-source) | <code>_space_group_magn_transforms.source</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="parent-space-group" aria-hidden="true">&#63423;</span> Parent space group](../physics/parameters.md#parent-space-group)**
+
+    | Parameter or field | Edi name |
+    | --- | --- |
+    | [Name](../physics/parameters.md#parent-space-group-name-h-m-alt) | <code>_parent_space_group.name_H-M_alt</code> |
+    | [Space-group number](../physics/parameters.md#parent-space-group-it-number) | <code>_parent_space_group.IT_number</code> |
+    | [To standard](../physics/parameters.md#parent-space-group-transform-pp-abc) | <code>_parent_space_group.transform_Pp_abc</code> |
+    | [To magnetic cell](../physics/parameters.md#parent-space-group-child-transform-pp-abc) | <code>_parent_space_group.child_transform_Pp_abc</code> |
+    | [Reference setting](../physics/parameters.md#parent-space-group-reference-setting) | <code>_parent_space_group.reference_setting</code> |
+    | [Derived](../physics/parameters.md#parent-space-group-derived) | <code>_parent_space_group.derived</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="parent-propagation-vector" aria-hidden="true">&#62219;</span> Propagation vector](../physics/parameters.md#parent-propagation-vector)**
+
+    | Parameter or field | Edi name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#parent-propagation-vector-id) | <code>_parent_propagation_vector.id</code> |
+    | [K](../physics/parameters.md#parent-propagation-vector-kxkykz) | <code>_parent_propagation_vector.kxkykz</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="atom-site-moment" aria-hidden="true">&#61732;</span> Magnetic moment](../physics/parameters.md#atom-site-moment)**
+
+    | Parameter or field | Edi name |
+    | --- | --- |
+    | [Label](../physics/parameters.md#atom-site-moment-label) | <code>_atom_site_moment.label</code> |
+    | [Mx](../physics/parameters.md#atom-site-moment-crystalaxis-x) | <code>_atom_site_moment.crystalaxis_x</code> |
+    | [My](../physics/parameters.md#atom-site-moment-crystalaxis-y) | <code>_atom_site_moment.crystalaxis_y</code> |
+    | [Mz](../physics/parameters.md#atom-site-moment-crystalaxis-z) | <code>_atom_site_moment.crystalaxis_z</code> |
+    | [Symmetry form](../physics/parameters.md#atom-site-moment-symmform) | <code>_atom_site_moment.symmform</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="magnetic-form-factor" aria-hidden="true">&#62930;</span> Magnetic form factor](../physics/parameters.md#magnetic-form-factor)**
+
+    | Parameter or field | Edi name |
+    | --- | --- |
+    | [Type](../physics/parameters.md#magnetic-form-factor-type-symbol) | <code>_magnetic_form_factor.type_symbol</code> |
+    | [Ion](../physics/parameters.md#magnetic-form-factor-ion) | <code>_magnetic_form_factor.ion</code> |
+    | [Approximation](../physics/parameters.md#magnetic-form-factor-approximation) | <code>_magnetic_form_factor.approximation</code> |
+    | [C₂](../physics/parameters.md#magnetic-form-factor-j2-coefficient) | <code>_magnetic_form_factor.j2_coefficient</code> |
+    | [C₄](../physics/parameters.md#magnetic-form-factor-j4-coefficient) | <code>_magnetic_form_factor.j4_coefficient</code> |
+    | [C₆](../physics/parameters.md#magnetic-form-factor-j6-coefficient) | <code>_magnetic_form_factor.j6_coefficient</code> |
+
     **[<span class="ed-reference-icon" data-reference-category="calculator" aria-hidden="true">&#61932;</span> Calculator](../physics/parameters.md#calculator)**
 
     | Parameter or field | Edi name |
@@ -1772,7 +1974,10 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Minimizer](../physics/parameters.md#minimizer-type) | <code>_minimizer.type</code> |
     | [Max iterations](../physics/parameters.md#minimizer-max-iterations) | <code>_minimizer.max_iterations</code> |
     | [Descent](../physics/parameters.md#minimizer-descent) | <code>_minimizer.descent</code> |
-    | [Tolerance](../physics/parameters.md#minimizer-chi-square-tolerance) | <code>_minimizer.chi_square_tolerance</code> |
+    | [Χ² change tolerance](../physics/parameters.md#minimizer-chi-square-tolerance) | <code>_minimizer.chi_square_tolerance</code> |
+    | [Stop rules](../physics/parameters.md#minimizer-stop-rules) | <code>_minimizer.stop_rules</code> |
+    | [Shift/s.u. tolerance](../physics/parameters.md#minimizer-shift-tolerance) | <code>_minimizer.shift_tolerance</code> |
+    | [Magnetic moments near zero](../physics/parameters.md#minimizer-moments-near-zero) | <code>_minimizer.moments_near_zero</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="fitting-mode" aria-hidden="true">&#61918;</span> Fitting mode](../physics/parameters.md#fitting-mode)**
 
@@ -1841,6 +2046,30 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Project saved](../physics/parameters.md#report-file-project-last-modified) | <code>_report_file.project_last_modified</code> |
     | [Digest](../physics/parameters.md#report-file-digest) | <code>_report_file.digest</code> |
 
+    **[<span class="ed-reference-icon" data-reference-category="space-group-symop-magn-operation" aria-hidden="true">&#62193;</span> Magnetic operator](../physics/parameters.md#space-group-symop-magn-operation)**
+
+    | Parameter or field | Edi name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#space-group-symop-magn-operation-id) | <code>_space_group_symop_magn_operation.id</code> |
+    | [Operation](../physics/parameters.md#space-group-symop-magn-operation-xyz) | <code>_space_group_symop_magn_operation.xyz</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="space-group-symop-magn-centering" aria-hidden="true">&#61618;</span> Magnetic centring vector](../physics/parameters.md#space-group-symop-magn-centering)**
+
+    | Parameter or field | Edi name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#space-group-symop-magn-centering-id) | <code>_space_group_symop_magn_centering.id</code> |
+    | [Operation](../physics/parameters.md#space-group-symop-magn-centering-xyz) | <code>_space_group_symop_magn_centering.xyz</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="expanded-atom-site-moment" aria-hidden="true">&#61732;</span> Moment in the cell](../physics/parameters.md#expanded-atom-site-moment)**
+
+    | Parameter or field | Edi name |
+    | --- | --- |
+    | [Site](../physics/parameters.md#expanded-atom-site-moment-atom-site-id) | <code>_expanded_atom_site_moment.atom_site_id</code> |
+    | [Sym](../physics/parameters.md#expanded-atom-site-moment-site-symmetry) | <code>_expanded_atom_site_moment.site_symmetry</code> |
+    | [Mx](../physics/parameters.md#expanded-atom-site-moment-crystalaxis-x) | <code>_expanded_atom_site_moment.crystalaxis_x</code> |
+    | [My](../physics/parameters.md#expanded-atom-site-moment-crystalaxis-y) | <code>_expanded_atom_site_moment.crystalaxis_y</code> |
+    | [Mz](../physics/parameters.md#expanded-atom-site-moment-crystalaxis-z) | <code>_expanded_atom_site_moment.crystalaxis_z</code> |
+
     **[<span class="ed-reference-icon" data-reference-category="fit-parameter" aria-hidden="true">&#61914;</span> Fit start value](../physics/parameters.md#fit-parameter)**
 
     | Parameter or field | Edi name |
@@ -1876,6 +2105,9 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Profile](../physics/parameters.md#fit-result-profile-function) | <code>_fit_result.profile_function</code> |
     | [Background](../physics/parameters.md#fit-result-background-function) | <code>_fit_result.background_function</code> |
     | [Descent](../physics/parameters.md#fit-result-descent) | <code>_fit_result.descent</code> |
+    | [Stopped by](../physics/parameters.md#fit-result-stopping-rule) | <code>_fit_result.stopping_rule</code> |
+    | [Stopping value](../physics/parameters.md#fit-result-stopping-value) | <code>_fit_result.stopping_value</code> |
+    | [Last largest shift/s.u.](../physics/parameters.md#fit-result-last-shift-su) | <code>_fit_result.last_shift_su</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="fit-result-bank" aria-hidden="true">&#61452;</span> Experiment fit result](../physics/parameters.md#fit-result-bank)**
 
@@ -1956,6 +2188,72 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | --- | --- |
     | [X-axis](../physics/parameters.md#pattern-chart-x-axis) | — |
 
+    **[<span class="ed-reference-icon" data-reference-category="evolution-chart" aria-hidden="true">&#61953;</span> Evolution chart](../physics/parameters.md#evolution-chart)**
+
+    | Parameter or field | Python name |
+    | --- | --- |
+    | [Error bars](../physics/parameters.md#evolution-chart-error-bars) | — |
+    | [Range](../physics/parameters.md#evolution-chart-range) | — |
+
+    **[<span class="ed-reference-icon" data-reference-category="space-group-magn" aria-hidden="true">&#61558;</span> Magnetic space group](../physics/parameters.md#space-group-magn)**
+
+    | Parameter or field | Python name |
+    | --- | --- |
+    | [BNS number](../physics/parameters.md#space-group-magn-number-bns) | — |
+    | [BNS symbol](../physics/parameters.md#space-group-magn-name-bns) | — |
+    | [UNI symbol](../physics/parameters.md#space-group-magn-name-uni) | — |
+    | [OG number](../physics/parameters.md#space-group-magn-number-og) | — |
+    | [OG symbol](../physics/parameters.md#space-group-magn-name-og) | — |
+    | [Point group](../physics/parameters.md#space-group-magn-point-group-name-uni) | — |
+    | [Point group number](../physics/parameters.md#space-group-magn-point-group-number-litvin) | — |
+
+    **[<span class="ed-reference-icon" data-reference-category="space-group-magn-transforms" aria-hidden="true">&#62306;</span> Magnetic setting transform](../physics/parameters.md#space-group-magn-transforms)**
+
+    | Parameter or field | Python name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#space-group-magn-transforms-id) | — |
+    | [Transform](../physics/parameters.md#space-group-magn-transforms-pp-abc) | — |
+    | [Setting](../physics/parameters.md#space-group-magn-transforms-source) | — |
+
+    **[<span class="ed-reference-icon" data-reference-category="parent-space-group" aria-hidden="true">&#63423;</span> Parent space group](../physics/parameters.md#parent-space-group)**
+
+    | Parameter or field | Python name |
+    | --- | --- |
+    | [Name](../physics/parameters.md#parent-space-group-name-h-m-alt) | — |
+    | [Space-group number](../physics/parameters.md#parent-space-group-it-number) | — |
+    | [To standard](../physics/parameters.md#parent-space-group-transform-pp-abc) | — |
+    | [To magnetic cell](../physics/parameters.md#parent-space-group-child-transform-pp-abc) | — |
+    | [Reference setting](../physics/parameters.md#parent-space-group-reference-setting) | — |
+    | [Derived](../physics/parameters.md#parent-space-group-derived) | — |
+
+    **[<span class="ed-reference-icon" data-reference-category="parent-propagation-vector" aria-hidden="true">&#62219;</span> Propagation vector](../physics/parameters.md#parent-propagation-vector)**
+
+    | Parameter or field | Python name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#parent-propagation-vector-id) | — |
+    | [K](../physics/parameters.md#parent-propagation-vector-kxkykz) | — |
+
+    **[<span class="ed-reference-icon" data-reference-category="atom-site-moment" aria-hidden="true">&#61732;</span> Magnetic moment](../physics/parameters.md#atom-site-moment)**
+
+    | Parameter or field | Python name |
+    | --- | --- |
+    | [Label](../physics/parameters.md#atom-site-moment-label) | — |
+    | [Mx](../physics/parameters.md#atom-site-moment-crystalaxis-x) | <code>project.structures[0].atom_site_moment[0].crystalaxis_x</code> |
+    | [My](../physics/parameters.md#atom-site-moment-crystalaxis-y) | <code>project.structures[0].atom_site_moment[0].crystalaxis_y</code> |
+    | [Mz](../physics/parameters.md#atom-site-moment-crystalaxis-z) | <code>project.structures[0].atom_site_moment[0].crystalaxis_z</code> |
+    | [Symmetry form](../physics/parameters.md#atom-site-moment-symmform) | <code>project.structures[0].atom_site_moment[0].symmform</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="magnetic-form-factor" aria-hidden="true">&#62930;</span> Magnetic form factor](../physics/parameters.md#magnetic-form-factor)**
+
+    | Parameter or field | Python name |
+    | --- | --- |
+    | [Type](../physics/parameters.md#magnetic-form-factor-type-symbol) | — |
+    | [Ion](../physics/parameters.md#magnetic-form-factor-ion) | — |
+    | [Approximation](../physics/parameters.md#magnetic-form-factor-approximation) | — |
+    | [C₂](../physics/parameters.md#magnetic-form-factor-j2-coefficient) | — |
+    | [C₄](../physics/parameters.md#magnetic-form-factor-j4-coefficient) | — |
+    | [C₆](../physics/parameters.md#magnetic-form-factor-j6-coefficient) | — |
+
     **[<span class="ed-reference-icon" data-reference-category="calculator" aria-hidden="true">&#61932;</span> Calculator](../physics/parameters.md#calculator)**
 
     | Parameter or field | Python name |
@@ -1969,7 +2267,10 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Minimizer](../physics/parameters.md#minimizer-type) | — |
     | [Max iterations](../physics/parameters.md#minimizer-max-iterations) | — |
     | [Descent](../physics/parameters.md#minimizer-descent) | <code>project.descent</code> |
-    | [Tolerance](../physics/parameters.md#minimizer-chi-square-tolerance) | — |
+    | [Χ² change tolerance](../physics/parameters.md#minimizer-chi-square-tolerance) | — |
+    | [Stop rules](../physics/parameters.md#minimizer-stop-rules) | — |
+    | [Shift/s.u. tolerance](../physics/parameters.md#minimizer-shift-tolerance) | — |
+    | [Magnetic moments near zero](../physics/parameters.md#minimizer-moments-near-zero) | — |
 
     **[<span class="ed-reference-icon" data-reference-category="fitting-mode" aria-hidden="true">&#61918;</span> Fitting mode](../physics/parameters.md#fitting-mode)**
 
@@ -2038,6 +2339,30 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Project saved](../physics/parameters.md#report-file-project-last-modified) | — |
     | [Digest](../physics/parameters.md#report-file-digest) | — |
 
+    **[<span class="ed-reference-icon" data-reference-category="space-group-symop-magn-operation" aria-hidden="true">&#62193;</span> Magnetic operator](../physics/parameters.md#space-group-symop-magn-operation)**
+
+    | Parameter or field | Python name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#space-group-symop-magn-operation-id) | — |
+    | [Operation](../physics/parameters.md#space-group-symop-magn-operation-xyz) | — |
+
+    **[<span class="ed-reference-icon" data-reference-category="space-group-symop-magn-centering" aria-hidden="true">&#61618;</span> Magnetic centring vector](../physics/parameters.md#space-group-symop-magn-centering)**
+
+    | Parameter or field | Python name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#space-group-symop-magn-centering-id) | — |
+    | [Operation](../physics/parameters.md#space-group-symop-magn-centering-xyz) | — |
+
+    **[<span class="ed-reference-icon" data-reference-category="expanded-atom-site-moment" aria-hidden="true">&#61732;</span> Moment in the cell](../physics/parameters.md#expanded-atom-site-moment)**
+
+    | Parameter or field | Python name |
+    | --- | --- |
+    | [Site](../physics/parameters.md#expanded-atom-site-moment-atom-site-id) | — |
+    | [Sym](../physics/parameters.md#expanded-atom-site-moment-site-symmetry) | — |
+    | [Mx](../physics/parameters.md#expanded-atom-site-moment-crystalaxis-x) | — |
+    | [My](../physics/parameters.md#expanded-atom-site-moment-crystalaxis-y) | — |
+    | [Mz](../physics/parameters.md#expanded-atom-site-moment-crystalaxis-z) | — |
+
     **[<span class="ed-reference-icon" data-reference-category="fit-parameter" aria-hidden="true">&#61914;</span> Fit start value](../physics/parameters.md#fit-parameter)**
 
     | Parameter or field | Python name |
@@ -2073,6 +2398,9 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Profile](../physics/parameters.md#fit-result-profile-function) | — |
     | [Background](../physics/parameters.md#fit-result-background-function) | — |
     | [Descent](../physics/parameters.md#fit-result-descent) | — |
+    | [Stopped by](../physics/parameters.md#fit-result-stopping-rule) | — |
+    | [Stopping value](../physics/parameters.md#fit-result-stopping-value) | — |
+    | [Last largest shift/s.u.](../physics/parameters.md#fit-result-last-shift-su) | — |
 
     **[<span class="ed-reference-icon" data-reference-category="fit-result-bank" aria-hidden="true">&#61452;</span> Experiment fit result](../physics/parameters.md#fit-result-bank)**
 
@@ -2153,6 +2481,72 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | --- | --- |
     | [X-axis](../physics/parameters.md#pattern-chart-x-axis) | <code>_edi_pattern_chart.x_axis</code> |
 
+    **[<span class="ed-reference-icon" data-reference-category="evolution-chart" aria-hidden="true">&#61953;</span> Evolution chart](../physics/parameters.md#evolution-chart)**
+
+    | Parameter or field | CIF name |
+    | --- | --- |
+    | [Error bars](../physics/parameters.md#evolution-chart-error-bars) | <code>_edi_evolution_chart.error_bars</code> |
+    | [Range](../physics/parameters.md#evolution-chart-range) | <code>_edi_evolution_chart.range</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="space-group-magn" aria-hidden="true">&#61558;</span> Magnetic space group](../physics/parameters.md#space-group-magn)**
+
+    | Parameter or field | CIF name |
+    | --- | --- |
+    | [BNS number](../physics/parameters.md#space-group-magn-number-bns) | <code>_space_group_magn.number_BNS</code> |
+    | [BNS symbol](../physics/parameters.md#space-group-magn-name-bns) | <code>_space_group_magn.name_BNS</code> |
+    | [UNI symbol](../physics/parameters.md#space-group-magn-name-uni) | <code>_space_group_magn.name_UNI</code> |
+    | [OG number](../physics/parameters.md#space-group-magn-number-og) | <code>_space_group_magn.number_OG</code> |
+    | [OG symbol](../physics/parameters.md#space-group-magn-name-og) | <code>_space_group_magn.name_OG</code> |
+    | [Point group](../physics/parameters.md#space-group-magn-point-group-name-uni) | <code>_space_group_magn.point_group_name_UNI</code> |
+    | [Point group number](../physics/parameters.md#space-group-magn-point-group-number-litvin) | <code>_space_group_magn.point_group_number_Litvin</code><details><summary>Accepted aliases</summary><code>_space_group_magn.point_group_number</code></details> |
+
+    **[<span class="ed-reference-icon" data-reference-category="space-group-magn-transforms" aria-hidden="true">&#62306;</span> Magnetic setting transform](../physics/parameters.md#space-group-magn-transforms)**
+
+    | Parameter or field | CIF name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#space-group-magn-transforms-id) | <code>_space_group_magn_transforms.id</code> |
+    | [Transform](../physics/parameters.md#space-group-magn-transforms-pp-abc) | <code>_space_group_magn_transforms.Pp_abc</code> |
+    | [Setting](../physics/parameters.md#space-group-magn-transforms-source) | <code>_space_group_magn_transforms.source</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="parent-space-group" aria-hidden="true">&#63423;</span> Parent space group](../physics/parameters.md#parent-space-group)**
+
+    | Parameter or field | CIF name |
+    | --- | --- |
+    | [Name](../physics/parameters.md#parent-space-group-name-h-m-alt) | <code>_parent_space_group.name_H-M_alt</code> |
+    | [Space-group number](../physics/parameters.md#parent-space-group-it-number) | <code>_parent_space_group.IT_number</code> |
+    | [To standard](../physics/parameters.md#parent-space-group-transform-pp-abc) | <code>_parent_space_group.transform_Pp_abc</code> |
+    | [To magnetic cell](../physics/parameters.md#parent-space-group-child-transform-pp-abc) | <code>_parent_space_group.child_transform_Pp_abc</code> |
+    | [Reference setting](../physics/parameters.md#parent-space-group-reference-setting) | <code>_parent_space_group.reference_setting</code> |
+    | [Derived](../physics/parameters.md#parent-space-group-derived) | <code>_edi_parent_space_group.derived</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="parent-propagation-vector" aria-hidden="true">&#62219;</span> Propagation vector](../physics/parameters.md#parent-propagation-vector)**
+
+    | Parameter or field | CIF name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#parent-propagation-vector-id) | <code>_parent_propagation_vector.id</code> |
+    | [K](../physics/parameters.md#parent-propagation-vector-kxkykz) | <code>_parent_propagation_vector.kxkykz</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="atom-site-moment" aria-hidden="true">&#61732;</span> Magnetic moment](../physics/parameters.md#atom-site-moment)**
+
+    | Parameter or field | CIF name |
+    | --- | --- |
+    | [Label](../physics/parameters.md#atom-site-moment-label) | <code>_atom_site_moment.label</code><details><summary>Accepted aliases</summary><code>_atom_site_moment_label</code></details> |
+    | [Mx](../physics/parameters.md#atom-site-moment-crystalaxis-x) | <code>_atom_site_moment.crystalaxis_x</code><details><summary>Accepted aliases</summary><code>_atom_site_moment_crystalaxis_x</code></details> |
+    | [My](../physics/parameters.md#atom-site-moment-crystalaxis-y) | <code>_atom_site_moment.crystalaxis_y</code><details><summary>Accepted aliases</summary><code>_atom_site_moment_crystalaxis_y</code></details> |
+    | [Mz](../physics/parameters.md#atom-site-moment-crystalaxis-z) | <code>_atom_site_moment.crystalaxis_z</code><details><summary>Accepted aliases</summary><code>_atom_site_moment_crystalaxis_z</code></details> |
+    | [Symmetry form](../physics/parameters.md#atom-site-moment-symmform) | <code>_atom_site_moment.symmform</code><details><summary>Accepted aliases</summary><code>_atom_site_moment_symmform</code></details> |
+
+    **[<span class="ed-reference-icon" data-reference-category="magnetic-form-factor" aria-hidden="true">&#62930;</span> Magnetic form factor](../physics/parameters.md#magnetic-form-factor)**
+
+    | Parameter or field | CIF name |
+    | --- | --- |
+    | [Type](../physics/parameters.md#magnetic-form-factor-type-symbol) | <code>_edi_magnetic_form_factor.type_symbol</code> |
+    | [Ion](../physics/parameters.md#magnetic-form-factor-ion) | <code>_edi_magnetic_form_factor.ion</code> |
+    | [Approximation](../physics/parameters.md#magnetic-form-factor-approximation) | <code>_edi_magnetic_form_factor.approximation</code> |
+    | [C₂](../physics/parameters.md#magnetic-form-factor-j2-coefficient) | <code>_edi_magnetic_form_factor.j2_coefficient</code> |
+    | [C₄](../physics/parameters.md#magnetic-form-factor-j4-coefficient) | <code>_edi_magnetic_form_factor.j4_coefficient</code> |
+    | [C₆](../physics/parameters.md#magnetic-form-factor-j6-coefficient) | <code>_edi_magnetic_form_factor.j6_coefficient</code> |
+
     **[<span class="ed-reference-icon" data-reference-category="calculator" aria-hidden="true">&#61932;</span> Calculator](../physics/parameters.md#calculator)**
 
     | Parameter or field | CIF name |
@@ -2166,7 +2560,10 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Minimizer](../physics/parameters.md#minimizer-type) | <code>_edi_minimizer.type</code><details><summary>Accepted aliases</summary><code>_easydiffraction_minimizer.type</code></details> |
     | [Max iterations](../physics/parameters.md#minimizer-max-iterations) | <code>_edi_minimizer.max_iterations</code><details><summary>Accepted aliases</summary><code>_easydiffraction_minimizer.max_iterations</code></details> |
     | [Descent](../physics/parameters.md#minimizer-descent) | <code>_edi_minimizer.descent</code> |
-    | [Tolerance](../physics/parameters.md#minimizer-chi-square-tolerance) | <code>_edi_minimizer.chi_square_tolerance</code> |
+    | [Χ² change tolerance](../physics/parameters.md#minimizer-chi-square-tolerance) | <code>_edi_minimizer.chi_square_tolerance</code> |
+    | [Stop rules](../physics/parameters.md#minimizer-stop-rules) | <code>_edi_minimizer.stop_rules</code> |
+    | [Shift/s.u. tolerance](../physics/parameters.md#minimizer-shift-tolerance) | <code>_edi_minimizer.shift_tolerance</code> |
+    | [Magnetic moments near zero](../physics/parameters.md#minimizer-moments-near-zero) | <code>_edi_minimizer.moments_near_zero</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="fitting-mode" aria-hidden="true">&#61918;</span> Fitting mode](../physics/parameters.md#fitting-mode)**
 
@@ -2235,6 +2632,30 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Project saved](../physics/parameters.md#report-file-project-last-modified) | <code>_edi_report_file.project_last_modified</code> |
     | [Digest](../physics/parameters.md#report-file-digest) | <code>_edi_report_file.digest</code> |
 
+    **[<span class="ed-reference-icon" data-reference-category="space-group-symop-magn-operation" aria-hidden="true">&#62193;</span> Magnetic operator](../physics/parameters.md#space-group-symop-magn-operation)**
+
+    | Parameter or field | CIF name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#space-group-symop-magn-operation-id) | <code>_space_group_symop_magn_operation.id</code><details><summary>Accepted aliases</summary><code>_space_group_symop_magn.id</code></details> |
+    | [Operation](../physics/parameters.md#space-group-symop-magn-operation-xyz) | <code>_space_group_symop_magn_operation.xyz</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="space-group-symop-magn-centering" aria-hidden="true">&#61618;</span> Magnetic centring vector](../physics/parameters.md#space-group-symop-magn-centering)**
+
+    | Parameter or field | CIF name |
+    | --- | --- |
+    | [Id](../physics/parameters.md#space-group-symop-magn-centering-id) | <code>_space_group_symop_magn_centering.id</code> |
+    | [Operation](../physics/parameters.md#space-group-symop-magn-centering-xyz) | <code>_space_group_symop_magn_centering.xyz</code> |
+
+    **[<span class="ed-reference-icon" data-reference-category="expanded-atom-site-moment" aria-hidden="true">&#61732;</span> Moment in the cell](../physics/parameters.md#expanded-atom-site-moment)**
+
+    | Parameter or field | CIF name |
+    | --- | --- |
+    | [Site](../physics/parameters.md#expanded-atom-site-moment-atom-site-id) | <code>_edi_expanded_atom_site_moment.atom_site_id</code> |
+    | [Sym](../physics/parameters.md#expanded-atom-site-moment-site-symmetry) | <code>_edi_expanded_atom_site_moment.site_symmetry</code> |
+    | [Mx](../physics/parameters.md#expanded-atom-site-moment-crystalaxis-x) | <code>_edi_expanded_atom_site_moment.crystalaxis_x</code> |
+    | [My](../physics/parameters.md#expanded-atom-site-moment-crystalaxis-y) | <code>_edi_expanded_atom_site_moment.crystalaxis_y</code> |
+    | [Mz](../physics/parameters.md#expanded-atom-site-moment-crystalaxis-z) | <code>_edi_expanded_atom_site_moment.crystalaxis_z</code> |
+
     **[<span class="ed-reference-icon" data-reference-category="fit-parameter" aria-hidden="true">&#61914;</span> Fit start value](../physics/parameters.md#fit-parameter)**
 
     | Parameter or field | CIF name |
@@ -2270,6 +2691,9 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | [Profile](../physics/parameters.md#fit-result-profile-function) | <code>_edi_fit_result.profile_function</code><details><summary>Accepted aliases</summary><code>_fit_result.profile_function</code></details> |
     | [Background](../physics/parameters.md#fit-result-background-function) | <code>_edi_fit_result.background_function</code><details><summary>Accepted aliases</summary><code>_fit_result.background_function</code></details> |
     | [Descent](../physics/parameters.md#fit-result-descent) | <code>_edi_fit_result.descent</code> |
+    | [Stopped by](../physics/parameters.md#fit-result-stopping-rule) | <code>_edi_fit_result.stopping_rule</code> |
+    | [Stopping value](../physics/parameters.md#fit-result-stopping-value) | <code>_edi_fit_result.stopping_value</code> |
+    | [Last largest shift/s.u.](../physics/parameters.md#fit-result-last-shift-su) | <code>_edi_fit_result.last_shift_su</code> |
 
     **[<span class="ed-reference-icon" data-reference-category="fit-result-bank" aria-hidden="true">&#61452;</span> Experiment fit result](../physics/parameters.md#fit-result-bank)**
 

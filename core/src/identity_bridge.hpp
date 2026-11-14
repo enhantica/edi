@@ -102,6 +102,10 @@ double read_correlation_threshold(const std::string& value);
 // A single crystal's `_reflns.threshold_sigma`/`_refine_ls.threshold_sigma` (`tag`) and `_reflns.threshold_basis`,
 // checked by crysta's rules (edi ADR-0050).
 double read_threshold_sigma(const std::string& value, const char* tag);
+// The engine-owned calculation-only reflection limit and retired descent vocabulary.
+const char* single_crystal_resolution_key();
+double read_single_crystal_resolution(const std::string& value);
+bool is_retired_descent(const std::string& value);
 std::string read_threshold_basis(const std::string& value);
 std::string read_pattern_x_axis(const std::string& value);
 // The Evolution chart's `_evolution_chart.error_bars` (`true`/`false`) and `_evolution_chart.range` (`values` or

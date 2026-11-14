@@ -1,5 +1,7 @@
 # ADR-0030 — The browser's files live in WasmFS
 
+**Amended 2026-11-13:** As of 2026-11-13 (ADR-0023 §3), only the multithreaded browser target is shipped. WasmFS and its file-access ownership remain; statements about two-kit validation below record the earlier implementation.
+
 - **Status:** Accepted
 - **Date:** 2026-10-11
 - **Implementation:** ✅ Implemented — both browser kits link WasmFS

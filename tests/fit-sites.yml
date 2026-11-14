@@ -298,3 +298,13 @@ sites:
     why: Both real commands fit the explicitly authored Sears Ni independent-experiment variant of the single-crystal joint family.
     assertion_feed: Weighted normal equations, Fisher covariance, named dataset agreement and independent saved-value rounding.
     audit: 2026-11-09; no CLI-produced value supplies an expected physical answer.
+
+  - file: tests/system/py/test_cli_performance_options.py
+    case: cosio-d20-scan-3f
+    why: Both real CLI hosts fit disposable copies of the pinned three-file scan to exercise process performance selections.
+    assertion_feed: Existing getter state, scan-start group invariants, exact scientific output invariance and native/Python reporting parity.
+
+  - file: tests/system/py/test_cli_progress_table.py
+    case: cosio-d20-scan-3f
+    why: Both real CLI hosts fit a disposable pinned scan to exercise pipe and PTY progress routing.
+    assertion_feed: Actual completion cardinality, fixed numeric fields, bounded terminal writes and saved failure totals.

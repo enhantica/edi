@@ -188,8 +188,8 @@ def test_approved_palette_rows_keep_exact_coordinates_and_role_order(palette):
         {
             'role': field,
             'index': '0',
-            'light': role_colours('light')[field],
-            'dark': role_colours('dark')[field],
+            'light': role_colours('light', palette)[field],
+            'dark': role_colours('dark', palette)[field],
         }
         for field in ('total_calculation', 'background', 'difference')
     )
@@ -198,16 +198,16 @@ def test_approved_palette_rows_keep_exact_coordinates_and_role_order(palette):
     )
 
 
-def test_exactly_five_approved_tables_and_attribution_are_published():
+def test_exactly_two_approved_tables_and_attribution_are_published():
     actual = {p.stem for p in (ROOT / 'data/palettes').glob('*.tsv')}
     assert actual == {p['name'].lower().replace(' ', '-') for p in PALETTES}, (
-        'Only the five recorded shared figure palettes remain in the shipped catalogue'
+        'Only the two active approved figure palettes remain in the shipped catalogue'
     )
     text = (ROOT / 'data/palettes/PROVENANCE.md').read_text()
     assert all(p['name'] in text for p in PALETTES), (
         'Every approved palette retains its provenance'
     )
-    assert 'owner approved' in text and '2026-10-26' in text, (
+    assert 'approved on 2026-11-10' in text, (
         'The replacement palettes identify the recorded owner approval'
     )
     assert 'Oklab' in text and 'Ottosson' in text, (

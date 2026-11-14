@@ -11,6 +11,12 @@ inputs:
   manifest-path:
     description: Pixi workspace manifest
     default: pixi.toml
+  environments:
+    description: Locked Pixi environments to install
+    default: default
+  cache:
+    description: Cache the complete selected Pixi environment
+    default: "true"
 runs:
   using: 'composite'
   steps:
@@ -28,5 +34,7 @@ runs:
         # shared ~/.pixi/bin (which the hub VM also uses).
         pixi-bin-path: ${{ runner.temp }}/pinned-pixi/pixi${{ runner.os == 'Windows' && '.exe' || '' }}
         manifest-path: ${{ inputs.manifest-path }}
+        environments: ${{ inputs.environments }}
+        cache: ${{ inputs.cache }}
         frozen: true
         post-cleanup: false

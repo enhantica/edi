@@ -6,6 +6,15 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. A scan's patterns come with its project, so open it from EasyDiffraction's collection with **Project → Examples**; each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+Fit the olivine Co₂SiO₄ with its magnetic structure to the whole D20 cooling scan, 213 patterns
+from 497.4 K down to 2.3 K, one after another and from the lowest temperature up. First the fit
+is staged on the 2.3 K pattern, the scan's template; then each later pattern starts from the
+previous result. The cobalt moments stay free at every temperature and fall towards zero near
+the Néel temperature, about 50 K.
+
+The project is the catalogue case `pd-neut-cwl_cosio-d20_scan-213f`, the one the command line
+and the app's Examples open. Its two Co sites share one displacement from the start.
+
 ## Open the example
 
 Press **Start** on Home, search **Examples** on **Project** for **pd-neut-cwl_cosio-d20_scan-213f** and open it.

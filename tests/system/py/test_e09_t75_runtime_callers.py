@@ -11,6 +11,7 @@ import sys
 import pytest
 
 from tests.fixtures.e09_t75_commands import assert_no_swallowed_refusal
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e09_t75_sdk_consumer import ROOT, SHA, consumer
 
 # Only the unavailable native ABI is substituted. The source importer, provenance,
@@ -78,7 +79,8 @@ for kind, form in forms.items():
 with (b / 'unsupported-commands.jsonl').open('a') as f:
     f.write(json.dumps(['cmake', *a]) + '\n')
 sys.exit(64)
-"""
+""",
+        newline='\n',
     )
     cmake.chmod(0o755)
 
@@ -124,7 +126,7 @@ def runtime_case(base, caller, explicit, *, accident=None):  # noqa: PLR0912, PL
             assert_no_swallowed_refusal(base, True)
         return result
 
-    built = call(['bash', 'tools/ci/core-build.sh'])
+    built = call([environment_bash(), 'tools/ci/core-build.sh'])
     if built.returncode:
         return built, None
     if caller == 'import':
@@ -167,7 +169,7 @@ def runtime_case(base, caller, explicit, *, accident=None):  # noqa: PLR0912, PL
                 )
             )
             script.write_text(text)
-        result = call(['bash', 'tools/ci/crysta-consumer.sh'])
+        result = call([environment_bash(), 'tools/ci/crysta-consumer.sh'])
     else:
         # Run the plugin lifecycle entry. A diagnostic has no consumer corpus source;
         # it must stay unknown, never stage the ordinary build's unrelated corpus.

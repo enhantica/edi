@@ -55,3 +55,5 @@ starting values or miss a step, and the tutorial shows what each stage should gi
 The same prompt, asking for a Jupyter notebook, is on the
 [<span class="ed-interface-icons" aria-hidden="true">:simple-python:</span> <span class="ed-icon-text">Python</span>](../../python/tutorials/assistant.md){ .ed-icon-label .ed-interface-link } tutorials. The application has an
 [AI assistant](../../user-guide/ai-assistant/index.md) built in.
+
+See the [recorded prompt trials](../../assistant-prompt-trials.md) for the tested models, dates and outcomes.

@@ -32,7 +32,7 @@ from import_gui_captures import (  # noqa: E402
     page,
     viewer,
 )
-from render_cli_tutorials import stages  # noqa: E402
+from render_cli_tutorials import introduction, stages  # noqa: E402
 
 sys.path.insert(0, str(ROOT.parent / 'tools/docs'))
 from app_tutorial_plan import plan  # noqa: E402
@@ -394,6 +394,7 @@ def render(case: str) -> Path:  # noqa: PLR0912, PLR0914, PLR0915 - one page, se
             ]
             PAGES.mkdir(parents=True, exist_ok=True)
             out = PAGES / f'{case}.md'
+            body.insert(1, introduction(source) + '\n')
             out.write_text(page(title, '\n'.join(body)), encoding='utf-8')
             return out
     else:
@@ -591,6 +592,7 @@ def render(case: str) -> Path:  # noqa: PLR0912, PLR0914, PLR0915 - one page, se
     ]
     PAGES.mkdir(parents=True, exist_ok=True)
     out = PAGES / f'{case}.md'
+    body.insert(1, introduction(source) + '\n')
     out.write_text(page(title, '\n'.join(body)), encoding='utf-8')
     if by_id.missing:
         print(

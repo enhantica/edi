@@ -23,6 +23,12 @@ def build_jobs():
 
 
 def build_host(command, timeout=BUILD_TIMEOUT):
+    if os.name == 'nt':
+        from tests.fixtures.plain_data.windows_job import (  # noqa: PLC0415 - native Windows only
+            build_host as windows_build_host,
+        )
+
+        return windows_build_host(command, timeout)
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,

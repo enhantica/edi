@@ -244,6 +244,24 @@
      "reason": "C",
      "verdict": "public"
     },
+    "sequential_fit": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Analysis.sequential_fit",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "sequential_fit_extract": {
+     "need": {
+      "by": "counterpart",
+      "ref": "Analysis.sequential_fit_extract",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "stop_rules": {
      "need": {
       "by": "deviation",
@@ -935,6 +953,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "neutron_scattering_length": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -966,6 +993,24 @@
      "need": {
       "by": "counterpart",
       "ref": "BraggPdExperiment.refln",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_dispersion": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_form_factor": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2349,10 +2394,37 @@
      "reason": "C",
      "verdict": "public"
     },
+    "neutron_scattering_length": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
       "ref": "CategoryOwner.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_dispersion": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_form_factor": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
       "verdict": "keep"
      },
      "reason": "C",
@@ -3915,6 +3987,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "neutron_scattering_length": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
@@ -3937,6 +4018,24 @@
      "need": {
       "by": "counterpart",
       "ref": "BraggPdExperiment.refln",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_dispersion": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_form_factor": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5297,10 +5396,37 @@
      "reason": "C",
      "verdict": "public"
     },
+    "neutron_scattering_length": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "parameters": {
      "need": {
       "by": "counterpart",
       "ref": "CategoryOwner.parameters",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_dispersion": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "xray_form_factor": {
+     "need": {
+      "by": "deviation",
+      "ref": "D96",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5403,6 +5529,46 @@
     "with_traceback": {
      "need": {
       "by": "owner",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "SequentialFit": {
+    "data_dir": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SequentialFit.data_dir",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "file_pattern": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SequentialFit.file_pattern",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "reverse": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SequentialFit.reverse",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    }
+   },
+   "SequentialFitExtract": {
+    "create": {
+     "need": {
+      "by": "counterpart",
+      "ref": "SequentialFitExtract.create",
       "verdict": "keep"
      },
      "reason": "C",
@@ -7206,6 +7372,24 @@
     "reason": "C",
     "verdict": "public"
    },
+   "SequentialFit": {
+    "need": {
+     "by": "counterpart",
+     "ref": "SequentialFit",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
+   "SequentialFitExtract": {
+    "need": {
+     "by": "counterpart",
+     "ref": "SequentialFitExtract",
+     "verdict": "keep"
+    },
+    "reason": "C",
+    "verdict": "public"
+   },
    "Severity": {
     "need": {
      "by": "deviation",
@@ -7556,6 +7740,8 @@
     "descent",
     "fit",
     "fitting_mode",
+    "sequential_fit",
+    "sequential_fit_extract",
     "stop_rules",
     "template_file"
    ]
@@ -7676,10 +7862,13 @@
     "linked_structure",
     "linked_structures",
     "name",
+    "neutron_scattering_length",
     "parameters",
     "peak",
     "preferred_orientation",
-    "refln"
+    "refln",
+    "xray_dispersion",
+    "xray_form_factor"
    ]
   },
   "Cell": {
@@ -7929,7 +8118,10 @@
     "linked_structure",
     "linked_structures",
     "name",
-    "parameters"
+    "neutron_scattering_length",
+    "parameters",
+    "xray_dispersion",
+    "xray_form_factor"
    ]
   },
   "ExperimentFactory": {
@@ -8214,9 +8406,12 @@
     "linked_structure",
     "linked_structures",
     "name",
+    "neutron_scattering_length",
     "parameters",
     "peak",
-    "refln"
+    "refln",
+    "xray_dispersion",
+    "xray_form_factor"
    ]
   },
   "PdTofData": {
@@ -8455,7 +8650,10 @@
     "linked_structure",
     "linked_structures",
     "name",
-    "parameters"
+    "neutron_scattering_length",
+    "parameters",
+    "xray_dispersion",
+    "xray_form_factor"
    ]
   },
   "ScanFileRecord": {
@@ -8487,6 +8685,20 @@
     "add_note",
     "args",
     "with_traceback"
+   ]
+  },
+  "SequentialFit": {
+   "kind": "class",
+   "members": [
+    "data_dir",
+    "file_pattern",
+    "reverse"
+   ]
+  },
+  "SequentialFitExtract": {
+   "kind": "class",
+   "members": [
+    "create"
    ]
   },
   "Severity": {

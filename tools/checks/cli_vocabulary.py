@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -282,17 +283,12 @@ def edi_descents_record() -> bytes:
     import edi  # noqa: PLC0415 — the compiled registry, imported only where it is compared
 
     report = edi.error_report(edi.VerbosityEnum.COMPACT)
-    lines = report.splitlines(keepends=True) if isinstance(report, str) else []
-    if (
-        len(lines) < 2
-        or re.fullmatch(r'schema=[1-9][0-9]*\n', lines[0]) is None
-        or lines[1] != 'record=error\n'
-        or not report.endswith('\n')
-        or any(line.startswith('schema=') for line in lines[1:])
-    ):
-        raise ValueError('linked edi report schema is malformed')
+    # Share the linked package-private header validator with the CLI.
+    from edi._machine_records import schema_line  # noqa: PLC0415, PLC2701
+
+    header = schema_line(report)
     return (
-        lines[0] + 'record=descents\n'
+        header + 'record=descents\n'
         f'default={edi._default_descent()}\n'
         f'descents={",".join(edi._descent_ids())}\n'
     ).encode()
@@ -320,7 +316,9 @@ def descent_listing_findings(crysta_binary: Path) -> list[str]:
         candidate = edi_descents_record()
     except ValueError as error:
         return [f'descent-listing: {error}']
-    return listing_byte_findings(reference.stdout, candidate)
+    return listing_byte_findings(
+        reference.stdout, candidate.replace(b'\n', os.linesep.encode('ascii'))
+    )
 
 
 def check_live(

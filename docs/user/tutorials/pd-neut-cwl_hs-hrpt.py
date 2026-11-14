@@ -6,28 +6,75 @@
 # neutron powder data from HRPT at PSI, with a pseudo-Voigt profile and Bérar-Baldinozzi
 # asymmetry.
 #
-# The project is the catalogue case `pd-neut-cwl_hs-hrpt`, the one the command line and the app's
-# Examples open.
+# It builds the catalogue case `pd-neut-cwl_hs-hrpt` step by step: the same project the command
+# line fits and the app's Examples open.
+
+# %% [markdown]
+# ## Import the library
 
 # %%
 import easydiffraction as edi
 
 # %% [markdown]
-# ## Load the project
+# ## Define the project
+#
+# A new project is empty: it holds no structure and no experiment until you add them.
 
 # %%
-project_path = edi.download_data('pd-neut-cwl_hs-hrpt', destination='data')
-project = edi.Project.load(project_path)
-structure = project.structures['hs']
-experiment = project.experiments['hrpt']
+project = edi.Project(name='pd-neut-cwl_hs-hrpt')
 
 # %% [markdown]
-# The project marks what its fit frees. The fit below frees it in stages, so start with all of it
-# fixed.
+# ## Define the structure
+#
+# Load the structure from EasyDiffraction's collection. Its CIF gives the space group, the cell and
+# the atom sites.
 
 # %%
-for parameter in project.free_parameters:
-    parameter.free = False
+path = edi.download_data('pd-neut-cwl_hs-hrpt-hs', destination='data')
+project.structures.add_from_cif_path(path)
+structure = project.structures['hs']
+
+# %%
+project.display.structure('hs')
+
+# %% [markdown]
+# ## Define the experiment
+#
+# Create the experiment from the measured data in EasyDiffraction's collection, then describe the
+# instrument, the peak profile, the background and the structure it links.
+
+# %%
+data_path = edi.download_data('pd-neut-cwl_hs-hrpt-hrpt-data', destination='data')
+project.experiments.add_from_data_path(
+    name='hrpt',
+    data_path=data_path,
+    sample_form='powder',
+    beam_mode='constant wavelength',
+    radiation_probe='neutron',
+    scattering_type='bragg',
+)
+experiment = project.experiments['hrpt']
+experiment.neutron_scattering_length = 'sears1992'
+experiment.peak.type = 'cwl-pseudo-voigt-berar-baldinozzi'
+experiment.instrument.name = 'HRPT'
+experiment.instrument.facility = 'PSI'
+experiment.peak.broad_gauss_u = 0.1
+experiment.peak.broad_gauss_v = -0.2
+experiment.peak.broad_gauss_w = 0.2
+experiment.peak.mixing_eta_0 = 0.5
+experiment.peak.cutoff_fwhm = 8
+experiment.instrument.setup_wavelength = 1.89
+experiment.linked_structures.create(structure_id='hs', scale=0.5)
+experiment.background.create(position=4, intensity=460.0)
+experiment.background.create(position=20, intensity=460.0)
+experiment.background.create(position=40, intensity=460.0)
+experiment.background.create(position=60, intensity=460.0)
+experiment.background.create(position=80, intensity=460.0)
+experiment.background.create(position=100, intensity=460.0)
+experiment.background.create(position=120, intensity=460.0)
+experiment.background.create(position=140, intensity=460.0)
+experiment.background.create(position=160, intensity=460.0)
+experiment.background.create(position=165, intensity=460.0)
 
 # %%
 project.display.pattern('hrpt')
@@ -151,8 +198,16 @@ project.display.fit.correlations()
 project.display.structure('hs')
 
 # %% [markdown]
+# ## Report
+#
+# The HTML report draws the measured, calculated and difference patterns with the reflection
+# positions, and lists the structures, the experiments and the fit. Open it in a browser.
+
+# %%
+project.report.save_html('pd-neut-cwl_hs-hrpt.html')
+
+# %% [markdown]
 # ## Save the project
 
 # %%
 project.save_as('pd-neut-cwl_hs-hrpt')
-project.report.save_html('pd-neut-cwl_hs-hrpt.html')

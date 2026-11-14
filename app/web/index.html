@@ -1,17 +1,10 @@
 <!doctype html>
 <!--
-  The EasyDiffraction web app's start page (edi ADR-0023). It loads one of the two builds beside it: the multithreaded one, which
-  needs a cross-origin-isolated page (SharedArrayBuffer), or the single-thread one, which runs anywhere and freezes the page while a
-  fit runs. Each build's files sit in a folder named by their content (`multithread-<hash>/`, `singlethread-<hash>/`), which
-  build.json names and the page reads past every cache: a redeploy cannot pair one build's cached script with another's module. On a
-  host that sends no COOP/COEP headers (GitHub Pages), coi-serviceworker.js adds them once it controls the page: the page registers
-  it and reloads under it, falling back only when that reload is still not isolated. `?build=multithread` or
-  `?build=singlethread` forces a build. Why a build was chosen is kept in window.ediBuildInfo for the app's diagnostics view
-  (Preferences > Advanced). While the build downloads, compiles and starts, the page shows the logo as a splash, its mark
-  turning as in EasyDiffractionBeta's loading window (mark.svg over name.svg, splash.css: the mark turns as an element, which
-  the compositor keeps drawing while the module's start blocks the main thread); when the page has a message instead of the
-  app, the logo stands still (logo.svg). The page takes the colour scheme the app's settings hold (light, dark, or the
-  system's), as the app will.
+  The EasyDiffraction web app's start page (ADR-0023). Only the multithreaded build is shipped.
+  Its content-named folder is read from build.json past caches to keep loader and module together.
+  Browser threading needs cross-origin isolation and SharedArrayBuffer. The service worker supplies
+  COOP/COEP on hosts without response headers; if isolation cannot be enabled, show a startup error.
+  The splash and saved colour scheme match the app while it downloads, compiles and starts.
 -->
 <html lang="en">
   <head>
@@ -80,7 +73,6 @@
     <div id="screen"></div>
     <script>
       "use strict";
-      const BUILDS = ["multithread", "singlethread"];
       const statusLine = document.getElementById("status");
 
       // The page has a message instead of the app: the logo stops turning.
@@ -108,49 +100,60 @@
         }
       }
 
-      // The build this browser runs and why ({build, reason}), or null while the page reloads under the service
-      // worker. A page that is not isolated reloads once under the worker, and falls back only if the page that reload
-      // brings (marked by `edi.coi-reloaded`, which each load consumes) is still not isolated. So a later load that found
-      // the worker in a stale state is retried, never taken as the answer.
+      // Enable isolation once through the service worker when the host supplies no headers.
+      // The reload marker is consumed on every visit, so a later stale worker can be retried.
       async function chooseBuild(deploy) {
-        const forced = new URLSearchParams(location.search).get("build");
-        const session = sessionStore();
-        const reloaded = session && session.getItem("edi.coi-reloaded");
-        if (session) {
-          session.removeItem("edi.coi-reloaded");
-          session.removeItem("edi.coi-reload");  // the earlier page's marker, which no load consumed
+        const requested = new URLSearchParams(location.search).get("build");
+        if (requested && requested !== "multithread") {
+          throw new Error("Only the multithreaded build is available. Remove the build parameter from the address.");
         }
-        if (BUILDS.includes(forced)) {
-          const fallback = session && session.getItem("edi.fallback-reason");
-          if (fallback) {
+        let session = sessionStore();
+        let reloaded = null;
+        if (session) {
+          try {
+            reloaded = session.getItem("edi.coi-reloaded");
+            session.removeItem("edi.coi-reloaded");
+            session.removeItem("edi.coi-reload");
             session.removeItem("edi.fallback-reason");
+          } catch (e) {
+            // Server-provided isolation does not require working browser storage.
+            session = null;
           }
-          return { build: forced, reason: fallback ? `fell back: ${fallback}` : `forced by ?build=${forced}` };
         }
         if (self.crossOriginIsolated && typeof SharedArrayBuffer === "function") {
           return { build: "multithread", reason: "the page is cross-origin isolated and has SharedArrayBuffer" };
         }
         if (!window.isSecureContext) {
-          return { build: "singlethread", reason: "not a secure context, so no service worker can isolate the page" };
+          throw new Error("Browser threading requires HTTPS or localhost. Open the app over a secure connection.");
+        }
+        if (self.crossOriginIsolated) {
+          throw new Error("Browser threading is unavailable. Use a current browser that allows shared memory.");
         }
         if (!navigator.serviceWorker) {
-          return { build: "singlethread", reason: "this browser offers no service worker to isolate the page" };
+          throw new Error("Browser threading requires cross-origin isolation. The server must send COOP/COEP headers because service workers are unavailable.");
         }
         if (!session) {
-          return { build: "singlethread", reason: "no session storage to remember a reload in" };
+          throw new Error("Browser threading requires cross-origin isolation. Allow session storage for automatic setup, or configure the server's COOP/COEP headers.");
         }
         if (reloaded === deploy) {
-          return { build: "singlethread", reason: "not cross-origin isolated after the service worker's reload" };
+          throw new Error("Browser threading is still unavailable after setup. Check that the server allows cross-origin isolation and shared memory.");
         }
+        let timer;
         try {
-          await navigator.serviceWorker.register("coi-serviceworker.js");
-          await navigator.serviceWorker.ready;
+          await Promise.race([
+            (async () => {
+              await navigator.serviceWorker.register("coi-serviceworker.js");
+              await navigator.serviceWorker.ready;
+            })(),
+            new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("service worker setup timed out")), 15000); }),
+          ]);
           session.setItem("edi.coi-reloaded", deploy);
           location.reload();
           return null;
         } catch (e) {
-          console.warn("edi: the COOP/COEP service worker could not register:", e);
-          return { build: "singlethread", reason: `the COOP/COEP service worker could not register: ${e}` };
+          throw new Error(`Browser threading could not be enabled. Check the server's COOP/COEP headers or allow the isolation service worker: ${e.message}`);
+        } finally {
+          clearTimeout(timer);
         }
       }
 
@@ -176,26 +179,9 @@
         return WebAssembly.compile(await response.arrayBuffer());
       }
 
-      // A multithreaded build that fails before it has started gives way to the single-thread one, once.
-      function fallBack(build, reason) {
-        const params = new URLSearchParams(location.search);
-        if (build !== "multithread" || params.has("build")) {
-          return false;
-        }
-        console.warn(`edi: the multithreaded build did not start (${reason}); loading the single-thread build`);
-        const session = sessionStore();
-        if (session) {
-          session.setItem("edi.fallback-reason", `the multithreaded build did not start (${reason})`);
-        }
-        params.set("build", "singlethread");
-        location.replace(`${location.pathname}?${params}`);
-        return true;
-      }
-
-      let loaded = false;
       let started = "";
       let startedReason = "";
-      // A page being left (a reload, a navigation) aborts its downloads; that is no reason to fall back.
+      // A page being left aborts downloads; do not report that as a startup failure.
       let leaving = false;
       window.addEventListener("pagehide", () => {
         leaving = true;
@@ -203,7 +189,10 @@
 
       async function start() {
         const folders = await buildFolders();
-        const chosen = await chooseBuild(`${folders.multithread} ${folders.singlethread}`);
+        if (typeof folders.multithread !== "string" || !/^multithread-[0-9a-f]+$/.test(folders.multithread)) {
+          throw new Error("build.json names no multithread build");
+        }
+        const chosen = await chooseBuild(folders.multithread);
         if (chosen === null) {
           return;
         }
@@ -214,7 +203,7 @@
         window.ediBuildInfo = {
           build,
           reason: chosen.reason,
-          deploy: `${folders.multithread} ${folders.singlethread}`,
+          deploy: folders.multithread,
         };
         const folder = folders[build];
         if (typeof folder !== "string" || !/^[a-z]+-[0-9a-f]+$/.test(folder)) {
@@ -236,15 +225,11 @@
             environment,
             module: loadModule(`${folder}/edi_app.wasm`),
             onLoaded: () => {
-              loaded = true;
               document.getElementById("loading").style.display = "none";
               screen.style.display = "block";
             },
             onExit: (exit) => {
               if (leaving) {
-                return;
-              }
-              if (!loaded && fallBack(started, exit.text || `code ${exit.code}`)) {
                 return;
               }
               screen.style.display = "none";
@@ -259,9 +244,6 @@
 
       start().catch((e) => {
         if (leaving) {
-          return;
-        }
-        if (!loaded && fallBack(started, e.message)) {
           return;
         }
         const which = started ? ` the ${started} build (chosen because ${startedReason})` : "";

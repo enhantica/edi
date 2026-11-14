@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
+
 ROOT = Path(__file__).resolve().parents[3]
 CASES = [
     'test_preferences_strip_uses_shared_project_colours',
@@ -40,7 +42,7 @@ def app_results():
     )
     result = subprocess.run(
         [
-            'bash',
+            environment_bash(),
             str(ROOT / 'tests/fixtures/scan_views/run.sh'),
             str(binary),
             '-input',

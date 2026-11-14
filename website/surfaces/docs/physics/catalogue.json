@@ -1149,19 +1149,6 @@
       "edi_key": "_absorption.abscor1"
     },
     {
-      "id": "absorption.abscor2",
-      "name": "abscor2",
-      "category": "absorption",
-      "family": "tof",
-      "units": "",
-      "description": "TOF sample absorption lambda-power ABSCOR2 (round-tripped, held fixed; freeing it is a hard error).",
-      "role": "stored-only",
-      "refinable_metadata": true,
-      "parameter_url": "parameters/#absorption-abscor2",
-      "explanation_url": "corrections/absorption/#eq-hewat",
-      "edi_key": "_absorption.abscor2"
-    },
-    {
       "id": "absorption.mu_r",
       "name": "mu_r",
       "category": "absorption",

@@ -5,9 +5,9 @@
 # events from this repository (never a fork's pull request) and in the reviewed `crysta-sdk`
 # environment, which holds the app key. A fork's pull request runs the jobs that need no token, and
 # the pin-currency job without its token steps.
-# Each job builds the native code itself: no artifact carries crysta's object code, and no
-# artifact is named after a runner. The latency bank runs on the self-hosted fleet, by dispatch
-# only (bank-latency.yml).
+# Compatible native consumers share this run's validated Edi artifacts and qualified SDK.
+# Qt and browser configurations keep their own builds; compiler caches cover both.
+# The latency bank runs on the self-hosted fleet by dispatch only (bank-latency.yml).
 name: CI
 
 on:
@@ -58,8 +58,8 @@ jobs:
         with:
           filters: |
             app_build: ['tools/ci/app-build.sh']
-            # The assistant is native-only in parts, so its sources are the ones a wasm build catches out.
-            wasm_build: ['app/src/assistant*']
+            # Qualify app, browser transport and publication infrastructure changes.
+            wasm_build: ['app/**', 'tools/ci/wasm*', '.github/workflows/ci.yml', '.github/workflows/pages.yml', '.github/actions/wasm-cache/**', 'tests/system/manual/*.mjs', 'tests/fixtures/e04_t11_wasm/**', 'tests/fixtures/survey/**', 'tests/system/py/test_survey_events.py', 'tests/integration/py/test_preferences_and_survey.py', 'website/surfaces/docs/assets/survey/**', 'website/surfaces/docs/about/survey.md', 'website/surfaces/mkdocs.yml', 'website/build.py', 'pixi.toml', 'pixi.lock', 'tools/ci/crysta*', 'tools/ci/compiler_cache.py']
 
   # The crysta SDK this run builds against, once per crysta commit (edi ADR-0083).
   crysta-sdk:
@@ -107,48 +107,54 @@ jobs:
           - platform: macOS
             runner: &macos macos-15
             sdk: osx-arm64
+          - platform: Windows
+            runner: windows-2022
+            sdk: win-64
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v5
+      - &windows-git
+        name: Enable Windows-compatible source paths
+        if: runner.os == 'Windows'
+        run: |
+          git config --global core.longpaths true
+          git config --global core.protectNTFS false
+      - &native-checkout
+        uses: actions/checkout@v5
+        if: runner.os != 'Windows'
+        with:
+          fetch-depth: 0
+      - &windows-checkout
+        name: Check out Windows-compatible source paths
+        if: runner.os == 'Windows'
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !**/[aA][uU][xX]
+            !**/[aA][uU][xX].*
+            !**/[cC][oO][nN]
+            !**/[cC][oO][nN].*
+            !**/[pP][rR][nN]
+            !**/[pP][rR][nN].*
+            !**/[nN][uU][lL]
+            !**/[nN][uU][lL].*
+            !**/[cC][oO][mM][1-9]
+            !**/[cC][oO][mM][1-9].*
+            !**/[lL][pP][tT][1-9]
+            !**/[lL][pP][tT][1-9].*
+      - &windows-compiler
+        name: Set up the Windows compiler
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          toolset: '14.44'
       - uses: ./.github/actions/setup-pixi
       # The compiler cache (core), between runs: this job keeps it for the next run.
-      - id: ccache
-        uses: ./.github/actions/ccache
-        with:
-          max-size: 400M
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/edi-ccache
-          key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            ccache-core-${{ steps.ccache.outputs.key-prefix }}
-            ccache-core-${{ runner.os }}-${{ runner.arch }}-
-      - uses: ./.github/actions/crysta-sdk
-        with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
-      - name: Build the native code once (core-build, then edi_tests in the same tree)
-        run: pixi run core-build
-        env:
-          EDI_CORE_TARGETS: edi_tests
-      - name: C++ unit tests
-        run: pixi run --skip-deps cpp-test
-      - name: Standalone and Python fit output agree
-        run: pixi run --skip-deps cli-stream-parity
-
-  audit:
-    name: audit
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
-    environment: crysta-sdk
-    # After the core tests, which take the runners first. It runs even when core fails, so one round lists
-    # every failure.
-    needs: [changes, core, crysta-sdk]
-    runs-on: *linux
-    env:
-      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: ./.github/actions/setup-pixi
-      # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
       - id: ccache
         uses: ./.github/actions/ccache
         with:
@@ -162,30 +168,41 @@ jobs:
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
         with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
-      - name: Build the native code
+          platform: ${{ matrix.sdk }}
+      - name: Build the native code once (core-build, then edi_tests in the same tree)
         run: pixi run core-build
-      - name: Runtime-manifest equality audit
-        run: pixi run per-pr-audit
+        env:
+          EDI_CORE_TARGETS: edi_tests edi_integration_tests
+      - name: Pack the validated native build
+        run: pixi run python tools/ci/edi_native.py pack --out build/edi-native-artifact
+      - uses: actions/upload-artifact@v4
+        with:
+          name: edi-native-${{ matrix.sdk }}
+          path: build/edi-native-artifact
+          retention-days: 7
+          if-no-files-found: error
+      - name: C++ unit tests
+        run: pixi run --skip-deps cpp-test
+      - name: Standalone and Python fit output agree
+        run: pixi run --skip-deps cli-stream-parity
+      - name: Save the native compiler cache after the attempt
+        if: ${{ !cancelled() && steps.ccache.outcome == 'success' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
 
-  core:
-    name: core · ${{ matrix.platform }}
-    if: github.event.pull_request.head.repo.fork == false
+
+  audit:
+    name: audit
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
     environment: crysta-sdk
-    needs: [changes, crysta-sdk]
+    # After the core tests, which take the runners first. It runs even when core fails, so one round lists
+    # every failure.
+    needs: [changes, core, crysta-sdk]
+    runs-on: *linux
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: Linux
-            runner: *linux
-            sdk: linux-64
-          - platform: macOS
-            runner: *macos
-            sdk: osx-arm64
-    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -206,6 +223,65 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - name: Build the native code
+        run: pixi run core-build
+      - name: Runtime-manifest equality audit
+        run: pixi run per-pr-audit
+
+  core:
+    name: core · ${{ matrix.platform }}
+    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.crysta-sdk.result == 'success' && github.event.pull_request.head.repo.fork == false }}
+    environment: crysta-sdk
+    needs: [changes, native, crysta-sdk]
+    env:
+      CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: Linux
+            runner: *linux
+            sdk: linux-64
+          - platform: macOS
+            runner: *macos
+            sdk: osx-arm64
+          - platform: Windows
+            runner: windows-2022
+            sdk: win-64
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - *windows-git
+      - *native-checkout
+      - *windows-checkout
+      - *windows-compiler
+      - uses: ./.github/actions/setup-pixi
+      - name: Keep the selected Bash available to test subprocesses
+        shell: bash
+        run: python tools/ci/native_shell.py "$BASH"
+      # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 400M
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-core-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-core-${{ steps.ccache.outputs.key-prefix }}
+            ccache-core-${{ runner.os }}-${{ runner.arch }}-
+      - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ matrix.sdk }}
+      - uses: ./.github/actions/edi-native
+        with:
+          platform: ${{ matrix.sdk }}
       - name: Build the native code
         run: pixi run core-build
       - name: The crysta consumer proof
@@ -296,6 +372,9 @@ jobs:
             ccache-core-${{ steps.ccache.outputs.key-prefix }}
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
@@ -440,7 +519,7 @@ jobs:
     if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && inputs.core_only != true }}
     environment: crysta-sdk
     # After the native build and the core tests of this run, which take the runners first. Each job still
-    # builds its own tree (no artifact carries crysta).
+    # validates and restores this run's default native build before notebook execution.
     needs: [changes, native, core, crysta-sdk]
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
@@ -461,6 +540,9 @@ jobs:
             ccache-core-${{ steps.ccache.outputs.key-prefix }}
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
@@ -492,9 +574,18 @@ jobs:
           - platform: macOS
             runner: *macos
             sdk: osx-arm64
+          - platform: Windows
+            runner: windows-2022
+            sdk: win-64
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v5
+      - *windows-git
+      - *native-checkout
+      - *windows-checkout
+      - *windows-compiler
       - uses: ./.github/actions/setup-pixi
       # The compiler cache (core), between runs: the native job keeps it; this job only reads it.
       - id: ccache
@@ -510,7 +601,10 @@ jobs:
             ccache-core-${{ runner.os }}-${{ runner.arch }}-
       - uses: ./.github/actions/crysta-sdk
         with:
-          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+          platform: ${{ matrix.sdk }}
+      - uses: ./.github/actions/edi-native
+        with:
+          platform: ${{ matrix.sdk }}
       - name: Build the native code
         run: pixi run core-build
       - name: Execute the CLI projects through python -m edi fit
@@ -565,6 +659,9 @@ jobs:
       - uses: ./.github/actions/crysta-sdk
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       - name: Build the native code
         run: pixi run core-build
       - name: Execute notebooks for rendering
@@ -611,6 +708,9 @@ jobs:
         with:
           max-size: 1G
       - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       # A pull request builds and tests the app only when it changes an app input (tools/ci/app_inputs.py) or runs
@@ -696,8 +796,8 @@ jobs:
       - name: qmlformat changes nothing
         if: steps.inputs.outputs.run == 'true'
         run: pixi run -e app --skip-deps app-format-check
-      # The onboarding tests' prerequisites, made before the tests that use them and outside their timing: the two
-      # standalone probes (the app group, the Qt Quick tier) and a documentation capture from the app just built.
+      # The Qt test prerequisites, made before the tests that use them and outside their timing: standalone
+      # log, feedback and browser-geometry probes, plus a documentation capture from the app just built.
       - name: Prepare the onboarding test prerequisites
         if: (github.event_name != 'pull_request') && steps.inputs.outputs.run == 'true'
         run: pixi run -e app --skip-deps onboarding-probes && pixi run -e app --skip-deps onboarding-capture
@@ -737,46 +837,22 @@ jobs:
       - name: app-build recovers a build/app configured under another toolchain
         if: (needs.changes.outputs.app_build == 'true') && steps.inputs.outputs.run == 'true'
         run: pixi run -e app --skip-deps app-build-recovery
-      # The app compiled for WebAssembly when the assistant's sources changed (the changes job's `wasm_build`):
-      # parts of the assistant are native-only, and the full WebAssembly job runs on main only, so a pull request
-      # would not notice a broken web build without this. One kit, no site checks; the toolchain comes from the
-      # same cache as the WebAssembly job's.
-      - name: Restore the WebAssembly toolchain
-        if: ${{ !cancelled() && matrix.platform == 'Linux' && needs.changes.outputs.wasm_build == 'true' }}
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/edi-wasm
-          key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}
-      # The step itself runs on every Linux app job, an earlier failure notwithstanding, so the CI contract can
-      # require it; it compiles only when the pull request changed the assistant's sources and says so either way.
       - name: Compile the app for WebAssembly
         if: ${{ !cancelled() && matrix.platform == 'Linux' }}
-        run: |
-          if [ "$EDI_WASM_OWED" != true ]; then
-            echo "compile-wasm: not owed, no change under app/src/assistant* in this run"
-            exit 0
-          fi
-          echo "compile-wasm: owed, the multithread kit follows"
-          pixi run crysta-sdk
-          pixi run -e app wasm-toolchain
-          pixi run -e app --skip-deps wasm-build multithread
-          # The linked web app holds no assistant code, QML or resources (ADR-0023 §6).
-          bash tools/ci/wasm-assistant-check.sh build/wasm/multithread/app
-        env:
-          EDI_WASM_OWED: ${{ needs.changes.outputs.wasm_build }}
+        run: echo "WebAssembly builds and browser checks run in the dedicated app · WebAssembly job."
 
-  # The app as a WebAssembly site (ADR-0023): both Qt wasm kits, the start page and the service-worker shim,
+  # The app as a WebAssembly site (ADR-0023): the multithread kit, start page and isolation shim,
   # packed as one site folder and uploaded as the `edi-webapp` artifact. The toolchain (Emscripten, Qt's wasm
-  # kits, Eigen, Chrome) installs into the runner's ~/.cache/edi-wasm on each run. crysta is compiled for
-  # wasm from the pinned SDK's source, per kit.
+  # kit, Eigen, Chrome) installs into the runner's ~/.cache/edi-wasm on each run. crysta is compiled for
+  # wasm from the pinned SDK's source.
   app-wasm:
     name: app · WebAssembly
-    # About 40 minutes, so pull requests skip it; main pushes, the nightly and manual runs keep it.
-    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && github.event_name != 'pull_request' && inputs.core_only != true }}
+    # Browser input changes qualify the multithread kit and both isolation routes on pull requests too.
+    if: ${{ !cancelled() && needs.changes.result == 'success' && github.event.pull_request.head.repo.fork == false && (github.event_name != 'pull_request' || needs.changes.outputs.wasm_build == 'true') && inputs.core_only != true }}
     environment: crysta-sdk
-    # After the core tests, which take the runners first. It runs even when core fails, so one round lists
-    # every failure.
-    needs: [changes, core, crysta-sdk]
+    # Browser qualification restores the native producer artifact after it finishes;
+    # its own scientific checks remain independent of the native test outcome.
+    needs: [changes, native, crysta-sdk]
     runs-on: *linux
     env:
       CRYSTA_SOURCE_SHA: ${{ needs.changes.outputs.crysta_sha }}
@@ -785,36 +861,34 @@ jobs:
         with:
           fetch-depth: 0  # the app's version line is `git describe`
       - uses: ./.github/actions/setup-pixi
-      # The compiler cache (wasm), between runs: this job keeps it for the next run.
-      - id: ccache
-        uses: ./.github/actions/ccache
-        with:
-          max-size: 2G
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/edi-ccache
-          key: ccache-wasm-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            ccache-wasm-${{ steps.ccache.outputs.key-prefix }}
-            ccache-wasm-${{ runner.os }}-${{ runner.arch }}-
+      - uses: ./.github/actions/wasm-cache
+        id: wasm-cache
       - uses: ./.github/actions/crysta-sdk
+        with:
+          platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
+      - uses: ./.github/actions/edi-native
         with:
           platform: ${{ runner.os == 'macOS' && 'osx-arm64' || 'linux-64' }}
       # The pinned crysta SDK and its source (the wasm builds compile that source), and the native build the
       # checks' tests import.
       - name: Build the native code
         run: pixi run core-build
-      # Emscripten, Qt's wasm kits, Eigen and Chrome, kept between runs and keyed by their pins (wasm-env.sh); the
-      # install step below checks each one's recorded version and reinstalls only what differs.
-      - name: Restore the WebAssembly toolchain
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/edi-wasm
-          key: edi-wasm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/wasm-env.sh', 'tests/fixtures/web_parallel/package-lock.json') }}
       - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
         run: pixi run -e app wasm-toolchain
-      - name: Build both kits and pack the site
+      - name: Survey event windows in the browser
+        run: pixi run --skip-deps python -m pytest tests/system/py/test_survey_events.py
+      - name: Reset browser compiler-cache statistics
+        run: pixi run --skip-deps ccache --zero-stats
+      - name: Build the multithread kit and pack the site
         run: pixi run -e app --skip-deps wasm-build
+      - name: Browser compiler-cache statistics
+        if: ${{ !cancelled() }}
+        run: pixi run --skip-deps ccache --show-stats --verbose
+      - name: Save the WebAssembly toolchain and compiler cache
+        if: ${{ !cancelled() && steps.wasm-cache.outcome == 'success' }}
+        uses: ./.github/actions/wasm-cache
+        with:
+          operation: save
       - name: Upload the site
         uses: actions/upload-artifact@v4
         with:
@@ -822,12 +896,23 @@ jobs:
           path: build/wasm/site
           if-no-files-found: error
           # The repository's default retention: the site is downloaded by hand.
+      - name: Retain the browser CLI and its source identity
+        uses: actions/upload-artifact@v4
+        with:
+          name: edi-wasm-cli
+          path: |
+            build/wasm/multithread/crysta-prefix/bin/crysta*
+            build/wasm/multithread/crysta-prefix/.edi-wasm-key
+            build/wasm/multithread/app/app/CRYSTA_SOURCE_SHA
+          include-hidden-files: true
+          retention-days: 7
+          if-no-files-found: error
       # The wasm crysta CLI's fit against the native reference, the zip's contents, and the app in headless
       # Chrome for each build.
       - name: Check the site in the browser
         run: >-
           pixi run --skip-deps wasm-check "$RUNNER_TEMP/edi-webapp-checks" tests/system/manual/e04_t11_browser.mjs
-          tests/system/py/test_e04_t11_wasm_fit.py tests/system/py/test_e04_t11_wasm_delivery.py
+          tests/system/py/test_e04_t11_wasm_fit.py tests/system/py/test_e04_t11_wasm_delivery.py tests/system/py/test_web_multithread_loader.py
       # The multithread kit's parallel fit: all three routes timed against each other (the speed ratio is in the log)
       # and crysta's executed-body witness built from the same crysta source with the same options. It takes about
       # 20 minutes, so it runs on main pushes, the nightly run and dispatch, not on pull requests.

@@ -13,6 +13,23 @@ import tomllib
 from pathlib import Path
 
 root = Path.cwd()
+
+
+def invoke(command, env):
+    """Keep each authored tool spy behind its explicit native interpreter."""
+    target = Path(command[0])
+    if not target.is_file() and (root / 'bin' / command[0]).is_file():
+        target = root / 'bin' / command[0]
+    if target.is_file():
+        with target.open('rb') as stream:
+            scripted = stream.read(2) == b'#!'
+    else:
+        scripted = False
+    if scripted:
+        command = [env['FIXTURE_NATIVE_BASH'], target.as_posix(), *command[1:]]
+    return subprocess.run(command, env=env, check=True)
+
+
 manifest = tomllib.loads((root / 'pixi.toml').read_text())
 tasks = dict(manifest['tasks'])
 for feature in manifest.get('feature', {}).values():
@@ -41,7 +58,7 @@ def run(name, extra=(), environment=None, inherited=None):
         return
     seen.add(identity)
     if name not in tasks:
-        subprocess.run([name, *extra], check=True)
+        invoke([name, *extra], os.environ)
         return
     if not (
         name.startswith(('app-', 'verify')) or name in {'group-app', 'core-build', 'merge-tasks'}
@@ -57,11 +74,21 @@ def run(name, extra=(), environment=None, inherited=None):
             run(dep['task'], environment=dep.get('environment'), inherited=selected)
     env = {**os.environ, 'PIXI_ENVIRONMENT_NAME': selected, **spec.get('env', {})}
     cmd = spec.get('cmd', '')
+    if name.startswith('app-test-scan-') and isinstance(cmd, str) and 'cmake' in cmd:
+        with Path(env['E04_CALLS']).open('a', encoding='utf-8') as stream:
+            stream.write('check:' + name + '\n')
+        return
     if cmd:
         if isinstance(cmd, list):
-            subprocess.run([*cmd, *extra], env=env, check=True)
+            invoke(
+                [env['FIXTURE_NATIVE_BASH'] if cmd[0] == 'bash' else cmd[0], *cmd[1:], *extra], env
+            )
         else:
-            subprocess.run(['bash', '-c', cmd + ' ' + shlex.join(extra)], env=env, check=True)
+            subprocess.run(
+                [env['FIXTURE_NATIVE_BASH'], '-c', cmd + ' ' + shlex.join(extra)],
+                env=env,
+                check=True,
+            )
 
 
 run(args[0], args[1:], environment=environment)

@@ -5,29 +5,98 @@
 # Fit two phases, YAlO₃ and corundum Al₂O₃, in one constant-wavelength neutron pattern from SPODI
 # at FRM II, measured at 3 K, with a shared Bérar-Baldinozzi profile and cylinder absorption.
 #
-# The project is the catalogue case `pd-neut-cwl_yalo3-al2o3-spodi`, the one the command line and
-# the app's Examples open.
+# It builds the catalogue case `pd-neut-cwl_yalo3-al2o3-spodi` step by step: the same project the
+# command line fits and the app's Examples open.
+
+# %% [markdown]
+# ## Import the library
 
 # %%
 import easydiffraction as edi
 
 # %% [markdown]
-# ## Load the project
+# ## Define the project
+#
+# A new project is empty: it holds no structure and no experiment until you add them.
 
 # %%
-project_path = edi.download_data('pd-neut-cwl_yalo3-al2o3-spodi', destination='data')
-project = edi.Project.load(project_path)
-yalo3 = project.structures['YAlO3']
-alumina = project.structures['Al2O3']
-experiment = project.experiments['spodi']
+project = edi.Project(name='pd-neut-cwl_yalo3-al2o3-spodi')
 
 # %% [markdown]
-# The project marks what its fit frees. The fit below frees it in stages, so start with all of it
-# fixed.
+# ## Define the structures
+#
+# Load the two structures from EasyDiffraction's collection. Each CIF gives its space group, cell
+# and atom sites.
 
 # %%
-for parameter in project.free_parameters:
-    parameter.free = False
+path = edi.download_data('pd-neut-cwl_yalo3-al2o3-spodi-YAlO3', destination='data')
+project.structures.add_from_cif_path(path)
+path = edi.download_data('pd-neut-cwl_yalo3-al2o3-spodi-Al2O3', destination='data')
+project.structures.add_from_cif_path(path)
+yalo3 = project.structures['YAlO3']
+alumina = project.structures['Al2O3']
+
+# %%
+project.display.structure('YAlO3')
+
+# %% [markdown]
+# ## Define the experiment
+#
+# Create the experiment from the measured data in EasyDiffraction's collection, then describe the
+# instrument, the peak profile, the background and the structure it links.
+
+# %%
+data_path = edi.download_data('pd-neut-cwl_yalo3-al2o3-spodi-spodi-data', destination='data')
+project.experiments.add_from_data_path(
+    name='spodi',
+    data_path=data_path,
+    sample_form='powder',
+    beam_mode='constant wavelength',
+    radiation_probe='neutron',
+    scattering_type='bragg',
+)
+experiment = project.experiments['spodi']
+experiment.neutron_scattering_length = 'sears1992'
+experiment.peak.type = 'cwl-pseudo-voigt-berar-baldinozzi'
+experiment.absorption.type = 'cylinder-hewat'
+experiment.instrument.name = 'SPODI'
+experiment.instrument.facility = 'FRM II'
+experiment.peak.broad_gauss_u = 0.04
+experiment.peak.broad_gauss_v = -0.05
+experiment.peak.broad_gauss_w = 0.1
+experiment.peak.mixing_eta_0 = 0.1
+experiment.peak.asym_beba_limit = 160
+experiment.instrument.setup_wavelength = 1.54816
+experiment.absorption.mu_r = 0.0221
+experiment.excluded_regions.create(start=0, end=4)
+experiment.excluded_regions.create(start=153.95, end=180)
+experiment.linked_structures.create(structure_id='YAlO3', scale=30)
+experiment.linked_structures.create(structure_id='Al2O3', scale=0.2)
+experiment.background.create(position=4.0500, intensity=2100.0)
+experiment.background.create(position=4.7770, intensity=2100.0)
+experiment.background.create(position=6.7860, intensity=2100.0)
+experiment.background.create(position=13.2590, intensity=2100.0)
+experiment.background.create(position=18.1700, intensity=2100.0)
+experiment.background.create(position=23.7500, intensity=2100.0)
+experiment.background.create(position=32.0090, intensity=2100.0)
+experiment.background.create(position=36.4730, intensity=2100.0)
+experiment.background.create(position=47.1880, intensity=2100.0)
+experiment.background.create(position=52.0980, intensity=2100.0)
+experiment.background.create(position=59.0180, intensity=2100.0)
+experiment.background.create(position=69.9550, intensity=2100.0)
+experiment.background.create(position=80.0000, intensity=2100.0)
+experiment.background.create(position=90.4910, intensity=2100.0)
+experiment.background.create(position=101.2050, intensity=2100.0)
+experiment.background.create(position=106.3390, intensity=2100.0)
+experiment.background.create(position=108.7950, intensity=2100.0)
+experiment.background.create(position=112.5890, intensity=2100.0)
+experiment.background.create(position=119.2860, intensity=2100.0)
+experiment.background.create(position=128.2140, intensity=2100.0)
+experiment.background.create(position=133.1250, intensity=2100.0)
+experiment.background.create(position=140.9380, intensity=2100.0)
+experiment.background.create(position=145.6250, intensity=2100.0)
+experiment.background.create(position=148.0800, intensity=2100.0)
+experiment.background.create(position=151.9000, intensity=2100.0)
 
 # %%
 project.display.pattern('spodi')
@@ -160,8 +229,16 @@ project.display.structure('YAlO3')
 project.display.structure('Al2O3')
 
 # %% [markdown]
+# ## Report
+#
+# The HTML report draws the measured, calculated and difference patterns with the reflection
+# positions, and lists the structures, the experiments and the fit. Open it in a browser.
+
+# %%
+project.report.save_html('pd-neut-cwl_yalo3-al2o3-spodi.html')
+
+# %% [markdown]
 # ## Save the project
 
 # %%
 project.save_as('pd-neut-cwl_yalo3-al2o3-spodi')
-project.report.save_html('pd-neut-cwl_yalo3-al2o3-spodi.html')

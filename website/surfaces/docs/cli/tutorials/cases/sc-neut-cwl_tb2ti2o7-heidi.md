@@ -2,40 +2,77 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit the pyrochlore Tb₂Ti₂O₇ to constant-wavelength neutron single-crystal data from HEiDi at
+MLZ, with anisotropic displacements and Becker-Coppens extinction.
+
+It builds the catalogue case `sc-neut-cwl_tb2ti2o7-heidi` step by step: the same project the
+command line fits and the app's Examples open.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p sc-neut-cwl_tb2ti2o7-heidi/structures sc-neut-cwl_tb2ti2o7-heidi/experiments sc-neut-cwl_tb2ti2o7-heidi/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name             sc-neut-cwl_tb2ti2o7-heidi
+_metadata.title "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)"
+_metadata.description "Single crystal · Anisotropic displacements and extinction from a rough start"
+_metadata.authors .
+_metadata.created          "22 Oct 2026 18:00:00"
+_metadata.last_modified    "22 Oct 2026 18:00:00"
+_metadata.timestamp        ?
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data sc-neut-cwl_tb2ti2o7-heidi
+    edi download-data sc-neut-cwl_tb2ti2o7-heidi-tb2ti2o7
+    mv data/sc-neut-cwl_tb2ti2o7-heidi-tb2ti2o7.edi sc-neut-cwl_tb2ti2o7-heidi/structures/tb2ti2o7.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data sc-neut-cwl_tb2ti2o7-heidi
+    python -m edi download-data sc-neut-cwl_tb2ti2o7-heidi-tb2ti2o7
+    mv data/sc-neut-cwl_tb2ti2o7-heidi-tb2ti2o7.edi sc-neut-cwl_tb2ti2o7-heidi/structures/tb2ti2o7.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/heidi.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
+
+    ```console
+    edi download-data sc-neut-cwl_tb2ti2o7-heidi-heidi
+    mv data/sc-neut-cwl_tb2ti2o7-heidi-heidi.edi sc-neut-cwl_tb2ti2o7-heidi/experiments/heidi.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data sc-neut-cwl_tb2ti2o7-heidi-heidi
+    mv data/sc-neut-cwl_tb2ti2o7-heidi-heidi.edi sc-neut-cwl_tb2ti2o7-heidi/experiments/heidi.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_extinction.domain_radius 25
-_extinction.mosaic_spread 0
-tb2ti2o7 4
+_fitting_mode.type single
+
+_edi.schema_version 3
 ```
-
-In `structures/tb2ti2o7.edi`, remove the `()` from every value; they now read:
-
-```edi
-O1 O 0.33 0.125 0.125 f 48 1 0.0026 Uani
-Tb 0.0026 0.0026 0.0026 0 0 0
-```
-
-The same for every other row (3 more).
 
 ## Scale
 

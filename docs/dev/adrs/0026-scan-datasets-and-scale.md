@@ -1,5 +1,7 @@
 # 0026. Scan datasets and their scale
 
+**Amended 2026-11-13:** Browser delivery is multithread-only as of 2026-11-13 (ADR-0023 §3). The earlier single-threaded browser read exception no longer describes a shipped target; browser scan reads use the worker route.
+
 - **Status:** Accepted
 - **Date:** 2026-10-06
 - **Implementation:** 🟡 Partially implemented: datasets, runs, the template dataset and the bounded read-ahead are shipped; the scale gate runs to 100,000 files

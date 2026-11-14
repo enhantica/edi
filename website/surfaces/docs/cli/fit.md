@@ -128,3 +128,31 @@ The first command writes the selected report formats except PDF. The second chec
 ## Continue visually
 
 Open the saved project in [the application](../application/index.md). Its structures and experiments are the same ones the command line reads.
+
+
+## Performance
+
+The app's calculation preferences are available for each command invocation:
+
+```sh
+edi fit PROJECT --threads auto --parallel-fits 1
+edi fit PROJECT --threads 4 --parallel-fits 2
+python -m edi fit PROJECT --threads 4 --parallel-fits 2
+```
+
+`--threads` sets threads per calculation; `auto` uses the engine's normal policy. `--parallel-fits`
+sets how many scan files are fitted together. The defaults are `auto` and `1`. These choices belong
+to the current process and are not saved as project preferences.
+
+When scan files run in parallel, each fit uses one thread. In a sequential scan, a group of files
+starts from the preceding group's result, so using more than one parallel fit can change starting
+values and results. Use `--parallel-fits 1` for a strict chain in which each file starts from its
+immediate predecessor.
+
+### Scan progress
+
+Scan fits print the project and column headings once. The row reports completed files, progress,
+elapsed time, estimated time remaining, successful and failed fits, and the latest chi-square.
+On a terminal it updates in place; narrower terminals omit optional columns to keep the row
+within the window. Redirected output writes one row per completed file. On a resumed fit,
+elapsed time is marked `this run` and the estimate uses only files fitted during that invocation.

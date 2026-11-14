@@ -55,13 +55,15 @@ def test_invalid_tutorial_subsets_are_refused(selection):
 
 
 @pytest.mark.parametrize(
-    'damage', [None, 'missing-prefix', 'extra-link', 'missing-dash', 'wrong-case']
+    'damage',
+    [None, 'missing-prefix', 'extra-link', 'missing-dash', 'wrong-case', 'link-text', 'svg-text'],
 )
 def test_subset_catalogue_observer_requires_prefix_dashes_and_only_declared_links(damage):
     soup = BeautifulSoup(
         '<table><tr><td>Python only: Control</td><td>—</td>'
         '<td><a href="python/tutorials/cases/control/" aria-label="Open the Python tutorial">'
-        '<svg></svg></a></td><td>—</td></tr></table>',
+        '<svg><title>Python</title><desc>Interface icon</desc></svg></a></td>'
+        '<td>—</td></tr></table>',
         'html.parser',
     )
     row = soup.tr
@@ -74,6 +76,12 @@ def test_subset_catalogue_observer_requires_prefix_dashes_and_only_declared_link
         row.find_all('td')[3].string = ''
     elif damage == 'wrong-case':
         row.a['href'] = 'python/tutorials/cases/other/'
+    elif damage == 'link-text':
+        row.a.append('Unexpected visible text')
+    elif damage == 'svg-text':
+        row.a.svg.append(
+            BeautifulSoup('<text>Unexpected visible text</text>', 'html.parser').find('text')
+        )
     if damage:
         with pytest.raises(AssertionError, match='Gate 3/4:'):
             assert_catalogue_coverage(row, ['python'], case='control')

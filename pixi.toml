@@ -13,17 +13,19 @@ platforms = [
     # glibc 2.28 sysroot and the 13.4 deployment target (MACOSX_DEPLOYMENT_TARGET below).
     { platform = "linux-64", glibc = "2.34" },
     { platform = "osx-arm64", macos = "14.0" },
-]  # win-64 returns once the bash-based tasks get platform shims
+    "win-64",
+]
 # The org launcher pin: pixi itself refuses to run under any other launcher version, locally and
 # in CI alike. CI installs exactly this version via .github/actions/setup-pixi; the hub parity
 # gate proves the two agree.
 requires-pixi = "==0.76.2"
 
 [activation.env]
+PYTHONUTF8 = "1"
 # The crysta commit edi builds (edi ADR-0083): its CI packs that commit's SDK once per platform
 # (.github/workflows/crysta-sdk.yml) and every job and product uses it. `pixi run crysta-sdk-pin <sha>`
 # moves it.
-CRYSTA_COMMIT = "2b6b981e21194f9a76074742dd0e148736ca4d9b"
+CRYSTA_COMMIT = "7e93891341f93c96569ade2bfbe3b5bb29df07d5"
 # ONE ruff cache, outside every source and test tree. Same class as crysta's: ruff writes
 # `.ruff_cache` into the directory it is invoked from, and a stray cache can keep a RETIRED
 # directory alive after its tracked files are gone, tripping a layout gate on a folder that
@@ -39,7 +41,7 @@ PYTHONPYCACHEPREFIX = '$PIXI_PROJECT_ROOT/build/pycache'
 COVERAGE_FILE = '$PIXI_PROJECT_ROOT/build/.coverage'
 
 [dependencies]
-python = ">=3.12"
+python = "3.14.*"
 # Pinned to the version the committed pixi.lock already resolves (an unpinned linter makes lint
 # non-reproducible — a new ruff release could add rules and turn CI red with no code change).
 # The pin targets the locked version exactly, so the lock is unchanged by construction.
@@ -47,19 +49,8 @@ ruff = "==0.15.20"
 pytest = "*"
 # CI splits the system tier into parallel jobs by recorded test times (tools/ci/system-tests-part.sh).
 pytest-split = ">=0.11.0,<0.12"
-# Owner ruling 67: the shell is pinned like any other toolchain input, so
-# `pixi run bash …` resolves the same bash on every leg. macOS ships bash 3.2 (2007) while
-# Linux runs 5.x, and edi's CI has a macOS leg. Declared HERE rather than in the linux-64
-# target table: that table holds the Linux compilers and coverage tools, and the shell is needed on every
-# platform.
-# Global is safe because every platform edi declares has a conda-forge bash; if win-64 returns
-# (see `platforms` above) this must become per-platform, and the lock will refuse loudly first.
-bash = ">=5.2"
-# Same class, same sweep: GNU userland assumed present. `sha256sum` is coreutils and macOS
-# ships `shasum` instead. Global rather than per-platform because every platform edi
-# declares (linux-64, osx-arm64) has a conda-forge coreutils — verified, not assumed — and
-# edi declares no win-64, which is the one platform that has none.
-coreutils = ">=9"
+# Unix shells and GNU tools are declared in their target tables. Windows CI uses Git for
+# Windows' Bash; the same scripts run under the workflow's explicit Bash shell.
 numpy = "*"
 # A compiler cache for the core build. CI switches it on (CMAKE_CXX_COMPILER_LAUNCHER, set by
 # .github/actions/ccache) and keeps its directory between runs; a local build uses it only when asked.
@@ -94,9 +85,6 @@ ninja = "*"
 # which crysta refused, and builds silently used a system Eigen instead.
 eigen = "==3.4.0"
 sleef = "*"
-# Explicit OpenMP runtime/headers on every supported platform; the compiler toolchain also pulls
-# libgomp on Linux, while llvm-openmp supplies the portable CMake find-package seam used by crysta.
-llvm-openmp = "*"
 pytest-cov = "*"
 # Declared explicitly, not relied on transitively: lib/edi/verification.py reads the crysta
 # corpus manifest to resolve a case's pinned FullProf reference, so this is a PRODUCTION
@@ -110,12 +98,16 @@ pyyaml = "*"
 doctest = "*"
 # Non-GUI QML expression gates execute JavaScript in this declared environment.
 nodejs = "==22.23.2"
+# Screenshot contract checks decode pixels in the default test environment.
+libwebp-base = "==1.6.0"
 
 # macOS SDK 27 (Xcode 27) needs Clang and libc++ 23: with Clang 19, libc++'s <complex> no longer sees INFINITY and
 # NAN through the SDK's math.h. The Mac drivers are named directly, since the cxx-compiler metapackage holds an older
 # Clang. ld64 reads the SDK's text stubs through tapi, and only tapi build 4 or later skips the arm64e.x1 slices SDK
 # 27 adds (conda-forge tapi-feedstock #21). The same toolchain as crysta's; ADR-0017.
 [target.osx-arm64.dependencies]
+bash = ">=5.2"
+coreutils = ">=9"
 tapi = { version = "==1600.0.11.8", build = "hb561403_4" }
 clang_osx-arm64 = "23.*"
 clangxx_osx-arm64 = "23.*"
@@ -156,11 +148,21 @@ llvm-openmp = "23.*"
 MACOSX_DEPLOYMENT_TARGET = '13.4'
 
 [target.linux-64.dependencies]
+bash = ">=5.2"
+coreutils = ">=9"
+llvm-openmp = "*"
 cxx-compiler = "*"
 clangxx = "22.*"
 llvm-tools = "22.*"
 # The core and its wheels link against glibc 2.28 although the platform's floor is 2.34 (the app's).
 sysroot_linux-64 = "2.28.*"
+
+# Same compiler/CRT and OpenMP ABI as the qualified Windows SDK and installer environment.
+[target.win-64.dependencies]
+cxx-compiler = "*"
+vs2022_win-64 = { version = "==19.44.35207", build = "ha74f236_42" }
+vc14_runtime = { version = "==14.51.36247", build = "habf1de7_42" }
+vcomp14 = { version = "==14.51.36247", build = "habf1de7_42" }
 
 # ADR-0015: the Qt/QML app host builds in its own environment, so the default environment stays Qt-free for
 # the core, the bindings and CI legs that never touch the app. qt6-main is LGPL-3.0-only on conda-forge.
@@ -234,8 +236,8 @@ CMAKE_C_COMPILER_LAUNCHER = "ccache"
 
 [feature.app.tasks]
 app-test-scan-lines = { cmd = "cmake -S tests/fixtures/scan_line_updates -B build/scan-line-updates -G Ninja && cmake --build build/scan-line-updates -j 4 && QT_QPA_PLATFORM=offscreen build/scan-line-updates/scan_line_updates" }
-app-test-scan-refresh = { cmd = "cmake --build build/app --target edi_scan_refresh_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_scan_refresh_tests" }
-app-test-scan-save = { cmd = "cmake --build build/app --target edi_scan_save_tests --config Release -j 4 && QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software build/app/app/edi_scan_save_tests", depends-on = ["app-build"] }
+app-test-scan-refresh = { cmd = "cmake --build build/app --target edi_scan_refresh_tests -j 4 && QT_QPA_PLATFORM=offscreen build/app/app/edi_scan_refresh_tests", depends-on = [{ task = "app-build", environment = "app" }] }
+app-test-scan-save = { cmd = "cmake --build build/app --target edi_scan_save_tests --config Release -j 4 && QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software build/app/app/edi_scan_save_tests", depends-on = [{ task = "app-build", environment = "app" }] }
 app-test-updates = { cmd = "cmake --build build/app --target edi_desktop_update_tests -j 4 && QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software build/app/app/edi_desktop_update_tests", depends-on = ["app-build"] }
 release-check = "python -m pytest tests/fixtures/releases/check_*.py tests/unit/py/test_release_promotion.py --noconftest -o addopts= -q"
 installer-check = "pixi run --manifest-path tools/installer/pixi.toml python -m pytest tests/fixtures/installer/check_*.py --noconftest -o addopts= -q"
@@ -256,9 +258,10 @@ app-run = { cmd = ["bash", "tools/ci/app-run.sh"] }
 # Development only: build crysta from a local checkout, link the app to it and start it
 # (`pixi run -e app app-with-crysta ../crysta`; docs/dev/local-crysta.md).
 app-with-crysta = { cmd = ["bash", "tools/dev/app-with-crysta.sh"] }
-# The onboarding tests' prerequisites, made outside each test's timing (tests/fixtures/onboarding/README.md): the two
-# standalone probes the logging and feedback tests launch, and a native documentation capture from the built app.
-onboarding-probes = "python tests/fixtures/onboarding/build_native.py log_probe && python tests/fixtures/onboarding/build_native.py payload_probe"
+# The Qt test prerequisites, made outside each test's timing (tests/fixtures/onboarding/README.md):
+# standalone log, feedback and browser-geometry probes, and a native documentation capture from the built app.
+
+onboarding-probes = "python tests/fixtures/onboarding/build_native.py log_probe && python tests/fixtures/onboarding/build_native.py payload_probe && python tests/fixtures/onboarding/build_native.py geometry_probe"
 # The capture tool refuses a folder holding an earlier capture, so each run starts from an empty one.
 onboarding-capture = { cmd = "rm -rf build/onboarding-capture && python tests/fixtures/onboarding/capture_bundle.py", depends-on = ["app-build"] }
 # The observer the system tier's tutorial tests read project storage through, linked from the app build, and the app
@@ -295,9 +298,9 @@ plot-bench = { cmd = "EDI_APP_TARGETS=edi_app_plot_bench bash tools/ci/app-build
 plot-bench-compare = { cmd = ["python", "app/tools/plot_bench_compare.py"] }
 # app-build's recovery from a stale build/app (another environment's compilers): CI's last app step.
 app-build-recovery = { cmd = ["bash", "tools/ci/app-build-recovery.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
-# ADR-0023: the app as a WebAssembly site. `wasm-toolchain` installs Emscripten and Qt's two wasm kits once
-# (~/.cache/edi-wasm); `wasm-build` builds crysta and the app for both kits and packs the site zip into
-# build/wasm (`wasm-build multithread` or `singlethread` builds one).
+# ADR-0023: the multithreaded WebAssembly site. `wasm-toolchain` installs Emscripten and Qt's wasm kit once
+# (~/.cache/edi-wasm); `wasm-build` builds crysta and the app and packs the site zip into
+# build/wasm (`wasm-build multithread` builds without packing).
 wasm-toolchain = { cmd = ["bash", "tools/ci/wasm-toolchain.sh"] }
 wasm-build = { cmd = ["bash", "tools/ci/wasm-build.sh"], depends-on = [{ task = "crysta-sdk", environment = "default" }, { task = "wasm-toolchain", environment = "app" }] }
 # Every app gate, for verify-quick / verify-full, which reach it through `app-verify` in the default
@@ -381,6 +384,14 @@ native-wiring = { cmd = ["bash", "tools/ci/native-wiring-tests.sh"], depends-on 
 # in a consumer job, where core-build only restores the native build.
 crysta-sdk = "bash tools/ci/build-crysta.sh && bash tools/ci/crysta-src.sh"
 core-build = { cmd = ["bash", "tools/ci/core-build.sh"] }  # acquires the SDK inside its producer lock
+# The command line's build and run tasks, the same as the app's (docs/dev/local-crysta.md): build it into
+# build/cli against the pinned crysta SDK; build, then run it (`pixi run cli fit docs/user/cli/<case>/project`);
+# run the built CLI without building; and, for development only, build crysta from a local checkout, build the
+# CLI against it and run it (`pixi run cli-with-crysta ../crysta fit ...`).
+cli-build = { cmd = ["bash", "tools/ci/cli-build.sh"] }
+cli = { cmd = "bash tools/ci/cli-build.sh && bash tools/ci/cli-run.sh" }
+cli-run = { cmd = ["bash", "tools/ci/cli-run.sh"] }
+cli-with-crysta = { cmd = ["bash", "tools/dev/cli-with-crysta.sh"] }
 # Pin the crysta commit edi builds (`pixi run crysta-sdk-pin <sha>`, edi ADR-0083).
 crysta-sdk-pin = { cmd = ["python", "tools/ci/crysta_sdk_pin.py"] }
 crysta-consumer = { cmd = ["bash", "tools/ci/crysta-consumer.sh"], depends-on = ["core-build"] }

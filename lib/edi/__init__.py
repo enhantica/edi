@@ -24,6 +24,9 @@ import sys as _sys
 from collections.abc import (
     Callable as _Callable,  # aliased: a bare name stays off the surface (I1)
 )
+from collections.abc import (
+    Iterator as _Iterator,
+)
 from importlib import import_module as _import_module
 from importlib import util as _importlib_util
 from pathlib import Path as _Path
@@ -388,6 +391,8 @@ __all__ = [
     'ScanPreamble',
     'ScatteringTypeEnum',
     'SchemaValidationError',
+    'SequentialFit',
+    'SequentialFitExtract',
     'Severity',
     'SpaceGroup',
     'SpaceGroupSymop',
@@ -439,6 +444,63 @@ _FIT_VERBOSITY = {
 }
 
 
+class SequentialFit:
+    """The scan a sequential fit runs over (diffraction-lib ``analysis.sequential_fit``).
+
+    ``data_dir`` is the folder of scan files, relative to the project's folder or absolute;
+    ``file_pattern`` picks its files, ``*`` by default; ``reverse`` fits them from the last in
+    name order. Saved as ``_sequential_fit`` in analysis.edi.
+    """
+
+    def __init__(self, project: Project) -> None:
+        self._project = project
+
+    @property
+    def data_dir(self) -> str:
+        return self._project._sequential_data_dir
+
+    @data_dir.setter
+    def data_dir(self, value: str) -> None:
+        self._project._sequential_data_dir = value
+
+    @property
+    def file_pattern(self) -> str:
+        return self._project._sequential_file_pattern
+
+    @file_pattern.setter
+    def file_pattern(self, value: str) -> None:
+        self._project._sequential_file_pattern = value
+
+    @property
+    def reverse(self) -> bool:
+        return self._project._sequential_reverse
+
+    @reverse.setter
+    def reverse(self, value: bool) -> None:
+        self._project._sequential_reverse = value
+
+
+class SequentialFitExtract:
+    """What a sequential fit reads from each scan file's header.
+
+    diffraction-lib's ``analysis.sequential_fit_extract``: per rule, a regular expression whose
+    first group gives the value of ``target`` (e.g. ``diffrn.ambient_temperature``), required or
+    not.
+    """
+
+    def __init__(self, project: Project) -> None:
+        self._project = project
+
+    def create(self, *, id: str, target: str, pattern: str, required: bool = True) -> None:
+        self._project._sequential_extract_create(id, target, pattern, required)
+
+    def __len__(self) -> int:
+        return len(self._project._sequential_extract_rows)
+
+    def __iter__(self) -> _Iterator[tuple[str, str, str, bool]]:
+        return iter(self._project._sequential_extract_rows)
+
+
 class Analysis:
     """The analysis facade (ruled C) — delegation only, no product logic (ADR-0009).
 
@@ -475,6 +537,16 @@ class Analysis:
     @template_file.setter
     def template_file(self, file: str) -> None:
         self._project._template_file = file
+
+    @property
+    def sequential_fit(self) -> SequentialFit:
+        """The scan a sequential fit runs over: its folder, file pattern and order."""
+        return SequentialFit(self._project)
+
+    @property
+    def sequential_fit_extract(self) -> SequentialFitExtract:
+        """The values a sequential fit reads from each scan file's header."""
+        return SequentialFitExtract(self._project)
 
     @property
     def descent(self) -> str:
@@ -1089,6 +1161,14 @@ _CW_PEAK_KEYS = frozenset({
     'broad_gauss_w',
 })
 _CW_INSTRUMENT_KEYS = frozenset({'setup_wavelength', 'calib_twotheta_offset'})
+# The loader engages these on every X-ray constant-wavelength experiment, so a new one starts
+# with them too and saves and reads back as the same project.
+_XRAY_CW_INSTRUMENT_KEYS = frozenset({
+    'setup_polarization_coefficient',
+    'setup_monochromator_twotheta',
+    'setup_wavelength_2',
+    'setup_wavelength_2_to_1_ratio',
+})
 # The optional CW line shifts — accepted from a spec, never engaged by default.
 _CW_LINE_SHIFT_KEYS = frozenset({'calib_sample_displacement', 'calib_sample_transparency'})
 # The X-ray CW monochromator polarization and K-alpha doublet — accepted from an X-ray spec only.
@@ -1258,13 +1338,15 @@ def _cw_instrument_keys(experiment):
     return keys
 
 
-def _engage_cw_members(experiment, peak_type):
+def _engage_cw_members(experiment, peak_type, *, xray=False):
     """Engage a CW experiment's members at their defaults, its profile's own slots included."""
     for member in sorted(_CW_PEAK_KEYS - {'type', 'cutoff_fwhm'}):
         setattr(experiment.peak, member, Parameter(0.0))
     for member, default in _CW_PROFILE_KEYS.get(peak_type, _TCH_KEYS).items():
         setattr(experiment.peak, member, Parameter(default))
-    for member in sorted(_CW_INSTRUMENT_KEYS):
+    for member in sorted(
+        _CW_INSTRUMENT_KEYS | (_XRAY_CW_INSTRUMENT_KEYS if xray else frozenset())
+    ):
         setattr(experiment.instrument, member, Parameter(0.0))
 
 
@@ -1515,7 +1597,7 @@ class ExperimentFactory:
         if beam_mode:
             experiment.experiment_type.beam_mode = _BEAM_MODE_BY_TOKEN[beam_mode]
         if is_cw:
-            _engage_cw_members(experiment, peak_type)
+            _engage_cw_members(experiment, peak_type, xray=radiation_probe == 'xray')
         return _unlinked(experiment)
 
     @staticmethod

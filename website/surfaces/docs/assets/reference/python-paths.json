@@ -1,5 +1,5 @@
 {
-  "edi_build_commit": "2947878fb97d8475779d084a647b089ddc81b16b",
+  "edi_build_commit": "eb0580f04066cf8d3fa06859fbd61b7011a5ed93",
   "examples": [
     "pd-neut-cwl_lbco_simulation",
     "pd-neut-cwl_lbco-hrpt",
@@ -29,9 +29,6 @@
   "paths": {
     "absorption.abscor1": [
       "project.experiments[0].absorption.abscor1"
-    ],
-    "absorption.abscor2": [
-      "project.experiments[0].absorption.abscor2"
     ],
     "absorption.mu_r": [
       "project.experiments[0].absorption.mu_r"

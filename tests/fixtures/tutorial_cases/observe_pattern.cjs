@@ -3,12 +3,21 @@ const fs = require('fs');
 const vm = require('vm');
 const [source, input] = process.argv.slice(2);
 const fixture = JSON.parse(fs.readFileSync(input, 'utf8'));
-const figure = {dataset: {index: '0'}, clientHeight: fixture.height};
+function element(tagName) {
+  return {
+    tagName, dataset: {}, style: {}, children: [], attributes: {}, listeners: {},
+    appendChild(child) { this.children.push(child); return child; },
+    setAttribute(name, value) { this.attributes[name] = value; },
+    addEventListener(name, callback) { this.listeners[name] = callback; },
+  };
+}
+const figure = Object.assign(element('figure'), {dataset: {index: '0'}, clientHeight: fixture.height});
 const model = {structures: [], experiments: [{pattern: fixture.pattern}]};
 const captured = [];
 const sandbox = {
   document: {
     documentElement: {},
+    createElement: element,
     getElementById: () => ({textContent: JSON.stringify(model)}),
     querySelectorAll: selector => selector === '.pattern-figure' ? [figure] : [],
   },

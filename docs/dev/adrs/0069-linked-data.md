@@ -85,3 +85,14 @@ data is written into its experiment file and a linked scan's files into `scans/<
 |---|---|
 | Copy everything always | Rejected by the owner (2026-11-04): large scans make projects and saves slow |
 | Absolute paths only | Rejected: a project moved together with its data would break |
+
+
+## Copied datasets before the first save
+
+The common copied-scan loader can keep its files in the project's existing temporary
+data root, or a fresh archive working root if none exists, before the project has a saved
+location. Its `path` and metadata path remain empty; `scan_data_root` supplies the already
+supported source for scan reading and the delegated save's carried data. A failed import
+removes a newly made working root. A successful one retains the files for Undo and Redo.
+This also supports browser directory uploads: their memory-only source cannot remain an
+external link after a reload. Saved desktop projects keep their existing linked default.

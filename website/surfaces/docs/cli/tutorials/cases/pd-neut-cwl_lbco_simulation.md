@@ -2,6 +2,14 @@
 
 Nothing to fit: edi calculates from the model as the project holds it, as the Python tutorial does.
 
+Calculate a constant-wavelength neutron pattern of the cubic perovskite La₀.₅Ba₀.₅CoO₃ without
+any measured data. The structure, the HRPT instrument, the peak profile and the background are in
+the project, and edi calculates the pattern over the project's 2θ range.
+
+The project is the catalogue case `pd-neut-cwl_lbco_simulation`: the files the command line fits
+with `python -m edi fit docs/user/cli/pd-neut-cwl_lbco_simulation/project` and the app opens from
+its Examples.
+
 ## Get the project
 
 === "Standalone executable"

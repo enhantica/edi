@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 
 from tests.fixtures.metadata_transition.source_bytes import previous_content
+from tests.fixtures.project_categories.historical_bytes import native_edi_bytes
 
 REFERENCE = 'bd72193898d2dc6fefb1d692703d1f7a4137c731'
 HERE = Path(__file__).resolve().parent
@@ -34,6 +35,7 @@ def hashes(root):
 
 
 def loop_bytes(contents):
+    contents = native_edi_bytes(contents)
     match = re.search(rb'(?m)^loop_\n(?:_fit_parameter_correlation\.[^\n]+\n)+', contents)
     if match is None:
         raise ValueError('The pre-change fit must save its complete correlation loop')
@@ -64,12 +66,14 @@ def freeze_numeric_tables(output):
             '',
         ])
         destination = output / (case + '-numeric.table')
-        destination.write_text(data)
+        destination.write_text(data, newline='\n')
         tables['cases'][case] = {
             'producer_loop_sha256': receipt['loop_sha256'],
             'numeric_sha256': hashlib.sha256(destination.read_bytes()).hexdigest(),
         }
-    (output / 'numeric-provenance.json').write_text(json.dumps(tables, indent=2) + '\n')
+    (output / 'numeric-provenance.json').write_text(
+        json.dumps(tables, indent=2) + '\n', newline='\n'
+    )
 
 
 def capture(reference, output):
@@ -96,14 +100,15 @@ def capture(reference, output):
             for field in ['created', 'last_modified']:
                 text = re.sub(r'(?m)^_metadata\.' + field + r'[^\n]*\n?', '', text)
                 text += '\n_metadata.' + field + ' "01 Jan 2099 00:00:00"\n'
-            project_file.write_text(text)
+            project_file.write_text(text, newline='\n')
             for filename in ['results.csv', 'results-provenance.csv', 'scan-notes.csv']:
                 (source / 'analysis' / filename).unlink(missing_ok=True)
             if name == 'scan':
                 template = sorted((source / 'experiments/d20_scan').glob('*.dat'))[1].name
                 analysis = source / 'analysis/analysis.edi'
                 analysis.write_text(
-                    analysis.read_text() + '\n_sequential_fit.template_file ' + template + '\n'
+                    analysis.read_text() + '\n_sequential_fit.template_file ' + template + '\n',
+                    newline='\n',
                 )
             input_hashes = hashes(source)
             shutil.copytree(source, output / (name + '-input'), dirs_exist_ok=True)
@@ -123,7 +128,9 @@ def capture(reference, output):
                 'analysis_sha256': hashlib.sha256(data).hexdigest(),
                 'loop_sha256': hashlib.sha256(loop).hexdigest(),
             }
-    (output / 'saved-provenance.json').write_text(json.dumps(manifest, indent=2) + '\n')
+    (output / 'saved-provenance.json').write_text(
+        json.dumps(manifest, indent=2) + '\n', newline='\n'
+    )
     freeze_numeric_tables(output)
 
 
