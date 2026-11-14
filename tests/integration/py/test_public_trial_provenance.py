@@ -38,7 +38,7 @@ def test_exported_trial_provenance_requires_its_real_committed_document(tmp_path
     document.parent.mkdir()
     records = [{'witness': 'independent authoring protocol'}]
     raw = '# Authored trials\n```json\n' + json.dumps(records) + '\n```\n'
-    document.write_text(raw, encoding='utf-8')
+    document.write_text(raw, encoding='utf-8', newline='\n')
     git(source, 'init', '-q')
     git(source, 'add', '.')
     git(source, 'commit', '-qm', 'Record independent authoring protocol')
@@ -46,10 +46,10 @@ def test_exported_trial_provenance_requires_its_real_committed_document(tmp_path
     output = tmp_path / 'export.json'
     options = ['--source-document', 'notes/trials.md']
     if change == 'dirty':
-        document.write_text(raw + 'uncommitted text\n', encoding='utf-8')
+        document.write_text(raw + 'uncommitted text\n', encoding='utf-8', newline='\n')
     elif change == 'uncommitted':
         options[-1] = 'notes/unknown.md'
-        (source / options[-1]).write_text(raw, encoding='utf-8')
+        (source / options[-1]).write_text(raw, encoding='utf-8', newline='\n')
     elif change == 'missing-argument':
         options = []
     elif change == 'absolute':

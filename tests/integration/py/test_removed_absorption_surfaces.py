@@ -241,7 +241,7 @@ def test_binary_prefilter_cannot_hide_unicode_case_or_mislabeled_text(tmp_path, 
         else spelling
     )
     path.write_bytes(text.encode())
-    assert violations(tmp_path, ['public']) == [str(path.relative_to(tmp_path))], (
+    assert violations(tmp_path, ['public']) == [path.relative_to(tmp_path).as_posix()], (
         'The byte prefilter preserves Unicode casefolding, escaped JSON and all file suffixes'
     )
 

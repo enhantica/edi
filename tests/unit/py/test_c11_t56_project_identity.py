@@ -773,6 +773,7 @@ def test_c11_t56_save_refuses_broken_carried_record_without_replacing_it(
     missing_target = tmp_path / 'missing-carried-record'
     record.unlink()
     record.symlink_to(missing_target)
+    before_target = record.readlink()
     before_last_modified = project.metadata.last_modified
 
     with pytest.raises(
@@ -785,7 +786,7 @@ def test_c11_t56_save_refuses_broken_carried_record_without_replacing_it(
         'a failed save must preserve the broken carried project.edi entry instead of replacing '
         'it with a metadata-only regular file'
     )
-    assert record.readlink().resolve() == missing_target.resolve(), (
+    assert record.readlink() == before_target, (
         'a failed save must leave the unreadable carried project.edi link target unchanged'
     )
     assert project.metadata.last_modified == before_last_modified, (

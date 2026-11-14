@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T13:36:28Z
+# measured_utc = 2026-11-14T14:29:43Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 176301 banked, 0 stale row(s) dropped)
-# Collected tests: 245156; with a reported duration: 77117
+# Recorded from: measured test run (65 node(s) measured once, 176303 banked, 0 stale row(s) dropped)
+# Collected tests: 245156; with a reported duration: 77164
 # Module-scoped fixture costs recorded: 191
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 245156
 # inventory_cpp = 402
-# inventory_measured = 176303
-# inventory_unmeasured = 69255
+# inventory_measured = 176348
+# inventory_unmeasured = 69210
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 85889
 
@@ -1914,7 +1914,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.010	tests/integration/py/test_c09_t16_verification_notebooks.py::test_owner_added_bank_flow_refuses_wrong_reference_or_candidate[other-bank]
 0.010	tests/integration/py/test_c09_t16_verification_notebooks.py::test_owner_added_bank_flow_refuses_wrong_reference_or_candidate[reference-candidate]
 0.020	tests/integration/py/test_c09_t16_verification_notebooks.py::test_pixi_notebook_tasks_form_the_local_execution_gate
-0.300	tests/integration/py/test_c09_t16_verification_notebooks.py::test_verification_sources_generate_stripped_notebooks_on_demand
+0.510	tests/integration/py/test_c09_t16_verification_notebooks.py::test_verification_sources_generate_stripped_notebooks_on_demand
 0.000	tests/integration/py/test_c11_t26_graded_start_corpus.py::test_c11_t26_hidden_consumer_contains_no_live_fit_or_calculation
 0.130	tests/integration/py/test_c11_t40_epoch_and_substrate_integration.py::test_c11_t40_loader_refuses_unsupported_schema_epoch[1]
 0.090	tests/integration/py/test_c11_t40_epoch_and_substrate_integration.py::test_c11_t40_loader_refuses_unsupported_schema_epoch[5]
@@ -2883,7 +2883,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.010	tests/integration/py/test_c15_t2_polarization.py::test_serialization_witness_rejects_a_dropped_parameter[setup_polarization_coefficient]
 0.010	tests/integration/py/test_c15_t2_polarization.py::test_zero_coefficient_preserves_prior_lorentz_path_exactly
 0.660	tests/integration/py/test_c22_t22_thread_policy.py::test_c22_t22_edi_active_counterfactual_still_spins
-0.020	tests/integration/py/test_c22_t22_thread_policy.py::test_c22_t22_edi_build_links_no_nested_blas_runtime
+0.030	tests/integration/py/test_c22_t22_thread_policy.py::test_c22_t22_edi_build_links_no_nested_blas_runtime
 0.000	tests/integration/py/test_c22_t22_thread_policy.py::test_c22_t22_edi_entrypoint_inventory_is_mechanical
 0.330	tests/integration/py/test_c22_t22_thread_policy.py::test_c22_t22_edi_extension_honours_explicit_thread_count_exactly
 0.680	tests/integration/py/test_c22_t22_thread_policy.py::test_c22_t22_edi_extension_inherits_passive_max_minus_two_policy
@@ -165955,7 +165955,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py:
 0.010	tests/integration/py/test_free_header_declaration.py::test_analysis_free_header_declares_the_owner_radio_popup
 0.350	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t4_existing_tof_writer_goldens_remain_byte_exact
 0.310	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t56_datablock_bytes_match_pre_fix_regression_pins
-0.020	tests/integration/py/test_fullprof_public_logs.py::test_authoring_capture_scrubs_paths_and_preserves_program_evidence
+0.050	tests/integration/py/test_fullprof_public_logs.py::test_authoring_capture_scrubs_paths_and_preserves_program_evidence
 0.030	tests/integration/py/test_fullprof_public_logs.py::test_every_committed_fullprof_log_is_scrubbed_and_its_receipt_matches
 0.014	tests/integration/py/test_historical_correlation_rename.py::test_removed_rows_keep_both_historical_endpoints_on_block_rename[category-experiment-link-remove-compact]
 0.016	tests/integration/py/test_historical_correlation_rename.py::test_removed_rows_keep_both_historical_endpoints_on_block_rename[category-experiment-link-remove-public]
@@ -167801,7 +167801,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_phase_scan_class_boundar
 0.000	tests/integration/py/test_plain_data_build.py::test_invalid_worker_budget_refuses_before_build[2.5]
 0.000	tests/integration/py/test_plain_data_build.py::test_invalid_worker_budget_refuses_before_build[]
 0.000	tests/integration/py/test_plain_data_build.py::test_invalid_worker_budget_refuses_before_build[bad]
-0.430	tests/integration/py/test_plain_data_build.py::test_timeout_stops_the_build_descendant_and_preserves_output[False]
+0.440	tests/integration/py/test_plain_data_build.py::test_timeout_stops_the_build_descendant_and_preserves_output[False]
 0.430	tests/integration/py/test_plain_data_build.py::test_timeout_stops_the_build_descendant_and_preserves_output[True]
 0.000	tests/integration/py/test_plain_data_build.py::test_unset_budget_uses_detected_cores
 0.550	tests/integration/py/test_plain_data_picker.py::test_availability_observer_rejects_retired_or_overbroad_rules[always-disabled]
@@ -167871,13 +167871,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py
 UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[zip-GetStartedGroup.qml-openProject]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_final_write.py::test_final_save_write_contains_the_adopted_complement_and_optional_dependent[calculated]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_final_write.py::test_final_save_write_contains_the_adopted_complement_and_optional_dependent[uncalculated]
-0.130	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[absolute]
-0.100	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[dirty]
-0.170	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[missing-argument]
-0.150	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[none]
-0.110	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[parent]
-0.120	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[pending]
-0.210	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[uncommitted]
+0.150	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[absolute]
+0.190	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[dirty]
+0.190	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[missing-argument]
+0.180	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[none]
+0.250	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[parent]
+0.170	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[pending]
+0.170	tests/integration/py/test_public_trial_provenance.py::test_exported_trial_provenance_requires_its_real_committed_document[uncommitted]
 0.000	tests/integration/py/test_public_trial_provenance.py::test_production_prompt_links_cite_the_truthful_historical_summary_outside_prompt_text
 0.170	tests/integration/py/test_public_workflow_ownership.py::test_each_component_publication_refuses_a_foreign_or_bypassed_transport[artifact]
 0.160	tests/integration/py/test_public_workflow_ownership.py::test_each_component_publication_refuses_a_foreign_or_bypassed_transport[comment-only]
@@ -167993,7 +167993,7 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference
 0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_a_fullprof_extension_cannot_hide_a_renamed_project[.pcr]
 0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_active_stamp_codec_projects_only_the_retired_historical_slot
 0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_binary_prefilter_cannot_hide_unicode_case_or_mislabeled_text[ABSCOR_2-.dat]
-0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_binary_prefilter_cannot_hide_unicode_case_or_mislabeled_text[ABSCOR_2-.ipynb]
+0.070	tests/integration/py/test_removed_absorption_surfaces.py::test_binary_prefilter_cannot_hide_unicode_case_or_mislabeled_text[ABSCOR_2-.ipynb]
 0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_binary_prefilter_cannot_hide_unicode_case_or_mislabeled_text[ABSCOR_2-.json]
 0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_binary_prefilter_cannot_hide_unicode_case_or_mislabeled_text[ABSCOR_2-.md]
 0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_binary_prefilter_cannot_hide_unicode_case_or_mislabeled_text[ABSCOR_2-.png]
@@ -169276,7 +169276,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.040	tests/integration/py/test_sdk_compiler_cache.py::test_failed_sdk_pack_reports_cache_stats_then_keeps_its_failure
 0.030	tests/integration/py/test_sdk_compiler_cache.py::test_installer_preserves_objects_after_failure_with_the_same_explicit_cache_boundary
 0.210	tests/integration/py/test_sdk_compiler_cache.py::test_selected_windows_bootstrap_uses_ninja_and_wrapper_keeps_other_callers_default
-0.110	tests/integration/py/test_sdk_sharing_contract.py::test_actual_sparse_checkout_omits_reserved_fixture_and_keeps_producer_inputs
+0.120	tests/integration/py/test_sdk_sharing_contract.py::test_actual_sparse_checkout_omits_reserved_fixture_and_keeps_producer_inputs
 0.110	tests/integration/py/test_sdk_sharing_contract.py::test_compiler_cache_precedes_install_and_is_keyed_by_actual_engine_lock
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_compiler_cache_preserves_absolute_fixture_paths_and_rejects_unsafe_rewrites
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_compiler_objects_cross_lock_fallback_never_escapes_platform_or_qualified_archive
@@ -169996,29 +169996,29 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_empty_project.p
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_empty_project.py::test_step_display_namespace_has_the_workflow_operations[parameters.free]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_empty_project.py::test_step_display_namespace_has_the_workflow_operations[pattern]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_empty_project.py::test_step_display_namespace_has_the_workflow_operations[structure]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_cosio-d20]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_cosio-d20_2k]
+0.230	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_cosio-d20]
+0.360	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_cosio-d20_2k]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_cosio-d20_scan-213f]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_hs-hrpt]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_lbco-hrpt]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_lmo-echidna]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_y2o3-spodi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_yalo3-al2o3-spodi]
+0.210	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_hs-hrpt]
+0.130	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_lbco-hrpt]
+0.180	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_lmo-echidna]
+0.370	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_y2o3-spodi]
+0.370	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-cwl_yalo3-al2o3-spodi]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-tof_cecoal-polaris]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-tof_ceo2-pearl]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-tof_ferrite-austenite-beer]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-tof_lbco-si-mcstas]
+0.870	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-tof_ferrite-austenite-beer]
+0.290	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-tof_lbco-si-mcstas]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-tof_ncaf-wish]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-tof_si-sepd]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-neut-xray-cwl_pbso4-d1a-lab]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-xray-cwl_lam7o3-p021]
+0.430	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-xray-cwl_lam7o3-p021]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-xray-cwl_latp-bm01_scan]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[pd-xray-cwl_pbso4-lab]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[sc-neut-cwl_cosio-heidi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[sc-neut-cwl_pr2nio4-5c2]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[sc-neut-cwl_tb2ti2o7-heidi]
+0.420	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[sc-neut-cwl_pr2nio4-5c2]
+0.340	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[sc-neut-cwl_tb2ti2o7-heidi]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial[sc-neut-tof_taurine-senju]
-0.000	tests/integration/py/test_tutorial_fit_stages.py::test_app_observer_tracks_members_resets_and_completed_unique_constraints
+0.010	tests/integration/py/test_tutorial_fit_stages.py::test_app_observer_tracks_members_resets_and_completed_unique_constraints
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_tutorial_teaches_the_same_fitting_groups_cycles_and_constraints[pd-neut-cwl_cosio-d20]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_tutorial_teaches_the_same_fitting_groups_cycles_and_constraints[pd-neut-cwl_cosio-d20_2k]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_fit_stages.py::test_app_tutorial_teaches_the_same_fitting_groups_cycles_and_constraints[pd-neut-cwl_cosio-d20_scan-213f]
@@ -170473,58 +170473,58 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_retired_navigat
 0.000	tests/integration/py/test_tutorial_strategy.py::test_app_name_observer_refuses_paths_and_invented_parameter_labels[fenced-calib_twotheta_offset]
 0.000	tests/integration/py/test_tutorial_strategy.py::test_app_name_observer_refuses_paths_and_invented_parameter_labels[fenced-cell.length_a]
 0.000	tests/integration/py/test_tutorial_strategy.py::test_app_name_observer_refuses_paths_and_invented_parameter_labels[fenced-experiment.background[1].intensity]
-0.000	tests/integration/py/test_tutorial_strategy.py::test_app_name_observer_refuses_paths_and_invented_parameter_labels[fenced-nonexistent control]
+0.020	tests/integration/py/test_tutorial_strategy.py::test_app_name_observer_refuses_paths_and_invented_parameter_labels[fenced-nonexistent control]
 0.000	tests/integration/py/test_tutorial_strategy.py::test_app_name_observer_refuses_paths_and_invented_parameter_labels[plain-calib_twotheta_offset]
 0.000	tests/integration/py/test_tutorial_strategy.py::test_app_name_observer_refuses_paths_and_invented_parameter_labels[plain-cell.length_a]
 0.000	tests/integration/py/test_tutorial_strategy.py::test_app_name_observer_refuses_paths_and_invented_parameter_labels[plain-experiment.background[1].intensity]
-0.010	tests/integration/py/test_tutorial_strategy.py::test_app_name_observer_refuses_paths_and_invented_parameter_labels[plain-nonexistent control]
+0.000	tests/integration/py/test_tutorial_strategy.py::test_app_name_observer_refuses_paths_and_invented_parameter_labels[plain-nonexistent control]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_cosio-d20]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_cosio-d20_2k]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_cosio-d20_scan-213f]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_hs-hrpt]
+0.320	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_cosio-d20_scan-213f]
+0.210	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_hs-hrpt]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_lbco-hrpt]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_lbco_simulation]
+0.100	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_lbco_simulation]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_lmo-echidna]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_y2o3-spodi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_yalo3-al2o3-spodi]
+0.310	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_y2o3-spodi]
+0.380	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-cwl_yalo3-al2o3-spodi]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-tof_cecoal-polaris]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-tof_ceo2-pearl]
+0.150	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-tof_ceo2-pearl]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-tof_ferrite-austenite-beer]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-tof_lbco-si-mcstas]
+0.290	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-tof_lbco-si-mcstas]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-tof_ncaf-wish]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-tof_si-sepd]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-xray-cwl_pbso4-d1a-lab]
+0.170	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-tof_si-sepd]
+0.360	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-neut-xray-cwl_pbso4-d1a-lab]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-xray-cwl_lam7o3-p021]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-xray-cwl_latp-bm01_scan]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-pd-xray-cwl_pbso4-lab]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-sc-neut-cwl_cosio-heidi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-sc-neut-cwl_pr2nio4-5c2]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-sc-neut-cwl_tb2ti2o7-heidi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-sc-neut-cwl_tb2ti2o7-heidi_simulation]
+0.300	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-sc-neut-cwl_pr2nio4-5c2]
+0.260	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-sc-neut-cwl_tb2ti2o7-heidi]
+0.250	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-sc-neut-cwl_tb2ti2o7-heidi_simulation]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[built-in-sc-neut-tof_taurine-senju]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_cosio-d20]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_cosio-d20_2k]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_cosio-d20_scan-213f]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_hs-hrpt]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_lbco-hrpt]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_lbco_simulation]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_lmo-echidna]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_y2o3-spodi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_yalo3-al2o3-spodi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-tof_cecoal-polaris]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-tof_ceo2-pearl]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-tof_ferrite-austenite-beer]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-tof_lbco-si-mcstas]
+0.170	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_cosio-d20]
+0.250	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_cosio-d20_2k]
+0.300	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_cosio-d20_scan-213f]
+0.150	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_hs-hrpt]
+0.100	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_lbco-hrpt]
+0.080	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_lbco_simulation]
+0.160	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_lmo-echidna]
+0.240	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_y2o3-spodi]
+0.330	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-cwl_yalo3-al2o3-spodi]
+0.260	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-tof_cecoal-polaris]
+0.120	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-tof_ceo2-pearl]
+0.480	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-tof_ferrite-austenite-beer]
+0.250	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-tof_lbco-si-mcstas]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-tof_ncaf-wish]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-tof_si-sepd]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-xray-cwl_pbso4-d1a-lab]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-xray-cwl_lam7o3-p021]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-xray-cwl_latp-bm01_scan]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-xray-cwl_pbso4-lab]
+0.140	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-tof_si-sepd]
+0.320	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-neut-xray-cwl_pbso4-d1a-lab]
+0.180	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-xray-cwl_lam7o3-p021]
+0.960	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-xray-cwl_latp-bm01_scan]
+0.100	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-pd-xray-cwl_pbso4-lab]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-sc-neut-cwl_cosio-heidi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-sc-neut-cwl_pr2nio4-5c2]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-sc-neut-cwl_tb2ti2o7-heidi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-sc-neut-cwl_tb2ti2o7-heidi_simulation]
+0.270	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-sc-neut-cwl_pr2nio4-5c2]
+0.240	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-sc-neut-cwl_tb2ti2o7-heidi]
+0.200	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-sc-neut-cwl_tb2ti2o7-heidi_simulation]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_tutorial_strategy.py::test_app_tutorial_uses_group_actions_and_actual_table_parameter_names[docs-sc-neut-tof_taurine-senju]
 0.000	tests/integration/py/test_tutorial_strategy.py::test_combined_blocks_require_a_reason_in_their_own_stage[first]
 0.000	tests/integration/py/test_tutorial_strategy.py::test_combined_blocks_require_a_reason_in_their_own_stage[later]
@@ -170690,7 +170690,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::tes
 UNMEASURED:failed-in-this-run	tests/integration/py/test_weight_fractions.py::test_single_enabled_fraction_is_unity_in_memory_save_and_reopen[True-single]
 0.150	tests/integration/py/test_weight_fractions.py::test_stored_cross_scale_correlation_matches_closed_form_quotient[-0.375]
 0.130	tests/integration/py/test_weight_fractions.py::test_stored_cross_scale_correlation_matches_closed_form_quotient[0.625]
-0.010	tests/integration/py/test_weight_fractions.py::test_three_enabled_fractions_keep_hill_howard_normalization_and_saved_values
+0.040	tests/integration/py/test_weight_fractions.py::test_three_enabled_fractions_keep_hill_howard_normalization_and_saved_values
 0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[disabled]
 0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[duplicate]
 0.000	tests/integration/py/test_weight_fractions.py::test_unity_byte_adaptation_refuses_changed_or_missing_fraction[missing]

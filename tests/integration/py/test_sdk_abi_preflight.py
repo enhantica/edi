@@ -343,6 +343,8 @@ def test_actual_preflight_step_checks_installer_and_only_supported_root_environm
     assert '${{' not in script, (
         'The bounded shell replay must resolve every actual matrix expression'
     )
+    baseline = 'printf "%s\\n" "$PATH" "${Python_ROOT_DIR-}" > environment-before\n'
+    script = baseline + script
     script += '\nprintf bootstrap-admitted > admitted\n'
     script += 'printf "%s\\n" "$PATH" "${Python_ROOT_DIR-}" > environment-after\n'
 
@@ -364,10 +366,11 @@ def test_actual_preflight_step_checks_installer_and_only_supported_root_environm
     assert good.stdout.count('SDK ABI package locks match') == 3, (
         'Every platform checks installer, root default and app through the same admission step'
     )
-    assert (tmp_path / 'environment-after').read_text().splitlines() == [
-        env['PATH'],
-        env['Python_ROOT_DIR'],
-    ], 'Metadata checks must leave the ambient PATH and Pixi Python root unchanged'
+    assert (tmp_path / 'environment-after').read_text().splitlines() == (
+        tmp_path / 'environment-before'
+    ).read_text().splitlines(), (
+        'Metadata admission preserves the native shell PATH and Python root exactly'
+    )
     assert not (tmp_path / 'ambient-called').exists(), (
         'Metadata checks must use the explicit action output rather than ambient Python lookup'
     )

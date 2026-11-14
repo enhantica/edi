@@ -374,7 +374,7 @@ def test_three_enabled_fractions_keep_hill_howard_normalization_and_saved_values
         err_msg='Three enabled structures retain normalized scale times cell mass times volume',
     )
     project.save_as(tmp_path / 'saved')
-    data = (tmp_path / 'saved/experiments/pattern.edi').read_bytes()
+    data = native_edi_bytes((tmp_path / 'saved/experiments/pattern.edi').read_bytes())
     assert historical_single_fraction('experiments/pattern.edi', data) == data, (
         'The single-structure adaptation leaves every byte of a multiphase saved experiment intact'
     )

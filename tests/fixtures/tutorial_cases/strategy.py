@@ -7,7 +7,7 @@ Independent rules, not a transcription of the tutorial generator or upstream cyc
 import re
 from collections import defaultdict
 
-from tests.fixtures.tutorial_cases.stages import group
+from tests.fixtures.tutorial_cases.stages import assert_template_batches, group
 
 NAMED_LIMIT = 3
 ALIGNMENT = {'cell', 'scale', 'zero shift', 'calibration'}
@@ -72,7 +72,8 @@ def stage_reason(plan, event, blocks):
     )
 
 
-def assert_strategy(plan):
+def assert_strategy(plan):  # noqa: PLR0914 - distinct cumulative, ownership and stage rules
+    assert_template_batches(plan)
     accepted = set()
     fixed_after_fit = set()
     pending = []
@@ -83,6 +84,8 @@ def assert_strategy(plan):
         if event['kind'] != 'fit':
             pending.append(event)
             continue
+        retired = {p for item in pending if item['kind'] == 'replace' for p in item['retired']}
+        accepted.difference_update(retired)
         current = set(plan['free_before'][index])
         dependents = {
             item['dependent']
@@ -116,7 +119,12 @@ def assert_strategy(plan):
         blocks = {block(group(value)) for value in new}
         explained = stage_reason(plan, event, blocks)
         boundary = stage_boundary(plan, event)
-        assert blocks or (index and boundary == previous_boundary), (
+        assert (
+            blocks
+            or dependents
+            or event.get('operation') == 'fit_sequential'
+            or (index and boundary == previous_boundary)
+        ), (
             'Gate 3/4: each new teaching stage introduces a scientific block; '
             'repeated fits stay within their current stage'
         )
@@ -129,7 +137,18 @@ def assert_strategy(plan):
                 'precedes profile and structure fitting'
             )
         else:
-            assert not (beyond_alignment and 'alignment' in blocks), (
+
+            def owner(parameter):
+                match = re.match(r'(.+?\[[^]]+\])\.', parameter)
+                return match[1] if match else parameter.split('.')[0]
+
+            new_alignment = {owner(p) for p in new if block(group(p)) == 'alignment'}
+            fresh_independent = (
+                plan.get('independent')
+                and new_alignment
+                and not (new_alignment & {owner(p) for p in accepted})
+            )
+            assert not (beyond_alignment and 'alignment' in blocks and not fresh_independent), (
                 'Gate 3/4: complete alignment before introducing later scientific blocks'
             )
         beyond_alignment |= bool(blocks - {'alignment'})
@@ -162,12 +181,26 @@ def visible_prose(source):
 
 def app_actions(source):
     """Read user instructions, excluding machine check/target ids and image markup."""
-    prose = re.sub(r'\b(free|fix)[ \t]*\n+', r'\1 ', visible_prose(source), flags=re.IGNORECASE)
+    prose = re.sub(
+        r'(?mi)^([ \t]*(?:[-*]\s+)?(?:free|fix))[ \t]*\n+[ \t]*',
+        r'\1 ',
+        visible_prose(source),
+        flags=re.IGNORECASE,
+    )
     for line in prose.splitlines():
         plain = re.sub(r'[*`]', '', line).strip()
         if plain.startswith('#'):
             yield ('boundary', plain.lstrip('# ').strip(), line)
-        match = re.search(r'\b(free|fix)\s+(.+)', plain, re.IGNORECASE)
+            continue
+        if re.search(r'\b(?:free|fixed|fix)\s*(?:[·:]\s*)?all\b', plain, re.IGNORECASE):
+            yield ('bulk', plain, line)
+            if re.search(r'\b(?:click|press|run)\s+(?:the\s+)?Fit\b', plain, re.IGNORECASE):
+                yield ('boundary', '', '')
+            continue
+        toggle = re.search(r'\b(tick|clear|untick)\s+Free\s+for\s+(.+)', plain, re.IGNORECASE)
+        match = re.match(r'(?:[-•]\s*)?(free|fix)\s+(.+)', plain, re.IGNORECASE)
+        if toggle:
+            yield ('free' if toggle[1].casefold() == 'tick' else 'fix', toggle[2], line)
         if match and not re.match(r'(?:column|header)\b', match[2], re.IGNORECASE):
             yield (match[1].casefold(), match[2], line)
         if re.search(r'\b(?:click|press|run)\s+(?:the\s+)?Fit\b', plain, re.IGNORECASE):
@@ -183,7 +216,13 @@ def assert_app_group_actions(source):
             if raw.lstrip().startswith('#'):
                 context = subject.casefold()
             continue
-        members = re.findall(r'`([^`]+)`', raw) or re.split(r',|\band\b', subject)
+        if action == 'bulk':
+            continue
+        members = [
+            a or b
+            for a, b in re.findall(r'`([^`]+)`|\*\*([^*]+)\*\*', raw)
+            if (a or b).casefold() not in {'free', 'fix', 'fit', 'analysis', 'parameters'}
+        ] or re.split(r',|\band\b', subject)
         if (
             re.search(r'\b(?:all|every|group|category)\b', subject, re.IGNORECASE)
             and len(members) == 1
@@ -206,8 +245,9 @@ def app_labels(reference):
     return labels | adp_labels
 
 
-def assert_app_names(source, labels):
-    prose = visible_prose(source)
+def assert_app_names(source, labels, table_names=(), datablock_names=()):
+    actions = list(app_actions(source))
+    prose = '\n'.join(raw for action, _subject, raw in actions if action != 'boundary')
     assert not re.search(
         r'\b(?:project|experiments?|structures?|cell|atom_sites|peak|instrument|'
         r'background|linked_structures)(?:\[[^\]\n]*\])?\.[A-Za-z_]'
@@ -228,12 +268,47 @@ def assert_app_names(source, labels):
         'displacements',
         'magnetic moments',
         'extinction',
+        'linked structures',
+        'instrument',
+        'atomic coordinates',
+        'atomic occupancies',
+        'atomic displacement',
+        'atom sites',
+        'peak profile',
+        'peak broadening',
+        'peak mixing',
+        'absorption',
+        'peak asymmetry',
+        'magnetic form factors',
     }
-    allowed = {value.casefold() for value in labels} | categories
-    for action, subject, raw in app_actions(source):
+    allowed = {value.casefold() for value in [*labels, *table_names]} | categories
+    for action, subject, raw in actions:
         if action == 'boundary':
             continue
-        tokens = re.findall(r'`([^`]+)`|\*\*([^*]+)\*\*|"([^"]+)"', raw)
+
+        def selector(match):
+            names = re.findall(r'\*\*([^*]*)\*\*', match[1])
+            assert all(name in datablock_names for name in names if name), (
+                'Gate 3/4: a datablock selector names an actual project block'
+            )
+            return match[0].replace(match[1], '')
+
+        parameter_text = re.sub(
+            r'(?:choose\s+|(?:parameters|rows the stage names) of\s+)'
+            r'((?:\*\*[^*]*\*\*(?:\s+and\s+)?)+)'
+            r'(?=(?:,\s*choosing each in| in) the datablock filter)',
+            selector,
+            raw,
+            flags=re.IGNORECASE,
+        )
+        parameter_text = re.sub(
+            r'(?:on \*\*Structure\*\*, )?choose \*\*[^*]+\*\* as every site.s type '
+            r'in the \*\*Atomic displacement\*\* table;?',
+            '',
+            parameter_text,
+            flags=re.IGNORECASE,
+        )
+        tokens = re.findall(r'`([^`]+)`|\*\*([^*]+)\*\*|"([^"]+)"', parameter_text)
         if not tokens:
             assert any(
                 re.search(r'(?<!\w)' + re.escape(label) + r'(?!\w)', subject, re.IGNORECASE)
@@ -241,11 +316,25 @@ def assert_app_names(source, labels):
             ), 'Gate 3/4: unquoted app instructions also name real table parameters or categories'
         for spelling in tokens:
             token = ''.join(spelling)
-            if token.casefold() in {'free', 'fix', 'fit', 'analysis', 'parameters'}:
+            if token.casefold() in {
+                'free',
+                'fix',
+                'fixed',
+                'fit',
+                'analysis',
+                'parameters',
+                'free · all',
+                'free all',
+                'fixed all',
+                'fix all',
+                'fixed · all',
+                'fix · all',
+            }:
                 continue
             name = re.split(r'\s*[\u203a→/]\s+', token)[-1].strip().casefold()
             assert token.casefold() in allowed or name in allowed, (
-                'Gate 3/4: a named app parameter is an actual dictionary table label'
+                'Gate 3/4: a named app parameter is an actual dictionary table label: '
+                + repr(token)
             )
 
 

@@ -2,6 +2,7 @@
 
 import ast
 import re
+from collections import UserDict
 from contextlib import suppress
 from pathlib import Path
 
@@ -37,7 +38,7 @@ def group(path):
     return 'other: ' + path
 
 
-def observe(source, bindings=None):  # noqa: PLR0915 - finite AST effects kept in execution order
+def observe(source, bindings=None):  # noqa: PLR0914, PLR0915 - finite AST effects kept in execution order
     source = python_syntax(source)
     tree = ast.parse(source)
     aliases = {}
@@ -97,7 +98,14 @@ def observe(source, bindings=None):  # noqa: PLR0915 - finite AST effects kept i
     freed = []
     fixed = []
     constraints = []
+    loaded_project = any(
+        isinstance(node, ast.Call) and ast.unparse(node.func).endswith('.Project.load')
+        for node in ast.walk(tree)
+    )
+    if loaded_project and 'project' in objects:
+        constraints = [str(row.expression) for row in objects['project'].analysis.constraints]
     constraint_aliases = {}
+    previous_active = set()
 
     def path(node):
         value = ast.unparse(node)
@@ -107,7 +115,8 @@ def observe(source, bindings=None):  # noqa: PLR0915 - finite AST effects kept i
             )
         return value
 
-    def visit(statements, context=''):  # noqa: PLR0912, PLR0915 - explicit supported AST nodes
+    def visit(statements, context=''):  # noqa: PLR0912, PLR0914, PLR0915 - explicit supported AST nodes
+        nonlocal previous_active
         for node in statements:  # noqa: PLR1702 - ordered AST statement effects
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 continue  # A definition is not an executed teaching stage.
@@ -201,13 +210,30 @@ def observe(source, bindings=None):  # noqa: PLR0915 - finite AST effects kept i
                         aliases[target.id] = path(node.value)
                         with suppress(KeyError):
                             objects[target.id] = value(node.value)
+                    if isinstance(target, ast.Attribute) and target.attr == 'adp_type':
+                        site_path = path(target.value)
+                        selected = value(node.value)
+                        value(target.value).adp_type = selected
+                        prefix = (
+                            site_path.replace('.atom_sites[', '.atom_site_aniso[') + '.'
+                            if selected in {'Biso', 'Uiso'}
+                            else site_path + '.adp_iso'
+                        )
+                        removed = {p for p in active if p.startswith(prefix)}
+                        active.difference_update(removed)
+                        events.append({
+                            'kind': 'replace',
+                            'line': node.lineno,
+                            'retired': sorted(removed),
+                        })
                     if isinstance(target, ast.Attribute) and target.attr == 'free':
                         parameter = path(target.value)
                         category = group(parameter + ' ' + context)
                         setting = value(node.value)
                         if setting is True:
+                            if parameter not in active:
+                                freed.append(category)
                             active.add(parameter)
-                            freed.append(category)
                             events.append({
                                 'kind': 'free',
                                 'group': category,
@@ -233,11 +259,12 @@ def observe(source, bindings=None):  # noqa: PLR0915 - finite AST effects kept i
                     and '.display.' not in name
                 ):
                     cycles.append({
-                        'freed': sorted(set(freed)),
-                        'fixed': sorted(set(fixed)),
+                        'freed': sorted({group(p) for p in active - previous_active}),
+                        'fixed': sorted({group(p) for p in previous_active - active}),
                         'active': sorted({group(value) for value in active}),
                         'constraints': len(constraints),
                     })
+                    previous_active = active.copy()
                     free_before.append(sorted(active))
                     freed.clear()
                     fixed.clear()
@@ -246,6 +273,15 @@ def observe(source, bindings=None):  # noqa: PLR0915 - finite AST effects kept i
                         'kind': 'fit',
                         'line': call.lineno,
                         'operation': name.rsplit('.', 1)[-1],
+                    })
+                elif name.endswith('.background.auto_estimate'):
+                    prefix = path(call.func.value) + '['
+                    retired = {p for p in active if p.startswith(prefix)}
+                    active.difference_update(retired)
+                    events.append({
+                        'kind': 'replace',
+                        'line': call.lineno,
+                        'retired': sorted(retired),
                     })
                 elif name.endswith('.display.pattern'):
                     events.append({'kind': 'pattern', 'line': call.lineno})
@@ -275,12 +311,38 @@ def observe(source, bindings=None):  # noqa: PLR0915 - finite AST effects kept i
                     })
 
     visit(tree.body)
-    return {'events': events, 'cycles': cycles, 'free_before': free_before, 'source': source}
+    return {
+        'events': events,
+        'cycles': cycles,
+        'free_before': free_before,
+        'source': source,
+        'independent': any(
+            isinstance(n, ast.Assign)
+            and isinstance(n.value, ast.Constant)
+            and n.value.value == 'independent'
+            and any(ast.unparse(t).endswith('.analysis.fitting_mode') for t in n.targets)
+            for n in ast.walk(tree)
+        ),
+    }
+
+
+def assert_template_batches(plan):
+    fits = [event for event in plan['events'] if event['kind'] == 'fit']
+    for index, event in enumerate(fits):
+        if event.get('operation') == 'fit_sequential':
+            assert index and plan['free_before'][index] == plan['free_before'][index - 1], (
+                'Gate 3: a sequential batch reuses its already validated free-parameter template'
+            )
 
 
 def assert_teaching_stages(plan):
+    assert_template_batches(plan)
     events = plan['events']
-    fits = [index for index, item in enumerate(events) if item['kind'] == 'fit']
+    fits = [
+        index
+        for index, item in enumerate(events)
+        if item['kind'] == 'fit' and item.get('operation') != 'fit_sequential'
+    ]
     assert len(fits) >= 2, 'Gate 3: a fitting tutorial teaches at least two actual fit stages'
     assert any(item['kind'] == 'pattern' for item in events[: fits[0]]), (
         'Gate 3: the pattern at starting values is displayed before the first fit'
@@ -327,13 +389,36 @@ APP_CATEGORIES = {
 }
 
 
-def app_population(case):
+class AppPopulation(UserDict):
+    """Offered member metadata, with its disposable source model for type-selector changes."""
+
+    def __init__(self, project):
+        super().__init__()
+        self.project = project
+        self.table_names = set()
+        self.datablock_names = {
+            str(block.name)
+            for blocks in [project.structures, project.experiments]
+            for block in blocks
+        }
+
+
+def app_population(case=None, *, project=None):  # noqa: PLR0912 - explicit category ownership and eligibility
     """Read offered members from the saved model, independently of replay expectations."""
     import edi  # noqa: PLC0415
 
     root = Path(__file__).resolve().parents[3]
-    project = edi.Project.load(str(root / 'docs/user/cli' / case / 'project'))
-    population = {}
+    if project is None:
+        project = edi.Project.load(str(root / 'docs/user/cli' / case / 'project'))
+    population = AppPopulation(project)
+    reference = (root / 'tests/fixtures/dictionary_display/metadata_reference.hpp').read_text()
+    labels = dict(
+        re.findall(
+            r'\{"([^"\n]+)", "([^"\n]+)", "[^"\n]*", "[^"\n]*"\}',
+            reference,
+        )
+    )
+    adp_labels = dict(re.findall(r'\{"atom_site.adp_type", "([^"\n]+)", "([^"\n]+)"\}', reference))
     for kind, blocks in [('structure', project.structures), ('experiment', project.experiments)]:  # noqa: PLR1702 - finite model walk
         for block in blocks:
             for owner in [
@@ -365,6 +450,30 @@ def app_population(case):
                         if name.startswith('_'):
                             continue
                         parameter = getattr(item, name)
+                        owner_id = {
+                            'atom_sites': 'atom_site',
+                            'linked_structures': 'linked_structure',
+                        }.get(owner, owner)
+                        label = labels.get(owner_id + '.' + name)
+                        if owner == 'atom_sites' and name == 'adp_iso':
+                            label = adp_labels.get(str(item.adp_type), label)
+                        if label and hasattr(parameter, 'free'):
+                            population.table_names.add(' '.join(v for v in [row, label] if v))
+                            population.table_names.add(
+                                ' '.join(v for v in [block.name, row, label] if v)
+                            )
+                            if owner in {'background', 'background_terms'}:
+                                population.table_names.add('Background ' + row + ' ' + label)
+                        if (
+                            owner == 'atom_sites'
+                            and name == 'adp_iso'
+                            and str(item.adp_type) not in {'Biso', 'Uiso'}
+                        ):
+                            continue
+                        if owner == 'atom_site_aniso':
+                            site = block.atom_sites[row]
+                            if str(site.adp_type) in {'Biso', 'Uiso'}:
+                                continue
                         if (
                             not hasattr(parameter, 'free')
                             or parameter.symmetry_constrained
@@ -379,8 +488,18 @@ def app_population(case):
 
 def app_cycles(steps, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - ordered manifest effects
     def canonical(value):
-        return re.sub(r"\[['\"]?([^]\"']+)['\"]?\]", r'.\1', value)
+        value = re.sub(r"\[['\"]?([^]\"']+)['\"]?\]", r'.\1', value)
+        if model is not None:
+            value = re.sub(r'^(?:structures|experiments)\.', '', value)
+            for kind, blocks in [
+                ('structure', model.structures),
+                ('experiment', model.experiments),
+            ]:
+                if len(blocks) == 1 and value.startswith(blocks[0].name + '.'):
+                    value = kind + value[len(blocks[0].name) :]
+        return value
 
+    model = getattr(population, 'project', None)
     population = dict(population or {})
     for step in steps:
         check = step.get('check', '')
@@ -391,9 +510,19 @@ def app_cycles(steps, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - ord
     active, freed, fixed = set(), set(), set()
     expressions, pending, seen = {}, set(), set()
     cycles = []
+    previous_active = set()
     awaiting_completion = False
     for step in steps:
         check = step.get('check', '')
+        type_change = re.fullmatch(r'pick:atomSiteAdp\.type\.(\d+)=(.+)', check)
+        if type_change:
+            if model is None or len(model.structures) != 1:
+                raise ValueError(
+                    'ADP type steps require the independently observed selected structure'
+                )
+            model.structures[0].atom_sites[int(type_change[1])].adp_type = type_change[2]
+            population = app_population(project=model)
+            active.intersection_update(population)
         if check.startswith(('tick:', 'untick:', 'free:', 'fixed:', 'free-choice:')):
             if check.startswith('free-choice:'):
                 _, action, category, *block = check.split(':')
@@ -419,7 +548,11 @@ def app_cycles(steps, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - ord
                 action, parameters = check.split(':', 1)
                 parameters = {canonical(p) for p in parameters.split(',')}
                 setting = action in {'tick', 'free'}
-            categories = {population[p][0] for p in parameters if setting or p in active}
+            categories = {
+                population[p][0]
+                for p in parameters
+                if (p not in active if setting else p in active)
+            }
             (freed if setting else fixed).update(categories)
             if setting:
                 active.update(parameters)
@@ -443,11 +576,12 @@ def app_cycles(steps, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - ord
             continue
         if button or completed:
             cycles.append({
-                'freed': sorted(freed),
-                'fixed': sorted(fixed),
+                'freed': sorted({population[p][0] for p in active - previous_active}),
+                'fixed': sorted({group(p) for p in previous_active - active}),
                 'active': sorted({population[p][0] for p in active}),
                 'constraints': len(pending | (set(expressions.values()) - seen)),
             })
+            previous_active = active.copy()
             freed.clear()
             fixed.clear()
             pending.clear()
@@ -456,45 +590,91 @@ def app_cycles(steps, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - ord
     return cycles
 
 
-def prose_cycles(source):
-    # Observe imperative app instructions, never a heading or prose saying "fit results".
+def prose_cycles(source, population=None):  # noqa: PLR0912 - finite written instruction grammar
+    """Read stage instructions and declared relations; visual markup contributes no actions."""
+    source = re.sub(r'<(?:figure|svg)\b.*?</(?:figure|svg)>', '', source, flags=re.DOTALL)
+    source = re.sub(r'<[^>]+>', '', source)
     source = re.sub(r'[*`_]', '', source)
     phrases = [
-        ('isotropic displacement', r'\b(?:isotropic|adp.iso|biso)\b'),
+        ('isotropic displacement', r'\b(?:isotropic|adp.iso|b\s*iso|atomic displacements?)\b'),
         ('anisotropic displacement', r'\b(?:anisotropic|adp.11|bij)\b'),
         ('positions', r'\b(?:positions?|coordinates|fract.[xyz])\b'),
         ('occupancies', r'\boccupanc'),
-        ('magnetic moments', r'\b(?:moments?|magnetic)\b'),
+        ('magnetic moments', r'\b(?:moments?|magnetic model)\b'),
+        ('magnetic form factor', r'\b(?:j2|form factor)\b'),
         ('extinction', r'\bextinction\b'),
         ('background', r'\bbackground\b'),
         ('zero shift', r'\b(?:zero|offset)\b'),
         ('calibration', r'\bcalibration\b'),
-        ('peak widths', r'\b(?:widths?|profile|peaks?)\b'),
+        ('peak widths', r'\b(?:widths?|peak profile|peak broadening)\b'),
+        ('peak asymmetry', r'\b(?:peak asymmetry|asymmetry)\b'),
         ('cell', r'\bcell\b'),
-        ('scale', r'\bscale\b'),
+        ('scale', r'\b(?:scales?|linked structures)\b'),
     ]
-    active, freed, fixed = set(), set(), set()
+    active, previous, fixed = set(), set(), set()
     pending_constraints = 0
+    model = getattr(population, 'project', None)
+    context = ''
     cycles = []
     for paragraph in source.split('\n\n'):
-        lower = paragraph.casefold()
-        groups = {name for name, pattern in phrases if re.search(pattern, lower)}
-        if re.search(r'\bfree\b', lower):
-            active.update(groups)
-            freed.update(groups)
-        if re.search(r'\bfix\b', lower):
-            active.difference_update(groups)
-            fixed.update(groups)
-        if re.search(r'\b(?:add|create)\b.*\bconstraint\b', lower):
+        lower = paragraph.casefold().strip()
+        if lower.startswith('#'):
+            context = lower.lstrip('# ')
+            if context == 'add the relations' and model is not None:
+                pending_constraints = len({
+                    str(row.expression) for row in model.analysis.constraints
+                })
+            continue
+        if re.search(r'\bfix\s+(?:all|every)\s+param', lower):
+            fixed.update(active)
+            active.clear()
+        relation = re.search(r'\bconstrain\s+.+?\bfollow\b', lower, re.DOTALL)
+        if relation:
             pending_constraints += 1
+            if 'displacement' in lower:
+                fixed.add('isotropic displacement')
+        setting_type = re.search(r'choose\s+(biso|uiso|beta|bani)\s+as every site', lower)
+        if (
+            setting_type
+            and setting_type[1] in {'beta', 'bani'}
+            and 'isotropic displacement' in active
+        ):
+            active.remove('isotropic displacement')
+            fixed.add('isotropic displacement')
+        instruction = re.search(
+            r'\b(?:tick|clear|untick)\s+free\s+for\b|\bfree\s*[·:]?\s*all\b'
+            r'|^(?:[-•]\s*)?(?:free|fix)\s+'
+            r'|\b(?:first|second|third|fourth|last|this) stage frees\b',
+            lower,
+        )
+        if instruction:
+            command = re.sub(
+                r'on structure, choose .+?as every site.s type in the atomic displacement table;?',
+                '',
+                lower,
+            )
+            groups = {name for name, pattern in phrases if re.search(pattern, command)}
+            if 'instrument' in command:
+                groups.add('zero shift' if re.search(r'zero|offset', context) else 'calibration')
+            if 'atomic displacement' in command and 'anisotropic' in context:
+                groups.discard('isotropic displacement')
+                groups.add('anisotropic displacement')
+            if 'peak profile' in command and 'asymmetry' in context:
+                groups.discard('peak widths')
+                groups.add('peak asymmetry')
+            if re.search(r'^(?:[-•]\s*)?fix\s+|\b(?:clear|untick)\s+free\s+for', command):
+                fixed.update(groups & active)
+                active.difference_update(groups)
+            else:
+                active.update(groups)
         if re.search(r'\b(?:click|press|run|perform)\s+(?:the\s+)?fit\b(?!\s+results)', lower):
             cycles.append({
-                'freed': sorted(freed),
-                'fixed': sorted(fixed),
+                'freed': sorted(active - previous),
+                'fixed': sorted(fixed | (previous - active)),
                 'active': sorted(active),
                 'constraints': pending_constraints,
             })
-            freed.clear()
+            previous = active.copy()
             fixed.clear()
             pending_constraints = 0
     return cycles

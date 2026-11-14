@@ -49,7 +49,7 @@ def test_authoring_capture_scrubs_paths_and_preserves_program_evidence(
         'Public capture must keep its separate exit receipt'
     )
     older = logs / 'older.log'
-    older.write_text(f'Executable: {executable}\n' + numeric)
+    older.write_text(f'Executable: {executable}\n' + numeric, newline='\n')
     published = logs / 'published.log'
     importlib.import_module('capture_logs').copy_public_log(older, published)
     assert str(executable) not in published.read_text() and numeric in published.read_text(), (

@@ -7,12 +7,14 @@ can skip; an app-capable job must supply its real matching runner.
 
 from __future__ import annotations
 
+import ctypes
 import json
 import os
 import subprocess
 import sys
 import tempfile
 import warnings
+from ctypes import wintypes
 from pathlib import Path
 
 import pytest
@@ -23,8 +25,21 @@ ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 
 
+def executable_file(path):
+    """Observe native executable capability without treating Windows readonly bits as mode bits."""
+    if not path.is_file():
+        return False
+    if os.name != 'nt':
+        return os.access(path, os.X_OK)
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.GetBinaryTypeW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(wintypes.DWORD)]
+    kernel.GetBinaryTypeW.restype = wintypes.BOOL
+    kind = wintypes.DWORD()
+    return bool(kernel.GetBinaryTypeW(str(path), ctypes.byref(kind))) and kind.value in {0, 6}
+
+
 def require_runner(runner: Path) -> None:
-    if not runner.is_file() or not os.access(runner, os.X_OK):
+    if not executable_file(runner):
         qt_config = 'lib/cmake/Qt6QuickTest/Qt6QuickTestConfig.cmake'
         can_build = any(
             (Path(sys.prefix) / base / qt_config).is_file() for base in ('', 'Library')

@@ -532,7 +532,10 @@ def test_actual_sparse_checkout_omits_reserved_fixture_and_keeps_producer_inputs
         'tools/ci/crysta-source.sh': b'producer identity script',
         '.github/actions/setup-pixi/action.yml': b'producer setup action',
     }
+    reserved = 'tests/fixtures/reserved/aux.edi'
     for name, data in files.items():
+        if name == reserved:
+            continue  # Author this Git entry without asking the host to open a device filename.
         path = source / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
@@ -550,6 +553,17 @@ def test_actual_sparse_checkout_omits_reserved_fixture_and_keeps_producer_inputs
     git(source, 'init', '-q')
     git(source, 'config', 'core.protectNTFS', 'false')
     git(source, 'add', '.')
+    blob = (
+        subprocess
+        .check_output(
+            ['git', '-C', str(source), 'hash-object', '-w', '--stdin'],
+            input=files[reserved],
+            env=env,
+        )
+        .decode()
+        .strip()
+    )
+    git(source, 'update-index', '--add', '--cacheinfo', '100644', blob, reserved)
     git(
         source,
         '-c',
@@ -560,6 +574,13 @@ def test_actual_sparse_checkout_omits_reserved_fixture_and_keeps_producer_inputs
         '-qm',
         'independent sparse transport',
     )
+    assert (
+        subprocess.check_output(
+            ['git', '-C', str(source), 'show', 'HEAD:' + reserved],
+            env=env,
+        )
+        == files[reserved]
+    ), 'The actual source commit must contain every reserved-name byte before sparse checkout'
     subprocess.run(
         ['git', 'clone', '-q', '--no-checkout', str(source), str(target)],
         env=env,

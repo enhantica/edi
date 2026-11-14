@@ -7,7 +7,7 @@ import os
 import sys
 from functools import cache, lru_cache
 from pathlib import Path
-from urllib.parse import unquote, urljoin, urlparse
+from urllib.parse import urljoin, urlparse
 
 PNG = b'\x89PNG\r\n\x1a\n'
 
@@ -137,7 +137,7 @@ def assert_webp_asset(address, page, root):
     assert parsed.scheme == 'file' and not parsed.netloc, (
         'Gate 4: tutorial images resolve to local published WebP files'
     )
-    path = Path(unquote(parsed.path))
+    path = Path.from_uri(parsed._replace(query='', fragment='').geturl())
     assert path.resolve().is_relative_to(root.resolve()) and path.is_file(), (
         'Gate 4: every tutorial image resolves inside the actual publication: ' + address
     )

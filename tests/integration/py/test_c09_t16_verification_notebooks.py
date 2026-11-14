@@ -449,13 +449,22 @@ def test_verification_sources_generate_stripped_notebooks_on_demand() -> None:
     )
     assert not untracked, f'verification sources must be committed: {untracked}'
 
-    notebook_paths = {str((VERIFICATION / name).relative_to(ROOT)) for name in expected_notebooks}
+    notebook_paths = {
+        (VERIFICATION / name).relative_to(ROOT).as_posix() for name in expected_notebooks
+    }
     assert not notebook_paths & tracked, (
         'generated verification notebooks must remain untracked derived artifacts'
     )
-    ignored = set(
-        _run('git', 'check-ignore', '--no-index', *sorted(notebook_paths)).stdout.splitlines()
+    result = subprocess.run(
+        ['git', 'check-ignore', '--no-index', '-z', '--stdin'],
+        cwd=ROOT,
+        input='\0'.join(sorted(notebook_paths)) + '\0',
+        text=True,
+        capture_output=True,
+        check=False,
     )
+    assert result.returncode == 0, 'Git must classify every declared derived notebook path'
+    ignored = set(result.stdout.rstrip('\0').split('\0'))
     assert ignored == notebook_paths, (
         'every derived verification notebook must be ignored until generated on demand'
     )

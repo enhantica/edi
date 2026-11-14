@@ -56,7 +56,7 @@ def violations(root, scopes):
                     continue
             checked.append(path)
             if FIELD.search(surface_text(path)):
-                hits.append(str(path.relative_to(root)))
+                hits.append(path.relative_to(root).as_posix())
         assert checked, 'Each public surface must contain nonexempt content: ' + name
     return sorted(set(hits))
 
@@ -92,7 +92,7 @@ def compiled_violations(root, scopes):
             if not path.is_file() or path.suffix.lower() not in CPP_SUFFIXES:
                 continue
             checked.append(path)
-            relative = str(path.relative_to(root))
+            relative = path.relative_to(root).as_posix()
             if relative in FROZEN_CPP_DATA:
                 if hashlib.sha256(path.read_bytes()).hexdigest() != FROZEN_CPP_DATA[relative]:
                     hits.append(relative)
@@ -106,6 +106,6 @@ def compiled_violations(root, scopes):
             source = re.sub(r'\\\r?\n', '', path.read_text(encoding='utf-8'))
             code = CPP_DATA.sub(' ', source)
             if re.search(r'\babscor2\b', code):
-                hits.append(str(path.relative_to(root)))
+                hits.append(path.relative_to(root).as_posix())
         assert checked, 'Every compiled inventory scope must contain source: ' + name
     return sorted(set(hits))
