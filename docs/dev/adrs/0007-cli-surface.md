@@ -129,3 +129,9 @@ rewrite bounds both the row and its clearing spaces after a resize. Plain ASCII 
 byte/display-width disagreement. Redirected output retains one complete row per completion.
 The private functions are host plumbing, outside the public Python surface. Machine records
 and saved scientific values are unaffected.
+
+Manual Undo output takes its version header from the linked engine's existing error-record
+emitter, through the same private header validator used by the descent-listing comparison.
+The helper refuses malformed, missing, unterminated or duplicate headers. Crysta's own manual
+Undo emitter uses kFitReportSchema directly. There is no separately maintained version literal;
+restored-parameter fields, dry mode, quiet mode and persistence rules remain unchanged.

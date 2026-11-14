@@ -49,6 +49,7 @@ from typing import Self
 import edi
 from edi import _edi as _native
 from edi import _project_output as _output
+from edi._machine_records import schema_line
 
 # One verbosity for both channels, so --verbosity means the same thing whichever --report is
 # chosen.
@@ -928,7 +929,7 @@ def run_undo(args: argparse.Namespace) -> int:
         return 0
     if args.report == 'machine':
         lines = [
-            'schema=8',
+            schema_line(edi.error_report(edi.VerbosityEnum.COMPACT)).removesuffix('\n'),
             'record=undo',
             f'was_no_op={"true" if was_no_op else "false"}',
             f'restored={len(restored)}',
