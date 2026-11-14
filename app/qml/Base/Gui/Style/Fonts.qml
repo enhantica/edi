@@ -43,6 +43,10 @@ QtObject {
     property FontLoader baloo2SemiBold: FontLoader {
         source: fonts.fontPath("Baloo_2", "Baloo2-SemiBold.ttf")
     }
+    // Baloo 2 with its weight axis (400 to 800), for the Home intro's words, whose weight changes smoothly.
+    property FontLoader baloo2Variable: FontLoader {
+        source: fonts.fontPath("Baloo_2", "Baloo2-Variable.ttf")
+    }
 
     // Font families, by the base's names
     readonly property string fontFamily: ptSansRegular.name

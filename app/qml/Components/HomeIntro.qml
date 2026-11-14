@@ -8,8 +8,8 @@ import edi.app
 
 // The intro at start (the owner, 2026-11-14), after the 2020 app's Home page (easyDiffraction 0.x, Home.qml): over a
 // plain backdrop, "Making diffraction data analysis easy" fades in, every word but "easy" and "diffraction" fades out,
-// and those two move to their places in the Home wordmark, "diffraction" turning SemiBold on the way. The round mark
-// then rolls in from beyond the left edge, very fast at first and braking hard like a sports car, its inner circles
+// "diffraction" growing to its logo weight meanwhile, and those two move to their places in the Home wordmark. The
+// round mark then rolls in from beyond the left edge, very fast at first and braking hard like a sports car, its inner circles
 // shown as a 24 fps film shows a wheel, so they seem to turn backwards while it clearly rolls forwards. Last,
 // the backdrop fades, so the rest of the window fades in around the landed wordmark. Skip jumps to the end; Disable
 // also turns Preferences' Home page animations off.
@@ -22,7 +22,6 @@ Item {
     // Each phase's progress, 0 to 1; the items below are bound to them.
     property real wordsIn: 0
     property real othersOut: 1
-    property real bold: 0
     property real move: 0
     property real roll: 0
     property real reveal: 0
@@ -51,7 +50,17 @@ Item {
 
     readonly property real pixelSize: wordmark ? wordmark.namePixelSize : 40
     readonly property real lineBaseline: height / 2
-    readonly property real lineWidth: making.implicitWidth + diffraction.implicitWidth + middle.implicitWidth + easy.implicitWidth
+    // The line is laid out at the lightest weight, so the words keep their places while "diffraction" grows.
+    readonly property real lineWidth: making.implicitWidth + lightDiffraction.advanceWidth + middle.implicitWidth + easy.implicitWidth
+    TextMetrics {
+        id: lightDiffraction
+        font.family: EaStyle.Fonts.baloo2Variable.name
+        font.pixelSize: intro.pixelSize
+        font.variableAxes: ({
+                "wght": 400
+            })
+        text: diffraction.text
+    }
     readonly property real lineX: (width - lineWidth) / 2
 
     // Where the words and the mark land, read from the Home wordmark just before they move.
@@ -96,10 +105,16 @@ Item {
         onWheel: wheel => wheel.accepted = true
     }
 
+    // The words in Baloo 2's lightest weight, 400, as the logo's "easy"; "diffraction" grows to the logo's 600 while the
+    // other words fade out, then keeps it through the move (the owner, 2026-11-14).
     component Word: EaElements.Label {
-        font.family: EaStyle.Fonts.baloo2Regular.name
-        font.styleName: "Regular"
+        property real weight: 400
+
+        font.family: EaStyle.Fonts.baloo2Variable.name
         font.pixelSize: intro.pixelSize
+        font.variableAxes: ({
+                "wght": weight
+            })
     }
 
     Word {
@@ -114,20 +129,13 @@ Item {
         readonly property real startX: intro.lineX + making.implicitWidth
         x: startX + (intro.diffractionEnd.x - startX) * intro.move
         y: intro.lineBaseline - baselineOffset + (intro.diffractionEnd.y - intro.lineBaseline + baselineOffset) * intro.move
-        opacity: intro.wordsIn * (1 - intro.bold)
-        text: ApplicationInfo.nameSuffixForLogo
-    }
-    Word {
-        x: diffraction.x
-        y: diffraction.y
-        font.family: EaStyle.Fonts.baloo2SemiBold.name
-        font.styleName: "SemiBold"
-        opacity: intro.wordsIn * intro.bold
+        opacity: intro.wordsIn
+        weight: 400 + 200 * (1 - intro.othersOut)
         text: ApplicationInfo.nameSuffixForLogo
     }
     Word {
         id: middle
-        x: diffraction.startX + diffraction.implicitWidth
+        x: diffraction.startX + lightDiffraction.advanceWidth
         y: intro.lineBaseline - baselineOffset
         opacity: intro.wordsIn * intro.othersOut
         text: qsTr(" data analysis ")
@@ -233,20 +241,12 @@ Item {
         ScriptAction {
             script: intro.place()
         }
-        ParallelAnimation {
-            NumberAnimation {
-                target: intro
-                property: "move"
-                to: 1
-                duration: 1000
-                easing.type: Easing.OutExpo
-            }
-            NumberAnimation {
-                target: intro
-                property: "bold"
-                to: 1
-                duration: 600
-            }
+        NumberAnimation {
+            target: intro
+            property: "move"
+            to: 1
+            duration: 1000
+            easing.type: Easing.OutExpo
         }
         NumberAnimation {
             target: intro
