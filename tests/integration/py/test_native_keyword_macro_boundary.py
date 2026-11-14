@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def require_sdk_access_identity(source):
     source = re.sub(r'\\\r?\n', '', source)
+    if not re.search(r'#\s*define\s+(?:private|protected|public)\b', source):
+        return
 
     def keep_include_operand(match):
         start = source.rfind('\n', 0, match.start()) + 1

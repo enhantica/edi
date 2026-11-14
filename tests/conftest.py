@@ -399,6 +399,23 @@ def crysta_reference_prefix() -> Path:
     return prefix
 
 
+def crysta_source_identity(source: Path) -> str:
+    """Name this checkout or exported SDK source, never an enclosing repository."""
+    if (source / '.git').exists():
+        current = subprocess.run(
+            ['git', '-C', str(source), 'rev-parse', 'HEAD'],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    else:
+        record = source / 'CRYSTA_SOURCE_SHA'
+        assert record.is_file(), 'Exported SDK sources require their own source identity record'
+        current = record.read_text(encoding='utf-8').strip()
+    assert re.fullmatch(r'[0-9a-f]{40}', current), 'Crysta source identity must be a full commit'
+    return current
+
+
 def crysta_reference_source() -> Path:
     """Resolve the source belonging to the selected comparison prefix, fail closed."""
     root = Path(__file__).resolve().parents[1]
@@ -409,12 +426,7 @@ def crysta_reference_source() -> Path:
         result = Path(source)
     else:
         result = root / 'build/crysta-src'
-    current = subprocess.run(
-        ['git', '-C', str(result), 'rev-parse', 'HEAD'],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
+    current = crysta_source_identity(result)
     assert current == (prefix / '.crysta-sha').read_text().strip(), (
         'engine comparison corpus and CLI must belong to the same linked crysta source'
     )

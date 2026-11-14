@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T01:31:13Z
+# measured_utc = 2026-11-14T02:34:23Z
 #
-# Recorded from: measured test run (5862 node(s) measured once, 172781 banked, 1630 stale row(s) dropped)
-# Collected tests: 244771; with a reported duration: 77059
+# Recorded from: measured test run (31 node(s) measured once, 175887 banked, 0 stale row(s) dropped)
+# Collected tests: 244802; with a reported duration: 77072
 # Module-scoped fixture costs recorded: 190
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 244771
+# inventory_python = 244802
 # inventory_cpp = 402
-# inventory_measured = 175887
+# inventory_measured = 175918
 # inventory_unmeasured = 69286
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85504
+# inventory_pr_python = 85535
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -1806,6 +1806,13 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.610	tests/integration/py/test_browser_dataset_routing.py::test_browser_folder_completion_preserves_initiator_and_consumes_once[session-replaced-sessionProject=foreign;-deliver(41,"chosen");-False]
 0.520	tests/integration/py/test_browser_dataset_routing.py::test_browser_folder_completion_preserves_initiator_and_consumes_once[stale--deliver(40,"obsolete");deliver(41,"chosen");-True]
 0.640	tests/integration/py/test_browser_dataset_routing.py::test_browser_folder_completion_preserves_initiator_and_consumes_once[target-cleared-group.webDataExperiment=null;-deliver(41,"chosen");-False]
+0.000	tests/integration/py/test_browser_toolbar_names.py::test_a_stale_caption_in_any_browser_actor_refuses[Reset to initial state without project, model and data]
+0.000	tests/integration/py/test_browser_toolbar_names.py::test_a_stale_caption_in_any_browser_actor_refuses[Save current state of the project]
+0.010	tests/integration/py/test_browser_toolbar_names.py::test_browser_actor_inventory_keeps_the_published_toolbar_contract
+0.000	tests/integration/py/test_browser_toolbar_names.py::test_empty_browser_actor_inventory_cannot_pass
+0.010	tests/integration/py/test_browser_toolbar_names.py::test_published_stale_actor_preimage_is_rejected[e04_t11_browser.mjs]
+0.010	tests/integration/py/test_browser_toolbar_names.py::test_published_stale_actor_preimage_is_rejected[project_archive_browser.mjs]
+0.010	tests/integration/py/test_browser_toolbar_names.py::test_published_stale_actor_preimage_is_rejected[project_browser_storage.mjs]
 0.060	tests/integration/py/test_bundled_display_fonts.py::test_default_label_formatter_alphabet_has_no_missing_glyphs
 0.060	tests/integration/py/test_bundled_display_fonts.py::test_display_census_includes_literals_escapes_and_formatter_domain
 0.000	tests/integration/py/test_bundled_display_fonts.py::test_each_recorded_display_site_has_a_real_glyph_in_its_rendering_face[Baloo 2]
@@ -161604,6 +161611,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cif_import_contract.py::
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[scan-host]
 0.050	tests/integration/py/test_compiled_app_environment.py::test_compiled_app_launch_provisions_an_absent_app_prefix[selector]
 0.100	tests/integration/py/test_compiled_app_environment.py::test_normal_screen_capture_provisions_an_absent_app_prefix
+0.140	tests/integration/py/test_compiler_cache_identity.py::test_unproved_committed_inputs_refuse_before_mutating_ci_files[no-committed-lock]
+0.210	tests/integration/py/test_compiler_cache_identity.py::test_unproved_committed_inputs_refuse_before_mutating_ci_files[no-committed-pin]
+0.120	tests/integration/py/test_compiler_cache_identity.py::test_unproved_committed_inputs_refuse_before_mutating_ci_files[no-head]
+0.320	tests/integration/py/test_compiler_cache_identity.py::test_working_lock_rewrite_cannot_change_the_restore_save_family[Linux]
+0.280	tests/integration/py/test_compiler_cache_identity.py::test_working_lock_rewrite_cannot_change_the_restore_save_family[Windows]
+0.310	tests/integration/py/test_compiler_cache_identity.py::test_working_lock_rewrite_cannot_change_the_restore_save_family[macOS]
 0.060	tests/integration/py/test_compiler_launcher_lookup.py::test_empty_custom_absolute_and_list_launchers_remain_exact_user_choices[environment--CXX]
 0.060	tests/integration/py/test_compiler_launcher_lookup.py::test_empty_custom_absolute_and_list_launchers_remain_exact_user_choices[environment--C]
 0.070	tests/integration/py/test_compiler_launcher_lookup.py::test_empty_custom_absolute_and_list_launchers_remain_exact_user_choices[environment-/custom path/ccache-CXX]
@@ -167124,6 +167137,24 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_token_readers.p
 0.080	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[datablock]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.py::test_same_site_id_in_two_structures_resolves_to_distinct_parameters[structure]
 0.010	tests/integration/py/test_multiphase_constraints.py::test_structure_added_after_project_creation_participates_in_constraints
+0.100	tests/integration/py/test_native_keyword_macro_boundary.py::test_authored_native_test_sources_preserve_sdk_access_identity
+0.010	tests/integration/py/test_native_keyword_macro_boundary.py::test_committed_probe_preimage_reaches_the_access_macro_gate
+0.020	tests/integration/py/test_native_keyword_macro_boundary.py::test_existing_transaction_probe_preloads_the_sdk_before_its_access_macro
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[private-#if 0\n#include "crysta/model.hpp"\n#endif\n]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[private-/*\n#include "crysta/model.hpp"\n*/\n]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[private-// #include "crysta/model.hpp"\n]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[private-]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[private-auto text = R"(\n#include "crysta/model.hpp"\n)";\n]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[protected-#if 0\n#include "crysta/model.hpp"\n#endif\n]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[protected-/*\n#include "crysta/model.hpp"\n*/\n]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[protected-// #include "crysta/model.hpp"\n]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[protected-]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[protected-auto text = R"(\n#include "crysta/model.hpp"\n)";\n]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[public-#if 0\n#include "crysta/model.hpp"\n#endif\n]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[public-/*\n#include "crysta/model.hpp"\n*/\n]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[public-// #include "crysta/model.hpp"\n]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[public-]
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[public-auto text = R"(\n#include "crysta/model.hpp"\n)";\n]
 0.030	tests/integration/py/test_native_serialized_source_admission.py::test_each_native_parser_refuses_competing_declared_sources[own+collection-batch-powder-cwl]
 0.020	tests/integration/py/test_native_serialized_source_admission.py::test_each_native_parser_refuses_competing_declared_sources[own+collection-batch-powder-tof]
 0.030	tests/integration/py/test_native_serialized_source_admission.py::test_each_native_parser_refuses_competing_declared_sources[own+collection-batch-reflections-cwl]

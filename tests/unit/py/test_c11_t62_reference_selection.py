@@ -1,11 +1,12 @@
 """: engine comparisons follow the loaded artifact and reject a stale CLI."""
 
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-from conftest import crysta_reference_prefix, crysta_reference_source
+from conftest import crysta_reference_prefix, crysta_reference_source, crysta_source_identity
 from tools.testing import fit_policy
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -45,3 +46,49 @@ def test_fit_policy_uses_the_same_corpus_as_the_loaded_engine(monkeypatch):
         ' the production fit-policy sentinel must select the loaded engine corpus '
         'under CRYSTA_CONSUMER_SRC, without requiring a second override'
     )
+
+
+def test_exported_source_never_borrows_the_enclosing_repository_identity(tmp_path):
+    subprocess.run(['git', 'init', str(tmp_path)], check=True, capture_output=True)
+    source = tmp_path / 'exported'
+    source.mkdir()
+    with pytest.raises(AssertionError, match='own source identity record'):
+        crysta_source_identity(source)
+    record = source / 'CRYSTA_SOURCE_SHA'
+    record.write_text('a7' * 20 + '\n')
+    assert crysta_source_identity(source) == 'a7' * 20
+    record.write_text('short-or-invalid')
+    with pytest.raises(AssertionError, match='full commit'):
+        crysta_source_identity(source)
+
+
+def test_real_checkout_uses_git_and_refuses_a_broken_git_identity(tmp_path):
+    subprocess.run(['git', 'init', str(tmp_path)], check=True, capture_output=True)
+    (tmp_path / 'CRYSTA_SOURCE_SHA').write_text('a7' * 20)
+    # A stale record must not rescue a checkout with unproved Git identity.
+    with pytest.raises(subprocess.CalledProcessError):
+        crysta_source_identity(tmp_path)
+    subprocess.run(
+        ['git', '-C', str(tmp_path), 'add', 'CRYSTA_SOURCE_SHA'], check=True, capture_output=True
+    )
+    subprocess.run(
+        [
+            'git',
+            '-C',
+            str(tmp_path),
+            '-c',
+            'user.name=Fixture',
+            '-c',
+            'user.email=fixture@example.invalid',
+            'commit',
+            '-m',
+            'Owned source',
+        ],
+        check=True,
+        capture_output=True,
+    )
+    head = subprocess.check_output(
+        ['git', '-C', str(tmp_path), 'rev-parse', 'HEAD'], text=True
+    ).strip()
+    assert crysta_source_identity(tmp_path) == head
+    assert head != 'a7' * 20
