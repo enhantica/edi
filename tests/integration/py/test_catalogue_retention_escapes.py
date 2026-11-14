@@ -96,6 +96,8 @@ def test_catalogue_projection_refuses_every_retained_input_escape(
             'agreement': project / 'structures',
             'native': project,
         }[channel]
-        (directory / ('extra.dat' if channel == 'scan' else 'extra.edi')).write_text('extra\n')
+        (directory / ('extra.dat' if channel == 'scan' else 'extra.edi')).write_text(
+            'extra\n', newline='\n'
+        )
     with pytest.raises((AssertionError, ValueError) if channel == 'native' else AssertionError):
         observe()

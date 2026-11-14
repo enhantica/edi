@@ -83,7 +83,7 @@ def test_actual_nested_compiler_execution_uses_the_selected_cache_policy(
     )
     invocations = {}
     for line in trace.splitlines():
-        record = re.match(r'\[[^]]+ (\d+)\] (.*)', line)
+        record = re.match(r'\[[^]]+ (\d+)\s*\] (.*)', line)
         if record:
             invocations.setdefault(record[1], []).append(record[2])
     suffix = 'c' if language == 'C' else 'cpp'

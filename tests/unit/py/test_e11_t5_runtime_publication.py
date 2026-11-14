@@ -13,7 +13,7 @@ import re
 import shutil
 import stat
 import subprocess
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import pytest
 
@@ -398,7 +398,7 @@ def _refused(run):
 
 
 def _payload_copy_calls(trace, payload):
-    source = str(payload)
+    source = payload.as_posix()
     calls = []
     for event in trace:
         args = event.get('args', [])
@@ -422,7 +422,11 @@ def _payload_copy_calls(trace, payload):
             }
             for part in args
         )
-        if copying and any(str(part).startswith(source) for part in args):
+        if copying and any(
+            str(part).replace('\\', '/').rstrip('/') == source.rstrip('/')
+            or str(part).replace('\\', '/').startswith(source.rstrip('/') + '/')
+            for part in args
+        ):
             calls.append(event)
     return calls
 
@@ -745,7 +749,7 @@ def test_changed_verified_identity_publishes_new_complete_tree_and_retains_old_r
         for event in second[2]
         if event.get('cmd', '').lower() == 'file'
         and event.get('args', [''])[0].upper() == 'RENAME'
-        and str(new) in event.get('args', [])
+        and new.as_posix() in event.get('args', [])
     ]
     assert renamed and all(Path(event['args'][1]) != new for event in renamed), (
         'The genuinely missing new identity is published through the ordinary atomic '
@@ -1047,7 +1051,7 @@ def _original_runtime_select_literal_manifest(fixture, original_caller, spelling
 
 @pytest.mark.parametrize('form', ['relative', 'absolute'])
 @pytest.mark.parametrize('selection', ['symlink_parent', 'nonexistent_component'])
-def test_original_explicit_manifest_spelling_selects_filesystem_owner_without_lexical_collapse(
+def test_original_explicit_manifest_spelling_selects_filesystem_owner_without_lexical_collapse(  # noqa: PLR0915 - native filesystem owner controls
     tmp_path, form, selection
 ):
     fixture = RuntimeFixture(tmp_path / 'owner-a', dedicated=True)
@@ -1106,25 +1110,25 @@ def test_original_explicit_manifest_spelling_selects_filesystem_owner_without_le
     component = 'selector' if selection == 'symlink_parent' else 'nonexistent_component'
     suffix = component + '/../input.json'
     selected_path = fixture.project / component / '..' / 'input.json'
-    spelling = suffix if form == 'relative' else str(selected_path)
+    spelling = suffix if form == 'relative' else selected_path.as_posix()
     assert spelling.endswith(suffix), (
         'Neither Python nor the fixture collapses the '
         'original caller spelling before CMake receives it'
     )
-    if selection == 'symlink_parent':
+    if os.name == 'nt':
+        assert selected_path.samefile(competing_b), (
+            'The Windows filesystem resolves this spelling to the actual lexical owner B'
+        )
+    elif selection == 'symlink_parent':
         assert (
             selector.is_symlink()
-            and selector.readlink() == (selected_parent / 'child')
+            and selector.readlink().samefile(selected_parent / 'child')
             and selected_path.samefile(selected_a)
             and selected_path.read_bytes() == selected_a.read_bytes()
-        ), (
-            'The real filesystem resolves the parent symlink then dot-dot to regular'
-            ' manifest A; no terminal symlink or inferred path identity is admitted'
-        )
+        ), 'The POSIX filesystem resolves the parent symlink before dot-dot to regular owner A'
     else:
         assert not (fixture.project / component).exists(), (
-            'Required: original explicit manifest spelling selects filesystem '
-            'owner without lexical collapse.'
+            'The POSIX missing-component vehicle must remain absent before the actual read'
         )
         with pytest.raises(FileNotFoundError):
             selected_path.read_bytes()
@@ -1133,7 +1137,15 @@ def test_original_explicit_manifest_spelling_selects_filesystem_owner_without_le
         'literal-' + form + '-' + selection,
         known_paths=(*refs, proof['published_a'], proof['published_b']),
     )
-    if selection == 'symlink_parent':
+    if os.name == 'nt':
+        _successful(observed)
+        assert fixture.publication() == proof['published_b'], (
+            'The Windows original reader must select the same B owner as its native filesystem'
+        )
+        assert (fixture.publication() / ENTRYPOINT).read_bytes() == proof['b_bytes'], (
+            'Native owner selection must retain every verified byte of the actual Windows owner'
+        )
+    elif selection == 'symlink_parent':
         _successful(observed)
         assert (
             fixture.publication() == proof['published_a']
@@ -1234,4 +1246,16 @@ def test_original_configure_disposition_keeps_return_and_entered_failure_distinc
     )
     assert proof['runtime_refused'] is refused, (
         f'{kind}: only positive failed exit with an entered owned error proves refusal'
+    )
+
+
+def test_copy_trace_keeps_windows_source_identity_across_separator_transport():
+    source = PureWindowsPath('C:/owned payload')
+    copy = {'cmd': 'file', 'args': ['COPY', 'C:/owned payload/', 'DESTINATION', 'out']}
+    assert _payload_copy_calls([copy], source) == [copy], (
+        'Native CMake trace paths must retain the exact Windows payload owner across separators'
+    )
+    other = dict(copy, args=['COPY', 'C:/owned payload-other/', 'DESTINATION', 'out'])
+    assert not _payload_copy_calls([other], source), (
+        'A similarly prefixed directory must never count as staging the owned payload'
     )

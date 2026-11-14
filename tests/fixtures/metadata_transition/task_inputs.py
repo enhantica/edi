@@ -9,6 +9,7 @@ import zipfile
 from pathlib import Path
 
 from tests.fixtures.path_keys import repository_key
+from tests.fixtures.project_categories.historical_bytes import native_edi_bytes
 
 HERE = Path(__file__).parent
 
@@ -49,6 +50,7 @@ def previous_content(data):
 
 
 def saved_analysis(data, source):
+    data = native_edi_bytes(data)
     """Check the declared or legacy stop rule before retaining older saved-byte pins."""
     path = Path(source) / 'analysis/analysis.edi'
     original = path.read_bytes() if path.is_file() else b''
@@ -93,6 +95,7 @@ def saved_analysis(data, source):
 
 
 def saved_experiment(data, source):
+    data = native_edi_bytes(data)
     """Check the new fixed scan width before retaining its old complete byte witness."""
     root = HERE.resolve().parents[2]
     source = Path(source)

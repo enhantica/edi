@@ -1,6 +1,7 @@
 """Launch fixture scripts with the environment's real interpreter on every host."""
 
 import os
+import shlex
 import shutil
 import sys
 import tempfile
@@ -47,3 +48,31 @@ def fixture_program(path):
         sys.executable if first == ('#!' + sys.executable).encode() else environment_bash()
     )
     return [interpreter, path.as_posix()]
+
+
+def native_executable(path):
+    """Locate a declared executable in its native single- or multi-configuration spelling."""
+    path = Path(path)
+    if os.name != 'nt':
+        return path
+    if path.suffix.lower() != '.exe':
+        path = path.with_name(path.name + '.exe')
+    return next((p for p in [path.parent / 'Release' / path.name, path] if p.is_file()), path)
+
+
+def python_program(path, source):
+    """Publish an authored Python spy behind a shell entrypoint Git Bash can execute."""
+    path = Path(path)
+    program = path.with_name(path.name + '.py')
+    program.write_text(source, encoding='utf-8', newline='\n')
+    path.write_text(
+        '#!/bin/sh\nexec '
+        + shlex.quote(Path(sys.executable).as_posix())
+        + ' '
+        + shlex.quote(program.as_posix())
+        + ' "$@"\n',
+        encoding='utf-8',
+        newline='\n',
+    )
+    path.chmod(0o755)
+    return path

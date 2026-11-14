@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T12:01:30Z
+# measured_utc = 2026-11-14T13:36:28Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 176299 banked, 0 stale row(s) dropped)
-# Collected tests: 245154; with a reported duration: 77116
+# Recorded from: measured test run (2 node(s) measured once, 176301 banked, 0 stale row(s) dropped)
+# Collected tests: 245156; with a reported duration: 77117
 # Module-scoped fixture costs recorded: 191
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245154
+# inventory_python = 245156
 # inventory_cpp = 402
-# inventory_measured = 176301
+# inventory_measured = 176303
 # inventory_unmeasured = 69255
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85887
+# inventory_pr_python = 85889
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -167839,6 +167839,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::te
 0.460	tests/integration/py/test_plain_data_picker.py::test_picker_observer_rejects_disconnected_and_wrong_target_handlers[wrong-multiplicity]
 0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[False]
 0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[True]
+0.060	tests/integration/py/test_platform_fixture_runtime.py::test_authored_python_spy_reaches_declared_and_refused_argv_without_an_ambient_tool
 0.010	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[path]
 0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[string]
 0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_native_consumer_uses_release_executable_and_honours_exact_override
@@ -244739,6 +244740,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publication.py::test_changed_verified_identity_publishes_new_complete_tree_and_retains_old_readers[archive_identity]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publication.py::test_changed_verified_identity_publishes_new_complete_tree_and_retains_old_readers[dedicated_legal]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publication.py::test_changed_verified_identity_publishes_new_complete_tree_and_retains_old_readers[verified_payload]
+0.000	tests/unit/py/test_e11_t5_runtime_publication.py::test_copy_trace_keeps_windows_source_identity_across_separator_transport
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publication.py::test_copy_trace_observes_each_supported_ordinary_operation_for_both_source_owners
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publication.py::test_corrupt_or_foreign_immutable_publication_refuses_without_replacement[changed_byte]
 UNMEASURED:not-completed-in-this-run	tests/unit/py/test_e11_t5_runtime_publication.py::test_corrupt_or_foreign_immutable_publication_refuses_without_replacement[corrupt_verifier]

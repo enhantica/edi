@@ -20,7 +20,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e09_t75_commands import assert_no_swallowed_refusal, checked_program
-from tests.fixtures.native_process import environment_bash, fixture_program
+from tests.fixtures.native_process import environment_bash, fixture_program, python_program
 from tests.system.py.test_e09_t75_pin_currency import currency_world
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -165,6 +165,12 @@ def consumer(  # noqa: PLR0914, PLR0915
     )
     binpath = tmp_path / 'bin'
     binpath.mkdir()
+    python3 = binpath / 'python3'
+    python3.write_text(
+        '#!/bin/sh\nexec ' + shlex.quote(Path(sys.executable).as_posix()) + ' "$@"\n',
+        newline='\n',
+    )
+    python3.chmod(0o755)
     for command in ('cmake', 'ninja', 'make', 'git', 'gh', 'curl'):
         p = binpath / command
         p.write_text(
@@ -289,7 +295,7 @@ emit_curl(data)
 """,
             newline='\n',
         )
-        curl.write_text(checked_program(curl.read_text(), 'curl'), newline='\n')
+        python_program(curl, checked_program(curl.read_text(), 'curl'))
         curl.chmod(0o755)
         env.pop('CRYSTA_SDK_DIR')
         env.update(
@@ -529,6 +535,10 @@ def test_d2_pairing_executes_branch_discovery_and_refuses_transport_failure(
     response = tmp_path / 'response'
     git = binpath / 'git'
     git.write_text(pair_lookup_program(calls, response), newline='\n')
+    (binpath / 'python3').write_text(
+        '#!/bin/sh\nexec ' + shlex.quote(Path(sys.executable).as_posix()) + ' "$@"\n', newline='\n'
+    )
+    (binpath / 'python3').chmod(0o755)
     git.chmod(0o755)
     for name in ('gh', 'cmake', 'curl'):
         p = binpath / name

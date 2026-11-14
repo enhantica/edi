@@ -1,6 +1,8 @@
 """Host-independent controls for native tool selection and exact source manifest transport."""
 
 import json
+import os
+import subprocess
 from pathlib import Path, PureWindowsPath
 from types import SimpleNamespace
 
@@ -83,3 +85,27 @@ def test_windows_native_consumer_uses_release_executable_and_honours_exact_overr
     consumer.os.environ['EDI_MAGNETIC_INTEGRATION_TEST_EXE'] = str(tmp_path / 'missing.exe')
     with pytest.raises(AssertionError, match='missing downstream consumer is a failure'):
         consumer.native_consumers.__wrapped__()
+
+
+def test_authored_python_spy_reaches_declared_and_refused_argv_without_an_ambient_tool(tmp_path):
+    program = tmp_path / 'fixture-read'
+    native_process.python_program(
+        program,
+        'import sys\nprint("FIXTURE_ARGV", repr(sys.argv[1:]))\n'
+        'sys.exit(0 if sys.argv[1:] == ["--declared", "value with spaces"] else 64)\n',
+    )
+    for arguments, expected in [(['--declared', 'value with spaces'], 0), (['--unknown'], 64)]:
+        result = subprocess.run(
+            [native_process.environment_bash(), str(program), *arguments],
+            env=os.environ.copy(),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=3,
+        )
+        assert result.returncode == expected and 'FIXTURE_ARGV' in result.stdout, (
+            'The authored Python transport must receive exact argv on both admission and refusal'
+        )
+        assert repr(arguments) in result.stdout, (
+            'Interpreter selection must preserve spaces, options and the complete addressed argv'
+        )

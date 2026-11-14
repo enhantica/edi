@@ -12,6 +12,7 @@ from decimal import Decimal
 import gemmi
 
 from tests.fixtures.metadata_transition import task_inputs
+from tests.fixtures.project_categories.historical_bytes import native_edi_bytes
 
 SILICON = 'docs/user/cli/pd-neut-tof_lbco-si-mcstas/project'
 PRASEODYMIUM = {
@@ -97,6 +98,7 @@ def reader_values(path, expected, frozen):
 
 
 def restore_representative(content, case):
+    content = native_edi_bytes(content)
     change = orbit_transition(case)
     if change is None:
         return content

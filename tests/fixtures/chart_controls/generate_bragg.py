@@ -118,7 +118,7 @@ def main():
             '// Source SHA-256: ' + PUBLISHED_SHA256,
         ]
     target = 'bragg-current.hpp' if current else 'bragg.hpp'
-    Path(__file__).with_name(target).write_text('\n'.join(output) + '\n')
+    Path(__file__).with_name(target).write_text('\n'.join(output) + '\n', newline='\n')
 
 
 if __name__ == '__main__':

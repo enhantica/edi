@@ -305,7 +305,7 @@ def test_c11_t56_bare_star_missing_token_remains_empty(
         f'_metadata.{field}',
         '?',
     )
-    (source / 'project.edi').write_text(record_text, encoding='utf-8')
+    (source / 'project.edi').write_text(record_text, encoding='utf-8', newline='\n')
 
     restored = edi.Project.load(source)
     captured = capfd.readouterr()
@@ -511,7 +511,7 @@ def test_c11_t56_present_text_record_refuses_with_state_specific_io_error(
     reason: str | None,
 ) -> None:
     source = _stage_project_without_record(tmp_path)
-    (source / 'project.edi').write_text(record_text, encoding='utf-8')
+    (source / 'project.edi').write_text(record_text, encoding='utf-8', newline='\n')
 
     _assert_record_refuses(
         source,
@@ -535,7 +535,7 @@ def test_c11_t56_semantically_invalid_datetime_refuses_at_record_boundary(
         f'_metadata.{field}',
         f'"{invalid_value}"',
     )
-    (source / 'project.edi').write_text(record_text, encoding='utf-8')
+    (source / 'project.edi').write_text(record_text, encoding='utf-8', newline='\n')
 
     _assert_record_refuses(
         source,
@@ -557,7 +557,7 @@ def test_c11_t56_valid_leap_day_datetime_remains_materializable(
         f'_metadata.{field}',
         f'"{leap_day}"',
     )
-    (source / 'project.edi').write_text(record_text, encoding='utf-8')
+    (source / 'project.edi').write_text(record_text, encoding='utf-8', newline='\n')
 
     restored = edi.Project.load(source)
     captured = capfd.readouterr()
@@ -582,6 +582,7 @@ def test_c11_t56_opaque_fit_timestamp_round_trips_byte_identically(
             OPAQUE_CORPUS_TIMESTAMP,
         ),
         encoding='utf-8',
+        newline='\n',
     )
 
     loaded = edi.Project.load(source)
@@ -676,7 +677,7 @@ def test_c11_t56_incomplete_record_restores_present_fields_and_keeps_defaults(
     record_text = REFERENCE_PROJECT_RECORD
     for field in missing_fields:
         record_text = _without_tag(record_text, f'_metadata.{field}')
-    (source / 'project.edi').write_text(record_text, encoding='utf-8')
+    (source / 'project.edi').write_text(record_text, encoding='utf-8', newline='\n')
 
     default_time_floor = datetime.now(UTC).replace(microsecond=0) - timedelta(seconds=1)
     restored = edi.Project.load(source)
@@ -719,7 +720,7 @@ def test_c11_t56_present_unreadable_record_refuses_with_io_error(
 ) -> None:
     source = _stage_project_without_record(tmp_path)
     record = source / 'project.edi'
-    record.write_text(REFERENCE_PROJECT_RECORD, encoding='utf-8')
+    record.write_text(REFERENCE_PROJECT_RECORD, encoding='utf-8', newline='\n')
     with unreadable_file(record):
         _assert_record_refuses(source, capfd)
 

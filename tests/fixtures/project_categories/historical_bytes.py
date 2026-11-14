@@ -189,6 +189,8 @@ def candidates(data, template=None, *, preferred=None):
 
 
 def prior_digest(data, expected, *, template=None, name=None):
+    if name is not None and name.endswith('.edi'):
+        data = native_edi_bytes(data)
     digest = hashlib.sha256(data).hexdigest()
     if digest == expected:
         return digest

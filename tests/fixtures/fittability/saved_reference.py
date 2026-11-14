@@ -249,7 +249,7 @@ def main():
                     ))
                 ]
             record['fitted_tokens'][rule] = rows
-    args.output.write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
+    args.output.write_text(json.dumps(record, indent=2, sort_keys=True) + '\n', newline='\n')
 
 
 if __name__ == '__main__':

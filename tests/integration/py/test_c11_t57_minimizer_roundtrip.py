@@ -43,7 +43,7 @@ def staged(tmp_path, spelling):
     source = re.sub(r'(?m)^_minimizer\.type[^\n]*\n?', '', analysis.read_text())
     if spelling is not None:
         source += f'\n_minimizer.type {spelling}\n'
-    analysis.write_text(source, encoding='utf-8')
+    analysis.write_text(source, encoding='utf-8', newline='\n')
     return target
 
 
