@@ -649,7 +649,7 @@ def human_fit(
         # earlier runs left.
         fitted_none = tally.completed == prior[0]
         sys.stdout.write(
-            _row(state['chi2'], state['file'], 0) + '\n'
+            _row(tally.last_chi2, tally.last_file, 0) + '\n'
             if fitted_none
             else '\n'
             if live[0]
