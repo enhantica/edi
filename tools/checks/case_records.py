@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -184,6 +185,22 @@ REQUIRED_TUTORIALS = ('python', 'cli_docs')
 REQUIRED_INTERFACE = {'python': 'python', 'cli_docs': 'cli'}
 
 
+def pin_problems(built: dict) -> list[str]:
+    """A pin's provenance is complete only with its original identity, reason and values."""
+    entry = built['pin']
+    if not isinstance(entry, dict):
+        return [f'{built["id"]}: has no complete regression pin provenance']
+    if (
+        not isinstance(entry.get('commit'), str)
+        or not re.fullmatch(r'[0-9a-f]{40}', entry['commit'])
+        or not isinstance(entry.get('reason'), str)
+        or not entry['reason'].strip()
+        or not entry.get('values')
+    ):
+        return [f'{built["id"]}: has no complete regression pin provenance']
+    return []
+
+
 def problems(root: Path = ROOT) -> list[str]:
     """Every case without one of its record's fields or artefacts, named."""
     out = []
@@ -200,6 +217,7 @@ def problems(root: Path = ROOT) -> list[str]:
         case = built['id']
         if not built['provenance']:
             out.append(f'{case}: has no authored PROVENANCE.md disclosure')
+        out.extend(pin_problems(built))
         if not built['title'] or not built['nav_title']:
             out.append(f'{case}: {REGISTRY} gives no title or no short-name')
         if built['diffraction_lib'] is None:

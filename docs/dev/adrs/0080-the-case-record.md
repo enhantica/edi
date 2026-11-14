@@ -151,3 +151,9 @@ require an actual capture with provenance. Existing image subjects and bytes
 remain required. Structure-chip observers use the owner-declared full labels
 “Crystal structure” and “Magnetic structure”, and include the added magnetic
 CoSiO HEIDI case in their independent membership set.
+
+
+The production case check refuses missing pin provenance as well as missing
+source disclosures: each record must carry a complete commit identity, a
+nonempty reason and its declared regression values. The collection cannot
+silently publish a future partial case after the current annotations are added.

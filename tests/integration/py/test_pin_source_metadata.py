@@ -4,10 +4,12 @@ import copy
 import hashlib
 import json
 import re
+import shutil
 import zipfile
 from pathlib import Path
 
 import pytest
+import yaml
 
 from tests.fixtures.metadata_transition import pin_sources as source
 
@@ -41,3 +43,37 @@ def test_pin_annotation_retains_its_exact_committed_source_document(name, monkey
             patch.setattr(source, 'rows', lambda rows=rows: rows)
             with pytest.raises(AssertionError):
                 source.previous_bytes(name, raw)
+
+
+@pytest.mark.parametrize('damage', ['missing', 'empty', 'commit', 'reason', 'values'])
+def test_real_case_checker_refuses_incomplete_pin_provenance(tmp_path, damage):
+    from tools.checks import case_records  # noqa: PLC0415 - exercise the real producer/checker
+
+    case = 'pd-neut-cwl_lbco-hrpt'
+    folder = tmp_path / 'docs/user/cli' / case
+    shutil.copytree(ROOT / 'docs/user/cli' / case, folder)
+    registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())
+    registry['projects'] = [row for row in registry['projects'] if row['id'] == case]
+    (folder.parent / 'projects.yml').write_text(yaml.safe_dump(registry))
+    vocabulary = tmp_path / 'app/examples'
+    vocabulary.mkdir(parents=True)
+    for name in ('metadata.json', 'tags.json'):
+        shutil.copyfile(ROOT / 'app/examples' / name, vocabulary / name)
+    metadata = json.loads((vocabulary / 'metadata.json').read_text())
+    metadata['examples'] = {case: metadata['examples'][case]}
+    (vocabulary / 'metadata.json').write_text(json.dumps(metadata))
+    assert not any('regression pin provenance' in item for item in case_records.problems(tmp_path))
+    path = folder / 'expected.json'
+    expected = json.loads(path.read_text())
+    if damage == 'missing':
+        del expected['source']['pins']
+    elif damage == 'empty':
+        expected['source']['pins'] = {}
+    elif damage in {'commit', 'reason'}:
+        expected['source']['pins'][damage] = ''
+    else:
+        for quantity in expected['quantities'].values():
+            if quantity.get('kind') == 'regression-pin':
+                quantity['kind'] = 'reference'
+    path.write_text(json.dumps(expected))
+    assert f'{case}: has no complete regression pin provenance' in case_records.problems(tmp_path)
