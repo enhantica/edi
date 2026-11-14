@@ -3,8 +3,8 @@
 # # Calculation without data: La₀.₅Ba₀.₅CoO₃, HRPT
 #
 # Calculate a constant-wavelength neutron pattern of the cubic perovskite La₀.₅Ba₀.₅CoO₃ without
-# any measured data. The structure, the HRPT instrument, the peak profile and the background are in
-# the project, and edi calculates the pattern over the project's 2θ range.
+# any measured data. The structure comes from EasyDiffraction's collection; the tutorial describes the
+# HRPT instrument, the peak profile, the background and the 2θ range, and edi calculates the pattern.
 #
 # It builds the catalogue case `pd-neut-cwl_lbco_simulation` step by step: the same project the
 # command line calculates and the app's Examples open.

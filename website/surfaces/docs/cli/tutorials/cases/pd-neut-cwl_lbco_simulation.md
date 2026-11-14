@@ -3,26 +3,76 @@
 Nothing to fit: edi calculates from the model as the project holds it, as the Python tutorial does.
 
 Calculate a constant-wavelength neutron pattern of the cubic perovskite La₀.₅Ba₀.₅CoO₃ without
-any measured data. The structure, the HRPT instrument, the peak profile and the background are in
-the project, and edi calculates the pattern over the project's 2θ range.
+any measured data. The structure comes from EasyDiffraction's collection; the tutorial describes the
+HRPT instrument, the peak profile, the background and the 2θ range, and edi calculates the pattern.
 
-The project is the catalogue case `pd-neut-cwl_lbco_simulation`: the files the command line fits
-with `python -m edi fit docs/user/cli/pd-neut-cwl_lbco_simulation/project` and the app opens from
-its Examples.
+It builds the catalogue case `pd-neut-cwl_lbco_simulation` step by step: the same project the
+command line calculates and the app's Examples open.
 
-## Get the project
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_lbco_simulation/structures pd-neut-cwl_lbco_simulation/experiments pd-neut-cwl_lbco_simulation/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_lbco_simulation
+_metadata.title "La₀.₅Ba₀.₅CoO₃ [Pm-3m] · HRPT @ PSI"
+_metadata.description "Cubic perovskite · Simulated pattern without measured data"
+_metadata.authors .
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_lbco_simulation
+    edi download-data pd-neut-cwl_lbco_simulation-lbco
+    mv data/pd-neut-cwl_lbco_simulation-lbco.edi pd-neut-cwl_lbco_simulation/structures/lbco.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_lbco_simulation
+    python -m edi download-data pd-neut-cwl_lbco_simulation-lbco
+    mv data/pd-neut-cwl_lbco_simulation-lbco.edi pd-neut-cwl_lbco_simulation/structures/lbco.edi
     ```
+
+## Define the experiment
+
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
+
+=== "Standalone executable"
+
+    ```console
+    edi download-data pd-neut-cwl_lbco_simulation-hrpt
+    mv data/pd-neut-cwl_lbco_simulation-hrpt.edi pd-neut-cwl_lbco_simulation/experiments/hrpt.edi
+    ```
+
+=== "Python package"
+
+    ```console
+    python -m edi download-data pd-neut-cwl_lbco_simulation-hrpt
+    mv data/pd-neut-cwl_lbco_simulation-hrpt.edi pd-neut-cwl_lbco_simulation/experiments/hrpt.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
+
+```edi
+_edi.schema_version 3
+
+_fitting_mode.type single
+
+_minimizer.type crysta
+```
 
 ## Calculate
 
