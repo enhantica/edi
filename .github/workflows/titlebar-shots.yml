@@ -209,7 +209,9 @@ jobs:
           $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
           $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
           $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
-          $bmp.Save("titlebar-windows.png"); Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          $bmp.Save("titlebar-windows.png")
+          # Close it as a user would, so the next start shows no crash notice and restores a normal window.
+          $null = $p.CloseMainWindow(); if (-not $p.WaitForExit(15000)) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
           # The same with Windows in dark mode (edi's Theme is System by default, so it follows).
           Set-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0 -Type DWord
           Set-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name SystemUsesLightTheme -Value 0 -Type DWord
