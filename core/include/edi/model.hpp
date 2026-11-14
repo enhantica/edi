@@ -4668,6 +4668,9 @@ struct FitResultBase {
     int multistart_probes_pruned = 0;
     int multistart_probe_iterations = 0;
     std::string multistart_survivor;
+    // Whether the descent that finished used the gain-ratio damping: true for fast descent, and for the default
+    // descent when its fast-descent probe continued, as crysta's own record says.
+    bool fast_descent = false;
     // . Both point counts, named — reporting only one of them under a `pts` heading is: `loaded`
     // is what the project carried, `fitted` is what entered the residual (after each bank's
     // excluded regions), and reduced chi-square is normalised by the FITTED count. On the

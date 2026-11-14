@@ -6066,6 +6066,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             outcome.multistart_probes_pruned = result.multistart_probes_pruned;
             outcome.multistart_probe_iterations = result.multistart_probe_iterations;
             outcome.multistart_survivor = result.multistart_survivor;
+            outcome.fast_descent = result.fast_descent;
             outcome.n_points_loaded = n_points_loaded;
             outcome.n_points_fitted = provider.n_data();
             outcome.iterations_history = to_edi(collector.history());
@@ -6666,6 +6667,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         outcome.multistart_probes_pruned = result.multistart_probes_pruned;
         outcome.multistart_probe_iterations = result.multistart_probe_iterations;
         outcome.multistart_survivor = result.multistart_survivor;
+        outcome.fast_descent = result.fast_descent;
         outcome.elapsed_ms = solved ? elapsed_ms : 0.0;
         outcome.status = to_edi(crysta::classify_fit_status(result));
         outcome.unevaluable_trials = result.unevaluable_trials;
@@ -6905,6 +6907,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             outcome.multistart_probes_pruned = result.multistart_probes_pruned;
             outcome.multistart_probe_iterations = result.multistart_probe_iterations;
             outcome.multistart_survivor = result.multistart_survivor;
+            outcome.fast_descent = result.fast_descent;
             outcome.banks = std::move(bank_metrics);
             outcome.n_points_loaded = n_points_loaded;
             outcome.n_points_fitted = provider.n_data();
