@@ -1056,6 +1056,10 @@ class ApplicationInfo : public QObject {
     // settings, --test-observer) nor with EDI_HOME_INTRO=0; EDI_HOME_INTRO=1 allows them anyway.
     Q_PROPERTY(bool homeIntroAllowed READ homeIntroAllowed CONSTANT)
     bool homeIntroAllowed() const;
+    // In the browser the start page plays the intro (app/web/intro.js) and keeps its on/off choice in the page's
+    // storage; Preferences' Intro animation reads and writes that same value there. Elsewhere: on, nothing kept.
+    Q_INVOKABLE bool introAnimationStored() const;
+    Q_INVOKABLE void storeIntroAnimation(bool on) const;
     // At most twice a second while the user moves, clicks, scrolls or types anywhere in the app: the Home page's idle
     // spin waits for a pause in these.
     Q_SIGNAL void userInput();

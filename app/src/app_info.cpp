@@ -110,7 +110,20 @@
 #include <omp.h>
 #endif
 #ifdef Q_OS_WASM
+#include <emscripten.h>
 #include <emscripten/val.h>
+
+// The start page's intro choice (app/web/intro.js), kept in the page's storage: "off", or absent for on. A page whose
+// storage is blocked reads on and keeps nothing.
+EM_JS(int, edi_intro_animation_stored, (), {
+    try { return localStorage.getItem("edi.introAnimation") === "off" ? 0 : 1; } catch (e) { return 1; }
+});
+EM_JS(void, edi_store_intro_animation, (int on), {
+    try {
+        if (on) localStorage.removeItem("edi.introAnimation");
+        else localStorage.setItem("edi.introAnimation", "off");
+    } catch (e) {}
+});
 #endif
 
 namespace QV4 {
@@ -11985,6 +11998,22 @@ int ApplicationInfo::scanWorkersMaximum() const { return std::max(1, QThread::id
 void ApplicationInfo::setScanWorkers(int count) const { edi::set_scan_workers(count); }
 
 void ApplicationInfo::storeSettings() const { edi_app::store_settings_now(); }
+
+bool ApplicationInfo::introAnimationStored() const {
+#ifdef Q_OS_WASM
+    return edi_intro_animation_stored() != 0;
+#else
+    return true;
+#endif
+}
+
+void ApplicationInfo::storeIntroAnimation(bool on) const {
+#ifdef Q_OS_WASM
+    edi_store_intro_animation(on ? 1 : 0);
+#else
+    Q_UNUSED(on);
+#endif
+}
 
 #if EDI_APP_ASSISTANT
 void ApplicationInfo::assistantToolbarActivated(const QJSValue& window, const QJSValue& toggle,
