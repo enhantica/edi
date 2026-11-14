@@ -63,8 +63,11 @@ def _model_parameters(project: object, source: Path) -> dict[str, list[float]]:
         for index, point in enumerate(experiment.background):
             identity = reference[experiment.name]['background'][index]
             record(f'{prefix}.background[{identity}].intensity', point.intensity)
-        for field in ('abscor1', 'abscor2'):
-            parameter = getattr(experiment.absorption, field)
+        assert not hasattr(experiment.absorption, 'abscor2'), (
+            'ADR-0123 excludes the retired coefficient from the observed joint state'
+        )
+        for field in ('abscor1',):
+            parameter = getattr(experiment.absorption, field, None)
             if parameter is not None:
                 record(f'{prefix}.absorption.{field}', parameter)
     return mapped

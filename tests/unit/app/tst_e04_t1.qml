@@ -375,7 +375,7 @@ TestCase {
         exp.peakType = "tof-pseudo-voigt";
         ordered(rows(exp.peak).filter(r => !r.usedByProfile).map(r => r.parameter.name).sort(), ["decay_beta_0", "decay_beta_1"], "I15: free decay fields survive pseudo-Voigt switch");
         exp.absorptionType = "cylinder";
-        ordered(fieldNames(exp.absorption), ["abscor1", "abscor2"], "I17: TOF cylinder exposes the ABSCOR pair");
+        ordered(fieldNames(exp.absorption), ["abscor1"], "I17/ADR-0123: TOF cylinder exposes exactly the live ABSCOR1 field");
     }
     function test_pattern_and_saved_text_through_independent_surface() {
         // Frozen separate-surface regression pins, not independent physics claims.
