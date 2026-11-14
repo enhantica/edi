@@ -17,7 +17,7 @@ from pathlib import Path
 import edi
 import pytest
 
-from conftest import calculator_load_warning, corpus_case_dir
+from conftest import calculator_load_warning, corpus_case_dir, crysta_reference_source
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
 from tests.fixtures.project_categories.historical_bytes import check_project_spacing, prior_digest
 from tests.fixtures.project_save.carried_results import carried_file_hash
@@ -71,15 +71,14 @@ def _stage_project_without_record(tmp_path: Path) -> Path:
 
 def _stage_committed_corpus_project(tmp_path: Path) -> Path:
     """Copy the corpus project's committed bytes, never a prior test's saved output."""
-    source = corpus_case_dir('si-sepd-s2') / 'project'
-    repo = next(
-        (parent for parent in (source, *source.parents) if (parent / '.git').exists()),
-        None,
-    )
-    assert repo is not None, (
-        'the criterion-5 vehicle must come from a git checkout so its committed pre-save bytes '
-        'cannot be replaced by an earlier test mutating the shared corpus worktree'
-    )
+    # The mutable per-session corpus is a scratch copy. Read its original, qualified
+    # source instead, whether that source is a checkout or the producer's SDK export.
+    repo = crysta_reference_source()
+    source = repo / 'tests/fitting/si-sepd-s2/project'
+    if not (repo / '.git').exists():
+        staged = tmp_path / 'source'
+        shutil.copytree(source, staged)
+        return staged
     relative_source = source.relative_to(repo)
     archive = subprocess.run(
         [

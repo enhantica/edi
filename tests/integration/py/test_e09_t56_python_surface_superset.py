@@ -14,6 +14,8 @@ from pathlib import Path
 import edi
 import pytest
 
+from conftest import crysta_source_identity
+
 ROOT = Path(__file__).resolve().parents[3]
 CHECKER = ROOT / 'tools/checks/python_surface_superset.py'
 SEED_NAME = '__e09_t56_seed__'
@@ -200,12 +202,7 @@ def test_e09_t56_installed_manifest_matches_live_built_edi_module() -> None:
         ).strip() == recorded_sha, (
             'I4: the pinned source record must match the Edi-linked Crysta source'
         )
-    source_head = subprocess.run(
-        ['git', '-C', str(source), 'rev-parse', 'HEAD'],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
+    source_head = crysta_source_identity(source)
     assert source_head == recorded_sha, 'I4: the selected source tree must match the linked SHA'
     completed = _run_checker(CHECKER, consumer=consumer)
     if (prefix / 'share/crysta/python-surface.json').is_file():

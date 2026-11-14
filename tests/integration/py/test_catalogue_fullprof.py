@@ -353,7 +353,7 @@ def assert_cli_expectations(case, expected):
     if case in SINGLE_CRYSTAL:
         assert_single_crystal_expectations(case, expected, source)
         return
-    assert expected.get('template', False) == '_scan' in case, (
+    assert expected.get('template', False) == ('_scan' in case), (
         'A scan compares its template single fit; ordinary cases cannot substitute a template'
     )
     assert source['converged'], 'A nonconvergent external attempt cannot supply minimum references'
