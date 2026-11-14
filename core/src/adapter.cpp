@@ -3319,6 +3319,11 @@ double read_threshold_sigma(const std::string& value, const char* tag) {
     return crysta::read_threshold_sigma(value, tag);
 }
 std::string read_threshold_basis(const std::string& value) { return crysta::read_threshold_basis(value); }
+const char* single_crystal_resolution_key() { return crysta::kSinThetaOverLambdaMaxKey; }
+double read_single_crystal_resolution(const std::string& value) {
+    return crysta::read_sin_theta_over_lambda_max(value);
+}
+bool is_retired_descent(const std::string& value) { return crysta::is_retired_descent(value); }
 
 // Edi's refusals spell an id exactly as crysta's do (edi/model.hpp).
 std::string printable_id(const std::string& id) { return crysta::printable_id(id); }
