@@ -26,8 +26,9 @@ Item {
     readonly property Item prefixItem: prefix
     readonly property Item suffixItem: suffix
 
-    // The Home page's idle spin: exactly two turns, easing in and out, ending where it started (the owner,
-    // 2026-11-14).
+    // The Home page's idle spin: the web app's loading spin (app/web/make_logo.py: six turns in 2.5 s, Qt's
+    // OutInElastic, amplitude 1, period 0.3) twice. The second time its closing half, whose wind-up would end in a snap,
+    // eases out instead, so the mark settles where it started (the owner, 2026-11-14).
     function spin() {
         idleSpin.restart();
     }
@@ -76,12 +77,42 @@ Item {
         text: ApplicationInfo.nameSuffixForLogo
     }
 
-    RotationAnimator {
+    SequentialAnimation {
         id: idleSpin
-        target: mark
-        from: 0
-        to: 720
-        duration: 2400
-        easing.type: Easing.InOutCubic
+
+        NumberAnimation {
+            target: mark
+            property: "rotation"
+            from: 0
+            to: 360 * 6
+            duration: 2500
+            easing.type: Easing.OutInElastic
+            easing.amplitude: 1
+            easing.period: 0.3
+        }
+        // OutInElastic's first half is OutElastic over half the time and half the turn, with the same period.
+        NumberAnimation {
+            target: mark
+            property: "rotation"
+            from: 0
+            to: 360 * 3
+            duration: 1250
+            easing.type: Easing.OutElastic
+            easing.amplitude: 1
+            easing.period: 0.3
+        }
+        NumberAnimation {
+            target: mark
+            property: "rotation"
+            from: 360 * 3
+            to: 360 * 6
+            duration: 1250
+            easing.type: Easing.InOutSine
+        }
+        PropertyAction {
+            target: mark
+            property: "rotation"
+            value: 0
+        }
     }
 }
