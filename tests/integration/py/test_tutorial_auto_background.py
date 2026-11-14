@@ -4,6 +4,8 @@ import ast
 import json
 import re
 
+import pytest
+
 from tests.fixtures.tutorial_cases.contract import ROOT, interfaces_for
 from tests.fixtures.tutorial_cases.install_cell import python_syntax
 from tests.fixtures.tutorial_cases.stages import observe
@@ -38,6 +40,27 @@ def automatic_before_fit(code):
     return not background_free or any(estimates[0] < line < min(fits) for line in manual)
 
 
+def command_background_lesson(written):
+    if not re.search(r'_background_estimate.mode\s+auto', written):
+        return False
+    methods = re.findall(r'_background_estimate.method\s+(\w+)', written)
+    if methods:
+        return all(method in {'auto', 'arpls', 'snip', 'fabc'} for method in methods)
+    return bool(re.search(r'\barPLS\b', written))
+
+
+def app_background_lesson(steps):
+    fits = [
+        index for index, step in enumerate(steps) if step.get('target') == 'statusBar.fit.button'
+    ]
+    return bool(fits) and any(
+        step.get('target') == 'background.estimate'
+        and step.get('check') == 'background-estimated:'
+        and index < min(fits)
+        for index, step in enumerate(steps)
+    )
+
+
 def test_cwl_and_tof_cases_teach_the_same_auto_background_on_every_interface():
     entries = json.loads((ROOT / 'app/tutorials/manifest.json').read_text())['tutorials']
     admitted = []
@@ -52,9 +75,7 @@ def test_cwl_and_tof_cases_teach_the_same_auto_background_on_every_interface():
             if not page.is_file():
                 continue
             written = page.read_text()
-            if not re.search(r'_background_estimate.mode\s+auto', written) or not re.search(
-                r'_background_estimate.method\s+\w+', written
-            ):
+            if not command_background_lesson(written):
                 continue
         if 'app' not in declared:
             admitted.append(case)
@@ -72,15 +93,7 @@ def test_cwl_and_tof_cases_teach_the_same_auto_background_on_every_interface():
                 ]
                 for step in block['steps']
             ]
-        if any(
-            step.get('target', '').startswith('background.')
-            and re.search(
-                r'\b(auto|automatic|arpls|snip|fabc)\b',
-                json.dumps(step),
-                re.IGNORECASE,
-            )
-            for step in steps
-        ):
+        if app_background_lesson(steps):
             admitted.append(case)
     assert any('-cwl_' in case for case in admitted) and any(
         '-tof_' in case for case in admitted
@@ -88,3 +101,30 @@ def test_cwl_and_tof_cases_teach_the_same_auto_background_on_every_interface():
         'Gate 3/4/5: CWL and TOF cases estimate and show the background before fitting '
         'on declared interfaces, converting to Manual before fitting background points'
     )
+
+
+@pytest.mark.parametrize(
+    'damage',
+    ['no-mode', 'unknown-method', 'no-method-lesson', 'no-action', 'no-check', 'late-estimate'],
+)
+def test_background_teaching_observer_reaches_the_real_action_and_refuses_escapes(damage):
+    written = (
+        '_background_estimate.mode auto\nThe default arPLS method estimates the background.\n'
+    )
+    steps = [
+        {'target': 'background.estimate', 'check': 'background-estimated:'},
+        {'target': 'statusBar.fit.button'},
+    ]
+    assert command_background_lesson(written) and app_background_lesson(steps)
+    if damage == 'no-mode':
+        assert not command_background_lesson(written.replace('_background_estimate.mode auto', ''))
+    elif damage == 'unknown-method':
+        assert not command_background_lesson(written + '_background_estimate.method foreign\n')
+    elif damage == 'no-method-lesson':
+        assert not command_background_lesson(written.replace('arPLS', 'foreign'))
+    elif damage == 'no-action':
+        assert not app_background_lesson([{'text': 'automatic background arPLS'}, steps[1]])
+    elif damage == 'no-check':
+        assert not app_background_lesson([{'target': 'background.estimate'}, steps[1]])
+    else:
+        assert not app_background_lesson(list(reversed(steps)))

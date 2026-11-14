@@ -163,3 +163,11 @@ takes.
 | A use_model check box, on by default | Rejected (the owner, 2026-10-20): a start model far from the data pulls the background into its misplaced peaks; auto checks first. |
 | Estimate each scan file before its fit | Rejected for now: the number of points would vary between files, which a scan's fixed parameters and results columns cannot follow. |
 | The settings per call only, in a dialog | Rejected (the owner, 2026-10-20): the settings are part of the project, as the other categories' are, and the CLI then needs no flags. |
+
+
+Tutorial coverage observes the actual **Estimate** action and its completed
+background check before fitting; the retired Autodetect wording is not an action
+identity. Command-line lessons may teach the documented default arPLS method in
+prose when its default-valued field is omitted from the saved edit. Explicit
+unknown method tokens still refuse. These are teaching-order and visible-action
+checks; algorithm correctness remains with the independent estimation references.
