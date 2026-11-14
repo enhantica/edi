@@ -35,17 +35,28 @@ EaComponents.ApplicationWindow {
         const left = rows[0], tabs = rows[1], right = rows[2];
         const strip = () => appBar.SafeArea.margins.top;
         const baseHeight = appBar.height;
-        appBar.height = Qt.binding(() => baseHeight + strip());
+        // The groups sit a whole strip below the system buttons' strip, so the tabs' hover does not touch it.
+        appBar.height = Qt.binding(() => baseHeight + 2 * strip());
         for (const row of [left, tabs, right])
-            row.anchors.verticalCenterOffset = Qt.binding(() => strip() / 2);
+            row.anchors.verticalCenterOffset = Qt.binding(() => strip());
         console.info("merged title bar: strip", strip());
     }
     // Dragging the empty app bar moves the window, and a double click maximizes or restores it, as a title bar does.
-    DragHandler {
+    // Starts on press, before any button or tab can take the press, so a drag works anywhere on the empty bar.
+    PointHandler {
         parent: window.appBar
         enabled: window.mergedTitleBar
-        target: null
-        onActiveChanged: if (active) window.startSystemMove()
+        acceptedButtons: Qt.LeftButton
+        grabPermissions: PointerHandler.TakeOverForbidden
+        onActiveChanged: if (active && !window.appBarControlAt(point.position)) window.startSystemMove()
+    }
+    function appBarControlAt(position) {
+        for (const row of appBar.children) {
+            const local = appBar.mapToItem(row, position.x, position.y);
+            if (row.visible && row.contains(local) && row.childAt(local.x, local.y))
+                return true;
+        }
+        return false;
     }
     TapHandler {
         parent: window.appBar

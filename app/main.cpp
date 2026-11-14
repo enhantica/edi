@@ -26,6 +26,9 @@
 #include "test_observer.hpp"
 #ifndef __EMSCRIPTEN__
 void start_installer_smoke(QQuickWindow&, const QString&);
+#ifdef Q_OS_MACOS
+void hide_mac_window_title(QWindow* window);
+#endif
 #endif
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
@@ -140,6 +143,9 @@ int main(int argc, char* argv[]) {
     if (auto* merged = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst())) {
         merged->setFlag(Qt::ExpandedClientAreaHint, true);
         merged->setFlag(Qt::NoTitleBarBackgroundHint, true);
+#ifdef Q_OS_MACOS
+        hide_mac_window_title(merged);
+#endif
         QTimer::singleShot(1500, merged, [merged] {
             const QMargins m = merged->safeAreaMargins();
             std::fprintf(stderr, "merged title bar: flags 0x%x, safe-area margins left %d top %d right %d\n",
