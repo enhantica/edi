@@ -433,3 +433,11 @@ next Open must resolve the genuine unsaved-changes prompt before expecting its
 Folder/Zip choice. One shared observer handles both actions, gives the guard
 priority over underlying controls and rejects unexpected geometry errors. No
 chooser event can be used as evidence that an unresolved guard was bypassed.
+
+
+The browser request observer waits for the selected Project page's actual group
+to enter the viewport after tab selection, before using its controls. Screenshot
+stability alone can precede the start of a page transition. Trusted pointers still
+use the unchanged fresh geometry, container and viewport refusal checks. Runtime
+exceptions retain the current action in their evidence; no exception is filtered
+or cleared when a scenario advances.

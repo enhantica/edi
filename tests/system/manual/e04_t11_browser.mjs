@@ -107,7 +107,7 @@ try {
   });
   ws = new WebSocket(endpoint);
   await new Promise((ok, fail) => { ws.onopen = ok; ws.onerror = fail; });
-  let id = 0, session;
+  let id = 0, session, activeAction = 'startup';
   const pending = new Map(), listeners = new Map(), lastEvents = new Map();
   ws.onmessage = message => {
     const item = JSON.parse(message.data);
@@ -120,7 +120,10 @@ try {
       lastEvents.set(item.method, item.params);
       for (const fn of listeners.get(item.method) || []) fn(item.params);
       if (item.method === 'Network.requestWillBeSent') network.push(item.params.request.url);
-      if (item.method === 'Runtime.exceptionThrown') errors.push(item.params.exceptionDetails);
+      if (item.method === 'Runtime.exceptionThrown') {
+        errors.push({...item.params.exceptionDetails,observerAction:activeAction});
+        console.error(`browser ${mode}: exception during ${activeAction}: ${item.params.exceptionDetails.exception?.description || item.params.exceptionDetails.text}`);
+      }
       if (item.method === 'Runtime.consoleAPICalled') transcript.push(item.params.args.map(a => a.value ?? a.description));
     }
   };
@@ -209,6 +212,7 @@ try {
     return node;
   };
   const click = async (regex, role, nativeObjectName, containerName) => {
+    activeAction = `click ${regex.source}`;
     await restoreCanvasViewport(evaluate);
     const projectAction=/Save project as/.test(regex.source)?'project.saveAs':
       /Open project/.test(regex.source)?'project.open':/Create a new project/.test(regex.source)?'project.create':null;
@@ -275,7 +279,6 @@ try {
     await frame();
     if(projectAction==='project.open' || projectAction==='project.create')
       await waitGuardedDialog(projectAction==='project.open'?'open.folder':'createProject.name');
-    if (/^(?:Home|Project|Structure|Experiment|Analysis|Start)$/.test(node.name?.value || '') || /(?:Examples|Get started)$/.test(node.name?.value || '')) await settleRenderedPage();
     if (node.role?.value === 'tab' && /^(?:Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || '')) {
       const deadline=Date.now()+45000;
       let selected=false;
@@ -289,6 +292,7 @@ try {
       } while (!selected && Date.now()<deadline);
       assert(selected,'page navigation must select the requested tab, not reuse labels from a hidden page');
     }
+    if (/^(?:Home|Project|Structure|Experiment|Analysis|Start)$/.test(node.name?.value || '') || /(?:Examples|Get started)$/.test(node.name?.value || '')) await settleRenderedPage();
 
   };
   const discardResetGuard = async () => {
@@ -891,6 +895,13 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
     let getStartedOpen = !fileRequestsOnly;
     const projectPage = async () => {
       await click(/^Project$/);
+      await waitBrowser(`(() => {const tab=window.ediControlGeometry('appBar.tab.project');
+        const group=window.ediControlGeometry('group.getStarted');
+        return tab.checked===true && group.visible===true && group.enabled===true &&
+          ['x','y','width','height'].every(key=>Number.isFinite(group[key])) &&
+          group.width>0 && group.height>0 && group.x>=0 && group.y>=0 &&
+          group.x+group.width<=1280 && group.y+group.height<=768;})()`,
+        'The selected Project page must finish moving into the real viewport before input');
       if (!getStartedOpen) {
         await click(/Get started$/, 'button'); getStartedOpen = true;
       }
