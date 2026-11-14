@@ -2810,6 +2810,15 @@
         },
         {
           "title": "Add the relations",
+          "text": "Check that the expression of constraint 1 reads **biso_Co2 = biso_Co1**, as the app suggests.",
+          "page": "analysis",
+          "target": "constraint.expression.0",
+          "check": "field:constraint.expression.0=biso_Co2 = biso_Co1",
+          "tab": "extras",
+          "why": "The two Co sites scatter alike, so the pattern cannot tell their displacements apart."
+        },
+        {
+          "title": "Add the relations",
           "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
@@ -10861,6 +10870,15 @@
         },
         {
           "title": "Add the relations",
+          "text": "Check that the expression of constraint 1 reads **biso_austenite = biso_ferrite**, as the app suggests.",
+          "page": "analysis",
+          "target": "constraint.expression.0",
+          "check": "field:constraint.expression.0=biso_austenite = biso_ferrite",
+          "tab": "extras",
+          "why": "Both phases are iron, so the data cannot tell their displacements apart."
+        },
+        {
+          "title": "Add the relations",
           "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
@@ -12602,6 +12620,15 @@
         },
         {
           "title": "Add the relations",
+          "text": "Check that the expression of constraint 1 reads **biso_Cr = biso_Ti**, as the app suggests.",
+          "page": "analysis",
+          "target": "constraint.expression.0",
+          "check": "field:constraint.expression.0=biso_Cr = biso_Ti",
+          "tab": "extras",
+          "why": "The seven metals share one site, so they share one displacement."
+        },
+        {
+          "title": "Add the relations",
           "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
@@ -12615,6 +12642,15 @@
           "page": "analysis",
           "target": "constraint.id.1",
           "check": "field:constraint.id.1=2",
+          "tab": "extras",
+          "why": "The seven metals share one site, so they share one displacement."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Check that the expression of constraint 2 reads **biso_Mn = biso_Ti**, as the app suggests.",
+          "page": "analysis",
+          "target": "constraint.expression.1",
+          "check": "field:constraint.expression.1=biso_Mn = biso_Ti",
           "tab": "extras",
           "why": "The seven metals share one site, so they share one displacement."
         },
@@ -12638,6 +12674,15 @@
         },
         {
           "title": "Add the relations",
+          "text": "Check that the expression of constraint 3 reads **biso_Fe = biso_Ti**, as the app suggests.",
+          "page": "analysis",
+          "target": "constraint.expression.2",
+          "check": "field:constraint.expression.2=biso_Fe = biso_Ti",
+          "tab": "extras",
+          "why": "The seven metals share one site, so they share one displacement."
+        },
+        {
+          "title": "Add the relations",
           "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
@@ -12651,6 +12696,15 @@
           "page": "analysis",
           "target": "constraint.id.3",
           "check": "field:constraint.id.3=4",
+          "tab": "extras",
+          "why": "The seven metals share one site, so they share one displacement."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Check that the expression of constraint 4 reads **biso_Co = biso_Ti**, as the app suggests.",
+          "page": "analysis",
+          "target": "constraint.expression.3",
+          "check": "field:constraint.expression.3=biso_Co = biso_Ti",
           "tab": "extras",
           "why": "The seven metals share one site, so they share one displacement."
         },
@@ -12674,6 +12728,15 @@
         },
         {
           "title": "Add the relations",
+          "text": "Check that the expression of constraint 5 reads **biso_Ni = biso_Ti**, as the app suggests.",
+          "page": "analysis",
+          "target": "constraint.expression.4",
+          "check": "field:constraint.expression.4=biso_Ni = biso_Ti",
+          "tab": "extras",
+          "why": "The seven metals share one site, so they share one displacement."
+        },
+        {
+          "title": "Add the relations",
           "text": "Click **+** under **Constraints** to add a constraint.",
           "page": "analysis",
           "target": "constraints.append",
@@ -12687,6 +12750,15 @@
           "page": "analysis",
           "target": "constraint.id.5",
           "check": "field:constraint.id.5=6",
+          "tab": "extras",
+          "why": "The seven metals share one site, so they share one displacement."
+        },
+        {
+          "title": "Add the relations",
+          "text": "Check that the expression of constraint 6 reads **biso_Cu = biso_Ti**, as the app suggests.",
+          "page": "analysis",
+          "target": "constraint.expression.5",
+          "check": "field:constraint.expression.5=biso_Cu = biso_Ti",
           "tab": "extras",
           "why": "The seven metals share one site, so they share one displacement."
         },

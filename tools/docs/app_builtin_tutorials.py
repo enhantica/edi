@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/docs'))
 sys.path.insert(0, str(ROOT / 'website'))
 
-from app_groups import Tracker, dictionary, load_case  # noqa: E402
+from app_groups import Tracker, dictionary, load_case, unrolled  # noqa: E402
 
 DICTIONARY = dictionary()
 from app_tutorial_plan import CLI_PAGES, free_lists, plan  # noqa: E402
@@ -735,7 +735,7 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
 
 def tutorial_steps(case: str) -> list[dict]:
     """The case's docs plan as tutorial steps."""
-    source = (TUTORIALS / f'{case}.py').read_text(encoding='utf-8')
+    source = unrolled((TUTORIALS / f'{case}.py').read_text(encoding='utf-8'))
     texts = stage_texts(case, source)
     pending: list = []
     context = {'page': 'project', 'tab': '', 'category': '', 'datablock': '', 'word': ''}
@@ -831,7 +831,23 @@ def with_reasons(case: str, steps: list[dict]) -> list[dict]:
         s['why'] = why
     # A step the app did before the tutorial reached it asks for nothing (app_tutorial_noops.tsv);
     # dropped once every reason is known: a dropped expression can explain the steps around it.
-    steps = [s for s in steps if (case, s.get('check', '')) not in NOOPS]
+    # A constraint's expression the app suggests stays a step: the tutorial still teaches it, as
+    # the Python one does, and asks the user to check it rather than type it.
+    for s in steps:
+        check = s.get('check', '')
+        if (case, check) in NOOPS and (
+            m := re.fullmatch(r'field:constraint\.expression\.(\d+)=(.+)', check)
+        ):
+            s['text'] = (
+                f'Check that the expression of constraint {int(m[1]) + 1} reads **{m[2]}**, '
+                'as the app suggests.'
+            )
+    steps = [
+        s
+        for s in steps
+        if (case, s.get('check', '')) not in NOOPS
+        or s.get('check', '').startswith('field:constraint.expression.')
+    ]
     said = set()
     for s in steps:
         why = s.get('why', '')
