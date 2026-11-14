@@ -16,3 +16,11 @@ PbSO4 override assigns D1A/ILL to its neutron experiment and unknowns to its lab
 `generate_readers.py` captures main-reader output as labelled regression pins. Neither
 file claims that engine output is an independent physical oracle. Regenerate these only
 on the intended pre-change main tree, before the migration or import implementation.
+
+Reader retention also projects the removed `_absorption.abscor2` field only when
+its frozen value is exactly zero and scalar. Nonzero or duplicate values refuse;
+every active absorption field remains exact. The complete archived source
+transition is recorded under metadata_transition/retired-source-fields, from
+commit ec587609746b50823c048463f353b1767cbfa5f9. No numerical pin or tolerance is
+regenerated. Descriptive migration comparisons use that same complete source
+transition chain instead of omitting the retired-field layer.

@@ -2,7 +2,8 @@
 
 Crysta ADR-0106 permits a different representative of the same Wyckoff orbit;
 ADR-0092 requires symmetry followers to use their rounded independent leader.
-No other reader column or saved byte is normalized here.
+The archived scalar zero of the retired absorption coefficient may be omitted.
+Every other reader column and saved byte remains exact.
 """
 
 import re
