@@ -268,7 +268,10 @@ try {
       y=rect.y+Math.min(rect.height,model.model.height)/2;
       assert(x>=0&&x<1280&&y>=0&&y<768,
         'The real group header pointer must lie inside the fixed browser viewport');
-    } else if (nativeObjectName) ({x,y} = await controlPointer(evaluate,nativeObjectName,containerName));
+    } else if (nativeObjectName) {
+      await waitControlGeometry(evaluate,frame,nativeObjectName);
+      ({x,y} = await controlPointer(evaluate,nativeObjectName,containerName));
+    }
     else {
       const model = await send('DOM.getBoxModel', { backendNodeId: node.backendDOMNodeId });
       const q = model.model.content;
