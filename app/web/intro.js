@@ -21,7 +21,6 @@
   let leaving = false;
   let layer = null;
   let skip = null;
-  const timers = [];
   const animations = [];
 
   function stored() {
@@ -53,7 +52,6 @@
 
   // Back to the splash as it was before the intro: the turning mark and the status line.
   function toSplash() {
-    timers.forEach(clearTimeout);
     animations.forEach((animation) => animation.cancel());
     if (layer !== null) layer.remove();
     layer = null;
@@ -158,15 +156,19 @@
   play(easyBold, [{ opacity: 1 }, { opacity: 0 }], 7100, 500, "linear", "forwards");
   play(easy, [{ opacity: 0 }, { opacity: 1 }], 7100, 500);
 
-  // The mark rolls without slipping, quartic ease-out: its turn is the distance over its radius.
+  // The mark rolls without slipping, quartic ease-out: its turn is the distance over its radius. Before the roll it
+  // waits beyond the left edge, where the roll's first frame holds it.
   const markSize = data.frame * scale;
-  const mark = document.createElement("img");
-  mark.src = "mark.svg";
-  mark.alt = "";
+  const mark = document.createElement("div");
+  mark.className = "intro-mark";
   mark.style.width = `${markSize}px`;
+  mark.style.height = `${markSize}px`;
   mark.style.left = `${box.left}px`;
   mark.style.top = `${box.top}px`;
-  mark.style.opacity = "0";
+  const markImage = document.createElement("img");
+  markImage.src = splash.querySelector(".mark").src;
+  markImage.alt = "";
+  mark.appendChild(markImage);
   layer.appendChild(mark);
   const distance = box.left + markSize * 1.2;
   const roll = [];
@@ -174,13 +176,13 @@
     const left = Math.pow(1 - i / 60, 4) * distance;  // still to go
     roll.push({ offset: i / 60, transform: `translate(${-left}px, 0) rotate(${(-left / (markSize / 2)) * (180 / Math.PI)}deg)` });
   }
-  play(mark, [{ opacity: 1 }, { opacity: 1 }], 8000, 1200, "linear", "forwards");
-  play(mark, roll, 8000, 1200);
-  timers.push(setTimeout(() => {
+  // The intro ends when the roll has finished on the animations' own clock, which starts with the first frame drawn
+  // and so can lag a timer started now.
+  play(mark, roll, 8000, 1200).finished.then(() => {
     ended = true;
     if (loaded) reveal();
     else toSplash();
-  }, 9200));
+  }, () => {});
 
   // Skip (once the app is ready) and Disable, text buttons at the bottom. Their gap to the page's edge
   // equals the space between them.
