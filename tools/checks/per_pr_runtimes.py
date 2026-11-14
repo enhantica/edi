@@ -1135,15 +1135,15 @@ def resolve_rows(  # noqa: PLR0913, PLR0917 — the carry inputs are distinct ev
         if nodeid in failing:
             # the cost of erroring is not the cost of running
             holes[nodeid] = 'failed-in-this-run'
-        elif nodeid in measured:
-            runtimes[nodeid] = measured[nodeid]
-        elif completed is not None and nodeid not in completed:
+        elif nodeid not in completed:
             # ⛔ REVIEW-21 F1: absent AND not proved complete. The run stopped before reaching
-            # this node, so there is no measurement to record and no failure to attribute. The
+            # this node or stopped within a reported phase; a phase duration is not completion. The
             # previous code fell through to the sub-floor branch below and wrote 0.000, which
             # turned every unreached node into the fastest possible measured test — exactly what
             # the shell's own diagnostic promises does NOT happen.
             holes[nodeid] = 'not-completed-in-this-run'
+        elif nodeid in measured:
+            runtimes[nodeid] = measured[nodeid]
         else:
             # ⛔ ABSENT IS NOT ONE THING, and my first version of this treated it as one.
             # pytest hides every duration below its ~0.005 s reporting floor even under
