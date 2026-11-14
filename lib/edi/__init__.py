@@ -1089,6 +1089,14 @@ _CW_PEAK_KEYS = frozenset({
     'broad_gauss_w',
 })
 _CW_INSTRUMENT_KEYS = frozenset({'setup_wavelength', 'calib_twotheta_offset'})
+# The loader engages these on every X-ray constant-wavelength experiment, so a new one starts
+# with them too and saves and reads back as the same project.
+_XRAY_CW_INSTRUMENT_KEYS = frozenset({
+    'setup_polarization_coefficient',
+    'setup_monochromator_twotheta',
+    'setup_wavelength_2',
+    'setup_wavelength_2_to_1_ratio',
+})
 # The optional CW line shifts — accepted from a spec, never engaged by default.
 _CW_LINE_SHIFT_KEYS = frozenset({'calib_sample_displacement', 'calib_sample_transparency'})
 # The X-ray CW monochromator polarization and K-alpha doublet — accepted from an X-ray spec only.
@@ -1516,6 +1524,9 @@ class ExperimentFactory:
             experiment.experiment_type.beam_mode = _BEAM_MODE_BY_TOKEN[beam_mode]
         if is_cw:
             _engage_cw_members(experiment, peak_type)
+            if radiation_probe == 'xray':
+                for member in sorted(_XRAY_CW_INSTRUMENT_KEYS):
+                    setattr(experiment.instrument, member, Parameter(0.0))
         return _unlinked(experiment)
 
     @staticmethod
