@@ -20,6 +20,7 @@ import edi
 import pytest
 
 from tests.conftest import corpus_case_dir
+from tests.fixtures.cli_performance.table_assertions import cells, table_rows, terminal_lines
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/cli_performance'
@@ -27,11 +28,38 @@ BINS = ROOT / 'build/ci/cli_performance'
 
 
 def projection(host, kind, *args):
+    if kind == 'row' and len(args) == 8:
+        args = (*args[:-1], args[6], args[6], 'completed-file.dat', args[-1])
+    if host == 'binding' and kind == 'sequence':
+        columns = args[0]
+        return (
+            edi._edi._scan_progress_heading('widths', True, 2, False, columns)
+            + '\n'
+            + edi._edi._scan_progress_row(
+                1, 2, 59.0, 1, 1, 0, 4.81, 4.81, 4.81, 'scan-first.dat', columns
+            )
+            + edi._edi._scan_progress_row(
+                2,
+                2,
+                36611.0,
+                2,
+                2,
+                0,
+                4.81,
+                3.91,
+                8.44,
+                'scan-last-abcdefghijklmnopqrstuvwxyz-abcdefghijklmnopqrstuvwxyz-tail.dat',
+                columns,
+            )
+            + '\n'
+        )
     if host == 'binding':
         function = getattr(edi._edi, '_scan_progress_' + kind, None)
         assert callable(function), (
             'The CLI must consume the actual shared private progress projection'
         )
+        if kind == 'row':
+            edi._edi._scan_progress_heading('projection', False, args[1], False, 0)
         return function(*args)
     arguments = [
         '-' if value is None else str(int(value)) if isinstance(value, bool) else str(value)
@@ -65,16 +93,41 @@ def projection(host, kind, *args):
     ],
 )
 def test_numeric_projection_retains_exact_count_time_eta_and_failure_facts(host, facts, expected):
-    row = projection(host, 'row', *facts, 0)
-    assert row.split() == expected, (
-        'Numeric cells retain exact counts, rounded clocks and this-run ETA without filenames'
+    completed, total, _elapsed, _measured, ok, failed, chi2 = facts
+    bound = chi2 if math.isfinite(chi2) else math.nan
+    row = projection(host, 'row', *facts, bound, bound, 'completed-file.dat', 0)
+    actual = cells(row)
+    offset = 2 if total else 1
+    elapsed = expected[offset]
+    left = expected[offset + 1] if total and 0 < completed < total else ''
+    assert actual['count'] == (f'{completed}/{total}' if total else str(completed)), (
+        'Progress retains the exact completed count and known total inside its own group'
     )
-    assert row.isascii() and '\r' not in row and '\n' not in row, (
-        'A shared numeric row is one ASCII line without cursor control'
+    assert actual['percent'] == (expected[1] if total else ''), (
+        'Known totals retain the independently calculated percent; unknown totals invent none'
     )
-    assert not re.search(r'\b(?:this|run|elapsed|eta|ok|failed|files)\b', row, re.IGNORECASE), (
-        'Labels and resumed time-basis prose belong to the static heading only'
+    assert (actual['elapsed'], actual['left']) == (elapsed, left), (
+        'The new clock group preserves the original rounded elapsed and measured-run ETA facts'
     )
+    assert (actual['ok'], actual['failed']) == (str(ok), str(failed)), (
+        'Successful and failed counts remain independent through the grouped table projection'
+    )
+    number = f'{chi2:.2f}' if math.isfinite(chi2) else ''
+    assert (actual['chi2'], actual['range']) == (number, f'{number}-{number}' if number else ''), (
+        'The final row retains the last metric and complete range; absent metrics stay empty'
+    )
+    assert actual['file'] == 'completed-file', (
+        'File is the last group and preserves the completed file stem without its extension'
+    )
+    bars = {1: '███░░░░░░░', 2: '███████░░░', 3: '██████████', 40: '██░░░░░░░░', 0: '░░░░░░░░░░'}
+    assert actual['bar'] == (bars[completed] if total else ''), (
+        'The progress bar has ten terminal cells at the nontrivial independently checked fractions'
+    )
+    assert '\r' not in row and '\n' not in row, (
+        'A log projection is one complete Unicode line without terminal controls'
+    )
+    with pytest.raises(AssertionError, match='five groups'):
+        cells(row.replace(' │ ', ' | ', 1))
 
 
 @pytest.mark.parametrize('host', ['native', 'binding'])
@@ -82,15 +135,18 @@ def test_numeric_projection_retains_exact_count_time_eta_and_failure_facts(host,
 def test_heading_identifies_project_estimated_eta_and_resumed_time_basis(host, resumed):
     heading = projection(host, 'heading', 'scan-demo', True, 20001, resumed, 0)
     assert heading.count('scan-demo') == 1 and heading.startswith('Sequential fit:'), (
-        'The static heading names the actual project and scan mode once'
+        'The heading names the actual project and scan mode once'
     )
-    for label in ('Completed', 'Progress', 'Elapsed', 'OK', 'Failed', 'chi2'):
-        assert label in heading, 'The static heading declares every retained numeric column'
-    assert re.search(r'(?:ETA|Remaining).*est', heading, re.IGNORECASE), (
-        'Remaining time is explicitly labelled as an estimate'
-    )
-    assert ('this run' in heading) is resumed, (
-        'A resumed heading distinguishes the measured invocation from historical completed rows'
+    columns = heading.splitlines()[-1].split(' │ ')
+    assert [part.split() for part in columns] == [
+        ['Progress'],
+        ['OK', 'Failed'],
+        ['Elapsed', 'Left'],
+        ['Chi2', 'Chi2', 'range'],
+        ['File'],
+    ], 'The final owner layout groups every heading in order and puts the file last'
+    assert 'this run' not in heading and len(columns[2]) == 15, (
+        'Elapsed is always headed Elapsed, seven columns wide in ordinary fixed-width logs'
     )
 
 
@@ -101,14 +157,18 @@ def test_count_slots_stay_fixed_across_thousand_and_ten_thousand_boundaries(host
     lengths = []
     for count in (9, 99, 999, 1000, 9999, 10000, 10001):
         row = projection(host, 'row', count, total, 61.0, count, count - 1, 1, 4.81, 0)
-        fields = list(re.finditer(r'\S+', row))
-        ends.append([fields[i].end() for i in ((0, 4, 5) if total else (0, 2, 3))])
-        lengths.append(len(row))
+        groups = row.split(' │ ')
+        ends.append([match.start() for match in re.finditer(r' │ ', row)][:2])
+        assert groups[0].split()[-1] == (f'{count}/{total}' if total else str(count)), (
+            'Digit-boundary checks retain the original actual completed and total counts'
+        )
+        lengths.append((len(groups[0]), len(groups[1])))
     assert len({tuple(item) for item in ends}) == 1, (
-        'Completed, OK and Failed retain their column boundaries beyond ten thousand files'
+        'Progress and outcome group boundaries remain fixed across '
+        'thousand and ten-thousand counts'
     )
     assert len(set(lengths)) == 1, (
-        'Counter digit growth cannot stretch the fixed projected numeric row'
+        'Counter growth cannot stretch its reserved progress and outcome groups'
     )
 
 
@@ -127,6 +187,30 @@ def test_resize_and_erase_padding_never_use_the_terminal_wrap_column(host, colum
     if columns >= 64:
         assert all(value in row.split() for value in ('10001/20001', '9984', '17')), (
             'Completed, successful and failed totals remain visible when their stable slots fit'
+        )
+
+    if columns == 120:
+        stream = projection(host, 'sequence', columns)
+        screen = terminal_lines(stream)
+        assert len(screen) == 4 and '\x1b[1A' in stream, (
+            'A wider live clock redraws the actual heading and final values together'
+        )
+        header, final = screen[-2:]
+        assert [m.start() for m in re.finditer(r' │ ', header)] == [
+            m.start() for m in re.finditer(r' │ ', final)
+        ], 'Every redrawn heading group aligns with its current values after a width change'
+        facts = cells(final)
+        assert (facts['elapsed'], facts['left'], facts['chi2'], facts['range']) == (
+            '10h10m11s',
+            '',
+            '4.81',
+            '3.91-8.44',
+        ), 'Width adaptation preserves independently specified final clocks and scientific metrics'
+        assert facts['file'].startswith('scan-last-') and facts['file'].endswith('-tail'), (
+            'A shortened last-file stem retains both its identifying prefix and suffix'
+        )
+        assert '…' in facts['file'] and all(len(line) <= columns - 1 for line in screen), (
+            'The middle ellipsis and block bar consume terminal cells rather than UTF-8 bytes'
         )
 
 
@@ -181,24 +265,33 @@ def test_real_piped_scan_has_one_static_header_and_one_numeric_row_per_file(host
     )
     assert '\r' not in stdout, 'Piped scan output preserves ordinary line boundaries'
     lines = stdout.splitlines()
-    rows = [line for line in lines if re.match(r'^\s*\d+/3\s', line)]
-    assert len(rows) == 3 and [line.split()[0] for line in rows] == ['1/3', '2/3', '3/3'], (
+    rows = table_rows(stdout)
+    assert len(rows) == 3 and [cells(line)['count'] for line in rows] == ['1/3', '2/3', '3/3'], (
         'The real host emits exactly one ordered numeric line for each actual file completion'
     )
-    assert stdout.count('Sequential fit:') == stdout.count('Completed') == 1, (
+    assert stdout.count('Sequential fit:') == stdout.count('Progress') == 1, (
         'The project heading and field labels are static rather than repeated with each completion'
     )
-    assert all('.dat' not in row and row.isascii() for row in rows), (
-        'Real numeric rows contain values rather than rolling filenames or non-ASCII glyphs'
+    assert all('.dat' not in row and cells(row)['file'] for row in rows), (
+        'Real progress rows retain the completed file stem and use the approved Unicode bar'
     )
     with (project / 'analysis/results.csv').open(newline='') as stream:
         saved = list(csv.DictReader(stream))
     failed = sum(row['fit_result.success'].lower() != 'true' for row in saved)
-    summaries = [line for line in lines if line.startswith('scan ·')]
-    assert len(summaries) == 1, 'The existing whole-scan summary is emitted exactly once'
-    assert f'{failed} failed' in summaries[0], (
-        'The existing truthful summary retains failures independently of the new table shape'
+    assert not any(line.startswith('scan ·') for line in lines), (
+        'The completed final table row replaces the retired separate scan summary'
     )
+    final = cells(rows[-1])
+    assert (final['count'], final['ok'], final['failed'], final['left']) == (
+        '3/3',
+        str(3 - failed),
+        str(failed),
+        '',
+    ), 'The final row keeps truthful complete counts and no remaining-time estimate'
+    finite = [float(item['fit_result.reduced_chi_square']) for item in saved]
+    assert final['chi2'] == f'{finite[-1]:.2f}' and final['range'] == (
+        f'{min(finite):.2f}-{max(finite):.2f}'
+    ), 'The final table metric and range come from the actual saved per-file results'
 
 
 @pytest.mark.parametrize('host', ['native', 'python'])
@@ -285,22 +378,30 @@ def test_real_tty_hosts_resize_each_actual_completion_without_wrapping(host, tmp
             os.close(slave)
         os.close(master)
     text = output.decode()
-    writes = [
-        part.split('\n', 1)[0] for part in text.split('\r') if re.match(r'^\s*\d+/3\s', part)
-    ]
-    assert boundaries == len(writes) == 3, (
-        'Both actual hosts render one acknowledged row for each real engine completion'
+    writes = re.findall(r'[█░]{10}  [^\r\n\x1b]+', text)
+    counts = [int(re.search(r'(\d+)/3', row)[1]) for row in writes]
+    assert boundaries == 3 and 2 <= len(writes) <= 3, (
+        'Every engine boundary is acknowledged; terminal updates may coalesce at ten per second'
     )
-    assert [row.split()[0] for row in writes] == ['1/3', '2/3', '3/3'], (
-        'Resizing preserves the actual ordered whole-scan completion counts'
+    assert counts[0] == 1 and counts[-1] == 3 and counts == sorted(set(counts)), (
+        'Resizing preserves truthful ordered completions and always draws the final total'
     )
-    for row, width in zip(writes, widths, strict=True):
-        assert row.isascii() and len(row) <= width - 1, (
-            'Every real TTY update including erase padding stays before the physical wrap column'
+    for row, count in zip(writes, counts, strict=True):
+        assert len(row) <= widths[count - 1] - 1, (
+            'Unicode terminal cells, including erase padding, stay before the physical wrap column'
         )
-        assert '.dat' not in row, 'The rolling real TTY row contains no filename identity'
-    assert text.count('Sequential fit:') == text.count('Completed') == 1, (
-        'A resized real scan keeps one static project header and one field-label heading'
+        assert '.dat' not in row, 'The completed file is displayed without its extension'
+    visible = terminal_lines(text)
+    saved = [line for line in visible if line.startswith('Saving project to ')]
+    assert saved == ([f"Saving project to '{project}'"] if host == 'python' else []), (
+        'The Python host retains its ordinary save announcement outside the progress table'
+    )
+    visible = [line for line in visible if line not in saved]
+    assert text.count('Sequential fit:') == 1 and len(visible) == 4, (
+        'Resizing redraws the heading with its values and leaves one final row without a summary'
+    )
+    assert 'Progress' in visible[2] and '3/3' in visible[3], (
+        'The final visible heading and completed row occupy their own aligned terminal lines'
     )
 
 
@@ -323,5 +424,6 @@ def test_machine_channel_keeps_machine_records_without_numeric_ui_table(host, tm
         'Machine output retains the versioned public emitter record'
     )
     assert not any(
-        label in stdout for label in ('Sequential fit:', 'Completed', 'Elapsed', '\r')
+        label in stdout
+        for label in ('Sequential fit:', 'Progress', 'Elapsed', 'Chi2 range', '█', '\r')
     ), 'Human progress projection and cursor control never enter the machine channel'
