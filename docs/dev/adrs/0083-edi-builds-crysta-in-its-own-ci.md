@@ -343,3 +343,21 @@ and inclusive dated-event windows. Core's in-process test tier has no browser
 prerequisite. Changes to these controls/assets, browser observers, source-receipt
 helpers, the engine pin or package locks require browser qualification through the
 same changed-input filter; explicit omission controls guard that declaration.
+
+
+### Native test transport and allocation coverage
+
+The Windows native producer builds the same Edi test targets as Linux and macOS.
+Fixture lookup uses filesystem parents rather than splitting the compiler's path
+on a Unix separator. Saved-file byte witnesses read and write in binary mode,
+matching the existing core reader; the CRT must not silently transform their
+reference bytes. The descent registry comparison retains exact bytes after the
+explicit native stdout LF-to-platform-newline transport that Crysta's CLI uses.
+Its schema, field ordering, registry contents and final newline remain checked;
+LF and CRLF transports run the same positive and substitution controls.
+
+Allocation-failure sweeps measure an unfaulted operation's actual allocation count
+before injecting every point, then require the successful control and complete
+failure coverage. The former fixed budget depended on the standard library's
+allocation behavior and could exhaust before success on MSVC. Storage, lifetime,
+source and ownership assertions remain identical at every injected failure.

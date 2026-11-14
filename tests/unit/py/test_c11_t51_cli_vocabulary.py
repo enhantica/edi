@@ -178,8 +178,10 @@ def test_calc_exception_is_retired_without_wildcarding_child_options() -> None:
     )
 
 
-def test_descent_listing_checker_rejects_non_byte_equal_output(monkeypatch) -> None:
+@pytest.mark.parametrize('newline', ['\n', '\r\n'], ids=['lf', 'crlf'])
+def test_descent_listing_checker_rejects_non_byte_equal_output(monkeypatch, newline) -> None:
     checker = _checker()
+    monkeypatch.setattr(checker.os, 'linesep', newline)
     assert checker.listing_byte_findings(b'{"schema":1}\n', b'{"schema":2}\n') == [
         'descent-listing: edi output differs from pinned crysta'
     ], ' control: any byte-level registry divergence must make the checker red'
@@ -197,6 +199,7 @@ def test_descent_listing_checker_rejects_non_byte_equal_output(monkeypatch) -> N
         'run',
         lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout=reference, stderr=b''),
     )
+    reference = reference.replace(b'\n', newline.encode('ascii'))
     binary = Path('independent-registry-oracle')
     assert checker.descent_listing_findings(binary) == [], (
         'Identical independently supplied registry bytes must pass the complete gate'
@@ -215,7 +218,7 @@ def test_descent_listing_checker_rejects_non_byte_equal_output(monkeypatch) -> N
                 'Registry ID, order and truncation drift must each be red'
             )
     with monkeypatch.context() as altered:
-        altered.setattr(checker, 'edi_descents_record', lambda: reference[:-1])
+        altered.setattr(checker, 'edi_descents_record', lambda: b'schema=41\nrecord=descents')
         assert checker.descent_listing_findings(binary) == mismatch, (
             'A truncated candidate record must remain a byte mismatch'
         )

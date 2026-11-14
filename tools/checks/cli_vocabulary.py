@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -315,7 +316,9 @@ def descent_listing_findings(crysta_binary: Path) -> list[str]:
         candidate = edi_descents_record()
     except ValueError as error:
         return [f'descent-listing: {error}']
-    return listing_byte_findings(reference.stdout, candidate)
+    return listing_byte_findings(
+        reference.stdout, candidate.replace(b'\n', os.linesep.encode('ascii'))
+    )
 
 
 def check_live(

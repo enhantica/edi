@@ -10,7 +10,7 @@
 
 namespace {
 std::string read_relation_text(const std::filesystem::path& path) {
-    std::ifstream input(path);
+    std::ifstream input(path, std::ios::binary);
     std::ostringstream text;
     text << input.rdbuf();
     return text.str();
@@ -42,7 +42,7 @@ TEST_CASE("Saved analysis and shown block text retain enabled and disabled relat
     text.insert(first + std::string("\"c = b/10\"").size(), " false");
     const auto second = text.find("\"b = 2*a + 1\"");
     text.insert(second + std::string("\"b = 2*a + 1\"").size(), " true");
-    std::ofstream(analysis) << text;
+    std::ofstream(analysis, std::ios::binary) << text;
     auto project = edi::load_project((directory.path / "input").string());
     edi::save_project(project, (directory.path / "first").string());
     const auto saved = read_relation_text(directory.path / "first/analysis/analysis.edi");
