@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-14T06:40:32Z
+# measured_utc = 2026-11-14T06:45:12Z
 #
-# Recorded from: measured test run (108 node(s) measured once, 175914 banked, 2 stale row(s) dropped)
-# Collected tests: 244875; with a reported duration: 77092
+# Recorded from: measured test run (1 node(s) measured once, 176022 banked, 0 stale row(s) dropped)
+# Collected tests: 244876; with a reported duration: 77092
 # Module-scoped fixture costs recorded: 191
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 244875
+# inventory_python = 244876
 # inventory_cpp = 402
-# inventory_measured = 176022
+# inventory_measured = 176023
 # inventory_unmeasured = 69255
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85608
+# inventory_pr_python = 85609
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -169023,6 +169023,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_scan_notes_diagnostics.p
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_minimal_producer_checkout_does_not_remove_engine_qualification_inputs
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_native_sdk_matrix_and_windows_compiler_match_the_declared_platform_contract
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_release_sdk_download_uses_the_exact_qualified_installer_run
+0.120	tests/integration/py/test_sdk_sharing_contract.py::test_runtime_audit_fetches_the_immutable_source_history_its_collection_reads
 0.010	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_cold_and_warm_producers_publish_required_artifacts_only_after_success
 0.000	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_consumers_bind_same_run_artifacts_and_refuse_foreign_transport
 0.050	tests/integration/py/test_sdk_sharing_contract.py::test_sdk_producer_rejects_missing_empty_changed_and_misdirected_outputs[0-linux-64]
