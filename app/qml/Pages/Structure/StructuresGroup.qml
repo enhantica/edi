@@ -38,7 +38,10 @@ SideBarGroup {
             currentRow: group.project ? group.project.currentStructureIndex : -1
             onRowActivated: row => ApplicationInfo.activateFormBlock(row, true)
 
-            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
+            // The Model column says how the structure is described, read only: it is fixed by where the structure comes
+            // from (the owner, 2026-11-15). Every structure is atom-based until mode-based ones can be loaded.
+            readonly property string atomBased: qsTr("Atom-based")
+            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, Math.ceil(Math.max(advance(qsTr("Model")), advance(atomBased))) + autoColumnPadding, AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -53,6 +56,11 @@ SideBarGroup {
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignLeft
                     text: qsTr("Name")
+                }
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignLeft
+                    text: qsTr("Model")
                 }
                 EaComponents.ListViewLabel {
                     elide: Text.ElideRight
@@ -92,6 +100,12 @@ SideBarGroup {
                     value: row.name
                     onActiveFocusChanged: ApplicationInfo.finishUiEvent(10, undefined)
                     onCommitted: text => row.structure.name = text
+                }
+                EaComponents.ListViewLabel {
+                    elide: Text.ElideRight
+                    horizontalAlignment: Text.AlignLeft
+                    objectName: `structures.model.${row.index}`
+                    text: table.atomBased
                 }
                 EaComponents.ListViewButton {
                     horizontalAlignment: Text.AlignHCenter
@@ -183,12 +197,6 @@ SideBarGroup {
                 ToolTip.text: qsTr("Add a copy of the selected structure, linked to no experiment")
                 onClicked: group.project.duplicateStructure()
             }
-        }
-
-        // The current structure's description: atom sites now, symmetry modes later (the owner, 2026-11-15).
-        DescriptionSelector {
-            objectName: "structures.description"
-            visible: group.project !== null && group.project.currentStructure !== null
         }
     }
 
