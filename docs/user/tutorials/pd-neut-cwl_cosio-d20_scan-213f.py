@@ -101,6 +101,7 @@ experiment.background.create(position=150, intensity=230.6987)
 # %%
 project.analysis.aliases.create(id='biso_Co1', param=structure.atom_sites['Co1'].adp_iso)
 project.analysis.aliases.create(id='biso_Co2', param=structure.atom_sites['Co2'].adp_iso)
+project.analysis.constraints.create(id='biso_Co2', expression='biso_Co2 = biso_Co1')
 
 # %%
 project.save_as('pd-neut-cwl_cosio-d20_scan-213f')
