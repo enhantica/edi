@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-15T14:21:37Z
+# measured_utc = 2026-11-15T15:03:05Z
 #
-# Recorded from: focused repaired gate controls; failing native and series gates remain unmeasured
-# Collected tests: 243048; with a reported duration: 75718
+# Recorded from: scoped review-4 repair controls; pinned-baseline feature failures remain unmeasured
+# Collected tests: 243069; with a reported duration: 75718
 # Module-scoped fixture costs recorded: 191
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 240655
+# inventory_python = 240676
 # inventory_cpp = 402
-# inventory_measured = 173359
-# inventory_unmeasured = 67698
+# inventory_measured = 173376
+# inventory_unmeasured = 67702
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 81868
+# inventory_pr_python = 81889
 
 UNMEASURED:not-completed-in-this-run	tests/fixtures/assistant_fixes/test_grouped_flags.py::test_grouped_adp_flags_after_fit_and_relation[normal]
 UNMEASURED:not-completed-in-this-run	tests/fixtures/assistant_fixes/test_grouped_flags.py::test_grouped_adp_flags_after_fit_and_relation[shown]
@@ -230258,14 +230258,31 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_single_
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_two_phase_ratio_fit_retains_three_independents_and_joint_covariance
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_uncommitted_complete_experiment_rows_are_removed_before_resume
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_local_nightly_task_consumes_the_declared_seeded_file
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_subject_mismatch_is_refused[archive]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_subject_mismatch_is_refused[headers]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_subject_mismatch_is_refused[newer-other-build]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_subject_mismatch_is_refused[source-identity]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_nonzero_angle_and_follower_errors_reject_bad_cells[missing-follower]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_nonzero_angle_and_follower_errors_reject_bad_cells[missing-spherical_azimuthal]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_nonzero_angle_and_follower_errors_reject_bad_cells[missing-spherical_polar]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_nonzero_angle_and_follower_errors_reject_bad_cells[stale-follower]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_nonzero_angle_and_follower_errors_reject_bad_cells[stale-spherical_azimuthal]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_nonzero_angle_and_follower_errors_reject_bad_cells[stale-spherical_polar]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_nonzero_angle_and_follower_errors_reject_bad_cells[zero-follower]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_nonzero_angle_and_follower_errors_reject_bad_cells[zero-spherical_azimuthal]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_nonzero_angle_and_follower_errors_reject_bad_cells[zero-spherical_polar]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_saved_link_defects_are_rejected[folder]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_saved_link_defects_are_rejected[pattern]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_seeded_failed_record_is_rejected[change0]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_seeded_failed_record_is_rejected[change1]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_seeded_failed_record_is_rejected[change2]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_seeded_failed_record_is_rejected[change3]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_start_chain_admits_rounded_predecessor_and_rejects_reset
 0.010	tests/system/py/test_joint_series_defect_controls.py::test_template_restart_and_skip_reset_are_rejected
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_tied_saved_fraction_error_is_numerical
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_valid_report_rounding_and_corruption[-2.16352-0.00481--2.1635-.0049]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_valid_report_rounding_and_corruption[1.23456-0.01001-1.235-.011]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_valid_report_rounding_and_corruption[2.16352-0.00481-2.1635-.0049]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_worker_chunks_reject_both_restart_and_accidental_full_chain
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_wrong_derived_error_is_rejected[0]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_wrong_derived_error_is_rejected[100]
@@ -230278,7 +230295,11 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_uncommi
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_wrong_series_derived_cells_are_rejected[stale-error-phase.atom_site_moment.A.spherical_modulus]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_wrong_series_derived_cells_are_rejected[wrong-value-linked_structure.other.weight_fraction]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_wrong_series_derived_cells_are_rejected[wrong-value-phase.atom_site_moment.A.spherical_modulus]
-UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_derived.py::test_derived_series_columns_follow_each_point_covariance
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_derived.py::test_derived_series_columns_follow_each_point_covariance[azimuthal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_derived.py::test_derived_series_columns_follow_each_point_covariance[follower]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_derived.py::test_derived_series_columns_follow_each_point_covariance[fraction]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_derived.py::test_derived_series_columns_follow_each_point_covariance[modulus]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_derived.py::test_derived_series_columns_follow_each_point_covariance[polar]
 0.000	tests/system/py/test_joint_series_edi.py::test_scan_adr_amendment_defines_the_join_and_single_experiment_rule
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_edi.py::test_series_save_keeps_one_external_folder_and_patterns_without_per_file_entries
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_edi.py::test_shared_phase_ratios_keep_distinct_overall_scales_and_three_independents
@@ -241208,7 +241229,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 119.403	tests/system/py/test_hidden_scan_redraws.py
 # module-cost: 0.745	tests/system/py/test_independent_experiments_app.py
 # module-cost: 0.455	tests/system/py/test_independent_experiments_cli.py
-# module-cost: 12.128	tests/system/py/test_joint_series_starts.py
+# module-cost: 13.850	tests/system/py/test_joint_series_starts.py
 # module-cost: 205.663	tests/system/py/test_legend_symbols.py
 # module-cost: 216.560	tests/system/py/test_legend_visibility.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py

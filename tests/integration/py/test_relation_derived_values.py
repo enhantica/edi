@@ -157,11 +157,9 @@ def test_moment_category_columns_are_saved_and_recomputed_on_load(tmp_path):
             path.read_text(), '_atom_site_moment.' + item, expected[index], expected_sigma[index]
         )
         assert '(' in values[0], 'A nondegenerate moment column must include its uncertainty'
-        assert gemmi.cif.as_number(values[0]) == pytest.approx(
-            expected[index], rel=0.002, abs=0.002
-        ), 'Saved spherical category values must follow the independent oblique-cell conversion'
         text = text.replace(values[0], '9999', 1)
     path.write_text(text)
+    expected, expected_sigma = persisted_moment_reference(tmp_path / 'saved')
     restored = engine.Project.load(tmp_path / 'saved')
     assert hasattr(restored.structure.atom_site_moment['A'], 'spherical'), (
         'Reopening must expose derived moment values from the stored independent components'
@@ -189,3 +187,48 @@ def test_moment_category_columns_are_saved_and_recomputed_on_load(tmp_path):
         strict=True,
     ):
         oracle.numeric_error(actual, expected_error, tolerance=3e-5)
+
+
+def persisted_moment_reference(root):
+    # Reload owns persisted inputs and rounded correlations, not the pre-save marginals.
+    saved = gemmi.cif.read_file(str(root / 'structures/phase.edi')).sole_block()
+    tags = ['_atom_site_moment.crystalaxis_' + axis for axis in 'xyz']
+    tags += [
+        '_cell.' + item
+        for item in (
+            'length_a',
+            'length_b',
+            'length_c',
+            'angle_alpha',
+            'angle_beta',
+            'angle_gamma',
+        )
+    ]
+    pairs = [oracle.token_pair(next(iter(saved.find_values(tag)))) for tag in tags]
+    stored_values, stored_errors = np.array(pairs).T
+    names = ['phase.atom_site_moment.A.crystalaxis_' + axis for axis in 'xyz']
+    names += [
+        'phase.cell.' + item
+        for item in (
+            'length_a',
+            'length_b',
+            'length_c',
+            'angle_alpha',
+            'angle_beta',
+            'angle_gamma',
+        )
+    ]
+    correlation = np.eye(9)
+    analysis = gemmi.cif.read_string(
+        'data_analysis\n' + (root / 'analysis/analysis.edi').read_text()
+    ).sole_block()
+    for row in analysis.find([
+        '_fit_parameter_correlation.parameter_unique_name_i',
+        '_fit_parameter_correlation.parameter_unique_name_j',
+        '_fit_parameter_correlation.correlation',
+    ]):
+        i, j = names.index(row[0]), names.index(row[1])
+        correlation[i, j] = correlation[j, i] = float(row[2])
+    return cases.propagated_spherical(
+        stored_values, correlation * np.outer(stored_errors, stored_errors)
+    )

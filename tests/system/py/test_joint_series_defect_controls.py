@@ -1,11 +1,12 @@
 """Defect controls for the runtime boundary predicates."""
 
+import shutil
 import tomllib
 from pathlib import Path
 
 import pytest
 
-from tests.fixtures.joint_series import oracle
+from tests.fixtures.joint_series import oracle, subject
 
 
 @pytest.mark.parametrize(
@@ -141,3 +142,104 @@ def test_worker_chunks_reject_both_restart_and_accidental_full_chain():
     )
     with pytest.raises(AssertionError):
         oracle.starts([template] * 4, template, after_skip, chained=True, chunks=(2, 2))
+
+
+@pytest.mark.parametrize(
+    ('value', 'sigma', 'shown', 'error'),
+    [
+        (2.16352, 0.00481, '2.1635', '.0049'),
+        (-2.16352, 0.00481, '-2.1635', '.0049'),
+        (1.23456, 0.01001, '1.235', '.011'),
+    ],
+)
+def test_valid_report_rounding_and_corruption(value, sigma, shown, error):
+    name = 'phase.atom_site_moment.A.spherical_polar'
+    row = {name: shown, name + '.uncertainty': error}
+    oracle.series_cells(row, name, value, sigma)
+    with pytest.raises(AssertionError):
+        oracle.series_cells({**row, name: str(value + 1)}, name, value, sigma)
+    with pytest.raises(AssertionError):
+        oracle.series_cells({**row, name + '.uncertainty': '0'}, name, value, sigma)
+    token = f'{shown}({error})'
+    oracle.category(
+        'data_phase\n_atom_site_moment.spherical_polar ' + token + '\n',
+        '_atom_site_moment.spherical_polar',
+        value,
+        sigma,
+        rule='iucr_99',
+    )
+
+
+def test_start_chain_admits_rounded_predecessor_and_rejects_reset():
+    template, fitted = [1.8], [[2.1635], [2.1635]]
+    oracle.starts(
+        [template, [2.16352]], template, fitted, chained=True, uncertainties=[[0.0049], [0.0049]]
+    )
+    with pytest.raises(AssertionError):
+        oracle.starts(
+            [template, template],
+            template,
+            fitted,
+            chained=True,
+            uncertainties=[[0.0049], [0.0049]],
+        )
+
+
+@pytest.mark.parametrize('channel', ['spherical_polar', 'spherical_azimuthal', 'follower'])
+@pytest.mark.parametrize('defect', ['missing', 'zero', 'stale'])
+def test_nonzero_angle_and_follower_errors_reject_bad_cells(channel, defect):
+    name = (
+        'linked_structure.other.scale'
+        if channel == 'follower'
+        else 'phase.atom_site_moment.A.' + channel
+    )
+    row = {name: '2.1635', name + '.uncertainty': '.0049'}
+    oracle.series_cells(row, name, 2.16352, 0.00481)
+    bad = dict(row)
+    if defect == 'missing':
+        bad.pop(name + '.uncertainty')
+    else:
+        bad[name + '.uncertainty'] = '0' if defect == 'zero' else '.011'
+    with pytest.raises(AssertionError):
+        oracle.series_cells(bad, name, 2.16352, 0.00481)
+
+
+@pytest.mark.parametrize('defect', ['newer-other-build', 'archive', 'headers', 'source-identity'])
+def test_native_subject_mismatch_is_refused(tmp_path, defect):
+    build = tmp_path / 'build/selected'
+    build.mkdir(parents=True)
+    include = tmp_path / 'source/include/crysta'
+    include.mkdir(parents=True)
+    (include / 'model.hpp').write_text('selected headers')
+    (build / 'CMakeCache.txt').write_text(
+        'CMAKE_HOME_DIRECTORY:INTERNAL=' + str(tmp_path / 'source') + '\n'
+    )
+    (build / '_crysta.so').write_bytes(b'selected extension')
+    (build / 'libcrysta_core.a').write_bytes(b'selected archive')
+    installed = tmp_path / 'installed/_crysta.so'
+    installed.parent.mkdir()
+    shutil.copyfile(build / '_crysta.so', installed)
+    other = tmp_path / 'build/newest'
+    other.mkdir()
+    (other / '_crysta.so').write_bytes(b'unrelated extension')
+    (other / 'libcrysta_core.a').write_bytes(b'unrelated archive')
+    shutil.copyfile(build / 'CMakeCache.txt', other / 'CMakeCache.txt')
+    assert subject.selected_core(tmp_path, installed) == (
+        build / 'libcrysta_core.a',
+        include.parent,
+    ), 'Native selection must follow the selected extension bytes, regardless of build timestamps'
+    subject.identity('selected\n', 'selected')
+
+    def rejected():
+        if defect == 'source-identity':
+            subject.identity('other', 'selected')
+        elif defect == 'headers':
+            wrong = tmp_path / 'wrong/include'
+            wrong.mkdir(parents=True)
+            (wrong / 'model.hpp').write_text('different header')
+            subject.selected_core(tmp_path, installed, include=wrong)
+        else:
+            subject.selected_core(tmp_path, installed, archive=other / 'libcrysta_core.a')
+
+    with pytest.raises(AssertionError):
+        rejected()

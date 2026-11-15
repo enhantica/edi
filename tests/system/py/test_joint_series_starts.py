@@ -10,7 +10,7 @@ import edi as engine
 import numpy as np
 import pytest
 
-from tests.fixtures.joint_series import cases, oracle
+from tests.fixtures.joint_series import cases, oracle, subject
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -26,17 +26,14 @@ def start_probe(tmp_path_factory):
         includes = [ROOT / 'core/include', sdk / 'include']
         defines = ['-DEDI_PROBE']
     else:
-        candidates = list((ROOT / 'build').glob('cp*/libcrysta_core.a'))
-        library = (
-            Path(os.environ['JOINT_SERIES_CORE'])
-            if 'JOINT_SERIES_CORE' in os.environ
-            else max(candidates, key=lambda p: p.stat().st_mtime_ns)
+        library, headers = subject.selected_core(
+            ROOT,
+            engine.__file__,
+            archive=os.environ.get('JOINT_SERIES_CORE'),
+            include=os.environ.get('JOINT_SERIES_INCLUDE'),
         )
-        libraries, includes, defines = (
-            [library],
-            [Path(os.environ.get('JOINT_SERIES_INCLUDE', ROOT / 'include'))],
-            [],
-        )
+        subject.committed_headers(ROOT, headers, engine.__build_commit__)
+        libraries, includes, defines = [library], [headers], []
     command = [
         os.environ.get('CXX', 'c++'),
         '-std=c++20',
@@ -57,6 +54,15 @@ def start_probe(tmp_path_factory):
     assert result.returncode == 0, (
         'The start observer must link to the real selected engine: ' + result.stderr
     )
+    if engine.__name__ == 'crysta':
+        proof = subprocess.run(
+            [str(build / 'starts'), '--identity'],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=5,
+        )
+        subject.identity(proof.stdout, engine.__build_commit__)
     return build / 'starts'
 
 
@@ -117,6 +123,22 @@ def test_actual_joint_fit(tmp_path, start_probe, mode, skip, workers):
         ]
         for row in points
     ]
+    uncertainties = [
+        [
+            float(row['phase.cell.length_a.uncertainty']),
+            *[
+                float(
+                    next(
+                        bank
+                        for bank in banks
+                        if bank['point'] == row['point'] and bank['experiment'] == name
+                    )['linked_structure.phase.scale.uncertainty']
+                )
+                for name in cases.BANKS
+            ],
+        ]
+        for row in points
+    ]
     assert not np.allclose(fitted[0], [4.09, 1.8, 4.7]), (
         'The first successful fit must differ from the template to expose a skip reset'
     )
@@ -125,5 +147,6 @@ def test_actual_joint_fit(tmp_path, start_probe, mode, skip, workers):
         [4.09, 1.8, 4.7],
         fitted,
         chained=mode == 'sequential',
+        uncertainties=uncertainties,
         chunks=((2, 2) if skip else (3, 2)) if workers == 3 else None,
     )

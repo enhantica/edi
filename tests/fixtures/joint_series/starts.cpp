@@ -15,7 +15,14 @@ static void starts(const std::string& file,
         std::cout << file << '\t' << value.first << '\t' << std::setprecision(17) << value.second
                   << '\n';
 }
+namespace crysta {
+const char* build_commit() noexcept;
+}
 int main(int argc, char** argv) {
+    if (argc == 2 && std::string(argv[1]) == "--identity") {
+        std::cout << crysta::build_commit();
+        return 0;
+    }
     if (argc != 3) return 2;
     crysta::threading::set_scan_workers(std::stoi(argv[2]));
     crysta::set_scan_file_start_observer(starts);

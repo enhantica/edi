@@ -1,7 +1,7 @@
 """Boundary predicates shared by live observations and defect controls."""
 
 import math
-from decimal import Decimal
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 import gemmi
@@ -37,7 +37,37 @@ def token_pair(token):
     return float(value), float(error)
 
 
-def category(text, tag, expected, sigma):
+def reported_pair(value, sigma):
+    """ADR-0092 default: decimal ceiling to two s.u. digits, half away value."""
+    number = Decimal(str(value))
+    error = Decimal(str(sigma))
+    if error > 0:
+        place = Decimal(1).scaleb(error.adjusted() - 1)
+        digits = (error / place).to_integral_value(rounding=ROUND_CEILING)
+        if digits == 100:
+            place *= 10
+            digits = Decimal(10)
+        shown = number.quantize(place, rounding=ROUND_HALF_UP)
+        if number and not shown:
+            own_place = Decimal(1).scaleb(number.copy_abs().adjusted() - 1)
+            shown = number.quantize(own_place, rounding=ROUND_HALF_UP)
+        return float(shown), float(digits * place)
+    place = Decimal(1).scaleb(number.copy_abs().adjusted() - 5)
+    return float(number.quantize(place, rounding=ROUND_HALF_UP)), float(error)
+
+
+def reported(actual_value, actual_error, value, sigma):
+    expected = reported_pair(value, sigma)
+    np.testing.assert_allclose(
+        [float(actual_value), float(actual_error)],
+        expected,
+        rtol=1e-12,
+        atol=1e-14,
+        err_msg='Persisted values and errors must follow the independent ADR-0092 decimal rule',
+    )
+
+
+def category(text, tag, expected, sigma, *, rule='exact'):
     block = gemmi.cif.read_string(text).sole_block()
     tokens = list(block.find_values(tag))
     assert tokens, 'Every derived category must persist its value and uncertainty column'
@@ -47,10 +77,14 @@ def category(text, tag, expected, sigma):
         assert 'other' in names, 'The tied derived category must identify its phase row'
         row = names.index('other')
     value, error = token_pair(tokens[row])
-    assert value == pytest.approx(expected, rel=0.002, abs=0.002), (
-        'Saved category values must match the independent expression'
-    )
-    numeric_error(error, sigma, tolerance=0.055)
+    if rule == 'exact':
+        # ADR-0088 point 4, incorporated by ADR-0132 point 2, retains round-trip derived tokens.
+        assert value == pytest.approx(expected, rel=1e-10, abs=1e-10), (
+            'Derived category values must retain the exact independent expression'
+        )
+        numeric_error(error, sigma, tolerance=3e-5)
+    else:
+        reported(value, error, expected, sigma)
 
 
 def link(text, project_dir, external, patterns):
@@ -75,7 +109,7 @@ def link(text, project_dir, external, patterns):
         )
 
 
-def starts(actual, template, successful, *, chained, chunks=None):
+def starts(actual, template, successful, *, chained, chunks=None, uncertainties=None):
     assert len(actual) == len(successful), (
         'Every fitted joint point must publish its actual start vector'
     )
@@ -86,9 +120,22 @@ def starts(actual, template, successful, *, chained, chunks=None):
             wanted.extend([start] * count)
             offset += count
             start = successful[offset - 1]
-    for observed, expected in zip(actual, wanted, strict=True):
+    expected_errors = [None] * len(wanted)
+    if uncertainties is not None and chained:
+        expected_errors = [None, *uncertainties[:-1]]
+        if chunks is not None:
+            expected_errors, offset, errors = [], 0, None
+            for count in chunks:
+                expected_errors.extend([errors] * count)
+                offset += count
+                errors = uncertainties[offset - 1]
+    for observed, expected, errors in zip(actual, wanted, expected_errors, strict=True):
+        comparable = observed
+        if errors is not None:
+            # CSV predecessors have reporting precision; the native chain retains fitted precision.
+            comparable = [reported_pair(v, su)[0] for v, su in zip(observed, errors, strict=True)]
         np.testing.assert_allclose(
-            observed,
+            comparable,
             expected,
             rtol=1e-8,
             atol=1e-10,
@@ -100,7 +147,4 @@ def series_cells(row, name, value, sigma):
     assert {name, name + '.uncertainty'} <= row.keys(), (
         'Every derived series value must have its own numerical uncertainty column'
     )
-    assert float(row[name]) == pytest.approx(value, rel=1e-6, abs=1e-9), (
-        'A derived series value must belong to the current point and category'
-    )
-    numeric_error(float(row[name + '.uncertainty']), sigma)
+    reported(row[name], row[name + '.uncertainty'], value, sigma)

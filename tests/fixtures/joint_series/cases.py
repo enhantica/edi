@@ -220,7 +220,7 @@ def spherical(inputs):
     return np.array([
         modulus,
         math.degrees(math.acos(z / modulus)),
-        math.degrees(math.atan2(y, x)),
+        math.degrees(math.atan2(y, x)) % 360,
     ])
 
 
@@ -297,7 +297,9 @@ def derived_series(source, root, engine):
         ('t', 'alpha.linked_structure.phase.scale'),
         ('d', 'alpha.linked_structure.other.scale'),
     ]
-    relations(root, aliases, ['oa = a', 'x = 1.2*a', 'y = -0.7*a', 'z = 2.3*a', 'd = t*v/u'])
+    relations(
+        root, aliases, ['oa = a', 'x = 1.2*a', 'y = -0.7+0.2*(a-4.1)', 'z = 2.3', 'd = t*v/u']
+    )
     project = engine.Project.load(root)
     (root / 'scan').mkdir(exist_ok=True)
     for index, key in enumerate(POINTS):

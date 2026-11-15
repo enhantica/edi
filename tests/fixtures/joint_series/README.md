@@ -28,4 +28,15 @@ calculation and the follower recomputed for every perturbation. It tests the sin
 
 Scale is measured separately on the producer-to-view path; these fixtures impose no timing assertions.
 
-The engine PR witness uses two points and two banks; this product retains its two-point, five-bank PR witness. The slow witness retains twenty points and five banks. Actual start vectors are observed at the native scan-driver boundary, with a template different from the first successful point. The series-derived witness uses three points and two experiments; magnetic components follow the cell parameter, so its magnitude error and shared phase-fraction error follow independent normal equations at each point.
+The engine PR witness uses two points and two banks; this product retains its two-point, five-bank PR witness. The slow witness retains twenty points and five banks. Actual start vectors are observed at the native scan-driver boundary, with a template different from the first successful point. The series-derived witness uses three points and two experiments; magnetic components follow non-collinear functions of the cell parameter, so the magnitude and both angular errors are nonzero. Five separate channels check the magnitude, polar angle, azimuth, shared phase fraction and relation follower at each point.
+
+The producer's reduced fixture checks fixed atomic references separately from its fitted scale columns; the consumer's full-free-set witness continues to check fitted atomic columns.
+Live fitted checks precede mutation or adopting Save. Each series prefix retains its terminal fitted values and errors;
+weighted calculation Jacobians provide a conditional covariance reference at those full-precision fitted seeds.
+CSV pairs are independently rounded by ADR-0092's default decimal rule; derived `.edi` category tokens retain the
+exact round-trip convention of ADR-0088 point 4 / ADR-0132 point 2. Reload expectations use persisted inputs and
+persisted correlations. The angular reference identifies azimuths modulo one turn.
+
+The native crysta probe finds the CMake build whose extension bytes match the imported extension, checks the linked
+core's embedded source identity, and checks its headers against that committed source. Archive and header overrides
+must match that selected build; timestamps cannot choose another subject. Baseline exports remain identifiable.
