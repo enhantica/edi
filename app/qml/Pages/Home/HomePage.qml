@@ -22,7 +22,7 @@ Item {
         id: idleWait
 
         interval: 30000
-        running: ApplicationInfo.homeIntroAllowed && !home.introRunning && EaGlobals.Vars.appBarCurrentIndex === 0 && Qt.application.state === Qt.ApplicationActive
+        running: ApplicationInfo.homeIntroAllowed && !home.introRunning && EaGlobals.Vars.appBarCurrentIndex === 0 && home.Window.active
         repeat: true
         onTriggered: home.wordmark.spin()
     }
