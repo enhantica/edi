@@ -89,7 +89,7 @@ In `experiments/spodi.edi`, add `()` after the values the stage frees:
 
 ```edi
 _instrument.calib_twotheta_offset 0()
-y2o3 0.1() 1.0
+y2o3 0.1()
 ```
 
 In `structures/y2o3.edi`, add `()` after the values the stage frees:
@@ -114,9 +114,9 @@ _cell.length_a 10.61()
 edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 3 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         3.53         8.11
-      1      0.061      2.66         4.61   43.2% ↓
-      2      0.072      2.66         4.61   
-  done · converged · 2 iters · reduced χ² 4.61 · Rwp 2.66 % · 0.08 s
+      1      0.087      2.66         4.61   43.2% ↓
+      2      0.099      2.66         4.61   
+  done · converged · 2 iters · reduced χ² 4.61 · Rwp 2.66 % · 0.11 s
 
   refined parameters (3 free):
   name            parameter                                               start        value      s.u.   change
@@ -165,8 +165,8 @@ The same for every other row (19 more).
 edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 24 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         2.66         4.65
-      1      0.079      2.37         3.70   20.3% ↓
-  done · converged · 1 iters · reduced χ² 3.70 · Rwp 2.37 % · 0.09 s
+      1      0.074      2.37         3.70   20.3% ↓
+  done · converged · 1 iters · reduced χ² 3.70 · Rwp 2.37 % · 0.08 s
 
   refined parameters (24 free):
   name            parameter                                               start        value      s.u.   change
@@ -227,8 +227,8 @@ _peak.broad_gauss_w 0.1()
 edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 27 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         2.37         3.71
-      1      0.087      1.78         2.10   43.5% ↓
-  done · converged · 1 iters · reduced χ² 2.10 · Rwp 1.78 % · 0.09 s
+      1      0.103      1.78         2.10   43.5% ↓
+  done · converged · 1 iters · reduced χ² 2.10 · Rwp 1.78 % · 0.11 s
 
   refined parameters (27 free):
   name            parameter                                               start        value      s.u.   change
@@ -296,8 +296,8 @@ O1 O 0.39() 0.15() 0.38() e 48 1 0.499298 beta
 edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 31 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         1.78         2.10
-      1      0.089      1.45         1.39   33.9% ↓
-  done · converged · 1 iters · reduced χ² 1.39 · Rwp 1.45 % · 0.10 s
+      1      0.109      1.45         1.39   33.9% ↓
+  done · converged · 1 iters · reduced χ² 1.39 · Rwp 1.45 % · 0.12 s
 
   refined parameters (31 free):
   name            parameter                                               start        value      s.u.   change
@@ -351,9 +351,8 @@ In `structures/y2o3.edi`, add `()` after the values the stage frees:
 ```edi
 Y1 0.00111() 0.00111() 0.00111() 0 0 0()
 Y2 0.00111() 0.00111 0.00111 0() 0 0
+O1 0.00111() 0.00111() 0.00111() 0() 0() 0()
 ```
-
-The same for every other row (1 more).
 
 === "Standalone executable"
 
@@ -371,7 +370,7 @@ The same for every other row (1 more).
 edi fit: project pd-neut-cwl_y2o3-spodi, 2509 pts fitted / 3060 loaded, 43 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         1.45         1.39
-      1      0.104      1.37         1.24   11.2% ↓
+      1      0.112      1.37         1.24   11.2% ↓
   done · converged · 1 iters · reduced χ² 1.24 · Rwp 1.37 % · 0.12 s
 
   refined parameters (43 free):

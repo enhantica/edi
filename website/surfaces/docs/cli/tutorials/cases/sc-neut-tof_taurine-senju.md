@@ -191,11 +191,33 @@ taurine 2.936()
 In `structures/taurine.edi`, set the values the stage starts again from:
 
 ```edi
-S1 S 0.208 0.34676 0.35118 e 4 1 0 Biso
-O1 O 0.33902 0.23701 0.35341 e 4 1 0 Biso
+S1 S 0.208 0.34676 0.35118 e 1 Biso 0
+O1 O 0.33902 0.23701 0.35341 e 1 Biso 0
+O2 O -0.06427 0.33875 0.29137 e 1 Biso 0
+O3 O 0.23286 0.40985 0.51108 e 1 Biso 0
+N1 N 0.2644 0.62996 0.33658 e 1 Biso 0
+H1 H 0.17 0.5995 0.43173 e 1 Biso 0
+H2 H 0.19405 0.70895 0.30623 e 1 Biso 0
+H3 H 0.45233 0.63476 0.36061 e 1 Biso 0
+C1 C 0.33574 0.43812 0.19983 e 1 Biso 0
+H11 H 0.53973 0.4432 0.23493 e 1 Biso 0
+H12 H 0.32105 0.39069 0.08168 e 1 Biso 0
+C2 C 0.20803 0.55562 0.18084 e 1 Biso 0
+H21 H 0.28448 0.59948 0.07592 e 1 Biso 0
+H22 H 0.00169 0.54787 0.16446 e 1 Biso 0
 ```
 
-The same for every other row (12 more).
+In `structures/taurine.edi`, delete the loop with these tags, and its rows: the stage no longer uses it:
+
+```edi
+_atom_site_aniso.id
+_atom_site_aniso.adp_11
+_atom_site_aniso.adp_22
+_atom_site_aniso.adp_33
+_atom_site_aniso.adp_12
+_atom_site_aniso.adp_13
+_atom_site_aniso.adp_23
+```
 
 === "Standalone executable"
 
@@ -213,8 +235,8 @@ The same for every other row (12 more).
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 6 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                        179.47      5665.97
-      1      0.291      51.73       470.73   91.7% ↓
-  done · converged · 1 iters · reduced χ² 470.73 · wR(F²) 51.73 % · 0.32 s
+      1      0.252      51.73       470.73   91.7% ↓
+  done · converged · 1 iters · reduced χ² 470.73 · wR(F²) 51.73 % · 0.29 s
 
   per-bank wR(F²) (%):   senju_1 60.04   senju_2 70.32   senju_3 39.79   senju_4 53.79   senju_5 41.41   senju_6 51.44
 
@@ -262,10 +284,10 @@ The same for every other row (12 more).
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 20 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         51.73       477.84
-      1      0.270      26.94       129.57   72.9% ↓
-      2      0.302      26.94       129.56   
-      3      0.340      26.94       129.56   
-  done · converged · 3 iters · reduced χ² 129.56 · wR(F²) 26.94 % · 0.38 s
+      1      0.282      26.94       129.57   72.9% ↓
+      2      0.312      26.94       129.56   
+      3      0.352      26.94       129.56   
+  done · converged · 3 iters · reduced χ² 129.56 · wR(F²) 26.94 % · 0.40 s
 
   per-bank wR(F²) (%):   senju_1 30.06   senju_2 28.38   senju_3 23.25   senju_4 24.93   senju_5 30.58   senju_6 26.29
 
@@ -326,10 +348,10 @@ _extinction.coefficient_33 0()
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 23 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         26.94       129.98
-      1      0.331      20.26        73.55   43.4% ↓
-      2      0.363      20.26        73.55   
-      3      0.406      20.26        73.55   
-  done · converged · 3 iters · reduced χ² 73.55 · wR(F²) 20.26 % · 0.45 s
+      1      0.262      20.26        73.55   43.4% ↓
+      2      0.291      20.26        73.55   
+      3      0.327      20.26        73.55   
+  done · converged · 3 iters · reduced χ² 73.55 · wR(F²) 20.26 % · 0.36 s
 
   per-bank wR(F²) (%):   senju_1 25.78   senju_2 22.57   senju_3 15.51   senju_4 17.82   senju_5 19.59   senju_6 22.41
 
@@ -394,9 +416,9 @@ The same for every other row (12 more).
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 65 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         20.26        77.05
-      1      0.371      17.04        54.49   29.3% ↓
-      2      0.413      17.04        54.49   
-  done · converged · 2 iters · reduced χ² 54.49 · wR(F²) 17.04 % · 0.49 s
+      1      0.304      17.04        54.49   29.3% ↓
+      2      0.347      17.04        54.49   
+  done · converged · 2 iters · reduced χ² 54.49 · wR(F²) 17.04 % · 0.39 s
 
   per-bank wR(F²) (%):   senju_1 22.17   senju_2 18.60   senju_3 13.00   senju_4 14.02   senju_5 17.01   senju_6 18.75
 
@@ -483,9 +505,33 @@ In `structures/taurine.edi`, set the values the stage starts again from:
 ```edi
 S1 S 0.2028() 0.34798() 0.3512() e 4 1 1.3599 beta
 O1 O 0.3383() 0.24191() 0.35398() e 4 1 2.67932 beta
+O2 O -0.0634() 0.33843() 0.29050() e 4 1 2.81027 beta
+O3 O 0.2339() 0.41042() 0.51081() e 4 1 2.13904 beta
+N1 N 0.26359() 0.63009() 0.33238() e 4 1 1.85477 beta
+H1 H 0.1795() 0.5999() 0.4320() e 4 1 3.96113 beta
+H2 H 0.1915() 0.7075() 0.3077() e 4 1 3.66063 beta
+H3 H 0.4537() 0.6340() 0.3629() e 4 1 4.02867 beta
+C1 C 0.34023() 0.43773() 0.20025() e 4 1 1.62569 beta
+H11 H 0.5403() 0.4442() 0.2356() e 4 1 3.3312 beta
+H12 H 0.3255() 0.39209() 0.0805() e 4 1 3.3312 beta
+C2 C 0.2079() 0.55619() 0.17999() e 4 1 2.03756 beta
+H21 H 0.2834() 0.6003() 0.0771() e 4 1 3.68864 beta
+H22 H 0.0032() 0.5471() 0.1639() e 4 1 4.22165 beta
+S1 0.0123() 0.00250() 0.00556() 0() 0.000578() 0()
+O1 0.0242() 0.00493() 0.01096() 0() 0.001139() 0()
+O2 0.0254() 0.00517() 0.01149() 0() 0.001195() 0()
+O3 0.0193() 0.00394() 0.00875() 0() 0.000910() 0()
+N1 0.01676() 0.00341() 0.00759() 0() 0.000789() 0()
+H1 0.0358() 0.00729() 0.01619() 0() 0.001684() 0()
+H2 0.0331() 0.00673() 0.01497() 0() 0.001556() 0()
+H3 0.0364() 0.00741() 0.01648() 0() 0.00171() 0()
+C1 0.01469() 0.00299() 0.00665() 0() 0.000691() 0()
+H11 0.0301() 0.00613() 0.01362() 0() 0.001416() 0()
+H12 0.0301() 0.00613() 0.01362() 0() 0.001416() 0()
+C2 0.01841() 0.00375() 0.00833() 0() 0.000866() 0()
+H21 0.0333() 0.00679() 0.01509() 0() 0.001569() 0()
+H22 0.0381() 0.00776() 0.0173() 0() 0.00179() 0()
 ```
-
-The same for every other row (26 more).
 
 === "Standalone executable"
 
@@ -503,9 +549,9 @@ The same for every other row (26 more).
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 135 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         17.04        59.18
-      1      0.543      12.19        30.27   48.8% ↓
-      2      0.605      12.19        30.27   
-  done · converged · 2 iters · reduced χ² 30.27 · wR(F²) 12.19 % · 0.70 s
+      1      0.497      12.19        30.27   48.8% ↓
+      2      0.558      12.19        30.27   
+  done · converged · 2 iters · reduced χ² 30.27 · wR(F²) 12.19 % · 0.65 s
 
   per-bank wR(F²) (%):   senju_1 18.18   senju_2 11.06   senju_3 9.02   senju_4 8.63   senju_5 12.28   senju_6 13.05
 

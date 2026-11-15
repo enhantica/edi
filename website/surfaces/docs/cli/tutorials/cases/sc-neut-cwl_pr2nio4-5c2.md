@@ -100,8 +100,8 @@ pr2nio4 4()
 edi fit: project sc-neut-cwl_pr2nio4-5c2, 198 pts fitted / 198 loaded, 1 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                        115.85      6415.49
-      1      0.072      49.30      1161.93   81.9% ↓
-  done · converged · 1 iters · reduced χ² 1161.93 · wR(F²) 49.30 % · 0.08 s
+      1      0.087      49.30      1161.93   81.9% ↓
+  done · converged · 1 iters · reduced χ² 1161.93 · wR(F²) 49.30 % · 0.10 s
 
   refined parameters (1 free):
   name            parameter                                               start        value      s.u.   change
@@ -122,9 +122,8 @@ In `structures/pr2nio4.edi`, add `()` after the values the stage frees:
 ```edi
 Pr Pr 0 0 0.362() i 8 1 0 Bani
 O2 O 0 0 0.176() i 8 0.722965 0 Bani
+Od O 0.075() 0.075() 0.175() p 32 0.074654 0 Biso
 ```
-
-The same for every other row (1 more).
 
 === "Standalone executable"
 
@@ -142,28 +141,28 @@ The same for every other row (1 more).
 edi fit: project sc-neut-cwl_pr2nio4-5c2, 198 pts fitted / 198 loaded, 6 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         49.30      1192.18
-      1      0.081      46.64      1067.00   10.5% ↓
-      2      0.090      46.63      1066.25   0.1% ↓
-      3      0.099      46.61      1065.55   0.1% ↓
-      4      0.109      46.60      1065.20   
-      5      0.119      46.60      1064.86   
-      6      0.129      46.59      1064.67   
-      7      0.139      46.59      1064.48   
-      8      0.148      46.59      1064.37   
-      9      0.157      46.58      1064.26   
-     10      0.169      46.58      1064.19   
-     11      0.179      46.58      1064.13   
-     12      0.189      46.58      1064.09   
-     13      0.199      46.58      1064.05   
-     14      0.208      46.58      1064.02   
-     15      0.219      46.58      1063.99   
-     16      0.230      46.58      1063.98   
-     17      0.241      46.58      1063.96   
-     18      0.251      46.58      1063.95   
-     19      0.261      46.58      1063.94   
-     20      0.271      46.58      1063.93   
-     21      0.284      46.58      1063.93   
-  done · converged · 21 iters · reduced χ² 1063.93 · wR(F²) 46.58 % · 0.29 s
+      1      0.099      46.64      1067.00   10.5% ↓
+      2      0.110      46.63      1066.25   0.1% ↓
+      3      0.121      46.61      1065.55   0.1% ↓
+      4      0.131      46.60      1065.20   
+      5      0.141      46.60      1064.86   
+      6      0.152      46.59      1064.67   
+      7      0.169      46.59      1064.48   
+      8      0.180      46.59      1064.37   
+      9      0.196      46.58      1064.26   
+     10      0.207      46.58      1064.19   
+     11      0.218      46.58      1064.13   
+     12      0.229      46.58      1064.09   
+     13      0.240      46.58      1064.05   
+     14      0.250      46.58      1064.02   
+     15      0.264      46.58      1063.99   
+     16      0.275      46.58      1063.98   
+     17      0.285      46.58      1063.96   
+     18      0.295      46.58      1063.95   
+     19      0.305      46.58      1063.94   
+     20      0.316      46.58      1063.93   
+     21      0.330      46.58      1063.93   
+  done · converged · 21 iters · reduced χ² 1063.93 · wR(F²) 46.58 % · 0.34 s
 
   refined parameters (6 free):
   name            parameter                                               start        value      s.u.   change
@@ -206,9 +205,9 @@ Od O 0.053() 0.068() 0.1728() p 32 0.074654 0() Biso
 edi fit: project sc-neut-cwl_pr2nio4-5c2, 198 pts fitted / 198 loaded, 7 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         46.58      1069.50
-      1      0.084      46.51      1066.71   0.3% ↓
-      2      0.096      46.51      1066.70   
-  done · converged · 2 iters · reduced χ² 1066.70 · wR(F²) 46.51 % · 0.11 s
+      1      0.092      46.51      1066.71   0.3% ↓
+      2      0.104      46.51      1066.70   
+  done · converged · 2 iters · reduced χ² 1066.70 · wR(F²) 46.51 % · 0.12 s
 
   refined parameters (7 free):
   name            parameter                                               start        value      s.u.   change
@@ -237,9 +236,10 @@ In `structures/pr2nio4.edi`, add `()` after the values the stage frees:
 ```edi
 Pr 0() 0() 0() 0 0 0
 Ni 0() 0() 0() 0 0 0
+O1 0() 0() 0() 0() 0 0
+O2 0() 0() 0() 0 0 0
+Oi 0() 0() 0() 0 0 0
 ```
-
-The same for every other row (3 more).
 
 === "Standalone executable"
 
@@ -257,14 +257,14 @@ The same for every other row (3 more).
 edi fit: project sc-neut-cwl_pr2nio4-5c2, 198 pts fitted / 198 loaded, 23 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         46.51      1164.23
-      1      0.112       4.29         9.89   99.2% ↓
-      2      0.126       4.27         9.79   0.9% ↓
-      3      0.141       4.26         9.76   0.3% ↓
-      4      0.158       4.26         9.75   0.1% ↓
-      5      0.168       4.26         9.75   
-      6      0.178       4.26         9.75   
-      7      0.189       4.26         9.75   
-  done · converged · 7 iters · reduced χ² 9.75 · wR(F²) 4.26 % · 0.20 s
+      1      0.131       4.29         9.89   99.2% ↓
+      2      0.148       4.27         9.79   0.9% ↓
+      3      0.163       4.26         9.76   0.3% ↓
+      4      0.180       4.26         9.75   0.1% ↓
+      5      0.197       4.26         9.75   
+      6      0.213       4.26         9.75   
+      7      0.230       4.26         9.75   
+  done · converged · 7 iters · reduced χ² 9.75 · wR(F²) 4.26 % · 0.25 s
 
   refined parameters (23 free):
   name            parameter                                               start        value      s.u.   change

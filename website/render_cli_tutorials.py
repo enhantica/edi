@@ -130,6 +130,63 @@ def snapshot(folder: Path) -> dict[str, list[str]]:
     }
 
 
+def loops(lines: list[str]) -> list[tuple[list[str], list[str]]]:
+    """Each loop of a file: its tags and its rows."""
+    out, index = [], 0
+    while index < len(lines):
+        if lines[index].strip() != 'loop_':
+            index += 1
+            continue
+        index += 1
+        tags, rows = [], []
+        while index < len(lines) and lines[index].startswith('_'):
+            tags.append(lines[index].strip())
+            index += 1
+        while (
+            index < len(lines)
+            and lines[index].strip()
+            and not lines[index].startswith(('_', 'loop_'))
+        ):
+            rows.append(lines[index])
+            index += 1
+        out.append((tags, rows))
+    return out
+
+
+def as_written(line: str, saved: list[str], raw: list[str]) -> str:
+    """A loop row of edi's saved file in the columns, and their order, of the file as downloaded.
+
+    edi writes columns the downloaded file leaves out (a linked structure's weight fraction, a
+    site's multiplicity); before the first fit the reader edits the downloaded file.
+    """
+    raw_tags = {tags[0].split('.')[0]: tags for tags, _rows in loops(raw)}
+    for tags, rows in loops(saved):
+        if MARK.sub('', line) not in {MARK.sub('', row) for row in rows}:
+            continue
+        kept = raw_tags.get(tags[0].split('.')[0])
+        values = line.split()
+        if not kept or len(values) != len(tags) or kept == tags:
+            return line
+        by_tag = dict(zip(tags, values, strict=True))
+        if not set(kept) <= set(by_tag):
+            return line
+        return ' '.join(by_tag[tag] for tag in kept)
+    return line
+
+
+def downloaded_columns(case: str, edits: list, after: dict[str, list[str]]) -> list:
+    """The edited rows in the columns of the case's files as downloaded (`as_written`)."""
+    raw = ROOT / f'docs/user/cli/{case}/project'
+    out = []
+    for name, kind, found in edits:
+        shown = found
+        if (raw / name).is_file():
+            lines = (raw / name).read_text(encoding='utf-8').splitlines()
+            shown = [as_written(line, after[name], lines) for line in found]
+        out.append((name, kind, shown))
+    return out
+
+
 # The case that also shows measured data from a file on disk (owner record 2026-11-08).
 FROM_FILE = {'pd-neut-tof_si-sepd'}
 FROM_FILE_TEXT = (
@@ -142,6 +199,54 @@ MARK = re.compile(r'\((\d*)\)')
 # The project settings a stage may change: the fitting mode and the background estimate's.
 SETTINGS = ('_fitting_mode.type', '_background_estimate.')
 FREED = re.compile(r'\(0?\)')
+
+
+def same_values(line: str, other: str) -> bool:
+    """Whether two unmarked lines hold the same values, to the digits the shorter one keeps.
+
+    After a fit edi writes a coordinate the symmetry ties to another at full precision; a later
+    save recomputes it from the other's rounded value (-0.206397, then -0.2064).
+    """
+    words, others = line.split(), other.split()
+    if len(words) != len(others):
+        return False
+    for word, held in zip(words, others, strict=True):
+        if word == held:
+            continue
+        try:
+            places = min(len(word.partition('.')[2]), len(held.partition('.')[2]))
+            if abs(float(word) - float(held)) > 0.5000001 * 10.0**-places:
+                return False
+        except ValueError:
+            return False
+    return True
+
+
+def by_first_word(lines: set[str]) -> dict[str, list[str]]:
+    """The lines without their marks, by their first word."""
+    out: dict[str, list[str]] = {}
+    for line in lines:
+        bare = MARK.sub('', line)
+        out.setdefault(bare.split(' ', 1)[0], []).append(bare)
+    return out
+
+
+def held_before(line: str, unmarked: dict[str, list[str]]) -> bool:
+    """Whether the line, marks aside, was in the file before (`same_values`)."""
+    bare = MARK.sub('', line)
+    return any(same_values(bare, held) for held in unmarked.get(bare.split(' ', 1)[0], []))
+
+
+# Loops edi computes and writes itself (measured and calculated data, reflections, the expanded
+# sites, their geometry and the symmetry operations), never edited by a reader.
+DERIVED = ('_data.', '_refln.', '_expanded_', '_geom_', '_space_group_symop')
+
+
+def derived_rows(lines: list[str]) -> set[str]:
+    """The rows of a file's derived loops (`DERIVED`)."""
+    return {
+        row for tags, rows in loops(lines) if tags and tags[0].startswith(DERIVED) for row in rows
+    }
 
 
 def changes(
@@ -157,7 +262,7 @@ def changes(
         if name == 'project.edi':
             continue
         old = set(before.get(name, []))
-        unmarked = {MARK.sub('', line) for line in old}
+        unmarked = by_first_word(old)
         kinds: dict[str, list[str]] = {
             'setting': [],
             'value': [],
@@ -166,8 +271,9 @@ def changes(
             'fixed': [],
             'relations': [],
         }
+        derived = derived_rows(lines)
         for line in lines:
-            if line in old:
+            if line in old or line in derived:
                 continue
             if line.startswith('_background_estimate.points_digest'):
                 continue  # written by edi, never by hand
@@ -175,7 +281,7 @@ def changes(
                 kinds['setting'].append(line)
             elif line.split(' ', 1)[0] in relations and name.startswith('analysis'):
                 kinds['relations'].append(line)
-            elif not name.startswith('analysis') and MARK.sub('', line) in unmarked:
+            elif not name.startswith('analysis') and held_before(line, unmarked):
                 # A value the stage frees is written with an empty or zero bracket; a value that
                 # keeps an earlier fit's s.u. (a constraint's dependent) was not edited.
                 if FREED.search(line):
@@ -192,8 +298,20 @@ def changes(
             elif not name.startswith('analysis') and line.split(' ', 1)[0] in rows:
                 # A value the stage sets, on a row its lines name (`atom_sites['Co1']`).
                 kinds['value'].append(MARK.sub('()', line))
+        kinds['dropped'] = dropped_loops(before.get(name, []), lines)
         out.extend((name, kind, found) for kind, found in kinds.items() if found)
     return out
+
+
+def dropped_loops(before: list[str], after: list[str]) -> list[str]:
+    """The tags of the loops a stage's settings remove (a site's tensors once it is isotropic)."""
+    kept = {tags[0] for tags, _rows in loops(after) if tags}
+    return [
+        tag
+        for tags, _rows in loops(before)
+        if tags and tags[0] not in kept and not tags[0].startswith(DERIVED)
+        for tag in tags
+    ]
 
 
 def tabs(command: str) -> str:
@@ -210,6 +328,7 @@ WORDS = {
     'added': 'add these lines, free with `()`; a value left out reads as zero',
     'fixed': 'remove the `()` from',
     'relations': 'add these rows to its alias and constraint loops',
+    'dropped': 'delete the loop with these tags, and its rows: the stage no longer uses it',
 }
 
 
@@ -218,16 +337,39 @@ WORDS = {
 EXCERPT_ROWS = 2
 
 
-def edited(edits: list[tuple[str, str, list[str]]], words: dict[str, str] = WORDS) -> str:
+def whole_loops(edits: list, after: dict[str, list[str]]) -> set[tuple[str, str]]:
+    """The edits whose rows are every row of their loop, which an excerpt may stand for."""
+    whole = set()
+    for name, kind, lines in edits:
+        edited_rows = [line for line in lines if not line.startswith('_')]
+        rows = {MARK.sub('', line) for line in edited_rows}
+        # "The same for every other row" holds only where each row marks the same columns.
+        patterns = {
+            tuple(index for index, word in enumerate(line.split()) if MARK.search(word))
+            for line in edited_rows
+        }
+        for _tags, loop_rows in loops(after.get(name, [])):
+            if rows and len(patterns) == 1 and rows == {MARK.sub('', row) for row in loop_rows}:
+                whole.add((name, kind))
+    return whole
+
+
+def edited(
+    edits: list[tuple[str, str, list[str]]],
+    words: dict[str, str] = WORDS,
+    whole: set[tuple[str, str]] | None = None,
+) -> str:
+    """The edits in words; a loop's rows as an excerpt only where the stage edits all of them."""
     out = []
     for name, kind, lines in edits:
         keyed = [line for line in lines if line.startswith('_')]
         rows = [line for line in lines if not line.startswith('_')]
-        shown = keyed[:SHOWN_LINES] + rows[:EXCERPT_ROWS]
+        excerpt = EXCERPT_ROWS if whole is None or (name, kind) in whole else len(rows)
+        shown = keyed[:SHOWN_LINES] + rows[:excerpt]
         more = ''
         if len(keyed) > SHOWN_LINES:
             more += f'\n… and {len(keyed) - SHOWN_LINES} more lines'
-        rest = len(rows) - EXCERPT_ROWS
+        rest = len(rows) - excerpt
         after = f'The same for every other row ({rest} more).\n' if rest > 0 else ''
         out.append(
             f'In `{name}`, {words[kind]}:\n\n```edi\n'
@@ -415,15 +557,24 @@ def render(case: str, binary: Path) -> Path:  # noqa: PLR0914, PLR0915 - one pag
         namespace = {'project': project}
         exec(names(source), namespace)  # noqa: S102 - the tutorial's own name lines
         auto: set[str] = set()
+        fitted = False  # the files are as downloaded until the first edi fit rewrites them
 
         def step(
-            title: str, text: str, code: list[str], shown: int = 0, verbosity: str = 'full'
+            title: str,
+            text: str,
+            code: list[str],
+            shown: int = 0,
+            verbosity: str = 'full',
+            *,
+            settings_only: bool = False,
         ) -> None:
             """Apply `code`, show its edits, run edi fit and show its output.
 
-            With `shown`, only the output's first and last `shown` lines.
+            With `shown`, only the output's first and last `shown` lines. With `settings_only`,
+            only the settings it changes: a sequential project saves its values without the
+            template fit's uncertainties, which no reader edits.
             """
-            nonlocal project
+            nonlocal project, fitted
             lines = []
             for line in code:
                 estimate = re.match(r'(\s*)(\w+)\.background\.auto_estimate\((.*)\)$', line)
@@ -455,7 +606,12 @@ def render(case: str, binary: Path) -> Path:  # noqa: PLR0914, PLR0915 - one pag
                     for structure in project.structures
                     for site in structure.atom_sites
                 }
-            edits = changes(before, snapshot(work), created, rows)
+            after = snapshot(work)
+            edits = changes(before, after, created, rows)
+            if not fitted:
+                edits = downloaded_columns(case, edits, after)
+            if settings_only:
+                edits = [edit for edit in edits if edit[1] == 'setting']
             run = subprocess.run(
                 [str(binary), 'fit', case, '--verbosity', verbosity],
                 cwd=scratch,
@@ -463,6 +619,7 @@ def render(case: str, binary: Path) -> Path:  # noqa: PLR0914, PLR0915 - one pag
                 text=True,
                 check=True,
             )
+            fitted = True
             output = run.stdout.rstrip().splitlines()
             if shown and len(output) > 2 * shown:
                 output = [*output[:shown], '…', *output[-shown:]]
@@ -472,7 +629,7 @@ def render(case: str, binary: Path) -> Path:  # noqa: PLR0914, PLR0915 - one pag
             parts.extend([
                 f'## {title}\n',
                 text + '\n' if text else '',
-                edited(edits),
+                edited(edits, whole=whole_loops(edits, after)),
                 tabs(f'fit {case}' + (' --verbosity full' if verbosity == 'full' else '')),
                 '```text\n' + '\n'.join(output) + '\n```\n',
             ])
@@ -513,6 +670,7 @@ def render(case: str, binary: Path) -> Path:  # noqa: PLR0914, PLR0915 - one pag
                 ["project.analysis.fitting_mode = 'sequential'"],
                 shown=6,
                 verbosity='compact',
+                settings_only=True,
             )
         if case in FROM_FILE:
             parts += ['## Your own measured data\n', FROM_FILE_TEXT]

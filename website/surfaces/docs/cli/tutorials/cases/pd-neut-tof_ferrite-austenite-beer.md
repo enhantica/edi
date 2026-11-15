@@ -120,8 +120,8 @@ In `experiments/expt_s2.edi`, add `()` after the values the stage frees:
 
 ```edi
 _instrument.calib_d_to_tof_offset 0()
-ferrite 400() 0.49780285149965137()
-austenite 100() 0.5021971485003485()
+ferrite 400()
+austenite 100()
 ```
 
 === "Standalone executable"
@@ -140,9 +140,9 @@ austenite 100() 0.5021971485003485()
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 4 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        41.44       229.84
-      1      0.223     23.83        76.04   66.9% ↓
-      2      0.276     23.83        76.04   
-  done · converged · 2 iters · reduced χ² 76.04 · Rwp 23.83 % · 0.30 s
+      1      0.218     23.83        76.04   66.9% ↓
+      2      0.243     23.83        76.04   
+  done · converged · 2 iters · reduced χ² 76.04 · Rwp 23.83 % · 0.26 s
 
   per-bank Rwp (%):   expt_n2 24.49   expt_s2 23.16
 
@@ -168,18 +168,70 @@ In `experiments/expt_n2.edi`, add `()` after the values the stage frees:
 ```edi
 1 40111.8789 0.19()
 2 41193.5664 0.19()
+3 42041.375 0.19()
+4 42713.7734 0.19()
+5 44409.3945 0.19()
+6 45198.7344 0.19()
+7 46251.1875 0.19()
+8 49350.0742 0.19()
+9 51289.6836 0.19()
+10 55245.1992 0.19()
+11 55679.707 0.19()
+12 56383.9102 0.19()
+13 58956.1797 0.19()
+14 61536.457 0.19()
+15 63768.0469 0.19()
+16 65581.2109 0.19()
+17 70183.8516 0.19()
+18 71787.8203 0.19()
+19 78343.1094 0.19()
+20 80016.8047 0.19()
+21 98141.8516 0.19()
+22 99262.2344 0.19()
+23 100985.8516 0.19()
+24 101933.8516 0.19()
+25 108656.0312 0.19()
+26 110896.75 0.19()
+27 113137.4844 0.19()
+28 114430.2031 0.19()
+29 116929.4844 0.19()
+30 119428.7422 0.19()
 ```
-
-The same for every other row (28 more).
 
 In `experiments/expt_s2.edi`, add `()` after the values the stage frees:
 
 ```edi
 1 40111.8789 0.18()
 2 41193.5664 0.18()
+3 42041.375 0.18()
+4 42713.7734 0.18()
+5 44409.3945 0.18()
+6 45198.7344 0.18()
+7 46251.1875 0.18()
+8 49350.0742 0.18()
+9 51289.6836 0.18()
+10 55245.1992 0.18()
+11 55679.707 0.18()
+12 56383.9102 0.18()
+13 58956.1797 0.18()
+14 61536.457 0.18()
+15 63768.0469 0.18()
+16 65581.2109 0.18()
+17 70183.8516 0.18()
+18 71787.8203 0.18()
+19 78343.1094 0.18()
+20 80016.8047 0.18()
+21 98141.8516 0.18()
+22 99262.2344 0.18()
+23 100985.8516 0.18()
+24 101933.8516 0.18()
+25 108656.0312 0.18()
+26 110896.75 0.18()
+27 113137.4844 0.18()
+28 114430.2031 0.18()
+29 116929.4844 0.18()
+30 119428.7422 0.18()
 ```
-
-The same for every other row (28 more).
 
 === "Standalone executable"
 
@@ -197,8 +249,8 @@ The same for every other row (28 more).
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 64 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        23.83        76.86
-      1      0.973     18.05        44.10   42.6% ↓
-  done · converged · 1 iters · reduced χ² 44.10 · Rwp 18.05 % · 1.06 s
+      1      1.041     18.05        44.10   42.6% ↓
+  done · converged · 1 iters · reduced χ² 44.10 · Rwp 18.05 % · 1.09 s
 
   per-bank Rwp (%):   expt_n2 17.91   expt_s2 18.20
 
@@ -321,8 +373,8 @@ _peak.broad_lorentz_gamma_0 5()
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 72 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        18.05        44.16
-      1      1.057     16.38        36.36   17.7% ↓
-  done · converged · 1 iters · reduced χ² 36.36 · Rwp 16.38 % · 1.10 s
+      1      1.051     16.38        36.36   17.7% ↓
+  done · converged · 1 iters · reduced χ² 36.36 · Rwp 16.38 % · 1.09 s
 
   per-bank Rwp (%):   expt_n2 16.15   expt_s2 16.61
 
@@ -445,9 +497,9 @@ Fe Fe 0 0 0 a 2 1 0.5() Biso
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 73 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        16.38        36.36
-      1      0.512      7.13         6.89   81.0% ↓
-      2      0.750      7.13         6.89   
-  done · converged · 2 iters · reduced χ² 6.89 · Rwp 7.13 % · 0.81 s
+      1      0.712      7.13         6.89   81.0% ↓
+      2      1.035      7.13         6.89   
+  done · converged · 2 iters · reduced χ² 6.89 · Rwp 7.13 % · 1.08 s
 
   per-bank Rwp (%):   expt_n2 7.06   expt_s2 7.20
 

@@ -185,9 +185,9 @@ _cell.length_c 20.8268()
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 11 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 140198364.17
-      1      0.712      4.51 140107944.41   0.1% ↓
-      2      0.819      4.51 140107929.77   
-  done · converged · 2 iters · reduced χ² 140107929.77 · Rwp 4.51 % · 0.87 s
+      1      0.578      4.51 140107944.41   0.1% ↓
+      2      0.672      4.51 140107929.77   
+  done · converged · 2 iters · reduced χ² 140107929.77 · Rwp 4.51 % · 0.72 s
 
   refined parameters (11 free):
   name            parameter                                               start        value      s.u.   change
@@ -220,6 +220,24 @@ In `experiments/bm01.edi`, add `()` after the values the stage frees:
 
 The same for every other row (28 more).
 
+In `structures/alpo4_c2221.edi`, remove the `()` from:
+
+```edi
+_atom_sites_cartn_transform.mat_11 6.97
+_atom_sites_cartn_transform.mat_22 7.11
+_atom_sites_cartn_transform.mat_33 7.003
+```
+
+In `structures/alpo4_p63mc.edi`, remove the `()` from:
+
+```edi
+_cell.length_b 4.983
+_atom_sites_cartn_transform.mat_11 4.983
+_atom_sites_cartn_transform.mat_12 -2.4915
+_atom_sites_cartn_transform.mat_22 4.3154
+_atom_sites_cartn_transform.mat_33 9.504
+```
+
 === "Standalone executable"
 
     ```console
@@ -236,8 +254,8 @@ The same for every other row (28 more).
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 41 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 141478227.17
-      1      1.197      4.51 141465283.67   
-  done · converged · 1 iters · reduced χ² 141465283.67 · Rwp 4.51 % · 1.26 s
+      1      1.107      4.51 141465283.67   
+  done · converged · 1 iters · reduced χ² 141465283.67 · Rwp 4.51 % · 1.15 s
 
   refined parameters (41 free):
   name            parameter                                               start        value      s.u.   change
@@ -300,6 +318,25 @@ _peak.broad_gauss_w 0.0156()
 _peak.mixing_eta_0 0.374()
 ```
 
+In `structures/alpo4_c2221.edi`, remove the `()` from:
+
+```edi
+_atom_sites_cartn_transform.mat_11 6.97
+_atom_sites_cartn_transform.mat_12 0.000000000000000435362
+_atom_sites_cartn_transform.mat_22 7.11
+_atom_sites_cartn_transform.mat_33 7.003
+```
+
+In `structures/alpo4_p63mc.edi`, remove the `()` from:
+
+```edi
+_cell.length_b 4.983
+_atom_sites_cartn_transform.mat_11 4.983
+_atom_sites_cartn_transform.mat_12 -2.4915
+_atom_sites_cartn_transform.mat_22 4.3154
+_atom_sites_cartn_transform.mat_33 9.504
+```
+
 === "Standalone executable"
 
     ```console
@@ -316,11 +353,11 @@ _peak.mixing_eta_0 0.374()
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 45 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 141658096.73
-      1      1.126      4.51 141616161.48   
-      2      1.208      4.51 141612687.24   
-      3      1.275      4.51 141612409.67   
-      4      1.623      4.51 141612395.32   
-  done · converged · 4 iters · reduced χ² 141612395.32 · Rwp 4.51 % · 1.69 s
+      1      0.885      4.51 141616161.48   
+      2      0.944      4.51 141612687.24   
+      3      1.005      4.51 141612409.67   
+      4      1.237      4.51 141612395.32   
+  done · converged · 4 iters · reduced χ² 141612395.32 · Rwp 4.51 % · 1.31 s
 
   refined parameters (45 free):
   name            parameter                                               start        value      s.u.   change
@@ -388,6 +425,26 @@ _peak.asym_beba_a0 0.088()
 _peak.asym_beba_b0 0.0043()
 ```
 
+In `structures/alpo4_c2221.edi`, remove the `()` from:
+
+```edi
+_atom_sites_cartn_transform.mat_11 6.97
+_atom_sites_cartn_transform.mat_13 0.00000000000000042881
+_atom_sites_cartn_transform.mat_22 7.11
+_atom_sites_cartn_transform.mat_23 0.00000000000000042881
+_atom_sites_cartn_transform.mat_33 7.003
+```
+
+In `structures/alpo4_p63mc.edi`, remove the `()` from:
+
+```edi
+_cell.length_b 4.983
+_atom_sites_cartn_transform.mat_11 4.983
+_atom_sites_cartn_transform.mat_12 -2.4915
+_atom_sites_cartn_transform.mat_22 4.3154
+_atom_sites_cartn_transform.mat_33 9.504
+```
+
 === "Standalone executable"
 
     ```console
@@ -404,10 +461,10 @@ _peak.asym_beba_b0 0.0043()
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 47 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 141730697.09
-      1      1.052      4.51 141699783.02   
-      2      1.125      4.51 141696298.52   
-      3      1.470      4.51 141696205.35   
-  done · converged · 3 iters · reduced χ² 141696205.35 · Rwp 4.51 % · 1.55 s
+      1      0.874      4.51 141699783.02   
+      2      0.939      4.51 141696298.52   
+      3      1.254      4.51 141696205.35   
+  done · converged · 3 iters · reduced χ² 141696205.35 · Rwp 4.51 % · 1.31 s
 
   refined parameters (47 free):
   name            parameter                                               start        value      s.u.   change
@@ -472,14 +529,39 @@ edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 47 f
 
 The main phase's free coordinates; Al's follows Ti's.
 
+In `structures/alpo4_c2221.edi`, remove the `()` from:
+
+```edi
+_atom_sites_cartn_transform.mat_11 6.97
+_atom_sites_cartn_transform.mat_22 7.11
+_atom_sites_cartn_transform.mat_33 7.003
+```
+
+In `structures/alpo4_p63mc.edi`, remove the `()` from:
+
+```edi
+_cell.length_b 4.983
+_atom_sites_cartn_transform.mat_11 4.983
+_atom_sites_cartn_transform.mat_12 -2.4915
+_atom_sites_cartn_transform.mat_23 0.00000000000000100797
+_atom_sites_cartn_transform.mat_33 9.504
+```
+
 In `structures/latp.edi`, add `()` after the values the stage frees:
 
 ```edi
 Ti1 Ti 0 0 0.14184() c 12 0.85 0.33 Biso
 P1 P 0.2877() 0 0.25 e 18 1 0.23 Biso
+O1 O 0.1817() 0.9911() 0.1889() f 36 1 0.94 Biso
+O2 O 0.1878() 0.1628() 0.0818() f 36 1 0.54 Biso
 ```
 
-The same for every other row (2 more).
+In `structures/latp.edi`, remove the `()` from:
+
+```edi
+_cell.length_b 8.4952
+_atom_sites_cartn_transform.mat_11 8.4952
+```
 
 === "Standalone executable"
 
@@ -497,9 +579,9 @@ The same for every other row (2 more).
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 55 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 142093212.27
-      1      0.999      4.51 142052227.84   
-      2      1.230      4.51 142050818.62   
-  done · converged · 2 iters · reduced χ² 142050818.62 · Rwp 4.51 % · 1.28 s
+      1      0.821      4.51 142052227.84   
+      2      1.119      4.51 142050818.62   
+  done · converged · 2 iters · reduced χ² 142050818.62 · Rwp 4.51 % · 1.20 s
 
   refined parameters (55 free):
   name            parameter                                               start        value      s.u.   change
@@ -570,14 +652,38 @@ edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 55 f
 
 ## LATP displacements
 
+In `structures/alpo4_c2221.edi`, remove the `()` from:
+
+```edi
+_atom_sites_cartn_transform.mat_11 6.97
+_atom_sites_cartn_transform.mat_22 7.11
+```
+
+In `structures/alpo4_p63mc.edi`, remove the `()` from:
+
+```edi
+_cell.length_b 4.983
+_atom_sites_cartn_transform.mat_11 4.983
+_atom_sites_cartn_transform.mat_23 0.00000000000000100797
+_atom_sites_cartn_transform.mat_33 9.504
+```
+
 In `structures/latp.edi`, add `()` after the values the stage frees:
 
 ```edi
 Ti1 Ti 0 0 0.14185() c 12 0.85 0.33() Biso
 P1 P 0.2877() 0 0.25 e 18 1 0.23() Biso
+O1 O 0.1818() 0.9911() 0.1889() f 36 1 0.94() Biso
+O2 O 0.1879() 0.1627() 0.0817() f 36 1 0.54() Biso
 ```
 
-The same for every other row (2 more).
+In `structures/latp.edi`, remove the `()` from:
+
+```edi
+_cell.length_b 8.4952
+_atom_sites_cartn_transform.mat_11 8.4952
+_atom_sites_cartn_transform.mat_12 -4.2476
+```
 
 === "Standalone executable"
 
@@ -595,11 +701,11 @@ The same for every other row (2 more).
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 59 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 142256063.67
-      1      0.953      4.51 142234677.52   
-      2      1.017      4.51 142229324.85   
-      3      1.084      4.51 142228737.76   
-      4      1.362      4.51 142228666.81   
-  done · converged · 4 iters · reduced χ² 142228666.81 · Rwp 4.51 % · 1.45 s
+      1      0.849      4.51 142234677.52   
+      2      0.915      4.51 142229324.85   
+      3      0.999      4.51 142228737.76   
+      4      1.320      4.51 142228666.81   
+  done · converged · 4 iters · reduced χ² 142228666.81 · Rwp 4.51 % · 1.38 s
 
   refined parameters (59 free):
   name            parameter                                               start        value      s.u.   change
@@ -695,16 +801,16 @@ _fitting_mode.type sequential
 Sequential fit: pd-xray-cwl_latp-bm01_scan
 
 Progress                  │ OK  Failed │ Elapsed    Left │  Chi2   Chi2 range │ File
-░░░░░░░░░░    1.4%   1/73 │  1       0 │      3s   3m18s │ 1.40e8  1.40e8-1.40e8 │ latp_312
-░░░░░░░░░░    2.7%   2/73 │  2       0 │      4s   2m30s │ 1.50e8  1.40e8-1.50e8 │ latp_311
-░░░░░░░░░░    4.1%   3/73 │  3       0 │      6s   2m20s │ 1.40e8  1.40e8-1.50e8 │ latp_310
+░░░░░░░░░░    1.4%   1/73 │  1       0 │      3s   3m36s │ 1.40e8  1.40e8-1.40e8 │ latp_312
+░░░░░░░░░░    2.7%   2/73 │  2       0 │      4s   2m36s │ 1.50e8  1.40e8-1.50e8 │ latp_311
+░░░░░░░░░░    4.1%   3/73 │  3       0 │      6s   2m25s │ 1.40e8  1.40e8-1.50e8 │ latp_310
 …
-█████████░   93.2%  68/73 │ 68       0 │   2m12s     10s │ 4.80e7  4.70e7-1.50e8 │ latp_245
-█████████░   94.5%  69/73 │ 69       0 │   2m15s      8s │ 4.60e7  4.60e7-1.50e8 │ latp_244
-██████████   95.9%  70/73 │ 70       0 │   2m16s      6s │ 3.90e7  3.90e7-1.50e8 │ latp_243
-██████████   97.3%  71/73 │ 71       0 │   2m19s      4s │ 3.80e7  3.80e7-1.50e8 │ latp_242
-██████████   98.6%  72/73 │ 72       0 │   2m21s      2s │ 3.60e7  3.60e7-1.50e8 │ latp_241
-██████████  100.0%  73/73 │ 73       0 │   2m23s         │ 4.00e7  3.60e7-1.50e8 │ latp_240
+█████████░   93.2%  68/73 │ 68       0 │   2m09s     10s │ 4.80e7  4.70e7-1.50e8 │ latp_245
+█████████░   94.5%  69/73 │ 69       0 │   2m12s      8s │ 4.60e7  4.60e7-1.50e8 │ latp_244
+██████████   95.9%  70/73 │ 70       0 │   2m14s      6s │ 3.90e7  3.90e7-1.50e8 │ latp_243
+██████████   97.3%  71/73 │ 71       0 │   2m16s      4s │ 3.80e7  3.80e7-1.50e8 │ latp_242
+██████████   98.6%  72/73 │ 72       0 │   2m19s      2s │ 3.60e7  3.60e7-1.50e8 │ latp_241
+██████████  100.0%  73/73 │ 73       0 │   2m21s         │ 4.00e7  3.60e7-1.50e8 │ latp_240
 ```
 
 ## Report

@@ -100,8 +100,8 @@ tb2ti2o7 4()
 edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 1 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         22.22        75.58
-      1      0.062      19.62        58.90   22.1% ↓
-  done · converged · 1 iters · reduced χ² 58.90 · wR(F²) 19.62 % · 0.07 s
+      1      0.063      19.62        58.90   22.1% ↓
+  done · converged · 1 iters · reduced χ² 58.90 · wR(F²) 19.62 % · 0.08 s
 
   refined parameters (1 free):
   name            parameter                                               start        value      s.u.   change
@@ -139,8 +139,8 @@ O1 O 0.33() 0.125 0.125 f 48 1 0.0026 Uani
 edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 2 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         19.62        59.17
-      1      0.094      14.74        33.42   43.5% ↓
-  done · converged · 1 iters · reduced χ² 33.42 · wR(F²) 14.74 % · 0.11 s
+      1      0.119      14.74        33.42   43.5% ↓
+  done · converged · 1 iters · reduced χ² 33.42 · wR(F²) 14.74 % · 0.13 s
 
   refined parameters (2 free):
   name            parameter                                               start        value      s.u.   change
@@ -160,9 +160,9 @@ In `structures/tb2ti2o7.edi`, add `()` after the values the stage frees:
 ```edi
 Tb 0.0026() 0.0026 0.0026 0() 0 0
 Ti 0.0026() 0.0026 0.0026 0() 0 0
+O1 0.0026() 0.0026() 0.0026 0 0 0()
+O2 0.0026() 0.0026 0.0026 0 0 0
 ```
-
-The same for every other row (2 more).
 
 === "Standalone executable"
 
@@ -180,8 +180,8 @@ The same for every other row (2 more).
 edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 10 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         14.74        34.69
-      1      0.104       6.09         5.93   82.9% ↓
-  done · converged · 1 iters · reduced χ² 5.93 · wR(F²) 6.09 % · 0.12 s
+      1      0.176       6.09         5.93   82.9% ↓
+  done · converged · 1 iters · reduced χ² 5.93 · wR(F²) 6.09 % · 0.19 s
 
   refined parameters (10 free):
   name            parameter                                               start        value      s.u.   change
@@ -213,6 +213,14 @@ _extinction.domain_radius 25()
 _extinction.mosaic_spread 0()
 ```
 
+In `structures/tb2ti2o7.edi`, remove the `()` from:
+
+```edi
+Tb Tb 0.5 0.5 0.5 d 16 1 0.00578 Uani
+Ti Ti 0 0 0 c 16 1 0.00515 Uani
+O2 O 0.375 0.375 0.375 b 8 1 0.00332 Uani
+```
+
 === "Standalone executable"
 
     ```console
@@ -229,15 +237,15 @@ _extinction.mosaic_spread 0()
 edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 12 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.09         5.98
-      1      0.097       2.90         1.35   77.4% ↓
-      2      0.109       2.88         1.33   1.6% ↓
-      3      0.121       2.88         1.33   
-      4      0.133       2.88         1.33   
-      5      0.152       2.88         1.33   
-      6      0.165       2.88         1.33   
-      7      0.179       2.88         1.33   
-      8      0.196       2.88         1.33   
-  done · converged · 8 iters · reduced χ² 1.33 · wR(F²) 2.88 % · 0.22 s
+      1      0.106       2.90         1.35   77.4% ↓
+      2      0.134       2.88         1.33   1.6% ↓
+      3      0.147       2.88         1.33   
+      4      0.160       2.88         1.33   
+      5      0.178       2.88         1.33   
+      6      0.190       2.88         1.33   
+      7      0.204       2.88         1.33   
+      8      0.250       2.88         1.33   
+  done · converged · 8 iters · reduced χ² 1.33 · wR(F²) 2.88 % · 0.27 s
 
   refined parameters (12 free):
   name                 parameter                                               start        value      s.u.   change

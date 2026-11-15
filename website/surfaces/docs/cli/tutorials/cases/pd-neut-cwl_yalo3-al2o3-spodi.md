@@ -87,8 +87,8 @@ In `experiments/spodi.edi`, add `()` after the values the stage frees:
 
 ```edi
 _instrument.calib_twotheta_offset 0()
-YAlO3 30() 0.9922535236803708()
-Al2O3 0.2() 0.007746476319629156()
+YAlO3 30()
+Al2O3 0.2()
 ```
 
 In `structures/Al2O3.edi`, add `()` after the values the stage frees:
@@ -122,12 +122,12 @@ _cell.length_c 7.36()
 edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 8 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        18.59       201.52
-      1      0.147     13.38       104.43   48.2% ↓
-      2      0.162     13.38       104.42   
-      3      0.178     13.38       104.42   
-      4      0.194     13.38       104.42   
-      5      0.222     13.38       104.42   
-  done · converged · 5 iters · reduced χ² 104.42 · Rwp 13.38 % · 0.24 s
+      1      0.174     13.38       104.43   48.2% ↓
+      2      0.191     13.38       104.42   
+      3      0.211     13.38       104.42   
+      4      0.226     13.38       104.42   
+      5      0.255     13.38       104.42   
+  done · converged · 5 iters · reduced χ² 104.42 · Rwp 13.38 % · 0.28 s
 
   refined parameters (8 free):
   name            parameter                                               start        value      s.u.   change
@@ -157,6 +157,14 @@ In `experiments/spodi.edi`, add `()` after the values the stage frees:
 
 The same for every other row (23 more).
 
+In `structures/Al2O3.edi`, remove the `()` from:
+
+```edi
+_cell.length_b 4.7561
+_atom_sites_cartn_transform.mat_11 4.7561
+_atom_sites_cartn_transform.mat_22 4.1189
+```
+
 === "Standalone executable"
 
     ```console
@@ -173,14 +181,14 @@ The same for every other row (23 more).
 edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 33 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        13.38       105.32
-      1      0.311     11.96        84.07   20.2% ↓
-      2      0.334     11.96        84.06   
-      3      0.352     11.96        84.06   
-      4      0.375     11.96        84.06   
-      5      0.393     11.96        84.06   
-      6      0.416     11.96        84.06   
-      7      0.521     11.96        84.06   
-  done · converged · 7 iters · reduced χ² 84.06 · Rwp 11.96 % · 0.54 s
+      1      0.375     11.96        84.07   20.2% ↓
+      2      0.402     11.96        84.06   
+      3      0.423     11.96        84.06   
+      4      0.450     11.96        84.06   
+      5      0.485     11.96        84.06   
+      6      0.526     11.96        84.06   
+      7      0.643     11.96        84.06   
+  done · converged · 7 iters · reduced χ² 84.06 · Rwp 11.96 % · 0.66 s
 
   refined parameters (33 free):
   name            parameter                                               start        value      s.u.   change
@@ -237,6 +245,13 @@ _peak.broad_gauss_w 0.1()
 _peak.mixing_eta_0 0.1()
 ```
 
+In `structures/Al2O3.edi`, remove the `()` from:
+
+```edi
+_cell.length_b 4.7555
+_atom_sites_cartn_transform.mat_11 4.7555
+```
+
 === "Standalone executable"
 
     ```console
@@ -253,25 +268,25 @@ _peak.mixing_eta_0 0.1()
 edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 37 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        11.96        84.18
-      1      0.289     11.46        77.33   8.1% ↓
-      2      0.308     11.46        77.33   
-      3      0.331     11.46        77.33   
-      4      0.356     11.46        77.33   
-      5      0.383     11.46        77.33   
-      6      0.401     11.46        77.33   
-      7      0.425     11.46        77.33   
-      8      0.443     11.46        77.33   
-      9      0.466     11.46        77.33   
-     10      0.486     11.46        77.33   
-     11      0.543     11.46        77.32   
-     12      0.562     11.46        77.32   
-     13      0.612     11.46        77.32   
-     14      0.633     11.46        77.32   
-     15      0.655     11.46        77.32   
-     16      0.672     11.46        77.32   
-     17      0.695     11.46        77.32   
-     18      0.803     11.46        77.32   
-  done · converged · 18 iters · reduced χ² 77.32 · Rwp 11.46 % · 0.83 s
+      1      0.424     11.46        77.33   8.1% ↓
+      2      0.442     11.46        77.33   
+      3      0.470     11.46        77.33   
+      4      0.491     11.46        77.33   
+      5      0.557     11.46        77.33   
+      6      0.581     11.46        77.33   
+      7      0.605     11.46        77.33   
+      8      0.630     11.46        77.33   
+      9      0.659     11.46        77.33   
+     10      0.681     11.46        77.33   
+     11      0.714     11.46        77.32   
+     12      0.736     11.46        77.32   
+     13      0.787     11.46        77.32   
+     14      0.808     11.46        77.32   
+     15      0.832     11.46        77.32   
+     16      0.854     11.46        77.32   
+     17      0.878     11.46        77.32   
+     18      1.029     11.46        77.32   
+  done · converged · 18 iters · reduced χ² 77.32 · Rwp 11.46 % · 1.06 s
 
   refined parameters (37 free):
   name            parameter                                               start        value      s.u.   change
@@ -348,10 +363,10 @@ _peak.asym_beba_b1 0()
 edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 41 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        11.46        77.43
-      1      0.283     11.28        74.99   3.2% ↓
-      2      0.302     11.28        74.99   
-      3      0.419     11.28        74.99   
-  done · converged · 3 iters · reduced χ² 74.99 · Rwp 11.28 % · 0.44 s
+      1      0.311     11.28        74.99   3.2% ↓
+      2      0.359     11.28        74.99   
+      3      0.481     11.28        74.99   
+  done · converged · 3 iters · reduced χ² 74.99 · Rwp 11.28 % · 0.51 s
 
   refined parameters (41 free):
   name            parameter                                               start        value      s.u.   change
@@ -419,9 +434,8 @@ In `structures/YAlO3.edi`, add `()` after the values the stage frees:
 ```edi
 Y Y 0.01() 0.55() 0.25 c 4 1 0.5 Biso
 O1 O -0.08() -0.02() 0.25 c 4 1 0.5 Biso
+O2 O 0.2() 0.29() 0.04() d 8 1 0.5 Biso
 ```
-
-The same for every other row (1 more).
 
 === "Standalone executable"
 
@@ -439,19 +453,19 @@ The same for every other row (1 more).
 edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 50 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        11.28        75.22
-      1      0.341      6.46        24.69   67.2% ↓
-      2      0.362      6.46        24.69   
-      3      0.381      6.46        24.69   
-      4      0.401      6.46        24.69   
-      5      0.430      6.46        24.69   
-      6      0.449      6.46        24.69   
-      7      0.469      6.46        24.69   
-      8      0.487      6.46        24.69   
-      9      0.507      6.46        24.69   
-     10      0.528      6.46        24.69   
-     11      0.569      6.46        24.69   
-     12      0.687      6.46        24.69   
-  done · converged · 12 iters · reduced χ² 24.69 · Rwp 6.46 % · 0.72 s
+      1      0.432      6.46        24.69   67.2% ↓
+      2      0.455      6.46        24.69   
+      3      0.479      6.46        24.69   
+      4      0.502      6.46        24.69   
+      5      0.540      6.46        24.69   
+      6      0.585      6.46        24.69   
+      7      0.612      6.46        24.69   
+      8      0.641      6.46        24.69   
+      9      0.697      6.46        24.69   
+     10      0.722      6.46        24.69   
+     11      0.773      6.46        24.69   
+     12      0.986      6.46        24.69   
+  done · converged · 12 iters · reduced χ² 24.69 · Rwp 6.46 % · 1.01 s
 
   refined parameters (50 free):
   name            parameter                                               start        value      s.u.   change
@@ -528,9 +542,9 @@ In `structures/YAlO3.edi`, add `()` after the values the stage frees:
 ```edi
 Y Y 0.01211() 0.55405() 0.25 c 4 1 0.5() Biso
 Al Al 0 0 0 a 4 1 0.5() Biso
+O1 O -0.08396() -0.02189() 0.25 c 4 1 0.5() Biso
+O2 O 0.20451() 0.29518() 0.04448() d 8 1 0.5() Biso
 ```
-
-The same for every other row (2 more).
 
 === "Standalone executable"
 
@@ -548,19 +562,19 @@ The same for every other row (2 more).
 edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 56 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         6.46        24.74
-      1      0.252      4.06         9.77   60.5% ↓
-      2      0.272      4.06         9.77   
-      3      0.290      4.06         9.77   
-      4      0.310      4.06         9.76   
-      5      0.330      4.06         9.76   0.1% ↓
-      6      0.351      4.05         9.74   0.1% ↓
-      7      0.370      4.05         9.73   0.1% ↓
-      8      0.389      4.05         9.73   
-      9      0.406      4.05         9.73   
-     10      0.425      4.05         9.73   
-     11      0.444      4.05         9.73   
-     12      0.555      4.05         9.73   
-  done · converged · 12 iters · reduced χ² 9.73 · Rwp 4.05 % · 0.58 s
+      1      0.279      4.06         9.77   60.5% ↓
+      2      0.304      4.06         9.77   
+      3      0.322      4.06         9.77   
+      4      0.341      4.06         9.76   
+      5      0.359      4.06         9.76   0.1% ↓
+      6      0.385      4.05         9.74   0.1% ↓
+      7      0.404      4.05         9.73   0.1% ↓
+      8      0.438      4.05         9.73   
+      9      0.458      4.05         9.73   
+     10      0.477      4.05         9.73   
+     11      0.496      4.05         9.73   
+     12      0.633      4.05         9.73   
+  done · converged · 12 iters · reduced χ² 9.73 · Rwp 4.05 % · 0.66 s
 
   refined parameters (56 free):
   name            parameter                                               start        value      s.u.   change
