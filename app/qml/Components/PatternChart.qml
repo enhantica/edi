@@ -378,6 +378,8 @@ Item {
         width: mainView.plotArea.width
         height: mainView.plotArea.height
         color: controller.measuredColor
+        // A single crystal's measured points are filled light, as the band is (the owner, 2026-11-16).
+        fillColor: chart.singleCrystal ? Qt.alpha(controller.measuredColor, 0.3) : controller.measuredColor
         markerSize: 5
         xMin: controller.xMin
         xMax: controller.xMax

@@ -121,6 +121,7 @@ Item {
             objectName: "measCalc.points"
             anchors.fill: parent
             color: AppColors.experiment(0, chart.colors.isDarkPalette)
+            fillColor: Qt.alpha(color, 0.3)
             markerSize: 4
             xMin: axisX.min
             xMax: axisX.max

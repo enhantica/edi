@@ -449,6 +449,7 @@ Item {
                 z: chart.highlight && index === chart.selectedIndex ? 1 : 0
                 opacity: chart.highlight && index !== chart.selectedIndex ? Preferences.chartFadedOpacity : 1
                 color: AppColors.experiment(index, chart.colors.isDarkPalette)
+                fillColor: Qt.alpha(color, 0.3)
                 markerSize: 5
                 xMin: axisX.min
                 xMax: axisX.max
@@ -475,6 +476,7 @@ Item {
                     anchors.fill: parent
                     opacity: chart.leftOutOpacity
                     color: stackedLayer.color
+                    fillColor: stackedLayer.fillColor
                     markerSize: 5
                     xMin: axisX.min
                     xMax: axisX.max
@@ -490,6 +492,8 @@ Item {
             visible: !chart.stacked && !(chart.experiment && chart.hiddenRows.includes(chart.experiment.name))
             anchors.fill: parent
             color: AppColors.experiment(0, chart.colors.isDarkPalette)
+            // Filled light, as the pattern band is (the owner, 2026-11-16).
+            fillColor: Qt.alpha(color, 0.3)
             markerSize: 5
             xMin: axisX.min
             xMax: axisX.max
@@ -505,6 +509,7 @@ Item {
             anchors.fill: parent
             opacity: chart.leftOutOpacity
             color: layer.color
+            fillColor: layer.fillColor
             markerSize: 5
             xMin: axisX.min
             xMax: axisX.max
