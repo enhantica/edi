@@ -200,6 +200,7 @@ def write_metadata(
         icon = 'App.icns' if SYSTEM == 'macos' else 'App.ico'
         shutil.copy2(icons / icon, config / icon)
         ET.SubElement(configuration.getroot(), 'InstallerApplicationIcon').text = 'App'
+        ET.SubElement(configuration.getroot(), 'StartMenuDir').text = 'EasyDiffraction'
     if SYSTEM in {'linux', 'windows'}:
         shutil.copy2(icons / 'App.png', config / 'App.png')
         ET.SubElement(configuration.getroot(), 'InstallerWindowIcon').text = 'App.png'
