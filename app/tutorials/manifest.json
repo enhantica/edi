@@ -8537,6 +8537,46 @@
           "tab": "basic"
         },
         {
+          "title": "Background",
+          "text": "Choose **wish_1_10** as the datablock filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.datablock",
+          "check": "pick:parameters.datablock=wish_1_10",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Choose **Background** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Background",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Clear **Free** for **1 intensity**.",
+          "page": "analysis",
+          "target": "parameters.free@experiments.wish_1_10.background.1.intensity",
+          "check": "untick:experiments.wish_1_10.background.1.intensity",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Clear **Free** for **36 intensity**.",
+          "page": "analysis",
+          "target": "parameters.free@experiments.wish_1_10.background.36.intensity",
+          "check": "untick:experiments.wish_1_10.background.36.intensity",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
           "title": "Fit: Background",
           "text": "Press **Fit** in the status bar.",
           "page": "analysis",
@@ -11098,6 +11138,70 @@
           "page": "analysis",
           "target": "parameters.freeHeader.free",
           "check": "free-choice:free:Background:expt_n2",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Choose **expt_n2** as the datablock filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.datablock",
+          "check": "pick:parameters.datablock=expt_n2",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Choose **Background** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Background",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Clear **Free** for **31 intensity**.",
+          "page": "analysis",
+          "target": "parameters.free@experiments.expt_n2.background.31.intensity",
+          "check": "untick:experiments.expt_n2.background.31.intensity",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Click the filters' **Clear** button.",
+          "page": "analysis",
+          "target": "parameters.clearFilters",
+          "check": "filters-clear",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Choose **expt_s2** as the datablock filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.datablock",
+          "check": "pick:parameters.datablock=expt_s2",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Choose **Background** as the category filter above the **Parameters** table.",
+          "page": "analysis",
+          "target": "parameters.category",
+          "check": "pick:parameters.category=Background",
+          "tab": "basic"
+        },
+        {
+          "title": "Background",
+          "text": "Clear **Free** for **31 intensity**.",
+          "page": "analysis",
+          "target": "parameters.free@experiments.expt_s2.background.31.intensity",
+          "check": "untick:experiments.expt_s2.background.31.intensity",
           "tab": "basic"
         },
         {

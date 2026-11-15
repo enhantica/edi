@@ -889,7 +889,17 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             # The switch leaves no displacement free, here as on the command line.
             previous = {path for path in previous if not re.search(r'\.adp_(iso|\d\d)$', path)}
         filters, rest = grouped(paths - previous, loops)
+        # A loop frees its whole background, so a point the stage leaves fixed (one past the end of
+        # the data) is fixed again after it, in its own row.
+        looped = {
+            f'{root}background[{point.id}].intensity'
+            for item in project.experiments
+            for root in [exp_root[item.name]]
+            if root + 'background[' in filters
+            for point in item.background
+        }
         fix_filters, fix_rest = grouped(previous - paths, list(exp_root.values()))
+        fix_rest |= looped - paths
         # One experiment: its background is the whole Background category. A loop over every
         # site's displacement is the Atomic displacement category.
         categories = []
@@ -999,7 +1009,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             actions += set_category(BACKGROUND, 'fixed', block if several else '')
         if fix_rest:
             actions += by_category(
-                project, sorted(fix_rest), previous, roots, 'fixed', several=several
+                project, sorted(fix_rest), previous | looped, roots, 'fixed', several=several
             )
         new_aliases = [
             (ident, unique_name(param, named))
