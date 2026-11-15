@@ -251,8 +251,14 @@ def line_phrases(
         merged.setdefault(key, []).append(group.block)
     names, again, again_rows = [], [], []
     for (title, filter_word, unword, part), blocks in merged.items():
-        bold = listed([f'**{block}**' for block in blocks])
-        where = f' of {bold}, choosing each in the datablock filter' if len(owners) > 1 else ''
+        # A group over every block (app_groups._across_blocks: block '') is the table without a
+        # datablock filter, so it names no block.
+        named = [f'**{block}**' for block in blocks if block]
+        where = (
+            f' of {listed(named)}, choosing each in the datablock filter'
+            if named and len(owners) > 1
+            else ''
+        )
         if filter_word:
             names.append(f'the **{title}** parameters with **{filter_word}** in their name{where}')
         elif part:

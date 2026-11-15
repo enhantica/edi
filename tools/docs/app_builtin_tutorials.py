@@ -147,6 +147,14 @@ def minimizer_steps(case: str, actions: list[str]) -> list[dict]:
                 )
             )
     bound = fills(actions).get('minimizer.maxIterations')
+    # The plan sets the limit the project declares, even where no step shows it.
+    analysis = CLI / case / 'project/analysis/analysis.edi'
+    text = analysis.read_text(encoding='utf-8') if analysis.is_file() else ''
+    declared = re.search(r'(?m)^_minimizer\.max_iterations (\d+)$', text)
+    if declared and bound != declared[1]:
+        raise SystemExit(
+            f'{case}: the plan does not set the iteration limit {declared[1]} the project declares'
+        )
     needed = stage_iterations(case)
     # The limit only when a stage needs more than the app's default (the owner, 2026-11-11).
     if bound and needed > DEFAULT_MAX_ITERATIONS:
@@ -504,7 +512,7 @@ def plan_step(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915 - one branch per docs
         elif ident == 'nothing-free':
             # Every fitting tutorial fixes everything on its first Analysis step: entries loaded
             # from the database can carry free marks, and each stage below frees its own group.
-            title, text = 'Fix every parameter first', ''
+            title, text = 'Start with nothing free', ''
         else:
             title, text = item['description'], ''
         del text

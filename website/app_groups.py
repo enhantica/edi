@@ -260,6 +260,9 @@ def groups(
             for parameter in members(project, block, owner)
             if offered(project, parameter) == title
         }
+        # What a stage frees is freeable then, though a later stage may fix or constrain it (the
+        # fittable rows are read from the finished project).
+        everything |= set(chosen)
         # The category's parameters that must keep their state through the action.
         left = (everything & free if fixing else everything - free) - set(chosen)
         # The fewest actions a person takes (the owner, 2026-11-11): Free · all (Fixed · all) only
