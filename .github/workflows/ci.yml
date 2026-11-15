@@ -820,7 +820,7 @@ jobs:
         env:
           EDI_APP_TEST_RUNNER: ${{ github.workspace }}/build/app/app/edi_app_tests
       - name: qmllint over edi's QML (zero warnings)
-        if: ${{ !cancelled() && steps.apphost.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.inputs.outputs.run == 'true' }}
         run: pixi run -e app --skip-deps app-lint
       - name: qmlformat changes nothing
         if: ${{ !cancelled() && steps.inputs.outputs.run == 'true' }}
