@@ -184,6 +184,12 @@ SideBarGroup {
                 onClicked: group.project.duplicateStructure()
             }
         }
+
+        // The current structure's description: atom sites now, symmetry modes later (the owner, 2026-11-15).
+        DescriptionSelector {
+            objectName: "structures.description"
+            visible: group.project !== null && group.project.currentStructure !== null
+        }
     }
 
     OnlineLoadDialog {

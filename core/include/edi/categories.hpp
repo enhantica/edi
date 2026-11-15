@@ -345,24 +345,27 @@ inline std::vector<Category> structure_categories(Structure& structure) {
     }
     categories.push_back(aniso);
     categories.push_back({"scattering_length", true, structure.scattering_lengths_fm.size()});
-    // The magnetic description (edi ADR-0078), for a structure that has one: crysta reads and
-    // writes it, so each category shows its rows as the file holds them.
+    // The magnetic description (edi ADR-0078) once a site carries a moment: crysta reads and writes
+    // it, so each category shows its rows as the file holds them. The moments are always listed, one
+    // row per site, so a moment can be given to any structure.
     const MagneticDescription& magnetic = structure.magnetic;
-    if (!magnetic.empty() || !structure.atom_site_moment.empty()) {
+    Category moments{"atom_site_moment", true, structure.atom_site_moment.size()};
+    for (const auto& moment : structure.atom_site_moment) {
+        const char* names[] = {"crystalaxis_x", "crystalaxis_y", "crystalaxis_z"};
+        const std::vector<Parameter*> parameters = moment->parameters();
+        for (std::size_t i = 0; i < parameters.size(); ++i) {
+            moments.fields.push_back({names[i], parameters[i], true, refinable(parameters[i])});
+        }
+    }
+    if (structure.atom_site_moment.empty()) {
+        categories.push_back(moments);
+    } else {
         categories.push_back({"space_group_magn"});
         categories.push_back({"parent_space_group"});
         categories.push_back({"parent_propagation_vector", true, magnetic.propagation_vectors.size()});
         categories.push_back({"space_group_symop_magn_operation", true, magnetic.operations.size()});
         if (!magnetic.centerings.empty()) {
             categories.push_back({"space_group_symop_magn_centering", true, magnetic.centerings.size()});
-        }
-        Category moments{"atom_site_moment", true, structure.atom_site_moment.size()};
-        for (const auto& moment : structure.atom_site_moment) {
-            const char* names[] = {"crystalaxis_x", "crystalaxis_y", "crystalaxis_z"};
-            const std::vector<Parameter*> parameters = moment->parameters();
-            for (std::size_t i = 0; i < parameters.size(); ++i) {
-                moments.fields.push_back({names[i], parameters[i], true, refinable(parameters[i])});
-            }
         }
         categories.push_back(moments);
         Category form_factors{"magnetic_form_factor", true, structure.magnetic_form_factors.size()};

@@ -49,6 +49,12 @@ without computing any of them itself.
   table lacks, is greyed out. C₂'s tooltip gives the Landé g it stands for, C₂ = 2/g − 1. The core holds a type's
   form factor as a keyed row (`magnetic_form_factor`) only once an edit or a file declares it; a row back at the
   defaults (its own ion, ⟨j0⟩, every coefficient 0 and fixed) is removed, so the file says nothing it does not need.
+- **Making a structure magnetic** (the owner, 2026-11-14). There is no separate crystal or magnetic structure type:
+  moments live on atom sites. Every structure's Structure page lists the Magnetic moments group, one row per site,
+  each "none" at first, with the form selector greyed. Choosing an ion for a site gives it a moment, and the
+  magnetic groups (magnetic space group, parent group, propagation vectors, operators, form factors) appear; setting
+  every site back to "none" hides them again. A Description selector above the groups offers Atom sites, and
+  Symmetry modes greyed until symmetry modes are supported.
 - **Symmetry from the operators** (2026-11-08). When a structure's magnetic operators form no table setting, crysta
   decides it once and edi reads that decision: no position, cell or displacement ties, the cell and positions not
   fittable, no Wyckoff letter (the site table shows none, and the multiplicity is the operators' orbit), and an
