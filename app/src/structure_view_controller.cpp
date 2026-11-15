@@ -363,7 +363,7 @@ QString StructureViewController::hoverAtSphere(int instanceIndex) const {
     if (report_ || instanceIndex < 0 || static_cast<std::size_t>(instanceIndex) >= drawing_.spheres.size()) {
         return {};
     }
-    return QString::fromStdString(edi::hover_text(source_, scene_, drawing_.spheres[instanceIndex].atom));
+    return QString::fromStdString(edi::hover_text(source_, scene_, drawing_.spheres[static_cast<std::size_t>(instanceIndex)].atom));
 }
 
 QString StructureViewController::hoverAtShared(double u) const {
@@ -377,7 +377,7 @@ QPointF StructureViewController::projectedCentre(int atom) const {
     if (atom < 0 || static_cast<std::size_t>(atom) >= scene_.atoms.size()) {
         return {std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()};
     }
-    const edi::Projected at = edi::project(scene_, view_, viewport_, scene_.atoms[atom].centre);
+    const edi::Projected at = edi::project(scene_, view_, viewport_, scene_.atoms[static_cast<std::size_t>(atom)].centre);
     return {at.x, at.y};
 }
 

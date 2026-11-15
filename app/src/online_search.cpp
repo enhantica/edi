@@ -359,14 +359,14 @@ void OnlineSearch::search() {
                   pagingChanged();
                   if (count <= kChunk) {
                       fetch(QUrl(QString::fromStdString(edi::online::cod_search_url(root, query))),
-                            [this, generation](const QByteArray& bytes, const QString& error, bool unreachable) {
+                            [this, generation](const QByteArray& data, const QString& failure, bool offline) {
                                 if (generation != generation_) return;
-                                if (!error.isEmpty()) {
-                                    fail(error, unreachable);
+                                if (!failure.isEmpty()) {
+                                    fail(failure, offline);
                                     return;
                                 }
                                 try {
-                                    std::vector<edi::online::Entry> found = codAnswer(bytes);
+                                    std::vector<edi::online::Entry> found = codAnswer(data);
                                     total_ = static_cast<int>(found.size());
                                     finish(std::move(found));
                                 } catch (const std::exception& problem) {
@@ -376,14 +376,14 @@ void OnlineSearch::search() {
                       return;
                   }
                   fetch(QUrl(QString::fromStdString(edi::online::cod_search_url(root, query, "lst"))),
-                        [this, generation](const QByteArray& bytes, const QString& error, bool unreachable) {
+                        [this, generation](const QByteArray& data, const QString& failure, bool offline) {
                             if (generation != generation_) return;
-                            if (!error.isEmpty()) {
-                                fail(error, unreachable);
+                            if (!failure.isEmpty()) {
+                                fail(failure, offline);
                                 return;
                             }
                             pending_ids_.clear();
-                            for (const QByteArray& line : bytes.split('\n')) {
+                            for (const QByteArray& line : data.split('\n')) {
                                 const QByteArray id = line.trimmed();
                                 if (!id.isEmpty()) pending_ids_.push_back(id.toStdString());
                             }
@@ -819,13 +819,13 @@ void OnlineSearch::fetchChecked(const QStringList& bases, const QString& path, l
                 return;
             }
             const edi::online::File file = found->files.front();
-            fetchFrom(bases, path, [file, name, done](const QByteArray& data, const QString& error, bool unreachable) {
-                if (!error.isEmpty()) {
-                    done({}, error, unreachable);
+            fetchFrom(bases, path, [file, name, done](const QByteArray& refetched, const QString& failure, bool offline) {
+                if (!failure.isEmpty()) {
+                    done({}, failure, offline);
                     return;
                 }
-                const QString again = content_problem(data, file.bytes, QString::fromStdString(file.sha256), name);
-                if (again.isEmpty()) done(data, {}, false);
+                const QString again = content_problem(refetched, file.bytes, QString::fromStdString(file.sha256), name);
+                if (again.isEmpty()) done(refetched, {}, false);
                 else done({}, again, false);
             });
         });

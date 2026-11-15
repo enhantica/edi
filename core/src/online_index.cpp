@@ -134,7 +134,8 @@ std::string count_text(double count) {
 
 std::string percent_encoded(const std::string& text) {
     std::string out;
-    for (unsigned char c : text) {
+    for (const char ch : text) {
+        const auto c = static_cast<unsigned char>(ch);
         if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') out += static_cast<char>(c);
         else {
             char hex[4];

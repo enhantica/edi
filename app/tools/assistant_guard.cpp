@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
         }).detach();
     });
     const auto forward = [&](const QByteArray& bytes, FILE* stream) {
-        if (!bytes.isEmpty() && std::fwrite(bytes.constData(), 1, bytes.size(), stream) != static_cast<std::size_t>(bytes.size())) stop();
+        if (!bytes.isEmpty() && std::fwrite(bytes.constData(), 1, static_cast<std::size_t>(bytes.size()), stream) != static_cast<std::size_t>(bytes.size())) stop();
     };
     QObject::connect(&process, &QProcess::readyReadStandardOutput, &app, [&] { forward(process.readAllStandardOutput(), stdout); });
     QObject::connect(&process, &QProcess::readyReadStandardError, &app, [&] { forward(process.readAllStandardError(), stderr); });

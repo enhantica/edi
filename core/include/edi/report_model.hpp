@@ -143,13 +143,13 @@ struct ReportParameter {
     bool fittable = true;
     /// Where it sits, as diffraction-lib's tables name it: its datablock, category, entry (an atom id or a row; empty
     /// for a single-row category) and item; its dictionary item (`category.name`, empty without one, for its docs link).
-    std::string datablock, category, entry, name, uid;
+    std::string datablock{}, category{}, entry{}, name{}, uid{};
     /// Its value and s.u. apart as the app's Analysis table writes them (file_text), its start likewise, and its
     /// admissible range (`-inf` and `inf` when unbounded).
-    std::string value_cell, su_cell, start_cell, min_cell, max_cell;
+    std::string value_cell{}, su_cell{}, start_cell{}, min_cell{}, max_cell{};
     /// The marks its s.u. carries after a fit (su_marks).
     bool su_poor = false;
-    std::string su_partner;
+    std::string su_partner{};
     double su_correlation = 0.0;
 };
 
@@ -193,7 +193,7 @@ struct ReportStructure {
         StructureScene scene;
         SceneDrawing drawing;
     };
-    std::vector<Variant> variants;
+    std::vector<Variant> variants{};
 };
 
 /// An experiment's pattern chart (ADR-0021): present_pattern's output over the full range with no decimation and a

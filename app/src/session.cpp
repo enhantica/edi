@@ -937,7 +937,7 @@ bool Session::saveProjectAsFreshWith(const SaveOperation& operation,const QUrl& 
     if(!current() || target->revision()!=revision)return false;
     const auto parent=QDir(requested.absolutePath()).canonicalPath();
     if(parent.isEmpty() || requested.fileName().isEmpty()) {
-        if(current())setLastError(tr("The original fresh save parent is unavailable."));return false;
+        if(current()){setLastError(tr("The original fresh save parent is unavailable."));}return false;
     }
     const auto where=parent+QLatin1Char('/')+requested.fileName();
     const PendingOpenSource pendingOrigin(*this,where);
@@ -1825,7 +1825,7 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
     const auto commit=[receiver,before,binding,pathBinding,opened,warnings,example,source=directory,afterOpen,adopted] {
         if(!receiver || !opened || receiver->project_!=before || receiver->replacement_generation_!=binding ||
             pathBinding==UINT64_MAX || receiver->path_generation_!=pathBinding)return false;
-        const PendingOpenSource pending(*receiver,source);
+        const PendingOpenSource opening(*receiver,source);
         if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source))return false;
         return !afterOpen || afterOpen();
     };
@@ -1892,7 +1892,7 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
     const auto commit=[receiver,before,binding,pathBinding,opened,warnings,example,source=source,afterOpen,adopted] {
         if(!receiver || !opened || receiver->project_!=before || receiver->replacement_generation_!=binding ||
             pathBinding==UINT64_MAX || receiver->path_generation_!=pathBinding)return false;
-        const PendingOpenSource pending(*receiver,source);
+        const PendingOpenSource opening(*receiver,source);
         if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source))return false;
         return !afterOpen || afterOpen();
     };
@@ -2278,16 +2278,16 @@ void Session::saveWebProjectAsWith(const SaveOperation& operation, const QString
     waiting.hold.reset();
     WebStorage::instance()->pickSave(kind, downloadName(), web_place_.key, [this, before, kind, copy, busy, waiting](
                                                                                const WebStorageAnswer& answer) mutable {
-        SaveOperation operation = std::move(waiting);
-        if (answer.ok && owns(operation) && !hold(operation)) {
+        SaveOperation resumed = std::move(waiting);
+        if (answer.ok && owns(resumed) && !hold(resumed)) {
             emit webSaveFailed(last_error_);
             return;
         }
-        if (!copy && answer.ok && owns(operation) && !planned(operation)) {
-            queueReplan(operation);  // the project changed while the place was picked
+        if (!copy && answer.ok && owns(resumed) && !planned(resumed)) {
+            queueReplan(resumed);  // the project changed while the place was picked
             return;
         }
-        if (before != project_ || project_ == nullptr || !answer.ok || !owns(operation)) {
+        if (before != project_ || project_ == nullptr || !answer.ok || !owns(resumed)) {
             if (before == project_ && !answer.cancelled) {
                 emit webSaveFailed(answer.message);
             }
@@ -2301,16 +2301,16 @@ void Session::saveWebProjectAsWith(const SaveOperation& operation, const QString
                              answer.name};
         // What a Save writes, staged on a copy of the project in a memory folder of its own.
         Staged staged;
-        if (!stageCopy(operation, copy ? "copy" : "web",
+        if (!stageCopy(resumed, copy ? "copy" : "web",
                        folderNameFor(kind == QStringLiteral("zip") ? project_->name() : place.name), staged) ||
-            !readyToWrite(operation, staged)) {
+            !readyToWrite(resumed, staged)) {
             emit webSaveFailed(last_error_);
             return;
         }
         const QPointer<ProjectViewModel> saving = project_;
         const quint64 revision = project_->revision();
         web_writing_ = true;
-        writeWebPlace(place, staged.folder, [this, saving, revision, staged, place, copy, held = operation.hold](bool written) {
+        writeWebPlace(place, staged.folder, [this, saving, revision, staged, place, copy, held = resumed.hold](bool written) {
             web_writing_ = false;
             if (saving.isNull() || saving != project_) {
                 QDir(staged.root).removeRecursively();

@@ -214,7 +214,7 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     };
     std::size_t datasets = 0;
     for (std::size_t i = 0; i < project.experiments.size(); ++i) {
-        datasets += in_fit(i) ? 1 : 0;
+        datasets += in_fit(i) ? 1U : 0U;
     }
     const QStringList blank_structures(static_cast<qsizetype>(2 * ordered.size()));
     const QStringList global{percent("fit_result.prof_r_factor", result.prof_r_factor),

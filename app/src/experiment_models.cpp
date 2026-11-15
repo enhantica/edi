@@ -205,7 +205,7 @@ void ReflectionListModel::sync() {
         for (std::size_t i = 0; i < loop->rows.size(); ++i) {
             const std::vector<std::string>& cells = loop->rows[i];
             const auto text = [&cells](int at) {
-                return at >= 0 && at < static_cast<int>(cells.size()) ? QString::fromStdString(cells[at]) : QString();
+                return at >= 0 && at < static_cast<int>(cells.size()) ? QString::fromStdString(cells[static_cast<std::size_t>(at)]) : QString();
             };
             const auto number = [&text](int at) {
                 bool ok = false;
@@ -471,8 +471,9 @@ QString SingleCrystalReflectionModel::hoverText(int row, bool squared) const {
         const double calc = squared ? calculated_.value(at, qQNaN()) : calculated_f_.value(at, qQNaN());
         QStringList lines;
         for (const std::string& line : edi::reflection_hover_lines(
-                 reflections->generated_index_h[at], reflections->generated_index_k[at],
-                 reflections->generated_index_l[at], qQNaN(), qQNaN(), calc, squared, project_.su_rule)) {
+                 reflections->generated_index_h[static_cast<std::size_t>(row)],
+                 reflections->generated_index_k[static_cast<std::size_t>(row)],
+                 reflections->generated_index_l[static_cast<std::size_t>(row)], qQNaN(), qQNaN(), calc, squared, project_.su_rule)) {
             lines.append(QString::fromStdString(line));
         }
         return lines.join(QStringLiteral("<br>"));

@@ -28,7 +28,8 @@ struct Refusal : std::runtime_error {
 inline Reply success(J value = O{}) { return {true, {}, json::write(value)}; }
 inline Reply failure(const std::string& code, const std::string& message) {
     std::string safe;
-    for (unsigned char c : message) {
+    for (const char ch : message) {
+        const auto c = static_cast<unsigned char>(ch);
         if (safe.size() >= Limits::error_bytes) break;
         if (c >= 32 && c != 127) safe.push_back(static_cast<char>(c));
     }

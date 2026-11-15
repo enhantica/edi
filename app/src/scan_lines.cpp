@@ -106,7 +106,7 @@ QSGGeometry* quads_of(const std::vector<ScanLines::Trace>& traces, std::size_t f
         const ScanLines::Trace& trace = traces[i];
         const std::size_t points = std::min(trace.x.size(), trace.v.size());
         for (std::size_t k = 0; k + 1 < points; ++k) {
-            segments += finite_point(trace, k) && finite_point(trace, k + 1) ? 1 : 0;
+            segments += finite_point(trace, k) && finite_point(trace, k + 1) ? 1U : 0U;
         }
     }
     const bool wide = 4 * segments > std::numeric_limits<quint16>::max();

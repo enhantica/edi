@@ -31,11 +31,6 @@ std::string iso_utc(std::time_t time) {
     return buffer;
 }
 
-// The report the project makes with `overrides`, its time now unless the options give one.
-ReportModel report_of(const Project& project, const ReportOverrides& overrides) {
-    return build_report(project, effective_report_options(project, overrides));
-}
-
 // The libraries the HTML is written with: the vendored ones when the options embed them, else none (online).
 const ReportLibraries& html_libraries(const ReportOptions& options, const ReportLibraries& libraries) {
     static const ReportLibraries kOnline;

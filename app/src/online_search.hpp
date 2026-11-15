@@ -77,7 +77,7 @@ public:
     Q_ENUM(Role)
     struct Choice {
         QString key, name, hint;
-        QStringList options;  // a selector's values (radiation, technique); empty for a text field
+        QStringList options{};  // a selector's values (radiation, technique); empty for a text field
     };
 
     using QAbstractListModel::QAbstractListModel;

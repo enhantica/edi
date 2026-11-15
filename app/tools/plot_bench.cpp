@@ -165,7 +165,7 @@ Shown stacked(const Scan& scan, std::size_t count, int columns, double width_px,
         const double row = static_cast<double>(d);
         // Each column's lowest value, then its highest when it differs.
         const auto add = [&](double x, float value) {
-            const double v = (value - scan.low) / span;
+            const double v = (static_cast<double>(value) - scan.low) / span;
             curve.upper.append(QPointF(x, row + v * kLift));
             lines.x.push_back(static_cast<float>((x - x_min) / (x_max - x_min) * width_px));
             lines.v.push_back(static_cast<float>(v));
@@ -277,8 +277,8 @@ Shown pattern_shown(const edi::PatternSource& source, int columns, std::optional
     for (const edi::PatternSeries& series : shown.series) {
         auto& [lo, hi] = range[static_cast<std::size_t>(series.pane)];
         for (std::size_t i = 0; i < series.points.size(); ++i) {
-            for (const double y : {series.points[i].y, i < series.bar_low.size() ? series.bar_low[i] : NAN,
-                                   i < series.bar_high.size() ? series.bar_high[i] : NAN}) {
+            for (const double y : {series.points[i].y, i < series.bar_low.size() ? series.bar_low[i] : std::nan(""),
+                                   i < series.bar_high.size() ? series.bar_high[i] : std::nan("")}) {
                 if (std::isfinite(y)) {
                     lo = std::min(lo, y);
                     hi = std::max(hi, y);
@@ -367,7 +367,7 @@ class Painted : public QQuickPaintedItem {
             QPainterPath path;
             bool drawing = false;
             for (std::size_t k = 0; k < traces[d].x.size(); ++k) {
-                const double x = traces[d].x[k], y = base - traces[d].v[k] * lift;
+                const double x = traces[d].x[k], y = base - static_cast<double>(traces[d].v[k]) * lift;
                 if (!std::isfinite(x) || !std::isfinite(y)) {
                     drawing = false;
                 } else if (drawing) {

@@ -72,22 +72,22 @@ class Sha256 {
             0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
             0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
         std::array<std::uint32_t, 64> w{};
-        for (int i = 0; i < 16; ++i)
+        for (std::size_t i = 0; i < 16; ++i)
             w[i] = (std::uint32_t(block_[4 * i]) << 24) | (std::uint32_t(block_[4 * i + 1]) << 16) |
                    (std::uint32_t(block_[4 * i + 2]) << 8) | std::uint32_t(block_[4 * i + 3]);
-        for (int i = 16; i < 64; ++i) {
+        for (std::size_t i = 16; i < 64; ++i) {
             const auto s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >> 3);
             const auto s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >> 10);
             w[i] = w[i - 16] + s0 + w[i - 7] + s1;
         }
         auto [a, b, c, d, e, f, g, h] = state_;
-        for (int i = 0; i < 64; ++i) {
+        for (std::size_t i = 0; i < 64; ++i) {
             const auto t1 = h + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + k[i] + w[i];
             const auto t2 = (rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c));
             h = g, g = f, f = e, e = d + t1, d = c, c = b, b = a, a = t1 + t2;
         }
         const std::array<std::uint32_t, 8> add = {a, b, c, d, e, f, g, h};
-        for (int i = 0; i < 8; ++i) state_[i] += add[i];
+        for (std::size_t i = 0; i < 8; ++i) state_[i] += add[i];
     }
     std::array<std::uint32_t, 8> state_ = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
                                            0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};

@@ -1158,10 +1158,10 @@ void ScanLayer::paint(QPainter* painter) {
                 // files and datablocks (the owner, 2026-10-22): blending from row to row had invented patterns between
                 // a sparse scan's rows.
                 const double value = !smooth_rows_ || pixel.lower == pixel.upper || !std::isfinite(va) || !std::isfinite(vb)
-                                         ? own[at]
+                                         ? static_cast<double>(own[at])
                                          : va + (vb - va) * pixel.share;
                 const edi::ScanMapColour colour = edi::scan_table_colour(table, (value - display_min_) / span);
-                const auto mix = [keep](int c, int b) { return static_cast<int>(std::lround(b + (c - b) * keep)); };
+                const auto mix = [keep](int channel, int base) { return static_cast<int>(std::lround(base + (channel - base) * keep)); };
                 line[i] = keep < 1.0 && colour.a > 0 ? qRgba(mix(colour.r, background_.red()), mix(colour.g, background_.green()),
                                                              mix(colour.b, background_.blue()), colour.a)
                                                        : qRgba(colour.r, colour.g, colour.b, colour.a);

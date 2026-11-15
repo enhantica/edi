@@ -304,7 +304,7 @@ void EvolutionViewModel::readPoints() {
             std::vector<std::optional<Point>> lowest(buckets), highest(buckets);
             points([&](const edi::EvolutionPoint& found) {
                 const Point point{found.x, found.y, found.su, static_cast<int>(found.dataset)};
-                const int bucket = bucket_of(point.x, x0, span, buckets);
+                const auto bucket = static_cast<std::size_t>(bucket_of(point.x, x0, span, buckets));
                 if (!lowest[bucket] || point.y < lowest[bucket]->y) {
                     lowest[bucket] = point;
                 }
@@ -312,7 +312,7 @@ void EvolutionViewModel::readPoints() {
                     highest[bucket] = point;
                 }
             });
-            for (int bucket = 0; bucket < buckets; ++bucket) {
+            for (std::size_t bucket = 0; bucket < lowest.size(); ++bucket) {
                 for (const std::optional<Point>& point : {lowest[bucket], highest[bucket]}) {
                     if (point && (points_.empty() || points_.back().dataset != point->dataset)) {
                         points_.push_back(*point);
@@ -335,7 +335,7 @@ void EvolutionViewModel::thin() {
     const int buckets = kThinningLimit / 2;
     std::vector<int> lowest(buckets, -1), highest(buckets, -1);
     for (std::size_t i = 0; i < points_.size(); ++i) {
-        const int bucket = bucket_of(points_[i].x, x0, span, buckets);
+        const auto bucket = static_cast<std::size_t>(bucket_of(points_[i].x, x0, span, buckets));
         if (lowest[bucket] < 0 || points_[i].y < points_[static_cast<std::size_t>(lowest[bucket])].y) {
             lowest[bucket] = static_cast<int>(i);
         }
@@ -344,7 +344,7 @@ void EvolutionViewModel::thin() {
         }
     }
     std::vector<Point> kept;
-    for (int bucket = 0; bucket < buckets; ++bucket) {
+    for (std::size_t bucket = 0; bucket < lowest.size(); ++bucket) {
         for (const int i : {lowest[bucket], highest[bucket]}) {
             if (i >= 0 && (kept.empty() || kept.back().dataset != points_[static_cast<std::size_t>(i)].dataset)) {
                 kept.push_back(points_[static_cast<std::size_t>(i)]);

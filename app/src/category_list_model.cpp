@@ -176,7 +176,7 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
         return -1;
     };
     for (int i = static_cast<int>(rows_.size()) - 1; i >= 0; --i) {
-        if (find(target, rows_[i].id, 0) < 0) {
+        if (find(target, rows_[static_cast<std::size_t>(i)].id, 0) < 0) {
             beginRemoveRows(QModelIndex(), i, i);
             rows_.erase(rows_.begin() + i);
             endRemoveRows();
@@ -199,7 +199,7 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
             endInsertRows();
         } else {
             beginMoveRows(QModelIndex(), found, found, QModelIndex(), row);
-            const Row moved = rows_[found];
+            const Row moved = rows_[static_cast<std::size_t>(found)];
             rows_.erase(rows_.begin() + found);
             rows_.insert(rows_.begin() + row, moved);
             endMoveRows();

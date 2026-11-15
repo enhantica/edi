@@ -31,9 +31,9 @@ std::optional<Version> calendar_version(const QString& value) {
     const auto match = syntax.match(value);
     if (!match.hasMatch()) return {};
     Version result{};
-    for (qsizetype i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; ++i) {
         bool ok = false;
-        result[i] = match.captured(i + 1).toULongLong(&ok);
+        result[static_cast<std::size_t>(i)] = match.captured(i + 1).toULongLong(&ok);
         if (!ok) return {};
     }
     if (result[0] < 2000) return {};

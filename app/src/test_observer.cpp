@@ -114,7 +114,7 @@ QString setting(const char* name, const char* fallback) {
 
 QString hash_values(const QList<double>& values) {
     const QByteArray bytes(reinterpret_cast<const char*>(values.constData()),
-                           static_cast<qsizetype>(values.size() * sizeof(double)));
+                           static_cast<qsizetype>(static_cast<std::size_t>(values.size()) * sizeof(double)));
     return QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex());
 }
 

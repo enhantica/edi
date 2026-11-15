@@ -36,8 +36,8 @@ struct Category {
     std::string id;                          // the `.edi` tag prefix, e.g. "peak"
     bool is_loop = false;
     std::size_t rows = 0;                    // loop rows (0 for a scalar category)
-    std::vector<CategoryField> fields;       // parameter fields in `.edi` order
-    std::vector<CategoryField> asymmetry;    // peak only: the `_peak.asym_*` subheading
+    std::vector<CategoryField> fields{};     // parameter fields in `.edi` order
+    std::vector<CategoryField> asymmetry{};  // peak only: the `_peak.asym_*` subheading
     bool admitted = true;                    // false: shown only because the block carries it
 };
 

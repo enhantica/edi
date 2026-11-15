@@ -27,14 +27,19 @@ constexpr double kImageThreshold = 0.98;
 constexpr double kC1 = (0.01 * 255) * (0.01 * 255);  // the SSIM stabilisers for an 8-bit range
 constexpr double kC2 = (0.03 * 255) * (0.03 * 255);
 
+// The row-major index of (row, column) in a grid `width` wide.
+std::size_t cell(int row, int width, int column) {
+    return static_cast<std::size_t>(row) * static_cast<std::size_t>(width) + static_cast<std::size_t>(column);
+}
+
 std::vector<double> luminance(const QImage& image) {
     const QImage rgb = image.convertToFormat(QImage::Format_RGB32);
-    std::vector<double> y(static_cast<std::size_t>(rgb.width()) * rgb.height());
+    std::vector<double> y(cell(rgb.height(), rgb.width(), 0));
     for (int row = 0; row < rgb.height(); ++row) {
         const auto* line = reinterpret_cast<const QRgb*>(rgb.constScanLine(row));
         for (int column = 0; column < rgb.width(); ++column) {
             const QRgb pixel = line[column];
-            y[static_cast<std::size_t>(row) * rgb.width() + column] =
+            y[cell(row, rgb.width(), column)] =
                 0.299 * qRed(pixel) + 0.587 * qGreen(pixel) + 0.114 * qBlue(pixel);
         }
     }
@@ -56,10 +61,10 @@ Score compare(const QImage& actual, const QImage& expected) {
     Score score;
     score.windows_x = (width + kWindow - 1) / kWindow;
     score.windows_y = (height + kWindow - 1) / kWindow;
-    score.windows.assign(static_cast<std::size_t>(score.windows_x) * score.windows_y, 1.0);
+    score.windows.assign(cell(score.windows_y, score.windows_x, 0), 1.0);
     const int tiles_x = (width + kTile - 1) / kTile;
     const int tiles_y = (height + kTile - 1) / kTile;
-    std::vector<double> tile_sum(static_cast<std::size_t>(tiles_x) * tiles_y, 0.0);
+    std::vector<double> tile_sum(cell(tiles_y, tiles_x, 0), 0.0);
     std::vector<int> tile_count(tile_sum.size(), 0);
     double total = 0.0;
     for (int wy = 0; wy < score.windows_y; ++wy) {
@@ -70,16 +75,16 @@ Score compare(const QImage& actual, const QImage& expected) {
             double sa = 0, sb = 0;
             for (int y = y0; y < y1; ++y) {
                 for (int x = x0; x < x1; ++x) {
-                    sa += a[static_cast<std::size_t>(y) * width + x];
-                    sb += b[static_cast<std::size_t>(y) * width + x];
+                    sa += a[cell(y, width, x)];
+                    sb += b[cell(y, width, x)];
                 }
             }
             const double ma = sa / n, mb = sb / n;
             double va = 0, vb = 0, cov = 0;
             for (int y = y0; y < y1; ++y) {
                 for (int x = x0; x < x1; ++x) {
-                    const double da = a[static_cast<std::size_t>(y) * width + x] - ma;
-                    const double db = b[static_cast<std::size_t>(y) * width + x] - mb;
+                    const double da = a[cell(y, width, x)] - ma;
+                    const double db = b[cell(y, width, x)] - mb;
                     va += da * da;
                     vb += db * db;
                     cov += da * db;
@@ -89,9 +94,9 @@ Score compare(const QImage& actual, const QImage& expected) {
             vb /= n;
             cov /= n;
             const double ssim = ((2 * ma * mb + kC1) * (2 * cov + kC2)) / ((ma * ma + mb * mb + kC1) * (va + vb + kC2));
-            score.windows[static_cast<std::size_t>(wy) * score.windows_x + wx] = ssim;
+            score.windows[cell(wy, score.windows_x, wx)] = ssim;
             total += ssim;
-            const std::size_t tile = static_cast<std::size_t>(y0 / kTile) * tiles_x + x0 / kTile;
+            const std::size_t tile = cell(y0 / kTile, tiles_x, x0 / kTile);
             tile_sum[tile] += ssim;
             tile_count[tile] += 1;
         }
@@ -108,7 +113,7 @@ void write_map(const Score& score, const QSize& size, const QString& path) {
     for (int y = 0; y < size.height(); ++y) {
         uchar* line = map.scanLine(y);
         for (int x = 0; x < size.width(); ++x) {
-            const double ssim = score.windows[static_cast<std::size_t>(y / kWindow) * score.windows_x + x / kWindow];
+            const double ssim = score.windows[cell(y / kWindow, score.windows_x, x / kWindow)];
             line[x] = static_cast<uchar>(std::clamp(ssim, 0.0, 1.0) * 255.0 + 0.5);
         }
     }

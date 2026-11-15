@@ -259,7 +259,7 @@ struct ScanTemplate {
     std::string file;
     std::optional<ScanResultIndex::Row> row;
     std::size_t files = 0, fitted = 0, converged = 0;
-    std::optional<std::size_t> place;  ///< the template dataset's place among the scan's datasets
+    std::optional<std::size_t> place{};  ///< the template dataset's place among the scan's datasets
 };
 
 ScanTemplate scan_template_of(const Project& scan) {

@@ -630,17 +630,6 @@ std::array<double, 3> in_form(const std::array<double, 6>& cell, const std::arra
     }
     return crystal;
 }
-
-std::array<double, 3> from_form(const std::array<double, 6>& cell, const std::array<double, 3>& values,
-                                const QString& form) {
-    if (form == QLatin1String("cartesian")) {
-        return crysta::moment_crystal_axis(cell, values);
-    }
-    if (form == QLatin1String("spherical")) {
-        return crysta::moment_crystal_axis(cell, crysta::moment_from_spherical(values));
-    }
-    return values;
-}
 }  // namespace
 
 QList<double> AtomSiteMomentListModel::components(int row, const QString& form) const {

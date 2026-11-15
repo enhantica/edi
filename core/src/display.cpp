@@ -360,16 +360,16 @@ TextCategory text_category(const std::string& text, std::string_view id) {
             if (unit.lines.size() > 2) {
                 field.insert(field.end(), unit.lines.begin() + 2, unit.lines.end() - 1);
             }
-            for (const std::string& line : field) {
-                if (line.empty()) {
-                    breaks += value.empty() ? 0 : 1;
+            for (const std::string& piece : field) {
+                if (piece.empty()) {
+                    breaks += value.empty() ? 0U : 1U;
                     continue;
                 }
                 if (!value.empty()) {
                     value += breaks > 0 ? std::string(breaks, '\n') : std::string(" ");
                 }
                 breaks = 0;
-                value += line;
+                value += piece;
             }
         } else {
             const std::vector<std::string> values = line_values(end == std::string::npos ? std::string() : line.substr(end));

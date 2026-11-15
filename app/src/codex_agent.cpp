@@ -440,42 +440,42 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         // The runtime owns its ordinary profile and managed login. Never assign
         // HOME/home/CODEX_HOME, open config/auth files, or copy provider tokens.
         connect(process, &QProcess::started, this, [this, original = prepared, scope] {
-            const QPointer<CodexAgent> receiver(this);
-            const auto current = [&] { return receiver && original && process_ == original.data() && generation_ == scope; };
-            try { if (current() && !failed_) emit started(); }
-            catch (...) { if (current()) fail("The official agent handshake could not be prepared."); }
+            const QPointer<CodexAgent> alive(this);
+            const auto stillCurrent = [&] { return alive && original && process_ == original.data() && generation_ == scope; };
+            try { if (stillCurrent() && !failed_) emit started(); }
+            catch (...) { if (stillCurrent()) fail("The official agent handshake could not be prepared."); }
         });
         connect(process, &QProcess::bytesWritten, this, [this, original = prepared, scope](qint64 count) {
             if (!original || process_ != original.data() || generation_ != scope || failed_ || count <= 0) return;
             // Optional writes are admitted only at an empty physical queue, so
             // these bytes are its FIFO head even after required writes arrive.
             optional_queued_bytes_ -= qMin(optional_queued_bytes_, static_cast<quint64>(count));
-            const QPointer<CodexAgent> receiver(this);
+            const QPointer<CodexAgent> alive(this);
             flushRequired(); // Can synchronously retire this exact process scope.
-            if(!receiver || !original || process_!=original.data() || generation_!=scope || failed_ ||
+            if(!alive || !original || process_!=original.data() || generation_!=scope || failed_ ||
                 original->state()!=QProcess::Running || optionalUsageBackpressured())return;
             try {emit optionalUsageReady();}catch(...){} // Optional terminal hint, never a required-write failure.
         });
         connect(process, &QProcess::readyReadStandardOutput, this, [this, original = prepared, scope] { if (original) read(original.data(), scope); });
         connect(process, &QProcess::readyReadStandardError, this, [this, original = prepared, scope] {
-            const QPointer<CodexAgent> receiver(this);
-            const auto current = [&] { return receiver && original && process_ == original.data() && generation_ == scope; };
-            if (!current()) return;
+            const QPointer<CodexAgent> alive(this);
+            const auto stillCurrent = [&] { return alive && original && process_ == original.data() && generation_ == scope; };
+            if (!stillCurrent()) return;
             if(active_frames_==std::numeric_limits<quint64>::max())return;
             ++active_frames_;
-            const auto frame=qScopeGuard([receiver]{if(receiver){--receiver->active_frames_;receiver->maybeOwnersReleased();}});
+            const auto frame=qScopeGuard([alive]{if(alive){--alive->active_frames_;alive->maybeOwnersReleased();}});
             try {
                 original->setReadChannel(QProcess::StandardError);
-                while (current() && !failed_ && original->bytesAvailable() > 0) {
+                while (stillCurrent() && !failed_ && original->bytesAvailable() > 0) {
                     const auto count=static_cast<quint64>(Limits::http_chunk_bytes);
 
                     const auto discarded = original->read(count);
-                    if (!current() || failed_) return;
+                    if (!stillCurrent() || failed_) return;
                     if (discarded.isEmpty()) break;
                     wire_bytes_ += static_cast<quint64>(discarded.size());
                 }
-                if (current()) original->setReadChannel(QProcess::StandardOutput);
-            } catch (...) { if (current()) fail("The official agent diagnostic channel could not be drained."); }
+                if (stillCurrent()) original->setReadChannel(QProcess::StandardOutput);
+            } catch (...) { if (stillCurrent()) fail("The official agent diagnostic channel could not be drained."); }
             // Never put raw runtime stderr (which may contain user data) in a
             // provider failure card or credential log.
         });
@@ -516,7 +516,7 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     checkDeadline(); if (!receiver || process_ != process || generation_ != epoch || failed_) return false;
     quint64 encoded = 0;
     if (!encodedSize(envelope, std::nullopt, encoded)) {
-        if (!nonfatalPreflight) fail("The official agent request has invalid Unicode, number or nesting."); return false;
+        if (!nonfatalPreflight) { fail("The official agent request has invalid Unicode, number or nesting."); } return false;
     }
     const auto initialQueued = static_cast<quint64>(process_->bytesToWrite());
     const auto lineSize = encoded + 1;
@@ -527,7 +527,7 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     const bool deferred=!deferred_required_.isEmpty() || queued!=0;
     auto line=QJsonDocument(envelope).toJson(QJsonDocument::Compact);
     if(static_cast<quint64>(line.size())!=encoded) {
-        if(!nonfatalPreflight)fail("The official agent request could not be encoded consistently.");return false;
+        if(!nonfatalPreflight){fail("The official agent request could not be encoded consistently.");}return false;
     }
     line.append('\n');
     auto heldWire=deferred_required_;
@@ -544,7 +544,7 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     }
     if(optionalUsage)optional_queued_bytes_=lineSize;
     if(process->write(line)!=line.size()) {
-        if(receiver && process_==process && generation_==epoch)fail("The official agent request could not be delivered.");return false;
+        if(receiver && process_==process && generation_==epoch){fail("The official agent request could not be delivered.");}return false;
     }
     return receiver && process_==process && generation_==epoch && !failed_;
 }

@@ -754,9 +754,9 @@ Reply ChatGptConnection::send(const JsonText& input) {
         if (!effort.isEmpty()) body["reasoning"] = Object{{"effort", effort}};
         auto wire = encoded(body);
         s.request_context = source; s.pending_terminal = {}; s.pending_calls = {}; s.pending_call_bytes = 2; const auto generation = s.generation; const auto connection = s.connection;
-        s.stream = std::make_unique<OpenAiStream>(source.value("turn_id").toString().toStdString(), source.value("request_id").toString().toStdString(), [&s, source, generation, connection](const JsonText& input) {
+        s.stream = std::make_unique<OpenAiStream>(source.value("turn_id").toString().toStdString(), source.value("request_id").toString().toStdString(), [&s, source, generation, connection](const JsonText& chunk) {
             if (generation != s.generation) return;
-            auto event = QJsonDocument::fromJson(QByteArray::fromStdString(input)).object(); event["connection_id"] = connection;
+            auto event = QJsonDocument::fromJson(QByteArray::fromStdString(chunk)).object(); event["connection_id"] = connection;
             if (event.value("type") == "tool_call") {
                 const auto project = source.value("context").toObject().value("project").toObject();
                 event["project_id"] = project.value("id").toString(); event["revision"] = project.isEmpty() ? QJsonValue("0") : project.value("revision");
@@ -783,13 +783,13 @@ Reply ChatGptConnection::send(const JsonText& input) {
             // but only semantically completed responses become continuation.
             // Failed calls were deferred and never dispatched, so retry can use
             // the previous clean replay without manufacturing tool outcomes.
-            const bool completed = s.pending_terminal.value("status") == "completed";
+            const bool finished = s.pending_terminal.value("status") == "completed";
             s.replay = replay;
-            if (!output.isEmpty()) s.replay_groups.push_back({source.value("history").toArray().size(), output, completed});
+            if (!output.isEmpty()) s.replay_groups.push_back({source.value("history").toArray().size(), output, finished});
             auto terminal = std::exchange(s.pending_terminal, Object{});
             auto calls = std::exchange(s.pending_calls, QJsonArray{}); s.pending_call_bytes = 2;
             s.stream.reset();
-            const auto generation = s.generation;
+            const auto doneGeneration = s.generation;
             if (terminal.value("status") != "completed") {
                 s.set_error("Provider reply failed, incomplete or refused. No tools ran. Retry uses the last completed reply.");
                 terminal["message"] = s.error;
@@ -797,17 +797,17 @@ Reply ChatGptConnection::send(const JsonText& input) {
             else {
                 s.error.clear(); s.error_code.clear();
                 for (const auto& call : calls) {
-                    if (generation != s.generation || s.request_context.isEmpty()) return;
+                    if (doneGeneration != s.generation || s.request_context.isEmpty()) return;
                     if (s.sink) s.sink(json(call.toObject()));
                 }
             }
-            if (generation != s.generation || s.request_context.isEmpty()) return;
+            if (doneGeneration != s.generation || s.request_context.isEmpty()) return;
             s.request_context = {};
             if (s.sink) s.sink(json(terminal));
         };
-        const auto data = [&s](QByteArray data) {
+        const auto data = [&s](QByteArray chunk) {
             if (!s.stream) return;
-            const auto result = s.stream->feed(std::string_view(data.constData(), static_cast<std::size_t>(data.size())));
+            const auto result = s.stream->feed(std::string_view(chunk.constData(), static_cast<std::size_t>(chunk.size())));
             if (!result.ok) s.inference_failed(decoder_reason(result, false), q(result.code));
         };
         s.active_inference = s.request({HttpMethod::post, QUrl("https://api.openai.com/v1/responses"),

@@ -291,7 +291,7 @@ int ScanSession::addRow(const edi::Project& project, const std::vector<std::stri
 }
 
 std::vector<std::string> ScanSession::row(const edi::Project& project, int dataset) const {
-    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[dataset].offset < 0) {
+    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return {};
     }
     if (!edi::scan_state_present(analysis_dir(project) / "results.csv", "analysis/results.csv")) {
@@ -305,7 +305,7 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
                                         "before");
         }
     }
-    std::vector<std::string> cells = edi::read_scan_row(project, index_.rows[dataset].offset);
+    std::vector<std::string> cells = edi::read_scan_row(project, index_.rows[static_cast<std::size_t>(dataset)].offset);
     const std::string& expected = datasets_.files[static_cast<std::size_t>(dataset)];
     if (cells.size() != index_.header.size() || edi::scan_row_file(index_, cells) != expected) {
         throw std::invalid_argument("analysis/results.csv changed under the app: the row for '" + expected +
@@ -320,15 +320,15 @@ std::vector<std::string> ScanSession::row(const edi::Project& project, int datas
 }
 
 QString ScanSession::outcome(int dataset) const {
-    if (dataset >= 0 && dataset < static_cast<int>(index_.rows.size()) && index_.rows[dataset].skipped) {
+    if (dataset >= 0 && dataset < static_cast<int>(index_.rows.size()) && index_.rows[static_cast<std::size_t>(dataset)].skipped) {
         return QStringLiteral("skipped");
     }
-    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[dataset].offset < 0) {
+    if (dataset < 0 || dataset >= static_cast<int>(index_.rows.size()) || index_.rows[static_cast<std::size_t>(dataset)].offset < 0) {
         return {};
     }
     // From the row's own facts: converged, else the reason crysta's ledger recorded when the file was fitted; a row
     // fitted before the ledger recorded reasons did not converge for a reason no one knows now.
-    const edi::ScanResultIndex::Row& row = index_.rows[dataset];
+    const edi::ScanResultIndex::Row& row = index_.rows[static_cast<std::size_t>(dataset)];
     if (row.converged) {
         return QStringLiteral("success");
     }
@@ -701,10 +701,10 @@ const std::vector<std::string>* ScanSession::extracted(int dataset) const {
     if (dataset < 0 || dataset >= static_cast<int>(datasets_.files.size())) {
         return nullptr;
     }
-    if (index_.rows[dataset].offset >= 0) {
-        return &index_.rows[dataset].extracted;
+    if (index_.rows[static_cast<std::size_t>(dataset)].offset >= 0) {
+        return &index_.rows[static_cast<std::size_t>(dataset)].extracted;
     }
-    return metadata_[dataset] ? &*metadata_[dataset] : nullptr;
+    return metadata_[static_cast<std::size_t>(dataset)] ? &*metadata_[static_cast<std::size_t>(dataset)] : nullptr;
 }
 
 QString ScanSession::metadataError(int dataset) const {

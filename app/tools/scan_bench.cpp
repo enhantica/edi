@@ -145,7 +145,7 @@ class Painted : public QQuickPaintedItem {
             QPainterPath path;
             bool drawing = false;
             for (std::size_t k = 0; k < traces[d].x.size(); ++k) {
-                const double x = traces[d].x[k], y = base - traces[d].v[k] * lift;
+                const double x = traces[d].x[k], y = base - static_cast<double>(traces[d].v[k]) * lift;
                 if (!std::isfinite(x) || !std::isfinite(y)) {
                     drawing = false;
                 } else if (drawing) {
@@ -306,8 +306,8 @@ int main(int argc, char** argv) {
         list.reserve(static_cast<qsizetype>(2 * trace.x.size()));
         const double row = static_cast<double>(d);
         for (std::size_t k = 0; k < trace.x.size(); ++k) {
-            const double y_low = row + (trace.low[k] - low) / (high - low) * lift;
-            const double y_high = row + (trace.high[k] - low) / (high - low) * lift;
+            const double y_low = row + (static_cast<double>(trace.low[k]) - low) / (high - low) * lift;
+            const double y_high = row + (static_cast<double>(trace.high[k]) - low) / (high - low) * lift;
             list.append(QPointF(trace.x[k], y_low));
             if (y_high != y_low) {
                 list.append(QPointF(trace.x[k], y_high));
@@ -327,10 +327,10 @@ int main(int argc, char** argv) {
                 for (std::size_t k = 0; k < trace.x.size(); ++k) {
                     const auto x = static_cast<float>((trace.x[k] - shown_min) / (shown_max - shown_min) * width);
                     out[d].x.push_back(x);
-                    out[d].v.push_back(static_cast<float>((trace.low[k] - low) / (high - low)));
+                    out[d].v.push_back(static_cast<float>((static_cast<double>(trace.low[k]) - low) / (high - low)));
                     if (trace.high[k] != trace.low[k]) {
                         out[d].x.push_back(x);
-                        out[d].v.push_back(static_cast<float>((trace.high[k] - low) / (high - low)));
+                        out[d].v.push_back(static_cast<float>((static_cast<double>(trace.high[k]) - low) / (high - low)));
                     }
                 }
                 drawn_points += out[d].x.size();

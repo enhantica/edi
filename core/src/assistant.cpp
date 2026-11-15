@@ -349,21 +349,6 @@ J selected_descriptor(const SelectedFile& file) {
     return O{{"id", file.id}, {"name", file.relative_name}, {"bytes", static_cast<double>(file.bytes.size())},
              {"text_readable", readable}, {"format", readable ? "unverified_text" : "unsupported_binary"}};
 }
-std::uint64_t selected_generation(const J& value) {
-    const auto& text = value.at("generation").string("generation");
-    std::uint64_t result = 0;
-    const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), result);
-    if (text.empty() || error != std::errc{} || end != text.data() + text.size() ||
-        !std::all_of(text.begin(), text.end(), [](char c) { return c >= '0' && c <= '9'; }))
-        refuse("invalid_argument", "generation must be an unsigned decimal string");
-    return result;
-}
-std::uint64_t selected_offset(const J& value, const char* field) {
-    const auto n = number(value, field);
-    if (n < 0 || n > 9007199254740991.0 || std::floor(n) != n)
-        refuse("invalid_argument", "Selected-file offset/length must be a nonnegative safe integer");
-    return static_cast<std::uint64_t>(n);
-}
 
 J manifest() {
     A tools;

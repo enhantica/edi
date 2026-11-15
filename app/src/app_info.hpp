@@ -96,10 +96,10 @@ struct TutorialStep {
     QString tab;
     QString title;
     bool coversTarget = false;
-    QStringList expectFree;
-    QStringList expectWholeBackground;
+    QStringList expectFree{};
+    QStringList expectWholeBackground{};
     // A built structure's sites when this step starts, "label type x y z" each (the replay's check).
-    QStringList expectSites;
+    QStringList expectSites{};
     double expectChi2 = -1;
     double expectChi2Tolerance = 0.01;
 };
@@ -131,9 +131,9 @@ struct Tutorial {
     QStringList completion;
     QString stop;
     QList<TutorialStep> steps;
-    QStringList tag_labels, tag_icons, tag_colors, tag_dark_colors;
+    QStringList tag_labels{}, tag_icons{}, tag_colors{}, tag_dark_colors{};
     // Its tags as the manifest gives them, "family:value".
-    QStringList tags;
+    QStringList tags{};
 };
 
 // What the app says about itself — its name, version and links. The only source of the identity the user

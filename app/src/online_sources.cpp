@@ -54,7 +54,7 @@ QString slug(const QString& name) {
 QList<QPair<QString, QString>> overrides() {
     QList<QPair<QString, QString>> pairs;
     const auto take = [&pairs](const QString& text) {
-        const int eq = text.indexOf(u'=');
+        const auto eq = text.indexOf(u'=');
         if (eq <= 0) return;
         pairs.append({text.left(eq).trimmed(), text.mid(eq + 1).trimmed()});
     };

@@ -1184,8 +1184,8 @@ void PatternChartController::refresh() {
             &PatternChartController::measuredColorChanged);
 
     QList<ChartBandModel::Band> bands;
-    for (const edi::ExcludedBand& band : shown_.excluded) {
-        bands.append({band.x_min, band.x_max});
+    for (const edi::ExcludedBand& excluded : shown_.excluded) {
+        bands.append({excluded.x_min, excluded.x_max});
     }
     double bragg_height = 0.0;
     for (const edi::PaneLayout& pane : shown_.layout) {
@@ -1240,11 +1240,11 @@ void PatternChartController::refresh() {
     QList<BraggLabel> labels;
     for (const edi::BraggRowLabel& label : shown_.bragg_labels) {
         // Hidden with its row's ticks, which share its style.
-        const auto ticks = std::find_if(shown_.series.begin(), shown_.series.end(), [&label](const edi::PatternSeries& series) {
+        const auto tickSeries = std::find_if(shown_.series.begin(), shown_.series.end(), [&label](const edi::PatternSeries& series) {
             return series.kind == edi::SeriesKind::BraggTicks && series.style == label.style;
         });
         labels.append({QString::fromStdString(label.text), colour_of(label.style), label.centre,
-                       ticks != shown_.series.end() && hiddenId(ticks->id), label.magnetic});
+                       tickSeries != shown_.series.end() && hiddenId(tickSeries->id), label.magnetic});
     }
     publish(bragg_labels_, labels, &PatternChartController::braggLabelsChanged);
     const bool subtractable = !report_ && experiment_ != nullptr && edi::has_background(*experiment_->experiment());

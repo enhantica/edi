@@ -163,7 +163,7 @@ MathSource captureMath(QStringView source) {
                 }
                 if(source[close]!=u'`'){++close;continue;}
                 qsizetype run=1;while(close+run<source.size() && source[close+run]==u'`')++run;
-                if(run==count)break;close+=run;
+                if(run==count){break;}close+=run;
             }
             if(close<source.size() && source[close]==u'`') {
                 result.markdown+=source.mid(i,close+count-i);i=close+count;continue;

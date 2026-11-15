@@ -44,7 +44,7 @@ void require_populated_participants(const crysta::Project& project, const char* 
 
 // --- V3: identity rejection --------------------------------------------------------------------
 void validate_fit_request(const std::vector<double>& grid, const std::vector<double>& observed,
-                             const std::vector<double>& sigma, const Project& project) {
+                             const std::vector<double>& sigma, const Project& /*project*/) {
     if (grid.empty() || observed.empty() || sigma.empty()) {
         throw std::invalid_argument("edi fit: empty measured data (grid/observed/sigma)");
     }
@@ -438,8 +438,8 @@ FitResultBase fit_experiments_independently(Project& project, const IterationCal
         copy.aliases.assign(std::move(own_aliases));
         std::vector<ItemVec<ParameterConstraint>::Ptr> own_constraints;
         for (const auto& constraint : copy.constraints) {
-            const auto owner = constraint_owner.find(constraint->id.value());
-            if (owner != constraint_owner.end() && (owner->second == e || owner->second == every)) {
+            const auto found = constraint_owner.find(constraint->id.value());
+            if (found != constraint_owner.end() && (found->second == e || found->second == every)) {
                 own_constraints.push_back(constraint);
             }
         }
@@ -549,10 +549,10 @@ FitResultBase fit_experiments_independently(Project& project, const IterationCal
         if (combined.iterations_history.empty()) {
             combined.pre_fit = result.pre_fit;
         }
-        for (IterationRecord record : result.iterations_history) {
-            record.iteration = static_cast<int>(combined.iterations_history.size()) + 1;
-            record.elapsed_ms += combined.elapsed_ms;
-            combined.iterations_history.push_back(std::move(record));
+        for (IterationRecord step : result.iterations_history) {
+            step.iteration = static_cast<int>(combined.iterations_history.size()) + 1;
+            step.elapsed_ms += combined.elapsed_ms;
+            combined.iterations_history.push_back(std::move(step));
         }
         combined.iterations += result.iterations;
         combined.n_points_loaded += result.n_points_loaded;

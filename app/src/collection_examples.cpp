@@ -142,8 +142,8 @@ void CollectionExamples::fetchPaired(const QString& id, const QStringList& bases
         return;
     }
     const QString base = bases.at(at);
-    const auto url = [](const QString& base, const QString& path) {
-        QUrl out(QString::fromStdString(edi::online::location_url(base.toStdString(), path.toStdString())));
+    const auto url = [](const QString& root, const QString& path) {
+        QUrl out(QString::fromStdString(edi::online::location_url(root.toStdString(), path.toStdString())));
         return out.scheme().isEmpty() ? QUrl::fromLocalFile(out.toString()) : out;
     };
     const QPointer<CollectionExamples> receiver(this);
@@ -177,15 +177,15 @@ void CollectionExamples::fetchPaired(const QString& id, const QStringList& bases
             it->sha256 = QString::fromStdString(file.sha256);
         }
         fetch_url(receiver, receiver->network_, url(base, path),
-                  [receiver, id, bases, at, retried, done, progress, file, name](const QByteArray& bytes, const QString& error, bool unreachable) {
+                  [receiver, id, bases, at, retried, done, progress, file, name](const QByteArray& data, const QString& failure, bool offline) {
             if (!receiver) return;
-            if (!error.isEmpty()) {
-                if (unreachable && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress);
-                else done({}, error);
+            if (!failure.isEmpty()) {
+                if (offline && at + 1 < bases.size()) receiver->fetchPaired(id, bases, at + 1, retried, done, progress);
+                else done({}, failure);
                 return;
             }
-            const QString problem = content_problem(bytes, file.bytes, QString::fromStdString(file.sha256), name);
-            if (problem.isEmpty()) done(bytes, {});
+            const QString problem = content_problem(data, file.bytes, QString::fromStdString(file.sha256), name);
+            if (problem.isEmpty()) done(data, {});
             else if (!retried) receiver->fetchPaired(id, bases, at, true, done, progress);
             else done({}, problem);
         }, [progress, expected = file.bytes](qint64 received, qint64 total) {
