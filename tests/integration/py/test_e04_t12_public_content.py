@@ -53,19 +53,27 @@ def git(root, *args):
 
 
 def commit(root, message):
+    # Content gates inspect genuine blobs, commit messages and parent ranges.
+    # Build those Git objects directly: porcelain commit hooks, signing and
+    # automatic housekeeping are not part of the publication contract.
     git(root, 'add', '.')
-    git(
+    tree = git(root, 'write-tree')
+    parent = git(root, 'for-each-ref', '--format=%(objectname)', 'refs/heads/main')
+    parents = ['-p', parent] if parent else []
+    head = git(
         root,
         '-c',
         'user.name=Contributor',
         '-c',
         'user.email=person@example.invalid',
-        'commit',
-        '--allow-empty',
-        '-qm',
+        'commit-tree',
+        tree,
+        *parents,
+        '-m',
         message,
     )
-    return git(root, 'rev-parse', 'HEAD')
+    git(root, 'update-ref', 'HEAD', head)
+    return head
 
 
 def specimen(tmp_path):
@@ -412,4 +420,10 @@ def test_content_fixture_commits_are_independent_of_host_hooks_and_signing(tmp_p
     ), (
         'Content witnesses create genuine distinct commits within the unchanged deadline '
         'independently of host signing and hook configuration'
+    )
+    assert git(root, 'show', '-s', '--format=%P', after) == before, (
+        'The fixture preserves the genuine first-parent range inspected by the content gate'
+    )
+    assert git(root, 'show', after + ':README.md') == 'A diffraction library.', (
+        'The fixture keeps the real committed file tree inspected by public-content policy'
     )

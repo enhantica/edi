@@ -1,4 +1,4 @@
-"""Authenticate committed C06-T8 retakes before checking the original annotation stage."""
+"""Authenticate committed solver retakes before checking the original annotation stage."""
 
 import hashlib
 import json
@@ -25,7 +25,7 @@ def previous_bytes(name, data):
     if digest == row['before_sha256']:
         return data
     assert digest in {row['after_sha256'], row.get('intermediate_sha256')}, (
-        'Pin provenance requires every committed source byte across the C06-T8 retake'
+        'Pin provenance requires every committed source byte across the solver retake'
     )
     with zipfile.ZipFile(HERE / 'joined-pin-sources.zip') as archive:
         before = archive.read(row['before_sha256'])
@@ -68,7 +68,7 @@ def generate():
                 'A retake cannot rewrite the original pin-document attribution'
             )
         assert release_pin_bytes.references(old) == release_pin_bytes.references(new), (
-            'C06-T8 retakes cannot rebase independent physical references or their bounds'
+            'Solver retakes cannot rebase independent physical references or their bounds'
         )
         old_hash, new_hash = (hashlib.sha256(raw).hexdigest() for raw in (before, after))
         rows[name] = {'before_sha256': old_hash, 'after_sha256': new_hash}

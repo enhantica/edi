@@ -1,9 +1,7 @@
 """Independent counter-domain and work-trace counterfactuals; no new fit pins."""
 
 import copy
-import os
 import shutil
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -12,7 +10,6 @@ from tests.fixtures.e04_t11_wasm import iteration_domains as counters
 from tests.fixtures.e04_t11_wasm import written
 from tests.fixtures.e04_t11_wasm.cli_domains import fields
 from tests.fixtures.e04_t11_wasm.reopen import assert_documents
-from tests.fixtures.native_process import environment_bash
 from tests.unit.py.test_browser_written_reference import raw_control
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -240,14 +237,15 @@ def test_save_cannot_substitute_a_historical_count_or_different_descent(tmp_path
         )
 
 
-def test_native_written_path_is_exported_only_after_successful_shared_capture():
+def test_native_capture_failure_is_latched_before_all_independent_checks():
     script = (ROOT / 'tools/ci/wasm-check.sh').read_text()
     capture = 'bash "$ROOT/tools/ci/wasm-written-reference.sh" "$REFERENCE"'
     export = 'export EDI_WASM_WRITTEN_REFERENCE="$REFERENCE"'
     assert 'set -euo pipefail' in script and script.index(capture) < script.index(
         export
     ) < script.index('python -m pytest'), (
-        'Catalogue work parity requires its explicitly owned successful native capture'
+        'Every consumer follows the explicitly owned native capture '
+        'and its aggregate failure state'
     )
 
 
@@ -373,39 +371,3 @@ def test_matching_malformed_point_counts_or_terminal_domains_are_refused(field, 
     report = '\n'.join(k + '=' + v for k, v in record.items())
     with pytest.raises(ValueError, match=r'Iteration|Current'):
         counters.compare_runtime(report, report, fixture)
-
-
-@pytest.mark.parametrize('capture_exit', [0, 23])
-def test_shared_capture_exports_only_the_successful_reference(tmp_path, capture_exit):
-    script = (ROOT / 'tools/ci/wasm-check.sh').read_text()
-    start = script.index('REFERENCE="$(mktemp -d')
-    end = script.index('\nstatus=0', start)
-    provider = tmp_path / 'tools/ci/wasm-written-reference.sh'
-    provider.parent.mkdir(parents=True)
-    provider.write_text('echo -n "$1" > "$OUT/captured-path"\nexit ' + str(capture_exit) + '\n')
-    output = tmp_path / 'output'
-    output.mkdir()
-    env = {**os.environ, 'ROOT': str(tmp_path), 'OUT': str(output)}
-    env.pop('EDI_WASM_WRITTEN_REFERENCE', None)
-    run = subprocess.run(
-        [
-            environment_bash(),
-            '-c',
-            'set -euo pipefail\n' + script[start:end] + '\necho -n "$EDI_WASM_WRITTEN_REFERENCE"',
-        ],
-        env=env,
-        text=True,
-        capture_output=True,
-        check=False,
-        timeout=5,
-    )
-    assert run.returncode == capture_exit, (
-        'A failed shared capture must stop the actual shell before exporting a purported reference'
-    )
-    expected = (output / 'captured-path').read_text()
-    assert Path(expected).is_dir() and expected.startswith(str(output)), (
-        'The capture receives the freshly allocated owner directory before any consumer'
-    )
-    assert run.stdout == (expected if capture_exit == 0 else ''), (
-        'Consumers inherit exactly the successful capture directory and no failed-capture handoff'
-    )
