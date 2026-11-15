@@ -3,7 +3,11 @@
 # Vendored/generated code (build/, nanobind) is excluded via the run command. Mirrors
 # crysta's curated set (ADR-0004 shared discipline): the wildcard groups on, the well-known
 # high-noise / purely-stylistic sub-checks off, keeping the bug-catching signal.
+# The Clang Static Analyzer is on, except its opt-in Padding hint: it asks for members in size order, and
+# the code orders them by meaning; it reports memory layout, never a fault.
 Checks: >
+  clang-analyzer-*,
+  -clang-analyzer-optin.performance.Padding,
   bugprone-*,
   cppcoreguidelines-*,
   modernize-*,

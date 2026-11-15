@@ -16,7 +16,7 @@ for tree in build/app build/ci; do
 done
 # Each file once: the bindings from the core's tree, everything else from the app's.
 run-clang-tidy -quiet -p build/app -j "${EDI_TIDY_JOBS:-4}" -header-filter="$own" -warnings-as-errors='*' \
-    -extra-arg=-Wno-unknown-warning-option "$own(core/src|cli|app|assistant/native)/.*\.cpp$" || status=$?
+    -extra-arg=-Wno-unknown-warning-option "^$root/(core/src|cli|app|assistant/native)/.*\.cpp$" || status=$?
 run-clang-tidy -quiet -p build/ci -j "${EDI_TIDY_JOBS:-4}" -header-filter="$own" -warnings-as-errors='*' \
-    -extra-arg=-Wno-unknown-warning-option "$own(lib/src)/.*\.cpp$" || status=$?
+    -extra-arg=-Wno-unknown-warning-option "^$root/lib/src/.*\.cpp$" || status=$?
 exit "$status"
