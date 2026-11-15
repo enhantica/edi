@@ -25,6 +25,9 @@
 #include "test_observer.hpp"
 #ifndef __EMSCRIPTEN__
 void start_installer_smoke(QQuickWindow&, const QString&);
+#ifdef Q_OS_MACOS
+double merge_mac_title_bar(QWindow* window);
+#endif
 #endif
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
@@ -134,6 +137,25 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     edi_app::install_test_observer(engine);
+#if defined(Q_OS_MACOS) || defined(Q_OS_WIN)
+    // The app bar is drawn under the system title bar (Qt 6.9 expanded client area); Main.qml sets the same flags.
+    auto* merged = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());
+    if (merged && merged->property("mergedTitleBar").toBool()) {
+        merged->setFlag(Qt::ExpandedClientAreaHint, true);
+        merged->setFlag(Qt::NoTitleBarBackgroundHint, true);
+#ifdef Q_OS_WIN
+        // Qt draws this strip itself on Windows (qwindowswindow.cpp, updateCustomTitlebar): the icon and title only
+        // when the window has a title hint, the three buttons from their own hints. Keep the buttons, drop the title.
+        merged->setFlags(Qt::Window | Qt::CustomizeWindowHint | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint
+                         | Qt::ExpandedClientAreaHint | Qt::NoTitleBarBackgroundHint);
+#endif
+#ifdef Q_OS_MACOS
+        // The app bar's first button lines up with the red traffic light (Main.qml).
+        const double red = merge_mac_title_bar(merged);
+        if (red >= 0) merged->setProperty("trafficLightsLeft", red);
+#endif
+    }
+#endif
     #ifndef __EMSCRIPTEN__
     if (smoke_flag >= 0) {
         auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst());

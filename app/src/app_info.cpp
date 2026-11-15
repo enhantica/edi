@@ -232,6 +232,18 @@ bool ApplicationInfo::homeIntroAllowed() const {
            !QCoreApplication::arguments().contains(QStringLiteral("--test-observer"));
 }
 
+bool ApplicationInfo::mergedTitleBar() const {
+#if defined(Q_OS_MACOS) || defined(Q_OS_WIN)
+    const QString given = qEnvironmentVariable("EDI_MERGED_TITLE_BAR");
+    if (given == QStringLiteral("1")) return true;
+    if (given == QStringLiteral("0")) return false;
+    return edi_app::fresh_settings_dir().isEmpty() &&
+           !QCoreApplication::arguments().contains(QStringLiteral("--test-observer"));
+#else
+    return false;
+#endif
+}
+
 bool ApplicationInfo::eventFilter(QObject* watched, QEvent* event) {
     switch (event->type()) {
         case QEvent::MouseButtonPress:
@@ -11929,6 +11941,14 @@ void ApplicationInfo::storeWindowGeometry(QObject* window, QObject* settings) co
         messageScriptWrite(engine, target, QString::fromLatin1(field), value);
         if (!messageScriptReady(engine)) return;
     }
+#ifdef Q_OS_WIN
+    // With the title bar merged into the app bar, Qt still counts its strip as frame on Windows, so the
+    // window's own position and the restored one disagree by that strip; keep the frame's position instead.
+    if (auto* merged = qobject_cast<QWindow*>(window); merged && merged->flags().testFlag(Qt::ExpandedClientAreaHint)) {
+        messageScriptWrite(engine, target, QStringLiteral("x"), QJSValue(merged->framePosition().x()));
+        messageScriptWrite(engine, target, QStringLiteral("y"), QJSValue(merged->framePosition().y()));
+    }
+#endif
 }
 
 void ApplicationInfo::restoreWindowGeometry(QObject* window, QObject* settings) const {
@@ -11977,6 +11997,11 @@ void ApplicationInfo::restoreWindowGeometry(QObject* window, QObject* settings) 
             messageScriptWrite(engine, view, QString::fromLatin1(field), value);
             if (!messageScriptReady(engine)) return;
         }
+#ifdef Q_OS_WIN
+        // The kept position is the frame's (storeWindowGeometry); put the frame back there.
+        if (auto* merged = qobject_cast<QWindow*>(window); merged && merged->flags().testFlag(Qt::ExpandedClientAreaHint))
+            merged->setFramePosition(QPoint(read(position, "x").toInt(), read(position, "y").toInt()));
+#endif
     }
     messageScriptWrite(engine, view, QStringLiteral("geometryRestored"), QJSValue(true));
     if (!messageScriptReady(engine)) return;

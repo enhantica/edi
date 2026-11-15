@@ -22,6 +22,58 @@ EaComponents.ApplicationWindow {
     appBar.objectName: "appBar"
     appBarCentralTabs.objectName: "appBar.workflow"
 
+    // The app bar is drawn under the system title bar on macOS and Windows (Qt 6.9 expanded client
+    // area). The system window buttons stay; the app bar's own buttons move clear of them by the safe-area margins.
+    readonly property bool mergedTitleBar: ApplicationInfo.mergedTitleBar
+    // The same flags main.cpp sets, here too so the window has them from creation, before its kept position is
+    // restored (on Windows the merged strip changes what Qt counts as frame).
+    readonly property int mergedFlags: Qt.Window | Qt.ExpandedClientAreaHint | Qt.NoTitleBarBackgroundHint
+    // Windows: no title hint, so Qt draws no icon or title in the strip, only the three buttons.
+    readonly property int windowsMergedFlags: mergedFlags | Qt.CustomizeWindowHint | Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint
+    flags: !mergedTitleBar ? Qt.Window : Qt.platform.os === "windows" ? windowsMergedFlags : mergedFlags
+    // Let the app bar reach the top edge (Qt keeps the content inside the safe area by default); the system
+    // buttons then sit in a strip at the top of the app bar, and every group of the app bar moves down below it.
+    topPadding: mergedTitleBar ? 0 : undefined
+    // macOS: the red traffic light's left edge, set from C++ (mac_titlebar.mm); the first app bar button lines up
+    // with it. The bar keeps its height.
+    property real trafficLightsLeft: -1
+    function setUpMergedTitleBar() {
+        if (!mergedTitleBar)
+            return;
+        // Our left and right buttons sit 4 px lower, clear of the system buttons; the page tabs stay.
+        appBar.children[0].anchors.verticalCenterOffset = 4;
+        appBar.children[2].anchors.verticalCenterOffset = 4;
+        if (Qt.platform.os !== "osx")
+            return;
+        const left = appBar.children[0];
+        const base = left.anchors.leftMargin;
+        left.anchors.leftMargin = Qt.binding(() => trafficLightsLeft >= 0 ? trafficLightsLeft : base);
+    }
+    // Dragging the empty app bar moves the window, and a double click maximizes or restores it, as a title bar does.
+    // Starts on press, before any button or tab can take the press, so a drag works anywhere on the empty bar.
+    PointHandler {
+        parent: window.appBar
+        enabled: window.mergedTitleBar
+        acceptedButtons: Qt.LeftButton
+        grabPermissions: PointerHandler.TakeOverForbidden
+        onActiveChanged: if (active && !window.appBarControlAt(point.position))
+            window.startSystemMove()
+    }
+    function appBarControlAt(position) {
+        for (const row of appBar.children) {
+            const local = appBar.mapToItem(row, position.x, position.y);
+            if (row.visible && row.contains(local) && row.childAt(local.x, local.y))
+                return true;
+        }
+        return false;
+    }
+    TapHandler {
+        parent: window.appBar
+        enabled: window.mergedTitleBar
+        acceptedButtons: Qt.LeftButton
+        onDoubleTapped: window.visibility === Window.Maximized ? window.showNormal() : window.showMaximized()
+    }
+
     // Same Create API/preferences as the ordinary current-window form. Native
     // callers pass an original Session-bound intent, never another app/window.
     property var assistantCreateGuard: null
@@ -1281,5 +1333,8 @@ EaComponents.ApplicationWindow {
     // The window takes its kept geometry as it is created, after the base's own settings have loaded; edi's
     // preferences go to the base once everything, the base's hidden dialog and its settings included, is complete
     // (Preferences.apply).
-    Component.onCompleted: ApplicationInfo.windowCompleted()
+    Component.onCompleted: {
+        setUpMergedTitleBar();
+        ApplicationInfo.windowCompleted();
+    }
 }

@@ -1056,6 +1056,10 @@ class ApplicationInfo : public QObject {
     // settings, --test-observer) nor with EDI_HOME_INTRO=0; EDI_HOME_INTRO=1 allows them anyway.
     Q_PROPERTY(bool homeIntroAllowed READ homeIntroAllowed CONSTANT)
     bool homeIntroAllowed() const;
+    // Whether the window draws the app bar under the system title bar (macOS and Windows only): not in a demo, test or
+    // observed run, whose images keep the system title bar, nor with EDI_MERGED_TITLE_BAR=0; =1 merges it anyway.
+    Q_PROPERTY(bool mergedTitleBar READ mergedTitleBar CONSTANT)
+    bool mergedTitleBar() const;
     // In the browser the start page plays the intro (app/web/intro.js) and keeps its on/off choice in the page's
     // storage; Preferences' Intro animation reads and writes that same value there. Elsewhere: on, nothing kept.
     Q_INVOKABLE bool introAnimationStored() const;
