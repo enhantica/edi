@@ -79,9 +79,27 @@ https://dictionary.iucr.org/Reflection_conditions for centring, glide and screw
 conditions. The fixture space groups are P 21/c (b1) and F d -3 m. Their point
 rotations give the explicit equivalent-index operations in the generator.
 
-The declared exact-index exclusion before merging is a product policy. SHELXL's
-unmerged OMIT form supports exact index omission, but its manual also says that
-with nonzero MERG it omits all inputs mapping to the final indices. The gate for
-Laue merging binds the declared product policy; it does not claim that difference
-is SHELXL parity. The early design review must assess the discrepancy.
-Source: https://shelx.uni-goettingen.de/shelxl_html.php, OMIT h k l.
+## Review-corrected reduced-index contract
+
+SHELXL OMIT is applied to the final reduced index. With `none`, every repeated
+measurement of that complete signed tuple is omitted. With `point_group`, all
+proper point-group equivalents mapping to that index are omitted; with
+`laue_class`, inversion is included too. Ranges and absences still have their
+specified first-reason precedence. An omitted reduced group contributes neither
+a merged intensity nor an agreement factor. This corrects the raw-index-first
+policy rejected by review r8; no product deviation from SHELXL is retained.
+Source: https://shelx.uni-goettingen.de/shelxl_html.php#OMIT.
+
+`contracts.py` regenerates the orthorhombic 222/mmm orbit witnesses and the
+body-centred Ni project plus `admission_reference.json`. The complete-tuple
+controls share h but differ in k, l or signs. Proper 222 rotations change two
+signs; inversion generates mmm. I centring requires even h+k+l. These are
+independent crystallographic operations, not symmetry engine output.
+
+The combined witness has raw rejected high intensities, unequal uncertainties,
+nonproportional equivalents, a weak post-merge group and nonzero factors.
+Its expected scales are closed-form inverse-variance normal equations after
+all declared admission steps, with body-centred origin Ni F²=4*(1.03)².
+The powder engine profile is only an input stimulus to a linear normal-equation
+invariant; no diffraction accuracy is inferred from it. Counterfactual controls
+exercise the actual gate checkers with the review's wrong algorithms or output.

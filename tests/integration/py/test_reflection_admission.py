@@ -1,5 +1,6 @@
 """Admission, merging and reporting against independent reflection arithmetic."""
 
+import copy
 import hashlib
 import importlib
 import json
@@ -19,6 +20,13 @@ from tests.fixtures.fitting_correctness.admission import (
     region,
     scalar,
     stage,
+)
+from tests.fixtures.fitting_correctness.contracts import (
+    DECLARATIONS,
+    INDEX_ROWS,
+    RICH_ROWS,
+    partition,
+    rich_reference,
 )
 from tests.fixtures.single_crystal_edges.observe import observe
 
@@ -87,77 +95,81 @@ def test_range_closed_endpoints_and_reversed_bounds_reach_fit(
     )
 
 
-def require_fit(result, rows):
+def require_fit(result, rows, basis=BASIS):
     values = np.array([row[3] for row in rows], dtype=float)
     sigma = np.array([row[4] for row in rows], dtype=float)
-    scale = np.dot(values, sigma**-2) / (BASIS * np.sum(sigma**-2))
+    scale = np.dot(values, sigma**-2) / (basis * np.sum(sigma**-2))
     links = result['after:link']
     assert len(links) == 1, 'The scale-only fit must retain its one declared phase link'
     assert float(links[0][3]) == pytest.approx(scale, rel=3e-5), (
         'The actual native fit must minimize the independently admitted weighted observations'
     )
-    chi2 = np.sum(((values - scale * BASIS) / sigma) ** 2) / (len(rows) - 1)
+    chi2 = np.sum(((values - scale * basis) / sigma) ** 2) / (len(rows) - 1)
     assert float(result['chi2'][0][0]) == pytest.approx(chi2, rel=5e-5, abs=1e-6), (
         'The actual fit objective and degrees of freedom must use the reduced reflection list'
     )
 
 
-def test_hkl_omit_is_exact_and_precedes_merge_and_cutoff(native, tmp_path):
-    rows = [*MERGE_ROWS, (2, 0, 0, 20, 1), (-2, 0, 0, 22, 2)]
-    declaration = '_reflns.merge laue_class\n' + exclusion(1, 0, 0)
-    root = stage(tmp_path / 'input', rows=rows, declarations=declaration)
-    result = observe(native, root, 'admission')
-    assert result['ok'], 'An exact hkl omission must be accepted before Laue merging'
-    reduced, _, _ = merged(rows, [[1], [2, 3], [4, 5], [6, 7]])
-    require_fit(result, [(0, 0, 0, mean, sigma) for mean, sigma in reduced])
-    text = (tmp_path / 'input-saved/experiments/bank.edi').read_text()
-    assert column(text, '_refln.include_status')[0] == 'x', (
-        'The exact listed hkl must be marked user-excluded'
+@pytest.mark.parametrize('mode', ['none', 'point_group', 'laue_class'])
+@pytest.mark.parametrize('group', ['P 2 2 2', 'P m m m'])
+def test_reduced_index_omit_removes_repeats_and_equivalents(native, tmp_path, mode, group):
+    groups, excluded = partition(
+        INDEX_ROWS, mode, centrosymmetric=group == 'P m m m', omit=(1, 2, 3)
     )
-    assert column(text, '_refln.include_status')[1] != 'x', (
-        'The declared exact-index policy must not omit an unlisted Friedel mate'
-    )
-    assert scalar(text, '_reflns.number_excluded') == 1, (
-        'An omitted row must be counted once before equivalents are grouped'
-    )
-
-
-@pytest.mark.parametrize(
-    ('mode', 'groups'),
-    [
-        ('none', [[0], [1], [2], [3], [4], [5]]),
-        ('point_group', [[0], [1], [2], [3], [4], [5]]),
-        ('laue_class', [[0, 1], [2, 3], [4, 5]]),
-    ],
-)
-def test_merge_modes_weighted_sigma_and_published_r_factors(native, tmp_path, mode, groups):
     root = stage(
-        tmp_path / 'input', declarations=f'_reflns.merge {mode}\n_reflns.absences include\n'
+        tmp_path / 'input',
+        rows=INDEX_ROWS,
+        group=group,
+        declarations=f'_reflns.merge {mode}\n' + exclusion(1, 2, 3),
     )
     result = observe(native, root, 'admission')
-    assert result['ok'], 'Every declared constant-wavelength merge mode must reach the real fit'
-    reduced, r_int, r_sigma = merged(MERGE_ROWS, groups)
-    require_fit(result, [(0, 0, 0, mean, sigma) for mean, sigma in reduced])
+    assert result['ok'], 'SHELXL OMIT must match reduced indices in the selected merge mode'
+    reduced, _, _ = merged(INDEX_ROWS, groups)
+    require_fit(result, [(0, 0, 0, mean, su) for mean, su in reduced])
+    text = (tmp_path / 'input-saved/experiments/bank.edi').read_text()
+    require_omissions(column(text, '_refln.include_status'), excluded)
+    assert scalar(text, '_reflns.number_excluded') == len(excluded), (
+        'Reduced-index OMIT counts every repeated or equivalent input once'
+    )
+
+
+def require_omissions(statuses, excluded):
+    assert [i for i, status in enumerate(statuses) if status == 'x'] == excluded, (
+        'OMIT uses the complete reduced h k l tuple, preserving neighboring indices'
+    )
+
+
+@pytest.mark.parametrize('mode', ['none', 'point_group', 'laue_class'])
+@pytest.mark.parametrize('group', ['P 2 2 2', 'P m m m'])
+def test_merge_modes_weighted_sigma_and_published_r_factors(native, tmp_path, mode, group):
+    groups, _ = partition(INDEX_ROWS, mode, centrosymmetric=group == 'P m m m')
+    root = stage(
+        tmp_path / 'input',
+        rows=INDEX_ROWS,
+        group=group,
+        declarations=f'_reflns.merge {mode}\n_reflns.absences include\n',
+    )
+    result = observe(native, root, 'admission')
+    assert result['ok'], 'Nontrivial point-group and Laue partitions must reach the actual fit'
+    reduced, r_int, r_sigma = merged(INDEX_ROWS, groups)
+    require_fit(result, [(0, 0, 0, mean, su) for mean, su in reduced])
     text = (tmp_path / 'input-saved/experiments/bank.edi').read_text()
     assert scalar(text, '_reflns.number_total') == len(groups), (
-        'The unique count must equal groups after admission and before the cutoff'
+        '222 merges proper rotational equivalents while retaining its Friedel orbit'
     )
     assert scalar(text, '_refine_ls.number_reflns') == len(groups), (
-        'The used count must equal the residual observation count with no fit cutoff'
+        'The residual uses every admitted unique observation before a cutoff is declared'
     )
     assert scalar(text, '_reflns.R_sigma') == pytest.approx(r_sigma, rel=1e-6), (
-        'R-sigma must sum the larger internal/external merged uncertainties '
-        'over the used merged intensities'
+        'R-sigma sums merged propagated-or-scatter su over used intensities'
     )
-    if r_int is None or mode == 'none':
+    if mode == 'none' or r_int is None:
         assert '_diffrn_reflns.av_R_equivalents ' not in text, (
-            'Rint without repeated merged groups must remain undefined '
-            'rather than a fabricated zero'
+            'Unmerged repeats do not define a merged Rint'
         )
     else:
         assert scalar(text, '_diffrn_reflns.av_R_equivalents') == pytest.approx(r_int, rel=1e-6), (
-            'Published Rint must use repeated original observations and the '
-            'weighted group mean on intensities'
+            'Rint uses original repeated intensities about their inverse-variance mean'
         )
 
 
@@ -355,28 +367,35 @@ def test_legacy_no_settings_preserves_saved_scale_and_raw_observations(tmp_path)
     )
 
 
-def test_absence_diagnostic_reports_independent_count_and_mean(native, tmp_path):
-    rows = [
-        (1, 0, 0, 12, 2),
-        (1, 1, 1, 18, 3),
-        (2, 0, 0, 10, 1),
-        (2, 1, 1, 14, 2),
-        (2, 2, 0, -2, 3),
-    ]
+def require_absence_notice(notes, count, mean):
+    notices = [line for line in notes.splitlines() if 'systematic absences' in line.lower()]
+    if count == 0 or mean <= 3:
+        assert not notices, (
+            'No absence warning is emitted at or below mean I/sigma three, or without absences'
+        )
+        return
+    assert len(notices) == 1, 'Strong absences produce exactly one diagnostic under either policy'
+    numbers = [float(value) for value in re.findall(r'(?<![A-Za-z])\d+(?:\.\d+)?', notices[0])]
+    assert numbers == pytest.approx([count, mean]), (
+        'The absence warning reports its actual absent count and mean I/sigma'
+    )
+
+
+@pytest.mark.parametrize('policy', ['include', 'exclude'])
+@pytest.mark.parametrize('mean', [None, 2, 3, 6], ids=['none', 'below', 'boundary', 'above'])
+def test_absence_diagnostic_reports_independent_count_and_mean(native, tmp_path, policy, mean):
+    rows = [(2, 0, 0, 10, 1), (2, 1, 1, 14, 2), (2, 2, 0, 18, 3)]
+    if mean is not None:
+        rows += [(1, 0, 0, 2 * mean, 2), (1, 1, 1, 3 * mean, 3)]
     root = stage(
-        tmp_path / 'input', rows=rows, group='I m -3 m', declarations='_reflns.absences exclude\n'
+        tmp_path / 'input',
+        rows=rows,
+        group='I m -3 m',
+        declarations=f'_reflns.absences {policy}\n',
     )
     result = observe(native, root, 'admission')
-    assert result['ok'], (
-        'Systematic-absence warning must not prevent the fit of allowed observations'
-    )
-    notices = [
-        line for line in result['notes'].splitlines() if 'systematic absences' in line.lower()
-    ]
-    assert len(notices) == 1, 'Strong systematic absences must produce one named diagnostic'
-    assert re.search(r'\b2\b.*\b6(?:\.0*)?\b', notices[0]), (
-        'The diagnostic must name the independently known absent count two and mean I/sigma six'
-    )
+    assert result['ok'], 'Absence diagnostics remain observable under both admission policies'
+    require_absence_notice(result['notes'], 0 if mean is None else 2, mean or 0)
 
 
 def test_exclusion_precedes_absence_and_is_not_counted_twice(tmp_path):
@@ -406,54 +425,83 @@ def test_tof_none_keeps_each_observation_wavelength(tmp_path):
     )
 
 
+def assistant_summaries(context):
+    # Scope by the actual dataset identity, never collect a factor from another experiment.
+    datasets = context.get('datasets', [])
+    result = {}
+    for dataset in datasets:
+        name = dataset.get('id')
+        result[name] = {}
+
+        def walk(value, name=name):
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    normalized = key.lower().replace('_', '').replace('-', '')
+                    aliases = {
+                        'rint': 'rint',
+                        'avrequivalents': 'rint',
+                        'rsigma': 'rsigma',
+                        'measured': 'measured',
+                        'unique': 'unique',
+                        'used': 'used',
+                        'excluded': 'excluded',
+                        'absent': 'absent',
+                        'mergemode': 'mode',
+                        'merge': 'mode',
+                        'mode': 'mode',
+                    }
+                    if normalized in aliases:
+                        result[name][aliases[normalized]] = item
+                    walk(item)
+            elif isinstance(value, list):
+                for item in value:
+                    walk(item)
+
+        walk(dataset)
+    return result
+
+
 def test_assistant_inspect_project_carries_the_same_merge_statistics(native, tmp_path):
-    root = stage(tmp_path / 'input', declarations='_reflns.merge laue_class\n')
+    root = stage(
+        tmp_path / 'input', rows=RICH_ROWS, group='I 2 2 2', declarations=DECLARATIONS, cutoff=2
+    )
+    other = (root / 'experiments/bank.edi').read_text().replace('data_bank', 'data_other')
+    other = other.replace(DECLARATIONS, '_reflns.merge point_group\n_reflns.absences include\n')
+    (root / 'experiments/other.edi').write_text(other)
     result = observe(native, root, 'admission')
-    assert result['ok'], (
-        'The real assistant context must be observable after the actual native fit'
-    )
-    assert len(result['inspect']) == 1, (
-        'The native controller must return one actual inspect_project context'
-    )
+    assert result['ok'], 'Two distinct experiments expose their own actual assistant summaries'
     context = json.loads(bytes.fromhex(result['inspect'][0][0]).decode())
-    found = {}
-
-    def walk(value):
-        if isinstance(value, dict):
-            for key, item in value.items():
-                normalized = key.lower().replace('_', '').replace('-', '')
-                if normalized in {'rint', 'avrequivalents', 'rsigma'}:
-                    found[normalized] = item
-                walk(item)
-        elif isinstance(value, list):
-            for item in value:
-                walk(item)
-
-    walk(context)
-    _, r_int, r_sigma = merged(MERGE_ROWS, [[0, 1], [2, 3], [4, 5]])
-    actual_rint = found.get('rint', found.get('avrequivalents'))
-    assert actual_rint == pytest.approx(r_int, rel=1e-6), (
-        'The actual inspect_project context must expose the independently computed Rint'
+    expected = json.loads(
+        (
+            Path(__file__).parents[2] / 'fixtures/fitting_correctness/admission_reference.json'
+        ).read_text()
     )
-    assert found.get('rsigma') == pytest.approx(r_sigma, rel=1e-6), (
-        'The actual inspect_project context must carry the same independently computed R-sigma'
-    )
+    actual = assistant_summaries(context)
+    for name in ('bank', 'other'):
+        assert name in actual, (
+            'inspect_project associates reflection statistics with the dataset identity'
+        )
+        require_summary(actual[name], expected[name])
 
 
-def test_exact_hkl_omission_removes_all_repeated_rows_without_omitting_mates(native, tmp_path):
-    rows = [*MERGE_ROWS, (1, 0, 0, 1000000, 1)]
-    root = stage(tmp_path / 'input', rows=rows, declarations=exclusion(1, 0, 0))
-    result = observe(native, root, 'admission')
-    assert result['ok'], (
-        'An exact hkl omission must admit a valid residual after repeated '
-        'matching rows are removed'
+def test_assistant_summary_escape_rejects_swapped_experiments():
+    expected = json.loads(
+        (
+            Path(__file__).parents[2] / 'fixtures/fitting_correctness/admission_reference.json'
+        ).read_text()
     )
-    require_fit(result, rows[1:6])
-    text = (tmp_path / 'input-saved/experiments/bank.edi').read_text()
-    assert scalar(text, '_reflns.number_excluded') == 2, (
-        'The declared exact-index policy removes every repeated matching observation, '
-        'counted independently of its mate'
-    )
+    context = {
+        'datasets': [
+            {'id': name, 'reflection_summary': summary}
+            for name, summary in expected.items()
+            if name in {'bank', 'other'}
+        ]
+    }
+    actual = assistant_summaries(context)
+    for name in ('bank', 'other'):
+        require_summary(actual[name], expected[name])
+    with pytest.raises(AssertionError, match='experiment'):
+        require_summary(actual['other'], expected['bank'])
 
 
 def test_no_automatic_outlier_rejection_during_merging(native, tmp_path):
@@ -477,3 +525,102 @@ def test_merging_never_hides_invalid_measurement_uncertainty(native, tmp_path, s
     assert re.search(r'(?i)sigma|uncert|s.u.|positive', result['error']), (
         'The invalid uncertainty refusal must identify the scientific input problem'
     )
+
+
+def require_summary(actual, expected):
+    for key in ('measured', 'unique', 'used', 'excluded', 'absent', 'mode', 'rint', 'rsigma'):
+        assert key in actual, (
+            'Every reflection summary field must be present in its experiment block'
+        )
+        if key in {'rint', 'rsigma'} and expected[key] is not None:
+            assert actual[key] == pytest.approx(expected[key], rel=1e-6), (
+                'Each experiment reports its own independently computed agreement factor'
+            )
+        else:
+            assert actual[key] == expected[key], (
+                'Each experiment reports its own counts, merge mode and undefined state'
+            )
+
+
+def test_combined_admission_reaches_fit_and_used_statistics(native, tmp_path):
+    root = stage(
+        tmp_path / 'input', rows=RICH_ROWS, group='I 2 2 2', declarations=DECLARATIONS, cutoff=2
+    )
+    result = observe(native, root, 'admission')
+    assert result['ok'], (
+        'The actual residual composes reduced OMIT, ranges, absences, merging and cutoff'
+    )
+    expected = rich_reference()
+    require_fit(
+        result,
+        [(0, 0, 0, mean, su) for mean, su in expected['reduced'] if mean > 2 * su],
+        basis=4 * BASIS,
+    )
+    text = (tmp_path / 'input-saved/experiments/bank.edi').read_text()
+    actual = {'mode': 'laue_class', 'measured': len(column(text, '_refln.index_h'))}
+    for key, tag in {
+        'unique': '_reflns.number_total',
+        'used': '_refine_ls.number_reflns',
+        'excluded': '_reflns.number_excluded',
+        'absent': '_reflns.number_absent',
+        'rint': '_diffrn_reflns.av_R_equivalents',
+        'rsigma': '_reflns.R_sigma',
+    }.items():
+        actual[key] = scalar(text, tag)
+    require_summary(actual, expected)
+
+
+def test_gate_escape_controls_discriminate_index_merge_stats_scale_and_warning():
+    # Counterfactual algorithm/observation exercises call the SAME checkers as product gates.
+    for mode in ('none', 'point_group', 'laue_class'):
+        groups, excluded = partition(INDEX_ROWS, mode, omit=(1, 2, 3))
+        statuses = ['x' if i in excluded else 'o' for i in range(len(INDEX_ROWS))]
+        require_omissions(statuses, excluded)
+        honly = ['x' if row[0] == 1 else 'o' for row in INDEX_ROWS]
+        with pytest.raises(AssertionError, match='complete reduced'):
+            require_omissions(honly, excluded)
+        if mode != 'none':
+            raw = ['x' if row[:3] == (1, 2, 3) else 'o' for row in INDEX_ROWS]
+            with pytest.raises(AssertionError, match='complete reduced'):
+                require_omissions(raw, excluded)
+    correct_groups, _ = partition(INDEX_ROWS, 'point_group')
+    expected_rows = [(0, 0, 0, m, s) for m, s in merged(INDEX_ROWS, correct_groups)[0]]
+
+    def fitted(rows):
+        values = np.array([row[3] for row in rows])
+        su = np.array([row[4] for row in rows])
+        scale = np.sum(values / su**2) / np.sum(su**-2) / BASIS
+        chi2 = np.sum(((values - scale * BASIS) / su) ** 2) / (len(rows) - 1)
+        return {'after:link': [['bank', 'phase', 'true', str(scale)]], 'chi2': [[str(chi2)]]}
+
+    require_fit(fitted(expected_rows), expected_rows)
+    for wrong_mode in ('none', 'laue_class'):
+        groups, _ = partition(INDEX_ROWS, wrong_mode)
+        wrong_rows = [(0, 0, 0, m, s) for m, s in merged(INDEX_ROWS, groups)[0]]
+        with pytest.raises(AssertionError, match='actual native fit'):
+            require_fit(fitted(wrong_rows), expected_rows)
+    expected = rich_reference()
+    require_summary(expected, expected)
+    for key in ('measured', 'unique', 'used', 'excluded', 'absent', 'mode', 'rint', 'rsigma'):
+        wrong = copy.deepcopy(expected)
+        wrong[key] = 'none' if key == 'mode' else (None if key == 'rint' else 0)
+        with pytest.raises(AssertionError, match='experiment'):
+            require_summary(wrong, expected)
+        del wrong[key]
+        with pytest.raises(AssertionError, match='present'):
+            require_summary(wrong, expected)
+    used = [(0, 0, 0, m, s) for m, s in expected['reduced'] if m > 2 * s]
+    correct = fitted(used)
+    unit = copy.deepcopy(correct)
+    unit['after:link'][0][3] = str(np.mean([row[3] for row in used]) / BASIS)
+    for wrong in (unit, fitted(RICH_ROWS)):
+        with pytest.raises(AssertionError, match='actual native fit'):
+            require_fit(wrong, used)
+    require_absence_notice('Systematic absences: 2 with mean I/sigma 6', 2, 6)
+    for mean in (0, 2, 3):
+        with pytest.raises(AssertionError, match='No absence warning'):
+            require_absence_notice(
+                'Systematic absences: 2 with mean I/sigma 6', 0 if mean == 0 else 2, mean
+            )
+    with pytest.raises(AssertionError, match='exactly one'):
+        require_absence_notice('', 2, 6)

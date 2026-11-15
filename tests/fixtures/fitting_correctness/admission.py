@@ -20,7 +20,13 @@ def stage(root, *, rows=None, declarations='', group='P 1', tof=False, cutoff=No
     root = materialize(root)
     structure = root / 'structures/phase.edi'
     structure.write_text(structure.read_text().replace('"P 1"', f'"{group}"'))
-    code = {'P 21/c': 'b1', 'F d -3 m': '2'}.get(group)
+    code = {
+        'P 21/c': 'b1',
+        'F d -3 m': '2',
+        'P 2 2 2': 'abc',
+        'P m m m': 'abc',
+        'I 2 2 2': 'abc',
+    }.get(group)
     if code:
         structure.write_text(structure.read_text() + f'\n_space_group.coord_system_code {code}\n')
     path = root / 'experiments/bank.edi'
