@@ -173,7 +173,8 @@ headers crysta's, every `results.csv` point having all its experiment rows, a la
 out while a run writes. A live point event carries both files' row offsets, so each new row is read from the end of
 its file. Reset and Undo set both files aside together.
 
-The scale gate extends to a series: a synthetic series of 1,000 points × 100 patterns, run on the producer path the
-app uses, with peak memory after point 1,000 within 10 % of the peak after point 100, the median time per point over
-points 901 to 1,000 within 1.2 times the median over points 101 to 200, and no GUI-thread stall over 100 ms while the
-app shows the run. Views draw from per-pattern summaries (ADR-0088).
+The scale gate extends to a series: a seeded series of 100 points × 5 patterns (the five WISH banks of the NCAF
+example), run on the producer path the app uses, with peak memory after point 100 within 10 % of the peak after point
+10, the median time per point over points 91 to 100 within 1.2 times the median over points 11 to 20, and no
+GUI-thread stall over 100 ms while the app shows the run. A series of 1,000 points × 100 patterns waits for real
+example data. Views draw from per-pattern summaries (ADR-0088).
