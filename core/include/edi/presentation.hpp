@@ -98,6 +98,16 @@ PatternSource pattern_on_axis(PatternSource on_d, PatternAxis axis);
 PatternSource capture_pattern(const Project& project, std::size_t experiment_index,
                               PatternAxis axis = PatternAxis::Native);
 
+// Owner thread. A single crystal's reflections as a pattern on the Q or sinθ/λ axis (the owner, 2026-11-16): each
+// reflection one point at its sinθ/λ converted by d_on_axis (d = 1/(2 sinθ/λ)), the points sorted by x; `meas` and
+// `su` the measured F² and its s.u., `calc` the calculated F², or F, sqrt(F²meas) with s.u. su / (2 F) and Fcalc when
+// `squared` is false (NaN where F²meas is 0 or less), and `resid` meas − calc; one phase, the linked structure, with
+// a tick at every reflection and its h k l, laid out as a powder pattern's (the owner, 2026-11-16). Without measured
+// reflections, the reflections a calculation generated, calculated only. Empty, with `current` false, until the
+// experiment's computed columns are current, and for any other axis or experiment.
+PatternSource single_crystal_pattern(const Project& project, std::size_t experiment_index, PatternAxis axis,
+                                     bool squared);
+
 // One experiment's `_refln` rows grouped into phases, one per structure id in the order the ids first
 // appear. A phase's place is its structure's place in `structure_names` (its first place when there
 // is no such name). capture_pattern groups this way, and so does a scan's fitted file. With the

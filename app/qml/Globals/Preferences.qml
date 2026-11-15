@@ -258,6 +258,12 @@ QtObject {
     property bool chartSubtractBackground: false
     // A single crystal's chart plots F² (calc against meas) or F ("f_squared" or "f").
     property string singleCrystalQuantity: "f_squared"
+    // A single crystal's chart: "comparison" (calc against meas), or the reflections on "q" or "sin_theta_over_lambda"
+    // as a pattern (the owner, 2026-11-16); and that pattern's y, "f_squared" or "f", kept apart from the comparison's.
+    property string singleCrystalXAxis: "comparison"
+    property string singleCrystalPatternQuantity: "f_squared"
+    // Its Bars style as thin lines, one pixel wide at any zoom, instead of bars with a width on the axis.
+    property bool singleCrystalThinBars: false
     // Every chart of several datasets (Stacked, single-crystal Stacked and the Map) draws the selected one on top and
     // fades the others to chartFadedOpacity; off, all are drawn alike and only the selection's label marks it (the
     // owner, 2026-10-24).
@@ -283,6 +289,9 @@ QtObject {
         property alias includedOnly: preferences.chartIncludedOnly
         property alias subtractBackground: preferences.chartSubtractBackground
         property alias singleCrystalQuantity: preferences.singleCrystalQuantity
+        property alias singleCrystalXAxis: preferences.singleCrystalXAxis
+        property alias singleCrystalPatternQuantity: preferences.singleCrystalPatternQuantity
+        property alias singleCrystalThinBars: preferences.singleCrystalThinBars
         property alias highlightSelected: preferences.chartHighlightSelected
         property alias hiddenRange: preferences.chartHiddenRange
     }

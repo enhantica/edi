@@ -70,6 +70,10 @@ Item {
     readonly property string measuredItem: squared ? "refln.intensity_meas" : "refln.f_meas"
     // Reflections calculated without measured ones: the calculated value against sin(θ)/λ, without the y = x line.
     readonly property bool simulated: !stacked && !reportMode && reflections !== null && reflections.simulated
+    // The reflections as a pattern on Q or sinθ/λ (the owner, 2026-11-16), drawn by the pattern chart over this one: the
+    // app's choice, and always for reflections calculated without measured ones. Until the main view has its own
+    // Meas vs calc tab, the two views share this chart and its x box.
+    readonly property bool onAxis: !stacked && !reportMode && experiment !== null && (simulated || Preferences.singleCrystalXAxis !== "comparison")
     readonly property string xItem: simulated ? "refln.sin_theta_over_lambda" : calculatedItem
     readonly property string yItem: simulated ? calculatedItem : measuredItem
     // The shown ranges, [xMin, xMax, yMin, yMax]; empty: every reflection, on one range for both axes.
@@ -220,6 +224,16 @@ Item {
         y: chart.topMargin
         spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
 
+        ToolbarComboBox {
+            readonly property var tokens: ["comparison", "q", "sin_theta_over_lambda"]
+
+            objectName: "singleCrystal.toolbar.xaxis"
+            visible: !chart.stacked
+            toolTip: qsTr("X axis")
+            model: [qsTr("Meas vs calc"), qsTr("x: Q"), qsTr("x: %1").arg(Session.label("refln.sin_theta_over_lambda"))]
+            shownIndex: 0
+            onActivated: index => Preferences.singleCrystalXAxis = tokens[index]
+        }
         ToolbarComboBox {
             objectName: "singleCrystal.toolbar.quantity"
             toolTip: qsTr("Plotted quantity")
@@ -553,5 +567,15 @@ Item {
                 }
             }
         }
+    }
+
+    // The reflections on Q or sinθ/λ, with the pattern chart's styles, Bars and colours (onAxis).
+    PatternChart {
+        anchors.fill: parent
+        visible: chart.onAxis
+        shown: chart.shown && chart.onAxis
+        experiment: chart.onAxis ? chart.experiment : null
+        singleCrystal: true
+        colors: chart.colors
     }
 }

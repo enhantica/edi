@@ -102,6 +102,11 @@ class PatternChartController : public QObject {
     // "sin_theta_over_lambda". Off the native axis the pattern is the d-spacing capture, converted for Q and sinθ/λ
     // (edi::capture_pattern), which needs a calculated pattern; until then the chart stays on the experiment's axis.
     Q_PROPERTY(QString xAxis READ xAxis WRITE setXAxis NOTIFY xAxisChanged)
+    // For a single crystal on Q or sinθ/λ, whether the intensities are F² (the default) or F
+    // (ExperimentViewModel::singleCrystalPattern).
+    Q_PROPERTY(bool squared READ squared WRITE setSquared NOTIFY squaredChanged)
+    // The Bars style's bars as thin lines, one pixel wide at any zoom, instead of a fixed width on the axis.
+    Q_PROPERTY(bool thinBars READ thinBars WRITE setThinBars NOTIFY thinBarsChanged)
     // Whether the x axis is d-spacing; setting it chooses d-spacing or the native axis.
     Q_PROPERTY(bool dSpacing READ dSpacing WRITE setDSpacing NOTIFY dSpacingChanged)
     // Whether the shown experiment has a current d column: until a calculation gives one, d cannot be chosen.
@@ -220,6 +225,10 @@ class PatternChartController : public QObject {
     void setYScale(YScale scale);
     QString xAxis() const;
     void setXAxis(const QString& token);
+    bool squared() const { return squared_; }
+    void setSquared(bool on);
+    bool thinBars() const { return thin_bars_; }
+    void setThinBars(bool on);
     bool dSpacing() const { return axis_ == edi::PatternAxis::DSpacing; }
     bool dAvailable() const { return d_available_; }
     void setDSpacing(bool on);
@@ -329,6 +338,8 @@ class PatternChartController : public QObject {
     void yScaleChanged();
     void dSpacingChanged();
     void xAxisChanged();
+    void squaredChanged();
+    void thinBarsChanged();
     void dAvailableChanged();
     void includedOnlyChanged();
     void subtractBackgroundChanged();
@@ -439,6 +450,10 @@ class PatternChartController : public QObject {
     bool subtract_background_ = false;
     bool background_available_ = false;
     edi::PatternAxis axis() const { return axis_; }
+    bool squared_ = true;
+    bool thin_bars_ = false;
+    // What the chart draws: a single crystal's reflections on Q or sinθ/λ, else the experiment's pattern on the axis.
+    const edi::PatternSource& shownSource() const;
     // The view: unset means the data's full x range, and y ranges fitted to what is presented.
     std::optional<double> x_min_, x_max_, y_min_, y_max_;
     // The animation: its ranges at the start and the end, as shown, and the view it ends in.
@@ -456,7 +471,7 @@ class PatternChartController : public QObject {
     struct BandSeries {
         QPointer<QXYSeries> upper, lower, top, bottom;
     };
-    std::array<BandSeries, 2> band_series_;
+    std::array<BandSeries, 3> band_series_;  // the measured band, the residual band, the calculated bars
     QString measured_drawing_ = QStringLiteral("band");  // how the measured data are drawn (measuredStyle)
     bool structure_curves_ = false, has_calculated_ = false;
     QList<QColor> structure_curve_colors_, structure_curve_fills_;

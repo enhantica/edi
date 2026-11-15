@@ -34,6 +34,9 @@ Item {
     // "pattern" for the app's one pattern chart, whose y scale is an app setting (edi ADR-0031 §2); none for a report
     // figure, whose options are its own.
     property string settingsPage: ""
+    // A single crystal's reflections on Q or sinθ/λ (SingleCrystalChart): the x box offers the single crystal's
+    // views, a second box F² or F, and the measured styles add Bars (the owner, 2026-11-16).
+    property bool singleCrystal: false
     // The y scale's tokens as the settings keep them, in PatternChartController.YScale's order.
     readonly property var scaleTokens: ["linear", "sqrt", "log"]
     // The chart is on the page and the tab the window shows: its page binds it (the owner's one-redraw
@@ -276,7 +279,9 @@ Item {
         // Hiding a curve from the legend keeps the y range, or fits it to the curves still shown (Preferences).
         hiddenFitsRange: Preferences.chartHiddenRange === "fit"
         // The app's one pattern chart follows the project's x axis (which the report follows too) and the app's y scale.
-        xAxis: chart.axisProject ? chart.axisProject.patternXAxis : "native"
+        xAxis: chart.singleCrystal ? (Preferences.singleCrystalXAxis === "sin_theta_over_lambda" ? "sin_theta_over_lambda" : "q") : chart.axisProject ? chart.axisProject.patternXAxis : "native"
+        squared: Preferences.singleCrystalPatternQuantity !== "f"
+        thinBars: Preferences.singleCrystalThinBars
         includedOnly: !chart.report && Preferences.chartIncludedOnly
         subtractBackground: !chart.report && Preferences.chartSubtractBackground
         yScale: chart.settingsPage === "pattern" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.patternYScale)) : PatternChartController.Linear
@@ -295,7 +300,8 @@ Item {
         backgroundSeries: backgroundLine
         residualSeries: residualLine
         // How the measured pattern is drawn, one app setting for every pattern chart; a report's chart keeps its own.
-        measuredStyle: Preferences.patternMeasuredStyle
+        // A single crystal without measured reflections draws its calculated ones as bars (the owner, 2026-11-16).
+        measuredStyle: chart.singleCrystal && chart.experiment !== null && chart.experiment.singleCrystalReflections.simulated ? "bars" : Preferences.patternMeasuredStyle
     }
 
     // An x label is centred under its tick; a y label ends beside the plot area.
@@ -404,8 +410,29 @@ Item {
             shownIndex: controller.yScale
             onActivated: index => ApplicationInfo.patternChoice(index, 0)
         }
+        // A single crystal's views: calc against meas (SingleCrystalChart's own), or its reflections on Q or sinθ/λ.
+        ToolbarComboBox {
+            readonly property var tokens: ["comparison", "q", "sin_theta_over_lambda"]
+
+            objectName: "chart.toolbar.singleCrystalXAxis"
+            visible: chart.singleCrystal
+            toolTip: qsTr("X axis")
+            model: [qsTr("Meas vs calc"), qsTr("x: Q"), qsTr("x: %1").arg(Session.label("refln.sin_theta_over_lambda"))]
+            shownIndex: Math.max(0, tokens.indexOf(controller.xAxis))
+            onActivated: index => Preferences.singleCrystalXAxis = tokens[index]
+        }
+        ToolbarComboBox {
+            objectName: "chart.toolbar.singleCrystalQuantity"
+            visible: chart.singleCrystal
+            toolTip: qsTr("Plotted quantity")
+            model: [qsTr("F²"), qsTr("F")]
+            closedTexts: [qsTr("y: F²"), qsTr("y: F")]
+            shownIndex: controller.squared ? 0 : 1
+            onActivated: index => Preferences.singleCrystalPatternQuantity = index === 0 ? "f_squared" : "f"
+        }
         ToolbarComboBox {
             objectName: "chart.toolbar.xaxis"
+            visible: !chart.singleCrystal
             // d, Q and sinθ/λ can be chosen once a calculation has given the experiment its d column (the owner,
             // 2026-10-22); the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing"
             // in both (the owner, 2026-10-22). Q = 4π sinθ/λ and sinθ/λ come from d (the owner, 2026-11-14).
@@ -421,9 +448,10 @@ Item {
         // How the measured pattern is drawn (the owner, 2026-10-22), one box of four choices named as the axis boxes
         // name theirs: the band of measured ± s.u., the default, with the residual drawn the same way; the line; the
         // points with their error bars; or both.
+        // A single crystal's reflections may also be drawn as bars, one per reflection (the owner, 2026-11-16).
         ToolbarComboBox {
-            readonly property var tokens: ["band", "line", "points", "linePoints"]
-            readonly property var entries: [qsTr("Band"), qsTr("Line"), qsTr("Points"), qsTr("Line + points")]
+            readonly property var tokens: chart.singleCrystal ? ["band", "line", "points", "linePoints", "bars"] : ["band", "line", "points", "linePoints"]
+            readonly property var entries: chart.singleCrystal ? [qsTr("Band"), qsTr("Line"), qsTr("Points"), qsTr("Line + points"), qsTr("Bars")] : [qsTr("Band"), qsTr("Line"), qsTr("Points"), qsTr("Line + points")]
 
             objectName: "chart.toolbar.measuredStyle"
             visible: !chart.report
@@ -433,6 +461,15 @@ Item {
             fitShown: true
             shownIndex: Math.max(0, tokens.indexOf(controller.measuredStyle))
             onActivated: index => ApplicationInfo.patternChoice(index, 2)
+        }
+        // Bars with a width on the axis, or thin lines that stay one pixel at any zoom (the owner, 2026-11-16).
+        ChartToolButton {
+            objectName: "chart.toolbar.thinBars"
+            visible: chart.singleCrystal && controller.measuredStyle === "bars"
+            fontIcon: "grip-lines-vertical"
+            toolTip: Preferences.singleCrystalThinBars ? qsTr("Draw the reflections as bars") : qsTr("Draw the reflections as thin lines")
+            checked: Preferences.singleCrystalThinBars
+            onClicked: Preferences.singleCrystalThinBars = !Preferences.singleCrystalThinBars
         }
         ChartToolbar {
             id: toolbar
@@ -534,6 +571,27 @@ Item {
             objectName: "chart.series.calc"
             color: controller.calculatedColor
             width: 2
+        }
+        // The calculated bars (the Bars style of a single crystal's reflections): filled as the measured band is,
+        // outlined in the calculated colour.
+        AreaSeries {
+            id: calculatedBars
+            objectName: "chart.series.calc.bars"
+            color: Qt.alpha(controller.calculatedColor, 0.3)
+            borderWidth: 0
+            upperSeries: LineSeries {}
+            lowerSeries: LineSeries {}
+            Component.onCompleted: controller.setBandSeries(2, calculatedBars.upperSeries, calculatedBars.lowerSeries, calculatedBarsTop, calculatedBarsBottom)
+        }
+        LineSeries {
+            id: calculatedBarsTop
+            objectName: "chart.series.calc.bars.top"
+            color: controller.calculatedColor
+            width: 1
+        }
+        LineSeries {
+            id: calculatedBarsBottom
+            visible: false
         }
     }
 
