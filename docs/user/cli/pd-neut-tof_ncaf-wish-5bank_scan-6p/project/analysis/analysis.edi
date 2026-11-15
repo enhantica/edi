@@ -1,0 +1,27 @@
+_edi.schema_version 2
+
+_fitting_mode.type sequential
+
+_minimizer.chi_square_tolerance 1e-4
+_minimizer.descent fast_descent
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+wish_5_6 1.0
+wish_4_7 1.0
+wish_3_8 1.0
+wish_2_9 1.0
+wish_1_10 1.0
+
+_sequential_fit.data_dir data
+_sequential_fit.reverse false
+
+loop_
+_sequential_fit_experiment.experiment_id
+_sequential_fit_experiment.file_pattern
+wish_1_10 "*_wish_1_10.xye"
+wish_2_9 "*_wish_2_9.xye"
+wish_3_8 "*_wish_3_8.xye"
+wish_4_7 "*_wish_4_7.xye"
+wish_5_6 "*_wish_5_6.xye"
