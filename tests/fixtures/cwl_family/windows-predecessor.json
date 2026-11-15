@@ -1,0 +1,11 @@
+{
+  "kind": "no-platform-predecessor",
+  "platform": "Windows",
+  "source": "7a8eabf53084332a10b90991907d2040e5365b6a",
+  "engine_source": "b9f2267451adf1896463c706a87fea20790d28ac",
+  "compiler": "MSVC",
+  "diagnostic": "C2026",
+  "translation_unit": "embedded_data.cpp",
+  "run": 43692035939,
+  "evidence": "https://github.com/enhantica/edi/actions/runs/43692035939"
+}

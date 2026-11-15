@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-15T06:09:08Z
+# measured_utc = 2026-11-15T08:17:09Z
 #
-# Recorded from: measured test run (50 node(s) measured once, 176759 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (11 node(s) measured once, 176798 banked, 4 stale row(s) dropped)
 # Collected tests: 245274; with a reported duration: 77593
 # Module-scoped fixture costs recorded: 198
 #
@@ -163844,11 +163844,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_cwl_family.py::test_supp
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_reference_and_sample_population_cannot_be_weakened[missing-sample]
 0.000	tests/integration/py/test_cwl_rename_bytes.py::test_native_reference_and_sample_population_cannot_be_weakened[nonfinite]
 0.010	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[fcj-cwl-tch-pseudo-voigt-fcj]
-0.020	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[tch-cwl-tch-pseudo-voigt]
-0.000	tests/integration/py/test_cwl_rename_bytes.py::test_windows_reference_selector_requires_its_original_compiled_identity[archive]
-0.000	tests/integration/py/test_cwl_rename_bytes.py::test_windows_reference_selector_requires_its_original_compiled_identity[platform]
-0.000	tests/integration/py/test_cwl_rename_bytes.py::test_windows_reference_selector_requires_its_original_compiled_identity[source]
-0.000	tests/integration/py/test_cwl_rename_bytes.py::test_windows_reference_selector_requires_its_original_compiled_identity[unchanged]
+0.030	tests/integration/py/test_cwl_rename_bytes.py::test_tch_rename_preserves_pre_change_regression_bytes[tch-cwl-tch-pseudo-voigt]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_windows_absence_requires_its_actual_build_failure_and_no_reference[failure]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_windows_absence_requires_its_actual_build_failure_and_no_reference[reference]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_windows_absence_requires_its_actual_build_failure_and_no_reference[source]
+0.000	tests/integration/py/test_cwl_rename_bytes.py::test_windows_absence_requires_its_actual_build_failure_and_no_reference[unchanged]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::test_datablock_alias_rename_saves_and_reopens[experiment-hrpt-experiment1-hrpt.instrument.calib_twotheta_offset]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_datablock_rename.py::test_datablock_alias_rename_saves_and_reopens[structure-lbco-structure1-lbco.atom_site.La.adp_iso]
 0.030	tests/integration/py/test_default_structure_rename.py::test_literal_structure_key_keeps_public_cells_and_stable_fit_ids[False]
