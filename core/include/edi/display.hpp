@@ -124,6 +124,9 @@ std::vector<std::string> reflection_hover_lines(int h, int k, int l, double meas
 double display_step(const Parameter& parameter, std::string_view variant = {});
 /// The same for a value of a numeric item.
 double display_step(std::string_view uid, double value, std::string_view variant = {});
+/// The Analysis slider's limits: value ± half_width, widened outward to whole multiples of one unit of the half
+/// width's leading digit, or of `step` when that is larger, so both limit boxes read round numbers.
+std::pair<double, double> slider_limits(double value, double half_width, double step);
 
 /// A parameter's value and s.u. as the project file and the Text tab spell them under `su_rule`.
 struct FileText {

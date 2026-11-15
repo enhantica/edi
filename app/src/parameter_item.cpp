@@ -389,4 +389,8 @@ double ParameterItem::sliderHalfWidth() const {
     return std::max(std::abs(value_) * 0.5, 1e-3);
 }
 
+double ParameterItem::sliderLower() const { return edi::slider_limits(value_, sliderHalfWidth(), sliderStep()).first; }
+
+double ParameterItem::sliderUpper() const { return edi::slider_limits(value_, sliderHalfWidth(), sliderStep()).second; }
+
 }  // namespace edi_app

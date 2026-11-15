@@ -4103,13 +4103,11 @@ void ApplicationInfo::updateParameterSliderLimits() const {
         return;
     }
     const auto selected = panelUsageContextRead(f, "selected");
-    const auto span = panelUsageMemberCall(f, selected, "sliderHalfWidth");
-    const auto value = assistantContextField(f, "selected", "value");
-    const auto a = panelUsageNumber(f, value), b = panelUsageNumber(f, span);
-    if (!a || !b) return;
-    panelUsageContextWrite(f, "lower", QJSValue(*a - *b));
-    const auto actual = assistantContextField(f, "selected", "value");
-    panelUsageContextWrite(f, "upper", panelUsageAdd(f, actual, span));
+    const auto lower = panelUsageNumber(f, panelUsageMemberCall(f, selected, "sliderLower"));
+    const auto upper = panelUsageNumber(f, panelUsageMemberCall(f, selected, "sliderUpper"));
+    if (!lower || !upper) return;
+    panelUsageContextWrite(f, "lower", QJSValue(*lower));
+    panelUsageContextWrite(f, "upper", QJSValue(*upper));
 }
 void ApplicationInfo::parameterSliderPressed(bool destroying) const {
     const auto f = panelUsageEngine(this);

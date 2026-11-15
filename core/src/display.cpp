@@ -503,6 +503,19 @@ double display_step(std::string_view uid, double value, std::string_view variant
     return crysta::display_step(value, format_of(found, variant));
 }
 
+std::pair<double, double> slider_limits(double value, double half_width, double step) {
+    double unit = std::pow(10.0, std::floor(std::log10(half_width)));
+    if (step > unit) unit = step;
+    // Whole units are counted against a power of ten, so 379 hundredths prints as 3.79 rather than 3.7900000000000005.
+    const int exponent = static_cast<int>(std::lround(std::log10(unit)));
+    const double scale = std::pow(10.0, std::abs(exponent));
+    const auto at = [&](double units) { return exponent < 0 ? units / scale : units * scale; };
+    const auto count = [&](double x) { return exponent < 0 ? x * scale : x / scale; };
+    // A limit already on a whole unit stays there despite rounding in the division.
+    constexpr double kSlack = 1e-9;
+    return {at(std::floor(count(value - half_width) + kSlack)), at(std::ceil(count(value + half_width) - kSlack))};
+}
+
 FileText file_text(const Parameter& parameter, const std::string& su_rule, bool exact) {
     const crysta::DictionaryItem& found = item(uid_of(spec_of(parameter)));
     const crysta::WrittenText text =

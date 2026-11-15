@@ -22,8 +22,8 @@ SideBarGroup {
 
     property ProjectViewModel project: null
     property ParameterItem selected: null
-    // Some experiment holds measured data: without any, nothing can be fitted (edi ADR-0046), so the free column and its
-    // header menu are hidden (the owner, 2026-10-27) and the free or fixed choice is disabled; the other filters stay
+    // Some experiment holds measured data: without any, nothing can be fitted (edi ADR-0046), so the free column, its
+    // header menu and the free or fixed choice are shown disabled, keeping the layout when data arrive; the other filters stay
     // (the owner, 2026-11-02), and values stay editable. The disabled choice goes back to all parameters: one left from
     // a project with data showed one row under "Atomic displacement (4)" (the owner, 2026-10-27).
     readonly property bool measured: project !== null && project.fit.measured
@@ -320,9 +320,9 @@ SideBarGroup {
             // columns, then the name down to a few characters; a row still too wide scrolls sideways (DataTable).
             readonly property var fittedColumns: [2, 3, 4, 5, 6, 7, 8]
             readonly property var rangeColumns: [7, 8]
-            readonly property real freeWidth: group.measured ? group.freeColumnWidth : 0
+            readonly property real freeWidth: group.freeColumnWidth
             readonly property real nameMinimum: Math.min((fittedWidths[1] ?? 0) + EaStyle.Sizes.fontPixelSize, EaStyle.Sizes.fontPixelSize * 8)
-            readonly property real fittedRoom: width - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * (group.measured ? 9 : 8) - numberColumnWidth - freeWidth - nameMinimum
+            readonly property real fittedRoom: width - rowPadding * 2 - EaStyle.Sizes.borderThickness * 2 - EaStyle.Sizes.tableColumnSpacing * 9 - numberColumnWidth - freeWidth - nameMinimum
             readonly property real fittedSum: fittedColumns.reduce((sum, column) => sum + (fittedWidths[column] ?? 0), 0)
             readonly property bool rangeShown: fittedRoom >= fittedSum
             readonly property var shownColumns: rangeShown ? fittedColumns : fittedColumns.filter(column => !rangeColumns.includes(column))
@@ -334,7 +334,7 @@ SideBarGroup {
             // The name takes the rest, set here rather than by the table's rule, so it follows only the table's width
             // and the measured texts, never the rows in view.
             readonly property real nameWidth: Math.max(EaStyle.Sizes.fontPixelSize * 4, Math.floor(fittedRoom + nameMinimum - shownColumns.reduce((sum, column) => sum + fittedColumn(column), 0)))
-            readonly property var wantedColumns: [numberColumnWidth, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat(group.measured ? [freeWidth] : [])
+            readonly property var wantedColumns: [numberColumnWidth, nameWidth].concat(fittedColumns.map(column => fittedColumn(column))).concat([freeWidth])
             // Applied a moment later: new widths remake rows and measure them again, which would otherwise feed back
             // into the widths while they are being worked out.
             function applyColumns() {
@@ -403,7 +403,6 @@ SideBarGroup {
                     // Laid out here, not by the table's alignment rule.
                     readonly property bool keepsAlignment: true
                     objectName: "parameters.freeHeader"
-                    visible: group.measured
                     horizontalAlignment: Text.AlignRight
                     rightPadding: freeArrow.width + group.freeGap + group.freeInset
                     color: group.freeTitleColor
@@ -576,10 +575,10 @@ SideBarGroup {
                     full: NumberText.plainFull(row.maximum)
                 }
                 // Enabled where a fit can vary the value, or while it is free so a flag set before a change can be
-                // cleared; otherwise disabled, its tooltip naming why (edi ADR-0053).
+                // cleared; otherwise disabled, its tooltip naming why (edi ADR-0053). Without measured data every box
+                // is disabled.
                 Item {
                     property int horizontalAlignment: Text.AlignHCenter
-                    visible: group.measured
                     height: parent.height
 
                     EaComponents.ListViewCheckBox {
@@ -587,7 +586,7 @@ SideBarGroup {
                         anchors.fill: parent
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `parameters.free.${row.index}`
-                        enabled: row.parameter !== null && (row.parameter.fittable || row.parameter.free)
+                        enabled: group.measured && row.parameter !== null && (row.parameter.fittable || row.parameter.free)
                         checked: row.parameter ? row.parameter.free : false
                         onToggled: row.parameter.free = checked
                         ToolTip.text: row.parameter && !row.parameter.fittable ? qsTr("Cannot be fitted: %1").arg(row.parameter.fitReason) : ""

@@ -22,7 +22,7 @@ StatusBarButton {
     readonly property bool running: fit !== null && (fit.running || fit.waitingForData)
 
     clickable: fit !== null && (running || fit.available)
-    keyIcon: running ? "stop-circle" : "play-circle"
+    keyIcon: running ? "stop" : "play"
     // Refit while a scan's results are outdated: every file again from the template (the owner, 2026-10-26).
     valueText: fit !== null && fit.waitingForData ? qsTr("Downloading… Stop") : running ? qsTr("Stop") : fit !== null && fit.outOfDate ? qsTr("Refit") : fit !== null && fit.continuable ? qsTr("Continue") : qsTr("Fit")
     iconColor: clickable ? AppColors.fitButtonForeground : EaStyle.Colors.themeForegroundDisabled
