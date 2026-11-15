@@ -468,7 +468,7 @@ The slider spans the selected value ± a half width, set when a row is selected 
 dragging; `ParameterItem::sliderHalfWidth`): 0.05 Å for a lattice constant (`length_a`, `length_b`, `length_c`; the
 owner, 2026-10-04), half the value's magnitude (at least 0.001) otherwise. Both limits are then rounded outward to a
 whole unit of the half width's leading digit, or of the value's display step when that is larger
-(`edi::slider_limits`), so the boxes read round numbers: 3.84127 ± 0.05 Å gives 3.79 to 3.90.
+(`edi::slider_limits`), so the boxes read round numbers, without trailing zeros: 3.84127 ± 0.05 Å gives 3.79 to 3.9.
 
 **A table's current row is marked by an accent bar at its left edge** (the owner, 2026-10-12), not by a background
 tint: the Experiments and Structures tables' current block and the parameter table's selected row. Every row keeps

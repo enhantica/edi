@@ -160,7 +160,8 @@ class ParameterItem : public QObject {
     QString suReason() const { return su_reason_; }
     double sliderStep() const;
     QString toolTip() const;
-    // A number of this item, a slider limit, in its display format; empty for a parameter the dictionary does not know.
+    // A number of this item, a slider limit, in its display format without trailing zeros; empty for a parameter the
+    // dictionary does not know.
     Q_INVOKABLE QString displayText(double value) const;
     // Set by the registry at each rebuild: a block's place and a site's element can change while the
     // parameter stays shown.

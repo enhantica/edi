@@ -259,7 +259,13 @@ QString ParameterItem::displayText(double value) const {
     if (parameter_->spec == nullptr) {
         return {};
     }
-    return QString::fromStdString(edi::shown_text(uid_.toStdString(), value, variant_.toStdString()));
+    QString text = QString::fromStdString(edi::shown_text(uid_.toStdString(), value, variant_.toStdString()));
+    // The limits are round numbers (sliderLower, sliderUpper), so trailing zeros only pad them: 10.2500 reads 10.25.
+    if (text.contains(QLatin1Char('.')) && !text.contains(QChar(0x00D7))) {
+        while (text.endsWith(QLatin1Char('0'))) text.chop(1);
+        if (text.endsWith(QLatin1Char('.'))) text.chop(1);
+    }
+    return text;
 }
 
 void ParameterItem::setPhaseIndex(int index) {
