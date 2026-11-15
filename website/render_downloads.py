@@ -44,15 +44,18 @@ def render(page: str, pages: list[list[dict]], *, kind: str = 'online') -> str:
     if not candidates:
         return page
     _, version, installers, published = max(candidates, key=itemgetter(0))
-    day = date.fromisoformat(published[:10])
-    display_date = f'{day.day} {day:%b %Y}'
-    page = page.replace(
-        {
-            'online': 'Desktop installers will appear here when published.',
-            'cli': 'Command line downloads will appear here when published.',
-        }[kind],
-        f'Latest version {version} ({display_date})',
-    )
+    if kind == 'online':
+        # The home page names the latest version and its date, so the desktop page drops its
+        # placeholder instead of repeating them.
+        page = re.sub(
+            r'<p[^>]*>Desktop installers will appear here when published\.</p>\n*', '', page
+        )
+    else:
+        day = date.fromisoformat(published[:10])
+        page = page.replace(
+            'Command line downloads will appear here when published.',
+            f'Latest version {version} ({day.day} {day:%b %Y})',
+        )
     for (platform, each), (url, size) in installers.items():
         if kind == 'online':
             page = page.replace(

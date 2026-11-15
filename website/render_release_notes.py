@@ -64,14 +64,36 @@ def _flatten_headings(body: str) -> str:
     return '\n'.join(lines)
 
 
-def _title(release: dict) -> str:
-    """The release title, as GitHub shows it: tag and release day (the tag names the year)."""
+def _day(release: dict) -> str:
+    """The release day, e.g. ``13 Nov``: the recorded release date, else the publication date."""
     recorded = RELEASE_DATE.search(release['body'] or '')
     _, month, day = map(
         int, (recorded[1] if recorded else release['published_at'][:10]).split('-')
     )
-    title = f'{release["tag_name"]} ({day} {MONTHS[month - 1]})'
+    return f'{day} {MONTHS[month - 1]}'
+
+
+def _title(release: dict) -> str:
+    """The release title, as GitHub shows it: tag and release day (the tag names the year)."""
+    title = f'{release["tag_name"]} ({_day(release)})'
     return escape(title) + (' preview' if release['prerelease'] else '')
+
+
+def latest_release(pages: list[list[dict]]) -> str:
+    """The home page line naming the latest published release, or nothing before the first."""
+    releases = [
+        release
+        for page in pages
+        for release in page
+        if not release['draft'] and not release['prerelease']
+    ]
+    if not releases:
+        return ''
+    latest = max(releases, key=itemgetter('published_at'))
+    return (
+        '<p class="ed-landing__release" markdown="span">EasyDiffraction '
+        f'[{escape(latest["tag_name"])}](changelog.md) · released {_day(latest)}</p>'
+    )
 
 
 def render(pages: list[list[dict]]) -> str:
