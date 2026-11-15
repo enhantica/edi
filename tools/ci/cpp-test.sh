@@ -36,6 +36,9 @@ if [ "${case_files:-0}" -lt 1 ]; then
     exit 1
 fi
 
+# Fault control for tools/ci/cpp-test-faults.sh only (never set in CI): no-summary drops the unit
+# binary's doctest summary from its log.
+FAULT="${CPP_TEST_FAULT:-}"
 suffix="$(python -c 'import sys; print(".exe" if sys.platform == "win32" else "")')"
 # Both tiers run whenever they were built: a failed unit case says nothing about the integration
 # cases, so the script reports every tier and fails at the end.
@@ -44,13 +47,15 @@ log="$TREE/edi_tests.log"
 status=0
 "$TREE/core/edi_tests$suffix" >"$log" 2>&1 || status=$?
 cat "$log"
+[ "$FAULT" != no-summary ] || : >"$log"
 if [ "$status" -ne 0 ]; then
     echo "cpp-test: edi_tests exited $status" >&2
     failed=1
 else
     # Non-vacuity: doctest exits 0 on "no test cases ran", so the reported count is what proves
     # the binary did work. Parsed from doctest's own summary line.
-    ran=$(grep -oE 'test cases: *[0-9]+' "$log" | grep -oE '[0-9]+' | head -1)
+    # Guarded: a missing summary is a red result, not a reason to skip the integration tier.
+    ran=$(grep -oE 'test cases: *[0-9]+' "$log" | grep -oE '[0-9]+' | head -1) || ran=''
     if [ "${ran:-0}" -lt 1 ]; then
         echo "cpp-test: edi_tests reported ${ran:-no} test cases — a green run that asserted nothing" >&2
         failed=1
