@@ -52,3 +52,30 @@ The following independent reference cases are ready for those adapters:
   with calculated=(2,7,12,9). The same scalar problem applies to single
   crystal F squared. This is the normal equation, derived from differentiating
   the weighted sum of squared residuals; background is held fixed.
+
+## Measured-list merge references
+
+`generate_merge_references.py` reads only the frozen measured input rows of the
+single-crystal fixture, never an engine calculation. It writes decimal weighted
+means, propagated uncertainties, both scatter conventions, Rint over repeated
+observations only, and R-sigma over the merged list. Negative intensities stay
+signed. The source digest is recorded. Running the generator reproduces
+`merge_reference.json` in either product.
+
+The real Tb2Ti2O7 list has no repeated Laue equivalents. Its Rint is undefined;
+it is not given a fabricated zero. The separately named Friedel duplicate
+witness retains the first measured rows and adds opposite indices with authored
+intensity offsets and unequal uncertainties. It is a constructed input, not an
+additional measured dataset or an engine regression pin.
+
+The original manual defines scatter using the rms deviation about the mean,
+divided by sqrt(n-1). The weighted-scatter alternative is retained alongside it
+so an eventual product contract must name its choice. These are reference data,
+not executable product adapters, and do not close the range or merge gates.
+
+Sources: SHELX-97 manual section 2, original manual hosted at
+https://ccc.bc.edu/content/dam/bc1/schools/mcas/Chemistry/pdf/research/xray/shelx-97.pdf;
+International Tables F section 21.1.7.1.1 for Rmerge;
+https://dictionary.iucr.org/Reflection_conditions for centring, glide and screw
+conditions. The fixture space groups are P 21/c (b1) and F d -3 m. Their point
+rotations give the explicit equivalent-index operations in the generator.
