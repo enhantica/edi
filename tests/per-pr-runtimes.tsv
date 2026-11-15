@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-15T21:56:52Z
+# measured_utc = 2026-11-15T22:43:17Z
 #
-# Recorded from: Scoped Linux receipts: native scene census, immutable source and solver-domain controls, Git object workflows and declared browser cadence; existing tier bounds retained
-# Collected tests: 245367; with a reported duration: 77720
+# Recorded from: Scoped release-only presentation replay with GitHub Actions variables and undeclared sibling/SDK inputs denied; literal tag/day, plain notes and public label descriptions
+# Collected tests: 245381; with a reported duration: 77720
 # Module-scoped fixture costs recorded: 205
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245367
+# inventory_python = 245381
 # inventory_cpp = 0
-# inventory_measured = 176948
+# inventory_measured = 176962
 # inventory_unmeasured = 68419
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 86062
+# inventory_pr_python = 86076
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -244787,6 +244787,20 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_project_save_owned_alias
 0.000	tests/unit/py/test_publication_transport_mapping.py::test_native_atomic_publication_requires_its_actual_platform_import[actual-import-linux-syscall-publication_syscall]
 0.000	tests/unit/py/test_publication_transport_mapping.py::test_native_atomic_publication_requires_its_actual_platform_import[missing-darwin-_renameatx_np-_publication_renameatx]
 0.000	tests/unit/py/test_publication_transport_mapping.py::test_native_atomic_publication_requires_its_actual_platform_import[missing-linux-syscall-publication_syscall]
+0.000	tests/unit/py/test_release_presentation.py::test_generated_notes_start_at_the_first_change_section_without_an_inner_title
+0.000	tests/unit/py/test_release_presentation.py::test_interface_pills_and_legend_use_short_labels_and_the_public_label_descriptions
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2026.11.14-2026-11-13-v2026.11.14 (13 Nov)-False]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2026.11.14-2026-11-13-v2026.11.14 (13 Nov)-True]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2026.12.4-2027-01-03-v2026.12.4 (3 Jan)-False]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2026.12.4-2027-01-03-v2026.12.4 (3 Jan)-True]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2027.12.0-2027-12-31-v2027.12.0 (31 Dec)-False]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2027.12.0-2027-12-31-v2027.12.0 (31 Dec)-True]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2028.02.9-2028-02-29-v2028.02.9 (29 Feb)-False]
+0.000	tests/unit/py/test_release_presentation.py::test_release_title_is_the_tag_and_unpadded_day_without_a_repeated_year[2028.02.9-2028-02-29-v2028.02.9 (29 Feb)-True]
+0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[False-False]
+0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[False-True]
+0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[True-False]
+0.000	tests/unit/py/test_release_presentation.py::test_whats_new_links_the_release_title_directly_to_its_change_sections[True-True]
 0.000	tests/unit/py/test_release_promotion.py::test_cli_delivery_requires_the_executed_identity_and_unchanged_zip
 0.030	tests/unit/py/test_release_promotion.py::test_component_archive_keeps_the_repository_paths_and_is_verified
 0.000	tests/unit/py/test_release_promotion.py::test_component_identity_and_original_checksums_are_verified[archive]

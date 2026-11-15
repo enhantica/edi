@@ -52,18 +52,22 @@ def test_interface_labels_render_once():
     published = {
         'draft': False,
         'prerelease': True,
-        'name': 'edi 2026.11.0',
+        'name': 'v2026.11.0 (5 Nov) preview',
+        'tag_name': 'v2026.11.0',
         'published_at': '2026-11-05T12:00:00Z',
         'html_url': 'https://github.com/enhantica/edi/releases/tag/v2026.11.0',
         'body': github,
     }
     page = DOCS.render([[published, {**published, 'draft': True, 'name': 'Private draft'}]])
-    assert page.count('.ed-release-interface') == 2, 'Interface labels render once.'
-    assert ':fa5-desktop: Desktop app' in page, 'Interface labels render once.'
-    assert ':fa5-globe: Web app' in page, 'Interface labels render once.'
+    notes = page.split('\n## [', 1)[1]
+    assert notes.count('.ed-release-interface') == 2, (
+        'Each affected interface appears once on the note, separately from the legend.'
+    )
+    assert ':fa5-desktop: desktop' in notes, 'Interface labels render once.'
+    assert ':fa5-globe: web' in notes, 'Interface labels render once.'
     assert '`desktop`' not in page, 'Interface labels render once.'
     assert 'Private draft' not in page, 'Interface labels render once.'
-    assert page.index('Improve plot zoom') < page.index(':fa5-desktop: Desktop app'), (
+    assert notes.index('Improve plot zoom') < notes.index(':fa5-desktop: desktop'), (
         'Interface labels render once.'
     )
 
@@ -129,8 +133,11 @@ def test_desktop_downloads_link_only_published_platform_assets():
         'Desktop downloads link only published platform assets.'
     )
     page = downloads.render(source, [[preview, draft]])
-    assert 'Latest version 2026.11.0 (5 Nov 2026)' in page, (
-        'Desktop downloads link only published platform assets.'
+    assert 'Latest version' not in page and 'will appear here' not in page, (
+        'Desktop downloads omit the duplicate version/date line once published assets exist'
+    )
+    assert all(asset['browser_download_url'] in page for asset in preview['assets']), (
+        'Every available preview-platform link preserves the exact published asset identity'
     )
     assert 'macos-arm64-online.zip' in page and 'linux-x86_64-online.zip' in page, (
         'Desktop downloads link only published platform assets.'
@@ -142,8 +149,8 @@ def test_desktop_downloads_link_only_published_platform_assets():
     ), 'Desktop downloads link only published platform assets.'
     stable = release('2026.10.2')
     page = downloads.render(source, [[preview, draft, stable]])
-    assert 'Latest version 2026.10.2 (5 Nov 2026)' in page, (
-        'Desktop downloads link only published platform assets.'
+    assert 'Latest version' not in page and 'will appear here' not in page, (
+        'Stable desktop assets keep the version/date line on the home page only'
     )
     assert 'EasyDiffraction-2026.10.2-windows-x86_64-online.zip' in page, (
         'Desktop downloads link only published platform assets.'
