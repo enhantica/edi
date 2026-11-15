@@ -228,7 +228,9 @@ EaComponents.ApplicationWindow {
     // Qt draws some things itself, such as the Windows title bar's buttons: its colour scheme follows edi's Theme.
     Connections {
         target: EaStyle.Colors
-        function onThemeChanged() { ApplicationInfo.applyColorScheme(EaStyle.Colors.theme) }
+        function onThemeChanged() {
+            ApplicationInfo.applyColorScheme(EaStyle.Colors.theme);
+        }
     }
 
     property string updateNotifiedVersion: ""
