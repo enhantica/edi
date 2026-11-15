@@ -21,6 +21,18 @@ def significant(item, action):  # noqa: PLR0911 - finite action vocabulary fails
         r'(?:tick|untick):(?:structures?|experiments?)(?:\[[\w.-]+\])?\.[\w.\[\]\'-]+', action
     ):
         return True
+    if action.startswith('choose:'):
+        actions = item.get('actions', [])
+        positions = [index for index, value in enumerate(actions) if value == action]
+        filters = positions and all(
+            index > 0 and actions[index - 1] in {'parameters.category', 'parameters.datablock'}
+            for index in positions
+        )
+        if filters and not any(
+            value in {'parameters.freeHeader.free', 'parameters.freeHeader.fixed'}
+            for value in actions
+        ):
+            return False
     if action.startswith(('fill:', 'type:', 'choose:', 'choose-token:')):
         return True
     if action in {

@@ -1,11 +1,17 @@
 .pragma library
 
-function begin(test, probe, report) {
-    const args = Qt.application.arguments;
+function permitPath(args) {
     const index = args.indexOf("-o");
-    if (index < 0 || !args[index + 1].endsWith("/native-owner-stream.txt,txt"))
+    const output = index >= 0 ? args[index + 1] : null;
+    if (typeof output !== "string" || !output.replace(/\\/g, "/").endsWith("/native-owner-stream.txt,txt"))
         return "";
-    const permit = args[index + 1].slice(0, -4) + ".permit";
+    return output.slice(0, -4) + ".permit";
+}
+
+function begin(test, probe, report) {
+    const permit = permitPath(Qt.application.arguments);
+    if (permit === "")
+        return "";
     const selected = test.name + "::" + test.qtest_results.functionName + (test.qtest_results.dataTag ? ":" + test.qtest_results.dataTag : "");
     if (report)
         report("NATIVE_OWNER_READY " + selected);

@@ -1,10 +1,17 @@
 """Independent controls for literal tutorial instructions and origin observation."""
 
+import json
+import os
+import subprocess
+import sys
+import time
 from collections import UserDict
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+from tests.fixtures.node_runtime import environment_node
 from tests.fixtures.tutorial_cases.command_line import (
     actions,
     edit_project,
@@ -13,6 +20,7 @@ from tests.fixtures.tutorial_cases.command_line import (
     write_project,
 )
 from tests.fixtures.tutorial_cases.stages import app_cycles, prose_cycles
+from tests.fixtures.tutorial_recipe import native
 from tests.fixtures.tutorial_recipe.reference import significant
 from tools.testing.fit_policy import (
     _cli_fit_origin,  # noqa: PLC2701 - direct argv observer control
@@ -401,3 +409,145 @@ def test_cli_named_form_factor_remainder_keeps_its_distinct_loop_and_value(tmp_p
     assert path.read_text().endswith('Co1 1.2()\nCo2 2.3()\nCo3 3.4()\n'), (
         'An already explicit j2 row cannot be counted again as an omitted row of the final table'
     )
+
+
+def test_native_turn_uses_the_actual_log_path_on_posix_and_windows():
+    source = (Path(__file__).resolve().parents[2] / 'unit/app/NativeTurn.js').read_text()
+    source = source.removeprefix('.pragma library')
+    paths = [
+        '/tmp/tutorial group/native-owner-stream.txt,txt',
+        r'C:\Users\Runner\tutorial group\native-owner-stream.txt,txt',
+        '/tmp/tutorial group/not-native-owner-stream.txt,txt',
+        None,
+    ]
+    arguments = [['-o', path] for path in paths] + [[], ['-o']]
+    run = subprocess.run(
+        [
+            str(environment_node()),
+            '-e',
+            source + '\nprocess.stdout.write(JSON.stringify('
+            'JSON.parse(process.argv[1]).map(permitPath)));',
+            json.dumps(arguments),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert run.returncode == 0, (
+        'The original native turn parser executes with the test environment Node: ' + run.stderr
+    )
+    assert json.loads(run.stdout) == [
+        '/tmp/tutorial group/native-owner-stream.txt.permit',
+        r'C:\Users\Runner\tutorial group\native-owner-stream.txt.permit',
+        '',
+        '',
+        '',
+        '',
+    ], 'Native turns retain actual Windows/POSIX path bytes and refuse missing or lookalike logs'
+
+
+def test_category_navigation_is_inert_only_without_a_group_wide_parameter_action():
+    actions = ['parameters.category', 'choose:Cell', 'tick:structure.cell.length_a']
+    direct = {'id': 'explicit-member-stage', 'actions': actions}
+    assert not significant(direct, 'choose:Cell'), (
+        'A category filter before an explicitly named parameter is presentation navigation'
+    )
+    assert significant(direct, 'tick:structure.cell.length_a'), (
+        'The actual named parameter release remains a scientific mutation target'
+    )
+    for choice in ['parameters.freeHeader.free', 'parameters.freeHeader.fixed']:
+        grouped = {'id': 'group-stage', 'actions': actions[:2] + [choice]}
+        assert significant(grouped, 'choose:Cell') and significant(grouped, choice), (
+            'Both the group selector and its group-wide Free/Fixed operation remain scientific'
+        )
+    assert significant(
+        {'id': 'type-stage', 'actions': ['atomSiteAdp.type.0', 'choose:beta']}, 'choose:beta'
+    ), 'A physical representation selector cannot be mistaken for a category filter'
+
+
+def test_native_watchdog_log_spam_cannot_keep_a_stuck_protocol_child_alive(tmp_path, monkeypatch):
+    monkeypatch.setattr(native, 'STEP_GUARD_SECONDS', 0.2)
+    script = (
+        'import time\n'
+        'print(\'TUTORIAL_REPLAY_STEP {"id":"negative-control","step":1}\',flush=True)\n'
+        'while True:\n    print("QWARN diagnostic activity",flush=True);time.sleep(0.02)\n'
+    )
+    result = native.run_native_observation(
+        [sys.executable, '-c', script],
+        tmp_path / 'negative-protocol',
+        dict(os.environ),
+        time.monotonic() + 0.8,
+    )
+    assert result['returncode'] is not None and result['returncode'] != 0, (
+        'The stuck negative protocol child is actually reaped rather than called a native pass'
+    )
+    assert result.get('guard') == 'action' and result['last_step'] == ('negative-control', 1), (
+        'Repeated diagnostic output cannot postpone the action guard until the overall deadline'
+    )
+    assert b'QWARN diagnostic activity' in Path(result['log']).read_bytes(), (
+        'The escape control really emits diagnostic activity while its native step stays stuck'
+    )
+
+
+def test_scan_stop_and_resume_keep_one_scientific_cycle_and_the_exact_template():
+    steps = [
+        {'check': 'tick:experiment.scale'},
+        {'target': 'statusBar.fit.button', 'check': 'fit-running'},
+        {'target': 'statusBar.fit.button', 'check': 'fit-stopped'},
+        {'target': 'statusBar.fit.button', 'check': 'fit-done'},
+    ]
+    assert app_cycles(steps) == app_cycles([steps[0], steps[-1], steps[-1]]), (
+        'Stop starts no fit; the initial and resumed scan calls each retain the same template'
+    )
+    for damage in [
+        steps[2:],
+        steps[:3] + [steps[2], steps[-1]],
+        steps[:3] + [{'check': 'tick:structure.cell.length_a'}, steps[-1]],
+        steps[:3] + [{'check': 'constraint:B = A'}, steps[-1]],
+    ]:
+        with pytest.raises(ValueError, match='scan'):
+            app_cycles(damage)
+    assert len(app_cycles([steps[0], steps[-1], steps[-1]])) == 2, (
+        'Two separate completed fits remain two actual scientific cycles'
+    )
+
+
+def test_position_prose_uses_the_named_elements_from_the_actual_model():
+    population = UserDict({
+        'structure.atom_sites.Pb1.fract_x': ('positions', 'sample'),
+        'structure.atom_sites.O1.fract_x': ('positions', 'sample'),
+    })
+    population.project = SimpleNamespace(
+        experiments=[],
+        structures=[
+            SimpleNamespace(
+                name='sample',
+                atom_sites={
+                    'Pb1': SimpleNamespace(type_symbol='Pb'),
+                    'O1': SimpleNamespace(type_symbol='O'),
+                },
+            )
+        ],
+    )
+    text = (
+        '## Lead and sulphur positions\n\n'
+        'Tick Free for the Atomic coordinates rows the stage names, then press Fit.\n\n'
+        '## Oxygen positions\n\n'
+        'Tick Free for the Atomic coordinates rows the stage names, then press Fit.'
+    )
+    expected = app_cycles(
+        [
+            {'check': 'tick:structure.atom_sites.Pb1.fract_x'},
+            {'check': 'fit-done'},
+            {'check': 'tick:structure.atom_sites.O1.fract_x'},
+            {'check': 'fit-done'},
+        ],
+        population,
+    )
+    assert prose_cycles(text, population) == expected, (
+        'A named element stage releases only its real site rows before the later element stage'
+    )
+    assert (
+        prose_cycles(text.replace('Oxygen positions', 'Lead positions'), population) != expected
+    ), 'Repeating the lead subset cannot impersonate a new oxygen-position release'

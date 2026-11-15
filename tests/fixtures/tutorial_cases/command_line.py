@@ -6,6 +6,8 @@ import textwrap
 import zipfile
 from pathlib import Path
 
+from tests.fixtures.tutorial_cases.pins import compare_regression_pin
+
 
 def actions(markdown):  # noqa: PLR0912, PLR0914, PLR0915 - finite written instruction grammar
     result = []
@@ -721,3 +723,19 @@ def write_project(project, filename, content):
         'Gate 5: Write creates one new file in a directory taught by the setup instructions'
     )
     target.write_text(content)
+
+
+def compare_staged_regression_pin(actual, quantities):
+    """Retain outcome pins; one-shot work counts belong to the one-shot pin gate."""
+    count = int(actual['iterations'])
+    assert actual['status'] == 'done' and actual['converged'] == 'true' and count > 0, (
+        'Gate 5: a staged lesson finishes a real converged fit with positive work'
+    )
+    assert {
+        int(key.split('.')[1]) for key in actual if re.fullmatch(r'iter\.\d+\.rwp', key)
+    } == set(range(1, count + 1)), (
+        'Gate 5: the final staged fit retains exactly its reported iteration trace'
+    )
+    compare_regression_pin(
+        actual, {key: value for key, value in quantities.items() if key != 'iterations'}
+    )

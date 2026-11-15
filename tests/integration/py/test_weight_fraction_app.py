@@ -203,7 +203,9 @@ def fraction_bridge(tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp('fraction-bridge')
     build = Path(sys.modules['edi._edi'].__file__).resolve().parents[2]
     cache = (build / 'CMakeCache.txt').read_text()
-    sdk = re.search(r'^crysta_DIR:PATH=(.+)$', cache, re.MULTILINE)[1]
+    sdk_match = re.search(r'^crysta_DIR:(?:PATH|UNINITIALIZED)=(.+)$', cache, re.MULTILINE)
+    assert sdk_match, 'The actual consumer cache declares its SDK package directory'
+    sdk = sdk_match[1]
     compiler = re.search(r'^CMAKE_CXX_COMPILER:FILEPATH=(.+)$', cache, re.MULTILINE)[1]
     core = native_static_library(build / 'core/libedi_core.a')
     assert core.is_file(), 'The display bridge must link the actual prepared native Edi core'

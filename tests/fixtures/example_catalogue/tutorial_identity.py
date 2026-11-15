@@ -1,6 +1,7 @@
 """Identify a literal project path or the generated notebook's adjacent download/load."""
 
 import ast
+import re
 
 from tests.fixtures.example_catalogue.tutorial_assets import assets
 from tests.fixtures.tutorial_cases.install_cell import python_syntax
@@ -101,6 +102,11 @@ def assert_case_downloads(stem, code, root):
     }
     if stem != 'pd-neut-cwl_lbco-hrpt':
         required.update(stem + '-' + path.stem for path in (project / 'structures').glob('*.edi'))
+    analysis = project / 'analysis/analysis.edi'
+    if analysis.is_file() and re.search(
+        r'(?m)^_sequential_fit\.data_dir\s+\S+', analysis.read_text()
+    ):
+        required.add(stem + '-scan')
     assert set(assets(code)) == required, (
         'Every declared model/data asset must be downloaded and consumed'
     )

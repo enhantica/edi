@@ -7,6 +7,7 @@ import pytest
 
 from tests.fixtures.tutorial_cases.command_line import (
     actions,
+    compare_staged_regression_pin,
     edit_project,
     visible_flag_edits,
 )
@@ -132,3 +133,29 @@ def test_visible_relation_edits_can_add_and_update_alias_and_constraint_loops(tm
     assert 'Ba "Ba = 2*La"' in path.read_text() and 'Ba "Ba = La"' not in path.read_text(), (
         'Gate 5: updating a displayed constraint retains its identity without duplicating its row'
     )
+
+
+def test_staged_pin_keeps_outcomes_strict_and_checks_its_own_work_trace():
+    quantities = {
+        'iterations': {'value': 5, 'tol_abs': 0, 'tol_rel': None},
+        'reduced_chi_square': {'value': 1.25, 'tol_abs': 0, 'tol_rel': None},
+        'n_free': {'value': 3, 'tol_abs': 0, 'tol_rel': None},
+    }
+    actual = {
+        'status': 'done',
+        'converged': 'true',
+        'iterations': '1',
+        'iter.1.rwp': '0.125',
+        'reduced_chi_square': '1.25',
+        'n_free': '3',
+    }
+    compare_staged_regression_pin(actual, quantities)
+    for damage in [
+        {'reduced_chi_square': '1.26'},
+        {'n_free': '4'},
+        {'converged': 'false'},
+        {'iterations': '2'},
+        {'iter.2.rwp': '0.12'},
+    ]:
+        with pytest.raises(AssertionError, match=r'Gate [25]:'):
+            compare_staged_regression_pin({**actual, **damage}, quantities)

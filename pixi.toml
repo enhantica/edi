@@ -362,6 +362,9 @@ nightly-only-tests = { cmd = [
     "tests/system/py/test_scan_correlation_save_stability.py",
     "tests/system/py/test_shared_correlation_app_state.py",
     "tests/system/py/test_project_transactions.py",
+    "tests/system/py/test_tutorial_command_line_workflows.py",
+    "tests/system/py/test_tutorial_recipe_native_states.py",
+    "tests/system/py/test_tutorial_assistant_create.py",
     "-q",
 ], depends-on = ["core-build"] }
 # The weekly-only group is the CIF import matrix: about 140,000 short tests, two hours serial.

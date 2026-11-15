@@ -199,3 +199,19 @@ Native and Python lifecycle costs stay recorded as module setup; each row's acti
 The source observer restores borrowed model ADP representations after observing a lesson. Independent initial
 parameter eligibility is prepared once per module; selecting an already selected representation does not rebuild it.
 A real representation change still rebuilds the offered parameter population before its next stage is observed.
+
+
+Recipe observations keep a separate native process for each complete scientific journey. Independent clock,
+fit-grammar, original menu and model controls run first. A blocked native action cannot hide the other declared
+recipes: each records its own actual exit, last step and raw log. The existing overall 7,200-second guard remains;
+a stalled-action guard is the sum of the walker's existing input, polish, advance, idle, incubation and target guards,
+plus only the current step's explicitly reported fit-work allowance. Diagnostic activity cannot restart that guard,
+a later step retires an earlier fit allowance, and partial log writes wait for a complete line. This guard shortens
+the failure path; it does not raise a tier bound or change a scientific assertion. The From file witness observes
+the original open Load menu before measured data exists, as well as its genuine Escape closure.
+
+The staged CLI lesson retains every final scientific outcome pin at its original tolerance. Its final fit starts from earlier fitted values, so its work count is checked against its own complete iteration trace rather than the one-shot starting-project iteration pin. The original one-shot CLI pin gate still checks that exact work count. A paired unchanged-assertion replay on LBCO demonstrated five iterations for the saved starting project and one for the staged final fit, with both reduced chi squares exactly 1.29684855.
+
+The strategy label observer shares an independently loaded population once per module. Its named-member rule distinguishes a proper subset of the actual offered category from the entire category; Free All is required for a large whole category, while Free All would change the scientific choice of a partial subset. Datablock selectors and explanatory sentences are not parameter lists. Selector lists retain exact named-block admission, including comma-separated lists; an empty selector is refused. Explicit parameter expressions may contain literal model row keys without turning those keys into reflected attribute names.
+
+Scan input attestation follows the actual adjacent download, original ZIP owner and extraction into the same project's declared sequential-fit directory. Its asset inventory includes the independently declared scan archive. Starting and resuming each count as the actual Python scan calls; Stop starts no fit. A resume must retain the exact template and relations. Element-named coordinate prose selects the actual model's matching sites. Whole notebook filesystem/checker workflows retain their original assertion bodies at PR integration cadence, leaving pure parser controls in unit tier.

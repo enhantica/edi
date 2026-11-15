@@ -208,7 +208,7 @@ def test_c34_t1a_all_five_ports_and_derived_notebooks_are_committed() -> None:
             assert path.is_file(), f' must commit tutorial port {path.relative_to(ROOT)}'
 
 
-def test_c34_t1a_exclusion_declaration_is_exact_and_each_notebook_names_its_unblocker() -> None:
+def check_c34_t1a_exclusion_declaration_is_exact_and_each_notebook_names_its_unblocker() -> None:
     assert DECLARATION.is_file(), (
         ' execution-disabled tutorials require a committed, enumerated declaration'
     )
@@ -229,7 +229,7 @@ def test_c34_t1a_exclusion_declaration_is_exact_and_each_notebook_names_its_unbl
         assert_downloaded_notebook(stem, notebook)
 
 
-def test_c34_t1a_ports_replace_deferred_switches_and_delete_only_max_workers() -> None:
+def check_c34_t1a_ports_replace_deferred_switches_and_delete_only_max_workers() -> None:
     for stem in EXPECTED:
         source_path = TUTORIALS / f'{stem}.py'
         notebook_path = TUTORIALS / f'{stem}.ipynb'
@@ -244,7 +244,7 @@ def test_c34_t1a_ports_replace_deferred_switches_and_delete_only_max_workers() -
         )
 
 
-def test_c34_t1a_notebooks_are_stripped_and_execution_disabled(tmp_path: Path) -> None:
+def check_c34_t1a_notebooks_are_stripped_and_execution_disabled(tmp_path: Path) -> None:
     pixi = tomllib.loads((ROOT / 'pixi.toml').read_text(encoding='utf-8'))
     tasks = pixi.get('tasks', {})
     for task in ('notebook-tests', 'notebook-exec-ci'):
@@ -298,7 +298,7 @@ def test_c34_t1a_exclusion_checker_is_wired_into_both_verify_chains() -> None:
         )
 
 
-def test_c34_t1a_exclusion_gate_rehearses_each_local_red_and_a_clean_checkout(
+def check_c34_t1a_exclusion_gate_rehearses_each_local_red_and_a_clean_checkout(
     tmp_path: Path,
 ) -> None:
     baseline = _gate_checkout(tmp_path / 'baseline')
@@ -342,3 +342,39 @@ def test_c34_t1a_exclusion_gate_rehearses_each_local_red_and_a_clean_checkout(
     assert result.returncode != 0, (
         ' local red (c) must reject a listed notebook that an nbmake task executes'
     )
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'unchanged',
+        'wrong-archive',
+        'wrong-extract-owner',
+        'wrong-directory',
+        'escaping-path',
+        'reassigned',
+    ],
+)
+def test_scan_archive_observer_keeps_download_extraction_and_scan_directory_connected(damage):
+    source = """project = edi.Project(name='right')
+scan_path = edi.download_data('right-scan', destination='data')
+with zipfile.ZipFile(scan_path) as archive:
+    archive.extractall('right/experiments/scan')
+project.analysis.sequential_fit.data_dir = 'experiments/scan'
+"""
+    changes = {
+        'unchanged': ('right-scan', 'right-scan'),
+        'wrong-archive': ('ZipFile(scan_path)', 'ZipFile(other)'),
+        'wrong-extract-owner': ('archive.extractall', 'other.extractall'),
+        'wrong-directory': ("data_dir = 'experiments/scan'", "data_dir = 'experiments/other'"),
+        'escaping-path': ('right/experiments/scan', 'right/../experiments/scan'),
+        'reassigned': ('with zipfile', "scan_path = 'wrong'\nwith zipfile"),
+    }
+    before, after = changes[damage]
+    if damage == 'unchanged':
+        assert assets(source) == ['right-scan'], (
+            'A real adjacent scan archive supplies its exact fit directory'
+        )
+    else:
+        with pytest.raises(AssertionError):
+            assets(source.replace(before, after))

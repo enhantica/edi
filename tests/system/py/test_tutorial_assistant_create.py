@@ -219,6 +219,7 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(  # noqa
     # Ordinary Open adopts a new current owner; reconnect the explicit subsequent
     # persistence request before asking it to create its separate simulation.
     actor.connect()
+    actor.until(lambda row: row['ui']['state'] == 'idle')
     # Explicit separate prerequisite, owner interpretation69121c6c2: no observed
     # measurements are invented to make an isolated structure reopenable.
     actor.append_turn([

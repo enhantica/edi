@@ -6,7 +6,7 @@ import pytest
 
 from tests.fixtures.tutorial_cases.command_line import actions
 from tests.fixtures.tutorial_cases.contract import CASES, ROOT, interfaces_for
-from tests.fixtures.tutorial_cases.stages import app_population, observe
+from tests.fixtures.tutorial_cases.stages import AppPopulation, app_population, observe
 from tests.fixtures.tutorial_cases.strategy import (
     app_labels,
     assert_app_group_actions,
@@ -42,17 +42,31 @@ def test_python_tutorial_uses_one_action_for_large_parameter_groups(case, surfac
     assert_code_group_actions(observe(source(case, surface)))
 
 
+@pytest.fixture(scope='module')
+def app_populations(request):
+    cases = {
+        item.callspec.params['case']
+        for item in request.session.items
+        if getattr(item, 'module', None) is request.module
+        and getattr(item, 'originalname', '')
+        == 'test_app_tutorial_uses_group_actions_and_actual_table_parameter_names'
+    }
+    return {case: app_population(case) for case in sorted(cases)}
+
+
 @pytest.mark.parametrize('case', [case for case in CASES if 'app' in interfaces_for(case)])
 @pytest.mark.parametrize('surface', ['built-in', 'docs'])
-def test_app_tutorial_uses_group_actions_and_actual_table_parameter_names(case, surface):
+def test_app_tutorial_uses_group_actions_and_actual_table_parameter_names(
+    case, surface, app_populations
+):
     if surface == 'built-in':
         written = app_text(case)
     else:
         path = ROOT / 'website/surfaces/docs/application/tutorials/cases' / (case + '.md')
         assert path.is_file(), 'Gate 3/4: each declared case has a current app tutorial page'
         written = path.read_text()
-    assert_app_group_actions(written)
-    population = app_population(case)
+    population = app_populations[case]
+    assert_app_group_actions(written, population)
     assert_app_names(written, LABELS, population.table_names, population.datablock_names)
 
 
@@ -276,3 +290,45 @@ project.analysis.fit()
     ]:
         with pytest.raises(AssertionError, match='Gate 3/4:'):
             assert_strategy(observe(mutation))
+
+
+def test_group_action_observer_keeps_actual_partial_groups_distinct_from_whole_groups():
+    population = AppPopulation(type('Project', (), {'structures': [], 'experiments': []})())
+    for label in ['U', 'V', 'W', 'X', 'Y']:
+        path = 'experiment.peak.' + label
+        population[path] = ('peak widths', 'bank')
+        population.table_members[label] = {path}
+    subset = '\n'.join('Tick **Free** for **' + label + '**.' for label in ['U', 'V', 'W', 'Y'])
+    assert_app_group_actions(subset, population)
+    for damage in [subset + '\nTick **Free** for **X**.', subset.replace('**Y**', '**Invented**')]:
+        with pytest.raises(AssertionError, match='Free header'):
+            assert_app_group_actions(damage, population)
+    assert_app_group_actions('Choose **Peak widths**, then **Free All**.', population)
+
+
+def test_group_action_observer_does_not_count_datablock_names_or_explanatory_sentences_as_members():  # noqa: E501 - stable full requirement identity
+    population = AppPopulation(type('Project', (), {'structures': [], 'experiments': []})())
+    population.datablock_names = {'bank1', 'bank2', 'bank3', 'bank4'}
+    assert_app_group_actions(
+        'Tick **Free** for **Peak broadening** rows of '
+        '**bank1**, **bank2**, **bank3** and **bank4**, then press **Fit**.',
+        population,
+    )
+    assert_app_group_actions(
+        'Free the moment components the magnetic space group allows. They start at zero, '
+        'where the intensity has no slope, so the fit starts them at 1 and says so.'
+    )
+    with pytest.raises(AssertionError, match='Free header'):
+        assert_app_group_actions('Free A, B, C and D. The following sentence explains why.')
+
+
+def test_actual_datablock_selector_lists_accept_commas_but_refuse_unknown_or_empty_names():
+    text = (
+        'Tick **Free** for **Instrument** rows the stage names of '
+        '**bank1**, **bank2**, **bank3** and **bank4**, choosing each in the datablock filter.'
+    )
+    blocks = {'bank1', 'bank2', 'bank3', 'bank4'}
+    assert_app_names(text, LABELS, datablock_names=blocks)
+    for damage in [text.replace('bank4', 'invented'), text.replace('**bank4**', '****')]:
+        with pytest.raises(AssertionError, match='actual project block'):
+            assert_app_names(damage, LABELS, datablock_names=blocks)

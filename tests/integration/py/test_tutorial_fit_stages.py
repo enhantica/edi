@@ -20,6 +20,7 @@ from tests.fixtures.tutorial_cases.strategy import assert_strategy
 
 FITTING = [case for case in CASES if case not in CONTRACT['simulations']]
 LARGE_POPULATION_CASES = frozenset({'sc-neut-tof_taurine-senju'})
+LARGE_SOURCE_CASES = frozenset({'sc-neut-cwl_cosio-heidi'})
 REFERENCE = json.loads((ROOT / 'tests/fixtures/tutorial_outline/stages.json').read_text())
 CORRELATION = sorted(
     {'pd-neut-cwl_lbco-hrpt', 'pd-neut-cwl_cosio-d20'}
@@ -84,7 +85,14 @@ def test_each_fitting_tutorial_shows_and_teaches_successive_parameter_groups(
     assert_teaching_stages(observe(source(case, surface), {'project': tutorial_model}))
 
 
-@pytest.mark.parametrize('case', [case for case in FITTING if 'python' in interfaces_for(case)])
+@pytest.mark.parametrize(
+    'case',
+    [
+        case
+        for case in FITTING
+        if 'python' in interfaces_for(case) and case not in LARGE_SOURCE_CASES
+    ],
+)
 def test_notebook_and_script_teach_the_same_exact_stage_sequence(case, tutorial_model):
     first, second = [
         observe(source(case, surface), {'project': tutorial_model})

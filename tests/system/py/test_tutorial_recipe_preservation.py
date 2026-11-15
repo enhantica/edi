@@ -5,14 +5,19 @@ import hashlib
 import importlib.util
 import json
 import os
-import subprocess
 import sys
+import time
 import uuid
 from pathlib import Path
 
 import pytest
 
 from tests.fixtures.tutorial_cases.notebook_fit import local_collection
+from tests.fixtures.tutorial_recipe.native import (
+    native_progress,
+    native_records,
+    run_native_observation,
+)
 from tests.fixtures.tutorial_recipe.reference import boundary_contracts, significant, state_errors
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -146,15 +151,6 @@ def test_unknown_recipe_action_is_refused_before_generation(
         translator.tutorial_steps(case)
 
 
-def native_records(raw, prefix):
-    marker = prefix.encode('ascii') + b' '
-    return [
-        json.loads(line.partition(marker)[2].decode('utf-8'))
-        for line in raw.splitlines()
-        if marker in line
-    ]
-
-
 def test_native_record_reader_keeps_diagnostic_bytes_outside_the_scientific_transport():
     raw = b'Qt comparison: \xb7\nTUTORIAL_RECIPE_BOUNDARY {"id":"control","stage":3}\n'
     assert native_records(raw, 'TUTORIAL_RECIPE_BOUNDARY') == [{'id': 'control', 'stage': 3}], (
@@ -165,6 +161,9 @@ def test_native_record_reader_keeps_diagnostic_bytes_outside_the_scientific_tran
 
 
 def observe_states(tmp_path_factory, wanted):
+    assert wanted <= set(RECIPES), (
+        'Native recipe selection contains only declared independent cases'
+    )
     runner = Path(
         os.environ.get(
             'EDI_APP_TEST_RUNNER',
@@ -182,7 +181,6 @@ def observe_states(tmp_path_factory, wanted):
         'OMP_NUM_THREADS': '1',
         'OPENBLAS_NUM_THREADS': '1',
     }
-    # This run selects only the declared semantic witnesses, not all tutorial replays.
     command = [
         str(runner),
         '-input',
@@ -192,16 +190,12 @@ def observe_states(tmp_path_factory, wanted):
         '-maxwarnings',
         '0',
     ]
-    command += [
+    controls = [
         'TutorialNavigation::test_required_clock_remains_monotonic_within_the_original_window',
         'TutorialNavigation::test_required_fit_guard_tracks_dataset_work',
         'TutorialNavigation::test_required_menu_observer_tracks_actual_popup_visibility',
+        'TutorialNavigation::test_required_data_menu_observer_tracks_the_unmeasured_experiment',
         'TutorialNavigation::test_required_recipe_observer_positive_control',
-    ]
-    command += [
-        'TutorialNavigation::test_required_recipe_boundary_state:' + case
-        for case in RECIPES
-        if case in wanted
     ]
     artifacts = (
         Path(
@@ -228,24 +222,37 @@ def observe_states(tmp_path_factory, wanted):
         )
         + '\n'
     )
-    with (artifacts / 'native.log').open('w') as output:
-        output.write('Current Qt recipe host; source and runner identities in source.json\n')
-        output.flush()
-        run = subprocess.run(
-            command,
-            cwd=ROOT,
-            env=env,
-            stdout=output,
-            stderr=subprocess.STDOUT,
-            timeout=7200,
-            check=False,
+    deadline = time.monotonic() + 7200
+    runs = {
+        'controls': run_native_observation(
+            command + controls, artifacts / 'controls', env, deadline, cwd=ROOT
         )
-    (artifacts / 'native.exit').write_text(str(run.returncode) + '\n')
-    raw = (artifacts / 'native.log').read_bytes()
+    }
+    for case in RECIPES:
+        if case in wanted:
+            runs[case] = run_native_observation(
+                command + ['TutorialNavigation::test_required_recipe_boundary_state:' + case],
+                artifacts / case,
+                env,
+                deadline,
+                cwd=ROOT,
+            )
+    records = []
+    transport_errors = {}
+    for case, run in runs.items():
+        try:
+            records.extend(
+                native_records(Path(run['log']).read_bytes(), 'TUTORIAL_RECIPE_BOUNDARY')
+            )
+        except (OSError, ValueError, UnicodeDecodeError) as error:
+            transport_errors[case] = str(error)
+    raw = Path(runs['controls']['log']).read_bytes()
     return {
-        'run': run,
-        'records': native_records(raw, 'TUTORIAL_RECIPE_BOUNDARY'),
+        'records': records,
+        'native_runs': runs,
+        'transport_errors': transport_errors,
         'menu_controls': native_records(raw, 'TUTORIAL_MENU_OBSERVER_CONTROL'),
+        'data_menu_controls': native_records(raw, 'TUTORIAL_DATA_MENU_CONTROL'),
         'clock_controls': native_records(raw, 'TUTORIAL_CLOCK_CONTROL'),
         'folder': str(artifacts),
     }
@@ -368,3 +375,26 @@ def test_docs_recipe_sources_are_unchanged():
 def test_unclassified_actions_cannot_be_declared_inert(action):
     with pytest.raises(ValueError, match='Unclassified docs recipe action'):
         significant({'id': 'ordinary-stage'}, action)
+
+
+def test_native_progress_retires_old_fit_guards_and_ignores_diagnostic_activity():
+    step = b'TUTORIAL_REPLAY_STEP {"id":"case","step":3}\n'
+    wait = b'TUTORIAL_FIT_WAIT {"id":"case","step":3,"milliseconds":65000}\n'
+    assert native_progress(step + wait) == (('case', 3), 65), (
+        'Only the currently observed actual fit contributes its work-derived completion guard'
+    )
+    assert native_progress(step + wait + b'QWARN diagnostic activity\n') == (('case', 3), 65), (
+        'Diagnostic output cannot invent a new native progress step or restart its guard'
+    )
+    assert native_progress(step + wait + b'TUTORIAL_REPLAY_STEP {"id":"case","step":4}\n') == (
+        ('case', 4),
+        0,
+    ), 'A later ordinary action retires the earlier fit guard rather than inheriting extra time'
+    assert native_progress(step + wait + b'TUTORIAL_REPLAY_STEP {"id":"case"') == (
+        ('case', 3),
+        65,
+    ), 'An in-flight partial log write is buffered until its complete native record arrives'
+    with pytest.raises(ValueError, match='nonnegative work guard'):
+        native_progress(step + b'TUTORIAL_FIT_WAIT {"id":"case","step":3,"milliseconds":-1}\n')
+    with pytest.raises(ValueError, match='actual case and integer step'):
+        native_progress(b'TUTORIAL_REPLAY_STEP []\n')

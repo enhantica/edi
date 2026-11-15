@@ -410,6 +410,7 @@ class AppPopulation(UserDict):
         super().__init__()
         self.project = project
         self.table_names = set()
+        self.table_members = {}
         self.datablock_names = {
             str(block.name)
             for blocks in [project.structures, project.experiments]
@@ -467,6 +468,7 @@ def app_population(case=None, *, project=None):  # noqa: PLR0912 - explicit cate
                         owner_id = {
                             'atom_sites': 'atom_site',
                             'linked_structures': 'linked_structure',
+                            'background_terms': 'background',
                         }.get(owner, owner)
                         label = labels.get(owner_id + '.' + name)
                         if owner == 'atom_sites' and name == 'adp_iso':
@@ -497,6 +499,17 @@ def app_population(case=None, *, project=None):  # noqa: PLR0912 - explicit cate
                         prefix = kind if len(blocks) == 1 else block.name
                         path = '.'.join(v for v in [prefix, owner, row, name] if v)
                         population[path] = (group(path), block.name)
+                        if label:
+                            for visible in {
+                                ' '.join(v for v in [row, label] if v),
+                                ' '.join(v for v in [block.name, row, label] if v),
+                                *(
+                                    ['Background ' + row + ' ' + label]
+                                    if owner in {'background', 'background_terms'}
+                                    else []
+                                ),
+                            }:
+                                population.table_members.setdefault(visible, set()).add(path)
     return population
 
 
@@ -526,6 +539,7 @@ def app_cycles(steps, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - ord
     cycles = []
     previous_active = set()
     awaiting_completion = False
+    scan_state = None
     population_dirty = False
     for step in steps:
         check = step.get('check', '')
@@ -594,7 +608,23 @@ def app_cycles(steps, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - ord
             if re.fullmatch(r'[^=]+=[^=]+', expression):
                 pending.add(expression)
         button = step.get('target') == 'statusBar.fit.button'
+        if check == 'fit-stopped':
+            if not button or scan_state != 'running':
+                raise ValueError('A scan stop follows its own actual running fit')
+            scan_state = 'stopped'
+            continue
+        if button and check == 'fit-done' and scan_state == 'stopped':
+            if active != previous_active or pending or (set(expressions.values()) - seen):
+                raise ValueError('A scan resume retains its exact template and constraints')
+            scan_state = None
+            awaiting_completion = False
+        if check == 'fit-running':
+            if not button or scan_state is not None:
+                raise ValueError('A scan starts once before its own stop or completion')
+            scan_state = 'running'
         completed = check in {'fitted', 'fit-done'}
+        if completed and scan_state == 'running':
+            scan_state = None
         if completed and awaiting_completion and not button:
             awaiting_completion = False
             continue
@@ -752,6 +782,34 @@ def prose_cycles(source, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - 
                         offered = {p for p in offered if category == 'isotropic displacement'}
                     elif 'anisotropic' in context:
                         offered = {p for p in offered if category == 'anisotropic displacement'}
+                if (
+                    category == 'positions'
+                    and 'rows the stage names' in command
+                    and model is not None
+                ):
+                    elements = {
+                        symbol
+                        for name, symbol in [
+                            ('oxygen', 'O'),
+                            ('lead', 'Pb'),
+                            ('sulphur', 'S'),
+                            ('sulfur', 'S'),
+                        ]
+                        if re.search(r'\b' + name + r'\b', heading)
+                    }
+                    if elements:
+                        structures = {str(block.name): block for block in model.structures}
+                        offered = {
+                            path
+                            for path in offered
+                            if '.atom_sites.' in path
+                            and str(
+                                structures[members[path][1]]
+                                .atom_sites[path.split('.')[-2]]
+                                .type_symbol
+                            )
+                            in elements
+                        }
                 candidates.update(offered)
             # A named Gaussian/Lorentzian/rise/decay stage selects only those members.
             if 'rows the stage names' in command:

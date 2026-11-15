@@ -21,6 +21,14 @@ def test_builtin_pre_fit_state_equals_the_declared_docs_recipe(case, states):
     expected = boundary_contracts(RECIPES[case])
     records = [r for r in states['records'] if r['id'] == case]
     problems = []
+    run = states['native_runs'][case]
+    if run['returncode'] != 0:
+        problems.append((
+            'native completion',
+            [run.get('first_failure'), run['reason'], run['log']],
+        ))
+    if case in states['transport_errors']:
+        problems.append(('strict transport', [states['transport_errors'][case]]))
     for boundary in expected:
         found = [row for row in records if row['stage'] == boundary['stage']]
         if len(found) != 1:
@@ -39,6 +47,15 @@ def test_builtin_pre_fit_state_equals_the_declared_docs_recipe(case, states):
 
 
 def test_recipe_observer_has_a_real_positive_control(states):
+    assert states['native_runs']['controls']['returncode'] == 0, (
+        'Every independent native clock, fit grammar, menu and model control completes normally'
+    )
+    assert 'controls' not in states['transport_errors'], (
+        'Native model-control JSON remains strict rather than replacing malformed data'
+    )
+    assert states['data_menu_controls'] == [{'closed': 0, 'opened': 1, 'closed_after': 0}], (
+        'The From file observer sees the genuine original menu before measured data exists'
+    )
     assert states['clock_controls'] == [{'delta': 156, 'monotonic': True}], (
         'Native boundary observations require the independently exercised '
         'monotonic animation clock'

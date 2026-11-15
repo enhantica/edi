@@ -204,6 +204,7 @@ TestCase {
         compare(links.length, 1, "The tour starts through the Home Tutorials link");
         // The injected clock completes popup transitions without waiting for wall time.
         OnboardingProbe.startClock();
+        settleTour();
         press(links[0], "Home Tutorials");
         OnboardingProbe.advanceClock(1000);
         tryCompare(chooser, "opened", true, 2000, "Home opens the real Tutorials chooser");
@@ -240,6 +241,7 @@ TestCase {
                 panel.stop();
             verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))), "A populated real project exposes every workflow control for callout placement");
             AppState.open(AppState.Page.Home);
+            settleTour();
             start("interface");
             geometryIndex = 0;
         }
@@ -2504,6 +2506,23 @@ TestCase {
         }
     }
 
+    function test_required_data_menu_observer_tracks_the_unmeasured_experiment() {
+        prepareLessonProject("pd-neut-cwl_lbco_simulation");
+        verify(!Session.project.fit.measured, "The From file witness starts before any measured observations exist");
+        AppState.open(AppState.Page.Experiment);
+        finishPages();
+        Ui.expandGroup(test, Probe, app, "group.experiments");
+        compare(requiredTargetItems("experiments.load.dataFile").length, 0, "The closed experiment Load menu contributes no visible From file action");
+        press(Ui.control(Probe, app, "experiments.load"), "The ordinary experiment Load menu");
+        tryVerify(() => requiredTargetItems("experiments.load.dataFile").length === 1, 2000, "The actual open menu offers From file before measured data exists");
+        const action = requiredTargetItems("experiments.load.dataFile")[0];
+        const menus = Array.from(Probe.visiblePopups(app)).filter(menu => Render.descendants(menu.contentItem).includes(action));
+        compare(menus.length, 1, "The offered From file action belongs to one actual original popup");
+        SettingsProof.key(menus[0].contentItem, Qt.Key_Escape);
+        settleTour();
+        tryVerify(() => requiredTargetItems("experiments.load.dataFile").length === 0, 2000, "Genuine Escape retires the actual From file menu action");
+        console.info('TUTORIAL_DATA_MENU_CONTROL ' + JSON.stringify({closed: 0, opened: 1, closed_after: 0}));
+    }
     function requiredFitStep(step) {
         return ["fitted", "fit-done"].includes(step.check);
     }
@@ -2524,8 +2543,8 @@ TestCase {
         let recipeStage = 0, recipeFileSeen = false;
         const recipeTargets = [];
         function observeRecipeMenu() {
-            if (data.recipe && Session.project && Session.project.currentExperiment && Session.project.currentExperiment.pattern.count > 0)
-                recipeFileSeen = recipeFileSeen || Render.descendants(Ui.windowRoot(app)).some(item => item.objectName === "experiments.load.dataFile" && Ui.rendered(item));
+            if (data.recipe && Session.project && Session.project.currentExperiment)
+                recipeFileSeen = recipeFileSeen || requiredTargetItems("experiments.load.dataFile").length === 1;
         }
         verify(steps.length > 1, "Every required tutorial has a nonempty written journey");
         const authored = scripts().find(entry => entry.id === data.tutorial);

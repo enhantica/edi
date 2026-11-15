@@ -1,6 +1,7 @@
 """Observe literal collection assets reaching adjacent model-building calls."""
 
 import ast
+from pathlib import PurePosixPath
 
 from tests.fixtures.tutorial_cases.install_cell import python_syntax
 
@@ -23,6 +24,81 @@ def _consume(statement, variable):
         argument = paths[0]
     assert isinstance(argument, ast.Name)
     assert argument.id == variable
+
+
+def _archive_consumer(tree, index, variable):
+    following = tree.body[index + 1 : index + 3]
+    assert len(following) == 2 and isinstance(following[0], ast.With), (
+        'A scan archive download reaches its adjacent ZipFile context'
+    )
+    context, setting = following
+    assert len(context.items) == 1, 'A scan archive has one original ZIP context owner'
+    item = context.items[0]
+    call = item.context_expr
+    assert (
+        isinstance(call, ast.Call)
+        and ast.unparse(call.func) == 'zipfile.ZipFile'
+        and len(call.args) == 1
+        and isinstance(call.args[0], ast.Name)
+        and call.args[0].id == variable
+        and not call.keywords
+        and isinstance(item.optional_vars, ast.Name)
+    ), 'The actual downloaded scan path opens its own ZIP context directly'
+    writes = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Name)
+        and node.id == variable
+        and isinstance(node.ctx, (ast.Store, ast.Del))
+    ]
+    assert len(writes) == 1, 'The downloaded scan path cannot be reassigned before consumption'
+    assert len(context.body) == 1 and isinstance(context.body[0], ast.Expr), (
+        'The scan ZIP context extracts its original archive once'
+    )
+    extract = context.body[0].value
+    assert (
+        isinstance(extract, ast.Call)
+        and ast.unparse(extract.func) == item.optional_vars.id + '.extractall'
+        and len(extract.args) == 1
+        and not extract.keywords
+        and isinstance(extract.args[0], ast.Constant)
+        and isinstance(extract.args[0].value, str)
+    ), 'The original ZIP archive extracts to one explicitly named directory'
+    assert (
+        isinstance(setting, ast.Assign)
+        and len(setting.targets) == 1
+        and ast.unparse(setting.targets[0]) == 'project.analysis.sequential_fit.data_dir'
+        and isinstance(setting.value, ast.Constant)
+        and isinstance(setting.value.value, str)
+    ), 'The extracted archive directly supplies the declared sequential-fit directory'
+    constructors = [
+        node.value
+        for node in tree.body[:index]
+        if isinstance(node, ast.Assign)
+        and ast.unparse(node.targets[0]) == 'project'
+        and isinstance(node.value, ast.Call)
+        and ast.unparse(node.value.func) == 'edi.Project'
+    ]
+    assert len(constructors) == 1, 'The archive belongs to one previously constructed project'
+    names = [
+        word.value.value
+        for word in constructors[0].keywords
+        if word.arg == 'name'
+        and isinstance(word.value, ast.Constant)
+        and isinstance(word.value.value, str)
+    ]
+    destination, directory = (
+        PurePosixPath(extract.args[0].value),
+        PurePosixPath(setting.value.value),
+    )
+    assert (
+        len(names) == 1
+        and not destination.is_absolute()
+        and not directory.is_absolute()
+        and '..' not in destination.parts
+        and '..' not in directory.parts
+        and destination.parts == (names[0], *directory.parts)
+    ), 'The archive extraction supplies this project and its exact relative scan directory'
 
 
 def assets(source):
@@ -54,7 +130,10 @@ def assets(source):
         if isinstance(value, ast.Call) and ast.unparse(value.func) == 'edi.download_data':
             assert len(statement.targets) == 1
             assert isinstance(statement.targets[0], ast.Name)
-            _consume(tree.body[index + 1], statement.targets[0].id)
+            if index + 1 < len(tree.body) and isinstance(tree.body[index + 1], ast.With):
+                _archive_consumer(tree, index, statement.targets[0].id)
+            else:
+                _consume(tree.body[index + 1], statement.targets[0].id)
             download(value)
         elif isinstance(value, ast.Dict) and any(
             isinstance(item, ast.Call) and ast.unparse(item.func) == 'edi.download_data'

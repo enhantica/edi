@@ -10,6 +10,7 @@ import pytest
 
 from tests.fixtures.tutorial_cases.command_line import (
     actions,
+    compare_staged_regression_pin,
     edit_project,
     loop_schemas,
     setup_action,
@@ -18,7 +19,7 @@ from tests.fixtures.tutorial_cases.command_line import (
 )
 from tests.fixtures.tutorial_cases.contract import ROOT, interfaces_for
 from tests.fixtures.tutorial_cases.notebook_fit import local_collection
-from tests.fixtures.tutorial_cases.pins import compare_regression_pin, machine_values, pinned_start
+from tests.fixtures.tutorial_cases.pins import machine_values, pinned_start
 from tests.fixtures.tutorial_cases.stages import group, observe
 from tests.integration.py.test_tutorial_empty_project import api
 from tests.integration.py.test_tutorial_fit_stages import FITTING, source
@@ -147,4 +148,4 @@ def test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin( 
             {'active': cycle['active'], 'constraints': total}
             for cycle, total in zip(expected, totals, strict=True)
         ], 'Gate 5: declared Command line and Python lessons share their exact stage sequence'
-    compare_regression_pin(machine_values(final), quantities)
+    compare_staged_regression_pin(machine_values(final), quantities)

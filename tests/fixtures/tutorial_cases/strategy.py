@@ -207,7 +207,24 @@ def app_actions(source):
             yield ('boundary', '', '')
 
 
-def assert_app_group_actions(source):
+def partial_app_members(members, population):
+    """Named subsets cannot use Free All without freeing extra actual members."""
+    if population is None or not members:
+        return False
+    labels = {name.casefold(): paths for name, paths in population.table_members.items()}
+    resolved = [labels.get(member.casefold(), set()) for member in members]
+    if not all(resolved):
+        return False
+    selected = set().union(*resolved)
+    for category in {population[path] for path in selected}:
+        available = {path for path, actual in population.items() if actual == category}
+        chosen = selected & available
+        if len(chosen) > NAMED_LIMIT and chosen == available:
+            return False
+    return True
+
+
+def assert_app_group_actions(source, population=None):
     named = defaultdict(set)
     context = 'named parameters'
     for action, subject, raw in app_actions(source):
@@ -222,7 +239,11 @@ def assert_app_group_actions(source):
             a or b
             for a, b in re.findall(r'`([^`]+)`|\*\*([^*]+)\*\*', raw)
             if (a or b).casefold() not in {'free', 'fix', 'fit', 'analysis', 'parameters'}
-        ] or re.split(r',|\band\b', subject)
+        ] or re.split(r',|\band\b', re.split(r'\.(?:\s|$)', subject, maxsplit=1)[0])
+        if population is not None:
+            members = [member for member in members if member not in population.datablock_names]
+            if not members:
+                continue
         if (
             re.search(r'\b(?:all|every|group|category)\b', subject, re.IGNORECASE)
             and len(members) == 1
@@ -233,7 +254,9 @@ def assert_app_group_actions(source):
         if category.startswith('other:'):
             category = 'calibration' if re.search(r'\boffset\b', subject) else context
         named[action, category].update(member.strip() for member in members)
-        assert len(named[action, category]) <= NAMED_LIMIT, (
+        assert len(named[action, category]) <= NAMED_LIMIT or partial_app_members(
+            named[action, category], population
+        ), (
             'Gate 3/4: app group actions use category filtering and the '
             'Free header, not long member lists'
         )
@@ -288,14 +311,14 @@ def assert_app_names(source, labels, table_names=(), datablock_names=()):
 
         def selector(match):
             names = re.findall(r'\*\*([^*]*)\*\*', match[1])
-            assert all(name in datablock_names for name in names if name), (
+            assert names and all(name and name in datablock_names for name in names), (
                 'Gate 3/4: a datablock selector names an actual project block'
             )
             return match[0].replace(match[1], '')
 
         parameter_text = re.sub(
             r'(?:choose\s+|(?:parameters|rows the stage names) of\s+)'
-            r'((?:\*\*[^*]*\*\*(?:\s+and\s+)?)+)'
+            r'((?:\*\*[^*]*\*\*)(?:(?:,\s*(?:and\s+)?|\s+and\s+)\*\*[^*]*\*\*)*)'
             r'(?=(?:,\s*choosing each in| in) the datablock filter)',
             selector,
             raw,

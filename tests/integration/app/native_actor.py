@@ -74,7 +74,7 @@ class NativeActor:
         lines = []
         while time.monotonic() < deadline:
             if self.reader is None and self.log_path.exists():
-                self.reader = self.log_path.open()
+                self.reader = self.log_path.open(encoding='utf-8', errors='backslashreplace')
             line = self.reader.readline() if self.reader else ''
             ended = self.process.poll() is not None
             if not line and ended and self.reader:
@@ -146,7 +146,7 @@ class NativeActor:
                 self.reader.close()
             self.console.close()
         if complete:
-            output = self.log_path.read_text()
+            output = self.log_path.read_text(encoding='utf-8', errors='backslashreplace')
             totals = re.findall(r'Totals: (\d+) passed, (\d+) failed, (\d+) skipped', output)
             assert totals and tuple(map(int, totals[-1])) == (
                 len(self.selections) - self.failures + 2,

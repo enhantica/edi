@@ -24,3 +24,8 @@ def test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial(
     stages.test_app_docs_teach_the_same_fit_stages_as_the_executable_tutorial(
         case, tutorial_model, tutorial_models
     )
+
+
+@pytest.mark.parametrize('case', sorted(stages.LARGE_SOURCE_CASES))
+def test_notebook_and_script_teach_the_same_exact_stage_sequence(case, tutorial_model):
+    stages.test_notebook_and_script_teach_the_same_exact_stage_sequence(case, tutorial_model)
