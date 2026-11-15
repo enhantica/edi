@@ -571,7 +571,7 @@
           "tab": "basic"
         },
         {
-          "title": "Free all from the header",
+          "title": "Free Background from the header",
           "text": "Click the **Free** column header of the **Parameters** table.",
           "page": "analysis",
           "target": "parameters.freeHeader",

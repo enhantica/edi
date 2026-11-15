@@ -976,7 +976,7 @@ def plan(case: str) -> dict:  # noqa: PLR0912, PLR0914, PLR0915 - one plan, step
             shot(
                 'group-free-all',
                 'analysis',
-                'Free all from the header',
+                f'Free {category} from the header',
                 ['parameters.freeHeader'],
                 ['parameters.freeHeader'],
                 'Main',
