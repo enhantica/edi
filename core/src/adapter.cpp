@@ -4655,6 +4655,18 @@ RelationProject relation_project(const Project& model) {
     converted.project =
         std::make_unique<crysta::Project>(std::move(structures), experiment_list(converted.banks));
     fill_crysta_relations(model, *converted.project);
+    // Each dependent marked and at its relation's value, so a derived value composes it through the
+    // relation instead of reading it as an input of its own. Relations that cannot hold leave it as
+    // written; a calculation refuses them.
+    try {
+        // The model already warned that a dependent's free flag is ignored; this copy drops it quietly.
+        const crysta::RelationGraph graph = crysta::compile_relations(*converted.project, false);
+        for (const crysta::Relation& relation : graph.relations()) {
+            relation.target->set_free(false);
+        }
+        crysta::apply_relations(*converted.project, false);
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch)
+    }
     return converted;
 }
 
@@ -4702,19 +4714,20 @@ std::optional<WeightFraction> weight_fraction(const LinkedStructure& link) {
 namespace {
 // The model's relations as crysta's project, with the held fit's correlations, so crysta's seed
 // covariance reads what the fit left (crysta's rule for an undefined s.u.).
+// Without a held fit the stored pairs still correlate the supplied s.u. (crysta reads them so too).
 RelationProject relation_project_with_fit(const Project& model) {
     RelationProject converted = relation_project(model);
+    std::vector<crysta::FitParameterCorrelation> rows;
+    for (const auto& row : model.fit_result.correlations) {
+        crysta::FitParameterCorrelation& copy = rows.emplace_back();
+        copy.id = row->id.value();
+        copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
+        copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
+        copy.correlation = row->correlation.get();
+        copy.file_path = row->file_path.value();
+    }
+    converted.project->fit_result.correlations.assign(rows);
     if (model.fit_result.held()) {
-        std::vector<crysta::FitParameterCorrelation> rows;
-        for (const auto& row : model.fit_result.correlations) {
-            crysta::FitParameterCorrelation& copy = rows.emplace_back();
-            copy.id = row->id.value();
-            copy.parameter_unique_name_i = row->parameter_unique_name_i.value();
-            copy.parameter_unique_name_j = row->parameter_unique_name_j.value();
-            copy.correlation = row->correlation.get();
-            copy.file_path = row->file_path.value();
-        }
-        converted.project->fit_result.correlations.assign(rows);
         converted.project->fit_result.result_kind = std::string("held");  // a fit is held
     }
     return converted;
@@ -7099,6 +7112,25 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                 clear_fit_result(*this);
             }
             settle_scan_results(fit_result, *scan, effective_scan_template_file(*this));
+            if (joint) {
+                // The model ends at the series' last point, so its derived values read that point's
+                // correlations, as crysta's model does.
+                std::vector<FitParameterCorrelation> rows;
+                for (const crysta::FitParameterCorrelation& pair : cproject.fit_result.correlations) {
+                    if (!pair.file_path.empty()) {
+                        continue;
+                    }
+                    FitParameterCorrelation& row = rows.emplace_back();
+                    row.source_kind = pair.source_kind.get();
+                    row.parameter_unique_name_i = pair.parameter_unique_name_i.get();
+                    row.parameter_unique_name_j = pair.parameter_unique_name_j.get();
+                    row.correlation = pair.correlation.get();
+                }
+                for (const auto& row : fit_result.correlations) {
+                    rows.push_back(*row);
+                }
+                fit_result.correlations.assign(numbered_correlations(rows));
+            }
         } else if (*completed_files > 0) {
             // Each file this run completed has its row in results.csv, so its results are kept as well; a resume
             // skips that file and could not make them again. The unfinished file has none, and the rest of the
