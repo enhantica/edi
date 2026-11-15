@@ -69,3 +69,10 @@ Owner decision `6c4f7a9d9` limits the slow cadence witness to 100 points × the 
 The per-PR witnesses remain two points, with two selected banks in the reduced producer case and five in the
 consumer case. The generator refuses larger counts before filesystem generation; no larger synthetic scale target
 is asserted or executed by these gates. The slow fits remain separate from this scoped repair replay.
+
+Local observer selection follows the loaded extension's nearest CMake owner, including nested or external
+build directories; installed copies still require one unique byte-matching build. A local edi build resolves
+its actual `crysta_DIR` package and linked SHA instead of assuming only the two exported CI directory names.
+The two declared CI export layouts retain their relocated prefixes. The prepared observer checks the linked
+core identity in both products. A stale embedded crysta source identity whose committed headers differ from
+the selected source remains a refused preparation; reconfigure/rebuild that artifact before observing starts.

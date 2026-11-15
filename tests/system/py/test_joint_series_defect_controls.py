@@ -455,3 +455,69 @@ def test_cli_corpus_identity_accepts_only_the_inert_field_transition(defect):
     assert absorption_start_bytes(name, bad) != original, (
         'The corpus identity rejects active, nonzero retired and unrelated changes'
     )
+
+
+@pytest.mark.parametrize('layout', ['direct', 'nested', 'external'])
+def test_native_build_location_disambiguates_identical_extension_copies(tmp_path, layout):
+    root = tmp_path / 'checkout'
+    root.mkdir()
+    source = tmp_path / 'source'
+    (source / 'include').mkdir(parents=True)
+    selected = tmp_path / 'external' if layout == 'external' else root / 'build/selected'
+    selected.mkdir(parents=True)
+    extension = selected / ('_crysta.so' if layout == 'direct' else 'python/crysta/_crysta.so')
+    extension.parent.mkdir(parents=True, exist_ok=True)
+    extension.write_bytes(b'selected extension')
+    (selected / 'libcrysta_core.a').write_bytes(b'selected archive')
+    cache = 'CMAKE_HOME_DIRECTORY:INTERNAL=' + str(source) + '\n'
+    (selected / 'CMakeCache.txt').write_text(cache)
+    copied = root / 'build/other'
+    copied.mkdir(parents=True)
+    (copied / '_crysta.so').write_bytes(b'selected extension')
+    (copied / 'libcrysta_core.a').write_bytes(b'other archive')
+    (copied / 'CMakeCache.txt').write_text(cache)
+    assert subject.selected_core(root, extension) == (
+        selected / 'libcrysta_core.a',
+        source / 'include',
+    ), 'A loaded extension must select its own CMake core before copied artifacts'
+
+
+@pytest.mark.parametrize('defect', ['none', 'linked-sha', 'package', 'prefix'])
+def test_native_edi_local_build_qualifies_its_cmake_prefix(tmp_path, defect):
+    root = tmp_path / 'edi'
+    source = tmp_path / 'source'
+    (source / 'core/include').mkdir(parents=True)
+    artifact = root / 'build/local-configuration'
+    extension = artifact / 'python/edi/_edi.so'
+    extension.parent.mkdir(parents=True)
+    extension.write_bytes(b'selected edi extension')
+    (artifact / 'core').mkdir()
+    (artifact / 'core/libedi_core.a').write_bytes(b'edi core')
+    sdk = tmp_path / 'selected-sdk'
+    package = sdk / 'lib/cmake/crysta'
+    package.mkdir(parents=True)
+    config = package / 'crystaConfig.cmake'
+    config.write_text('selected package')
+    (sdk / 'lib/libcrysta_core.a').write_bytes(b'crysta core')
+    (sdk / 'include').mkdir()
+    (sdk / '.crysta-sha').write_text('a' * 40)
+    (artifact / '.crysta-linked-sha').write_text('a' * 40)
+    (artifact / 'CMakeCache.txt').write_text(
+        'crysta_DIR:PATH=' + str(package) + '\nCMAKE_HOME_DIRECTORY:INTERNAL=' + str(source) + '\n'
+    )
+    if defect == 'linked-sha':
+        (artifact / '.crysta-linked-sha').write_text('b' * 40)
+    elif defect == 'package':
+        config.unlink()
+    elif defect == 'prefix':
+        (sdk / 'lib/libcrysta_core.a').unlink()
+    if defect != 'none':
+        with pytest.raises(AssertionError):
+            subject.selected_edi(root, extension)
+    else:
+        assert subject.selected_edi(root, extension) == (
+            artifact,
+            sdk,
+            source / 'core/include',
+            'a' * 40,
+        ), 'A local edi observer must use its selected package and linked source identity'

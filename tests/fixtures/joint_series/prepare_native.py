@@ -18,10 +18,9 @@ COMPILE_TIMEOUT = 30
 
 def configuration(root, engine):
     if engine.__name__ == 'edi':
-        sdk = importlib.import_module('tests.conftest').crysta_reference_prefix()
-        artifact = Path(engine._edi.__file__).resolve().parents[2]
+        artifact, sdk, headers, core_commit = subject.selected_edi(root, engine._edi.__file__)
         libraries = [artifact / 'core/libedi_core.a', sdk / 'lib/libcrysta_core.a']
-        includes, defines = [root / 'core/include', sdk / 'include'], ['-DEDI_PROBE']
+        includes, defines = [headers, sdk / 'include'], ['-DEDI_PROBE']
     else:
         library, headers = subject.selected_core(
             root,
@@ -31,8 +30,10 @@ def configuration(root, engine):
         )
         subject.committed_headers(root, headers, engine.__build_commit__)
         libraries, includes, defines = [library], [headers], []
+        core_commit = engine.__build_commit__
     spec = {
         'engine': engine.__name__,
+        'core_commit': core_commit,
         'extension': subject.digest(engine.__file__).hex(),
         'archives': {str(p.resolve()): subject.digest(p).hex() for p in libraries},
         'headers': {
@@ -75,11 +76,10 @@ def validate(build, spec):
 def prepared(root, engine):
     spec, *_ = configuration(root, engine)
     binary = validate(directory(root, spec), spec)
-    if engine.__name__ == 'crysta':
-        proof = subprocess.run(
-            [str(binary), '--identity'], capture_output=True, text=True, check=True, timeout=5
-        )
-        subject.identity(proof.stdout, engine.__build_commit__)
+    proof = subprocess.run(
+        [str(binary), '--identity'], capture_output=True, text=True, check=True, timeout=5
+    )
+    subject.identity(proof.stdout, spec['core_commit'])
     return binary
 
 

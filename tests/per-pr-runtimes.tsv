@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-15T17:10:12Z
+# measured_utc = 2026-11-15T17:59:48Z
 #
-# Recorded from: scoped review-5 controls and CLI callers; feature and unexecuted slow nodes remain explicit
-# Collected tests: 243095; with a reported duration: 75722
+# Recorded from: scoped local observer qualification controls and actual starts; worker-chain failures explicit
+# Collected tests: 243102; with a reported duration: 75727
 # Module-scoped fixture costs recorded: 191
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 240700
+# inventory_python = 240707
 # inventory_cpp = 402
-# inventory_measured = 173400
-# inventory_unmeasured = 67702
+# inventory_measured = 173413
+# inventory_unmeasured = 67696
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 81913
+# inventory_pr_python = 81920
 
 UNMEASURED:not-completed-in-this-run	tests/fixtures/assistant_fixes/test_grouped_flags.py::test_grouped_adp_flags_after_fit_and_relation[normal]
 UNMEASURED:not-completed-in-this-run	tests/fixtures/assistant_fixes/test_grouped_flags.py::test_grouped_adp_flags_after_fit_and_relation[shown]
@@ -230270,6 +230270,13 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_uncommi
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_cli_iteration_record_follows_its_producing_run
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_cli_model_count_drops_only_the_retired_named_slot
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_local_nightly_task_consumes_the_declared_seeded_file
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_build_location_disambiguates_identical_extension_copies[direct]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_build_location_disambiguates_identical_extension_copies[external]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_build_location_disambiguates_identical_extension_copies[nested]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_edi_local_build_qualifies_its_cmake_prefix[linked-sha]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_edi_local_build_qualifies_its_cmake_prefix[none]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_edi_local_build_qualifies_its_cmake_prefix[package]
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_edi_local_build_qualifies_its_cmake_prefix[prefix]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_preparation_is_declared_before_its_consumers
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_preparation_never_compiles_to_repair_bad_evidence[changed-binary]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_preparation_never_compiles_to_repair_bad_evidence[missing]
@@ -230292,7 +230299,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_uncommi
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_saved_fraction_admits_adoption_and_rejects_stale_state[wrong-value]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_saved_link_defects_are_rejected[folder]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_saved_link_defects_are_rejected[pattern]
-0.010	tests/system/py/test_joint_series_defect_controls.py::test_saved_moment_covariance_corruption_is_rejected[correlation]
+0.020	tests/system/py/test_joint_series_defect_controls.py::test_saved_moment_covariance_corruption_is_rejected[correlation]
 0.010	tests/system/py/test_joint_series_defect_controls.py::test_saved_moment_covariance_corruption_is_rejected[marginal]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_seeded_cadence_ceiling_refuses_before_generating_data[0]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_seeded_cadence_ceiling_refuses_before_generating_data[101]
@@ -230302,7 +230309,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_uncommi
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_seeded_failed_record_is_rejected[change3]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_seeded_scale_policy_is_100_points_and_five_banks
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_sequential_workers_reject_chunk_restart_and_preserve_skip_chain
-0.010	tests/system/py/test_joint_series_defect_controls.py::test_template_restart_and_skip_reset_are_rejected
+0.000	tests/system/py/test_joint_series_defect_controls.py::test_template_restart_and_skip_reset_are_rejected
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_tied_saved_fraction_error_is_numerical
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_valid_report_rounding_and_corruption[-2.16352-0.00481--2.1635-.0049]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_valid_report_rounding_and_corruption[1.23456-0.01001-1.235-.011]
@@ -230333,13 +230340,13 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_seeded.py::test_
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_seeded.py::test_small_fullprof_seeded_series[ladder]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_joint_series_seeded_nightly.py::test_slow_fullprof_seeded_points[fast_descent]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_joint_series_seeded_nightly.py::test_slow_fullprof_seeded_points[ladder]
-UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[1-False-independent]
-UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[1-False-sequential]
-UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[1-True-independent]
-UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[1-True-sequential]
-UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[3-False-independent]
+0.490	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[1-False-independent]
+0.523	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[1-False-sequential]
+0.450	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[1-True-independent]
+0.460	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[1-True-sequential]
+0.430	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[3-False-independent]
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[3-False-sequential]
-UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[3-True-independent]
+0.390	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[3-True-independent]
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[3-True-sequential]
 0.300	tests/system/py/test_latest_fit_uncertainty.py::test_cli_fit_clears_fixed_uncertainty_on_disk
 0.080	tests/system/py/test_latest_fit_uncertainty.py::test_every_fit_path_clears_fixed_su_and_keeps_dependent_su[independent]
@@ -241253,7 +241260,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 119.403	tests/system/py/test_hidden_scan_redraws.py
 # module-cost: 0.745	tests/system/py/test_independent_experiments_app.py
 # module-cost: 0.455	tests/system/py/test_independent_experiments_cli.py
-# module-cost: 0.273	tests/system/py/test_joint_series_starts.py
+# module-cost: 0.247	tests/system/py/test_joint_series_starts.py
 # module-cost: 205.663	tests/system/py/test_legend_symbols.py
 # module-cost: 216.560	tests/system/py/test_legend_visibility.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py
