@@ -4634,8 +4634,10 @@ NB_MODULE(_edi, m) {
     def_parameter_walks(project);
     def_free_parameters(project);
     // ADR-0086: experiment sets and their two switches, which write ordinary alias and constraint rows.
+    // Each handle holds the project's Python object, so it cannot outlive the project it reads.
     struct ExperimentSetRef {
         edi::Project* project = nullptr;
+        nb::object owner;
         std::string id;
         std::string leader() const {
             for (const auto& set : project->experiment_sets) {
@@ -4648,6 +4650,7 @@ NB_MODULE(_edi, m) {
     };
     struct ExperimentSetsRef {
         edi::Project* project = nullptr;
+        nb::object owner;
     };
     nb::class_<ExperimentSetRef>(m, "ExperimentSet", "An experiment set: a template experiment and its members.")
         .def_prop_ro("id", [](const ExperimentSetRef& self) { return self.id; })
@@ -4704,21 +4707,59 @@ NB_MODULE(_edi, m) {
             "create",
             [](const ExperimentSetsRef& self, const std::string& id, const std::string& template_experiment,
                const std::vector<std::string>& members) {
-                edi::ExperimentSet set;
-                set.id = id;
-                set.template_experiment_id = template_experiment;
-                self.project->experiment_sets.push_back(std::move(set));
+                edi::Project& project = *self.project;
                 std::vector<std::string> all = members;
                 if (std::find(all.begin(), all.end(), template_experiment) == all.end()) {
                     all.insert(all.begin(), template_experiment);  // the template is a member
                 }
-                for (const std::string& name : all) {
-                    edi::ExperimentSetMember member;
-                    member.experiment_id = name;
-                    member.set_id = id;
-                    self.project->experiment_set_members.push_back(std::move(member));
+                // The whole set is checked before anything is added, so a refusal changes nothing.
+                for (const auto& set : project.experiment_sets) {
+                    if (set->id.value() == id) {
+                        throw nb::value_error(("experiment set '" + id + "' already exists").c_str());
+                    }
                 }
-                return ExperimentSetRef{self.project, id};
+                for (std::size_t k = 0; k < all.size(); ++k) {
+                    const std::string& name = all[k];
+                    if (std::find(all.begin(), all.begin() + static_cast<std::ptrdiff_t>(k), name) !=
+                        all.begin() + static_cast<std::ptrdiff_t>(k)) {
+                        throw nb::value_error(("experiment '" + name + "' is listed twice").c_str());
+                    }
+                    const bool known = std::any_of(project.experiments.begin(), project.experiments.end(),
+                                                   [&name](const auto& experiment) {
+                                                       return experiment->name.value() == name;
+                                                   });
+                    if (!known) {
+                        throw nb::value_error(("the project has no experiment '" + name + "'").c_str());
+                    }
+                    for (const auto& member : project.experiment_set_members) {
+                        if (member->experiment_id.value() == name) {
+                            throw nb::value_error(("experiment '" + name + "' is already in set '" +
+                                                   member->set_id.value() + "'")
+                                                      .c_str());
+                        }
+                    }
+                }
+                const std::vector<edi::ItemVec<edi::ExperimentSet>::Ptr> sets_before(
+                    project.experiment_sets.begin(), project.experiment_sets.end());
+                const std::vector<edi::ItemVec<edi::ExperimentSetMember>::Ptr> members_before(
+                    project.experiment_set_members.begin(), project.experiment_set_members.end());
+                try {
+                    edi::ExperimentSet set;
+                    set.id = id;
+                    set.template_experiment_id = template_experiment;
+                    project.experiment_sets.push_back(std::move(set));
+                    for (const std::string& name : all) {
+                        edi::ExperimentSetMember member;
+                        member.experiment_id = name;
+                        member.set_id = id;
+                        project.experiment_set_members.push_back(std::move(member));
+                    }
+                } catch (...) {
+                    project.experiment_sets.assign(sets_before);
+                    project.experiment_set_members.assign(members_before);
+                    throw;
+                }
+                return ExperimentSetRef{self.project, self.owner, id};
             },
             nb::kw_only(), "id"_a, "template"_a, "members"_a,
             "Group experiments made from one template; each member stays an ordinary experiment.")
@@ -4733,19 +4774,20 @@ NB_MODULE(_edi, m) {
              })
         .def("__getitem__",
              [](const ExperimentSetsRef& self, const std::string& id) {
-                 ExperimentSetRef ref{self.project, id};
+                 ExperimentSetRef ref{self.project, self.owner, id};
                  static_cast<void>(ref.leader());  // refuses an unknown id
                  return ref;
              })
         .def("__iter__", [](const ExperimentSetsRef& self) {
             nb::list out;
             for (const auto& set : self.project->experiment_sets) {
-                out.append(ExperimentSetRef{self.project, set->id.value()});
+                out.append(ExperimentSetRef{self.project, self.owner, set->id.value()});
             }
             return out.attr("__iter__")();
         });
     project.def_prop_ro(
-        "experiment_sets", [](edi::Project& p) { return ExperimentSetsRef{&p}; }, nb::keep_alive<0, 1>(),
+        "experiment_sets",
+        [](nb::handle self) { return ExperimentSetsRef{nb::cast<edi::Project*>(self), nb::borrow(self)}; },
         "The project's experiment sets.");
     project.def(nb::init<>())
         // NAMED construction — the port's spelling

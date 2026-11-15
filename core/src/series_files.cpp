@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -91,6 +92,54 @@ std::vector<SeriesGroup> group_series_files(const std::vector<std::string>& name
     return groups;
 }
 
+namespace {
+
+// The series itself, on a project already checked; the caller undoes it on a throw.
+std::vector<std::string> declare_series_unchecked(Project& project, BraggPdExperiment& source,
+                                                  const std::string& data_dir, const std::vector<SeriesGroup>& groups,
+                                                  const std::string& set_id,
+                                                  const std::function<std::string(const std::string&)>& name_of) {
+    std::vector<std::string> names{source.name};
+    const BraggPdExperiment template_copy(source);
+    for (std::size_t g = 1; g < groups.size(); ++g) {
+        BraggPdExperiment copy = experiment_copy(project, template_copy);
+        const std::string wanted = name_of(groups[g].pattern);
+        bool taken = wanted.empty();
+        for (const auto& held : project.experiments) {
+            taken = taken || datablock_key(held->name, "experiment") == wanted;
+        }
+        if (!taken) {
+            copy.name = wanted;
+        }
+        names.push_back(copy.name);
+        project.experiments.push_back(std::move(copy));
+    }
+    project.sequential_fit.data_dir = data_dir;
+    // The one-experiment declaration's pattern and template file belong to the scan this replaces.
+    project.sequential_fit.file_pattern = "*";
+    project.sequential_fit.template_file.clear();
+    project.sequential_fit.experiments.clear();
+    for (std::size_t g = 0; g < groups.size(); ++g) {
+        SequentialFitExperiment member;
+        member.experiment_id = names[g];
+        member.file_pattern = groups[g].pattern;
+        project.sequential_fit.experiments.push_back(std::move(member));
+    }
+    ExperimentSet set;
+    set.id = set_id;
+    set.template_experiment_id = names.front();
+    project.experiment_sets.push_back(std::move(set));
+    for (const std::string& name : names) {
+        ExperimentSetMember member;
+        member.experiment_id = name;
+        member.set_id = set_id;
+        project.experiment_set_members.push_back(std::move(member));
+    }
+    return names;
+}
+
+}  // namespace
+
 std::vector<std::string> declare_series_of_joint_fits(Project& project, const std::string& template_experiment,
                                                       const std::string& data_dir,
                                                       const std::vector<SeriesGroup>& groups,
@@ -118,40 +167,47 @@ std::vector<std::string> declare_series_of_joint_fits(Project& project, const st
         }
         return name;
     };
-    std::vector<std::string> names{source->name};
-    const BraggPdExperiment template_copy(*source);
-    for (std::size_t g = 1; g < groups.size(); ++g) {
-        BraggPdExperiment copy = experiment_copy(project, template_copy);
-        const std::string wanted = name_of(groups[g].pattern);
-        bool taken = wanted.empty();
-        for (const auto& held : project.experiments) {
-            taken = taken || datablock_key(held->name, "experiment") == wanted;
+    // Every experiment of a series reads one file pattern, so the template must be the project's
+    // only experiment, and the set must be new; checked before anything changes.
+    if (project.experiments.size() != 1) {
+        throw std::invalid_argument("a series of joint fits is made from a project of one experiment; this one has " +
+                                    std::to_string(project.experiments.size()));
+    }
+    for (const auto& set : project.experiment_sets) {
+        if (set->id.value() == set_id) {
+            throw std::invalid_argument("experiment set '" + set_id + "' already exists");
         }
-        if (!taken) {
-            copy.name = wanted;
+    }
+    for (const auto& member : project.experiment_set_members) {
+        if (member->experiment_id.value() == source->name.value()) {
+            throw std::invalid_argument("experiment '" + source->name.value() + "' is already in set '" +
+                                        member->set_id.value() + "'");
         }
-        names.push_back(copy.name);
-        project.experiments.push_back(std::move(copy));
     }
-    project.sequential_fit.data_dir = data_dir;
-    project.sequential_fit.experiments.clear();
-    for (std::size_t g = 0; g < groups.size(); ++g) {
-        SequentialFitExperiment member;
-        member.experiment_id = names[g];
-        member.file_pattern = groups[g].pattern;
-        project.sequential_fit.experiments.push_back(std::move(member));
+    // Whatever fails below puts every collection and the declaration back as they were.
+    const std::vector<ItemVec<BraggPdExperiment>::Ptr> experiments_before(project.experiments.begin(),
+                                                                          project.experiments.end());
+    const std::vector<ItemVec<SequentialFitExperiment>::Ptr> declared_before(
+        project.sequential_fit.experiments.begin(), project.sequential_fit.experiments.end());
+    const std::vector<ItemVec<ExperimentSet>::Ptr> sets_before(project.experiment_sets.begin(),
+                                                               project.experiment_sets.end());
+    const std::vector<ItemVec<ExperimentSetMember>::Ptr> members_before(project.experiment_set_members.begin(),
+                                                                        project.experiment_set_members.end());
+    const std::string data_dir_before = project.sequential_fit.data_dir;
+    const std::string pattern_before = project.sequential_fit.file_pattern;
+    const std::string template_file_before = project.sequential_fit.template_file;
+    try {
+        return declare_series_unchecked(project, *source, data_dir, groups, set_id, name_of);
+    } catch (...) {
+        project.experiments.assign(experiments_before);
+        project.sequential_fit.experiments.assign(declared_before);
+        project.experiment_sets.assign(sets_before);
+        project.experiment_set_members.assign(members_before);
+        project.sequential_fit.data_dir = data_dir_before;
+        project.sequential_fit.file_pattern = pattern_before;
+        project.sequential_fit.template_file = template_file_before;
+        throw;
     }
-    ExperimentSet set;
-    set.id = set_id;
-    set.template_experiment_id = names.front();
-    project.experiment_sets.push_back(std::move(set));
-    for (const std::string& name : names) {
-        ExperimentSetMember member;
-        member.experiment_id = name;
-        member.set_id = set_id;
-        project.experiment_set_members.push_back(std::move(member));
-    }
-    return names;
 }
 
 }  // namespace edi

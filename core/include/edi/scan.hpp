@@ -202,7 +202,8 @@ std::vector<SeriesGroup> group_series_files(const std::vector<std::string>& name
 /// the experiment `template_experiment` takes the first group's pattern and each further group a copy of it, named
 /// after its pattern (the `*` and the extension dropped, the ends trimmed of `_` and `-`, a `_copy` suffix when
 /// taken). The experiments form the experiment set `set_id`, the template first. No data file is read. Returns the
-/// experiments' names in group order. Throws std::invalid_argument for an unknown template or no group.
+/// experiments' names in group order. Throws std::invalid_argument for an unknown template, no group, a project of
+/// more than one experiment, or a set id or membership already taken, and changes nothing when it throws.
 std::vector<std::string> declare_series_of_joint_fits(Project& project, const std::string& template_experiment,
                                                       const std::string& data_dir,
                                                       const std::vector<SeriesGroup>& groups,
@@ -215,7 +216,8 @@ std::vector<double> series_point_scales(const Project& project, const std::strin
 
 /// ADR-0088 point 5: the summary of one Map or Stacked row of a series over [d_min, d_max] at `columns` columns: the
 /// point's pattern of each experiment in `experiments` (places in project order), read from its file on the d axis by
-/// that experiment's calibration (crysta's rule for `_data.d_spacing`) and divided by its entry in `scales`; for one
+/// that experiment's calibration as fitted at the point (the template's before; crysta's rule for `_data.d_spacing`)
+/// and divided by its entry in `scales`; for one
 /// experiment its columns, for several their merge (All experiments merged). Each pattern is released once summarised.
 /// Throws std::out_of_range for a point or experiment the datasets do not hold, and as read_scan_dataset does.
 ScanColumns series_row_columns(const Project& project, const ScanDatasets& datasets, std::size_t point,
