@@ -6,7 +6,7 @@ import edi as engine
 import numpy as np
 import pytest
 
-from tests.fixtures.joint_series import cases
+from tests.fixtures.joint_series import cases, oracle
 
 
 def result_tables(directory):
@@ -294,12 +294,26 @@ def test_two_phase_ratio_fit_retains_three_independents_and_joint_covariance(tmp
         assert abs(value - 1 / 3) <= 5 * uncertainty, (
             'Fitted fractions must recover their authored equal-ZMV ratio within five s.u.'
         )
-    covariance, chi_square = cases.calculation_covariance(project, free)
+    parameters = [
+        project.experiments[bank].linked_structures[phase].scale
+        for bank, phase in [('zeta', 'phase'), ('zeta', 'other'), ('alpha', 'phase')]
+    ]
+    covariance, chi_square = cases.calculation_covariance(project, parameters)
+    u, v, _t = [parameter.value for parameter in parameters]
+    gradient = np.array([-v, u, 0.0]) / (u + v) ** 2
+    expected_sigma = float(np.sqrt(gradient @ covariance @ gradient))
+    for _value, error in fraction_values:
+        oracle.numeric_error(error, expected_sigma)
+    project.save_as(tmp_path / 'fitted-saved')
+    for file in (tmp_path / 'fitted-saved/experiments').glob('*.edi'):
+        oracle.category(
+            file.read_text(), '_linked_structure.weight_fraction', v / (u + v), expected_sigma
+        )
     assert result.reduced_chi_square == pytest.approx(chi_square, rel=1e-6), (
         'The phase-sum reduced chi-square must divide by observations minus three independents'
     )
     np.testing.assert_allclose(
-        [parameter.uncertainty for parameter in free],
+        [parameter.uncertainty for parameter in parameters],
         np.sqrt(np.diag(covariance)),
         rtol=0.03,
         err_msg='The phase-sum joint covariance must use the relation Jacobian and N minus three',

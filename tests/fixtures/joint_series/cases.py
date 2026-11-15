@@ -3,6 +3,7 @@
 import csv
 import math
 import re
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -252,14 +253,73 @@ def calculation_covariance(project, parameters):
             np.asarray(project.experiments[b].data.intensity_calc).copy() for b in BANKS
         ])
 
+    weights = np.concatenate([
+        np.asarray(project.experiments[b].data.intensity_meas_su) for b in BANKS
+    ])
     columns = []
     for index, value in enumerate(start):
         step = 1e-5 * max(abs(value), 0.01)
         upper, lower = start.copy(), start.copy()
         upper[index] += step
         lower[index] -= step
-        columns.append((calculated(upper) - calculated(lower)) / (2 * step))
-    residual = calculated(start) - observations
+        columns.append((calculated(upper) - calculated(lower)) / (2 * step) / weights)
+    residual = (calculated(start) - observations) / weights
     jacobian = np.array(columns).T
     chi_square = (residual @ residual) / (len(residual) - len(parameters))
     return np.linalg.inv(jacobian.T @ jacobian) * chi_square, chi_square
+
+
+def derived_series(source, root, engine):
+    shutil.copytree(source, root)
+    main = root / 'structures/phase.edi'
+    text = clear_free_flags(main.read_text())
+    text = re.sub(r'(?m)^_cell.length_a .*$', '_cell.length_a 4.1()', text)
+    main.write_text(text)
+    other = text.split('loop_\n_space_group_symop_magn_operation')[0]
+    (root / 'structures/other.edi').write_text(
+        other.replace('data_phase', 'data_other').replace('4.1()', '4.1')
+    )
+    for index, bank in enumerate(BANKS):
+        (root / 'experiments' / f'{index}_{bank}.edi').write_text(
+            experiment(bank, wavelength=(1.54, 1.27)[index], phases=('phase', 'other'))
+        )
+    analysis = root / 'analysis/analysis.edi'
+    analysis.write_text(
+        '_fitting_mode.type joint\n_minimizer.max_iterations 60\n_minimizer.'
+        'chi_square_tolerance 1e-10\nloop_\n_joint_fit.experiment_id\n_joint_'
+        'fit.weight\nzeta 1\nalpha 1\n'
+    )
+    aliases = [('a', 'phase.cell.length_a'), ('oa', 'other.cell.length_a')]
+    aliases += [(axis, 'phase.atom_site_moment.A.crystalaxis_' + axis) for axis in 'xyz']
+    aliases += [
+        ('u', 'zeta.linked_structure.phase.scale'),
+        ('v', 'zeta.linked_structure.other.scale'),
+        ('t', 'alpha.linked_structure.phase.scale'),
+        ('d', 'alpha.linked_structure.other.scale'),
+    ]
+    relations(root, aliases, ['oa = a', 'x = 1.2*a', 'y = -0.7*a', 'z = 2.3*a', 'd = t*v/u'])
+    project = engine.Project.load(root)
+    (root / 'scan').mkdir(exist_ok=True)
+    for index, key in enumerate(POINTS):
+        project.structures['phase'].cell.length_a.value = CELLS[index]
+        for bank, phase, value in [
+            ('zeta', 'phase', 2 + 0.2 * index),
+            ('zeta', 'other', 1 + 0.3 * index),
+            ('alpha', 'phase', 3 + 0.6 * index),
+        ]:
+            project.experiments[bank].linked_structures[phase].scale.value = value
+        project.analysis.calculate()
+        for b, bank in enumerate(BANKS):
+            values = np.asarray(project.experiments[bank].data.intensity_calc)
+            sigma = np.maximum(1, np.sqrt(np.maximum(values, 0)))
+            observed = values + (index + 1) * 0.1 * sigma * np.sin(
+                np.arange(len(values)) * 1.7 + b
+            )
+            (root / 'scan' / f'{key}_{("b5", "b1")[b]}.xy').write_text(
+                ''.join(
+                    f'{x:.17g} {y:.17g} {su:.17g}\n'
+                    for x, y, su in zip(GRID, observed, sigma, strict=True)
+                )
+            )
+    declare_series(root)
+    return root

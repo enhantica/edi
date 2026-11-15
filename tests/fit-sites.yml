@@ -311,3 +311,9 @@ sites:
   - file: tests/system/py/test_joint_series_seeded_nightly.py
     case: ncaf-wish-3bank-s5
     why: The same five-bank external reference repeats twenty points from identical starts for each explicit descent.
+
+  - file: tests/system/py/test_joint_series_starts.py
+    case: constraint-covariance
+
+  - file: tests/system/py/test_joint_series_derived.py
+    case: constraint-covariance

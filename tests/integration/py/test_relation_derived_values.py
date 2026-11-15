@@ -9,7 +9,7 @@ import gemmi
 import numpy as np
 import pytest
 
-from tests.fixtures.joint_series import cases
+from tests.fixtures.joint_series import cases, oracle
 
 
 @pytest.mark.parametrize('source', ['member', 'leader'])
@@ -144,15 +144,18 @@ def test_oblique_moment_spherical_view_matches_independent_full_covariance(tmp_p
 
 
 def test_moment_category_columns_are_saved_and_recomputed_on_load(tmp_path):
-    project, inputs, _ = moment_project(tmp_path / 'input')
+    project, inputs, covariance = moment_project(tmp_path / 'input')
     project.save_as(tmp_path / 'saved')
     path = tmp_path / 'saved/structures/phase.edi'
     text = path.read_text()
     block = gemmi.cif.read_string(text).sole_block()
-    expected = cases.spherical(inputs)
+    expected, expected_sigma = cases.propagated_spherical(inputs, covariance)
     for index, item in enumerate(('spherical_modulus', 'spherical_polar', 'spherical_azimuthal')):
         values = list(block.find_values('_atom_site_moment.' + item))
         assert len(values) == 1, 'Each saved moment must carry all three derived category columns'
+        oracle.category(
+            path.read_text(), '_atom_site_moment.' + item, expected[index], expected_sigma[index]
+        )
         assert '(' in values[0], 'A nondegenerate moment column must include its uncertainty'
         assert gemmi.cif.as_number(values[0]) == pytest.approx(
             expected[index], rel=0.002, abs=0.002
@@ -171,3 +174,18 @@ def test_moment_category_columns_are_saved_and_recomputed_on_load(tmp_path):
         atol=1e-7,
         err_msg='Saved derived columns must never override independent moment components',
     )
+
+    np.testing.assert_allclose(
+        [view.modulus.uncertainty, view.polar.uncertainty, view.azimuth.uncertainty],
+        expected_sigma,
+        rtol=3e-5,
+        atol=1e-8,
+        err_msg='Reload must retain the full supplied component and cell covariance',
+    )
+
+    for actual, expected_error in zip(
+        (view.modulus.uncertainty, view.polar.uncertainty, view.azimuth.uncertainty),
+        expected_sigma,
+        strict=True,
+    ):
+        oracle.numeric_error(actual, expected_error, tolerance=3e-5)

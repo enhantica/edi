@@ -3,7 +3,7 @@
 import edi as engine
 import pytest
 
-from tests.fixtures.joint_series import cases, ncaf
+from tests.fixtures.joint_series import cases, ncaf, oracle
 
 
 def check_seeded_fit(tmp_path, points, descent):
@@ -23,6 +23,7 @@ def check_seeded_fit(tmp_path, points, descent):
     )
     assert len(banks) == points * 5, 'Every NCAF point must retain all five experiments'
     for row in rows:
+        oracle.outcome(row)
         for name, reference in ncaf.atom_references().items():
             column = 'ncaf.atom_site.' + name
             assert float(row[column]) == pytest.approx(

@@ -6,7 +6,7 @@ from pathlib import Path
 import edi
 import pytest
 
-from tests.fixtures.joint_series import cases
+from tests.fixtures.joint_series import cases, oracle
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -119,6 +119,15 @@ def test_series_save_keeps_one_external_folder_and_patterns_without_per_file_ent
     )
     saved_patterns = list((tmp_path / 'saved').rglob('*.xy'))
     assert not saved_patterns, 'Keeping a series linked must not copy its measured patterns'
+    oracle.link(text, tmp_path / 'saved', external, {'zeta': '*_b5.xy', 'alpha': '*_b1.xy'})
+    reopened = edi.Project.load(tmp_path / 'saved')
+    reopened.save_as(tmp_path / 'resaved')
+    oracle.link(
+        (tmp_path / 'resaved/analysis/analysis.edi').read_text(),
+        tmp_path / 'resaved',
+        external,
+        {'zeta': '*_b5.xy', 'alpha': '*_b1.xy'},
+    )
     shutil.move(external, tmp_path / 'moved-measured')
     restored = edi.Project.load(tmp_path / 'saved')
     assert len(restored.experiments) == 2, (

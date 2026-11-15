@@ -27,3 +27,5 @@ independents. Its covariance reference is `(J.T J)^-1 * chi_square/(N-4)`, with 
 calculation and the follower recomputed for every perturbation. It tests the single-structure powder path.
 
 Scale is measured separately on the producer-to-view path; these fixtures impose no timing assertions.
+
+The engine PR witness uses two points and two banks; this product retains its two-point, five-bank PR witness. The slow witness retains twenty points and five banks. Actual start vectors are observed at the native scan-driver boundary, with a template different from the first successful point. The series-derived witness uses three points and two experiments; magnetic components follow the cell parameter, so its magnitude error and shared phase-fraction error follow independent normal equations at each point.
