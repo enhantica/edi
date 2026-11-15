@@ -37,6 +37,8 @@ Item {
     // A single crystal's reflections on Q or sinθ/λ (SingleCrystalChart): the x box offers the single crystal's
     // views, a second box F² or F, and the measured styles add Bars (the owner, 2026-11-16).
     property bool singleCrystal: false
+    // The single crystal's structure colour, its ticks' (the calculated colour until there are ticks).
+    readonly property color structureColor: controller.braggColors.length > 0 ? controller.braggColors[0] : controller.calculatedColor
     // The y scale's tokens as the settings keep them, in PatternChartController.YScale's order.
     readonly property var scaleTokens: ["linear", "sqrt", "log"]
     // The chart is on the page and the tab the window shows: its page binds it (the owner's one-redraw
@@ -574,10 +576,12 @@ Item {
         }
         // The calculated bars (the Bars style of a single crystal's reflections): filled as the measured band is,
         // outlined in the calculated colour.
+        // A single crystal's are filled in its structure's colour inside the calculated (total) red outline, and drawn in
+        // that colour as thin lines (the owner, 2026-11-16).
         AreaSeries {
             id: calculatedBars
             objectName: "chart.series.calc.bars"
-            color: Qt.alpha(controller.calculatedColor, 0.3)
+            color: Qt.alpha(chart.singleCrystal ? chart.structureColor : controller.calculatedColor, 0.3)
             borderWidth: 0
             upperSeries: LineSeries {}
             lowerSeries: LineSeries {}
@@ -586,7 +590,7 @@ Item {
         LineSeries {
             id: calculatedBarsTop
             objectName: "chart.series.calc.bars.top"
-            color: controller.calculatedColor
+            color: chart.singleCrystal && controller.thinBars ? chart.structureColor : controller.calculatedColor
             width: 1
         }
         LineSeries {
