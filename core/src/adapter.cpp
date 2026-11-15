@@ -5843,6 +5843,9 @@ std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& ta
 std::vector<std::string> descent_ids() { return crysta::descent_ids(); }
 
 std::string default_descent() { return crysta::kDefaultDescent; }
+bool runs_two_trials(const std::string& descent) {
+    return descent == crysta::kAutoDescent || descent == crysta::kTwoTrialDescent;
+}
 std::string current_descent_id(const std::string& id) { return crysta::current_descent_id(id); }
 double default_chi_square_tolerance() { return crysta::kDefaultChiSquareTolerance; }
 double default_shift_tolerance() { return crysta::kDefaultShiftTolerance; }

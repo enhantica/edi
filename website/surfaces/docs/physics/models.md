@@ -132,6 +132,7 @@ The current [nuclear neutron](diffraction.md#eq-nuclear-structure-factor) and [X
 
 | Type | Scope | Explanation |
 | --- | --- | --- |
+| `auto` | least-squares; selected strategies have bound restrictions | [Physics](minimization.md#eq-lm) |
 | `ladder` | least-squares; selected strategies have bound restrictions | [Physics](minimization.md#eq-lm) |
 | `fast_descent` | least-squares; selected strategies have bound restrictions | [Physics](minimization.md#eq-lm) |
 | `fast_descent_and_ladder` | least-squares; selected strategies have bound restrictions | [Physics](minimization.md#eq-lm) |
