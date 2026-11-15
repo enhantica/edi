@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-15T09:31:25Z
+# measured_utc = 2026-11-15T09:40:15Z
 #
-# Recorded from: measured test run (95 node(s) measured once, 176779 banked, 28 stale row(s) dropped)
-# Collected tests: 245302; with a reported duration: 77603
+# Recorded from: measured test run (74 node(s) measured once, 176779 banked, 0 stale row(s) dropped)
+# Collected tests: 245311; with a reported duration: 77603
 # Module-scoped fixture costs recorded: 199
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245302
+# inventory_python = 245311
 # inventory_cpp = 402
-# inventory_measured = 176843
+# inventory_measured = 176852
 # inventory_unmeasured = 68861
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85997
+# inventory_pr_python = 86006
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -238058,10 +238058,19 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_cli_stream_parity.py
 0.000	tests/system/py/test_tutorial_cli_stream_parity.py::test_time_normalizer_never_hides_other_output_changes[rwp]
 0.000	tests/system/py/test_tutorial_cli_stream_parity.py::test_time_normalizer_never_hides_other_output_changes[starting-row]
 0.000	tests/system/py/test_tutorial_cli_stream_parity.py::test_time_normalizer_never_hides_other_output_changes[summary]
-0.230	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[extra-model]
-0.250	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[measured-file]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_literal_loop_creation_refuses_incomplete_or_ambiguous_declarations[duplicate-key]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_literal_loop_creation_refuses_incomplete_or_ambiguous_declarations[duplicate-tag]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_literal_loop_creation_refuses_incomplete_or_ambiguous_declarations[empty]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_literal_loop_creation_refuses_incomplete_or_ambiguous_declarations[existing-category]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_literal_loop_creation_refuses_incomplete_or_ambiguous_declarations[mixed]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_literal_loop_creation_refuses_incomplete_or_ambiguous_declarations[no-key]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_literal_loop_creation_refuses_incomplete_or_ambiguous_declarations[placeholder]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_literal_loop_creation_refuses_incomplete_or_ambiguous_declarations[row-width]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_literal_new_loop_keeps_the_declared_schema_and_rows
+0.220	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[extra-model]
+0.240	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[measured-file]
 0.290	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[redirected-input]
-0.130	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[staged-model]
+0.140	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[staged-model]
 0.140	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[unchanged]
 0.010	tests/system/py/test_tutorial_command_line_stages.py::test_staged_pin_keeps_outcomes_strict_and_checks_its_own_work_trace
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_edit_observer_applies_real_scalar_and_loop_brackets_without_changing_other_values

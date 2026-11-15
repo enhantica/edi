@@ -238,3 +238,62 @@ def test_visible_loop_deletion_refuses_ambiguous_or_escaping_targets(tmp_path, d
     assert path.read_bytes() == before, (
         'Gate 5: an inadmissible loop deletion leaves the original target unchanged'
     )
+
+
+def test_literal_new_loop_keeps_the_declared_schema_and_rows(tmp_path):
+    path = tmp_path / 'sample.edi'
+    path.write_text('data_sample\n_cell.length_a 3.14159\n')
+    edit_project(
+        tmp_path,
+        'sample.edi',
+        'loop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_11\nS1 0.125()\nO1 0.25()\n',
+    )
+    assert (
+        path.read_text().endswith(
+            'loop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_11\nS1 0.125()\nO1 0.25()\n'
+        )
+        and '_cell.length_a 3.14159\n' in path.read_text()
+    ), 'Gate 5: an explicit complete loop can be created without inventing columns or values'
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'row-width',
+        'duplicate-key',
+        'mixed',
+        'no-key',
+        'duplicate-tag',
+        'existing-category',
+        'empty',
+        'placeholder',
+    ],
+)
+def test_literal_loop_creation_refuses_incomplete_or_ambiguous_declarations(tmp_path, damage):
+    path = tmp_path / 'sample.edi'
+    path.write_text('data_sample\n_cell.length_a 3.14159\n')
+    excerpt = 'loop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_11\nS1 0.125()\n'
+    if damage == 'row-width':
+        excerpt = excerpt.replace('S1 0.125()', 'S1')
+    elif damage == 'duplicate-key':
+        excerpt += 'S1 0.25()\n'
+    elif damage == 'mixed':
+        excerpt = excerpt.replace('_atom_site_aniso.adp_11', '_background.intensity')
+    elif damage == 'no-key':
+        excerpt = excerpt.replace('_atom_site_aniso.id\n', '').replace('S1 ', '')
+    elif damage == 'duplicate-tag':
+        excerpt = excerpt.replace('_atom_site_aniso.adp_11', '_atom_site_aniso.id')
+    elif damage == 'existing-category':
+        path.write_text(
+            path.read_text() + 'loop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_22\nS1 0.25\n'
+        )
+    elif damage == 'empty':
+        excerpt = excerpt.replace('S1 0.125()\n', '')
+    else:
+        excerpt = excerpt.replace('0.125()', '...')
+    before = path.read_bytes()
+    with pytest.raises(AssertionError, match='Gate 5:'):
+        edit_project(tmp_path, 'sample.edi', excerpt)
+    assert path.read_bytes() == before, (
+        'Gate 5: an inadmissible new loop leaves its file unchanged'
+    )

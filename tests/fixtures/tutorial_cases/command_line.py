@@ -556,9 +556,51 @@ def edit_project(project, filename, excerpt, schemas=()):  # noqa: PLR0912, PLR0
                 )
             )
             matches = [block for block in blocks if set(headers) <= set(block[1].splitlines())]
-            assert headers and len(matches) == 1, (
-                'Gate 5: a loop edit identifies its original column set'
+            assert headers and len(headers) == len(set(headers)), (
+                'Gate 5: a literal loop names unique explicit column tags'
             )
+            if not matches:
+                category = headers[0].split('.', 1)[0]
+                assert all(
+                    column.startswith(category + '.') for column in headers
+                ) and not re.search(r'(?m)^' + re.escape(category) + r'\.', original), (
+                    'Gate 5: a new loop cannot mix categories or duplicate any existing category'
+                )
+                keys = [
+                    i
+                    for i, column in enumerate(headers)
+                    if column.endswith((
+                        '.id',
+                        '.label',
+                        '.number',
+                        '.x',
+                        '.structure_id',
+                        '.position',
+                    ))
+                ]
+                assert keys, 'Gate 5: a new loop declares an explicit stable row key'
+                rows, identities = [], set()
+                while index < len(lines) and not lines[index].strip().startswith((
+                    '_',
+                    'loop_',
+                    'data_',
+                )):
+                    raw = lines[index].strip()
+                    values = shlex.split(raw, comments=True)
+                    index += 1
+                    if not values:
+                        continue
+                    assert len(values) == len(headers) and not any(
+                        value in {'...', '…'} for value in values
+                    ), 'Gate 5: every new loop row supplies every column without placeholders'
+                    key = values[keys[0]]
+                    assert key not in identities, 'Gate 5: a new loop cannot repeat a row identity'
+                    identities.add(key)
+                    rows.append(raw)
+                assert rows, 'Gate 5: a new loop contains its explicitly supplied data rows'
+                original += '\nloop_\n' + '\n'.join([*headers, *rows]) + '\n'
+                continue
+            assert len(matches) == 1, 'Gate 5: a loop edit identifies one original column set'
             block = matches[0]
             full_headers = block[1].splitlines()
             keys = [
