@@ -6107,8 +6107,9 @@ void ProjectViewModel::publish(bool structural) {
     structure_list_->setStructures(structure_models_);
     if (retired_) return;
     // A scan's rows change with its results and its template, not with an edit or a dataset shown: those are
-    // updated one row at a time (syncDataset). A structural change listed them already (syncBlocks).
-    if (!structural && !scan_) {
+    // updated one row at a time (syncDataset). Other rows are listed again once their models are synced, since
+    // syncBlocks listed a structural change with the names from before it (a rename).
+    if (!scan_) {
         syncDatasets();
         if (retired_) return;
     }
