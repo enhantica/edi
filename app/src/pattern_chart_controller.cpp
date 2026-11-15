@@ -1216,8 +1216,8 @@ void PatternChartController::refresh() {
         replace(target.top, outline);
         replace(target.bottom, {});
     };
+    // Measured values stay points with their error bars (the marks above); the residual is drawn as bars.
     if (bars) {
-        fill_bars(measured, 0, shown_y_min_, shown_y_max_);
         fill_bars(residual, 1, residual_min_, residual_max_);
     }
     fill_bars(calculated, 2, shown_y_min_, shown_y_max_);

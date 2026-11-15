@@ -30,9 +30,10 @@ compare patterns from different instruments and probes, and expect Q = 4π sinθ
    (`edi::single_crystal_pattern`): each at its sinθ/λ converted by `d_on_axis` with d = 1/(2 sinθ/λ), sorted by x,
    measured and calculated F² (or F, with s.u. su / (2F)), the residual, and the linked structure's ticks with their
    h k l. The pattern chart draws it in the powder layout and colours (calculated red, ticks in the structure's
-   colour), with its own F | F² setting and one more measured style, **Bars**: measured and calculated overlaid, one
-   bar per reflection, 0.012 Å⁻¹ wide in Q (the same width in sinθ/λ), so they widen when zoomed in; a toolbar toggle
-   draws them as one-pixel lines at any zoom. The residual is drawn as bars from zero. Without measured reflections the
+   colour), with its own F | F² setting and one more measured style, **Bars**: one calculated bar per reflection, red
+   outline filled in the structure's colour, 0.012 Å⁻¹ wide in Q (the same width in sinθ/λ), so they widen when
+   zoomed in, with the measured values as points with their error bars; a toolbar toggle draws the bars as one-pixel
+   lines at any zoom. Contributions are named by the structure, with the powder chart's icons. The residual is drawn as bars from zero. Without measured reflections the
    calculated ones are drawn as bars with their ticks.
 6. **Meas vs calc** (the owner, 2026-11-16): measured against calculated, with the y = x line, for a single crystal per
    reflection (F or F², its existing comparison chart) and for a powder per data point (`MeasCalcChart`,
