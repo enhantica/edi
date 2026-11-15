@@ -12,8 +12,8 @@ is staged on the 2.3 K pattern, the scan's template; then each later pattern sta
 previous result. The cobalt moments stay free at every temperature and fall towards zero near
 the Néel temperature, about 50 K.
 
-The project is the catalogue case `pd-neut-cwl_cosio-d20_scan-213f`, the one the command line
-and the app's Examples open. Its two Co sites share one displacement from the start.
+It builds the catalogue case `pd-neut-cwl_cosio-d20_scan-213f` step by step: the same project the
+command line fits and the app's Examples open. Its two Co sites share one displacement.
 
 ## Open the example
 
@@ -23,6 +23,10 @@ Press **Start** on Home, search **Examples** on **Project** for **pd-neut-cwl_co
 <a class="gui-image-link" href="../../../assets/gui/cases/pd-neut-cwl_cosio-d20_scan-213f/example-open.webp?v=53ca977fd567" data-gui-dark="65c5d25f2774" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Open the example from Examples"><svg class="gui-capture" data-gui-view="overview" viewBox="0 0 1480 800" width="1480" height="800" role="img" aria-label="Open the example from Examples"><title>Open the example from Examples</title><defs><clipPath id="gui-clip-example-open-overview"><rect width="1480" height="800" rx="17.76" /></clipPath></defs><image href="../../../assets/gui/cases/pd-neut-cwl_cosio-d20_scan-213f/example-open.webp?v=53ca977fd567" data-gui-dark="65c5d25f2774" width="1480" height="800" clip-path="url(#gui-clip-example-open-overview)" /><rect class="gui-image-frame" width="1480" height="800" rx="17.76" /><path class="is-active" data-gui-region="example-open-overview-1" data-gui-area="main" data-gui-parts="[[0,77,770,681]]" d="M1.000 82.000 Q1.000 78.000 5.000 78.000 L765.000 78.000 Q769.000 78.000 769.000 82.000 L769.000 753.000 Q769.000 757.000 765.000 757.000 L5.000 757.000 Q1.000 757.000 1.000 753.000 Z" /><path data-gui-navigation data-gui-area="navigation" data-gui-parts="[[595.46875,0,59.734375,77]]" d="M596.469 5.000 Q596.469 1.000 600.469 1.000 L650.203 1.000 Q654.203 1.000 654.203 5.000 L654.203 72.000 Q654.203 76.000 650.203 76.000 L600.469 76.000 Q596.469 76.000 596.469 72.000 Z" /></svg></a>
 
 </figure>
+
+## The example's constraints
+
+The example comes with the constraints the project keeps from the start. On **Analysis → Extra**, **Constraints** lists them: **biso_Co2 = biso_Co1**.
 
 ## Start with nothing free
 
