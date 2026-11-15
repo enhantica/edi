@@ -64,8 +64,9 @@ def render(page: str, pages: list[list[dict]], *, kind: str = 'online') -> str:
                 f'data-download-platform="{platform}" data-download-kind="{each}" href="{url}"',
             )
             page = page.replace(
-                f'<small data-download-size="{platform}-{each}">{each.capitalize()}</small>',
-                f'<small data-download-size="{platform}-{each}">{each.capitalize()} · '
+                f'<small data-download-size="{platform}-{each}">'
+                f'{each.capitalize()} installer</small>',
+                f'<small data-download-size="{platform}-{each}">{each.capitalize()} installer · '
                 f'{round(size / 1_000_000)} MB</small>',
             )
         else:

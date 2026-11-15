@@ -186,7 +186,8 @@ def download_buttons(family: str, entries: list[dict]) -> list[str]:
             platform = html.escape(entry['artifact_platform'], quote=True)
             kind_attr = f' data-download-kind="{kind}"' if kind else ''
             kind_line = (
-                f'<small data-download-size="{platform}-{kind}">{kind.capitalize()}</small>'
+                f'<small data-download-size="{platform}-{kind}">'
+                f'{kind.capitalize()} installer</small>'
                 if kind
                 else ''
             )

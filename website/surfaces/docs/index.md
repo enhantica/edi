@@ -30,8 +30,8 @@ hide:
 
 <div class="ed-landing__actions" markdown>
 
-[Try the web app](https://app.easydiffraction.org/){ .md-button .md-button--primary }
-[Download for desktop](application/desktop.md#download){ .md-button }
+[Download for desktop](application/desktop.md#download){ .md-button .md-button--primary }
+[Try in the browser](https://app.easydiffraction.org/){ .md-button }
 
 </div>
 

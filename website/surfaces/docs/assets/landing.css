@@ -91,18 +91,17 @@
   gap: .3em;
   padding: .24rem .51rem;
   border-radius: 999px;
-  background: var(--md-default-fg-color);
-  color: var(--md-default-bg-color);
+  background: var(--md-default-fg-color--lightest);
+  color: var(--md-default-fg-color);
   font-size: .65rem;
   line-height: 1.25;
-  font-weight: 600;
+  font-weight: 400;
   white-space: nowrap;
   text-decoration: none;
 }
 .md-typeset .ed-landing__interfaces a:hover,
 .md-typeset .ed-landing__interfaces a:focus-visible {
-  background: var(--md-primary-fg-color);
-  color: var(--md-default-bg-color);
+  color: var(--md-primary-fg-color);
   text-decoration: none;
 }
 .ed-landing__interfaces .twemoji {
