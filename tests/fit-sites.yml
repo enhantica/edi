@@ -307,8 +307,8 @@ sites:
     why: Two banks of the five-bank FullProf extension isolate the hand-counted equality free set.
   - file: tests/system/py/test_joint_series_seeded.py
     case: ncaf-wish-3bank-s5
-    why: The five-bank FullProf extension repeats committed observations and the external optimum for two series points.
-  - file: tests/system/py/test_joint_series_seeded_nightly.py
+    why: One point and two banks retain fixed FullProf atomic inputs and independently fitted bank scales.
+  - file: tests/system/slow/seeded_series.py
     case: ncaf-wish-3bank-s5
     why: The same five-bank external reference repeats one hundred points from identical starts for each explicit descent.
 

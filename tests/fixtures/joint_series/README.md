@@ -18,7 +18,7 @@ The engine fixture copies `project` and `expected.json` from edi's
 `docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof` at `7ed17b57213c4c8fbb1595a94b55794c64ec5fce`.
 Only the project description changes the old fit verb to “fit”; the numeric inputs are unchanged.
 That case's PROVENANCE identifies FullProf 8.40's converged five-bank input and saved run. The generator copies the
-measured observations into two points for the small gate and one hundred for the nightly gate, each with five banks.
+measured observations into one point with two banks for the PR gate and one hundred with five banks for the slow gate.
 Only `kind: reference` atomic values from that file are correctness references. Engine regression pins in the same
 file are retained for source fidelity and are not read by these gates. FullProf never runs in a test.
 
@@ -28,9 +28,12 @@ calculation and the follower recomputed for every perturbation. It tests the sin
 
 Scale is measured separately on the producer-to-view path; these fixtures impose no timing assertions.
 
-The engine PR witness uses two points and two banks; this product retains its two-point, five-bank PR witness. The slow witness retains one hundred points and five banks. Actual start vectors are observed at the native scan-driver boundary, with a template different from the first successful point. The series-derived witness uses three points and two experiments; magnetic components follow non-collinear functions of the cell parameter, so the magnitude and both angular errors are nonzero. Five separate channels check the magnitude, polar angle, azimuth, shared phase fraction and relation follower at each point.
-
-The producer's reduced fixture checks fixed atomic references separately from its fitted scale columns; the consumer's full-free-set witness continues to check fitted atomic columns.
+Both PR witnesses use one point and two banks. The slow witness retains one hundred points and five banks.
+Actual start vectors are observed at the native scan-driver boundary, with a template different from the first
+successful point. The series-derived witness uses three points and two experiments; magnetic components follow
+non-collinear functions of the cell parameter, so the magnitude and both angular errors are nonzero. Five separate
+channels check the magnitude, polar angle, azimuth, shared phase fraction and relation follower at each point.
+The reduced fixtures check fixed atomic references separately from fitted scale columns.
 Live fitted checks precede mutation or adopting Save. Each series prefix retains its terminal fitted values and errors;
 weighted calculation Jacobians provide a conditional covariance reference at those full-precision fitted seeds.
 CSV pairs are independently rounded by ADR-0092's default decimal rule; derived `.edi` category tokens retain the
@@ -66,9 +69,8 @@ exactly. The azimuth reference follows the ADR-0108 convention modulo one turn, 
 
 
 Owner decision `6c4f7a9d9` limits the slow cadence witness to 100 points × the five actual NCAF WISH banks.
-The per-PR witnesses remain two points, with two selected banks in the reduced producer case and five in the
-consumer case. The generator refuses larger counts before filesystem generation; no larger synthetic scale target
-is asserted or executed by these gates. The slow fits remain separate from this scoped repair replay.
+The per-PR witnesses use one point with two selected banks in both bindings. The generator refuses larger counts before filesystem generation; no larger synthetic scale target
+is asserted or executed by these gates. Scientific series runs use the explicit slow cadence.
 
 Local observer selection follows the loaded extension's nearest CMake owner, including nested or external
 build directories; installed copies still require one unique byte-matching build. A local edi build resolves
@@ -76,3 +78,17 @@ its actual `crysta_DIR` package and linked SHA instead of assuming only the two 
 The two declared CI export layouts retain their relocated prefixes. The prepared observer checks the linked
 core identity in both products. A stale embedded crysta source identity whose committed headers differ from
 the selected source remains a refused preparation; reconfigure/rebuild that artifact before observing starts.
+
+The full one-hundred-point, five-bank seeded witness is `tests/system/slow/seeded_series.py`.
+It runs only through the named slow/nightly cadence. Its filename is outside default pytest discovery,
+and the producer path is outside the bounded PR tier roots. The ordinary seeded cases retain one joint point
+and two banks with real sparse observed bins and two fitted bank scales. Their module fixture validates the readonly
+preparation receipt; every fit remains in its measured test body.
+The first-case validation cost remains visible in the runtime receipt; no tier threshold changes.
+
+`joint-series-seeded-prepare` has a ten-second envelope and calculates only the readonly fixed-profile
+basis and stages real observed bins. Its receipt binds engine bytes, preparation code, FullProf input files
+and every staged byte. The PR test copies that input, solves its weighted linear reference independently,
+and performs its actual joint fit in the test body. Missing or changed preparation refuses; tests never
+rebuild it. The PR suite declares this preparation; the producer’s `suite-pr` does so without building
+the native system observer.

@@ -330,7 +330,9 @@ format = "ruff format ."
 # The core suites leave out tests/integration/app, the app group: it needs the Qt app build and runs as
 # group-app after app-build (app-verify, both CI app jobs; tests/test-groups.json "app").
 # Shared bounded native preparation, before any behavior node's runtime is measured.
-joint-series-prepare = { cmd = ["python", "-m", "tests.fixtures.joint_series.prepare_native", "--engine", "edi"], depends-on = ["core-build"] }
+slow-seeded-series = { cmd = ["bash", "tools/ci/slow-seeded-series.sh", "nightly-only"], depends-on = ["core-build"] }
+joint-series-seeded-prepare = { cmd = ["python", "-m", "tests.fixtures.joint_series.prepare_seeded", "--engine", "edi"], depends-on = ["core-build"] }
+joint-series-prepare = { cmd = ["python", "-m", "tests.fixtures.joint_series.prepare_native", "--engine", "edi"], depends-on = ["joint-series-seeded-prepare", "core-build"] }
 test = { cmd = ["bash", "tools/ci/pytest-lenient.sh", "--ignore=tests/integration/app"], depends-on = ["joint-series-prepare", "core-build"] }
 # The quick (review-time) selection runs the FULL tier set — the measured-`heavy` exclusion is
 # retired (tests/test-groups.json declares the named groups, equal on test selection). Renamed
@@ -361,7 +363,7 @@ nightly-only-tests = { cmd = [
     "tests/system/py/test_scan_correlation_save_stability.py",
     "tests/system/py/test_shared_correlation_app_state.py",
     "tests/system/py/test_project_transactions.py",
-    "tests/system/py/test_joint_series_seeded_nightly.py",
+    "tests/system/slow/seeded_series.py",
     "-q",
 ], depends-on = ["core-build"] }
 # The weekly-only group is the CIF import matrix: about 140,000 short tests, two hours serial.

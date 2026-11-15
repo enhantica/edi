@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-15T17:59:48Z
+# measured_utc = 2026-11-15T21:30:03Z
 #
-# Recorded from: scoped local observer qualification controls and actual starts; worker-chain failures explicit
-# Collected tests: 243102; with a reported duration: 75727
-# Module-scoped fixture costs recorded: 191
+# Recorded from: bounded one-point two-bank seeded fits and cadence/preparation escape controls; slow hundred-by-five scientific nodes outside PR collection; unrelated rows retained
+# Collected tests: 243113; with a reported duration: 75738
+# Module-scoped fixture costs recorded: 192
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 240707
+# inventory_python = 240718
 # inventory_cpp = 402
-# inventory_measured = 173413
-# inventory_unmeasured = 67696
+# inventory_measured = 173428
+# inventory_unmeasured = 67692
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 81920
+# inventory_pr_python = 81933
 
 UNMEASURED:not-completed-in-this-run	tests/fixtures/assistant_fixes/test_grouped_flags.py::test_grouped_adp_flags_after_fit_and_relation[normal]
 UNMEASURED:not-completed-in-this-run	tests/fixtures/assistant_fixes/test_grouped_flags.py::test_grouped_adp_flags_after_fit_and_relation[shown]
@@ -173994,20 +173994,20 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 0.000	tests/system/py/test_ci_execution_paths.py::test_smoke_auditor_rejects_same_keyword_non_witnesses[scalar]
 0.000	tests/system/py/test_ci_execution_paths.py::test_smoke_auditor_rejects_same_keyword_non_witnesses[simd]
 0.000	tests/system/py/test_ci_execution_paths.py::test_smoke_auditor_rejects_same_keyword_non_witnesses[thread]
-0.070	tests/system/py/test_ci_execution_receipts.py::test_empty_deferred_cohort_refuses_before_execution
+0.060	tests/system/py/test_ci_execution_receipts.py::test_empty_deferred_cohort_refuses_before_execution
 0.010	tests/system/py/test_ci_execution_receipts.py::test_invalid_driver_selection_refuses_before_execution
-0.150	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-full-cohort-1]
+0.040	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-full-cohort-1]
 0.040	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-full-cohort-2]
-0.030	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-full-cohort-3]
-0.190	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-pr-deferral-1]
-0.100	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-pr-deferral-2]
-0.270	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-pr-deferral-3]
-0.210	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-full-cohort-1]
-0.030	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-full-cohort-2]
-0.270	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-full-cohort-3]
-0.230	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-pr-deferral-1]
-0.300	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-pr-deferral-2]
-0.110	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-pr-deferral-3]
+0.040	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-full-cohort-3]
+0.120	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-pr-deferral-1]
+0.090	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-pr-deferral-2]
+0.100	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[failed-pr-deferral-3]
+0.040	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-full-cohort-1]
+0.040	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-full-cohort-2]
+0.050	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-full-cohort-3]
+0.110	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-pr-deferral-1]
+0.100	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-pr-deferral-2]
+0.100	tests/system/py/test_ci_execution_receipts.py::test_shipped_driver_executes_exact_selection_and_preserves_exit[passed-pr-deferral-3]
 0.167	tests/system/py/test_ci_native_modes.py::test_selected_sdk_executes_scalar_and_simd_values[scalar]
 0.000	tests/system/py/test_ci_native_modes.py::test_selected_sdk_executes_scalar_and_simd_values[simd]
 UNMEASURED:failed-in-this-run	tests/system/py/test_cif_app_import.py::test_app_load_structure_accepts_and_loads_the_published_cif
@@ -230259,6 +230259,19 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_single_
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_single_structure_cross_bank_equality_has_joint_free_count_and_covariance
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_two_phase_ratio_fit_retains_three_independents_and_joint_covariance
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_uncommitted_complete_experiment_rows_are_removed_before_resume
+0.100	tests/system/py/test_joint_series_cadence.py::test_actual_slow_driver_refuses_pr_leaks[discoverable]
+0.100	tests/system/py/test_joint_series_cadence.py::test_actual_slow_driver_refuses_pr_leaks[duplicate]
+0.110	tests/system/py/test_joint_series_cadence.py::test_actual_slow_driver_refuses_pr_leaks[none]
+0.100	tests/system/py/test_joint_series_cadence.py::test_actual_slow_driver_refuses_pr_leaks[undeclared]
+0.100	tests/system/py/test_joint_series_cadence.py::test_actual_slow_driver_refuses_pr_leaks[wrong_root]
+2.130	tests/system/py/test_joint_series_cadence.py::test_ordinary_pytest_collection_cannot_find_slow_fits
+0.010	tests/system/py/test_joint_series_cadence.py::test_pr_task_graph_requires_shared_seed_preparation
+0.000	tests/system/py/test_joint_series_cadence.py::test_prepared_seeded_input_cannot_repair_or_trust_changed_bytes[input]
+0.000	tests/system/py/test_joint_series_cadence.py::test_prepared_seeded_input_cannot_repair_or_trust_changed_bytes[missing]
+0.000	tests/system/py/test_joint_series_cadence.py::test_prepared_seeded_input_cannot_repair_or_trust_changed_bytes[profile]
+0.000	tests/system/py/test_joint_series_cadence.py::test_prepared_seeded_input_cannot_repair_or_trust_changed_bytes[spec]
+0.060	tests/system/py/test_joint_series_cadence.py::test_slow_ci_steps_are_schedule_or_manual_only
+0.000	tests/system/py/test_joint_series_cadence.py::test_slow_shape_and_pr_discovery_are_separate
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_cif2_list_cells_preserve_scalar_category_checks[["a]b" [1 2] 'x#y']]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_cif2_list_cells_preserve_scalar_category_checks[[1 # kept comment\n 2]]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_cif2_list_cells_preserve_scalar_category_checks[[1 2]]
@@ -230269,7 +230282,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_uncommi
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_cli_fixture_declares_its_historical_descent_without_overwriting_it
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_cli_iteration_record_follows_its_producing_run
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_cli_model_count_drops_only_the_retired_named_slot
-0.000	tests/system/py/test_joint_series_defect_controls.py::test_local_nightly_task_consumes_the_declared_seeded_file
+0.010	tests/system/py/test_joint_series_defect_controls.py::test_local_nightly_task_consumes_the_declared_seeded_file
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_build_location_disambiguates_identical_extension_copies[direct]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_build_location_disambiguates_identical_extension_copies[external]
 0.000	tests/system/py/test_joint_series_defect_controls.py::test_native_build_location_disambiguates_identical_extension_copies[nested]
@@ -230336,10 +230349,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_edi.py::test_ser
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_edi.py::test_shared_phase_ratios_keep_distinct_overall_scales_and_three_independents
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_edi.py::test_sharing_switch_writes_constraints_and_recognizes_hand_edits
 UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_edi.py::test_zero_leader_ratio_reference_refuses_without_partial_constraints
-UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_seeded.py::test_small_fullprof_seeded_series[fast_descent]
-UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_seeded.py::test_small_fullprof_seeded_series[ladder]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_joint_series_seeded_nightly.py::test_slow_fullprof_seeded_points[fast_descent]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_joint_series_seeded_nightly.py::test_slow_fullprof_seeded_points[ladder]
+0.612	tests/system/py/test_joint_series_seeded.py::test_small_fullprof_seeded_series[fast_descent]
+0.490	tests/system/py/test_joint_series_seeded.py::test_small_fullprof_seeded_series[ladder]
 0.490	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[1-False-independent]
 0.523	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[1-False-sequential]
 0.450	tests/system/py/test_joint_series_starts.py::test_actual_joint_fit[1-True-independent]
@@ -241260,6 +241271,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 119.403	tests/system/py/test_hidden_scan_redraws.py
 # module-cost: 0.745	tests/system/py/test_independent_experiments_app.py
 # module-cost: 0.455	tests/system/py/test_independent_experiments_cli.py
+# module-cost: 0.068	tests/system/py/test_joint_series_seeded.py
 # module-cost: 0.247	tests/system/py/test_joint_series_starts.py
 # module-cost: 205.663	tests/system/py/test_legend_symbols.py
 # module-cost: 216.560	tests/system/py/test_legend_visibility.py

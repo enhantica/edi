@@ -336,6 +336,9 @@ jobs:
           # The nightly-only group's files (tests/test-groups.json) run on the nightly schedule and on a full manual
           # run, so a branch can show the nightly before it merges.
           EDI_RUN_NIGHTLY_ONLY: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.core_only != true) }}
+      - name: Seeded series (slow cadence)
+        if: ${{ !cancelled() && matrix.part == 1 && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.core_only != true)) }}
+        run: pixi run slow-seeded-series
       - name: Keep the part's durations
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

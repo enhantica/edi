@@ -87,7 +87,7 @@ def test_saved_link_defects_are_rejected(tmp_path, defect):
 def test_local_nightly_task_consumes_the_declared_seeded_file():
     root = Path(__file__).resolve().parents[3]
     command = tomllib.loads((root / 'pixi.toml').read_text())['tasks']['nightly-only-tests']['cmd']
-    assert 'tests/system/py/test_joint_series_seeded_nightly.py' in command, (
+    assert 'tests/system/slow/seeded_series.py' in command, (
         'The named local nightly task must actually execute its declared seeded witness'
     )
 
