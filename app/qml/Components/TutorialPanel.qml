@@ -1350,10 +1350,12 @@ Popup {
         // A step already done when the tutorial reaches it asks for nothing; the replay reports these.
         if (panel.step === 0)
             panel.doneOnArrival = [];
-        // Fixing the whole table first is a precaution: a project loaded without free marks already holds it.
-        if (holdsNow && panel.arrivedForward && panel.current.check && panel.current.check !== "free-choice:fixed:All categories")
+        // Fixing the whole table first is a precaution: a project loaded without free marks already holds it, so it
+        // is neither reported nor taken as done ahead; it waits for Next like an explanation.
+        const precaution = panel.current && panel.current.check === "free-choice:fixed:All categories";
+        if (holdsNow && panel.arrivedForward && panel.current.check && !precaution)
             panel.doneOnArrival = panel.doneOnArrival.concat([`${panel.step + 1}\t${panel.current.check}`]);
-        panel.doneAhead = holdsNow && panel.arrivedForward && !panel.followingHeld;
+        panel.doneAhead = holdsNow && panel.arrivedForward && !panel.followingHeld && !precaution;
         panel.heldAtStart = holdsNow && !panel.doneAhead;
         const following = panel.steps[panel.step + 1];
         panel.followingHeld = following ? panel.holds(following.check) : true;
