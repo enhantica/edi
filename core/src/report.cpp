@@ -593,26 +593,12 @@ constexpr double kScanTableShrinkDelay = 2.0;
 // On a terminal, at most about ten updates a second; the final row is always drawn.
 constexpr double kScanTableUpdateInterval = 0.1;
 
-// A chi-square in the fit tables' number format: a decimal with two places for 0.001 <= |x| < 1000, else
-// three significant digits in e-notation (`1.87e-10`, `7.45e9`); zero is `0`.
+// A chi-square as the fit tables show it: its item's format for 0.001 <= |x| < 1000, else three significant
+// digits in e-notation (`1.87e-10`, `7.45e9`); zero is `0`.
 std::string scan_number(double value) {
     if (!std::isfinite(value)) return {};
     if (value == 0.0) return "0";
-    std::ostringstream text;
-    text.imbue(std::locale::classic());
-    const double size = std::abs(value);
-    if (size >= 0.001 && size < 1000.0) {
-        text << std::fixed << std::setprecision(2) << value;
-        return text.str();
-    }
-    int exponent = static_cast<int>(std::floor(std::log10(size)));
-    double mantissa = value / std::pow(10.0, exponent);
-    if (std::abs(std::round(mantissa * 100.0) / 100.0) >= 10.0) {
-        mantissa /= 10.0;
-        ++exponent;
-    }
-    text << std::fixed << std::setprecision(2) << mantissa << 'e' << exponent;
-    return text.str();
+    return table_number(value, display_text("fit_result.reduced_chi_square", value), false);
 }
 
 // The columns in their groups, Progress │ OK Failed │ Elapsed Left │ Chi2 Chi2 range │ File: the number columns
