@@ -495,9 +495,11 @@ class SequentialFitExtract:
         self._project._sequential_extract_create(id, target, pattern, required)
 
     def __len__(self) -> int:
+        """The number of extraction rules."""
         return len(self._project._sequential_extract_rows)
 
     def __iter__(self) -> _Iterator[tuple[str, str, str, bool]]:
+        """Each rule as (id, target, pattern, required)."""
         return iter(self._project._sequential_extract_rows)
 
 
