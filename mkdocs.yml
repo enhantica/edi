@@ -119,6 +119,9 @@ nav:
           - "ADR-0083 crysta CI build": dev/adrs/0083-edi-builds-crysta-in-its-own-ci.md
           - "ADR-0084 Two palettes": dev/adrs/0084-two-palettes-and-the-gradient-rule.md
           - "ADR-0085 Red s.u.": dev/adrs/0085-red-su-for-poorly-determined-parameters.md
+          - "ADR-0086 Experiment sets": dev/adrs/0086-experiment-sets-and-shared-parameters.md
+          - "ADR-0087 Series loading and linked data": dev/adrs/0087-series-of-joint-fits-and-linked-data.md
+          - "ADR-0088 Series views": dev/adrs/0088-series-views-shared-and-per-experiment.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

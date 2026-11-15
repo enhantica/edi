@@ -8,6 +8,9 @@
   fetched at fit start remain
 - **Priority:** High
 
+**Extended by [ADR-0087](0087-series-of-joint-fits-and-linked-data.md):** a series of joint fits is copied or linked as
+one folder, and the Save as dialog shows the per-save decision as its Measured data row.
+
 ## Context
 
 Measured data entered a project only by copy: an experiment holds its data in its own `.edi`, and a scan read a
