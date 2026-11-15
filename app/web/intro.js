@@ -3,7 +3,7 @@
 // "easy" and "diffraction" move to their places in the logo ("easy" turning Regular on the way), and
 // the mark rolls in from beyond the left edge and brakes hard. It plays while the app downloads and
 // starts. If the app is ready first, the page fades out once the intro ends; if the intro ends first,
-// the mark keeps turning as the splash does until the app is ready. Skip shows once the app is ready
+// the mark keeps turning as the splash does until the app is ready. Skip fades in once the app is ready
 // and fades the page out; Disable turns the intro off for good (the app's Preferences, Intro
 // animation, read and write the same stored value) and leaves the splash alone.
 //
@@ -22,6 +22,7 @@
   let layer = null;
   let skip = null;
   const animations = [];
+  const outExpo = "cubic-bezier(0.16, 1, 0.3, 1)";
 
   function stored() {
     try {
@@ -44,7 +45,7 @@
     if (leaving) return;
     leaving = true;
     loading.style.pointerEvents = "none";
-    const fade = loading.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 1000, easing: "ease-in-out", fill: "forwards" });
+    const fade = loading.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 1000, easing: outExpo, fill: "forwards" });
     fade.onfinish = () => {
       loading.style.display = "none";
     };
@@ -76,7 +77,11 @@
         loading.style.display = "none";
         return;
       }
-      if (skip !== null) skip.style.visibility = "visible";
+      if (skip !== null) {
+        skip.style.visibility = "visible";
+        // To the buttons' own opacity (index.html), so Skip ends as Disable looks and keeps its hover.
+        skip.animate([{ opacity: 0 }], { duration: 1000, easing: "ease-in-out" });
+      }
       if (ended) reveal();
     },
     // The page shows a message instead of the app: no intro over it.
@@ -143,7 +148,6 @@
   const shown = [{ opacity: 0 }, { opacity: 1 }];
   for (const element of [making, diffraction, middle, easyBold]) play(element, shown, 1000, 1500);
   for (const element of [making, middle]) play(element, [{ opacity: 1 }, { opacity: 0 }], 5000, 2000, "linear", "forwards");
-  const outExpo = "cubic-bezier(0.16, 1, 0.3, 1)";
   const moveTo = (fromX, toX, toY) => [
     { transform: "translate(0, 0)" },
     { transform: `translate(${toX - fromX}px, ${toY - baseline}px)` },
@@ -153,8 +157,13 @@
   play(diffraction, moveTo(diffractionX, ...diffractionEnd), 7000, 1000, outExpo);
   play(easyBold, moveTo(easyX, ...easyEnd), 7000, 1000, outExpo);
   play(easy, moveTo(easyX, ...easyEnd), 7000, 1000, outExpo);
-  play(easyBold, [{ opacity: 1 }, { opacity: 0 }], 7100, 500, "linear", "forwards");
-  play(easy, [{ opacity: 0 }, { opacity: 1 }], 7100, 500);
+  // "easy" turns Regular over the middle of the move, as on the desktop: from 0.2 to 0.8 of the move's out-expo
+  // progress, which it reaches 32 ms and 232 ms after the move starts.
+  const lightAt = (t) => Math.min(1, Math.max(0, (1 - Math.pow(2, -10 * t) - 0.2) / 0.6));
+  const light = [];
+  for (let i = 0; i <= 20; ++i) light.push(lightAt(0.0322 + (0.2322 - 0.0322) * i / 20));
+  play(easyBold, light.map((value, i) => ({ offset: i / 20, opacity: 1 - value })), 7032, 200, "linear", "forwards");
+  play(easy, light.map((value, i) => ({ offset: i / 20, opacity: value })), 7032, 200);
 
   // The mark rolls without slipping, quartic ease-out: its turn is the distance over its radius. Before the roll it
   // waits beyond the left edge, where the roll's first frame holds it.
