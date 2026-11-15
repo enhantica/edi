@@ -2,6 +2,7 @@
 
 import json
 import re
+import selectors
 import subprocess
 import sys
 from pathlib import Path
@@ -109,21 +110,30 @@ def test_stacked_uses_palette_while_map_retains_its_selector():
 
 def test_citation_uses_zenodo_doi_and_consistent_title():
     citation = (ROOT / 'CITATION.cff').read_text()
-    assert '10.5281/zenodo.22905049' in citation, (
+    assert '10.5281/zenodo.24127939' in citation, (
         'The citation must use the approved Zenodo record DOI'
     )
     source = (QML / 'Pages/Home/CitationDialog.qml').read_text()
     assert 'How to cite' in source, 'The citation dialog must retain the common How to cite title'
     assert 'external' in source.lower(), 'The DOI link must carry the external resource icon'
-    assert 'underline: false' in source or 'text-decoration: none' in source, (
+    assert 'InfoDialog.InfoButton {' in source and 'objectName: "citation.doi"' in source, (
         'The clickable DOI must have no underline'
     )
     for label, value in [('Copy as text', 'text'), ('Copy as BibTeX', 'bibtex')]:
         assert label in source and 'copyText(dialog.citation.' + value in source, (
             'Both citation formats must copy their corresponding citation content'
         )
-    assert source.count('flat: true') >= 2, 'Both citation copy buttons must have no background'
-    assert 'footer:' in source, 'Citation copy actions must be in the footer beside Close'
+    info = (QML / 'Components/InfoDialog.qml').read_text()
+    assert source.count('InfoDialog.InfoButton {') == 3, (
+        'DOI and both citation copy actions must use the common background-free button'
+    )
+    assert 'actions: [' in source and 'property alias actions: buttons.contentData' in info, (
+        'Citation actions must populate the common dialog footer'
+    )
+    assert (
+        'footer: EaElements.DialogButtonBox {' in info
+        and 'standardButtons: Dialog.Close' in source
+    ), 'Citation copy actions must be in the footer beside Close'
     assert re.search(r'^# How to cite$', (DOCS / 'about/citation.md').read_text(), re.MULTILINE), (
         'The website and app must use the same How to cite title'
     )
@@ -142,7 +152,7 @@ def test_cosio_example_starting_moments():
 def survey():
     pages = list(DOCS.glob('about/**/survey*.md'))
     assert len(pages) == 1, 'About must contain one persistent Survey page'
-    return pages[0].read_text()
+    return pages[0].read_text() + '\n' + (DOCS / 'assets/survey/survey.js').read_text()
 
 
 def test_survey_navigation_and_question_groups():
@@ -170,7 +180,7 @@ def test_survey_navigation_and_question_groups():
         'jupyter',
         'scripting',
         'standalone',
-        'without python scripting',
+        'command-line tool as a python package',
     ]:
         assert phrase in source, 'Survey must distinguish all six interfaces'
     for phrase in ['fullprof', 'gsas-ii', 'topas', 'jana', 'none', 'other']:
@@ -253,6 +263,73 @@ def test_online_sources_documented_collection_passes_real_checker():
     )
 
 
+@pytest.fixture(scope='module')
+def survey_browser(tmp_path_factory):
+    # Share browser/Node startup only; each request runs every assertion on a fresh context/page.
+    stderr_path = tmp_path_factory.mktemp('survey-browser') / 'stderr.log'
+    with stderr_path.open('w+') as stderr:
+        process = subprocess.Popen(
+            ['node', str(ROOT / 'tests/fixtures/survey/browser.mjs')],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=stderr,
+            text=True,
+        )
+
+        def receive(timeout):
+            with selectors.DefaultSelector() as ready:
+                ready.register(process.stdout, selectors.EVENT_READ)
+                assert ready.select(timeout=timeout), (
+                    'The real survey worker must answer within its bounded request time'
+                )
+            line = process.stdout.readline()
+            assert line, (
+                'The real survey worker must publish a response; startup stderr: '
+                + stderr_path.read_text()
+            )
+            return json.loads(line)
+
+        def observe(root, page, events, instant):
+            process.stdin.write(
+                json.dumps({
+                    'root': str(root),
+                    'pagePath': str(page),
+                    'eventPath': str(events),
+                    'instant': instant,
+                })
+                + '\n'
+            )
+            process.stdin.flush()
+            response = receive(20)
+            assert set(response) == {'instant', 'ok', 'error'}, (
+                'Every real-browser response must carry its exact request identity and outcome'
+            )
+            assert response['instant'] == instant and type(response['ok']) is bool, (
+                'The browser must execute this supplied date rather than reuse another result'
+            )
+            return response
+
+        startup_ready = False
+        try:
+            assert receive(10) == {'ready': True}, (
+                'The shared real browser must complete startup before any date witness'
+            )
+            startup_ready = True
+            yield observe
+        finally:
+            process.stdin.close()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+            process.stdout.close()
+            if startup_ready:
+                assert process.returncode == 0, (
+                    'The shared browser must shut down cleanly after its cases'
+                )
+
+
 @pytest.mark.parametrize(
     'instant',
     [
@@ -263,25 +340,12 @@ def test_online_sources_documented_collection_passes_real_checker():
         '2030-05-13T00:00:00Z',
     ],
 )
-def test_survey_event_windows_in_browser(instant):
+def test_survey_event_windows_in_browser(instant, survey_browser):
     survey()
     files = list(DOCS.rglob('*events*.json'))
     assert len(files) == 1, 'Survey events must be declared in one file'
     pages = list(DOCS.glob('about/**/survey*.md'))
-    result = subprocess.run(
-        [
-            'node',
-            str(ROOT / 'tests/fixtures/survey/events.mjs'),
-            str(DOCS),
-            str(pages[0].relative_to(DOCS)),
-            str(files[0]),
-            instant,
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=20,
-    )
-    assert result.returncode == 0, (
-        'The real survey combobox must enforce active event dates: ' + result.stderr
+    result = survey_browser(DOCS, pages[0].relative_to(DOCS), files[0], instant)
+    assert result['ok'], (
+        'The real survey combobox must enforce active event dates: ' + result['error']
     )

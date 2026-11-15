@@ -30,9 +30,6 @@
     "absorption.abscor1": [
       "project.experiments[0].absorption.abscor1"
     ],
-    "absorption.abscor2": [
-      "project.experiments[0].absorption.abscor2"
-    ],
     "absorption.mu_r": [
       "project.experiments[0].absorption.mu_r"
     ],

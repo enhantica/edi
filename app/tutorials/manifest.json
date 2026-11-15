@@ -2019,12 +2019,12 @@
         },
         {
           "title": "Descent",
-          "text": "On **Analysis → Extra**, choose **Fast descent** as the **Descent**. From this start the default descent stops in a shallower minimum.",
+          "text": "On **Analysis → Extra**, choose **Fast descent** as the **Descent**. From this start the default, Fast descent and ladder, stops in a shallower minimum.",
           "page": "analysis",
           "target": "minimizer.descent",
           "check": "descent:fast_descent",
           "tab": "extras",
-          "why": "From this start the default descent stops in a shallower minimum."
+          "why": "From this start the default, Fast descent and ladder, stops in a shallower minimum."
         },
         {
           "title": "Scale, 2θ zero and cell",
@@ -12901,12 +12901,12 @@
         },
         {
           "title": "Descent",
-          "text": "On **Analysis → Extra**, choose **Fast descent** as the **Descent**. With the default descent the fit stops in a shallower minimum, with O1 x stuck near 0.5.",
+          "text": "On **Analysis → Extra**, choose **Fast descent** as the **Descent**. With the default, Fast descent and ladder, the fit stops in a shallower minimum, with O1 x stuck near 0.5.",
           "page": "analysis",
           "target": "minimizer.descent",
           "check": "descent:fast_descent",
           "tab": "extras",
-          "why": "With the default descent the fit stops in a shallower minimum, with O1 x stuck near 0.5."
+          "why": "With the default, Fast descent and ladder, the fit stops in a shallower minimum, with O1 x stuck near 0.5."
         },
         {
           "title": "Scale, 2θ zero and cell",

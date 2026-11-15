@@ -6,6 +6,7 @@ import json
 import zipfile
 from pathlib import Path
 
+from tests.fixtures.c06_t8 import seed_updates
 from tests.fixtures.metadata_transition import task_inputs
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -13,7 +14,7 @@ HERE = Path(__file__).parent
 
 
 def previous_bytes(name, data):
-    data = task_inputs.previous_bytes(name, data)
+    data = task_inputs.previous_bytes(name, seed_updates.previous_bytes(name, data))
     rows = json.loads((HERE / 'sources.json').read_text())['files']
     row = rows.get(str(name))
     if row is None:
@@ -47,7 +48,7 @@ def archived_content_pairs():
 
 
 def previous_content(data):
-    data = task_inputs.previous_content(data)
+    data = task_inputs.previous_content(seed_updates.previous_content(data))
     before_hash = archived_content_pairs().get(hashlib.sha256(data).hexdigest())
     if before_hash is None:
         return data

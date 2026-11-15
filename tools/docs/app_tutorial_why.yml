@@ -6,7 +6,7 @@ pd-neut-cwl_lbco-hrpt:
   constraint:biso_Ba: La and Ba share one site and scatter neutrons similarly, so the pattern cannot tell their displacements apart.
 pd-neut-cwl_cosio-d20:
   constraint:biso_Co2: The two Co sites scatter alike, so the pattern cannot tell their displacements apart.
-  descent: From this start the default descent stops in a shallower minimum.
+  descent: From this start the default, Fast descent and ladder, stops in a shallower minimum.
 pd-neut-cwl_cosio-d20_2k:
   constraint:biso_Co2: The two Co sites scatter alike, so the pattern cannot tell their displacements apart.
   constraint:dl: The two FCJ asymmetry terms cannot be told apart in this pattern, so they move as one.
@@ -29,7 +29,7 @@ pd-xray-cwl_lam7o3-p021:
   constraint:5: The seven metals share one site, so they share one displacement.
   constraint:6: The seven metals share one site, so they share one displacement.
   constraint:7: The two oxygen sites cannot be told apart in their displacements, so they share one.
-  descent: With the default descent the fit stops in a shallower minimum, with O1 x stuck near 0.5.
+  descent: With the default, Fast descent and ladder, the fit stops in a shallower minimum, with O1 x stuck near 0.5.
   background-estimate: With the peaks fitted, an estimate with the calculated peaks subtracted follows the low-angle background better.
 sc-neut-tof_taurine-senju:
   reflection-cutoff: The project fits only the reflections stronger than three times their s.u., as FullProf does for this case.
@@ -49,7 +49,7 @@ pd-neut-tof_si-sepd:
 pd-neut-cwl_cosio-d20_scan-213f:
   fitting-mode:single: The template pattern is fitted alone first, so the scan starts from a good model.
   fitting-mode:sequential: Back to the scan, each pattern fitted in turn from the one before it.
-  descent: With the default descent the scan can stop in a shallower minimum of the peak widths.
+  descent: With the default, Fast descent and ladder, the scan can stop in a shallower minimum of the peak widths.
 pd-xray-cwl_latp-bm01_scan:
   fitting-mode:single: The template pattern is fitted alone first, so the scan starts from a good model.
   fitting-mode:sequential: Back to the scan, each pattern fitted in turn from the one before it.

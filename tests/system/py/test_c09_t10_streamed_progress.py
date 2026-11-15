@@ -193,10 +193,13 @@ def test_c09_t10_human_cli_flushes_each_injected_callback_before_summary(
             return FakeProject()
 
     monkeypatch.setattr(cli.edi, 'Project', FakeProjectType)
-    monkeypatch.setattr(cli.edi, 'stream_header', lambda _p, _name: 'HEADER\n')
-    monkeypatch.setattr(cli.edi, 'iteration_line', lambda row, _previous: f'ROW {row.iteration}')
-    monkeypatch.setattr(cli.edi, 'summary_line', lambda _outcome: 'SUMMARY\n')
-    monkeypatch.setattr(cli.edi, 'parameter_table', lambda _outcome: 'PARAMETERS\n')
+    monkeypatch.setattr(cli.edi._edi, '_metric_variant', lambda _project: 'Rwp')
+    monkeypatch.setattr(cli.edi, 'stream_header', lambda _p, _name, _variant: 'HEADER\n')
+    monkeypatch.setattr(
+        cli.edi, 'iteration_line', lambda row, _previous, _variant: f'ROW {row.iteration}'
+    )
+    monkeypatch.setattr(cli.edi, 'summary_line', lambda _outcome, _variant: 'SUMMARY\n')
+    monkeypatch.setattr(cli.edi, 'parameter_table', lambda _outcome, _project: 'PARAMETERS\n')
     spy = _FlushSpy()
     monkeypatch.setattr(cli.sys, 'stdout', spy)
 

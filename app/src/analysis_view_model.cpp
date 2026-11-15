@@ -439,7 +439,7 @@ void AnalysisViewModel::sync() {
         fitting_mode_ = mode;
         emit fittingModeChanged();
     }
-    const QString descent = QString::fromStdString(project_.descent.empty() ? edi::default_descent() : project_.descent);
+    const QString descent = QString::fromStdString(project_.descent.empty() ? edi::default_descent() : edi::current_descent_id(project_.descent));
     if (descent != descent_) {
         descent_ = descent;
         emit descentChanged();

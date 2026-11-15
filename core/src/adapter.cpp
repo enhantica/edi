@@ -2854,7 +2854,7 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
                                       crysta::BeamModeEnum::TimeOfFlight, model.fitting_mode);
     cproject.minimizer_max_iterations = model.minimizer_max_iterations;
     // The declared descent and chi-square tolerance round-trip the same way.
-    cproject.minimizer_descent = model.descent;
+    cproject.minimizer_descent = current_descent_id(model.descent);
     cproject.minimizer_chi_square_tolerance = model.minimizer_chi_square_tolerance;
     cproject.minimizer_stop_rules = model.minimizer_stop_rules;
     cproject.minimizer_shift_tolerance = model.minimizer_shift_tolerance;
@@ -5838,6 +5838,7 @@ std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& ta
 std::vector<std::string> descent_ids() { return crysta::descent_ids(); }
 
 std::string default_descent() { return crysta::kDefaultDescent; }
+std::string current_descent_id(const std::string& id) { return crysta::current_descent_id(id); }
 double default_chi_square_tolerance() { return crysta::kDefaultChiSquareTolerance; }
 double default_shift_tolerance() { return crysta::kDefaultShiftTolerance; }
 
@@ -5851,8 +5852,10 @@ void validate_descent(const std::string& descent, const std::string& where) {
     if (descent.empty()) {
         return;
     }
+    // The default's former id is accepted as the default it now names.
+    const std::string current = current_descent_id(descent);
     const std::vector<std::string>& ids = crysta::descent_ids();
-    if (std::find(ids.begin(), ids.end(), descent) != ids.end()) {
+    if (std::find(ids.begin(), ids.end(), current) != ids.end()) {
         return;
     }
     std::string registered;
@@ -5872,7 +5875,7 @@ namespace {
 crysta::DescentRequest declared_request(const Project& project) {
     crysta::DescentRequest request;
     if (!project.descent.empty()) {
-        request.descent = project.descent;
+        request.descent = current_descent_id(project.descent);
     }
     request.max_iterations = detail::bounded_max_iterations(project.minimizer_max_iterations);
     if (project.minimizer_chi_square_tolerance > 0.0) {
@@ -6019,8 +6022,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             // (absent: the historical 50 cap), the descent and the chi-square stop. A declared
             // descent, tolerance or stop rule goes through crysta's registry entry point
             // (DescentRequest, id validated above), and so does a project declaring none: the request
-            // then carries crysta's defaults (fast descent, the default stop rules), the same fit the
-            // project-analysis path and the CLI run. The request's seed/polish pair mirrors
+            // then carries crysta's defaults (fast descent and ladder, the default stop rules), the
+            // same fit the project-analysis path and the CLI run. The request's seed/polish pair mirrors
             // `separable_linear=true` exactly (crysta descent.hpp).
             crysta::DescentRequest request =
                 declared_request(*this);
@@ -6066,6 +6069,7 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             outcome.multistart_probes_pruned = result.multistart_probes_pruned;
             outcome.multistart_probe_iterations = result.multistart_probe_iterations;
             outcome.multistart_survivor = result.multistart_survivor;
+            outcome.fast_descent = result.fast_descent;
             outcome.n_points_loaded = n_points_loaded;
             outcome.n_points_fitted = provider.n_data();
             outcome.iterations_history = to_edi(collector.history());
@@ -6485,7 +6489,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         cproject.minimizer_max_iterations = minimizer_max_iterations;
         // Crysta's driver runs every inner fit under the declared descent and
         // tolerance and records them in the same analysis/results.csv row.
-        cproject.minimizer_descent = descent;
+        cproject.minimizer_descent = current_descent_id(descent);
         cproject.minimizer_chi_square_tolerance = minimizer_chi_square_tolerance;
         cproject.minimizer_stop_rules = minimizer_stop_rules;
         cproject.minimizer_shift_tolerance = minimizer_shift_tolerance;
@@ -6666,6 +6670,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         outcome.multistart_probes_pruned = result.multistart_probes_pruned;
         outcome.multistart_probe_iterations = result.multistart_probe_iterations;
         outcome.multistart_survivor = result.multistart_survivor;
+        outcome.fast_descent = result.fast_descent;
         outcome.elapsed_ms = solved ? elapsed_ms : 0.0;
         outcome.status = to_edi(crysta::classify_fit_status(result));
         outcome.unevaluable_trials = result.unevaluable_trials;
@@ -6905,6 +6910,7 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             outcome.multistart_probes_pruned = result.multistart_probes_pruned;
             outcome.multistart_probe_iterations = result.multistart_probe_iterations;
             outcome.multistart_survivor = result.multistart_survivor;
+            outcome.fast_descent = result.fast_descent;
             outcome.banks = std::move(bank_metrics);
             outcome.n_points_loaded = n_points_loaded;
             outcome.n_points_fitted = provider.n_data();

@@ -561,6 +561,10 @@ FitResultBase fit_experiments_independently(Project& project, const IterationCal
         combined.unevaluable_trials += result.unevaluable_trials;
         combined.terminal_unevaluable_trials += result.terminal_unevaluable_trials;
         combined.descent = result.descent;
+        // The gain-ratio damping finished every experiment, or the combined record does not claim it:
+        // when the default descent continued with fast descent in one experiment and the ladder in
+        // another, the flag says false, the same as for a ladder fit.
+        combined.fast_descent = (first || combined.fast_descent) && result.fast_descent;
         chi_square += own_chi;
         dof += own_dof;
         record.n_data_points += own.n_data_points;

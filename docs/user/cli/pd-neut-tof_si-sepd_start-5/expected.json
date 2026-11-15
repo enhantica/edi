@@ -50,7 +50,7 @@
         }
       }
     },
-    "multistart-prune": {
+    "fast-descent-and-ladder": {
       "quantities": {
         "reduced_chi_square": {
           "value": 3.610945792,

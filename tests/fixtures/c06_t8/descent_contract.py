@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 RETIRED = ('fast_descent_linear_snap', 'fast_descent_guarded_linear_snap')
-VALID = {'ladder', 'fast_descent', 'multistart_prune'}
+VALID = {'ladder', 'fast_descent', 'fast_descent_and_ladder'}
 SNAP = re.compile(
     r'fast[_\s-]+descent(?:[_\s-]+with)?[_\s-]+(?:guarded[_\s-]+)?linear[_\s-]+snap', re.IGNORECASE
 )
@@ -65,6 +65,10 @@ def advertisements(root, scopes):
             structured = path.suffix.lower() in {'.json', '.ipynb'}
             if structured:
                 raw = json.dumps(json.loads(raw), ensure_ascii=False)
+            # Every inspected unit is a substring of this decoded text. Keep JSON
+            # validation above this necessary-condition filter, including escaped names.
+            if not SNAP.search(raw):
+                continue
             units = (
                 [(raw, True)]
                 if structured

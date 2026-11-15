@@ -43,7 +43,33 @@ def _to_schema_2(text: str) -> str:
     return text
 
 
-def make_schema_2_project(tmp_path: Path, *, cell_only_free: bool = False) -> Path:
+def _metadata_data_rows(text: str) -> str:
+    lines = text.splitlines(keepends=True)
+    positions = [
+        index for index, line in enumerate(lines) if line.strip() == '_data.time_of_flight'
+    ]
+    assert len(positions) == 1, 'The metadata vehicle retains exactly one original TOF data loop'
+    start = positions[0]
+    assert start > 0 and lines[start - 1].strip() == 'loop_', (
+        'The metadata vehicle must reach the actual measured-data loop header'
+    )
+    while start < len(lines) and lines[start].startswith('_data.'):
+        start += 1
+    end = start
+    while end < len(lines) and lines[end].strip() and not lines[end].startswith(('_', 'loop_')):
+        end += 1
+    rows = lines[start:end]
+    assert len(rows) > 3, 'The metadata vehicle must begin with a nontrivial measured pattern'
+    selected = [rows[0], rows[len(rows) // 2], rows[-1]]
+    assert len(set(selected)) == 3, (
+        'The metadata walk keeps distinct original rows spanning the complete observed interval'
+    )
+    return ''.join(lines[:start] + selected + lines[end:])
+
+
+def make_schema_2_project(
+    tmp_path: Path, *, cell_only_free: bool = False, metadata_only: bool = False
+) -> Path:
     destination = tmp_path / 'schema-2-project'
     shutil.copytree(corpus_case_dir('si-sepd-s2') / 'project', destination)
     for path in destination.rglob('*.edi'):
@@ -70,6 +96,8 @@ def make_schema_2_project(tmp_path: Path, *, cell_only_free: bool = False) -> Pa
                     '_cell.length_a 10.250256(5)',
                     1,
                 )
+        if metadata_only and path.parent.name == 'experiments':
+            text = _metadata_data_rows(text)
         path.write_text(text, encoding='utf-8')
     return destination
 

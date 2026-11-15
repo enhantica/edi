@@ -572,16 +572,6 @@
   {
     "kind": "experiment",
     "block": "wish_1_10",
-    "category": "absorption",
-    "name": "abscor2",
-    "label": "",
-    "free": false,
-    "descriptor": false,
-    "blocked": true
-  },
-  {
-    "kind": "experiment",
-    "block": "wish_1_10",
     "category": "linked_structure",
     "name": "scale",
     "label": "ncaf",
@@ -1522,16 +1512,6 @@
   {
     "kind": "experiment",
     "block": "wish_2_9",
-    "category": "absorption",
-    "name": "abscor2",
-    "label": "",
-    "free": false,
-    "descriptor": false,
-    "blocked": true
-  },
-  {
-    "kind": "experiment",
-    "block": "wish_2_9",
     "category": "linked_structure",
     "name": "scale",
     "label": "ncaf",
@@ -2192,16 +2172,6 @@
   {
     "kind": "experiment",
     "block": "wish_3_8",
-    "category": "absorption",
-    "name": "abscor2",
-    "label": "",
-    "free": false,
-    "descriptor": false,
-    "blocked": true
-  },
-  {
-    "kind": "experiment",
-    "block": "wish_3_8",
     "category": "linked_structure",
     "name": "scale",
     "label": "ncaf",
@@ -2858,16 +2828,6 @@
     "free": true,
     "descriptor": false,
     "blocked": false
-  },
-  {
-    "kind": "experiment",
-    "block": "wish_4_7",
-    "category": "absorption",
-    "name": "abscor2",
-    "label": "",
-    "free": false,
-    "descriptor": false,
-    "blocked": true
   },
   {
     "kind": "experiment",
@@ -3648,16 +3608,6 @@
     "free": true,
     "descriptor": false,
     "blocked": false
-  },
-  {
-    "kind": "experiment",
-    "block": "wish_5_6",
-    "category": "absorption",
-    "name": "abscor2",
-    "label": "",
-    "free": false,
-    "descriptor": false,
-    "blocked": true
   },
   {
     "kind": "experiment",

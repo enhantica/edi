@@ -36,9 +36,12 @@ runtime proof is pending this workspace's app build; unexecuted nodes remain
 explicitly unmeasured in the runtime table. Formatting and collection do not
 attest their runtime behaviour.
 
-`generate_bragg.py` generates the native boundary fixture from `owner.json`
-and the independent OKLab observer. With one experiment, structures start at
-position 2 in Earth and position 1 in the other palettes (ADR-0038). The boundary
-still checks every Bragg tick, public colour lookup and label identity; its old
-five-colour structure gradient is replaced by the shared eleven-colour palette
-and the ADR's overflow shades.
+`generate_bragg.py` generates the native boundary fixture from the approved design
+coordinates transcribed in `data/palettes/PROVENANCE.md` and the independent OKLab
+observer. ADR-0084 replaces the five earlier palettes with Main and Colour-blind
+safe; both reserve experiment positions 0 and 1, so structures begin at position 2.
+Every original structure-count and theme boundary still checks every Bragg tick,
+public colour lookup and label identity, including the overflow shades. The native
+case also checks that the four retired tokens are absent from the live catalogue
+and load as Main. The earlier `owner.json` design bytes remain unchanged for the
+historical controls that consume them.

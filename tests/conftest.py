@@ -250,6 +250,8 @@ def session_joint_fit(tmp_path_factory: pytest.TempPathFactory) -> SessionJointF
     library, preload_variable = _build_native_observer(workdir)
     log_path = workdir / 'fit-native.log'
     environment = os.environ.copy()
+    # One full observed fit proves I/O and write-back; threading has its own gates.
+    environment['OMP_NUM_THREADS'] = '1'
     environment['EDI_C08_NATIVE_OBSERVER_LOG'] = str(log_path)
     previous = environment.get(preload_variable)
     environment[preload_variable] = (
@@ -409,12 +411,18 @@ def crysta_reference_source() -> Path:
         result = Path(source)
     else:
         result = root / 'build/crysta-src'
-    current = subprocess.run(
-        ['git', '-C', str(result), 'rev-parse', 'HEAD'],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
+    if (result / '.git').exists():
+        current = subprocess.run(
+            ['git', '-C', str(result), 'rev-parse', 'HEAD'],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    else:
+        current = (result / 'CRYSTA_SOURCE_SHA').read_text().strip()
+        assert re.fullmatch(r'[0-9a-f]{40}', current), (
+            'engine source archives require the official full source identity marker'
+        )
     assert current == (prefix / '.crysta-sha').read_text().strip(), (
         'engine comparison corpus and CLI must belong to the same linked crysta source'
     )

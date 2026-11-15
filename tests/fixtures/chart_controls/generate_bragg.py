@@ -1,16 +1,37 @@
-"""Generate Bragg boundary values from owner colours and ADR-0038's position rule."""
+"""Generate Bragg boundaries from approved design bytes and ADR-0084 positions."""
 
 import json
+import re
 from pathlib import Path
 
 from tests.fixtures.approved_palettes.reference import gradient
 
 ROOT = Path(__file__).resolve().parents[3]
-TOKENS = ['earth', 'classic', 'soft', 'natural', 'colourBlindSafe']
+TOKENS = ['main', 'colourBlindSafe']
+
+
+def approved_palettes():
+    source = (ROOT / 'data/palettes/PROVENANCE.md').read_text()
+    palettes = []
+    for title in ('Main', 'Colour-blind safe'):
+        block = source.split(f'### {title}\n', 1)[1].split('\n### ', 1)[0]
+        rows = re.findall(
+            r'^\| figure \| (\d+) \| `(#[0-9A-F]{6})` \| `(#[0-9A-F]{6})` \|$',
+            block,
+            re.MULTILINE,
+        )
+        if [int(row[0]) for row in rows] != list(range(11)):
+            raise ValueError('Each approved palette must list its eleven ordered design colours')
+        palettes.append({
+            'name': title,
+            'light': [row[1] for row in rows],
+            'dark': [row[2] for row in rows],
+        })
+    return palettes
 
 
 def main():
-    palettes = json.loads(Path(__file__).with_name('owner.json').read_text())['palettes']
+    palettes = approved_palettes()
     output = [
         '#pragma once',
         '#include <cstddef>',
@@ -24,7 +45,8 @@ def main():
         'inline const std::vector<Case> cases{',
     ]
     for token, palette in zip(TOKENS, palettes, strict=True):
-        start = 2 if palette['name'] == 'Earth' else 1
+        # Both current palettes reserve experiment positions 0 and 1 (ADR-0084).
+        start = 2
         for count in (1, 2, 5, 6, 9, 10, 11, 17, 162):
             positions = list(range(start, start + count))
             size = positions[-1] + 1

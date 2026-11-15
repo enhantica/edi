@@ -79,9 +79,10 @@ def _parameters(project: Any) -> list[tuple[str, Any]]:
         assert isinstance(absorption, edi.CylinderHewatAbsorption), (
             'every parameter-bearing absorption must retain the registered cylinder family'
         )
+        assert not hasattr(absorption, 'abscor2'), 'ADR-0123 exposes no retired cylinder member'
         found.extend(
             (f'experiment.absorption.{name}', getattr(absorption, name))
-            for name in ('abscor1', 'abscor2')
+            for name in ('abscor1',)
             if getattr(absorption, name) is not None
         )
     found.extend(
@@ -118,7 +119,8 @@ def _cif(adp_columns: list[tuple[str, str]]) -> str:
 def test_c11_t40_every_reachable_parameter_has_surviving_metadata(
     tmp_path: Path,
 ) -> None:
-    source = make_schema_2_project(tmp_path)
+    # Metadata needs the full model and data extent, not thousands of repeated pattern rows.
+    source = make_schema_2_project(tmp_path, metadata_only=True)
     experiment = experiment_path(source)
     cylinder_text = experiment.read_text(encoding='utf-8')
     no_absorption_text = ''.join(
@@ -129,7 +131,7 @@ def test_c11_t40_every_reachable_parameter_has_surviving_metadata(
     #  F-d-ABS: parameters exist iff their typed family says so. Exercise the
     # shared cylinder fixture AND explicit/implicit none; never let fixture drift choose coverage.
     for selector, text, family, expected_count in (
-        ('cylinder', cylinder_text, edi.CylinderHewatAbsorption, 46),
+        ('cylinder', cylinder_text, edi.CylinderHewatAbsorption, 45),
         ('none', no_absorption_text + '\n_absorption.type none\n', edi.NoAbsorption, 44),
         ('absent', no_absorption_text, edi.NoAbsorption, 44),
     ):
@@ -146,13 +148,9 @@ def test_c11_t40_every_reachable_parameter_has_surviving_metadata(
             selector,
         )
         absorption_paths = {path for path, _ in parameters if '.absorption.' in path}
-        expected_paths = (
-            {'experiment.absorption.abscor1', 'experiment.absorption.abscor2'}
-            if selector == 'cylinder'
-            else set()
-        )
+        expected_paths = {'experiment.absorption.abscor1'} if selector == 'cylinder' else set()
         assert absorption_paths == expected_paths, (
-            'only the cylinder family may contribute its complete absorption parameter pair',
+            'only the cylinder family contributes its complete live absorption parameter set',
             selector,
         )
         for path, parameter in parameters:
