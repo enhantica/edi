@@ -501,4 +501,81 @@ TestCase {
         compare(button.keyIcon, "play", "A settled fit restores the plain play icon");
     }
 
+    function test_single_crystal_measured_load_and_one_undo() {
+        Session.closeProject();
+        source = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/fitting_correctness/single_crystal"));
+        verify(Session.openProject(source), "The independent Ni experiment opens before replacing its measured reflections");
+        const project = Session.project, experiment = project.currentExperiment;
+        tryVerify(() => !project.calculating, 10000, "The saved single-crystal calculation settles before data replacement");
+        experiment.scale.value = 2.3;
+        const before = experiment.text.inputText;
+        verify(SettingsProof.write(source, "replacement.hkl", "1 0 0 12 1\n2 0 0 17 2\n2 1 1 -3 3\n2 2 0 50 4\n"), "A distinct signed reflection list with unequal uncertainties supplies the load-data witness");
+        verify(project.loadDataInto(experiment, Qt.resolvedUrl(source + "/replacement.hkl")), "The real single-crystal data loader replaces measurements");
+        tryVerify(() => !project.calculating, 10000, "The measured-reflection load and its automatic factor settle");
+        const afterScale = project.currentExperiment.scale.value;
+        const observations = [12,17,-3,50], sigma = [1,2,3,4], basis = 1.03*1.03;
+        let numerator = 0, denominator = 0;
+        for (let index=0; index<observations.length; ++index) {
+            numerator += basis * observations[index] / (sigma[index]*sigma[index]);
+            denominator += basis*basis / (sigma[index]*sigma[index]);
+        }
+        project.undo();
+        tryVerify(() => !project.calculating, 10000, "Undo of the single-crystal data load settles");
+        fuzzyCompare(project.currentExperiment.scale.value,2.3,1e-12,"One undo restores the previous single-crystal scale with its data");
+        compare(project.currentExperiment.text.inputText,before,"One undo restores the complete previous single-crystal input declaration");
+        fuzzyCompare(afterScale,numerator/denominator,1e-5,"Single-crystal data replacement automatically applies the independent weighted scale optimum");
+    }
+    function test_disabled_phase_keeps_scale_while_remaining_phase_rescales() {
+        open(true);
+        const project=Session.project, experiment=project.currentExperiment;
+        const structure=SettingsProof.text(source,"structures/phase.edi");
+        verify(SettingsProof.write(source,"extra.edi",structure.replace("data_phase","data_extra")),"A second powder phase supplies a genuinely disabled scale witness");
+        verify(project.loadStructure(Qt.resolvedUrl(source+"/extra.edi")),"The second structure is added through the actual loader");
+        experiment.linkedStructures.append();
+        ready();
+        let rows=Probe.rows(experiment.linkedStructures);
+        rows[0].scale.value=2;
+        rows[1].scale.value=3;
+        ready();
+        verify(experiment.linkedStructures.setEnabled(1,false),"The phase-disable action exercises the declared removal trigger");
+        ready();
+        rows=Probe.rows(experiment.linkedStructures);
+        const disabledScale=rows[1].scale.value;
+        let numerator=0,denominator=0;
+        for (const row of Probe.rows(experiment.pattern)) {
+            if (!isFinite(row.intensityCalc) || !isFinite(row.intensityMeas) || !(row.intensityMeasSu>0)) continue;
+            const net=row.intensityCalc-row.intensityBkg, weight=1/(row.intensityMeasSu*row.intensityMeasSu);
+            numerator += weight*net*(row.intensityMeas-row.intensityBkg);
+            denominator += weight*net*net;
+        }
+        verify(denominator>0,"Disabling one phase leaves a measured calculated profile for the normal equation");
+        const remainingFactor=numerator/denominator;
+        project.undo();
+        ready();
+        const restored=Probe.rows(experiment.linkedStructures);
+        verify(restored[1].enabled,"One undo restores the disabled phase membership");
+        fuzzyCompare(restored[0].scale.value,2,1e-12,"One undo restores the first pre-disable scale");
+        fuzzyCompare(restored[1].scale.value,3,1e-12,"One undo restores the second pre-disable scale");
+        fuzzyCompare(disabledScale,3,1e-12,"A disabled link keeps its own scale during common-factor initialization");
+        fuzzyCompare(remainingFactor,1,3e-5,"Disabling a phase fits only the remaining enabled phase contribution");
+    }
+
+    function test_common_scale_no_change_data() {
+        return [{tag:"zero-calculation",zero:true},{tag:"negative-optimum",zero:false}];
+    }
+    function test_common_scale_no_change(data) {
+        open(false);
+        const project=Session.project;
+        scale().value=data.zero?0:2.3;
+        ready();
+        const before=scale().value;
+        const observations=data.zero?"20 10 1\n30 20 2\n40 30 3\n50 40 4\n":"20 10 1\n30 20 2\n40 30 3\n50 40 4\n";
+        verify(SettingsProof.write(source,"guard.xye",observations),"The no-change witness declares either zero calculated signal or a negative optimum");
+        verify(project.loadDataInto(project.currentExperiment,Qt.resolvedUrl(source+"/guard.xye")),"The no-change guard is reached by a real measured-data load: "+project.lastError);
+        ready();
+        fuzzyCompare(scale().value,before,1e-12,"A zero denominator or nonpositive common factor leaves scales unchanged");
+        const notes=Probe.rows(Session.loadWarnings).filter(row=>/phase scales.*left|scale.*unchanged/i.test(String(row.message)));
+        compare(notes.length,1,"A skipped common factor posts one explanatory info line in Messages");
+    }
+
 }

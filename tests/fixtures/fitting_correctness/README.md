@@ -78,3 +78,10 @@ International Tables F section 21.1.7.1.1 for Rmerge;
 https://dictionary.iucr.org/Reflection_conditions for centring, glide and screw
 conditions. The fixture space groups are P 21/c (b1) and F d -3 m. Their point
 rotations give the explicit equivalent-index operations in the generator.
+
+The declared exact-index exclusion before merging is a product policy. SHELXL's
+unmerged OMIT form supports exact index omission, but its manual also says that
+with nonzero MERG it omits all inputs mapping to the final indices. The gate for
+Laue merging binds the declared product policy; it does not claim that difference
+is SHELXL parity. The early design review must assess the discrepancy.
+Source: https://shelx.uni-goettingen.de/shelxl_html.php, OMIT h k l.

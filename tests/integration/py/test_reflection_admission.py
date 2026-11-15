@@ -1,8 +1,11 @@
 """Admission, merging and reporting against independent reflection arithmetic."""
 
+import hashlib
 import importlib
 import json
+import os
 import re
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -18,7 +21,6 @@ from tests.fixtures.fitting_correctness.admission import (
     stage,
 )
 from tests.fixtures.single_crystal_edges.observe import observe
-from tests.integration.py.test_single_crystal_empty import native as native_observer
 
 ENGINE = 'edi'
 BASIS = 1.03**2
@@ -33,7 +35,30 @@ def saved(root, destination):
 
 @pytest.fixture(scope='module')
 def native():
-    return native_observer.__wrapped__()
+    root = Path(__file__).resolve().parents[3]
+    selected = os.environ.get('SINGLE_CRYSTAL_EMPTY_OBSERVER')
+    if selected:
+        executable = Path(selected)
+    elif ENGINE == 'crysta':
+        executable = (
+            root / 'build/crysta'
+        ).resolve().parent / 'tests/fixtures/single_crystal_edges/single_crystal_edge_probe'
+    else:
+        directory = Path(importlib.import_module(ENGINE)._edi.__file__).resolve().parents[2]
+        executable = directory / 'single_crystal_edges/single_crystal_edge_probe'
+    assert executable.is_file(), (
+        'The admission gates require the prepared actual native-model observer'
+    )
+    identity = subprocess.check_output(
+        [str(executable), '--identity'], text=True, timeout=10
+    ).strip()
+    expected = hashlib.sha256(
+        (root / 'tests/fixtures/single_crystal_edges/probe.cpp').read_bytes()
+    ).hexdigest()
+    assert identity == expected, (
+        'The prepared observer must match the complete committed fixture source'
+    )
+    return executable
 
 
 @pytest.mark.parametrize(
@@ -90,7 +115,7 @@ def test_hkl_omit_is_exact_and_precedes_merge_and_cutoff(native, tmp_path):
         'The exact listed hkl must be marked user-excluded'
     )
     assert column(text, '_refln.include_status')[1] != 'x', (
-        'SHELXL OMIT hkl must not omit the Friedel mate unless it is listed separately'
+        'The declared exact-index policy must not omit an unlisted Friedel mate'
     )
     assert scalar(text, '_reflns.number_excluded') == 1, (
         'An omitted row must be counted once before equivalents are grouped'
@@ -153,6 +178,18 @@ def test_merging_precedes_fit_cutoff(native, tmp_path):
     used = [(0, 0, 0, mean, sigma) for mean, sigma in reduced if mean > 2 * sigma]
     require_fit(result, used)
 
+    text = (tmp_path / 'input-saved/experiments/bank.edi').read_text()
+    assert scalar(text, '_reflns.number_total') == 3, (
+        'The unique count is reported before the merged-observation cutoff'
+    )
+    assert scalar(text, '_refine_ls.number_reflns') == len(used), (
+        'The used count is reported after the merged-observation cutoff'
+    )
+    expected_sigma = sum(row[4] for row in used) / sum(row[3] for row in used)
+    assert scalar(text, '_reflns.R_sigma') == pytest.approx(expected_sigma, rel=1e-6), (
+        'R-sigma must use only merged observations that survive the fit cutoff'
+    )
+
 
 @pytest.mark.parametrize(
     ('group', 'rows', 'absent'),
@@ -169,21 +206,24 @@ def test_merging_precedes_fit_cutoff(native, tmp_path):
         ),
     ],
 )
-def test_international_tables_absences_and_warning(tmp_path, group, rows, absent):
+@pytest.mark.parametrize('policy', ['include', 'exclude'])
+def test_international_tables_absences_and_warning(tmp_path, group, rows, absent, policy):
     root = stage(
-        tmp_path / 'input', rows=rows, group=group, declarations='_reflns.absences exclude\n'
+        tmp_path / 'input', rows=rows, group=group, declarations=f'_reflns.absences {policy}\n'
     )
     text = saved(root, tmp_path / 'saved')
     assert scalar(text, '_reflns.number_absent') == len(absent), (
         'Integral centring, serial screw and zonal glide absences must '
         'follow International Tables rules'
     )
-    assert scalar(text, '_refine_ls.number_reflns') == len(rows) - len(absent), (
+    assert scalar(text, '_refine_ls.number_reflns') == len(rows) - (
+        len(absent) if policy == 'exclude' else 0
+    ), (
         'Systematic absences must be removed before residual admission '
         'while weak allowed rows remain'
     )
     statuses = column(text, '_refln.include_status')
-    assert all(statuses[index] == '-' for index in absent), (
+    assert all((statuses[index] == '-') == (policy == 'exclude') for index in absent), (
         'The exported row status must distinguish systematic absences from user omissions'
     )
 
@@ -383,4 +423,43 @@ def test_assistant_inspect_project_carries_the_same_merge_statistics(native, tmp
     )
     assert found.get('rsigma') == pytest.approx(r_sigma, rel=1e-6), (
         'The actual inspect_project context must carry the same independently computed R-sigma'
+    )
+
+
+def test_exact_hkl_omission_removes_all_repeated_rows_without_omitting_mates(native, tmp_path):
+    rows = [*MERGE_ROWS, (1, 0, 0, 1000000, 1)]
+    root = stage(tmp_path / 'input', rows=rows, declarations=exclusion(1, 0, 0))
+    result = observe(native, root, 'admission')
+    assert result['ok'], (
+        'An exact hkl omission must admit a valid residual after repeated '
+        'matching rows are removed'
+    )
+    require_fit(result, rows[1:6])
+    text = (tmp_path / 'input-saved/experiments/bank.edi').read_text()
+    assert scalar(text, '_reflns.number_excluded') == 2, (
+        'The declared exact-index policy removes every repeated matching observation, '
+        'counted independently of its mate'
+    )
+
+
+def test_no_automatic_outlier_rejection_during_merging(native, tmp_path):
+    rows = [*MERGE_ROWS, (1, 0, 0, 10000, 1)]
+    root = stage(tmp_path / 'input', rows=rows, declarations='_reflns.merge laue_class\n')
+    result = observe(native, root, 'admission')
+    assert result['ok'], 'Default merging must retain even a strongly inconsistent equivalent'
+    reduced, _, _ = merged(rows, [[0, 1, 6], [2, 3], [4, 5]])
+    require_fit(result, [(0, 0, 0, mean, sigma) for mean, sigma in reduced])
+
+
+@pytest.mark.parametrize('sigma', [0, -1])
+def test_merging_never_hides_invalid_measurement_uncertainty(native, tmp_path, sigma):
+    rows = [*MERGE_ROWS]
+    rows[0] = (1, 0, 0, 10, sigma)
+    root = stage(tmp_path / 'input', rows=rows, declarations='_reflns.merge laue_class\n')
+    result = observe(native, root, 'admission')
+    assert not result['ok'], (
+        'A nonpositive measurement uncertainty must be refused before merging or weighting'
+    )
+    assert re.search(r'(?i)sigma|uncert|s.u.|positive', result['error']), (
+        'The invalid uncertainty refusal must identify the scientific input problem'
     )
