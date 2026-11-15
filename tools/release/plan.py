@@ -145,6 +145,16 @@ def release_body(notes: str, date: str) -> str:
     )
 
 
+MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+
+def release_title(version: str, date: str, *, preview: bool = False) -> str:
+    """A GitHub release's title, its version and release date: ``2026.11.14 (13 Nov 2026)``."""
+    day = datetime.date.fromisoformat(date)
+    title = f'{version} ({day.day} {MONTHS[day.month - 1]} {day.year})'
+    return title + ' preview' if preview else title
+
+
 def release_date(body: str | None) -> str | None:
     """The release date a release body records, if any."""
     match = RELEASE_DATE.search(body or '')
@@ -247,8 +257,11 @@ def markdown_note(entry: dict) -> str:
 
 
 def markdown_notes(release: dict) -> str:
-    """Render the same recorded titles for GitHub and application release history."""
-    lines = [f'# EasyDiffraction {release["version"]}', '']
+    """Render the same recorded titles for GitHub and application release history.
+
+    The release title already names the version, so the notes start at the first section.
+    """
+    lines = []
     for group, entries in release['notes'].items():
         if entries:
             lines.extend([f'## {group}', ''])
