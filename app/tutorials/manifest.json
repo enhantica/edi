@@ -14274,6 +14274,15 @@
           "check": "example:pd-neut-cwl_cosio-d20_scan-213f"
         },
         {
+          "title": "The example's constraints",
+          "text": "Check that the expression of constraint 1 reads **biso_Co2 = biso_Co1**: the example comes with it. The two Co sites scatter alike, so the pattern cannot tell their displacements apart.",
+          "page": "analysis",
+          "target": "constraint.expression.0",
+          "check": "field:constraint.expression.0=biso_Co2 = biso_Co1",
+          "tab": "extras",
+          "why": "The two Co sites scatter alike, so the pattern cannot tell their displacements apart."
+        },
+        {
           "title": "Start with nothing free",
           "text": "Entries loaded from the database can come with parameters already free, and the stages below free each group themselves. Click the **Free** column header of the **Parameters** table.",
           "page": "analysis",

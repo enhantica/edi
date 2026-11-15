@@ -47,6 +47,7 @@ pd-neut-cwl_y2o3-spodi:
 pd-neut-tof_si-sepd:
   background-estimate: An estimate of 14 points under the peaks gives the fit a good starting background.
 pd-neut-cwl_cosio-d20_scan-213f:
+  constraint:biso_Co2: The two Co sites scatter alike, so the pattern cannot tell their displacements apart.
   fitting-mode:single: The template pattern is fitted alone first, so the scan starts from a good model.
   fitting-mode:sequential: Back to the scan, each pattern fitted in turn from the one before it.
   descent: With the default descent the scan can stop in a shallower minimum of the peak widths.
