@@ -7,7 +7,7 @@ one after another, with linked displacement parameters.
 
 It builds the catalogue case `pd-xray-cwl_latp-bm01_scan` step by step: the same project the
 command line fits and the app's Examples open. Al shares Ti's site, coordinate and displacement,
-and the impurity phase's displacements are shared,.
+and the impurity phase's displacements are shared.
 
 ## Define the project
 
@@ -185,9 +185,9 @@ _cell.length_c 20.8268()
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 11 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 140198364.17
-      1      0.575      4.51 140107944.41   0.1% ↓
-      2      0.657      4.51 140107929.77   
-  done · converged · 2 iters · reduced χ² 140107929.77 · Rwp 4.51 % · 0.71 s
+      1      0.712      4.51 140107944.41   0.1% ↓
+      2      0.819      4.51 140107929.77   
+  done · converged · 2 iters · reduced χ² 140107929.77 · Rwp 4.51 % · 0.87 s
 
   refined parameters (11 free):
   name            parameter                                               start        value      s.u.   change
@@ -236,41 +236,41 @@ The same for every other row (28 more).
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 41 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 141478227.17
-      1      0.884      4.51 141465283.67   
-  done · converged · 1 iters · reduced χ² 141465283.67 · Rwp 4.51 % · 0.93 s
+      1      1.197      4.51 141465283.67   
+  done · converged · 1 iters · reduced χ² 141465283.67 · Rwp 4.51 % · 1.26 s
 
   refined parameters (41 free):
   name            parameter                                               start        value      s.u.   change
-  intensity       experiment.background[10].intensity                    7.98e7  7.9900000e70.1000000e7   0.1% ↑
-  intensity       experiment.background[12].intensity                    4.82e7  4.8200000e70.0700000e7   
-  intensity       experiment.background[14].intensity                    3.71e7  3.7200000e70.0700000e7   0.2% ↑
-  intensity       experiment.background[16].intensity                    3.07e7  3.0700000e70.0600000e7   
-  intensity       experiment.background[18].intensity                    2.61e7  2.6100000e70.0400000e7   0.1% ↓
-  intensity       experiment.background[20].intensity                    2.43e7  2.4400000e70.0400000e7   0.2% ↑
-  intensity       experiment.background[23].intensity                    2.29e7  2.2900000e70.0400000e7   0.1% ↓
-  intensity       experiment.background[25].intensity                    2.27e7  2.2800000e70.0400000e7   0.4% ↑
-  intensity       experiment.background[27].intensity                    2.51e7  2.5100000e70.0400000e7   
-  intensity       experiment.background[30].intensity                    2.44e7  2.4400000e70.0300000e7   0.2% ↑
-  intensity       experiment.background[33].intensity                    2.59e7  2.5900000e70.0300000e7   0.1% ↑
-  intensity       experiment.background[36].intensity                    1.93e7  1.9300000e70.0170000e7   0.1% ↑
-  intensity       experiment.background[38].intensity                    1.59e7  1.5970000e70.0150000e7   0.1% ↑
-  intensity       experiment.background[40].intensity                    1.66e7  1.6600000e70.0140000e7   0.1% ↑
-  intensity       experiment.background[43].intensity                    1.89e7  1.8860000e70.0150000e7   0.1% ↑
-  intensity       experiment.background[45].intensity                    1.81e7  1.8080000e70.0140000e7   
-  intensity       experiment.background[47].intensity                    1.79e7  1.7900000e70.0130000e7   
-  intensity       experiment.background[49].intensity                    1.95e7  1.9490000e70.0130000e7   0.1% ↑
-  intensity       experiment.background[4].intensity                     3.70e7  3.7000000e70.3000000e7   
-  intensity       experiment.background[51].intensity                    2.04e7  2.0370000e70.0120000e7   
-  intensity       experiment.background[53].intensity                    2.19e7  2.1930000e70.0110000e7   
-  intensity       experiment.background[55].intensity                    2.24e7  2.2390000e70.0100000e7   
-  intensity       experiment.background[57].intensity                    2.18e7  2.1840000e70.0100000e7   
-  intensity       experiment.background[59].intensity                    2.38e7  2.3840000e70.0080000e7   
-  intensity       experiment.background[5].intensity                     4.17e7  4.1700000e70.1100000e7   
-  intensity       experiment.background[61].intensity                    1.90e7  1.8960000e70.0090000e7   
-  intensity       experiment.background[62].intensity                    1.55e7  1.5500000e70.0300000e7   
-  intensity       experiment.background[7].intensity                     5.27e7  5.2800000e70.1100000e7   0.1% ↑
-  intensity       experiment.background[8].intensity                     6.72e7  6.7200000e70.1300000e7   
-  intensity       experiment.background[9].intensity                     8.27e7  8.2700000e70.1500000e7   
+  intensity       experiment.background[10].intensity                    7.98e7       7.99e7    0.10e7   0.1% ↑
+  intensity       experiment.background[12].intensity                    4.82e7       4.82e7    0.07e7   
+  intensity       experiment.background[14].intensity                    3.71e7       3.72e7    0.07e7   0.2% ↑
+  intensity       experiment.background[16].intensity                    3.07e7       3.07e7    0.06e7   
+  intensity       experiment.background[18].intensity                    2.61e7       2.61e7    0.04e7   0.1% ↓
+  intensity       experiment.background[20].intensity                    2.43e7       2.44e7    0.04e7   0.2% ↑
+  intensity       experiment.background[23].intensity                    2.29e7       2.29e7    0.04e7   0.1% ↓
+  intensity       experiment.background[25].intensity                    2.27e7       2.28e7    0.04e7   0.4% ↑
+  intensity       experiment.background[27].intensity                    2.51e7       2.51e7    0.04e7   
+  intensity       experiment.background[30].intensity                    2.44e7       2.44e7    0.03e7   0.2% ↑
+  intensity       experiment.background[33].intensity                    2.59e7       2.59e7    0.03e7   0.1% ↑
+  intensity       experiment.background[36].intensity                    1.93e7      1.930e7   0.017e7   0.1% ↑
+  intensity       experiment.background[38].intensity                    1.59e7      1.597e7   0.015e7   0.1% ↑
+  intensity       experiment.background[40].intensity                    1.66e7      1.660e7   0.014e7   0.1% ↑
+  intensity       experiment.background[43].intensity                    1.89e7      1.886e7   0.015e7   0.1% ↑
+  intensity       experiment.background[45].intensity                    1.81e7      1.808e7   0.014e7   
+  intensity       experiment.background[47].intensity                    1.79e7      1.790e7   0.013e7   
+  intensity       experiment.background[49].intensity                    1.95e7      1.949e7   0.013e7   0.1% ↑
+  intensity       experiment.background[4].intensity                     3.70e7        3.7e7     0.3e7   
+  intensity       experiment.background[51].intensity                    2.04e7      2.037e7   0.012e7   
+  intensity       experiment.background[53].intensity                    2.19e7      2.193e7   0.011e7   
+  intensity       experiment.background[55].intensity                    2.24e7      2.239e7   0.010e7   
+  intensity       experiment.background[57].intensity                    2.18e7      2.184e7   0.010e7   
+  intensity       experiment.background[59].intensity                    2.38e7      2.384e7   0.008e7   
+  intensity       experiment.background[5].intensity                     4.17e7       4.17e7    0.11e7   
+  intensity       experiment.background[61].intensity                    1.90e7      1.896e7   0.009e7   
+  intensity       experiment.background[62].intensity                    1.55e7       1.55e7    0.03e7   
+  intensity       experiment.background[7].intensity                     5.27e7       5.28e7    0.11e7   0.1% ↑
+  intensity       experiment.background[8].intensity                     6.72e7       6.72e7    0.13e7   
+  intensity       experiment.background[9].intensity                     8.27e7       8.27e7    0.15e7   
   2θ offset, deg  experiment.instrument.calib_twotheta_offset           -0.0387      -0.0387    0.0005   
   scale           experiment.linked_structures[alpo4_c2221].scale          0.55         0.53      0.12   3.0% ↓
   scale           experiment.linked_structures[alpo4_p63mc].scale           1.6          1.6       0.5   2.0% ↓
@@ -316,44 +316,44 @@ _peak.mixing_eta_0 0.374()
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 45 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 141658096.73
-      1      0.722      4.51 141616161.48   
-      2      0.784      4.51 141612687.24   
-      3      0.849      4.51 141612409.67   
-      4      1.080      4.51 141612395.32   
-  done · converged · 4 iters · reduced χ² 141612395.32 · Rwp 4.51 % · 1.13 s
+      1      1.126      4.51 141616161.48   
+      2      1.208      4.51 141612687.24   
+      3      1.275      4.51 141612409.67   
+      4      1.623      4.51 141612395.32   
+  done · converged · 4 iters · reduced χ² 141612395.32 · Rwp 4.51 % · 1.69 s
 
   refined parameters (45 free):
   name            parameter                                               start        value      s.u.   change
-  intensity       experiment.background[10].intensity                    7.99e7  7.9800000e70.1100000e7   0.1% ↓
-  intensity       experiment.background[12].intensity                    4.82e7  4.8200000e70.0700000e7   
-  intensity       experiment.background[14].intensity                    3.72e7  3.7100000e70.0700000e7   0.2% ↓
-  intensity       experiment.background[16].intensity                    3.07e7  3.0700000e70.0600000e7   0.1% ↓
-  intensity       experiment.background[18].intensity                    2.61e7  2.6100000e70.0400000e7   0.1% ↓
-  intensity       experiment.background[20].intensity                    2.44e7  2.4300000e70.0400000e7   0.3% ↓
-  intensity       experiment.background[23].intensity                    2.29e7  2.2900000e70.0400000e7   0.2% ↓
-  intensity       experiment.background[25].intensity                    2.28e7  2.2700000e70.0400000e7   0.2% ↓
-  intensity       experiment.background[27].intensity                    2.51e7  2.5100000e70.0400000e7   0.1% ↓
-  intensity       experiment.background[30].intensity                    2.44e7  2.4400000e70.0300000e7   
-  intensity       experiment.background[33].intensity                    2.59e7  2.5900000e70.0300000e7   
-  intensity       experiment.background[36].intensity                    1.93e7  1.9290000e70.0170000e7   0.1% ↓
-  intensity       experiment.background[38].intensity                    1.60e7  1.5950000e70.0160000e7   0.1% ↓
-  intensity       experiment.background[40].intensity                    1.66e7  1.6580000e70.0150000e7   0.1% ↓
-  intensity       experiment.background[43].intensity                    1.89e7  1.8850000e70.0150000e7   0.1% ↓
-  intensity       experiment.background[45].intensity                    1.81e7  1.8070000e70.0150000e7   
-  intensity       experiment.background[47].intensity                    1.79e7  1.7900000e70.0130000e7   
-  intensity       experiment.background[49].intensity                    1.95e7  1.9470000e70.0140000e7   0.1% ↓
-  intensity       experiment.background[4].intensity                     3.70e7  3.7000000e70.3000000e7   
-  intensity       experiment.background[51].intensity                    2.04e7  2.0360000e70.0120000e7   
-  intensity       experiment.background[53].intensity                    2.19e7  2.1910000e70.0120000e7   0.1% ↓
-  intensity       experiment.background[55].intensity                    2.24e7  2.2380000e70.0110000e7   
-  intensity       experiment.background[57].intensity                    2.18e7  2.1830000e70.0100000e7   
-  intensity       experiment.background[59].intensity                    2.38e7  2.3830000e70.0080000e7   
-  intensity       experiment.background[5].intensity                     4.17e7  4.1700000e70.1100000e7   
-  intensity       experiment.background[61].intensity                    1.90e7  1.8950000e70.0090000e7   
-  intensity       experiment.background[62].intensity                    1.55e7  1.5500000e70.0300000e7   
-  intensity       experiment.background[7].intensity                     5.28e7  5.2700000e70.1100000e7   0.1% ↓
-  intensity       experiment.background[8].intensity                     6.72e7  6.7200000e70.1300000e7   
-  intensity       experiment.background[9].intensity                     8.27e7  8.2700000e70.1500000e7   0.1% ↓
+  intensity       experiment.background[10].intensity                    7.99e7       7.98e7    0.11e7   0.1% ↓
+  intensity       experiment.background[12].intensity                    4.82e7       4.82e7    0.07e7   
+  intensity       experiment.background[14].intensity                    3.72e7       3.71e7    0.07e7   0.2% ↓
+  intensity       experiment.background[16].intensity                    3.07e7       3.07e7    0.06e7   0.1% ↓
+  intensity       experiment.background[18].intensity                    2.61e7       2.61e7    0.04e7   0.1% ↓
+  intensity       experiment.background[20].intensity                    2.44e7       2.43e7    0.04e7   0.3% ↓
+  intensity       experiment.background[23].intensity                    2.29e7       2.29e7    0.04e7   0.2% ↓
+  intensity       experiment.background[25].intensity                    2.28e7       2.27e7    0.04e7   0.2% ↓
+  intensity       experiment.background[27].intensity                    2.51e7       2.51e7    0.04e7   0.1% ↓
+  intensity       experiment.background[30].intensity                    2.44e7       2.44e7    0.03e7   
+  intensity       experiment.background[33].intensity                    2.59e7       2.59e7    0.03e7   
+  intensity       experiment.background[36].intensity                    1.93e7      1.929e7   0.017e7   0.1% ↓
+  intensity       experiment.background[38].intensity                    1.60e7      1.595e7   0.016e7   0.1% ↓
+  intensity       experiment.background[40].intensity                    1.66e7      1.658e7   0.015e7   0.1% ↓
+  intensity       experiment.background[43].intensity                    1.89e7      1.885e7   0.015e7   0.1% ↓
+  intensity       experiment.background[45].intensity                    1.81e7      1.807e7   0.015e7   
+  intensity       experiment.background[47].intensity                    1.79e7      1.790e7   0.013e7   
+  intensity       experiment.background[49].intensity                    1.95e7      1.947e7   0.014e7   0.1% ↓
+  intensity       experiment.background[4].intensity                     3.70e7        3.7e7     0.3e7   
+  intensity       experiment.background[51].intensity                    2.04e7      2.036e7   0.012e7   
+  intensity       experiment.background[53].intensity                    2.19e7      2.191e7   0.012e7   0.1% ↓
+  intensity       experiment.background[55].intensity                    2.24e7      2.238e7   0.011e7   
+  intensity       experiment.background[57].intensity                    2.18e7      2.183e7   0.010e7   
+  intensity       experiment.background[59].intensity                    2.38e7      2.383e7   0.008e7   
+  intensity       experiment.background[5].intensity                     4.17e7       4.17e7    0.11e7   
+  intensity       experiment.background[61].intensity                    1.90e7      1.895e7   0.009e7   
+  intensity       experiment.background[62].intensity                    1.55e7       1.55e7    0.03e7   
+  intensity       experiment.background[7].intensity                     5.28e7       5.27e7    0.11e7   0.1% ↓
+  intensity       experiment.background[8].intensity                     6.72e7       6.72e7    0.13e7   
+  intensity       experiment.background[9].intensity                     8.27e7       8.27e7    0.15e7   0.1% ↓
   2θ offset, deg  experiment.instrument.calib_twotheta_offset           -0.0387      -0.0387    0.0005   0.1% ↓
   scale           experiment.linked_structures[alpo4_c2221].scale          0.53         0.53      0.12   0.8% ↑
   scale           experiment.linked_structures[alpo4_p63mc].scale           1.6          1.6       0.5   1.6% ↓
@@ -404,43 +404,43 @@ _peak.asym_beba_b0 0.0043()
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 47 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 141730697.09
-      1      0.747      4.51 141699783.02   
-      2      0.813      4.51 141696298.52   
-      3      1.077      4.51 141696205.35   
-  done · converged · 3 iters · reduced χ² 141696205.35 · Rwp 4.51 % · 1.14 s
+      1      1.052      4.51 141699783.02   
+      2      1.125      4.51 141696298.52   
+      3      1.470      4.51 141696205.35   
+  done · converged · 3 iters · reduced χ² 141696205.35 · Rwp 4.51 % · 1.55 s
 
   refined parameters (47 free):
   name            parameter                                               start        value      s.u.   change
-  intensity       experiment.background[10].intensity                    7.98e7  7.9800000e70.1100000e7   
-  intensity       experiment.background[12].intensity                    4.82e7  4.8200000e70.0700000e7   
-  intensity       experiment.background[14].intensity                    3.71e7  3.7100000e70.0700000e7   0.1% ↑
-  intensity       experiment.background[16].intensity                    3.07e7  3.0700000e70.0600000e7   0.1% ↓
-  intensity       experiment.background[18].intensity                    2.61e7  2.6100000e70.0400000e7   0.1% ↓
-  intensity       experiment.background[20].intensity                    2.43e7  2.4300000e70.0400000e7   0.1% ↑
-  intensity       experiment.background[23].intensity                    2.29e7  2.2900000e70.0400000e7   0.2% ↓
-  intensity       experiment.background[25].intensity                    2.27e7  2.2800000e70.0400000e7   0.2% ↑
-  intensity       experiment.background[27].intensity                    2.51e7  2.5100000e70.0400000e7   0.1% ↓
-  intensity       experiment.background[30].intensity                    2.44e7  2.4400000e70.0300000e7   0.1% ↑
-  intensity       experiment.background[33].intensity                    2.59e7  2.5900000e70.0300000e7   
-  intensity       experiment.background[36].intensity                    1.93e7  1.9290000e70.0170000e7   
-  intensity       experiment.background[38].intensity                    1.59e7  1.5950000e70.0160000e7   
-  intensity       experiment.background[40].intensity                    1.66e7  1.6580000e70.0150000e7   
-  intensity       experiment.background[43].intensity                    1.89e7  1.8850000e70.0150000e7   
-  intensity       experiment.background[45].intensity                    1.81e7  1.8070000e70.0150000e7   
-  intensity       experiment.background[47].intensity                    1.79e7  1.7900000e70.0130000e7   
-  intensity       experiment.background[49].intensity                    1.95e7  1.9470000e70.0140000e7   
-  intensity       experiment.background[4].intensity                     3.70e7  3.7000000e70.3000000e7   
-  intensity       experiment.background[51].intensity                    2.04e7  2.0360000e70.0120000e7   
-  intensity       experiment.background[53].intensity                    2.19e7  2.1910000e70.0120000e7   
-  intensity       experiment.background[55].intensity                    2.24e7  2.2380000e70.0110000e7   
-  intensity       experiment.background[57].intensity                    2.18e7  2.1830000e70.0100000e7   
-  intensity       experiment.background[59].intensity                    2.38e7  2.3830000e70.0080000e7   
-  intensity       experiment.background[5].intensity                     4.17e7  4.1700000e70.1100000e7   
-  intensity       experiment.background[61].intensity                    1.90e7  1.8960000e70.0090000e7   
-  intensity       experiment.background[62].intensity                    1.55e7  1.5500000e70.0300000e7   
-  intensity       experiment.background[7].intensity                     5.27e7  5.2800000e70.1100000e7   0.1% ↑
-  intensity       experiment.background[8].intensity                     6.72e7  6.7200000e70.1400000e7   0.1% ↓
-  intensity       experiment.background[9].intensity                     8.27e7  8.2700000e70.1500000e7   
+  intensity       experiment.background[10].intensity                    7.98e7       7.98e7    0.11e7   
+  intensity       experiment.background[12].intensity                    4.82e7       4.82e7    0.07e7   
+  intensity       experiment.background[14].intensity                    3.71e7       3.71e7    0.07e7   0.1% ↑
+  intensity       experiment.background[16].intensity                    3.07e7       3.07e7    0.06e7   0.1% ↓
+  intensity       experiment.background[18].intensity                    2.61e7       2.61e7    0.04e7   0.1% ↓
+  intensity       experiment.background[20].intensity                    2.43e7       2.43e7    0.04e7   0.1% ↑
+  intensity       experiment.background[23].intensity                    2.29e7       2.29e7    0.04e7   0.2% ↓
+  intensity       experiment.background[25].intensity                    2.27e7       2.28e7    0.04e7   0.2% ↑
+  intensity       experiment.background[27].intensity                    2.51e7       2.51e7    0.04e7   0.1% ↓
+  intensity       experiment.background[30].intensity                    2.44e7       2.44e7    0.03e7   0.1% ↑
+  intensity       experiment.background[33].intensity                    2.59e7       2.59e7    0.03e7   
+  intensity       experiment.background[36].intensity                    1.93e7      1.929e7   0.017e7   
+  intensity       experiment.background[38].intensity                    1.59e7      1.595e7   0.016e7   
+  intensity       experiment.background[40].intensity                    1.66e7      1.658e7   0.015e7   
+  intensity       experiment.background[43].intensity                    1.89e7      1.885e7   0.015e7   
+  intensity       experiment.background[45].intensity                    1.81e7      1.807e7   0.015e7   
+  intensity       experiment.background[47].intensity                    1.79e7      1.790e7   0.013e7   
+  intensity       experiment.background[49].intensity                    1.95e7      1.947e7   0.014e7   
+  intensity       experiment.background[4].intensity                     3.70e7        3.7e7     0.3e7   
+  intensity       experiment.background[51].intensity                    2.04e7      2.036e7   0.012e7   
+  intensity       experiment.background[53].intensity                    2.19e7      2.191e7   0.012e7   
+  intensity       experiment.background[55].intensity                    2.24e7      2.238e7   0.011e7   
+  intensity       experiment.background[57].intensity                    2.18e7      2.183e7   0.010e7   
+  intensity       experiment.background[59].intensity                    2.38e7      2.383e7   0.008e7   
+  intensity       experiment.background[5].intensity                     4.17e7       4.17e7    0.11e7   
+  intensity       experiment.background[61].intensity                    1.90e7      1.896e7   0.009e7   
+  intensity       experiment.background[62].intensity                    1.55e7       1.55e7    0.03e7   
+  intensity       experiment.background[7].intensity                     5.27e7       5.28e7    0.11e7   0.1% ↑
+  intensity       experiment.background[8].intensity                     6.72e7       6.72e7    0.14e7   0.1% ↓
+  intensity       experiment.background[9].intensity                     8.27e7       8.27e7    0.15e7   
   2θ offset, deg  experiment.instrument.calib_twotheta_offset           -0.0387      -0.0392    0.0014   1.3% ↓
   scale           experiment.linked_structures[alpo4_c2221].scale          0.53         0.53      0.12   0.4% ↑
   scale           experiment.linked_structures[alpo4_p63mc].scale           1.6          1.6       0.5   0.2% ↑
@@ -497,42 +497,42 @@ The same for every other row (2 more).
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 55 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 142093212.27
-      1      0.820      4.51 142052227.84   
-      2      1.067      4.51 142050818.62   
-  done · converged · 2 iters · reduced χ² 142050818.62 · Rwp 4.51 % · 1.12 s
+      1      0.999      4.51 142052227.84   
+      2      1.230      4.51 142050818.62   
+  done · converged · 2 iters · reduced χ² 142050818.62 · Rwp 4.51 % · 1.28 s
 
   refined parameters (55 free):
   name            parameter                                               start        value      s.u.   change
-  intensity       experiment.background[10].intensity                    7.98e7  7.9800000e70.1100000e7   
-  intensity       experiment.background[12].intensity                    4.82e7  4.8200000e70.0700000e7   
-  intensity       experiment.background[14].intensity                    3.71e7  3.7100000e70.0700000e7   
-  intensity       experiment.background[16].intensity                    3.07e7  3.0700000e70.0600000e7   0.1% ↓
-  intensity       experiment.background[18].intensity                    2.61e7  2.6100000e70.0400000e7   
-  intensity       experiment.background[20].intensity                    2.43e7  2.4300000e70.0400000e7   0.1% ↑
-  intensity       experiment.background[23].intensity                    2.29e7  2.2800000e70.0400000e7   0.2% ↓
-  intensity       experiment.background[25].intensity                    2.28e7  2.2800000e70.0400000e7   0.2% ↓
-  intensity       experiment.background[27].intensity                    2.51e7  2.5100000e70.0400000e7   
-  intensity       experiment.background[30].intensity                    2.44e7  2.4400000e70.0300000e7   
-  intensity       experiment.background[33].intensity                    2.59e7  2.5900000e70.0300000e7   
-  intensity       experiment.background[36].intensity                    1.93e7  1.9300000e70.0170000e7   
-  intensity       experiment.background[38].intensity                    1.59e7  1.5950000e70.0160000e7   
-  intensity       experiment.background[40].intensity                    1.66e7  1.6570000e70.0160000e7   0.1% ↓
-  intensity       experiment.background[43].intensity                    1.89e7  1.8850000e70.0150000e7   
-  intensity       experiment.background[45].intensity                    1.81e7  1.8070000e70.0150000e7   
-  intensity       experiment.background[47].intensity                    1.79e7  1.7900000e70.0130000e7   
-  intensity       experiment.background[49].intensity                    1.95e7  1.9470000e70.0140000e7   
-  intensity       experiment.background[4].intensity                     3.70e7  3.7000000e70.3000000e7   
-  intensity       experiment.background[51].intensity                    2.04e7  2.0360000e70.0120000e7   
-  intensity       experiment.background[53].intensity                    2.19e7  2.1920000e70.0120000e7   
-  intensity       experiment.background[55].intensity                    2.24e7  2.2380000e70.0110000e7   
-  intensity       experiment.background[57].intensity                    2.18e7  2.1830000e70.0100000e7   
-  intensity       experiment.background[59].intensity                    2.38e7  2.3830000e70.0080000e7   
-  intensity       experiment.background[5].intensity                     4.17e7  4.1700000e70.1100000e7   
-  intensity       experiment.background[61].intensity                    1.90e7  1.8950000e70.0100000e7   
-  intensity       experiment.background[62].intensity                    1.55e7  1.5500000e70.0300000e7   
-  intensity       experiment.background[7].intensity                     5.28e7  5.2800000e70.1100000e7   
-  intensity       experiment.background[8].intensity                     6.72e7  6.7100000e70.1400000e7   0.1% ↓
-  intensity       experiment.background[9].intensity                     8.27e7  8.2700000e70.1500000e7   
+  intensity       experiment.background[10].intensity                    7.98e7       7.98e7    0.11e7   
+  intensity       experiment.background[12].intensity                    4.82e7       4.82e7    0.07e7   
+  intensity       experiment.background[14].intensity                    3.71e7       3.71e7    0.07e7   
+  intensity       experiment.background[16].intensity                    3.07e7       3.07e7    0.06e7   0.1% ↓
+  intensity       experiment.background[18].intensity                    2.61e7       2.61e7    0.04e7   
+  intensity       experiment.background[20].intensity                    2.43e7       2.43e7    0.04e7   0.1% ↑
+  intensity       experiment.background[23].intensity                    2.29e7       2.28e7    0.04e7   0.2% ↓
+  intensity       experiment.background[25].intensity                    2.28e7       2.28e7    0.04e7   0.2% ↓
+  intensity       experiment.background[27].intensity                    2.51e7       2.51e7    0.04e7   
+  intensity       experiment.background[30].intensity                    2.44e7       2.44e7    0.03e7   
+  intensity       experiment.background[33].intensity                    2.59e7       2.59e7    0.03e7   
+  intensity       experiment.background[36].intensity                    1.93e7      1.930e7   0.017e7   
+  intensity       experiment.background[38].intensity                    1.59e7      1.595e7   0.016e7   
+  intensity       experiment.background[40].intensity                    1.66e7      1.657e7   0.016e7   0.1% ↓
+  intensity       experiment.background[43].intensity                    1.89e7      1.885e7   0.015e7   
+  intensity       experiment.background[45].intensity                    1.81e7      1.807e7   0.015e7   
+  intensity       experiment.background[47].intensity                    1.79e7      1.790e7   0.013e7   
+  intensity       experiment.background[49].intensity                    1.95e7      1.947e7   0.014e7   
+  intensity       experiment.background[4].intensity                     3.70e7        3.7e7     0.3e7   
+  intensity       experiment.background[51].intensity                    2.04e7      2.036e7   0.012e7   
+  intensity       experiment.background[53].intensity                    2.19e7      2.192e7   0.012e7   
+  intensity       experiment.background[55].intensity                    2.24e7      2.238e7   0.011e7   
+  intensity       experiment.background[57].intensity                    2.18e7      2.183e7   0.010e7   
+  intensity       experiment.background[59].intensity                    2.38e7      2.383e7   0.008e7   
+  intensity       experiment.background[5].intensity                     4.17e7       4.17e7    0.11e7   
+  intensity       experiment.background[61].intensity                    1.90e7      1.895e7   0.010e7   
+  intensity       experiment.background[62].intensity                    1.55e7       1.55e7    0.03e7   
+  intensity       experiment.background[7].intensity                     5.28e7       5.28e7    0.11e7   
+  intensity       experiment.background[8].intensity                     6.72e7       6.71e7    0.14e7   0.1% ↓
+  intensity       experiment.background[9].intensity                     8.27e7       8.27e7    0.15e7   
   2θ offset, deg  experiment.instrument.calib_twotheta_offset           -0.0392      -0.0393    0.0014   0.2% ↓
   scale           experiment.linked_structures[alpo4_c2221].scale          0.53         0.53      0.12   0.5% ↑
   scale           experiment.linked_structures[alpo4_p63mc].scale           1.6          1.6       0.5   0.5% ↑
@@ -595,44 +595,44 @@ The same for every other row (2 more).
 edi fit: project pd-xray-cwl_latp-bm01_scan, 3114 pts fitted / 3163 loaded, 59 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         4.51 142256063.67
-      1      0.805      4.51 142234677.52   
-      2      0.874      4.51 142229324.85   
-      3      0.938      4.51 142228737.76   
-      4      1.166      4.51 142228666.81   
-  done · converged · 4 iters · reduced χ² 142228666.81 · Rwp 4.51 % · 1.22 s
+      1      0.953      4.51 142234677.52   
+      2      1.017      4.51 142229324.85   
+      3      1.084      4.51 142228737.76   
+      4      1.362      4.51 142228666.81   
+  done · converged · 4 iters · reduced χ² 142228666.81 · Rwp 4.51 % · 1.45 s
 
   refined parameters (59 free):
   name            parameter                                               start        value      s.u.   change
-  intensity       experiment.background[10].intensity                    7.98e7  7.9800000e70.1100000e7   
-  intensity       experiment.background[12].intensity                    4.82e7  4.8200000e70.0700000e7   
-  intensity       experiment.background[14].intensity                    3.71e7  3.7100000e70.0700000e7   
-  intensity       experiment.background[16].intensity                    3.07e7  3.0600000e70.0600000e7   0.2% ↓
-  intensity       experiment.background[18].intensity                    2.61e7  2.6100000e70.0400000e7   
-  intensity       experiment.background[20].intensity                    2.43e7  2.4300000e70.0400000e7   
-  intensity       experiment.background[23].intensity                    2.28e7  2.2800000e70.0400000e7   0.2% ↑
-  intensity       experiment.background[25].intensity                    2.28e7  2.2800000e70.0400000e7   0.2% ↓
-  intensity       experiment.background[27].intensity                    2.51e7  2.5100000e70.0400000e7   0.1% ↓
-  intensity       experiment.background[30].intensity                    2.44e7  2.4400000e70.0300000e7   
-  intensity       experiment.background[33].intensity                    2.59e7  2.5900000e70.0300000e7   
-  intensity       experiment.background[36].intensity                    1.93e7  1.9300000e70.0180000e7   
-  intensity       experiment.background[38].intensity                    1.59e7  1.5950000e70.0160000e7   
-  intensity       experiment.background[40].intensity                    1.66e7  1.6570000e70.0160000e7   
-  intensity       experiment.background[43].intensity                    1.89e7  1.8860000e70.0150000e7   
-  intensity       experiment.background[45].intensity                    1.81e7  1.8080000e70.0150000e7   
-  intensity       experiment.background[47].intensity                    1.79e7  1.7900000e70.0130000e7   
-  intensity       experiment.background[49].intensity                    1.95e7  1.9490000e70.0150000e7   0.1% ↑
-  intensity       experiment.background[4].intensity                     3.70e7  3.7000000e70.3000000e7   
-  intensity       experiment.background[51].intensity                    2.04e7  2.0370000e70.0130000e7   
-  intensity       experiment.background[53].intensity                    2.19e7  2.1930000e70.0130000e7   
-  intensity       experiment.background[55].intensity                    2.24e7  2.2390000e70.0120000e7   
-  intensity       experiment.background[57].intensity                    2.18e7  2.1840000e70.0100000e7   
-  intensity       experiment.background[59].intensity                    2.38e7  2.3850000e70.0090000e7   0.1% ↑
-  intensity       experiment.background[5].intensity                     4.17e7  4.1700000e70.1100000e7   
-  intensity       experiment.background[61].intensity                    1.90e7  1.8970000e70.0110000e7   0.1% ↑
-  intensity       experiment.background[62].intensity                    1.55e7  1.5500000e70.0300000e7   
-  intensity       experiment.background[7].intensity                     5.28e7  5.2800000e70.1100000e7   
-  intensity       experiment.background[8].intensity                     6.71e7  6.7100000e70.1400000e7   0.1% ↑
-  intensity       experiment.background[9].intensity                     8.27e7  8.2700000e70.1500000e7   
+  intensity       experiment.background[10].intensity                    7.98e7       7.98e7    0.11e7   
+  intensity       experiment.background[12].intensity                    4.82e7       4.82e7    0.07e7   
+  intensity       experiment.background[14].intensity                    3.71e7       3.71e7    0.07e7   
+  intensity       experiment.background[16].intensity                    3.07e7       3.06e7    0.06e7   0.2% ↓
+  intensity       experiment.background[18].intensity                    2.61e7       2.61e7    0.04e7   
+  intensity       experiment.background[20].intensity                    2.43e7       2.43e7    0.04e7   
+  intensity       experiment.background[23].intensity                    2.28e7       2.28e7    0.04e7   0.2% ↑
+  intensity       experiment.background[25].intensity                    2.28e7       2.28e7    0.04e7   0.2% ↓
+  intensity       experiment.background[27].intensity                    2.51e7       2.51e7    0.04e7   0.1% ↓
+  intensity       experiment.background[30].intensity                    2.44e7       2.44e7    0.03e7   
+  intensity       experiment.background[33].intensity                    2.59e7       2.59e7    0.03e7   
+  intensity       experiment.background[36].intensity                    1.93e7      1.930e7   0.018e7   
+  intensity       experiment.background[38].intensity                    1.59e7      1.595e7   0.016e7   
+  intensity       experiment.background[40].intensity                    1.66e7      1.657e7   0.016e7   
+  intensity       experiment.background[43].intensity                    1.89e7      1.886e7   0.015e7   
+  intensity       experiment.background[45].intensity                    1.81e7      1.808e7   0.015e7   
+  intensity       experiment.background[47].intensity                    1.79e7      1.790e7   0.013e7   
+  intensity       experiment.background[49].intensity                    1.95e7      1.949e7   0.015e7   0.1% ↑
+  intensity       experiment.background[4].intensity                     3.70e7        3.7e7     0.3e7   
+  intensity       experiment.background[51].intensity                    2.04e7      2.037e7   0.013e7   
+  intensity       experiment.background[53].intensity                    2.19e7      2.193e7   0.013e7   
+  intensity       experiment.background[55].intensity                    2.24e7      2.239e7   0.012e7   
+  intensity       experiment.background[57].intensity                    2.18e7      2.184e7   0.010e7   
+  intensity       experiment.background[59].intensity                    2.38e7      2.385e7   0.009e7   0.1% ↑
+  intensity       experiment.background[5].intensity                     4.17e7       4.17e7    0.11e7   
+  intensity       experiment.background[61].intensity                    1.90e7      1.897e7   0.011e7   0.1% ↑
+  intensity       experiment.background[62].intensity                    1.55e7       1.55e7    0.03e7   
+  intensity       experiment.background[7].intensity                     5.28e7       5.28e7    0.11e7   
+  intensity       experiment.background[8].intensity                     6.71e7       6.71e7    0.14e7   0.1% ↑
+  intensity       experiment.background[9].intensity                     8.27e7       8.27e7    0.15e7   
   2θ offset, deg  experiment.instrument.calib_twotheta_offset           -0.0393      -0.0394    0.0014   0.2% ↓
   scale           experiment.linked_structures[alpo4_c2221].scale          0.53         0.53      0.12   0.9% ↑
   scale           experiment.linked_structures[alpo4_p63mc].scale           1.6          1.6       0.5   0.6% ↑
@@ -692,19 +692,19 @@ _fitting_mode.type sequential
     ```
 
 ```text
-[░░░░░░░░░░░░░░] · 1/73 · 1% · elapsed 2s · eta 2m32s · 1 ok · 0 fail · latp_312 · reduced χ² 142229626.70
-[░░░░░░░░░░░░░░] · 2/73 · 3% · elapsed 3s · eta 1m55s · 2 ok · 0 fail · latp_311 · reduced χ² 145127699.82
-[█░░░░░░░░░░░░░] · 3/73 · 4% · elapsed 5s · eta 1m50s · 3 ok · 0 fail · latp_310 · reduced χ² 143755384.27
-[█░░░░░░░░░░░░░] · 4/73 · 5% · elapsed 6s · eta 1m49s · 4 ok · 0 fail · latp_309 · reduced χ² 147076823.95
-[█░░░░░░░░░░░░░] · 5/73 · 7% · elapsed 8s · eta 1m45s · 5 ok · 0 fail · latp_308 · reduced χ² 146985656.48
-[█░░░░░░░░░░░░░] · 6/73 · 8% · elapsed 9s · eta 1m41s · 6 ok · 0 fail · latp_307 · reduced χ² 147115481.27
+Sequential fit: pd-xray-cwl_latp-bm01_scan
+
+Progress                  │ OK  Failed │ Elapsed    Left │  Chi2   Chi2 range │ File
+░░░░░░░░░░    1.4%   1/73 │  1       0 │      3s   3m18s │ 1.40e8  1.40e8-1.40e8 │ latp_312
+░░░░░░░░░░    2.7%   2/73 │  2       0 │      4s   2m30s │ 1.50e8  1.40e8-1.50e8 │ latp_311
+░░░░░░░░░░    4.1%   3/73 │  3       0 │      6s   2m20s │ 1.40e8  1.40e8-1.50e8 │ latp_310
 …
-[█████████████░] · 69/73 · 95% · elapsed 2m08s · eta 7s · 69 ok · 0 fail · latp_244 · reduced χ² 45839457.15
-[█████████████░] · 70/73 · 96% · elapsed 2m09s · eta 6s · 70 ok · 0 fail · latp_243 · reduced χ² 38966574.31
-[██████████████] · 71/73 · 97% · elapsed 2m11s · eta 4s · 71 ok · 0 fail · latp_242 · reduced χ² 37983723.70
-[██████████████] · 72/73 · 99% · elapsed 2m14s · eta 2s · 72 ok · 0 fail · latp_241 · reduced χ² 36267052.67
-[██████████████] · 73/73 · 100% · elapsed 2m16s · 73 ok · 0 fail
-scan · 73 files · 73 converged · 0 failed · reduced χ² 36267052.67-152294380.50 · 2m16s
+█████████░   93.2%  68/73 │ 68       0 │   2m12s     10s │ 4.80e7  4.70e7-1.50e8 │ latp_245
+█████████░   94.5%  69/73 │ 69       0 │   2m15s      8s │ 4.60e7  4.60e7-1.50e8 │ latp_244
+██████████   95.9%  70/73 │ 70       0 │   2m16s      6s │ 3.90e7  3.90e7-1.50e8 │ latp_243
+██████████   97.3%  71/73 │ 71       0 │   2m19s      4s │ 3.80e7  3.80e7-1.50e8 │ latp_242
+██████████   98.6%  72/73 │ 72       0 │   2m21s      2s │ 3.60e7  3.60e7-1.50e8 │ latp_241
+██████████  100.0%  73/73 │ 73       0 │   2m23s         │ 4.00e7  3.60e7-1.50e8 │ latp_240
 ```
 
 ## Report

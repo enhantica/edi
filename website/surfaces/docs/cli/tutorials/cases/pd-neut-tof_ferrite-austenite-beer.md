@@ -140,9 +140,9 @@ austenite 100() 0.5021971485003485()
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 4 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        41.44       229.84
-      1      0.145     23.83        76.04   66.9% ↓
-      2      0.164     23.83        76.04   
-  done · converged · 2 iters · reduced χ² 76.04 · Rwp 23.83 % · 0.18 s
+      1      0.223     23.83        76.04   66.9% ↓
+      2      0.276     23.83        76.04   
+  done · converged · 2 iters · reduced χ² 76.04 · Rwp 23.83 % · 0.30 s
 
   per-bank Rwp (%):   expt_n2 24.49   expt_s2 23.16
 
@@ -197,8 +197,8 @@ The same for every other row (28 more).
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 64 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        23.83        76.86
-      1      0.705     18.05        44.10   42.6% ↓
-  done · converged · 1 iters · reduced χ² 44.10 · Rwp 18.05 % · 0.75 s
+      1      0.973     18.05        44.10   42.6% ↓
+  done · converged · 1 iters · reduced χ² 44.10 · Rwp 18.05 % · 1.06 s
 
   per-bank Rwp (%):   expt_n2 17.91   expt_s2 18.20
 
@@ -321,8 +321,8 @@ _peak.broad_lorentz_gamma_0 5()
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 72 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        18.05        44.16
-      1      0.773     16.38        36.36   17.7% ↓
-  done · converged · 1 iters · reduced χ² 36.36 · Rwp 16.38 % · 0.82 s
+      1      1.057     16.38        36.36   17.7% ↓
+  done · converged · 1 iters · reduced χ² 36.36 · Rwp 16.38 % · 1.10 s
 
   per-bank Rwp (%):   expt_n2 16.15   expt_s2 16.61
 
@@ -360,7 +360,7 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_n2].background[9].intensity                    0.195        0.191     0.026   1.8% ↓
   TOF offset, µs  experiments[expt_n2].instrument.calib_d_to_tof_offset           -1.95        -2.17      0.26   11.1% ↓
   σ₀², µs²        experiments[expt_n2].peak.broad_gauss_sigma_0                     900          281        95   68.8% ↓
-  σ₁², µs²/Å²     experiments[expt_n2].peak.broad_gauss_sigma_1                  1.00e3      1.860e3   0.110e3 ! 86.0% ↑
+  σ₁², µs²/Å²     experiments[expt_n2].peak.broad_gauss_sigma_1                  1.00e3       1.86e3    0.11e3 ! 86.0% ↑
   σ₂², µs²/Å⁴     experiments[expt_n2].peak.broad_gauss_sigma_2                     300          203        24 ! 32.4% ↓
   γ₀, µs          experiments[expt_n2].peak.broad_lorentz_gamma_0                     5         5.86      0.44   17.3% ↑
   intensity       experiments[expt_s2].background[10].intensity                   0.204        0.206     0.026   1.0% ↑
@@ -397,7 +397,7 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   scale           experiments[expt_s2].linked_structures[austenite].scale         74.03        74.57      0.24   0.7% ↑
   scale           experiments[expt_s2].linked_structures[ferrite].scale           300.2        303.1       1.2   1.0% ↑
   σ₀², µs²        experiments[expt_s2].peak.broad_gauss_sigma_0                     900          276        94   69.3% ↓
-  σ₁², µs²/Å²     experiments[expt_s2].peak.broad_gauss_sigma_1                  1.00e3      1.880e3   0.110e3 ! 87.9% ↑
+  σ₁², µs²/Å²     experiments[expt_s2].peak.broad_gauss_sigma_1                  1.00e3       1.88e3    0.11e3 ! 87.9% ↑
   σ₂², µs²/Å⁴     experiments[expt_s2].peak.broad_gauss_sigma_2                     300          192        23 ! 36.1% ↓
   γ₀, µs          experiments[expt_s2].peak.broad_lorentz_gamma_0                     5         5.91      0.44   18.1% ↑
 
@@ -445,9 +445,9 @@ Fe Fe 0 0 0 a 2 1 0.5() Biso
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 73 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        16.38        36.36
-      1      0.558      7.13         6.89   81.0% ↓
-      2      0.866      7.13         6.89   
-  done · converged · 2 iters · reduced χ² 6.89 · Rwp 7.13 % · 0.91 s
+      1      0.512      7.13         6.89   81.0% ↓
+      2      0.750      7.13         6.89   
+  done · converged · 2 iters · reduced χ² 6.89 · Rwp 7.13 % · 0.81 s
 
   per-bank Rwp (%):   expt_n2 7.06   expt_s2 7.20
 
@@ -485,7 +485,7 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_n2].background[9].intensity                    0.191        0.205     0.011   7.3% ↑
   TOF offset, µs  experiments[expt_n2].instrument.calib_d_to_tof_offset           -2.17        -2.11      0.13   2.9% ↑
   σ₀², µs²        experiments[expt_n2].peak.broad_gauss_sigma_0                     281          914        60   225.4% ↑
-  σ₁², µs²/Å²     experiments[expt_n2].peak.broad_gauss_sigma_1                  1.86e3      1.247e3   0.060e3 ! 33.0% ↓
+  σ₁², µs²/Å²     experiments[expt_n2].peak.broad_gauss_sigma_1                  1.86e3       1.24e3    0.06e3 ! 33.0% ↓
   σ₂², µs²/Å⁴     experiments[expt_n2].peak.broad_gauss_sigma_2                     203          325        12 ! 60.3% ↑
   γ₀, µs          experiments[expt_n2].peak.broad_lorentz_gamma_0                  5.86         4.98      0.21   15.1% ↓
   intensity       experiments[expt_s2].background[10].intensity                   0.206        0.198     0.012   3.6% ↓

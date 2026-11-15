@@ -95,7 +95,9 @@ _edi.schema_version 3
 The first stage frees the phase scale, the 2θ zero shift, the three cell lengths and the magnetic
 model: the moment components the magnetic space group allows (Co1 in any direction, Co2 only
 along b) and the j2 term of the Co²⁺ form factor, which sets how the magnetic intensities fall
-with angle.
+with angle. They are freed together because at 2 K many peaks are purely magnetic: the scale
+fitted alone would also absorb the error of the starting moments in those peaks, while freed
+with the moments it follows the nuclear peaks and the moments follow the magnetic ones.
 
 In `experiments/d20.edi`, add `()` after the values the stage frees:
 
@@ -132,11 +134,11 @@ The same for every other row (1 more).
 edi fit: project pd-neut-cwl_cosio-d20_2k, 1438 pts fitted / 1506 loaded, 10 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        11.38        35.87
-      1      0.066      5.97         9.88   72.5% ↓
-      2      0.074      5.97         9.88   
-      3      0.085      5.97         9.88   
-      4      0.097      5.97         9.88   
-  done · converged · 4 iters · reduced χ² 9.88 · Rwp 5.97 % · 0.10 s
+      1      0.075      5.97         9.88   72.5% ↓
+      2      0.083      5.97         9.88   
+      3      0.095      5.97         9.88   
+      4      0.109      5.97         9.88   
+  done · converged · 4 iters · reduced χ² 9.88 · Rwp 5.97 % · 0.12 s
 
   refined parameters (10 free):
   name            parameter                                                 start        value      s.u.   change
@@ -186,17 +188,17 @@ The same for every other row (14 more).
 edi fit: project pd-neut-cwl_cosio-d20_2k, 1438 pts fitted / 1506 loaded, 26 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         5.97         9.99
-      1      0.100      5.65         8.93   10.6% ↓
-      2      0.114      5.65         8.93   
-      3      0.127      5.65         8.93   
-      4      0.140      5.65         8.93   
-      5      0.159      5.65         8.93   
-      6      0.172      5.65         8.93   
-      7      0.182      5.65         8.93   
-      8      0.192      5.65         8.93   
-      9      0.203      5.65         8.93   
-     10      0.217      5.65         8.93   
-  done · converged · 10 iters · reduced χ² 8.93 · Rwp 5.65 % · 0.23 s
+      1      0.110      5.65         8.93   10.6% ↓
+      2      0.128      5.65         8.93   
+      3      0.140      5.65         8.93   
+      4      0.152      5.65         8.93   
+      5      0.164      5.65         8.93   
+      6      0.177      5.65         8.93   
+      7      0.191      5.65         8.93   
+      8      0.204      5.65         8.93   
+      9      0.216      5.65         8.93   
+     10      0.234      5.65         8.93   
+  done · converged · 10 iters · reduced χ² 8.93 · Rwp 5.65 % · 0.24 s
 
   refined parameters (26 free):
   name            parameter                                                 start        value      s.u.   change
@@ -237,7 +239,9 @@ edi fit: project pd-neut-cwl_cosio-d20_2k, 1438 pts fitted / 1506 loaded, 26 fre
 
 The third stage frees the atoms: each site's isotropic displacement (Co2's follows Co1's by the
 project's constraint) and the coordinates the symmetry leaves free. Co1 sits on a centre of
-symmetry, so it has none; the other sites lie on the mirror plane, except O3.
+symmetry, so it has none; the other sites lie on the mirror plane, except O3. Both are freed in
+one stage because positions and displacements change the same peak intensities: fitted apart,
+the one freed first would absorb the error of the other.
 
 In `structures/cosio.edi`, add `()` after the values the stage frees:
 
@@ -264,12 +268,12 @@ The same for every other row (4 more).
 edi fit: project pd-neut-cwl_cosio-d20_2k, 1438 pts fitted / 1506 loaded, 42 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         5.65         9.03
-      1      0.082      5.59         8.86   1.8% ↓
-      2      0.093      5.59         8.86   
-      3      0.103      5.59         8.86   
-      4      0.115      5.59         8.86   
-      5      0.130      5.59         8.86   
-  done · converged · 5 iters · reduced χ² 8.86 · Rwp 5.59 % · 0.14 s
+      1      0.109      5.59         8.86   1.8% ↓
+      2      0.127      5.59         8.86   
+      3      0.138      5.59         8.86   
+      4      0.152      5.59         8.86   
+      5      0.174      5.59         8.86   
+  done · converged · 5 iters · reduced χ² 8.86 · Rwp 5.59 % · 0.19 s
 
   refined parameters (42 free):
   name            parameter                                                 start        value      s.u.   change
@@ -351,17 +355,17 @@ _peak.broad_lorentz_y 0.017548()
 edi fit: project pd-neut-cwl_cosio-d20_2k, 1438 pts fitted / 1506 loaded, 46 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         5.59         8.89
-      1      0.094      5.58         8.86   0.3% ↓
-      2      0.106      5.58         8.86   
-      3      0.117      5.58         8.86   
-      4      0.130      5.58         8.86   
-      5      0.142      5.58         8.86   
-      6      0.155      5.58         8.86   
-      7      0.167      5.58         8.86   
-      8      0.179      5.58         8.86   
-      9      0.191      5.58         8.86   
-     10      0.208      5.58         8.86   
-  done · converged · 10 iters · reduced χ² 8.86 · Rwp 5.58 % · 0.22 s
+      1      0.106      5.58         8.86   0.3% ↓
+      2      0.120      5.58         8.86   
+      3      0.134      5.58         8.86   
+      4      0.147      5.58         8.86   
+      5      0.161      5.58         8.86   
+      6      0.174      5.58         8.86   
+      7      0.187      5.58         8.86   
+      8      0.201      5.58         8.86   
+      9      0.214      5.58         8.86   
+     10      0.245      5.58         8.86   
+  done · converged · 10 iters · reduced χ² 8.86 · Rwp 5.58 % · 0.26 s
 
   refined parameters (46 free):
   name            parameter                                                 start        value      s.u.   change
@@ -445,26 +449,26 @@ _peak.asym_fcj_1 0()
 edi fit: project pd-neut-cwl_cosio-d20_2k, 1438 pts fitted / 1506 loaded, 47 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         5.58         8.87
-      1      0.418      5.51         8.62   2.8% ↓
-      2      0.430      5.44         8.41   2.4% ↓
-      3      0.443      5.36         8.16   2.9% ↓
-      4      0.455      5.23         7.77   4.9% ↓
-      5      0.470      4.94         6.93   10.7% ↓
-      6      0.488      4.76         6.45   6.9% ↓
-      7      0.502      4.70         6.28   2.8% ↓
-      8      0.518      4.70         6.27   0.1% ↓
-      9      0.534      4.69         6.27   
-     10      0.552      4.69         6.26   0.1% ↓
-     11      0.570      4.69         6.26   0.1% ↓
-     12      0.585      4.69         6.25   0.1% ↓
-     13      0.604      4.69         6.25   
-     14      0.622      4.69         6.25   
-     15      0.640      4.69         6.25   
-     16      0.655      4.69         6.25   
-     17      0.677      4.69         6.25   
-     18      0.692      4.69         6.25   
-     19      0.715      4.69         6.25   
-  done · converged · 19 iters · reduced χ² 6.25 · Rwp 4.69 % · 0.73 s
+      1      0.258      5.51         8.62   2.8% ↓
+      2      0.270      5.44         8.41   2.4% ↓
+      3      0.282      5.36         8.16   2.9% ↓
+      4      0.291      5.23         7.77   4.9% ↓
+      5      0.301      4.94         6.93   10.7% ↓
+      6      0.313      4.76         6.45   6.9% ↓
+      7      0.323      4.70         6.28   2.8% ↓
+      8      0.337      4.70         6.27   0.1% ↓
+      9      0.350      4.69         6.27   
+     10      0.366      4.69         6.26   0.1% ↓
+     11      0.382      4.69         6.26   0.1% ↓
+     12      0.395      4.69         6.25   0.1% ↓
+     13      0.411      4.69         6.25   
+     14      0.427      4.69         6.25   
+     15      0.443      4.69         6.25   
+     16      0.456      4.69         6.25   
+     17      0.472      4.69         6.25   
+     18      0.485      4.69         6.25   
+     19      0.511      4.69         6.25   
+  done · converged · 19 iters · reduced χ² 6.25 · Rwp 4.69 % · 0.53 s
 
   refined parameters (47 free):
   name            parameter                                                 start        value      s.u.   change

@@ -100,8 +100,8 @@ pr2nio4 4()
 edi fit: project sc-neut-cwl_pr2nio4-5c2, 198 pts fitted / 198 loaded, 1 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                        115.85      6415.49
-      1      0.077      49.30      1161.93   81.9% ↓
-  done · converged · 1 iters · reduced χ² 1161.93 · wR(F²) 49.30 % · 0.09 s
+      1      0.072      49.30      1161.93   81.9% ↓
+  done · converged · 1 iters · reduced χ² 1161.93 · wR(F²) 49.30 % · 0.08 s
 
   refined parameters (1 free):
   name            parameter                                               start        value      s.u.   change
@@ -142,28 +142,28 @@ The same for every other row (1 more).
 edi fit: project sc-neut-cwl_pr2nio4-5c2, 198 pts fitted / 198 loaded, 6 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         49.30      1192.18
-      1      0.082      46.64      1067.00   10.5% ↓
-      2      0.091      46.63      1066.25   0.1% ↓
-      3      0.100      46.61      1065.55   0.1% ↓
-      4      0.110      46.60      1065.20   
+      1      0.081      46.64      1067.00   10.5% ↓
+      2      0.090      46.63      1066.25   0.1% ↓
+      3      0.099      46.61      1065.55   0.1% ↓
+      4      0.109      46.60      1065.20   
       5      0.119      46.60      1064.86   
-      6      0.128      46.59      1064.67   
-      7      0.137      46.59      1064.48   
-      8      0.147      46.59      1064.37   
+      6      0.129      46.59      1064.67   
+      7      0.139      46.59      1064.48   
+      8      0.148      46.59      1064.37   
       9      0.157      46.58      1064.26   
-     10      0.166      46.58      1064.19   
-     11      0.176      46.58      1064.13   
-     12      0.185      46.58      1064.09   
-     13      0.195      46.58      1064.05   
-     14      0.204      46.58      1064.02   
-     15      0.214      46.58      1063.99   
-     16      0.224      46.58      1063.98   
-     17      0.232      46.58      1063.96   
-     18      0.242      46.58      1063.95   
-     19      0.251      46.58      1063.94   
-     20      0.261      46.58      1063.93   
-     21      0.273      46.58      1063.93   
-  done · converged · 21 iters · reduced χ² 1063.93 · wR(F²) 46.58 % · 0.28 s
+     10      0.169      46.58      1064.19   
+     11      0.179      46.58      1064.13   
+     12      0.189      46.58      1064.09   
+     13      0.199      46.58      1064.05   
+     14      0.208      46.58      1064.02   
+     15      0.219      46.58      1063.99   
+     16      0.230      46.58      1063.98   
+     17      0.241      46.58      1063.96   
+     18      0.251      46.58      1063.95   
+     19      0.261      46.58      1063.94   
+     20      0.271      46.58      1063.93   
+     21      0.284      46.58      1063.93   
+  done · converged · 21 iters · reduced χ² 1063.93 · wR(F²) 46.58 % · 0.29 s
 
   refined parameters (6 free):
   name            parameter                                               start        value      s.u.   change
@@ -206,9 +206,9 @@ Od O 0.053() 0.068() 0.1728() p 32 0.074654 0() Biso
 edi fit: project sc-neut-cwl_pr2nio4-5c2, 198 pts fitted / 198 loaded, 7 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         46.58      1069.50
-      1      0.076      46.51      1066.71   0.3% ↓
-      2      0.087      46.51      1066.70   
-  done · converged · 2 iters · reduced χ² 1066.70 · wR(F²) 46.51 % · 0.10 s
+      1      0.084      46.51      1066.71   0.3% ↓
+      2      0.096      46.51      1066.70   
+  done · converged · 2 iters · reduced χ² 1066.70 · wR(F²) 46.51 % · 0.11 s
 
   refined parameters (7 free):
   name            parameter                                               start        value      s.u.   change
@@ -257,14 +257,14 @@ The same for every other row (3 more).
 edi fit: project sc-neut-cwl_pr2nio4-5c2, 198 pts fitted / 198 loaded, 23 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         46.51      1164.23
-      1      0.102       4.29         9.89   99.2% ↓
-      2      0.114       4.27         9.79   0.9% ↓
-      3      0.126       4.26         9.76   0.3% ↓
-      4      0.138       4.26         9.75   0.1% ↓
-      5      0.150       4.26         9.75   
-      6      0.162       4.26         9.75   
-      7      0.176       4.26         9.75   
-  done · converged · 7 iters · reduced χ² 9.75 · wR(F²) 4.26 % · 0.19 s
+      1      0.112       4.29         9.89   99.2% ↓
+      2      0.126       4.27         9.79   0.9% ↓
+      3      0.141       4.26         9.76   0.3% ↓
+      4      0.158       4.26         9.75   0.1% ↓
+      5      0.168       4.26         9.75   
+      6      0.178       4.26         9.75   
+      7      0.189       4.26         9.75   
+  done · converged · 7 iters · reduced χ² 9.75 · wR(F²) 4.26 % · 0.20 s
 
   refined parameters (23 free):
   name            parameter                                               start        value      s.u.   change

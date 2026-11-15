@@ -139,8 +139,8 @@ O1 O 0.33() 0.125 0.125 f 48 1 0.0026 Uani
 edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 2 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         19.62        59.17
-      1      0.084      14.74        33.42   43.5% ↓
-  done · converged · 1 iters · reduced χ² 33.42 · wR(F²) 14.74 % · 0.10 s
+      1      0.094      14.74        33.42   43.5% ↓
+  done · converged · 1 iters · reduced χ² 33.42 · wR(F²) 14.74 % · 0.11 s
 
   refined parameters (2 free):
   name            parameter                                               start        value      s.u.   change
@@ -180,8 +180,8 @@ The same for every other row (2 more).
 edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 10 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         14.74        34.69
-      1      0.098       6.09         5.93   82.9% ↓
-  done · converged · 1 iters · reduced χ² 5.93 · wR(F²) 6.09 % · 0.11 s
+      1      0.104       6.09         5.93   82.9% ↓
+  done · converged · 1 iters · reduced χ² 5.93 · wR(F²) 6.09 % · 0.12 s
 
   refined parameters (10 free):
   name            parameter                                               start        value      s.u.   change
@@ -229,15 +229,15 @@ _extinction.mosaic_spread 0()
 edi fit: project sc-neut-cwl_tb2ti2o7-heidi, 220 pts fitted / 220 loaded, 12 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                          6.09         5.98
-      1      0.095       2.90         1.35   77.4% ↓
-      2      0.106       2.88         1.33   1.6% ↓
-      3      0.117       2.88         1.33   
-      4      0.128       2.88         1.33   
-      5      0.145       2.88         1.33   
-      6      0.155       2.88         1.33   
-      7      0.169       2.88         1.33   
-      8      0.182       2.88         1.33   
-  done · converged · 8 iters · reduced χ² 1.33 · wR(F²) 2.88 % · 0.20 s
+      1      0.097       2.90         1.35   77.4% ↓
+      2      0.109       2.88         1.33   1.6% ↓
+      3      0.121       2.88         1.33   
+      4      0.133       2.88         1.33   
+      5      0.152       2.88         1.33   
+      6      0.165       2.88         1.33   
+      7      0.179       2.88         1.33   
+      8      0.196       2.88         1.33   
+  done · converged · 8 iters · reduced χ² 1.33 · wR(F²) 2.88 % · 0.22 s
 
   refined parameters (12 free):
   name                 parameter                                               start        value      s.u.   change

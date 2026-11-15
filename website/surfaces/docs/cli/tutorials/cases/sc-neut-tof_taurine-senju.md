@@ -188,6 +188,15 @@ In `experiments/senju_6.edi`, add `()` after the values the stage frees:
 taurine 2.936()
 ```
 
+In `structures/taurine.edi`, set the values the stage starts again from:
+
+```edi
+S1 S 0.208 0.34676 0.35118 e 4 1 0 Biso
+O1 O 0.33902 0.23701 0.35341 e 4 1 0 Biso
+```
+
+The same for every other row (12 more).
+
 === "Standalone executable"
 
     ```console
@@ -204,8 +213,8 @@ taurine 2.936()
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 6 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                        179.47      5665.97
-      1      0.231      51.73       470.73   91.7% ↓
-  done · converged · 1 iters · reduced χ² 470.73 · wR(F²) 51.73 % · 0.26 s
+      1      0.291      51.73       470.73   91.7% ↓
+  done · converged · 1 iters · reduced χ² 470.73 · wR(F²) 51.73 % · 0.32 s
 
   per-bank wR(F²) (%):   senju_1 60.04   senju_2 70.32   senju_3 39.79   senju_4 53.79   senju_5 41.41   senju_6 51.44
 
@@ -253,10 +262,10 @@ The same for every other row (12 more).
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 20 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         51.73       477.84
-      1      0.222      26.94       129.57   72.9% ↓
-      2      0.248      26.94       129.56   
-      3      0.281      26.94       129.56   
-  done · converged · 3 iters · reduced χ² 129.56 · wR(F²) 26.94 % · 0.31 s
+      1      0.270      26.94       129.57   72.9% ↓
+      2      0.302      26.94       129.56   
+      3      0.340      26.94       129.56   
+  done · converged · 3 iters · reduced χ² 129.56 · wR(F²) 26.94 % · 0.38 s
 
   per-bank wR(F²) (%):   senju_1 30.06   senju_2 28.38   senju_3 23.25   senju_4 24.93   senju_5 30.58   senju_6 26.29
 
@@ -317,10 +326,10 @@ _extinction.coefficient_33 0()
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 23 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         26.94       129.98
-      1      0.220      20.26        73.55   43.4% ↓
-      2      0.246      20.26        73.55   
-      3      0.279      20.26        73.55   
-  done · converged · 3 iters · reduced χ² 73.55 · wR(F²) 20.26 % · 0.31 s
+      1      0.331      20.26        73.55   43.4% ↓
+      2      0.363      20.26        73.55   
+      3      0.406      20.26        73.55   
+  done · converged · 3 iters · reduced χ² 73.55 · wR(F²) 20.26 % · 0.45 s
 
   per-bank wR(F²) (%):   senju_1 25.78   senju_2 22.57   senju_3 15.51   senju_4 17.82   senju_5 19.59   senju_6 22.41
 
@@ -385,9 +394,9 @@ The same for every other row (12 more).
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 65 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         20.26        77.05
-      1      0.261      17.04        54.49   29.3% ↓
-      2      0.299      17.04        54.49   
-  done · converged · 2 iters · reduced χ² 54.49 · wR(F²) 17.04 % · 0.34 s
+      1      0.371      17.04        54.49   29.3% ↓
+      2      0.413      17.04        54.49   
+  done · converged · 2 iters · reduced χ² 54.49 · wR(F²) 17.04 % · 0.49 s
 
   per-bank wR(F²) (%):   senju_1 22.17   senju_2 18.60   senju_3 13.00   senju_4 14.02   senju_5 17.01   senju_6 18.75
 
@@ -469,6 +478,15 @@ edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, sen
 
 Back to anisotropic displacements (edi converts the values), with every tensor component free.
 
+In `structures/taurine.edi`, set the values the stage starts again from:
+
+```edi
+S1 S 0.2028() 0.34798() 0.3512() e 4 1 1.3599 beta
+O1 O 0.3383() 0.24191() 0.35398() e 4 1 2.67932 beta
+```
+
+The same for every other row (26 more).
+
 === "Standalone executable"
 
     ```console
@@ -485,9 +503,9 @@ Back to anisotropic displacements (edi converts the values), with every tensor c
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 135 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         17.04        59.18
-      1      0.388      12.19        30.27   48.8% ↓
-      2      0.446      12.19        30.27   
-  done · converged · 2 iters · reduced χ² 30.27 · wR(F²) 12.19 % · 0.53 s
+      1      0.543      12.19        30.27   48.8% ↓
+      2      0.605      12.19        30.27   
+  done · converged · 2 iters · reduced χ² 30.27 · wR(F²) 12.19 % · 0.70 s
 
   per-bank wR(F²) (%):   senju_1 18.18   senju_2 11.06   senju_3 9.02   senju_4 8.63   senju_5 12.28   senju_6 13.05
 

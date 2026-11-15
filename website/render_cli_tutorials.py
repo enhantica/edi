@@ -22,6 +22,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from app_groups import unrolled
+
 ROOT = Path(__file__).resolve().parents[1]
 PAGES = ROOT / 'website/surfaces/docs/cli/tutorials/cases'
 SHOWN_LINES = 12
@@ -31,11 +33,11 @@ BY_HAND = (
     ' The Python tutorial builds the structure atom by atom; here its file comes from the '
     'collection, with the same space group, cell and sites.'
 )
-# The lines of a stage that change the project: what it frees or fixes, a value it resets, and
-# its aliases and constraints.
+# The lines of a stage that change the project: what it frees or fixes, a value or displacement
+# type it resets, and its aliases and constraints.
 EDITS = re.compile(
     r'(\.free = (True|False)$|^\s+point\.intensity\.free|^for point in |\.adp_iso = |'
-    r'\.aliases\.create\(|\.constraints\.create\(|\.auto_estimate\()'
+    r'\.adp_type = |\.aliases\.create\(|\.constraints\.create\(|\.auto_estimate\()'
 )
 
 
@@ -374,7 +376,8 @@ def render_calculation(case: str, title: str) -> Path:
 def render(case: str, binary: Path) -> Path:  # noqa: PLR0914, PLR0915 - one page, step by step
     import edi  # noqa: PLC0415 - only rendering needs the package; the stage parsing does not
 
-    source = (ROOT / f'docs/user/tutorials/{case}.py').read_text(encoding='utf-8')
+    # A loop over a tuple of named parameters is run as the lines it stands for.
+    source = unrolled((ROOT / f'docs/user/tutorials/{case}.py').read_text(encoding='utf-8'))
     title = re.search(r'^# # (.+)$', source, flags=re.MULTILINE).group(1)
     if 'project.calculate()' in source and '.free = True' not in source:
         return render_calculation(case, title)
@@ -445,6 +448,13 @@ def render(case: str, binary: Path) -> Path:  # noqa: PLR0914, PLR0915 - one pag
             project.save_as(str(work))
             # The rows whose values the stage sets: `atom_sites['Co1'].adp_iso = 0.5` names Co1.
             rows = frozenset(re.findall(r"\['([^']+)'\]\.\w+ = (?!True|False)", '\n'.join(lines)))
+            # A loop setting every site's displacement type rewrites each site's row and tensor.
+            if any('.adp_type = ' in line for line in lines):
+                rows |= {
+                    str(site.id)
+                    for structure in project.structures
+                    for site in structure.atom_sites
+                }
             edits = changes(before, snapshot(work), created, rows)
             run = subprocess.run(
                 [str(binary), 'fit', case, '--verbosity', verbosity],

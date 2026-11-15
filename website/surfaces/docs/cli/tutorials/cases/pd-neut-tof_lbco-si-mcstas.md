@@ -117,9 +117,9 @@ _cell.length_a 5.43()
 edi fit: project pd-neut-tof_lbco-si-mcstas, 633 pts fitted / 1000 loaded, 4 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        50.18       398.16
-      1      0.613     23.12        84.52   78.8% ↓
-      2      0.707     23.12        84.52   
-  done · converged · 2 iters · reduced χ² 84.52 · Rwp 23.12 % · 0.76 s
+      1      0.597     23.12        84.52   78.8% ↓
+      2      0.684     23.12        84.52   
+  done · converged · 2 iters · reduced χ² 84.52 · Rwp 23.12 % · 0.73 s
 
   refined parameters (4 free):
   name            parameter                                               start        value      s.u.   change
@@ -161,8 +161,8 @@ The same for every other row (11 more).
 edi fit: project pd-neut-tof_lbco-si-mcstas, 633 pts fitted / 1000 loaded, 17 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        23.12        86.31
-      1      0.849     21.09        71.82   16.8% ↓
-  done · converged · 1 iters · reduced χ² 71.82 · Rwp 21.09 % · 0.90 s
+      1      0.741     21.09        71.82   16.8% ↓
+  done · converged · 1 iters · reduced χ² 71.82 · Rwp 21.09 % · 0.79 s
 
   refined parameters (17 free):
   name            parameter                                               start        value      s.u.   change
@@ -216,15 +216,15 @@ _peak.broad_gauss_sigma_2 20000()
 edi fit: project pd-neut-tof_lbco-si-mcstas, 633 pts fitted / 1000 loaded, 20 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        21.09        72.17
-      1      0.761     21.02        71.67   0.7% ↓
-      2      0.838     21.00        71.52   0.2% ↓
-      3      0.917     20.95        71.22   0.4% ↓
-      4      1.008     20.90        70.86   0.5% ↓
-      5      1.116     20.88        70.73   0.2% ↓
-      6      1.235     20.88        70.73   
-      7      1.328     20.88        70.73   
-      8      1.465     20.88        70.73   
-  done · converged · 8 iters · reduced χ² 70.73 · Rwp 20.88 % · 1.52 s
+      1      0.796     21.02        71.67   0.7% ↓
+      2      0.888     21.00        71.52   0.2% ↓
+      3      0.994     20.95        71.22   0.4% ↓
+      4      1.078     20.90        70.86   0.5% ↓
+      5      1.163     20.88        70.73   0.2% ↓
+      6      1.238     20.88        70.73   
+      7      1.312     20.88        70.73   
+      8      1.442     20.88        70.73   
+  done · converged · 8 iters · reduced χ² 70.73 · Rwp 20.88 % · 1.49 s
 
   refined parameters (20 free):
   name            parameter                                               start        value      s.u.   change
@@ -243,9 +243,9 @@ edi fit: project pd-neut-tof_lbco-si-mcstas, 633 pts fitted / 1000 loaded, 20 fr
   intensity       experiment.background[9].intensity                     0.2505       0.2504    0.0093   
   scale           experiment.linked_structures[lbco].scale                31.05        30.88      0.55   0.6% ↓
   scale           experiment.linked_structures[si].scale                  0.231        0.216     0.033   6.7% ↓
-  σ₀², µs²        experiment.peak.broad_gauss_sigma_0                    5.00e4     2.0200e4  0.9800e4 ! 59.6% ↓
-  σ₁², µs²/Å²     experiment.peak.broad_gauss_sigma_1                   -5.00e4     -5.000e3  14.000e3 ! 90.1% ↑
-  σ₂², µs²/Å⁴     experiment.peak.broad_gauss_sigma_2                    2.00e4      3.800e3   4.700e3 ! 80.8% ↓
+  σ₀², µs²        experiment.peak.broad_gauss_sigma_0                    5.00e4       2.02e4    0.98e4 ! 59.6% ↓
+  σ₁², µs²/Å²     experiment.peak.broad_gauss_sigma_1                   -5.00e4         -5e3      14e3 ! 90.1% ↑
+  σ₂², µs²/Å⁴     experiment.peak.broad_gauss_sigma_2                    2.00e4        3.8e3     4.7e3 ! 80.8% ↓
   a, Å            structures[lbco].cell.length_a                         3.8904      3.89039   0.00022   
   a, Å            structures[si].cell.length_a                           5.4331       5.4334    0.0029   
 
@@ -285,10 +285,10 @@ _peak.decay_beta_1 0.004()
 edi fit: project pd-neut-tof_lbco-si-mcstas, 633 pts fitted / 1000 loaded, 23 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        20.88        71.08
-      1      0.223     20.86        70.92   0.2% ↓
-      2      0.242     20.86        70.91   
-      3      0.301     20.86        70.91   
-  done · converged · 3 iters · reduced χ² 70.91 · Rwp 20.86 % · 0.32 s
+      1      0.233     20.86        70.92   0.2% ↓
+      2      0.254     20.86        70.91   
+      3      0.316     20.86        70.91   
+  done · converged · 3 iters · reduced χ² 70.91 · Rwp 20.86 % · 0.33 s
 
   refined parameters (23 free):
   name            parameter                                               start        value      s.u.   change
@@ -307,9 +307,9 @@ edi fit: project pd-neut-tof_lbco-si-mcstas, 633 pts fitted / 1000 loaded, 23 fr
   intensity       experiment.background[9].intensity                     0.2504       0.2508    0.0093   0.1% ↑
   scale           experiment.linked_structures[lbco].scale                30.88        30.89      0.56   
   scale           experiment.linked_structures[si].scale                  0.216        0.218     0.033   0.7% ↑
-  σ₀², µs²        experiment.peak.broad_gauss_sigma_0                    2.02e4     2.1000e4  1.0000e4   5.2% ↑
-  σ₁², µs²/Å²     experiment.peak.broad_gauss_sigma_1                   -5.00e3     -5.000e3  15.000e3 ! 3.5% ↑
-  σ₂², µs²/Å⁴     experiment.peak.broad_gauss_sigma_2                    3.80e3      3.500e3   4.700e3 ! 7.5% ↓
+  σ₀², µs²        experiment.peak.broad_gauss_sigma_0                    2.02e4        2.1e4     1.0e4   5.2% ↑
+  σ₁², µs²/Å²     experiment.peak.broad_gauss_sigma_1                   -5.00e3         -5e3      15e3 ! 3.5% ↑
+  σ₂², µs²/Å⁴     experiment.peak.broad_gauss_sigma_2                    3.80e3        3.5e3     4.7e3 ! 7.5% ↓
   β₀              experiment.peak.decay_beta_0                            0.006      0.00547   0.00063   8.8% ↓
   β₁              experiment.peak.decay_beta_1                            0.004       0.0050    0.0014   24.2% ↑
   α₁              experiment.peak.rise_alpha_1                             0.01       0.0104    0.0012   4.1% ↑
@@ -352,16 +352,16 @@ O O 0 0.5 0.5 c 3 1 0.5() Biso
 edi fit: project pd-neut-tof_lbco-si-mcstas, 633 pts fitted / 1000 loaded, 25 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        20.86        71.17
-      1      0.222      5.49         4.94   93.1% ↓
-      2      0.243      5.38         4.74   4.0% ↓
-      3      0.263      5.27         4.54   4.3% ↓
-      4      0.284      5.13         4.30   5.2% ↓
-      5      0.305      5.06         4.18   2.8% ↓
-      6      0.326      5.04         4.16   0.6% ↓
-      7      0.346      5.04         4.16   
-      8      0.367      5.04         4.16   
-      9      0.436      5.04         4.16   
-  done · converged · 9 iters · reduced χ² 4.16 · Rwp 5.04 % · 0.45 s
+      1      0.232      5.49         4.94   93.1% ↓
+      2      0.253      5.38         4.74   4.0% ↓
+      3      0.274      5.27         4.54   4.3% ↓
+      4      0.295      5.13         4.30   5.2% ↓
+      5      0.316      5.06         4.18   2.8% ↓
+      6      0.337      5.04         4.16   0.6% ↓
+      7      0.359      5.04         4.16   
+      8      0.381      5.04         4.16   
+      9      0.446      5.04         4.16   
+  done · converged · 9 iters · reduced χ² 4.16 · Rwp 5.04 % · 0.46 s
 
   refined parameters (25 free):
   name            parameter                                               start        value      s.u.   change
@@ -380,9 +380,9 @@ edi fit: project pd-neut-tof_lbco-si-mcstas, 633 pts fitted / 1000 loaded, 25 fr
   intensity       experiment.background[9].intensity                     0.2508       0.2379    0.0023   5.2% ↓
   scale           experiment.linked_structures[lbco].scale                30.89        42.53      0.34   37.7% ↑
   scale           experiment.linked_structures[si].scale                  0.218       0.3088    0.0089   41.7% ↑
-  σ₀², µs²        experiment.peak.broad_gauss_sigma_0                    2.10e4     4.4700e4  0.3500e4 ! 112.7% ↑
-  σ₁², µs²/Å²     experiment.peak.broad_gauss_sigma_1                   -5.00e3    -5.2900e4  0.4500e4 ! 958.9% ↓
-  σ₂², µs²/Å⁴     experiment.peak.broad_gauss_sigma_2                    3.50e3     2.3500e4  0.1400e4 ! 570.8% ↑
+  σ₀², µs²        experiment.peak.broad_gauss_sigma_0                    2.10e4       4.47e4    0.35e4 ! 112.7% ↑
+  σ₁², µs²/Å²     experiment.peak.broad_gauss_sigma_1                   -5.00e3      -5.29e4    0.45e4 ! 958.9% ↓
+  σ₂², µs²/Å⁴     experiment.peak.broad_gauss_sigma_2                    3.50e3       2.35e4    0.14e4 ! 570.8% ↑
   β₀              experiment.peak.decay_beta_0                          0.00547      0.00543   0.00015   0.8% ↓
   β₁              experiment.peak.decay_beta_1                            0.005      0.00412   0.00032   17.7% ↓
   α₁              experiment.peak.rise_alpha_1                           0.0104      0.00989   0.00025   4.9% ↓

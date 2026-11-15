@@ -114,9 +114,9 @@ _cell.length_a 5.431()
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 3 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        52.36       204.71
-      1      0.076     10.45         8.16   96.0% ↓
-      2      0.088     10.45         8.16   
-  done · converged · 2 iters · reduced χ² 8.16 · Rwp 10.45 % · 0.10 s
+      1      0.064     10.45         8.16   96.0% ↓
+      2      0.079     10.45         8.16   
+  done · converged · 2 iters · reduced χ² 8.16 · Rwp 10.45 % · 0.09 s
 
   refined parameters (3 free):
   name            parameter                                               start        value      s.u.   change
@@ -165,8 +165,8 @@ The same for every other row (12 more).
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 17 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        10.45         8.18
-      1      0.124      7.45         4.16   49.1% ↓
-  done · converged · 1 iters · reduced χ² 4.16 · Rwp 7.45 % · 0.13 s
+      1      0.096      7.45         4.16   49.1% ↓
+  done · converged · 1 iters · reduced χ² 4.16 · Rwp 7.45 % · 0.11 s
 
   refined parameters (17 free):
   name            parameter                                               start        value      s.u.   change
@@ -223,8 +223,8 @@ _peak.broad_gauss_sigma_1 30()
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 19 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         7.45         4.16
-      1      0.109      7.42         4.13   0.8% ↓
-  done · converged · 1 iters · reduced χ² 4.13 · Rwp 7.42 % · 0.12 s
+      1      0.113      7.42         4.13   0.8% ↓
+  done · converged · 1 iters · reduced χ² 4.13 · Rwp 7.42 % · 0.13 s
 
   refined parameters (19 free):
   name            parameter                                               start        value      s.u.   change
@@ -280,7 +280,7 @@ _peak.broad_lorentz_gamma_1 3()
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 20 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         7.42         4.13
-      1      0.116      7.28         3.97   3.7% ↓
+      1      0.113      7.28         3.97   3.7% ↓
   done · converged · 1 iters · reduced χ² 3.97 · Rwp 7.28 % · 0.13 s
 
   refined parameters (20 free):
@@ -336,8 +336,8 @@ Si Si 0.125 0.125 0.125 a 8 1 0.5() Biso
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 21 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         7.28         3.98
-      1      0.122      7.28         3.97   0.2% ↓
-  done · converged · 1 iters · reduced χ² 3.97 · Rwp 7.28 % · 0.13 s
+      1      0.114      7.28         3.97   0.2% ↓
+  done · converged · 1 iters · reduced χ² 3.97 · Rwp 7.28 % · 0.12 s
 
   refined parameters (21 free):
   name            parameter                                               start        value      s.u.   change
@@ -396,9 +396,9 @@ _peak.decay_beta_1 0.01()
 edi fit: project pd-neut-tof_si-sepd, 5600 pts fitted / 5600 loaded, 23 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         7.28         3.97
-      1      0.103      7.18         3.86   2.7% ↓
-      2      0.125      7.18         3.86   
-  done · converged · 2 iters · reduced χ² 3.86 · Rwp 7.18 % · 0.14 s
+      1      0.099      7.18         3.86   2.7% ↓
+      2      0.118      7.18         3.86   
+  done · converged · 2 iters · reduced χ² 3.86 · Rwp 7.18 % · 0.13 s
 
   refined parameters (23 free):
   name            parameter                                               start        value      s.u.   change
