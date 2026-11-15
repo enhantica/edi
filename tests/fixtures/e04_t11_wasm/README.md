@@ -131,7 +131,7 @@ ambiguous bindings refuse. `native_precision_bindings` retains every before/afte
 and column. The existing conditioning writer then verifies the unrounded native operands.
 
 
-The captured machine record is projected to schema 9 without rerunning its fit.
+The schema projection preserves the captured machine record without rerunning its fit.
 The original numeric/input/producer provenance above is retained; the wire-only
 projection and unavailable stop metadata are documented in
-[the version-projection receipt](../c06_t8/README.md).
+[the machine report schema projection](../c06_t8/README.md).

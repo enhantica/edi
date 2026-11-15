@@ -114,7 +114,6 @@
   "instrument.setup_wavelength_2": "physics/parameters/#instrument-setup-wavelength-2",
   "instrument.setup_wavelength_2_to_1_ratio": "physics/parameters/#instrument-setup-wavelength-2-to-1-ratio",
   "absorption.abscor1": "physics/parameters/#absorption-abscor1",
-  "absorption.abscor2": "physics/parameters/#absorption-abscor2",
   "absorption.mu_r": "physics/parameters/#absorption-mu-r",
   "extinction.domain_radius": "physics/parameters/#extinction-domain-radius",
   "extinction.mosaic_spread": "physics/parameters/#extinction-mosaic-spread",

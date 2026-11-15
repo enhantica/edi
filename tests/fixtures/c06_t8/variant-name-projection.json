@@ -1,0 +1,26 @@
+{
+  "source_commit": "5a2a33367f376f105ea12a27743c4ba26726b75e",
+  "claim": "Exact variant-key rename only; every numerical value, reference and tolerance unchanged",
+  "files": {
+    "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/expected.json": {
+      "before_sha256": "8e4b8d49fb74c5fbd5fafad6ad2581328a62208244f17f79f134dbb30dd0fc2d",
+      "after_sha256": "c7cac5b0f36476bcb07b932067dc1ac7ad5724cd1c224280ae7bcaede74923d2"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/expected.json": {
+      "before_sha256": "85d5c0aeebc606e4c9eba69d50c37563e96cc2c2d20b7b5523f61fffe92b25aa",
+      "after_sha256": "5fef88ddb461fe3238fb4a5c8d4dd188564e20797c9a4259cc8a4549d58b06fc"
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/expected.json": {
+      "before_sha256": "fb6b43996e590403b9d4a71376e94bae5e5c1ea988fec30ee1117e6844294a61",
+      "after_sha256": "d0fac3cc46897af042ddb5a3aa1877e93a1932b3052787ef5f1b1e50933ecf66"
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/expected.json": {
+      "before_sha256": "f83a2d487d2ed68f570b52d0e25797f4a9ee89f30dc5b0eb98087d1d95027b1f",
+      "after_sha256": "550ed032830678784988b0e17e5d53c02ac0b424ddb27945c921026ce3ab6a4c"
+    },
+    "docs/user/cli/pd-neut-tof_si-sepd_start-5/expected.json": {
+      "before_sha256": "ce8a290da8ac854830dde54c0a03f8ddece533d6e871f040cb865c360cdb3e99",
+      "after_sha256": "610feebb5648eaf0cc3647e5651bf3a9000282f68b5af38717f45b25ad43cd5e"
+    }
+  }
+}

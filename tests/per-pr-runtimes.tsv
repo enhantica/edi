@@ -10,9 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-10T12:29:08Z
+# measured_utc = 2026-11-15T02:43:31Z
 #
-# New feature gates remain explicitly unmeasured until passing runner qualification.
+# Recorded from: serial focused measurement of seven affected saved-byte and browser nodes; all out-of-scope bank and inherited debt retained
+# Collected tests: 242976; with a reported duration: 75716
+# Module-scoped fixture costs recorded: 190
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -27,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 240539
+# inventory_python = 240583
 # inventory_cpp = 402
-# inventory_measured = 173260
-# inventory_unmeasured = 67681
+# inventory_measured = 173336
+# inventory_unmeasured = 67649
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 81754
+# inventory_pr_python = 81798
 
 UNMEASURED:not-completed-in-this-run	tests/fixtures/assistant_fixes/test_grouped_flags.py::test_grouped_adp_flags_after_fit_and_relation[normal]
 UNMEASURED:not-completed-in-this-run	tests/fixtures/assistant_fixes/test_grouped_flags.py::test_grouped_adp_flags_after_fit_and_relation[shown]
@@ -469,6 +471,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_assistant_trial_retirem
 0.000	tests/integration/app/test_background_estimate_settings_action.py::test_saved_settings_receipt_refuses_partial_or_weakened_categories[number]
 0.000	tests/integration/app/test_background_estimate_settings_action.py::test_saved_settings_receipt_refuses_partial_or_weakened_categories[short]
 0.000	tests/integration/app/test_background_estimate_settings_action.py::test_saved_settings_receipt_refuses_partial_or_weakened_categories[zero]
+0.600	tests/integration/app/test_c06_t8_descent_options.py::test_real_gui_retains_only_supported_descents
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_adp_view_uses_probability_in_atom_scale_position]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_analysis_tensor_rows_stay_with_their_site]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_atom_filter_recovers_from_red_and_commits_element]
@@ -2107,6 +2110,37 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_background_term_ids.py::
 0.000	tests/integration/py/test_bundled_display_fonts.py::test_legend_marks_are_geometry_not_displayed_characters
 0.000	tests/integration/py/test_bundled_display_fonts.py::test_structure_legend_uses_the_atom_table_icon_pipeline
 0.000	tests/integration/py/test_bundled_display_fonts.py::test_wyckoff_fraction_font_selection_reaches_the_actual_delegate
+0.000	tests/integration/py/test_c06_t8_descents.py::test_a_missing_surface_cannot_pass
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[examples-display-label]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[examples-escaped-json]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[examples-token]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[feature_docs-display-label]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[feature_docs-token]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[gui_capture-display-label]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[gui_capture-escaped-json]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[gui_capture-token]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[reference_docs-display-label]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[reference_docs-escaped-json]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[reference_docs-token]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[user_docs-display-label]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[user_docs-escaped-json]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_each_surface_rejects_retired_choice_spellings[user_docs-token]
+0.200	tests/integration/py/test_c06_t8_descents.py::test_former_default_id_normalizes_and_saves_canonically_twice[analysis]
+0.190	tests/integration/py/test_c06_t8_descents.py::test_former_default_id_normalizes_and_saves_canonically_twice[declaration]
+0.180	tests/integration/py/test_c06_t8_descents.py::test_former_default_id_normalizes_and_saves_canonically_twice[project]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_python_registry_and_default_match_the_owner_decision
+0.020	tests/integration/py/test_c06_t8_descents.py::test_retired_descents_are_not_advertised_on_public_surfaces[examples]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_retired_descents_are_not_advertised_on_public_surfaces[feature_docs]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_retired_descents_are_not_advertised_on_public_surfaces[gui_capture]
+0.010	tests/integration/py/test_c06_t8_descents.py::test_retired_descents_are_not_advertised_on_public_surfaces[reference_docs]
+0.720	tests/integration/py/test_c06_t8_descents.py::test_retired_descents_are_not_advertised_on_public_surfaces[user_docs]
+0.210	tests/integration/py/test_c06_t8_descents.py::test_retired_project_descent_warns_once_migrates_and_stays_migrated[fast_descent_guarded_linear_snap]
+0.210	tests/integration/py/test_c06_t8_descents.py::test_retired_project_descent_warns_once_migrates_and_stays_migrated[fast_descent_linear_snap]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_retired_token_cannot_remain_an_active_python_selection[analysis-fast_descent_guarded_linear_snap]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_retired_token_cannot_remain_an_active_python_selection[analysis-fast_descent_linear_snap]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_retired_token_cannot_remain_an_active_python_selection[project-fast_descent_guarded_linear_snap]
+0.000	tests/integration/py/test_c06_t8_descents.py::test_retired_token_cannot_remain_an_active_python_selection[project-fast_descent_linear_snap]
+0.120	tests/integration/py/test_c06_t8_descents.py::test_retirement_prose_does_not_advertise_an_active_choice
 0.000	tests/integration/py/test_c09_t12_general_jacobian_pin.py::test_c09_t12_round_trip_fixture_is_locked_to_independent_biso_reference
 0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_decimal_brackets_are_absolute_on_edi
 0.100	tests/integration/py/test_c09_t14_refinable_su_grammar.py::test_c09_t14_decimal_su_save_load_preserves_reference_value_exactly[.5(1.5)]
@@ -3168,39 +3202,39 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t23_cli_projects.py:
 0.130	tests/integration/py/test_c34_t23_cli_projects.py::test_loaded_settings_reject_comment_and_ignored_metadata_tokens
 0.054	tests/integration/py/test_c34_t23_cli_projects.py::test_pull_request_ci_and_verify_execute_the_complete_registry
 0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_registry_executes_owner_declared_set_and_retains_every_seed
-0.080	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[extra-ncaf-wish-2bank-s3]
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[extra-ncaf-wish-3bank-s5]
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[extra-si-sepd-s2]
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[extra-si-sepd-s5]
-0.070	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[input-ncaf-wish-2bank-s3]
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[input-ncaf-wish-3bank-s5]
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[input-si-sepd-s2]
-0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[input-si-sepd-s5]
-0.130	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[kind-ncaf-wish-2bank-s3]
-0.030	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[kind-ncaf-wish-3bank-s5]
-0.030	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[kind-si-sepd-s2]
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[kind-si-sepd-s5]
-0.150	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[missing-ncaf-wish-2bank-s3]
-0.030	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[missing-ncaf-wish-3bank-s5]
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[missing-si-sepd-s2]
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[missing-si-sepd-s5]
-0.150	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[tolerance-ncaf-wish-2bank-s3]
-0.030	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[tolerance-ncaf-wish-3bank-s5]
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[tolerance-si-sepd-s2]
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[tolerance-si-sepd-s5]
-0.130	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[value-ncaf-wish-2bank-s3]
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[value-ncaf-wish-3bank-s5]
-0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[value-si-sepd-s2]
-0.030	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[value-si-sepd-s5]
-0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[cosio-d20-s1]
-0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[cosio-d20-s4]
-0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[cosio-d20-scan-3f]
-0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[lbco-hrpt-s2]
-0.000	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[lbco-hrpt-s4]
-0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[ncaf-wish-2bank-s3]
-0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[ncaf-wish-3bank-s5]
-0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[si-sepd-s2]
-0.010	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[si-sepd-s5]
+0.150	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[extra-ncaf-wish-2bank-s3]
+0.070	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[extra-ncaf-wish-3bank-s5]
+0.050	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[extra-si-sepd-s2]
+0.050	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[extra-si-sepd-s5]
+0.130	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[input-ncaf-wish-2bank-s3]
+0.060	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[input-ncaf-wish-3bank-s5]
+0.040	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[input-si-sepd-s2]
+0.040	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[input-si-sepd-s5]
+0.150	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[kind-ncaf-wish-2bank-s3]
+0.080	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[kind-ncaf-wish-3bank-s5]
+0.050	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[kind-si-sepd-s2]
+0.060	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[kind-si-sepd-s5]
+0.140	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[missing-ncaf-wish-2bank-s3]
+0.070	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[missing-ncaf-wish-3bank-s5]
+0.050	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[missing-si-sepd-s2]
+0.050	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[missing-si-sepd-s5]
+0.140	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[tolerance-ncaf-wish-2bank-s3]
+0.070	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[tolerance-ncaf-wish-3bank-s5]
+0.050	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[tolerance-si-sepd-s2]
+0.060	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[tolerance-si-sepd-s5]
+0.140	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[value-ncaf-wish-2bank-s3]
+0.070	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[value-ncaf-wish-3bank-s5]
+0.050	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[value-si-sepd-s2]
+0.060	tests/integration/py/test_c34_t23_cli_projects.py::test_retaken_seed_regression_pins_reject_byte_and_inventory_changes[value-si-sepd-s5]
+0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[cosio-d20-s1]
+0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[cosio-d20-s4]
+0.030	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[cosio-d20-scan-3f]
+0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[lbco-hrpt-s2]
+0.020	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[lbco-hrpt-s4]
+0.110	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[ncaf-wish-2bank-s3]
+0.050	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[ncaf-wish-3bank-s5]
+0.030	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[si-sepd-s2]
+0.030	tests/integration/py/test_c34_t23_cli_projects.py::test_seed_regression_pin_tree_is_byte_identical_to_crysta_main[si-sepd-s5]
 0.460	tests/integration/py/test_c34_t23_cli_projects.py::test_settings_cli_exposes_loaded_sequential_conditions_by_item_name[latp_304.dat]
 0.470	tests/integration/py/test_c34_t23_cli_projects.py::test_settings_cli_exposes_loaded_sequential_conditions_by_item_name[latp_312.dat]
 0.010	tests/integration/py/test_c34_t24_minimizer_declarations.py::test_analysis_reference_documents_conditions_and_all_registered_values
@@ -3213,7 +3247,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t23_cli_projects.py:
 0.000	tests/integration/py/test_c34_t24_minimizer_declarations.py::test_invalid_declared_condition_refuses_at_load[max_iterations--7]
 0.000	tests/integration/py/test_c34_t24_minimizer_declarations.py::test_invalid_declared_condition_refuses_at_load[max_iterations-0]
 0.000	tests/integration/py/test_c34_t24_minimizer_declarations.py::test_invalid_declared_condition_refuses_at_load[max_iterations-1.5]
-0.000	tests/integration/py/test_c34_t24_minimizer_declarations.py::test_unknown_descent_error_names_the_registry
+0.010	tests/integration/py/test_c34_t24_minimizer_declarations.py::test_unknown_descent_error_names_the_registry
 0.000	tests/integration/py/test_c34_t25_fullprof_layout.py::test_cctbx_oracle_nontrivial_sites_and_partial_occupancy_escape
 0.000	tests/integration/py/test_c34_t25_fullprof_layout.py::test_complete_code_inventory_covers_original_fullprof_records[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
 0.000	tests/integration/py/test_c34_t25_fullprof_layout.py::test_complete_code_inventory_covers_original_fullprof_records[pd-neut-cwl_lab6-echidna_11b]
@@ -165403,8 +165437,8 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::test_single_crystal_independent_cell_marks_load_fixed[length_b]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::test_single_crystal_independent_cell_marks_load_fixed[length_c]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::test_surviving_cell_flag_is_refused_after_powder_is_removed
-UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::test_tof_capability_load_keeps_value_and_uncertainty[abscor2]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::test_tof_capability_load_keeps_value_and_uncertainty[calib_d_to_tof_reciprocal]
+0.100	tests/integration/py/test_fittability_loading.py::test_tof_capability_load_preserves_live_pairs_and_ignores_retired_member[abscor2]
+0.020	tests/integration/py/test_fittability_loading.py::test_tof_capability_load_preserves_live_pairs_and_ignores_retired_member[calib_d_to_tof_reciprocal]
 0.100	tests/integration/py/test_fittability_loading.py::test_wavelength_can_fit_when_dispersion_is_explicitly_none
 0.120	tests/integration/py/test_fittability_saved_bytes.py::test_main_fitted_descriptor_bytes_regression_pin[iucr_19-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project]
 0.120	tests/integration/py/test_fittability_saved_bytes.py::test_main_fitted_descriptor_bytes_regression_pin[iucr_99-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project]
@@ -165573,7 +165607,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/single_crystal/projects/sc-neut-cwl_tbti_basic]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/single_crystal/projects/sc-neut-cwl_tbti_isotropic-extinction]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/single_crystal/projects/sc-neut-tof_taurine_basic]
-0.070	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/table_display]
+0.080	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/table_display]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-app/examples/pd-xray-cwl_lif/project]
 0.020	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/pd-neut-cwl_cosio-d20/project]
 0.120	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project]
@@ -167509,19 +167543,19 @@ UNMEASURED:awaiting working feature and runner qualification	tests/integration/p
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_boolean_preferences_use_aligned_selectors[autoCollapse]
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_boolean_preferences_use_aligned_selectors[checkUpdateOnStart]
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_boolean_preferences_use_aligned_selectors[showFitResults]
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_citation_uses_zenodo_doi_and_consistent_title
+0.000	tests/integration/py/test_preferences_and_survey.py::test_citation_uses_zenodo_doi_and_consistent_title
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_cosio_example_starting_moments
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_online_sources_documented_collection_passes_real_checker
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_preferences_retains_working_controls
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_preferences_tab_order_and_removed_controls
 UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_stacked_uses_palette_while_map_retains_its_selector
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_ai_questions_are_separate
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-09T23:59:59Z]
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-10T00:00:00Z]
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-11T12:00:00Z]
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-12T23:59:59Z]
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-13T00:00:00Z]
-UNMEASURED:awaiting working feature and runner qualification	tests/integration/py/test_preferences_and_survey.py::test_survey_navigation_and_question_groups
+0.000	tests/integration/py/test_preferences_and_survey.py::test_survey_ai_questions_are_separate
+0.414	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-09T23:59:59Z]
+0.180	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-10T00:00:00Z]
+0.180	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-11T12:00:00Z]
+0.210	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-12T23:59:59Z]
+0.310	tests/integration/py/test_preferences_and_survey.py::test_survey_event_windows_in_browser[2030-05-13T00:00:00Z]
+0.120	tests/integration/py/test_preferences_and_survey.py::test_survey_navigation_and_question_groups
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[Clang]
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[New design helper]
 0.000	tests/integration/py/test_production_licence_scope.py::test_development_entry_refusal_cannot_be_evaded_by_a_surface_mark[diffraction-lib]
@@ -167556,6 +167590,40 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_promotion_requires_complete_single_attempt
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_python_index_exposes_only_public_hash_bound_wheels
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_skill_checker_refuses_an_independently_missing_target
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_a_fullprof_extension_cannot_hide_a_renamed_project[.inp]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_a_fullprof_extension_cannot_hide_a_renamed_project[.new]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_a_fullprof_extension_cannot_hide_a_renamed_project[.pcr]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_missing_public_scope_cannot_silently_pass
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_multipattern_fullprof_inputs_keep_their_own_column[.inp]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_multipattern_fullprof_inputs_keep_their_own_column[.new]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_multipattern_fullprof_inputs_keep_their_own_column[.pcr]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_only_fullprof_input_formats_are_exempt[.PCR]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_only_fullprof_input_formats_are_exempt[.edi]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_only_fullprof_input_formats_are_exempt[.inp]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_only_fullprof_input_formats_are_exempt[.ipynb]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_only_fullprof_input_formats_are_exempt[.json]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_only_fullprof_input_formats_are_exempt[.md]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_only_fullprof_input_formats_are_exempt[.new]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_only_fullprof_input_formats_are_exempt[.out]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_only_fullprof_input_formats_are_exempt[.pcr]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_only_fullprof_input_formats_are_exempt[.prf]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_only_fullprof_input_formats_are_exempt[.sum]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_public_surface_census_reaches_each_declared_scope[census]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_public_surface_census_reaches_each_declared_scope[documentation]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_public_surface_census_reaches_each_declared_scope[examples_and_tutorials]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_public_surface_census_reaches_each_declared_scope[generators]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_public_surface_census_reaches_each_declared_scope[gui]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_public_surface_census_reaches_each_declared_scope[parameters]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_public_surface_census_reaches_each_declared_scope[python_surface]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_python_census_decodes_escaped_names_and_ignores_only_retired_metadata[classification]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_python_census_decodes_escaped_names_and_ignores_only_retired_metadata[public]
+0.010	tests/integration/py/test_removed_absorption_surfaces.py::test_removed_absorption_field_is_absent_from_every_public_surface[census]
+0.920	tests/integration/py/test_removed_absorption_surfaces.py::test_removed_absorption_field_is_absent_from_every_public_surface[documentation]
+0.020	tests/integration/py/test_removed_absorption_surfaces.py::test_removed_absorption_field_is_absent_from_every_public_surface[examples_and_tutorials]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_removed_absorption_field_is_absent_from_every_public_surface[generators]
+0.020	tests/integration/py/test_removed_absorption_surfaces.py::test_removed_absorption_field_is_absent_from_every_public_surface[gui]
+0.000	tests/integration/py/test_removed_absorption_surfaces.py::test_removed_absorption_field_is_absent_from_every_public_surface[parameters]
+0.010	tests/integration/py/test_removed_absorption_surfaces.py::test_removed_absorption_field_is_absent_from_every_public_surface[python_surface]
 0.020	tests/integration/py/test_rename_namespace.py::test_datablock_rename_preserves_namespace_and_category_tokens[absorption-False-aliases-sequential]
 0.020	tests/integration/py/test_rename_namespace.py::test_datablock_rename_preserves_namespace_and_category_tokens[absorption-False-aliases-single]
 0.020	tests/integration/py/test_rename_namespace.py::test_datablock_rename_preserves_namespace_and_category_tokens[absorption-False-correlations-sequential]
@@ -169953,31 +170021,16 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_app_collection_referen
 0.520	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[sdk-source-desktop-selector]
 0.000	tests/system/py/test_app_version_rebuild.py::test_user_visible_version_follows_a_new_commit_in_a_reused_build[incremental]
 0.000	tests/system/py/test_app_version_rebuild.py::test_user_visible_version_follows_a_new_commit_in_a_reused_build[reconfigured]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Classic]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Colour-blind safe]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Earth]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Natural]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Soft]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Classic]
+0.012	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Colour-blind safe]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-dark-Main]
 0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Colour-blind safe]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Earth]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Natural]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Soft]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Classic]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[measured-light-Main]
 0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Colour-blind safe]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Earth]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Natural]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Soft]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Classic]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-dark-Main]
 0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Colour-blind safe]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Earth]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Natural]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Soft]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Classic]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_colour_assignment_matches_approved_order_and_oklab[structures-light-Main]
 0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Colour-blind safe]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Earth]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Natural]
-0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Soft]
+0.010	tests/system/py/test_approved_palettes.py::test_actual_role_colours_match_approved_light_and_dark[Main]
 0.011	tests/system/py/test_approved_palettes.py::test_exact_catalogue_order_and_natural_default
 0.000	tests/system/py/test_approved_palettes.py::test_independent_oklab_observer_reaches_neutral_and_nonidentity_controls
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_assistant_lifetime_reference.py::test_killed_app_leaves_no_connected_runtime_descendants[idle]
@@ -170517,29 +170570,29 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_browser_saved_project.
 0.190	tests/system/py/test_browser_saved_project.py::test_saved_browser_reference_and_real_row_refuse_wrong_operands[web_control_geometry_controls.mjs]
 0.220	tests/system/py/test_browser_saved_project.py::test_saved_browser_reference_and_real_row_refuse_wrong_operands[web_saved_fit_controls.mjs]
 0.000	tests/system/py/test_c06_t6_fitting_corpus.py::test_corpus_absent_at_pin_is_a_named_transition_state[corpus-present]
-0.100	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-cecoal]
-0.080	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-lab6]
-0.150	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-pearl]
-1.480	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[beer-ferrite-austenite]
-0.090	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[constraint-covariance]
-0.910	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[cosio-d20-scan-3f]
-1.070	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lab6-echidna-fcj]
-1.480	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lam7o3-p021::fast-descent]
-1.080	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lam7o3-p021::ladder]
-0.140	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[multiphase-scales]
-1.230	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]
-0.110	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-cwl-pr2nio4-basic]
-0.110	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-cwl-tbti-anisotropic-adp]
-0.100	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-cwl-tbti-basic]
-0.100	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-joint-larson]
-0.110	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-page-cwl-pr2nio4-basic]
-0.110	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-page-cwl-tbti-anisotropic-adp]
-0.100	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-page-cwl-tbti-basic]
-0.120	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-page-cwl-tbti-isotropic-extinction]
-0.100	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-page-tof-taurine-basic]
-0.500	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-senju-taurine-converged]
-0.190	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-tof-taurine-basic]
-1.520	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[yap-spodi-3k]
+0.240	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-cecoal]
+0.160	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-lab6]
+0.610	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[background-pearl]
+1.260	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[beer-ferrite-austenite]
+0.200	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[constraint-covariance]
+0.490	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[cosio-d20-scan-3f]
+0.680	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lab6-echidna-fcj]
+0.880	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lam7o3-p021::fast-descent]
+0.970	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[lam7o3-p021::ladder]
+0.210	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[multiphase-scales]
+4.400	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[ncaf-wish-3bank-s5::ladder]
+0.240	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-cwl-pr2nio4-basic]
+0.210	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-cwl-tbti-anisotropic-adp]
+0.290	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-cwl-tbti-basic]
+0.220	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-joint-larson]
+0.200	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-page-cwl-pr2nio4-basic]
+0.250	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-page-cwl-tbti-anisotropic-adp]
+0.190	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-page-cwl-tbti-basic]
+0.210	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-page-cwl-tbti-isotropic-extinction]
+0.180	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-page-tof-taurine-basic]
+0.780	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-senju-taurine-converged]
+0.200	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[single-crystal-tof-taurine-basic]
+0.960	tests/system/py/test_c06_t6_fitting_corpus.py::test_fitting_case_matches_expected_through_edi[yap-spodi-3k]
 0.000	tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_case_resolver_fails_closed_for_an_invalid_override
 0.000	tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_case_resolver_uses_override_and_requires_the_requested_case
 0.720	tests/system/py/test_c06_t6_fitting_corpus_consumer.py::test_c06_t6_edi_runner_collection_is_the_manifest_projection
@@ -170554,14 +170607,14 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_browser_saved_project.
 0.030	tests/system/py/test_c09_t1_whole_fit_delegation.py::test_c09_t1_fit_fails_closed_on_empty_measured_data
 0.090	tests/system/py/test_c09_t1_whole_fit_delegation.py::test_c09_t1_fit_fails_closed_on_malformed_models
 0.000	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_cli_oracle_has_exact_joint_layout_and_metrics
-3.090	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_matches_the_full_value_set_from_the_shared_producer
-0.400	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_performs_no_native_file_io_or_subprocess
+1.850	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_matches_the_full_value_set_from_the_shared_producer
+0.320	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_c09_t6_joint_refit_performs_no_native_file_io_or_subprocess
 0.000	tests/system/py/test_c09_t6_joint_multibank_absorption.py::test_current_tail_record_retains_the_fullprof_reference_bounds
 0.840	tests/system/py/test_c09_t7_cached_fit.py::test_c09_t7_stateless_api_remains_the_default
 0.050	tests/system/py/test_c09_t7_cached_fit.py::test_c09_t7_v1_rejects_a_deliberately_transposed_index
 0.960	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_classic_numeric_corpus_and_comma_counterfactual_are_deterministic
 0.780	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_existing_constructors_and_model_only_fit_signatures_remain_available
-0.340	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_joint_one_call_fit_reuses_the_full_value_set
+0.220	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_joint_one_call_fit_reuses_the_full_value_set
 0.010	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_missing_tof_column_fails_during_the_one_load_mode[misspelled]
 0.010	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_missing_tof_column_fails_during_the_one_load_mode[omitted]
 0.000	tests/system/py/test_c09_t8_complete_project_loading.py::test_c09_t8_one_loader_rejects_every_data_less_bank[joint]
@@ -170582,12 +170635,14 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_browser_saved_project.
 3.000	tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_python_fit_overloads_restore_callback_ownership[joint-embedded]
 1.950	tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_python_fit_overloads_restore_callback_ownership[single-analysis]
 1.790	tests/system/py/test_c09_t9_output_contract_and_cli.py::test_c09_t9_python_fit_overloads_restore_callback_ownership[single-embedded]
-2.220	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[fast_descent]
-2.000	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[fast_descent_guarded_linear_snap]
-2.000	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[fast_descent_linear_snap]
-1.700	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[ladder]
-3.400	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[multistart_prune]
-0.510	tests/system/py/test_c11_t35_descent_end_to_end.py::test_omitted_descent_preserves_the_default_record_bytes_regression_pin
+1.170	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[fast_descent]
+1.450	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[fast_descent_and_ladder]
+0.030	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[fast_descent_guarded_linear_snap]
+0.020	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[fast_descent_linear_snap]
+1.060	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[ladder]
+1.510	tests/system/py/test_c11_t35_descent_end_to_end.py::test_each_registered_id_routes_through_cli_and_project_analysis[multistart_prune]
+0.570	tests/system/py/test_c11_t35_descent_end_to_end.py::test_historical_ladder_preserves_the_default_record_bytes_regression_pin
+1.320	tests/system/py/test_c11_t35_descent_end_to_end.py::test_omitted_selector_matches_explicit_canonical_default_and_corpus_pin
 1.600	tests/system/py/test_c11_t43_rejection_classes.py::test_cli_persistence_never_follows_a_retained_touched_document_symlink
 0.870	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_cli_recovers_recorded_cause_or_legacy_unknown[max-iter-legacy]
 0.890	tests/system/py/test_c11_t43_rejection_classes.py::test_completed_resume_cli_recovers_recorded_cause_or_legacy_unknown[max-iter-recorded]
@@ -172214,7 +172269,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 0.420	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[sc-neut-tof_taurine-unknown_basic-0]
 2.670	tests/system/py/test_c34_t24_cli_variants.py::test_later_variant_corruption_is_not_hidden_by_an_earlier_pass
 3.300	tests/system/py/test_c34_t24_cli_variants.py::test_project_variant_terminal_status_is_enforced
-1.220	tests/system/py/test_c34_t24_declared_fit_conditions.py::test_absent_conditions_equal_explicit_engine_defaults
+3.210	tests/system/py/test_c34_t24_declared_fit_conditions.py::test_absent_conditions_equal_explicit_engine_defaults
 1.030	tests/system/py/test_c34_t24_declared_fit_conditions.py::test_guarded_scan_records_its_observed_outcomes_without_assuming_convergence
 0.000	tests/system/py/test_c34_t24_declared_fit_conditions.py::test_provenance_gate_rejects_each_misattribution[chi_square_tolerance]
 0.000	tests/system/py/test_c34_t24_declared_fit_conditions.py::test_provenance_gate_rejects_each_misattribution[descent]
@@ -172895,9 +172950,9 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::t
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_owner_selection_rejects_coordinated_consumer_changes[deletion]
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_owner_selection_rejects_coordinated_consumer_changes[permutation]
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::test_owner_selection_rejects_coordinated_consumer_changes[substitution]
-UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_a_converged_result_cannot_gain_materially_on_an_immediate_default_refit
-UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_default_descent_reaches_the_frozen_fast_descent_regression_witness
-UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_default_variant_is_also_bound_to_the_independent_fullprof_reference
+1.280	tests/system/py/test_catalogue_descent.py::test_a_converged_result_cannot_gain_materially_on_an_immediate_default_refit
+0.820	tests/system/py/test_catalogue_descent.py::test_default_descent_reaches_the_frozen_fast_descent_regression_witness
+0.890	tests/system/py/test_catalogue_descent.py::test_default_variant_is_also_bound_to_the_independent_fullprof_reference
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_common_pool_and_earth_reservation:Classic]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_common_pool_and_earth_reservation:Colour-blind safe]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_common_pool_and_earth_reservation:Earth]
@@ -172940,29 +172995,20 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::tes
 0.600	tests/system/py/test_chart_control_colours.py::test_element_adjustment_reaches_two_to_one_without_unneeded_movement[dark-vesta]
 0.780	tests/system/py/test_chart_control_colours.py::test_element_adjustment_reaches_two_to_one_without_unneeded_movement[light-jmol]
 1.080	tests/system/py/test_chart_control_colours.py::test_element_adjustment_reaches_two_to_one_without_unneeded_movement[light-vesta]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_every_palette_retains_prefix_when_more_items_are_added
+0.018	tests/system/py/test_chart_control_colours.py::test_every_palette_retains_prefix_when_more_items_are_added
 UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_exact_palette_names_order_and_earth_default
 0.010	tests/system/py/test_chart_control_colours.py::test_hydrogen_and_carbon_are_distinct_in_light_tables
 0.000	tests/system/py/test_chart_control_colours.py::test_independent_colour_observer_controls
 UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_map_catalogue_has_only_the_six_named_choices
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_one_assignment_function_reserves_only_earth_and_reuses_holes[Classic]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_one_assignment_function_reserves_only_earth_and_reuses_holes[Colour-blind safe]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_one_assignment_function_reserves_only_earth_and_reuses_holes[Earth]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_one_assignment_function_reserves_only_earth_and_reuses_holes[Natural]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_one_assignment_function_reserves_only_earth_and_reuses_holes[Soft]
+0.040	tests/system/py/test_chart_control_colours.py::test_one_assignment_function_reserves_only_earth_and_reuses_holes[Colour-blind safe]
+0.040	tests/system/py/test_chart_control_colours.py::test_one_assignment_function_reserves_only_earth_and_reuses_holes[Main]
 0.000	tests/system/py/test_chart_control_colours.py::test_original_element_scheme_data_is_unchanged_for_three_dimensions
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_overflow_keeps_categorical_prefix_and_uses_first_two_colour_family[dark]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_overflow_keeps_categorical_prefix_and_uses_first_two_colour_family[light]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[dark-Classic]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[dark-Colour-blind safe]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[dark-Earth]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[dark-Natural]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[dark-Soft]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[light-Classic]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[light-Colour-blind safe]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[light-Earth]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[light-Natural]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[light-Soft]
+0.070	tests/system/py/test_chart_control_colours.py::test_overflow_keeps_categorical_prefix_and_uses_first_two_colour_family[dark]
+0.060	tests/system/py/test_chart_control_colours.py::test_overflow_keeps_categorical_prefix_and_uses_first_two_colour_family[light]
+0.010	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[dark-Colour-blind safe]
+0.010	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[dark-Main]
+0.010	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[light-Colour-blind safe]
+0.010	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[light-Main]
 0.000	tests/system/py/test_chart_fonts.py::test_font_inventory_covers_every_chart_and_pane
 0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[correlations]
 0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[evolution]
@@ -228043,16 +228089,16 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.000	tests/system/py/test_e09_t56_superset_controls.py::test_missing_member_is_red
 0.000	tests/system/py/test_e09_t56_superset_controls.py::test_missing_name_is_red
 0.000	tests/system/py/test_e09_t56_superset_controls.py::test_sparse_and_malformed_records_are_tolerated_as_names_only
-1.760	tests/system/py/test_e09_t58_absorption_cli_canonicalization.py::test_both_clis_write_one_typed_none_absorption_tree[absent]
-1.940	tests/system/py/test_e09_t58_absorption_cli_canonicalization.py::test_both_clis_write_one_typed_none_absorption_tree[explicit-none]
-0.930	tests/system/py/test_e09_t58_absorption_family_contract.py::test_absorption_family_acceptance_and_contents_match_crysta[first-only]
-0.950	tests/system/py/test_e09_t58_absorption_family_contract.py::test_absorption_family_acceptance_and_contents_match_crysta[missing]
-0.070	tests/system/py/test_e09_t58_absorption_family_contract.py::test_absorption_family_acceptance_and_contents_match_crysta[none-with-coefficient]
-1.060	tests/system/py/test_e09_t58_absorption_family_contract.py::test_absorption_family_acceptance_and_contents_match_crysta[second-only]
-0.080	tests/system/py/test_e09_t58_absorption_family_contract.py::test_absorption_family_acceptance_and_contents_match_crysta[unknown]
-2.750	tests/system/py/test_e09_t58_absorption_family_contract.py::test_switching_a_loaded_cylinder_to_none_clears_calculation_state[factory]
-2.530	tests/system/py/test_e09_t58_absorption_family_contract.py::test_switching_a_loaded_cylinder_to_none_clears_calculation_state[type-setter]
-0.750	tests/system/py/test_e09_t58_cli_persistence.py::test_both_cli_surfaces_save_byte_equal_trees_and_conforming_records
+4.770	tests/system/py/test_e09_t58_absorption_cli_canonicalization.py::test_both_clis_write_one_typed_none_absorption_tree[absent]
+4.640	tests/system/py/test_e09_t58_absorption_cli_canonicalization.py::test_both_clis_write_one_typed_none_absorption_tree[explicit-none]
+2.320	tests/system/py/test_e09_t58_absorption_family_contract.py::test_absorption_family_acceptance_and_contents_match_crysta[first-only]
+1.940	tests/system/py/test_e09_t58_absorption_family_contract.py::test_absorption_family_acceptance_and_contents_match_crysta[missing]
+0.140	tests/system/py/test_e09_t58_absorption_family_contract.py::test_absorption_family_acceptance_and_contents_match_crysta[none-with-coefficient]
+1.960	tests/system/py/test_e09_t58_absorption_family_contract.py::test_absorption_family_acceptance_and_contents_match_crysta[second-only]
+0.150	tests/system/py/test_e09_t58_absorption_family_contract.py::test_absorption_family_acceptance_and_contents_match_crysta[unknown]
+1.290	tests/system/py/test_e09_t58_absorption_family_contract.py::test_switching_a_loaded_cylinder_to_none_clears_calculation_state[factory]
+1.330	tests/system/py/test_e09_t58_absorption_family_contract.py::test_switching_a_loaded_cylinder_to_none_clears_calculation_state[type-setter]
+0.920	tests/system/py/test_e09_t58_cli_persistence.py::test_both_cli_surfaces_save_byte_equal_trees_and_conforming_records
 4.140	tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-absent-absent]
 3.950	tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-absent-fixed]
 3.980	tests/system/py/test_e09_t58_cli_persistence.py::test_edi_all_accepted_axis_prior_arrangements_survive_saved_undo[absent-absent-zero]
@@ -234851,10 +234897,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_save_snapshot_contract.py::te
 0.000	tests/system/py/test_scan_correlation_save_stability.py::test_template_correlation_ids_survive_unchanged_app_reload_and_save[sequential-later-single-undo]
 0.000	tests/system/py/test_scan_driver_resume.py::test_callback_runs_after_each_result_is_committed
 0.000	tests/system/py/test_scan_driver_resume.py::test_event_gate_rejects_wrong_file_and_wrong_value_with_correct_callback_count
-0.170	tests/system/py/test_scan_driver_resume.py::test_resume_gate_rejects_real_duplicate_work_with_unchanged_csv_and_events
+0.160	tests/system/py/test_scan_driver_resume.py::test_resume_gate_rejects_real_duplicate_work_with_unchanged_csv_and_events
 0.000	tests/system/py/test_scan_driver_resume.py::test_resumed_facade_csv_is_cell_identical_to_native_driver_consistency
 0.160	tests/system/py/test_scan_driver_resume.py::test_save_as_retains_scan_results_and_preserves_the_source_copy
-0.021	tests/system/py/test_scan_driver_resume.py::test_stop_retains_committed_rows_and_continue_visits_only_remaining_files
+0.010	tests/system/py/test_scan_driver_resume.py::test_stop_retains_committed_rows_and_continue_visits_only_remaining_files
 0.340	tests/system/py/test_scan_forwarding_controls.py::test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibility
 0.006	tests/system/py/test_scan_lazy_input.py::test_driver_opens_only_current_file_and_bounded_read_ahead
 0.000	tests/system/py/test_scan_lazy_input.py::test_gate_rejects_an_exercised_read_all_files_before_fitting_escape[eager-load-openat]
@@ -238606,7 +238652,7 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_constraint_transitions.cpp::Na
 0.006	tests/unit/cpp/test_datablock_rename.cpp::Refused datablock rename preserves every reference
 0.009	tests/unit/cpp/test_datablock_rename.cpp::Site and tensor key edits follow every coordinate and ADP reference
 0.009	tests/unit/cpp/test_datablock_rename.cpp::Structure rename follows all relation categories and exact name boundaries
-UNMEASURED:red-first native baseline ae20ff66 fails; green execution cost is not measured	tests/unit/cpp/test_dictionary_metadata.cpp::The core metadata bridge retains every dictionary label unit and file tooltip
+0.014	tests/unit/cpp/test_dictionary_metadata.cpp::The core metadata bridge retains every dictionary label unit and file tooltip
 0.013	tests/unit/cpp/test_dictionary_parameter_table.cpp::CLI parameter table scientific pairs keep the project uncertainty precision
 0.010	tests/unit/cpp/test_dictionary_parameter_table.cpp::CLI parameter tables use the dictionary format for each numeric category
 0.000	tests/unit/cpp/test_e04_t10_scene.cpp::E04-T10 I13 I14 both projections and pointer transformations
@@ -238772,9 +238818,9 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_integer_domain.cpp::Rep
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains existing presentation and drawing outputs at nontrivial seams
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains hostile UTF8 text and encodes nonfinite values as null
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report options retain section order and an explicitly fixed UTC timestamp
-0.010	tests/unit/cpp/test_report_presentation_boundaries.cpp::Every structure count retains its approved Bragg colour
+0.009	tests/unit/cpp/test_report_presentation_boundaries.cpp::Every structure count retains its approved Bragg colour
 0.002	tests/unit/cpp/test_report_presentation_boundaries.cpp::Every structure palette entry and wraparound retains its Bragg colour
-0.002	tests/unit/cpp/test_report_presentation_boundaries.cpp::Static report borders every filled and empty correlation cell
+0.003	tests/unit/cpp/test_report_presentation_boundaries.cpp::Static report borders every filled and empty correlation cell
 0.000	tests/unit/cpp/test_scan_visible_range.cpp::A resolved scan range retains its measured samples without a full-range envelope
 0.001	tests/unit/cpp/test_scan_visible_range.cpp::Visible scan columns retain every in-range minimum and maximum
 UNMEASURED:native-Release-measurement-held	tests/unit/cpp/test_shared_correlation_storage.cpp::An unrelated scan event preserves literal loaded pair identity and spelling
@@ -238824,7 +238870,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_c09_t17_seeded_scale_no_fit.py:
 0.000	tests/unit/py/test_c09_t17_seeded_scale_no_fit.py::test_original_pcr_pin_survives_in_c34_t25_historical_inputs[pd-neut-tof_si-sepd_jorgensen-von-dreele-size-strain]
 0.000	tests/unit/py/test_c09_t17_seeded_scale_no_fit.py::test_original_pcr_pin_survives_in_c34_t25_historical_inputs[pd-neut-tof_si-sepd_jorgensen-von-dreele]
 0.000	tests/unit/py/test_c09_t17_seeded_scale_no_fit.py::test_original_pcr_pin_survives_in_c34_t25_historical_inputs[pd-neut-tof_si-sepd_jorgensen]
-0.020	tests/unit/py/test_c09_t6_io_seams.py::test_c09_t6_jvd_and_absorption_load_with_nontrivial_parameter_states
+0.030	tests/unit/py/test_c09_t6_io_seams.py::test_c09_t6_jvd_and_absorption_load_with_nontrivial_parameter_states
 0.000	tests/unit/py/test_c09_t6_io_seams.py::test_c09_t6_jvd_requires_each_lorentzian_field[_peak.broad_lorentz_gamma_0]
 0.000	tests/unit/py/test_c09_t6_io_seams.py::test_c09_t6_jvd_requires_each_lorentzian_field[_peak.broad_lorentz_gamma_1]
 0.010	tests/unit/py/test_c09_t6_io_seams.py::test_c09_t6_jvd_requires_each_lorentzian_field[_peak.broad_lorentz_gamma_2]
@@ -240994,6 +241040,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 216.944	tests/integration/app/test_assistant_trial_retirement.py
 # module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
 # module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
+# module-cost: 0.820	tests/integration/app/test_c06_t8_descent_options.py
 # module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
 # module-cost: 1561.469	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 37.773	tests/integration/app/test_e04_t1_runtime_escapes.py
@@ -241024,6 +241071,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 0.191	tests/integration/py/test_native_serialized_source_admission.py
 # module-cost: 14.337	tests/integration/py/test_parameter_table_notation.py
 # module-cost: 0.956	tests/integration/py/test_plain_data_picker.py
+# module-cost: 0.546	tests/integration/py/test_preferences_and_survey.py
 # module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
 # module-cost: 1.555	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.373	tests/integration/py/test_scan_extended_contract.py
@@ -241035,7 +241083,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 11.310	tests/system/py/test_app_minimum.py
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 0.705	tests/system/py/test_app_version_rebuild.py
-# module-cost: 1.669	tests/system/py/test_approved_palettes.py
+# module-cost: 2.288	tests/system/py/test_approved_palettes.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
 # module-cost: 8.499	tests/system/py/test_atomic_displacement_count.py
 # module-cost: 64.108	tests/system/py/test_backlogged_frames.py
@@ -241049,7 +241097,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
 # module-cost: 4.014	tests/system/py/test_case_examples.py
 # module-cost: 0.075	tests/system/py/test_case_record_escapes.py
-# module-cost: 3.771	tests/system/py/test_chart_control_colours.py
+# module-cost: 3.842	tests/system/py/test_chart_control_colours.py
 # module-cost: 20.346	tests/system/py/test_chart_fonts.py
 # module-cost: 11.490	tests/system/py/test_chart_handover.py
 # module-cost: 3.683	tests/system/py/test_ci_native_modes.py
@@ -241128,7 +241176,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 717.517	tests/system/py/test_scan_app_execution.py
 # module-cost: 1.272	tests/system/py/test_scan_collection_delivery.py
 # module-cost: 98.679	tests/system/py/test_scan_correlation_save_stability.py
-# module-cost: 29.759	tests/system/py/test_scan_driver_resume.py
+# module-cost: 26.324	tests/system/py/test_scan_driver_resume.py
 # module-cost: 1.016	tests/system/py/test_scan_lazy_input.py
 # module-cost: 1.968	tests/system/py/test_scan_native_boundary.py
 # module-cost: 0.318	tests/system/py/test_scan_output_aliases.py

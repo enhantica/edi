@@ -715,7 +715,6 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | GUI name |
     | --- | --- |
     | [ABSCOR1](../physics/parameters.md#absorption-abscor1) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#62992;</span> <span class="ed-reference-icon" aria-hidden="true">&#61507;</span> </span><span class="ed-icon-text">ABSCOR1</span></span> |
-    | [ABSCOR2](../physics/parameters.md#absorption-abscor2) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#62992;</span> <span class="ed-reference-icon" aria-hidden="true">&#61507;</span> </span><span class="ed-icon-text">ABSCOR2</span></span> |
     | [ΜR](../physics/parameters.md#absorption-mu-r) | <span class="ed-icon-label"><span class="ed-icon-group" aria-hidden="true"><span class="ed-reference-icon" aria-hidden="true">&#62992;</span> <span class="ed-reference-icon" aria-hidden="true">&#61507;</span> </span><span class="ed-icon-text">μR</span></span> |
     | [Type](../physics/parameters.md#absorption-type) | type |
 
@@ -953,7 +952,6 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | Edi name |
     | --- | --- |
     | [ABSCOR1](../physics/parameters.md#absorption-abscor1) | <code>_absorption.abscor1</code> |
-    | [ABSCOR2](../physics/parameters.md#absorption-abscor2) | <code>_absorption.abscor2</code> |
     | [ΜR](../physics/parameters.md#absorption-mu-r) | <code>_absorption.mu_r</code> |
     | [Type](../physics/parameters.md#absorption-type) | <code>_absorption.type</code> |
 
@@ -1191,7 +1189,6 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | Python name |
     | --- | --- |
     | [ABSCOR1](../physics/parameters.md#absorption-abscor1) | <code>project.experiments[0].absorption.abscor1</code> |
-    | [ABSCOR2](../physics/parameters.md#absorption-abscor2) | <code>project.experiments[0].absorption.abscor2</code> |
     | [ΜR](../physics/parameters.md#absorption-mu-r) | <code>project.experiments[0].absorption.mu_r</code> |
     | [Type](../physics/parameters.md#absorption-type) | <code>project.experiments[0].absorption.type</code> |
 
@@ -1429,7 +1426,6 @@ Compare names used in the app, saved Edi projects, Python and CIF. Select a para
     | Parameter or field | CIF name |
     | --- | --- |
     | [ABSCOR1](../physics/parameters.md#absorption-abscor1) | <code>_edi_absorption.abscor1</code> |
-    | [ABSCOR2](../physics/parameters.md#absorption-abscor2) | <code>_edi_absorption.abscor2</code> |
     | [ΜR](../physics/parameters.md#absorption-mu-r) | <code>_edi_absorption.mu_r</code><details><summary>Accepted aliases</summary><code>_easydiffraction_absorption.mu_r</code></details> |
     | [Type](../physics/parameters.md#absorption-type) | <code>_edi_absorption.type</code><details><summary>Accepted aliases</summary><code>_easydiffraction_absorption.type</code></details> |
 

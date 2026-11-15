@@ -26,6 +26,7 @@ from conftest import (
 )
 from tests.fixtures.correlations.machine_record import without_pair_count
 from tests.fixtures.ncaf_free_flags import canonicalize
+from tests.fixtures.project_categories.historical_bytes import prior_bytes
 from tests.fixtures.saved_spelling.reference import saved_pair, spelling, with_default_rule
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -534,13 +535,20 @@ def test_both_cli_surfaces_save_byte_equal_trees_and_conforming_records(
         'path and byte equal except the positive wall-clock fit duration'
     )
     expected_carried = source_record.replace(b'_edi.schema_version 2', b'_edi.schema_version 3', 1)
-    assert crysta_record == expected_carried, (
+    assert prior_bytes(crysta_record, expected_carried, name='project.edi') == expected_carried, (
         'the disengaged crysta CLI must preserve the partial project record apart from schema '
-        'reconciliation'
+        'reconciliation and ADR-0102 category placement'
     )
-    assert project_record_without_fields(
-        edi_record, 'created', 'last_modified', 'timestamp'
-    ) == with_default_rule(crysta_record), (
+    # The GUI design ADR specifies the current default; historical archives stay iucr_19.
+    expected_edi = with_default_rule(crysta_record, rule='iucr_99')
+    assert (
+        prior_bytes(
+            project_record_without_fields(edi_record, 'created', 'last_modified', 'timestamp'),
+            expected_edi,
+            name='project.edi',
+        )
+        == expected_edi
+    ), (
         'edi persistence adds only its three absent owned metadata fields and the exact '
         'default uncertainty rule to the carried record'
     )

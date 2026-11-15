@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.system.py.test_approved_palettes import PALETTES
+
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/chart_controls'
 OWNER = json.loads((FIXTURE / 'owner.json').read_text())
@@ -118,15 +120,15 @@ def test_exact_palette_names_order_and_earth_default(colour_probe):
     assert default == 'Main', 'A new user defaults to the approved Main palette'
 
 
-@pytest.mark.parametrize('palette', OWNER['palettes'], ids=itemgetter('name'))
+@pytest.mark.parametrize('palette', PALETTES, ids=itemgetter('name'))
 @pytest.mark.parametrize('theme', ['light', 'dark'])
 def test_palette_coordinates_and_calc_match_owner_bytes(colour_probe, palette, theme):
     names, _ = catalogue(colour_probe)
     token = names.get(palette['name'])
     assert token is not None, 'Every owner-approved palette is present in the native catalogue'
     output = invoke(colour_probe, 'colours', token, theme)
-    assert output[0].split('\t')[1] == OWNER['calc'][theme], (
-        'All five palettes have the exact common calculation colour for the requested theme'
+    assert output[0].split('\t')[1] == palette['calc'][theme], (
+        'Both palettes have their exact approved calculation colour for the requested theme'
     )
     table_paths = list((ROOT / 'data/palettes').glob('*.tsv'))
     actual = []
@@ -145,7 +147,7 @@ def test_palette_coordinates_and_calc_match_owner_bytes(colour_probe, palette, t
 
 def test_every_palette_retains_prefix_when_more_items_are_added(colour_probe):
     names, _ = catalogue(colour_probe)
-    for palette in OWNER['palettes']:
+    for palette in PALETTES:
         token = names.get(palette['name'])
         assert token is not None, 'Every shared palette must expose its assignment function'
         for theme in ('light', 'dark'):
@@ -295,7 +297,7 @@ def test_independent_colour_observer_controls():
 @pytest.mark.parametrize('theme', ['light', 'dark'])
 def test_overflow_keeps_categorical_prefix_and_uses_first_two_colour_family(colour_probe, theme):
     names, _ = catalogue(colour_probe)
-    for palette in OWNER['palettes'][1:]:
+    for palette in PALETTES:
         token = names.get(palette['name'])
         assert token is not None, 'Each pool palette is available before testing overflow'
         a, b = map(_math.lab, palette[theme][:2])
@@ -332,12 +334,12 @@ def test_overflow_keeps_categorical_prefix_and_uses_first_two_colour_family(colo
                 )
 
 
-@pytest.mark.parametrize('palette', OWNER['palettes'], ids=itemgetter('name'))
+@pytest.mark.parametrize('palette', PALETTES, ids=itemgetter('name'))
 def test_one_assignment_function_reserves_only_earth_and_reuses_holes(colour_probe, palette):
     names, _ = catalogue(colour_probe)
     token = names.get(palette['name'])
     assert token is not None, 'Every palette participates in the shared assignment contract'
-    reserved = palette['name'] == 'Earth'
+    reserved = True
     for kinds in ('sesese', 'eeesss', 'ssseee', 'ssssss', 'eeeeee', ''):
         output = invoke(colour_probe, 'positions', token, *kinds)
         assert all(value.isdecimal() for value in output), (
@@ -346,16 +348,16 @@ def test_one_assignment_function_reserves_only_earth_and_reuses_holes(colour_pro
         used, expected = set(), []
         for kind in kinds:
             position = 2 if reserved and kind == 's' else 0
-            while position in used:
+            while position in used or (kind == 'e' and 2 <= position <= 4):
                 position += 1
             expected.append(position)
             used.add(position)
         assert list(map(int, output)) == expected, (
-            'Items take the lowest free position, with two Earth reservations only'
+            'Items take the lowest free position, with experiments 0-1 and structures 2-4 reserved'
         )
-    retained = ('e:4', 's:6', 'e', 's', 'e:4')
+    retained = ('e:5', 's:6', 'e', 's', 'e:5')
     output = list(map(int, invoke(colour_probe, 'positions', token, *retained)))
-    assert output[:2] == [4, 6] and len(set(output)) == len(output), (
+    assert output[:2] == [5, 6] and len(set(output)) == len(output), (
         'Existing positions survive additions while duplicate claims cannot share one colour'
     )
     assert output[2] == 0 and output[3] == (2 if reserved else 1), (

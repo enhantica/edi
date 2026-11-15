@@ -877,7 +877,7 @@ def run_undo(args: argparse.Namespace) -> int:
         return 0
     if args.report == 'machine':
         lines = [
-            'schema=8',
+            'schema=9',
             'record=undo',
             f'was_no_op={"true" if was_no_op else "false"}',
             f'restored={len(restored)}',

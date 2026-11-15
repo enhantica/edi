@@ -2612,7 +2612,7 @@
     "present_in_edi": 63
   },
   "unimplemented_notes": {
-    "absorption.mu_r": "upstream's CW cylinder absorption surface; edi's TOF `abscor1`/`abscor2` pair is a declared divergence \u2014 see table (a)",
+    "absorption.mu_r": "upstream's CW cylinder absorption surface; edi's TOF `abscor1` is a declared divergence \u2014 see table (a)",
     "aliases.id": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
     "aliases.param": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",
     "aliases.parameter_unique_name": "the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) \u2014 the facade exists, this category is not yet ported",

@@ -77,7 +77,7 @@ TestCase {
         app.height = 800;
         AppState.open(AppState.Page.Home);
         verify(waitForRendering(app.contentItem), "The Home entry point is rendered before tutorial input");
-        panel = one(app, "tutorial");
+        panel = one(app, "tutorialPanel");
         chooser = one(app, "tutorials");
     }
     function cleanup() {

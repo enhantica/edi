@@ -66,8 +66,9 @@ def test_c09_t6_jvd_and_absorption_load_with_nontrivial_parameter_states() -> No
         )
         assert experiment.absorption.type == 'cylinder'
         assert experiment.absorption.abscor1 is not None
-        assert experiment.absorption.abscor2 is not None
-        assert _triplet(experiment.absorption.abscor2) == (0.0, 0.0, False)
+        assert not hasattr(experiment.absorption, 'abscor2'), (
+            'ADR-0123 removes the second coefficient instead of keeping a fixed-zero member'
+        )
         for field in (
             'broad_lorentz_gamma_0',
             'broad_lorentz_gamma_1',

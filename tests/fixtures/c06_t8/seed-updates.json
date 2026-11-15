@@ -1,0 +1,361 @@
+{
+  "claim": "Exact source-only stages; historical captures and every scientific reference/tolerance retained",
+  "files": {
+    "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/analysis/analysis.edi": {
+      "kind": "default-stop-rule-set",
+      "current_sha256": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
+      "previous_sha256": "67d5b9b5cb07a85a6c63c2d29c7fb7ddcf9e6224aa0d28fb80e8cd61f08a13f5",
+      "source_commit": "a452ce52ec19ba696412af61f21ddb36699c5a2f",
+      "effective_rules": [
+        "chi_square_change",
+        "shift_su"
+      ]
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/expected.json": {
+      "kind": "regression-and-retired-strategy-update",
+      "current_sha256": "8e4b8d49fb74c5fbd5fafad6ad2581328a62208244f17f79f134dbb30dd0fc2d",
+      "previous_sha256": "71fc0f3d81c60a97eac90d29de669af0f352998097f4e9655f6904161c0c5e3e",
+      "changed_paths": [
+        [
+          "variants",
+          "fast-descent-guarded-linear-snap"
+        ],
+        [
+          "variants",
+          "fast-descent-linear-snap"
+        ],
+        [
+          "variants",
+          "fast-descent",
+          "quantities",
+          "reduced_chi_square",
+          "value"
+        ],
+        [
+          "variants",
+          "fast-descent",
+          "quantities",
+          "iterations",
+          "value"
+        ],
+        [
+          "variants",
+          "fast-descent",
+          "quantities",
+          "rwp",
+          "value"
+        ],
+        [
+          "variants",
+          "multistart-prune",
+          "quantities",
+          "iterations",
+          "value"
+        ]
+      ],
+      "source_commits": [
+        "5a2a33367f376f105ea12a27743c4ba26726b75e",
+        "a0a116e1a7a11e6944978c09e249e5b6514976f4",
+        "48af9b4184793b701a04fcb787bde3d06aca6d75",
+        "7a9e8c7d79223107f2d22b78e2f2bc01069a52de",
+        "19a125cdd54f45d018c8f8610cbe75c4bbac0010"
+      ]
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/analysis/analysis.edi": {
+      "kind": "default-stop-rule-set",
+      "current_sha256": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
+      "previous_sha256": "67d5b9b5cb07a85a6c63c2d29c7fb7ddcf9e6224aa0d28fb80e8cd61f08a13f5",
+      "source_commit": "a452ce52ec19ba696412af61f21ddb36699c5a2f",
+      "effective_rules": [
+        "chi_square_change",
+        "shift_su"
+      ]
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/expected.json": {
+      "kind": "regression-and-retired-strategy-update",
+      "current_sha256": "85d5c0aeebc606e4c9eba69d50c37563e96cc2c2d20b7b5523f61fffe92b25aa",
+      "previous_sha256": "f0a80ef50913cdf1d3ac203649f8dc324aa620fe48bcbf645a3a3e5882ede72a",
+      "changed_paths": [
+        [
+          "variants",
+          "fast-descent-guarded-linear-snap"
+        ],
+        [
+          "variants",
+          "fast-descent-linear-snap"
+        ],
+        [
+          "variants",
+          "ladder",
+          "quantities",
+          "iterations",
+          "value"
+        ],
+        [
+          "variants",
+          "fast-descent",
+          "quantities",
+          "iterations",
+          "value"
+        ],
+        [
+          "variants",
+          "multistart-prune",
+          "quantities",
+          "iterations",
+          "value"
+        ]
+      ],
+      "source_commits": [
+        "5a2a33367f376f105ea12a27743c4ba26726b75e",
+        "48af9b4184793b701a04fcb787bde3d06aca6d75",
+        "7a9e8c7d79223107f2d22b78e2f2bc01069a52de",
+        "19a125cdd54f45d018c8f8610cbe75c4bbac0010"
+      ]
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/analysis/analysis.edi": {
+      "kind": "default-stop-rule-set",
+      "current_sha256": "fde9a40134aaf6794cde3e396a01067e1018d78871c394d4646c95052416f726",
+      "previous_sha256": "d75ec8b040218447803d88387564a3688e6764645329b3b6e4a0909dde8486af",
+      "source_commit": "a452ce52ec19ba696412af61f21ddb36699c5a2f",
+      "effective_rules": [
+        "chi_square_change",
+        "shift_su"
+      ]
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/expected.json": {
+      "kind": "regression-and-retired-strategy-update",
+      "current_sha256": "db13c03cfa2ef9c7b06edc4d14f2f51a3275ad5a2e215858b24b399e991131e0",
+      "previous_sha256": "447cefab0247ea7490de834703c4d1d48b467560d9ac78371a31d51eb0fad0ce",
+      "changed_paths": [
+        [
+          "quantities",
+          "results[52.345].fit_result.reduced_chi_square",
+          "value"
+        ],
+        [
+          "quantities",
+          "results[299.394].fit_result.reduced_chi_square",
+          "value"
+        ],
+        [
+          "quantities",
+          "results[497.379].fit_result.reduced_chi_square",
+          "value"
+        ]
+      ],
+      "source_commits": [
+        "ccf7bcd5d6c23a8f4c185404af590e50ec791f0e",
+        "19a125cdd54f45d018c8f8610cbe75c4bbac0010"
+      ]
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/analysis/analysis.edi": {
+      "kind": "default-stop-rule-set",
+      "current_sha256": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
+      "previous_sha256": "67d5b9b5cb07a85a6c63c2d29c7fb7ddcf9e6224aa0d28fb80e8cd61f08a13f5",
+      "source_commit": "a452ce52ec19ba696412af61f21ddb36699c5a2f",
+      "effective_rules": [
+        "chi_square_change",
+        "shift_su"
+      ]
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/expected.json": {
+      "kind": "regression-and-retired-strategy-update",
+      "current_sha256": "fb6b43996e590403b9d4a71376e94bae5e5c1ea988fec30ee1117e6844294a61",
+      "previous_sha256": "3f4854ddb59db3bd760aecf042947655b87be12379e7d4d0e24a549143def199",
+      "changed_paths": [
+        [
+          "variants",
+          "multistart-prune",
+          "quantities",
+          "iterations",
+          "value"
+        ]
+      ],
+      "source_commits": [
+        "5a2a33367f376f105ea12a27743c4ba26726b75e",
+        "48af9b4184793b701a04fcb787bde3d06aca6d75",
+        "19a125cdd54f45d018c8f8610cbe75c4bbac0010"
+      ]
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/analysis/analysis.edi": {
+      "kind": "default-stop-rule-set",
+      "current_sha256": "06acc049b2fdfd16e06af5c03634f364d62a2819d2bb2b0ea456cd4b79ba5061",
+      "previous_sha256": "67d5b9b5cb07a85a6c63c2d29c7fb7ddcf9e6224aa0d28fb80e8cd61f08a13f5",
+      "source_commit": "a452ce52ec19ba696412af61f21ddb36699c5a2f",
+      "effective_rules": [
+        "chi_square_change",
+        "shift_su"
+      ]
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/expected.json": {
+      "kind": "regression-and-retired-strategy-update",
+      "current_sha256": "f83a2d487d2ed68f570b52d0e25797f4a9ee89f30dc5b0eb98087d1d95027b1f",
+      "previous_sha256": "dca3ec4168d6acadd28fafaf95f1e8a3e34772b3d8621ae3e6e075c4700f039b",
+      "changed_paths": [
+        [
+          "variants",
+          "fast-descent-guarded-linear-snap"
+        ],
+        [
+          "variants",
+          "fast-descent-linear-snap"
+        ],
+        [
+          "variants",
+          "multistart-prune",
+          "quantities",
+          "iterations",
+          "value"
+        ]
+      ],
+      "source_commits": [
+        "5a2a33367f376f105ea12a27743c4ba26726b75e",
+        "48af9b4184793b701a04fcb787bde3d06aca6d75",
+        "7a9e8c7d79223107f2d22b78e2f2bc01069a52de",
+        "19a125cdd54f45d018c8f8610cbe75c4bbac0010"
+      ]
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/analysis/analysis.edi": {
+      "kind": "default-stop-rule-set",
+      "current_sha256": "362967ebcac29cd81a538ba27f01b70d61eb04bfcbf8d2de0ba4e13bb271e428",
+      "previous_sha256": "2112e363e47287fcb3e099e9daf7ad625dd74f4c358564d24b294329d4f9f412",
+      "source_commit": "a452ce52ec19ba696412af61f21ddb36699c5a2f",
+      "effective_rules": [
+        "chi_square_change",
+        "shift_su"
+      ]
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/expected.json": {
+      "kind": "regression-and-retired-strategy-update",
+      "current_sha256": "d5f27b4065cd18d4d548a8892762c2da7d88df7afbbb446a2da4c223a446f264",
+      "previous_sha256": "75388692a9955f8ad8dfdbf32f0884153368624fdf305c9dbc682eb26515de9e",
+      "changed_paths": [
+        [
+          "variants",
+          "fast-descent-linear-snap"
+        ]
+      ],
+      "source_commits": [
+        "7a9e8c7d79223107f2d22b78e2f2bc01069a52de",
+        "19a125cdd54f45d018c8f8610cbe75c4bbac0010"
+      ]
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/analysis/analysis.edi": {
+      "kind": "default-stop-rule-set",
+      "current_sha256": "bc78689c1a4491d308a0611490dceed83edb4898244ae092ec555ee91a548484",
+      "previous_sha256": "ab7833a2fcdc93948e196e9f828353c85f430cfe21a865fea8637395b8dacbab",
+      "source_commit": "a452ce52ec19ba696412af61f21ddb36699c5a2f",
+      "effective_rules": [
+        "chi_square_change",
+        "shift_su"
+      ]
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/expected.json": {
+      "kind": "regression-and-retired-strategy-update",
+      "current_sha256": "4bf8faee81a03e325fa9c460be5e35fb5e6fde8d104fe69db85931a7ff9fb1bc",
+      "previous_sha256": "24c2089601da4ede482fa8f9bf6b8cee86abd4666e10693c6eea24bf3421605f",
+      "changed_paths": [
+        [
+          "edi",
+          "quantities",
+          "iterations",
+          "value"
+        ],
+        [
+          "edi",
+          "quantities",
+          "iterations",
+          "kind"
+        ],
+        [
+          "edi",
+          "quantities",
+          "rwp",
+          "value"
+        ]
+      ],
+      "source_commits": [
+        "48af9b4184793b701a04fcb787bde3d06aca6d75",
+        "2ffd7d782c50b62ddd1300269c904cd88755c125",
+        "19a125cdd54f45d018c8f8610cbe75c4bbac0010"
+      ]
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi": {
+      "kind": "removed-zero-absorption-scalar",
+      "current_sha256": "a11f45c403ecfd11c19735513ca98d83dbc08e8840db55313ebee2aa0e094742",
+      "previous_sha256": "8ff32f263a67fb995d2c71ba18ee23bbb9ab20f9eda107bf6962aa8682bbdb35",
+      "removed": "_absorption.abscor2 0.0\n",
+      "source_commit": "de09a36"
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi": {
+      "kind": "removed-zero-absorption-scalar",
+      "current_sha256": "e6877b535165ee93149232317266fbe0e3b3367557ec2df1a8f8bc636eded16a",
+      "previous_sha256": "d1b14b8e4d0fc5d3cf5a30874af406989b900cf511a2b81bf5dfc996d3b0c986",
+      "removed": "_absorption.abscor2 0.0\n",
+      "source_commit": "de09a36"
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi": {
+      "kind": "removed-zero-absorption-scalar",
+      "current_sha256": "0614959bb1e1f9499a31a6fb5c3d910ce0b73e5b094c846f6c835a566ef63a2a",
+      "previous_sha256": "0392a4ddde4be4844ca09bba86353da964b826df21b037cf6bf1da9470447c69",
+      "removed": "_absorption.abscor2 0.0\n",
+      "source_commit": "de09a36"
+    },
+    "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/analysis/analysis.edi": {
+      "kind": "default-stop-rule-set",
+      "current_sha256": "9f58295877950335b95efa1716755b1247203d5be0475d9520960a0584d2b17f",
+      "previous_sha256": "64a4df3d307150fe046493217d368c2ce7f7b29c71ee5eb371b118f7a2d3804a",
+      "source_commit": "a452ce52ec19ba696412af61f21ddb36699c5a2f",
+      "effective_rules": [
+        "chi_square_change",
+        "shift_su"
+      ]
+    },
+    "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/analysis/analysis.edi": {
+      "kind": "default-stop-rule-set",
+      "current_sha256": "9f58295877950335b95efa1716755b1247203d5be0475d9520960a0584d2b17f",
+      "previous_sha256": "64a4df3d307150fe046493217d368c2ce7f7b29c71ee5eb371b118f7a2d3804a",
+      "source_commit": "a452ce52ec19ba696412af61f21ddb36699c5a2f",
+      "effective_rules": [
+        "chi_square_change",
+        "shift_su"
+      ]
+    },
+    "docs/user/cli/pd-neut-tof_si-sepd_start-5/expected.json": {
+      "kind": "regression-and-retired-strategy-update",
+      "current_sha256": "ce8a290da8ac854830dde54c0a03f8ddece533d6e871f040cb865c360cdb3e99",
+      "previous_sha256": "010d7144039d48340c54bbc6610dcaca44ea95eec229204aaf60e5f454c89ea3",
+      "changed_paths": [
+        [
+          "variants",
+          "fast-descent-guarded-linear-snap"
+        ],
+        [
+          "variants",
+          "fast-descent-linear-snap"
+        ],
+        [
+          "variants",
+          "multistart-prune",
+          "quantities",
+          "reduced_chi_square",
+          "value"
+        ],
+        [
+          "variants",
+          "multistart-prune",
+          "quantities",
+          "rwp",
+          "value"
+        ]
+      ],
+      "source_commits": [
+        "5a2a33367f376f105ea12a27743c4ba26726b75e",
+        "48af9b4184793b701a04fcb787bde3d06aca6d75",
+        "7a9e8c7d79223107f2d22b78e2f2bc01069a52de",
+        "19a125cdd54f45d018c8f8610cbe75c4bbac0010"
+      ]
+    }
+  }
+}

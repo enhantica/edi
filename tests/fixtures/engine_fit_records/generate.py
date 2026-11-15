@@ -1,5 +1,6 @@
 """Capture pinned-engine parity records after checking unchanged external references."""
 
+import argparse
 import hashlib
 import json
 import subprocess
@@ -51,6 +52,10 @@ def capture(case, verbosity):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--two-probe-default', action='store_true')
+    parser.add_argument('--canonical-default', action='store_true')
+    args = parser.parse_args()
     source, record, provenance = capture('ncaf-wish-3bank-s5', 'full')
     actual = fields(record)
     reference = json.loads((source / 'expected.json').read_text())['variants']['ladder'][
@@ -75,7 +80,33 @@ def main():
         },
         'independent_checks': checks,
     })
-    (HERE / 'joint-tail-default.json').write_text(
+    if args.canonical_default:
+        previous = HERE / 'joint-two-probe-default.json'
+        old = json.loads(previous.read_text())['record']
+        if old.count('\ndescent=multistart_prune\n') != 1 or record != old.replace(
+            '\ndescent=multistart_prune\n', '\ndescent=fast_descent_and_ladder\n'
+        ):
+            raise ValueError('Canonical naming must preserve every earlier two-probe record byte')
+        provenance.update({
+            'decision': 'Canonical default name; every mechanism and numerical row unchanged',
+            'previous_name_record_sha256': digest(previous),
+        })
+        (HERE / 'joint-canonical-default.json').write_text(
+            json.dumps({'provenance': provenance, 'record': record}, indent=2) + '\n'
+        )
+        return
+    name = 'joint-two-probe-default.json' if args.two_probe_default else 'joint-tail-default.json'
+    if args.two_probe_default:
+        if actual['descent'] != 'multistart_prune' or actual['iterations'] != '4':
+            raise ValueError(
+                'The two-probe default receipt requires its four-iteration two-probe run'
+            )
+        provenance.update({
+            'decision': 'Default probes fast descent and ladder; same minimum',
+            'previous_policy_record_sha256': digest(HERE / 'joint-tail-default.json'),
+            'previous_policy': 'Explicit ladder, seven iterations; complete record retained',
+        })
+    (HERE / name).write_text(
         json.dumps(
             {
                 'provenance': provenance,
@@ -85,6 +116,8 @@ def main():
         )
         + '\n'
     )
+    if args.two_probe_default:
+        return
     _, record, provenance = capture('cosio-d20-s1', 'compact')
     if fields(record)['status'] != 'no_step' or fields(record)['converged'] != 'false':
         raise ValueError('The failed resumed descent retains its terminal reason')

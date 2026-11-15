@@ -213,7 +213,37 @@ def test_c09_t6_joint_refit_matches_the_full_value_set_from_the_shared_producer(
         float(golden['reduced_chi2']),
         'reduced_chi_square',
     )
-    assert outcome.iterations == int(golden['iterations'])
+    # The complete ladder/tail golden still governs every value, uncertainty and metric.
+    # Only iteration identity follows the independently captured current default policy.
+    snapshot = json.loads(
+        (ROOT / 'tests/fixtures/engine_fit_records/joint-two-probe-default.json').read_text()
+    )
+    assert snapshot['provenance']['previous_policy_record_sha256'] == _sha256(
+        ROOT / 'tests/fixtures/engine_fit_records/joint-tail-default.json'
+    ), 'The default-policy receipt retains the complete historical ladder reference unchanged'
+    default = engine_record('joint-two-probe-default')
+    assert default['descent'] == 'multistart_prune' and default['iterations'] == '4', (
+        'The CLI receipt separates the actual two-probe default from the historical ladder'
+    )
+    canonical_snapshot = json.loads(
+        (ROOT / 'tests/fixtures/engine_fit_records/joint-canonical-default.json').read_text()
+    )
+    assert canonical_snapshot['provenance']['previous_name_record_sha256'] == _sha256(
+        ROOT / 'tests/fixtures/engine_fit_records/joint-two-probe-default.json'
+    ), 'The canonical-name receipt must authenticate the complete earlier default capture'
+    assert canonical_snapshot['record'] == snapshot['record'].replace(
+        '\ndescent=multistart_prune\n', '\ndescent=fast_descent_and_ladder\n'
+    ), (
+        'Only the selector name may change; every historical mechanism, value and uncertainty '
+        'row remains exact'
+    )
+    default = engine_record('joint-canonical-default')
+    assert default['descent'] == 'fast_descent_and_ladder' and default['iterations'] == '4', (
+        'The canonical CLI receipt retains the exact four-iteration two-probe default'
+    )
+    assert outcome.iterations == int(default['iterations']), (
+        'The shared default fit must match the exact independently captured CLI iteration count'
+    )
     assert outcome.converged is True
     assert golden['converged'] == 'true'
     assert len(record['callback_history']) == outcome.iterations
