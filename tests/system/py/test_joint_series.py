@@ -5,6 +5,7 @@ import shutil
 import edi as engine
 import numpy as np
 import pytest
+
 from tests.fixtures.joint_series import cases
 
 

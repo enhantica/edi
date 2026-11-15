@@ -8,6 +8,7 @@ import edi as engine
 import gemmi
 import numpy as np
 import pytest
+
 from tests.fixtures.joint_series import cases
 
 
