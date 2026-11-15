@@ -14,8 +14,11 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# clang-tidy reads the compile commands (tools/ci/cpp-tidy.sh).
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(cmake/edi_build_options.cmake)
+include(cmake/edi_warnings.cmake)
 
 add_subdirectory(core)
 add_subdirectory(cli)
@@ -58,3 +61,19 @@ if(EDI_BUILD_APP)
         add_subdirectory(tests/integration/py/assistant_ui_probe assistant-ui-probe)
     endif()
 endif()
+
+# Every target of edi's own directories, its hand-written sources only (cmake/edi_warnings.cmake).
+set(EDI_OWN_DIRECTORIES core cli)
+if(EDI_BUILD_BINDINGS)
+    list(APPEND EDI_OWN_DIRECTORIES lib)
+endif()
+if(EDI_BUILD_ASSISTANT_NATIVE AND NOT EMSCRIPTEN)
+    list(APPEND EDI_OWN_DIRECTORIES assistant/native)
+endif()
+if(EDI_BUILD_APP)
+    list(APPEND EDI_OWN_DIRECTORIES app)
+endif()
+foreach(directory IN LISTS EDI_OWN_DIRECTORIES)
+    get_property(targets DIRECTORY ${directory} PROPERTY BUILDSYSTEM_TARGETS)
+    edi_apply_warnings(${targets})
+endforeach()

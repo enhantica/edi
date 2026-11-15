@@ -306,8 +306,24 @@ wasm-build = { cmd = ["bash", "tools/ci/wasm-build.sh"], depends-on = [{ task = 
 # -e app app-test`, `app-ui-test` and `app-ui-bless` still run by hand.
 app-gates = { depends-on = ["app-test-scan-lines", "app-test-scan-refresh", { task = "app-build", environment = "app" }, "app-lint", "app-format-check"] }
 
+# The C++ static checks (edi ADR-0089): clang-tidy at one version on every platform, the version crysta's code-quality
+# rules pin, and cppcheck. They read the compile commands of the app's build tree (build/app), so this environment
+# holds only the tools.
+[feature.cpp-lint.dependencies]
+clang-tools = "==22.1.8"
+# clang's builtin headers (stddef.h and the rest), which clang-tidy reads.
+clang-22 = "==22.1.8"
+cppcheck = "==2.21.0"
+bash = ">=5.2"
+python = "3.14.*"  # run-clang-tidy is a Python script
+
+[feature.cpp-lint.tasks]
+cpp-tidy = { cmd = ["bash", "tools/ci/cpp-tidy.sh"] }
+cpp-cppcheck = { cmd = ["bash", "tools/ci/cpp-cppcheck.sh"] }
+
 [environments]
 app = ["app"]
+cpp-lint = { features = ["cpp-lint"], no-default-feature = true }
 
 [pypi-dependencies]
 easydiffraction = { path = ".", editable = true }
