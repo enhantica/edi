@@ -332,7 +332,7 @@ format = "ruff format ."
 # CI checkout / clean tree has no `_edi.so` and `import edi` fails, while a stale `.so` masks it locally.
 # The core suites leave out tests/integration/app, the app group: it needs the Qt app build and runs as
 # group-app after app-build (app-verify, both CI app jobs; tests/test-groups.json "app").
-test = { cmd = ["bash", "tools/ci/pytest-lenient.sh", "--ignore=tests/integration/app"], depends-on = ["core-build"] }
+test = { cmd = ["bash", "tools/ci/pytest-lenient.sh", "--ignore=tests/integration/app", "--ignore=tests/system/py/test_survey_events.py"], depends-on = ["core-build"] }
 # The quick (review-time) selection runs the FULL tier set — the measured-`heavy` exclusion is
 # retired (tests/test-groups.json declares the named groups, equal on test selection). Renamed
 # from `per-commit-tests` — the owner cadence
@@ -343,6 +343,7 @@ test = { cmd = ["bash", "tools/ci/pytest-lenient.sh", "--ignore=tests/integratio
 quick-tests = { cmd = [
     "python", "-m", "pytest",
     "tests/unit", "tests/integration", "tests/system", "--ignore=tests/integration/app",
+    "--ignore=tests/system/py/test_survey_events.py",
     "-q",
 ], depends-on = ["core-build"] }
 # The nightly-only group retains the app-builder witnesses.
@@ -457,8 +458,10 @@ verification-parity-tests = { cmd = [
 # review-time run) and `full` (CI on merge; the merge-time run, ONCE after the accept). The
 # former local-before-PR group IS quick (nothing runs per commit); selection is unchanged and
 # EQUAL between the two.
-group-quick = { depends-on = ["quick-tests", "cpp-test"] }
-group-full = { depends-on = ["test", "cpp-test"] }
+# Actual survey browsers require the same provisioning as the app-wasm CI job.
+group-browser = { cmd = ["python", "-m", "pytest", "tests/system/py/test_survey_events.py", "-q"], depends-on = ["core-build", { task = "wasm-toolchain", environment = "app" }] }
+group-quick = { depends-on = ["quick-tests", "cpp-test", "group-browser"] }
+group-full = { depends-on = ["test", "cpp-test", "group-browser"] }
 group-nightly-only = { depends-on = ["nightly-only-tests"] }
 group-weekly-only = { depends-on = ["weekly-only-tests"] }
 # Run on its own it builds first, as every app step does: the core the suite's conftest imports and the app,

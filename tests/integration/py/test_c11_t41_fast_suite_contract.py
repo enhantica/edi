@@ -540,6 +540,8 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
                 'tests/unit',
                 'tests/integration',
                 'tests/system/py/test_runtime_publication_reuse.py',
+                'tests/system/py/test_phase_scan_parity.py',
+                'tests/system/py/test_public_content_workflows.py',
                 '--ignore=tests/integration/app',
                 '-q',
                 *ignores,
@@ -549,7 +551,10 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
                 'The production core runner excludes exactly the declared nightly and weekly '
                 'files unless their respective inclusion switches are true'
             )
-        ignores.append('--ignore=' + LICENCE_MODULE)
+        ignores.extend([
+            '--ignore=' + LICENCE_MODULE,
+            '--ignore=tests/system/py/test_survey_events.py',
+        ])
         assert json.loads(result.stdout) == [
             '-m',
             'pytest',
@@ -567,7 +572,7 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
             '--store-durations',
         ], (
             'Production partitions retain the complete tier '
-            'with exactly the nightly omissions and the staged-artifact licence delegation'
+            'with exactly the nightly omissions, staged licences and browser-job delegation'
         )
 
     assert tasks['nightly-only-tests']['cmd'] == [
@@ -633,8 +638,13 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
         )
 
         for group, python_task in (('quick', 'quick-tests'), ('full', 'test')):
-            assert tasks[groups[group]['task']]['depends-on'] == [python_task, 'cpp-test'], (
-                'both local declared groups retain their executable Python and C++ selections'
+            assert tasks[groups[group]['task']]['depends-on'] == [
+                python_task,
+                'cpp-test',
+                'group-browser',
+            ], (
+                'Both local cadences retain all Python and C++ selections '
+                'plus their browser-provisioned survey group'
             )
         assert tasks['quick-tests']['cmd'] == [
             'python',
@@ -644,18 +654,30 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
             'tests/integration',
             'tests/system',
             '--ignore=tests/integration/app',
+            '--ignore=tests/system/py/test_survey_events.py',
             '-q',
         ], 'the unsplit local group and split CI jobs must retain identical tier selections'
         assert tasks['test']['cmd'] == [
             'bash',
             'tools/ci/pytest-lenient.sh',
             '--ignore=tests/integration/app',
+            '--ignore=tests/system/py/test_survey_events.py',
         ], 'the local merge group retains its complete default collection outside the app tier'
         assert tasks['core-tests']['cmd'] == ['bash', 'tools/ci/core-tests.sh'], (
             'The split core task uses the runner that preserves the explicit nightly selection'
         )
         assert tasks['system-tests-part']['cmd'] == ['bash', 'tools/ci/system-tests-part.sh'], (
             'each system part invokes the actual declared partition executable'
+        )
+        assert groups['browser']['paths'] == ['tests/system/py/test_survey_events.py'], (
+            'The complete survey browser module belongs to the browser-provisioned group'
+        )
+        assert tasks['group-browser']['depends-on'] == [
+            'core-build',
+            {'task': 'wasm-toolchain', 'environment': 'app'},
+        ], (
+            'Both local verification cadences provision Playwright and Chrome '
+            'before real survey browsers'
         )
         partition = (ROOT / 'tools/ci/system-tests-part.sh').read_text()
         assert re.search(r'exec python -m pytest tests/system -q "\$@"\s*\\', partition), (

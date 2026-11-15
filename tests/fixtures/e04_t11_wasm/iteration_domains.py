@@ -24,7 +24,7 @@ WORK_FIELDS = (
 
 CAPTURE_FILES = {'native.json', 'native-report.txt', 'conditioning.json', 'conditioning-raw.json'}
 CURRENT = {
-    'conditions': {'descent': 'multistart_prune', 'stop_rules': 'chi_square_change shift_su'},
+    'conditions': {'descent': 'auto', 'stop_rules': 'chi_square_change shift_su'},
     'probe_horizon': 3,
 }
 EXACT_FIELDS = (
@@ -53,7 +53,7 @@ def declaration(value=None):
         raise ValueError('Iteration domain declaration requires its exact schema fields')
     if (
         value['schema'] != 'catalogue-iteration-domains/1'
-        or value['authority'] != ['edi ADR-0023']
+        or value['authority'] != ['edi ADR-0023', 'crysta ADR-0130']
         or value['current'] != CURRENT
         or not isinstance(value['historical'], dict)
         or value['historical'].keys() != {'lbco', 'ncaf'}
@@ -286,3 +286,28 @@ def saved(project, raw, report):
         matches = re.findall(r'^_fit_result\.' + tag + r'\s+(\S+)\s*$', text, re.MULTILINE)
         if matches != [wanted]:
             raise ValueError('Saved iteration count/descent differs from the actual current fit')
+
+
+def write_auto_declaration():
+    """Update only the current condition receipt; never recapture historical fit outputs."""
+    path = HERE / 'iteration-domains.json'
+    value = json.loads(path.read_text())
+    old = {**CURRENT, 'conditions': {**CURRENT['conditions'], 'descent': 'multistart_prune'}}
+    assert value['current'] in (old, CURRENT), (
+        'Auto declaration generation retains every current work bound and stopping condition'
+    )
+    assert value['authority'] in (['edi ADR-0023'], ['edi ADR-0023', 'crysta ADR-0130']), (
+        'The current declaration adds only the committed Auto descent authority'
+    )
+    history = json.dumps(value['historical'], sort_keys=True)
+    value['current'] = CURRENT
+    value['authority'] = ['edi ADR-0023', 'crysta ADR-0130']
+    declaration(value)
+    assert json.dumps(value['historical'], sort_keys=True) == history, (
+        'Auto condition generation cannot change any historical capture or its custody'
+    )
+    path.write_text(json.dumps(value, indent=2) + '\n')
+
+
+if __name__ == '__main__':
+    write_auto_declaration()

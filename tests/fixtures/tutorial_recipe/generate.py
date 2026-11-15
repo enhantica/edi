@@ -7,6 +7,8 @@ import json
 import sys
 from pathlib import Path
 
+import gemmi
+
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 from tests.fixtures.tutorial_recipe.reference import boundary_contracts  # noqa: E402
@@ -34,23 +36,41 @@ def build():
     output = {}
     for case in CASES:
         print('docs recipe', case, flush=True)
+        declared_plan = plan(case)
         paths = [
             ROOT / 'tools/docs/app_tutorial_plan.py',
             ROOT / 'docs/user/tutorials' / (case + '.py'),
             ROOT / 'website/surfaces/docs/cli/tutorials/cases' / (case + '.md'),
         ]
         paths += sorted((ROOT / 'docs/user/cli' / case / 'project').rglob('analysis*.edi'))
+        if any('background.estimate' in item['actions'] for item in declared_plan['steps']):
+            paths += sorted((ROOT / 'docs/user/cli' / case / 'project/experiments').glob('*.edi'))
         output[case] = {
-            'plan': plan(case),
+            'plan': declared_plan,
             'fits': [(title, sorted(paths)) for title, paths in free_lists(case)],
             'sources': {
                 path.relative_to(ROOT).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
                 for path in paths
             },
         }
-    for recipe in output.values():
+    for case, recipe in output.items():
+        if any('background.estimate' in item['actions'] for item in recipe['plan']['steps']):
+            recipe['estimated_background_paths'] = estimated_background_paths(case)
         recipe['boundaries'] = boundary_contracts(recipe)
     return output
+
+
+def estimated_background_paths(case, root=ROOT):
+    """Map declared CLI manual rows to ADR-0040's replacement ordinal identities."""
+    result = {}
+    for path in sorted((root / 'docs/user/cli' / case / 'project/experiments').glob('*.edi')):
+        block = gemmi.cif.read(str(path)).sole_block()
+        for index, row in enumerate(block.find(['_background.id'])):
+            name = gemmi.cif.as_string(row[0])
+            result['experiment.background.' + name + '.intensity'] = (
+                'experiment.background.' + str(index + 1) + '.intensity'
+            )
+    return result
 
 
 def refresh_page_custody(document, root=ROOT):

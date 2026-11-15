@@ -105,3 +105,93 @@ def test_named_refusal_keeps_the_original_action_preservation_contract():
     assert recipe_action_error(translate, [], recipe, 0, 0) is None, (
         'The original named refusal remains sufficient for a deleted required action'
     )
+
+
+def estimated_state():
+    expected = {
+        'free': [],
+        'aliases': {},
+        'constraints': {},
+        'values': {},
+        'points': {},
+        'regions': {},
+        'estimate': {'n_points': 3, 'use_model': 'subtract'},
+        'estimate_calls': 1,
+    }
+    actual = {
+        'free': [],
+        'analysis': 'data_analysis\n',
+        'values': {},
+        'targets': ['background.estimate'],
+        'applied_estimates': 1,
+        'experiments': [
+            {
+                'text': 'data_experiment\nloop_\n_background.id\n_background.position\n'
+                '_background.intensity\n1 5.25 18.5\n2 7.5 22.75\n3 10.75 16.25\n',
+                'n_points': 3,
+                'use_model': 'subtract',
+                'estimate_points': 0,
+                'estimate_note': '',
+            }
+        ],
+    }
+    return expected, actual
+
+
+def test_applied_background_is_observed_from_persisted_rows_and_model_replacement():
+    from tests.fixtures.tutorial_recipe.reference import state_errors  # noqa: PLC0415
+
+    expected, actual = estimated_state()
+    assert not state_errors(expected, actual), (
+        'An applied ADR-0040 estimate is proved independently of blank preview/warning fields '
+        'through its actual point rows and taught action'
+    )
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'missing',
+        'count',
+        'identity',
+        'manual-id',
+        'position',
+        'intensity',
+        'order',
+        'replacement',
+        'setting',
+        'mode',
+        'action',
+    ],
+)
+def test_background_estimate_observer_refuses_missing_or_malformed_applied_data(damage):
+    from tests.fixtures.tutorial_recipe.reference import state_errors  # noqa: PLC0415
+
+    expected, actual = estimated_state()
+    experiment = actual['experiments'][0]
+    if damage == 'missing':
+        experiment['text'] = 'data_experiment\n'
+    elif damage == 'count':
+        experiment['text'] = experiment['text'].replace('3 10.75 16.25\n', '')
+    elif damage == 'identity':
+        experiment['text'] = experiment['text'].replace('2 7.5', '1 7.5')
+    elif damage == 'manual-id':
+        experiment['text'] = experiment['text'].replace('2 7.5', '14.7 7.5')
+    elif damage == 'position':
+        experiment['text'] = experiment['text'].replace('7.5 22.75', '? 22.75')
+    elif damage == 'intensity':
+        experiment['text'] = experiment['text'].replace('22.75', '?')
+    elif damage == 'order':
+        experiment['text'] = experiment['text'].replace('7.5 22.75', '4.5 22.75')
+    elif damage == 'replacement':
+        actual['applied_estimates'] = 0
+    elif damage == 'setting':
+        experiment['n_points'] = 2
+    elif damage == 'mode':
+        experiment['use_model'] = 'none'
+    else:
+        actual['targets'] = []
+    assert state_errors(expected, actual), (
+        'The persisted estimate observer rejects every missing-data, identity, geometry, '
+        'setting and action escape: ' + damage
+    )

@@ -4,7 +4,7 @@
 set -euo pipefail
 # Actual publication/cache-permission workflows belong to system tier, and retain their
 # original PR core-job execution even where the ordinary system shards do not run on PRs.
-command=(python -m pytest tests/unit tests/integration tests/system/py/test_runtime_publication_reuse.py --ignore=tests/integration/app -q)
+command=(python -m pytest tests/unit tests/integration tests/system/py/test_runtime_publication_reuse.py tests/system/py/test_phase_scan_parity.py tests/system/py/test_public_content_workflows.py --ignore=tests/integration/app -q)
 leave_out() {
   local paths
   paths="$(python -c 'import json, sys; sys.stdout.reconfigure(newline="\n"); print("\n".join(json.load(open("tests/test-groups.json"))["groups"][sys.argv[1]]["paths"]))' "$1")"

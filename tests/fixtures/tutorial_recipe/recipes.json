@@ -447,7 +447,7 @@
         {
           "id": "group-free-all",
           "page": "analysis",
-          "description": "Free all from the header",
+          "description": "Free Background from the header",
           "actions": [
             "parameters.freeHeader"
           ],
@@ -537,10 +537,9 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic displacement",
-            "tick:structure.atom_sites[Ba].adp_iso",
-            "tick:structure.atom_sites[Co].adp_iso",
-            "tick:structure.atom_sites[La].adp_iso",
-            "tick:structure.atom_sites[O].adp_iso"
+            "parameters.freeHeader",
+            "parameters.freeHeader.free",
+            "parameters.clearFilters"
           ],
           "highlights": [
             "group.parameters"
@@ -741,7 +740,7 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "tools/docs/app_tutorial_plan.py": "483429ca1d5e04ad5478e3db21faff3e5b9799deb8d8f17e26380aafe299665c",
       "docs/user/tutorials/pd-neut-cwl_lbco-hrpt.py": "37db37d1c03b7ef1d932681c227cbe736224063463f677a9f45fbd9bf5d8737c",
       "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_lbco-hrpt.md": "d3234035fe8de4e07401d02117415d64615ac4b74f11b07b90a5c55d7cf00deb",
       "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/analysis/analysis.edi": "a4d2395b2606f9ba4730de91f87aa0cb92167c5b5d0680c0a8d8bb32f5dd8959"
@@ -1414,12 +1413,9 @@
             "reveal:parameters.category",
             "parameters.category",
             "choose:Atomic displacement",
-            "tick:structure.atom_sites[Co1].adp_iso",
-            "tick:structure.atom_sites[Co2].adp_iso",
-            "tick:structure.atom_sites[O1].adp_iso",
-            "tick:structure.atom_sites[O2].adp_iso",
-            "tick:structure.atom_sites[O3].adp_iso",
-            "tick:structure.atom_sites[Si].adp_iso"
+            "parameters.freeHeader",
+            "parameters.freeHeader.free",
+            "parameters.clearFilters"
           ],
           "highlights": [
             "group.parameters"
@@ -1820,7 +1816,7 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "tools/docs/app_tutorial_plan.py": "483429ca1d5e04ad5478e3db21faff3e5b9799deb8d8f17e26380aafe299665c",
       "docs/user/tutorials/pd-neut-cwl_cosio-d20.py": "955616cb7ae13dad87bcb844ad5a4f145733b88076f3621cddacf9ddf1e40b90",
       "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_cosio-d20.md": "110e1a1fe09821734d5eb52d2b724a33cd54d22fc70d48c06de5b62b36c3caa3",
       "docs/user/cli/pd-neut-cwl_cosio-d20/project/analysis/analysis.edi": "eb25ddb4323f27b49ee37478d30a7910428f4d00a7d0003a744a36f680679ace"
@@ -2816,7 +2812,7 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "tools/docs/app_tutorial_plan.py": "483429ca1d5e04ad5478e3db21faff3e5b9799deb8d8f17e26380aafe299665c",
       "docs/user/tutorials/pd-neut-cwl_cosio-d20_2k.py": "f37f01f1d3c982adc797867359f130a5138a4c79717658063368844ef1c1711c",
       "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_cosio-d20_2k.md": "eebaee875bed333634830315022fe56b52497053751cdc65f214597d255a085c",
       "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/analysis/analysis.edi": "fc3edb415512ca536353f603603646ad83eddedd88d50a81019b54e4e165a616"
@@ -3835,7 +3831,7 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "tools/docs/app_tutorial_plan.py": "483429ca1d5e04ad5478e3db21faff3e5b9799deb8d8f17e26380aafe299665c",
       "docs/user/tutorials/pd-neut-cwl_lmo-echidna.py": "a3c385d801234e20bfbc84b1b92d698e8f832bbf15448400a346e697f3867e9d",
       "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_lmo-echidna.md": "ffaa1e7af0065b3d26cee820754977d2361c05596ae7ef23d0c3e5f7e14fdd82",
       "docs/user/cli/pd-neut-cwl_lmo-echidna/project/analysis/analysis.edi": "15de9a58c3c93c2e535daeeefe2973c5ea43b7e6a2e389c356d82b4fa9a058a3"
@@ -4592,6 +4588,22 @@
             "choose:Background",
             "parameters.freeHeader",
             "parameters.freeHeader.free",
+            "parameters.clearFilters",
+            "reveal:parameters.datablock",
+            "parameters.datablock",
+            "choose:expt_n2",
+            "reveal:parameters.category",
+            "parameters.category",
+            "choose:Background",
+            "untick:experiments[expt_n2].background[31].intensity",
+            "parameters.clearFilters",
+            "reveal:parameters.datablock",
+            "parameters.datablock",
+            "choose:expt_s2",
+            "reveal:parameters.category",
+            "parameters.category",
+            "choose:Background",
+            "untick:experiments[expt_s2].background[31].intensity",
             "parameters.clearFilters"
           ],
           "highlights": [
@@ -4975,7 +4987,7 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "tools/docs/app_tutorial_plan.py": "483429ca1d5e04ad5478e3db21faff3e5b9799deb8d8f17e26380aafe299665c",
       "docs/user/tutorials/pd-neut-tof_ferrite-austenite-beer.py": "1aac20fa4f880c5b231ff2cb45343a88dcab289d71bb2e8f1e04ab55d0ddbb0c",
       "website/surfaces/docs/cli/tutorials/cases/pd-neut-tof_ferrite-austenite-beer.md": "ebacf92f8a8aa24b379bf78b652d4b3ccb65a57f19a8b61187fa10d2da002780",
       "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/analysis/analysis.edi": "1c24e1088d024dfe9edfd8784920133ad4476690edf8d925284411ef3c65700b"
@@ -6077,10 +6089,33 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "tools/docs/app_tutorial_plan.py": "483429ca1d5e04ad5478e3db21faff3e5b9799deb8d8f17e26380aafe299665c",
       "docs/user/tutorials/pd-xray-cwl_lam7o3-p021.py": "49659882d29dcf8e1d0fa21846dd0ccd7a1b48996a3d87787d01005fb80e0e00",
       "website/surfaces/docs/cli/tutorials/cases/pd-xray-cwl_lam7o3-p021.md": "ae50674b923dd038e1d173d53fa99ede88ebbb6c100556ab9961f52ab6e68bef",
-      "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/analysis/analysis.edi": "487e082c579f3bbc602f285738f6169844c7413774acc1d9b1df60030054bd36"
+      "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/analysis/analysis.edi": "487e082c579f3bbc602f285738f6169844c7413774acc1d9b1df60030054bd36",
+      "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/experiments/p021.edi": "dfcd48810e7d43aea27835c0a31cc0d1efd18124d192552b1bd4606a43d493a9"
+    },
+    "estimated_background_paths": {
+      "experiment.background.2.0.intensity": "experiment.background.1.intensity",
+      "experiment.background.2.3.intensity": "experiment.background.2.intensity",
+      "experiment.background.2.7.intensity": "experiment.background.3.intensity",
+      "experiment.background.2.9.intensity": "experiment.background.4.intensity",
+      "experiment.background.3.0.intensity": "experiment.background.5.intensity",
+      "experiment.background.3.1.intensity": "experiment.background.6.intensity",
+      "experiment.background.3.7.intensity": "experiment.background.7.intensity",
+      "experiment.background.4.1.intensity": "experiment.background.8.intensity",
+      "experiment.background.4.3.intensity": "experiment.background.9.intensity",
+      "experiment.background.4.4.intensity": "experiment.background.10.intensity",
+      "experiment.background.4.5.intensity": "experiment.background.11.intensity",
+      "experiment.background.4.9.intensity": "experiment.background.12.intensity",
+      "experiment.background.5.1.intensity": "experiment.background.13.intensity",
+      "experiment.background.7.intensity": "experiment.background.14.intensity",
+      "experiment.background.8.intensity": "experiment.background.15.intensity",
+      "experiment.background.10.intensity": "experiment.background.16.intensity",
+      "experiment.background.11.intensity": "experiment.background.17.intensity",
+      "experiment.background.12.intensity": "experiment.background.18.intensity",
+      "experiment.background.14.7.intensity": "experiment.background.19.intensity",
+      "experiment.background.15.0.intensity": "experiment.background.20.intensity"
     },
     "boundaries": [
       {
@@ -6248,26 +6283,26 @@
         "stage": 4,
         "title": "Background from the fitted model",
         "free": [
+          "experiment.background.1.intensity",
           "experiment.background.10.intensity",
           "experiment.background.11.intensity",
           "experiment.background.12.intensity",
-          "experiment.background.14.7.intensity",
-          "experiment.background.15.0.intensity",
-          "experiment.background.2.0.intensity",
-          "experiment.background.2.3.intensity",
-          "experiment.background.2.7.intensity",
-          "experiment.background.2.9.intensity",
-          "experiment.background.3.0.intensity",
-          "experiment.background.3.1.intensity",
-          "experiment.background.3.7.intensity",
-          "experiment.background.4.1.intensity",
-          "experiment.background.4.3.intensity",
-          "experiment.background.4.4.intensity",
-          "experiment.background.4.5.intensity",
-          "experiment.background.4.9.intensity",
-          "experiment.background.5.1.intensity",
+          "experiment.background.13.intensity",
+          "experiment.background.14.intensity",
+          "experiment.background.15.intensity",
+          "experiment.background.16.intensity",
+          "experiment.background.17.intensity",
+          "experiment.background.18.intensity",
+          "experiment.background.19.intensity",
+          "experiment.background.2.intensity",
+          "experiment.background.20.intensity",
+          "experiment.background.3.intensity",
+          "experiment.background.4.intensity",
+          "experiment.background.5.intensity",
+          "experiment.background.6.intensity",
           "experiment.background.7.intensity",
           "experiment.background.8.intensity",
+          "experiment.background.9.intensity",
           "experiment.instrument.calib_twotheta_offset",
           "experiment.linked_structures.lam7o3.scale",
           "experiment.peak.broad_gauss_u",
@@ -6314,26 +6349,26 @@
         "stage": 5,
         "title": "Atom positions",
         "free": [
+          "experiment.background.1.intensity",
           "experiment.background.10.intensity",
           "experiment.background.11.intensity",
           "experiment.background.12.intensity",
-          "experiment.background.14.7.intensity",
-          "experiment.background.15.0.intensity",
-          "experiment.background.2.0.intensity",
-          "experiment.background.2.3.intensity",
-          "experiment.background.2.7.intensity",
-          "experiment.background.2.9.intensity",
-          "experiment.background.3.0.intensity",
-          "experiment.background.3.1.intensity",
-          "experiment.background.3.7.intensity",
-          "experiment.background.4.1.intensity",
-          "experiment.background.4.3.intensity",
-          "experiment.background.4.4.intensity",
-          "experiment.background.4.5.intensity",
-          "experiment.background.4.9.intensity",
-          "experiment.background.5.1.intensity",
+          "experiment.background.13.intensity",
+          "experiment.background.14.intensity",
+          "experiment.background.15.intensity",
+          "experiment.background.16.intensity",
+          "experiment.background.17.intensity",
+          "experiment.background.18.intensity",
+          "experiment.background.19.intensity",
+          "experiment.background.2.intensity",
+          "experiment.background.20.intensity",
+          "experiment.background.3.intensity",
+          "experiment.background.4.intensity",
+          "experiment.background.5.intensity",
+          "experiment.background.6.intensity",
           "experiment.background.7.intensity",
           "experiment.background.8.intensity",
+          "experiment.background.9.intensity",
           "experiment.instrument.calib_twotheta_offset",
           "experiment.linked_structures.lam7o3.scale",
           "experiment.peak.broad_gauss_u",
@@ -6387,26 +6422,26 @@
         "stage": 6,
         "title": "Displacements",
         "free": [
+          "experiment.background.1.intensity",
           "experiment.background.10.intensity",
           "experiment.background.11.intensity",
           "experiment.background.12.intensity",
-          "experiment.background.14.7.intensity",
-          "experiment.background.15.0.intensity",
-          "experiment.background.2.0.intensity",
-          "experiment.background.2.3.intensity",
-          "experiment.background.2.7.intensity",
-          "experiment.background.2.9.intensity",
-          "experiment.background.3.0.intensity",
-          "experiment.background.3.1.intensity",
-          "experiment.background.3.7.intensity",
-          "experiment.background.4.1.intensity",
-          "experiment.background.4.3.intensity",
-          "experiment.background.4.4.intensity",
-          "experiment.background.4.5.intensity",
-          "experiment.background.4.9.intensity",
-          "experiment.background.5.1.intensity",
+          "experiment.background.13.intensity",
+          "experiment.background.14.intensity",
+          "experiment.background.15.intensity",
+          "experiment.background.16.intensity",
+          "experiment.background.17.intensity",
+          "experiment.background.18.intensity",
+          "experiment.background.19.intensity",
+          "experiment.background.2.intensity",
+          "experiment.background.20.intensity",
+          "experiment.background.3.intensity",
+          "experiment.background.4.intensity",
+          "experiment.background.5.intensity",
+          "experiment.background.6.intensity",
           "experiment.background.7.intensity",
           "experiment.background.8.intensity",
+          "experiment.background.9.intensity",
           "experiment.instrument.calib_twotheta_offset",
           "experiment.linked_structures.lam7o3.scale",
           "experiment.peak.broad_gauss_u",
@@ -7657,7 +7692,7 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "tools/docs/app_tutorial_plan.py": "483429ca1d5e04ad5478e3db21faff3e5b9799deb8d8f17e26380aafe299665c",
       "docs/user/tutorials/sc-neut-tof_taurine-senju.py": "bc43153c88e6485898b58c3b8773f7937fe7198412bf7547993e15fb6c6e03ef",
       "website/surfaces/docs/cli/tutorials/cases/sc-neut-tof_taurine-senju.md": "05452e14d0c5ac9325fbfefbb3c2156348f150c4c26b936eeef30fc05602ab10",
       "docs/user/cli/sc-neut-tof_taurine-senju/project/analysis/analysis.edi": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469"
@@ -8733,10 +8768,34 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "tools/docs/app_tutorial_plan.py": "483429ca1d5e04ad5478e3db21faff3e5b9799deb8d8f17e26380aafe299665c",
       "docs/user/tutorials/pd-neut-cwl_y2o3-spodi.py": "83c56831547c1acd42e98352d4db49b86b87d0bf4b8b9234ccae14a39364446f",
       "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_y2o3-spodi.md": "3330963867980b76c460ea7cc07c62050b422db6f9add23a1e68a15fe9c56926",
-      "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e"
+      "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+      "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/experiments/spodi.edi": "c6ff7236515100d6a5559271a52772142d435583d2b477f87b82411848a45eb3"
+    },
+    "estimated_background_paths": {
+      "experiment.background.1.intensity": "experiment.background.1.intensity",
+      "experiment.background.2.intensity": "experiment.background.2.intensity",
+      "experiment.background.3.intensity": "experiment.background.3.intensity",
+      "experiment.background.4.intensity": "experiment.background.4.intensity",
+      "experiment.background.5.intensity": "experiment.background.5.intensity",
+      "experiment.background.6.intensity": "experiment.background.6.intensity",
+      "experiment.background.7.intensity": "experiment.background.7.intensity",
+      "experiment.background.8.intensity": "experiment.background.8.intensity",
+      "experiment.background.9.intensity": "experiment.background.9.intensity",
+      "experiment.background.10.intensity": "experiment.background.10.intensity",
+      "experiment.background.11.intensity": "experiment.background.11.intensity",
+      "experiment.background.12.intensity": "experiment.background.12.intensity",
+      "experiment.background.13.intensity": "experiment.background.13.intensity",
+      "experiment.background.14.intensity": "experiment.background.14.intensity",
+      "experiment.background.15.intensity": "experiment.background.15.intensity",
+      "experiment.background.16.intensity": "experiment.background.16.intensity",
+      "experiment.background.17.intensity": "experiment.background.17.intensity",
+      "experiment.background.18.intensity": "experiment.background.18.intensity",
+      "experiment.background.19.intensity": "experiment.background.19.intensity",
+      "experiment.background.20.intensity": "experiment.background.20.intensity",
+      "experiment.background.21.intensity": "experiment.background.21.intensity"
     },
     "boundaries": [
       {
@@ -9561,10 +9620,27 @@
       ]
     ],
     "sources": {
-      "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
+      "tools/docs/app_tutorial_plan.py": "483429ca1d5e04ad5478e3db21faff3e5b9799deb8d8f17e26380aafe299665c",
       "docs/user/tutorials/pd-neut-tof_si-sepd.py": "a3c2cf12bc72f14af65bfbec168bdc55d9f784943eb095370310e87b8db01783",
       "website/surfaces/docs/cli/tutorials/cases/pd-neut-tof_si-sepd.md": "ad4777c42a755bc80d1fc7bb38f77f9b5decfbd75e20f85a4b9efa3b8b3d1e03",
-      "docs/user/cli/pd-neut-tof_si-sepd/project/analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e"
+      "docs/user/cli/pd-neut-tof_si-sepd/project/analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e",
+      "docs/user/cli/pd-neut-tof_si-sepd/project/experiments/sepd.edi": "0b4d62e18dc5313073dc3cca68c2812c29ff09b4c3b04b39bdba42995adc4ea9"
+    },
+    "estimated_background_paths": {
+      "experiment.background.1.intensity": "experiment.background.1.intensity",
+      "experiment.background.2.intensity": "experiment.background.2.intensity",
+      "experiment.background.3.intensity": "experiment.background.3.intensity",
+      "experiment.background.4.intensity": "experiment.background.4.intensity",
+      "experiment.background.5.intensity": "experiment.background.5.intensity",
+      "experiment.background.6.intensity": "experiment.background.6.intensity",
+      "experiment.background.7.intensity": "experiment.background.7.intensity",
+      "experiment.background.8.intensity": "experiment.background.8.intensity",
+      "experiment.background.9.intensity": "experiment.background.9.intensity",
+      "experiment.background.10.intensity": "experiment.background.10.intensity",
+      "experiment.background.11.intensity": "experiment.background.11.intensity",
+      "experiment.background.12.intensity": "experiment.background.12.intensity",
+      "experiment.background.13.intensity": "experiment.background.13.intensity",
+      "experiment.background.14.intensity": "experiment.background.14.intensity"
     },
     "boundaries": [
       {

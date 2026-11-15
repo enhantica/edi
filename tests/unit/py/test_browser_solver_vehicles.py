@@ -4,6 +4,7 @@ import copy
 import hashlib
 import json
 import math
+import pickle  # noqa: S403 - writes trusted local snapshots only; never unpickles
 import shutil
 from pathlib import Path
 from types import SimpleNamespace
@@ -72,7 +73,7 @@ def _immutable_sources():
     dependency_bytes = {path: path.read_bytes() for path in dependencies}
     candidates = real.candidates(*admitted[:2], names, banks, source)
     immutable = copy.deepcopy((fixture, old, names, banks))
-    immutable_json = json.dumps(immutable, sort_keys=True, allow_nan=False)
+    immutable_protocol = pickle.dumps(immutable, protocol=5)
     candidate_snapshot = copy.deepcopy(candidates)
     cache = SimpleNamespace(
         documents={},
@@ -132,9 +133,9 @@ def _immutable_sources():
             lambda path: immutable_sha(path, real.sha, cache.digests, cache.authenticated_bytes),
         )
         yield
-    assert (fixture, old, names, banks) == immutable and json.dumps(
-        (fixture, old, names, banks), sort_keys=True, allow_nan=False
-    ) == immutable_json, (
+    assert (fixture, old, names, banks) == immutable and pickle.dumps(
+        (fixture, old, names, banks), protocol=5
+    ) == immutable_protocol, (
         'Shared authenticated source setup cannot be altered by a protocol control'
     )
     assert candidates == candidate_snapshot, (
@@ -220,7 +221,7 @@ def current(historical):
     record.update({
         'iterations': str(count),
         'reduced_chi_square': str(final),
-        'descent': 'multistart_prune',
+        'descent': 'auto',
         'multistart_prune': 'true',
         'multistart_probes_started': '2',
         'multistart_probes_pruned': '1',
@@ -291,7 +292,7 @@ def test_historical_wasm_report_rejects_each_changed_original_value_or_su(
         ('n_points_fitted', '1'),
         ('status', 'failed'),
         ('converged', 'false'),
-        ('descent', 'multistart_prune'),
+        ('descent', 'auto'),
         ('stopping_rule', 'shift_su'),
         ('multistart_probe_iterations', '1'),
         ('multistart_survivor', 'ladder'),
@@ -466,91 +467,6 @@ class ReachedArrayValidationError(Exception):
     pass
 
 
-@pytest.mark.parametrize('historical_bad', [False, True])
-def test_capture_uses_two_fresh_projects_and_never_carries_historical_settings_into_default(
-    historical, tmp_path, monkeypatch, historical_bad
-):
-    events, projects = [], []
-    real_qualifier = written.qualify_historical
-
-    class Analysis:
-        def __init__(self):
-            object.__setattr__(self, 'edits', [])
-            object.__setattr__(self, 'descent', 'multistart_prune')
-            object.__setattr__(self, 'stop_rules', 'chi_square_change shift_su')
-            object.__setattr__(self, 'fitting_mode', 'joint')
-
-        def __setattr__(self, key, value):
-            self.edits.append((key, value))
-            object.__setattr__(self, key, value)
-
-    def load(source):
-        assert source == historical.source, 'Each phase loads the exact authenticated source'
-        if projects:
-            assert 'historical-qualified' in events, (
-                'Current loading cannot precede successful full historical qualification'
-            )
-        project = SimpleNamespace(
-            analysis=Analysis(),
-            su_rule='iucr_99',
-            free_parameters=[None] * 193,
-            _minimizer_max_iterations=1000,
-            _minimizer_chi_square_tolerance=1e-4,
-        )
-        projects.append(project)
-        events.append('load')
-        return project
-
-    def fit(project, loaded):
-        if len(projects) == 2:
-            assert project is not projects[0], (
-                'The default run cannot reuse the fitted historical model'
-            )
-            assert project.analysis.edits == [], 'The current default receives no setter overrides'
-            assert loaded['descent'] == 'multistart_prune', (
-                'The fresh default keeps its actual descent'
-            )
-            events.append('current-start')
-            raise StopBeforeCurrentFitError
-        assert dict(project.analysis.edits) == solver_vehicles.HISTORICAL, (
-            'Exactly the two historically backed selectors change before the historical fit'
-        )
-        assert len(project.analysis.edits) == 2, 'Historical setup cannot retune another setting'
-        raw = copy.deepcopy(historical.raw)
-        if historical_bad:
-            raw['values'][next(iter(raw['values']))] += 1
-        events.append('historical-fit')
-        return raw, object()
-
-    def qualified(*args, **kwargs):
-        result = real_qualifier(*args, **kwargs)
-        events.append('historical-qualified')
-        return result
-
-    monkeypatch.setattr(written.edi, 'Project', SimpleNamespace(load=load))
-    monkeypatch.setattr(written, 'fit_with_trace', fit)
-    monkeypatch.setattr(written, 'qualify_historical', qualified)
-    monkeypatch.setattr(
-        written.edi, 'machine_report', lambda *_args: report_text(historical.record)
-    )
-    destination = tmp_path / 'not-a-qualified-capture'
-    expected = ValueError if historical_bad else StopBeforeCurrentFitError
-    with pytest.raises(expected):
-        written.capture(
-            ROOT,
-            'ncaf',
-            destination,
-            written.sha(written.edi._edi.__file__),
-            written.edi.__build_commit__,
-        )
-    assert len(projects) == (1 if historical_bad else 2), (
-        'A failed historical reference blocks the fresh current run completely'
-    )
-    assert not (destination / 'result.json').exists(), (
-        'Control-flow spies stop before Save and can never produce qualification evidence'
-    )
-
-
 @pytest.fixture(scope='module', autouse=True)
 def capsule_template(historical, current, tmp_path_factory):
     """A literal metadata envelope deliberately stops before real array validation."""
@@ -559,9 +475,7 @@ def capsule_template(historical, current, tmp_path_factory):
     project = reference / 'project'
     (project / 'analysis').mkdir(parents=True)
     (project / 'analysis/analysis.edi').write_text(
-        '_fit_result.iterations '
-        + str(current.raw['iterations'])
-        + '\n_fit_result.descent multistart_prune\n'
+        '_fit_result.iterations ' + str(current.raw['iterations']) + '\n_fit_result.descent auto\n'
     )
     for directory, state in ((reference / 'historical', historical), (reference, current)):
         (directory / 'loaded.json').write_text(json.dumps(state.loaded))

@@ -1,7 +1,8 @@
 {
   "claim": "Committed source-stage receipt only; no numerical fit or recapture",
   "before_revision": "42491216b12ea0d676a680e2606e513835c8f42d",
-  "after_revision": "9d4162bb35cc1f361daf5e1e2fc0860b0def62cd",
+  "intermediate_revision": "9d4162bb35cc1f361daf5e1e2fc0860b0def62cd",
+  "after_revision": "b2c6d9b1547ed6506d2bc36cae5f9a43b748895a",
   "files": {
     "docs/user/cli/pd-neut-cwl_cosio-d20/expected.json": {
       "before_sha256": "12e45149be7ad5e2557cd524ce61774dcdae3ec1d7cf05e09871474c9afff37b",
@@ -37,7 +38,8 @@
     },
     "docs/user/cli/pd-xray-cwl_latp_scan-4f/expected.json": {
       "before_sha256": "520268873c457caf36ddc7046e33856ce83d954fcce505ee5ba0368d1e5f68ab",
-      "after_sha256": "7204ecfaf1a055212f4273b81a2bbb453562b4d70ba22ed528da2181916f4725"
+      "after_sha256": "f717885cf443d8b83a3277399833fb1ed1f6965a9f0af0800324298ae5e92970",
+      "intermediate_sha256": "7204ecfaf1a055212f4273b81a2bbb453562b4d70ba22ed528da2181916f4725"
     },
     "docs/user/cli/pd-xray-cwl_pbso4-lab/expected.json": {
       "before_sha256": "81b2095d856afcef4813627bd8b0cfcfe23b35477d218e515709fd0f149923eb",

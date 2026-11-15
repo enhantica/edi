@@ -47,6 +47,8 @@ TestCase {
         repeat: true
         onTriggered: ++test.clockTicks
     }
+    SignalSpy { id: recipeBackgroundReset; signalName: "modelReset" }
+    SignalSpy { id: recipeBackgroundInserted; signalName: "rowsInserted" }
     SignalSpy {
         id: clicked
         signalName: "clicked"
@@ -2540,7 +2542,7 @@ TestCase {
     }
     function walkRequiredTutorial(data, last) {
         const steps = panel.steps;
-        let recipeStage = 0, recipeFileSeen = false;
+        let recipeStage = 0, recipeFileSeen = false, recipeAppliedEstimates = 0;
         const recipeTargets = [];
         function observeRecipeMenu() {
             if (data.recipe && Session.project && Session.project.currentExperiment)
@@ -2570,7 +2572,7 @@ TestCase {
                 observeRecipeMenu();
                 recipeTargets.push(step.target);
                 if (requiredFitStep(step))
-                    recordRecipeBoundary(data.tutorial, ++recipeStage, recipeTargets, recipeFileSeen);
+                    recordRecipeBoundary(data.tutorial, ++recipeStage, recipeTargets, recipeFileSeen, recipeAppliedEstimates);
             }
             if (index + 1 === steps.length)
                 break;
@@ -2578,6 +2580,12 @@ TestCase {
                 const dialog = SettingsProof.creationDialog(app);
                 verify(dialog !== null && dialog.visible, "The tutorial creates its project in the isolated test folder");
                 dialog.projectParentDirectory = String(SettingsProof.emptyDirectory());
+            }
+            if (data.recipe && step.target === "background.estimate") {
+                recipeBackgroundReset.target = Session.project.currentExperiment.background;
+                recipeBackgroundInserted.target = Session.project.currentExperiment.background;
+                recipeBackgroundReset.clear();
+                recipeBackgroundInserted.clear();
             }
             if (panel.step === index)
                 press(one(panel, "tutorial.next"), "Replay the written step " + (index + 1), requiredFitStep(step));
@@ -2604,6 +2612,12 @@ TestCase {
                 return panel.step > index;
             }, 60000, "The panel advances after the declared action completes, including asynchronous loads");
             compare(panel.step, index + 1, "The panel reaches the next written step without skipping its target");
+            if (data.recipe && step.target === "background.estimate") {
+                verify(recipeBackgroundReset.count + recipeBackgroundInserted.count > 0, "Each taught Estimate replaces actual background rows before the lesson advances");
+                ++recipeAppliedEstimates;
+                recipeBackgroundReset.target = null;
+                recipeBackgroundInserted.target = null;
+            }
             if (/^(example|download|web-row):/.test(step.check || "")) {
                 verify(requiredAsyncState(step.check), "The async step leaves its declared project, block or measured data in the actual model");
                 console.info("TUTORIAL_ASYNC_COMPLETE " + JSON.stringify({id: data.tutorial, check: step.check, from: index, to: panel.step, state: true}));
@@ -2621,7 +2635,7 @@ TestCase {
     function recipeText(text) {
         return text.split(/\n(?=loop_\s*\n)/).filter(part => !/^loop_\s*\n_(data|refln)\./.test(part)).join("\n");
     }
-    function recordRecipeBoundary(id, stage, targets, fileSeen) {
+    function recordRecipeBoundary(id, stage, targets, fileSeen, appliedEstimates) {
         const project = Session.project;
         const rows = Probe.rows(project.parameters), values = {};
         function recipePath(row) {
@@ -2648,7 +2662,7 @@ TestCase {
         console.info("TUTORIAL_RECIPE_BOUNDARY " + JSON.stringify({id: id, stage: stage,
             free: rows.filter(row => row.free).map(row => recipePath(row)), values: values,
             analysis: project.analysis.text.text, structures: structures, experiments: experiments,
-            targets: targets, fileAlternativeSeen: fileSeen}));
+            targets: targets, fileAlternativeSeen: fileSeen, applied_estimates: appliedEstimates}));
         if (id !== "observer-control") {
             const recipes = JSON.parse(OnboardingProbe.sourceText("tests/fixtures/tutorial_recipe/recipes.json"));
             const expected = recipes[id].boundaries[stage - 1];
@@ -2662,7 +2676,11 @@ TestCase {
                 compare(project.currentExperiment.excludedRegions.count, Object.keys(expected.regions).length, "Every declared excluded region exists before fitting");
             if (Object.keys(expected.estimate).length) {
                 compare(project.currentExperiment.backgroundEstimatePoints, expected.estimate.n_points, "Background estimation keeps the declared point setting before fitting");
-                verify(project.currentExperiment.estimatePoints > 0, "The requested background estimate is actually applied before fitting");
+                const points = Probe.rows(project.currentExperiment.background);
+                compare(points.length, expected.estimate.n_points, "The applied estimate replaces the model with the requested number of points");
+                compare(JSON.stringify(points.map(row => row.id)), JSON.stringify(points.map((_row, index) => String(index + 1))), "Estimated background points carry the ordinal identities required by ADR-0040");
+                verify(points.every((row, index) => Number.isFinite(row.position) && Number.isFinite(row.intensity.value) && (!index || points[index - 1].position < row.position)), "The applied estimated model has finite intensities and strictly increasing coordinates");
+                compare(appliedEstimates, expected.estimate_calls, "Every taught estimate has a witnessed actual model replacement before fitting");
                 compare(targets.filter(target => target === "background.estimate").length, expected.estimate_calls, "Every initial or residual background estimate has its own taught action");
             }
             if (expected.file_required)
@@ -2671,7 +2689,7 @@ TestCase {
     }
     function test_required_recipe_observer_positive_control() {
         prepareLessonProject("pd-neut-cwl_lbco_simulation");
-        recordRecipeBoundary("observer-control", 0, [], false);
+        recordRecipeBoundary("observer-control", 0, [], false, 0);
     }
     function test_required_recipe_boundary_state_data() {
         return Object.keys(JSON.parse(OnboardingProbe.sourceText("tests/fixtures/tutorial_recipe/recipes.json"))).map(id => ({tag: id, tutorial: id, recipe: true}));

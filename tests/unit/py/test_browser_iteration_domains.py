@@ -30,7 +30,7 @@ def control():
         'absolute_tolerance': 1e-11,
         '_iteration_domain': {
             'conditions': {
-                'descent': 'multistart_prune',
+                'descent': 'auto',
                 'stop_rules': 'chi_square_change shift_su',
             },
             'probe_horizon': 3,
@@ -52,7 +52,7 @@ def control():
         'param.cell.value': '3.25',
         'param.cell.uncertainty': '0.2',
         'iterations': '2',
-        'descent': 'multistart_prune',
+        'descent': 'auto',
         'stopping_rule': 'chi_square_change',
         'multistart_prune': 'true',
         'multistart_probes_started': '2',
@@ -84,7 +84,7 @@ def test_historical_counters_remain_authenticated_in_their_original_domain(
     case, field, authenticated_inputs
 ):
     fixture, old, *_ = authenticated_inputs[case]
-    assert fixture['_iteration_domain']['conditions']['descent'] == 'multistart_prune', (
+    assert fixture['_iteration_domain']['conditions']['descent'] == 'auto', (
         'Historical ladder counts stay separate from current continuation work'
     )
     changed = dict(fixture)
@@ -221,13 +221,13 @@ def test_save_cannot_substitute_a_historical_count_or_different_descent(tmp_path
     _, raw, report = control()
     analysis = tmp_path / 'analysis/analysis.edi'
     analysis.parent.mkdir()
-    good = '_fit_result.iterations 2\n_fit_result.descent multistart_prune\n'
+    good = '_fit_result.iterations 2\n_fit_result.descent auto\n'
     analysis.write_text(good)
     counters.saved(tmp_path, raw, report)
     changed = (
         good.replace('iterations 2', 'iterations 8')
         if field == 'iterations'
-        else good.replace('multistart_prune', 'ladder')
+        else good.replace('auto', 'ladder')
     )
     analysis.write_text(changed)
     with pytest.raises(ValueError, match='Saved iteration'):

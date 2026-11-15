@@ -1,6 +1,7 @@
 """Recipe effects and comparisons, independent of the built-in translator and manifest."""
 
 import copy
+import math
 import re
 
 import gemmi
@@ -242,6 +243,7 @@ def boundary_contracts(recipe):  # noqa: PLR0912, PLR0914, PLR0915 - finite docs
             if action == 'background.estimate':
                 seen_estimate = True
                 estimate_calls += 1
+                points.clear()  # ADR-0040: estimation replaces the manual point rows.
         aliases.update({name: alias_paths[i] for i, name in alias_ids.items() if i in alias_paths})
         if 'wait-fit' not in item['actions']:
             continue
@@ -250,7 +252,12 @@ def boundary_contracts(recipe):  # noqa: PLR0912, PLR0914, PLR0915 - finite docs
         state = {
             'stage': fit,
             'title': title,
-            'free': sorted(canonical(p) for p in paths),
+            'free': sorted(
+                recipe.get('estimated_background_paths', {}).get(canonical(p), canonical(p))
+                if seen_estimate
+                else canonical(p)
+                for p in paths
+            ),
             'aliases': copy.deepcopy(aliases),
             'constraints': copy.deepcopy(constraints),
             'values': copy.deepcopy(values),
@@ -278,7 +285,7 @@ def _block(text):
     ).sole_block()
 
 
-def state_errors(expected, actual):  # noqa: PLR0912 - explicit independent fields
+def state_errors(expected, actual):  # noqa: PLR0912, PLR0915 - finite independent model fields
     errors = []
     if expected.get('file_required') and not actual.get('fileAlternativeSeen'):
         errors.append('From file alternative not shown')
@@ -300,6 +307,8 @@ def state_errors(expected, actual):  # noqa: PLR0912 - explicit independent fiel
         errors.append('relation expressions')
     if actual['targets'].count('background.estimate') != expected['estimate_calls']:
         errors.append('background estimate action count')
+    if actual.get('applied_estimates', 0) != expected['estimate_calls']:
+        errors.append('background estimate model replacement count')
     for key, value in expected['values'].items():
         if key not in actual['values'] or abs(actual['values'][key] - value) > 1e-9:
             errors.append('value reset: ' + key)
@@ -351,6 +360,19 @@ def state_errors(expected, actual):  # noqa: PLR0912 - explicit independent fiel
                 errors.append('background estimate settings')
             if 'use_model' in want and experiment['use_model'] != want['use_model']:
                 errors.append('background residual/model setting')
-            if experiment['estimate_points'] <= 0 or not experiment['estimate_note']:
-                errors.append('background estimate applied')
+            rows = list(
+                block.find(['_background.id', '_background.position', '_background.intensity'])
+            )
+            count = want.get('n_points', experiment['n_points'])
+            if len(rows) != count or [gemmi.cif.as_string(row[0]) for row in rows] != [
+                str(i + 1) for i in range(count)
+            ]:
+                errors.append('background estimate point identities')
+            coordinates = [
+                (gemmi.cif.as_number(row[1]), gemmi.cif.as_number(row[2])) for row in rows
+            ]
+            if not all(math.isfinite(value) for row in coordinates for value in row) or any(
+                a[0] >= b[0] for a, b in zip(coordinates, coordinates[1:], strict=False)
+            ):
+                errors.append('background estimate point geometry')
     return errors

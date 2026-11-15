@@ -131,6 +131,10 @@ sites:
     case: multiphase-scales
     why: Authored two-phase scan controls recover known linear coefficients and compare each file with its single multiphase fit.
 
+  - file: tests/system/py/test_phase_scan_parity.py
+    case: multiphase-scales
+    why: The same authored scan/single parity and reopen workflow moved to system, preserving its exact corpus identity and PR core cadence.
+
 
   - file: tests/integration/py/test_phase_scan_class_boundaries.py
     case: multiphase-scales

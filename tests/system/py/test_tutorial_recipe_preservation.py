@@ -267,6 +267,10 @@ def declared_good_state(expected):
             for value in expected['points'].values()
         )
     settings = expected['estimate']
+    if settings:
+        text += 'loop_\n_background.id\n_background.position\n_background.intensity\n' + ''.join(
+            f'{i + 1} {7.25 + i * 0.7} {21.75 + i * 1.2}\n' for i in range(settings['n_points'])
+        )
     return {
         'free': expected['free'].copy(),
         'analysis': analysis,
@@ -283,6 +287,7 @@ def declared_good_state(expected):
         else [],
         'values': expected['values'].copy(),
         'targets': ['background.estimate'] * expected['estimate_calls'],
+        'applied_estimates': expected['estimate_calls'],
         'fileAlternativeSeen': True,
         'experiments': [
             {
@@ -342,7 +347,7 @@ def test_missing_action_controls_keep_the_docs_expectation(case, stage, damage):
     elif damage == 'residual':
         bad['experiments'][0]['use_model'] = 'none'
     elif damage == 'estimate':
-        bad['experiments'][0]['estimate_points'] = 0
+        bad['experiments'][0]['text'] = 'data_experiment\n'
     elif damage == 'file':
         bad['fileAlternativeSeen'] = False
     elif damage == 'estimate-action':
