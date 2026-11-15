@@ -44,14 +44,9 @@ def test_single_crystal_scale_derivative_matches_finite_difference(tmp_path):
     )
 
 
-def test_loading_single_crystal_initializes_scale_to_weighted_optimum(tmp_path):
+def test_opening_saved_single_crystal_keeps_its_declared_scale(tmp_path):
     project = load(tmp_path)
-    basis = np.full(4, B_SQUARED)
-    sigma = np.array([1.0, 1.0, 2.0, 3.0])
-    expected = np.dot(basis / sigma**2, OBSERVED) / np.dot(basis / sigma**2, basis)
-    np.testing.assert_allclose(
-        project.experiments[0].linked_structure.scale.value,
-        expected,
-        rtol=3e-5,
-        err_msg='Loading measured single-crystal data must initialize its overall scale by WLS',
+    assert project.experiments[0].linked_structure.scale.value.hex() == (2.3).hex(), (
+        'Opening a saved project must preserve its declared scale; only '
+        'measured-data and phase edits initialize it'
     )

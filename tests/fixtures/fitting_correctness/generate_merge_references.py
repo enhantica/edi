@@ -67,12 +67,18 @@ def merge(rows, kind):
             'propagated_su': str(propagated),
             'shelx_scatter_su': str(scatter),
             'weighted_scatter_su': str(weighted_scatter),
+            'weighted_merged_su': str(max(propagated, weighted_scatter)),
             'shelx_merged_su': str(max(propagated, scatter)),
         })
     denominator = sum(Decimal(row['intensity']) for row in output)
     return {
         'rows': output,
         'r_int': str(r_numerator / r_denominator) if r_denominator else None,
+        'r_sigma_weighted': str(
+            sum(Decimal(row['weighted_merged_su']) for row in output) / denominator
+        )
+        if denominator
+        else None,
         'r_sigma_shelx': str(sum(Decimal(row['shelx_merged_su']) for row in output) / denominator)
         if denominator
         else None,

@@ -25,11 +25,11 @@ A separate edi fit witness copies the pinned Tb2Ti2O7 corpus unchanged and uses
 its independently computed FullProf normal-equation references. It does not
 admit synthetic fit inputs or change the fit policy.
 
-Still requiring a declared product contract: single-crystal range serialization,
-merge/absence settings and result fields, the scatter estimator, reflection-table
-toggle/undo and chart reasons. Neither current category census nor public Python
-surface declares those features. The common-scale phase-add/remove trigger and
-two-phase ratio gate also remain open. These are coverage gaps, not passing gates.
+The admission adapters bind the declared file interfaces: `_excluded_reflection`,
+`_excluded_region.axis`, `_reflns.merge` and `_reflns.absences`. They observe the
+real native fit and saved computed categories, including original-row statuses,
+counts and agreement factors. Opening a saved project preserves its scale;
+automatic common-factor fitting belongs to measured-data and phase-link edits.
 
 The following independent reference cases are ready for those adapters:
 - Cubic cell a=6 A: d(100)=6, d(200)=3, d(211)=sqrt(6), d(220)=3/sqrt(2).
@@ -39,13 +39,13 @@ The following independent reference cases are ready for those adapters:
   sigma=(1,2,3,1). Weighted means are 10.8 and 38.5; propagated uncertainties
   sqrt(0.8) and sqrt(0.9). With weighted scatter of the mean defined as
   sqrt(sum(w*(I-mean)^2)/((n-1)*sum(w))), the scatter uncertainties are 1.6
-  and 4.5. The packet does not yet define which scatter estimator it chooses.
+  and 4.5. The selected product convention is the weighted scatter above (CCSL WTMEAN).
   Rint numerator is 19; sum of unmerged intensities is 89. Source:
   International Tables F, section 21.1.7.1.1,
   https://onlinelibrary.wiley.com/iucr/itc/Fb/ch21o1v0001/sec21o1o7o1o1/
   SHELXTL manual defines R(sigma)=sum(sigma(F squared))/sum(F squared):
   https://xray.uky.edu/Resources/manuals/Shelxtl-manual.pdf
-  The merged-value convention must be stated before an R-sigma adapter is gated.
+  The executable R-sigma adapter uses the larger of weighted scatter and propagated uncertainty, over used merged rows.
 - Fixed-background WLS: two phase profiles (1,2,0,3), (0,1,4,1), initial
   scales (2,3), background (5,7,11,13), observations (10,26,44,42),
   sigma (1,2,3,4). k=sum(w*(observed-background)*calculated)/sum(w*calculated^2),
@@ -70,8 +70,7 @@ additional measured dataset or an engine regression pin.
 
 The original manual defines scatter using the rms deviation about the mean,
 divided by sqrt(n-1). The weighted-scatter alternative is retained alongside it
-so an eventual product contract must name its choice. These are reference data,
-not executable product adapters, and do not close the range or merge gates.
+for comparison. The executable adapter uses the CCSL weighted scatter, independently derived from WTMEAN; the JSON now records that merged uncertainty and its R-sigma too.
 
 Sources: SHELX-97 manual section 2, original manual hosted at
 https://ccc.bc.edu/content/dam/bc1/schools/mcas/Chemistry/pdf/research/xray/shelx-97.pdf;

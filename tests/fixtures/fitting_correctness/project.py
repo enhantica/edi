@@ -55,12 +55,15 @@ _refln.index_l
 _refln.intensity_meas
 _refln.intensity_meas_su
 """
-    if status:
-        text += '_refln.include_status\n'
-    for index, row in enumerate(rows):
+    for row in rows:
         text += ' '.join(map(str, row))
-        if status:
-            text += ' x' if index == 0 else ' o'
         text += '\n'
+    if status:
+        text += (
+            '\nloop_\n_excluded_reflection.id\n_excluded_reflection.index_h\n'
+            '_excluded_reflection.index_k\n_excluded_reflection.index_l\n1 1 0 0\n'
+        )
+    if centred:
+        text += '\n_reflns.absences exclude\n'
     (root / 'experiments/bank.edi').write_text(text)
     return root
