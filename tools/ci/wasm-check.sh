@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # Check the packed web app (edi ADR-0023) from its zip, as it is delivered: the given pytest files (the wasm crysta
 # CLI's fit against the native reference, the zip's contents), then the given browser driver in each case (the
-# single-thread build without isolation, the multithreaded build with headers, the multithreaded build through the
+# multithreaded build with headers, the multithreaded build through the
 # service-worker shim). Screenshots and logs go to OUT.
 #
 #   pixi run wasm-check <out dir> <browser driver> <pytest file>...
@@ -37,13 +37,15 @@ rm -rf "$SITE"
 python -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$ZIP" "$SITE"
 
 export EDI_WASM_ZIP="$ZIP"
-export EDI_WASM_CLI_SINGLETHREAD="$ROOT/build/wasm/singlethread/crysta-prefix/bin/crysta.js"
 export EDI_WASM_CLI_MULTITHREAD="$ROOT/build/wasm/multithread/crysta-prefix/bin/crysta.js"
+
+REFERENCE="$(mktemp -d "$OUT/native-written.XXXXXX")"
+bash "$ROOT/tools/ci/wasm-written-reference.sh" "$REFERENCE"
 
 status=0
 python -m pytest -q "$@" || status=1
-for mode in singlethread multithread shim; do
+for mode in multithread shim; do
   echo "wasm-check: browser, $mode"
-  node --experimental-websocket "$DRIVER" "$SITE" "$mode" "$OUT/$mode" "$CHROME" || status=1
+  node --experimental-websocket "$DRIVER" "$SITE" "$mode" "$OUT/$mode" "$CHROME" --written-reference="$REFERENCE" || status=1
 done
 exit "$status"

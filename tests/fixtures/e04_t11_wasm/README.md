@@ -18,8 +18,8 @@ Regenerate only with a native edi extension and a pinned Python environment:
 python tests/fixtures/e04_t11_wasm/generate.py
 ```
 
-The core numerical vehicles are the compiled wasm `crysta` CLI, separate for each thread kit. Set
-`EDI_WASM_CLI_SINGLETHREAD` and `EDI_WASM_CLI_MULTITHREAD` to their generated JavaScript entrypoints, then
+The core numerical vehicles are the compiled wasm `crysta` CLI, for the sole multithread kit. Set
+`EDI_WASM_CLI_MULTITHREAD` to its generated JavaScript entrypoint, then
 run the system Python gates. They copy the committed project before executing a fit.
 `EDI_WASM_ZIP` selects the single delivered archive; its default location is `build/wasm/*.zip`.
 These environment variables select real artifacts and never replace a result or a browser capability.
@@ -27,7 +27,6 @@ These environment variables select real artifacts and never replace a result or 
 The browser checks are a dedicated task check, separate from the disabled desktop app tests:
 
 ```sh
-node --experimental-websocket tests/system/manual/e04_t11_browser.mjs <extracted-webapp> singlethread <persistent-output> <chrome>
 node --experimental-websocket tests/system/manual/e04_t11_browser.mjs <extracted-webapp> multithread <persistent-output> <chrome>
 node --experimental-websocket tests/system/manual/e04_t11_browser.mjs <extracted-webapp> shim <persistent-output> <chrome>
 ```
@@ -47,15 +46,15 @@ the former `backendDOMNodeId` lookup confused this event with an AX node. The ch
 backend node must still equal the file input captured from the app's own request. The pointer
 action and chooser event are awaited together so a refused request retains its failure evidence. Structure remains single-file and full experiment remains batch. The
 `--file-request-case=load-data` case creates an experiment and opens **Load ▾ → Measured data into → From file…**.
-It requires a single-file chooser, and the full `all` case includes it. The driver never opens the input directly. Structure and Experiment groups start open
+It requires the supported multiple-file chooser, and the full `all` case includes it. The driver never opens the input directly. Structure and Experiment groups start open
 (edi ADR-0017 section 3); the former unconditional header toggles closed them before Load.
 The driver preserves their open state and still requires the real chooser and native results.
 
 Use Node with the WebSocket API (the shown flag enables it on Node 20) and pinned Chrome headless shell 146 with SwiftShader (the feasibility-check browser). The driver
 records screenshots, the browser's own isolation flag, requested wasm URLs, runtime exceptions and
 the fitting accessibility tree and progress-mutation history. It uses an isolated browser profile, serves under a subfolder,
-blocks the isolation shim for the non-isolated single-thread case, supplies real headers for the
-multi-thread case, and supplies no headers for the separate service-worker case. Browser controls
+supplies real headers for direct isolation and no headers for the separate service-worker route.
+The startup refusal checks require a visible error before any kit download when isolation or shared memory is unavailable, a retired build is requested, or the manifest lacks the supported kit. Browser controls
 are located by their user-facing accessibility names, and clicks use real pointer input after the native page settles and its mirrored rectangle is mapped to the visible page.
 No fixed delay substitutes for a ready page, completed fit, accepted file picker or completed download.
 The driver expects a browser-visible Qt accessibility tree; if the kit does not expose the controls,

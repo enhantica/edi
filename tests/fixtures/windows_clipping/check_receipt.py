@@ -1,4 +1,4 @@
-"""Require the complete Windows drawing witness, including both Qt web kits."""
+"""Require the complete Windows drawing witness, including the sole Qt multithread kit."""
 
 import argparse
 import hashlib
@@ -19,7 +19,7 @@ SCENARIOS = (
     'sidebar-collapse',
     'popup-close',
 )
-CASES = set(itertools.product(('singlethread', 'multithread'), ('light', 'dark'), SCENARIOS))
+CASES = set(itertools.product(('multithread',), ('light', 'dark'), SCENARIOS))
 
 
 def validate(document, head):
@@ -32,6 +32,8 @@ def validate(document, head):
     if len(keys) != len(CASES) or set(keys) != CASES:
         raise ValueError('Every kit, theme and clipping case must execute exactly once')
     for row in rows:
+        if row['build'].get('kits') != ['multithread']:
+            raise ValueError('The Windows artifact must carry only the supported multithread kit')
         if row['build'].get('ediCommit') != head:
             raise ValueError('The Windows artifact must match the exact checked-out head')
         if row.get('status') != 'passed' or not row['state'].get('completed'):

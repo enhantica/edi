@@ -37,6 +37,8 @@ EaElements.MenuItem {
         }
         EaElements.Label {
             anchors.verticalCenter: parent.verticalCenter
+            width: EaStyle.Sizes.fontPixelSize * 7.5
+            elide: Text.ElideRight
             font: item.font
             color: item.foreground
             Behavior on color {
@@ -46,7 +48,9 @@ EaElements.MenuItem {
         }
         EaElements.Label {
             anchors.verticalCenter: parent.verticalCenter
+            width: Math.max(0, item.availableWidth - EaStyle.Sizes.fontPixelSize * 9.75)
             leftPadding: EaStyle.Sizes.fontPixelSize * 0.75
+            elide: Text.ElideRight
             font: item.font
             color: EaStyle.Colors.themeForegroundMinor
             text: item.hint

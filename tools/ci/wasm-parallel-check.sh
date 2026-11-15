@@ -5,8 +5,8 @@
 #
 #   pixi run wasm-parallel-check <out dir>
 #
-# The matrix (tests/system/manual/web_parallel.mjs) fits the corpus projects on all three routes of the packed site
-# and times the multithread kit against the singlethread one. The witnesses build crysta's observer probes from the
+# The matrix (tests/system/manual/web_parallel.mjs) fits the corpus projects on both isolation routes of the packed site
+# and compares one worker with the parallel thread policy on the same multithread kit. The witnesses build crysta's observer probes from the
 # crysta source the app compiles (build/crysta-src, or EDI_WASM_CRYSTA_SRC as in wasm-build.sh), with the web
 # build's thread and SIMD options, and run them in the browser: the threaded probe must show fill chunks running at
 # the same time on different workers, and the two controls (serial dispatch, backend off) must be refused after
@@ -52,9 +52,12 @@ python -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv
 PW="$(wasm_playwright_dir)"
 export PLAYWRIGHT_BROWSERS_PATH="$PW/browsers" WEB_PARALLEL_PLAYWRIGHT="$PW/node_modules/playwright-core/index.mjs"
 
+REFERENCE="$(mktemp -d "$OUT/native-written.XXXXXX")"
+bash "$ROOT/tools/ci/wasm-written-reference.sh" "$REFERENCE"
+
 status=0
 echo "wasm-parallel-check: the browser matrix"
-node --experimental-websocket tests/system/manual/web_parallel.mjs "$SITE" "$OUT/matrix" "$CHROME" || status=1
+node --experimental-websocket tests/system/manual/web_parallel.mjs "$SITE" "$OUT/matrix" "$CHROME" --written-reference="$REFERENCE" || status=1
 
 # The observer builds are crysta builds for wasm, configured as wasm-build.sh configures them: Emscripten's own
 # toolchain, not the environment's compilers or its Eigen.

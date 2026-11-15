@@ -18,7 +18,7 @@ def build_namespace(tmp_path):
     root = tmp_path / 'edi'
     scripts = root / 'tools/ci'
     scripts.mkdir(parents=True)
-    for name in ('wasm-build.sh', 'wasm-env.sh'):
+    for name in ('wasm-build.sh', 'wasm-env.sh', 'wasm-assistant-check.sh'):
         shutil.copy2(ROOT / 'tools/ci' / name, scripts / name)
     source = root / 'build/crysta-src'
     source.mkdir(parents=True)
@@ -71,7 +71,7 @@ for arg in args:
         executable = bin_dir / name
         executable.write_text('#!' + sys.executable + '\n' + transport)
         executable.chmod(0o755)
-    for mode in ('singlethread', 'multithread'):
+    for mode in ('multithread',):
         kit = tools / 'qt/6.11.2' / ('wasm_' + mode)
         (kit / 'lib/cmake/Qt6').mkdir(parents=True)
         (kit / 'lib/cmake/Qt6/QtPublicWasmToolchainHelpers.cmake').write_text(
@@ -123,35 +123,37 @@ def run_build(namespace, modes):
 @pytest.fixture(scope='module')
 def build_calls(tmp_path_factory):
     namespace = build_namespace(tmp_path_factory.mktemp('web-build-transports'))
-    result, calls = run_build(namespace, ['multithread', 'singlethread'])
+    result, calls = run_build(namespace, ['multithread'])
     assert result.returncode == 0, (
-        'Both web kits must reach their actual build commands with offline compiler transports: '
-        + result.stderr
+        'The shipped kit reaches its actual offline build commands: ' + result.stderr
     )
     return calls
 
 
 def test_each_kit_selects_its_own_engine_backend_and_simd(build_calls):
     core = [call['args'] for call in build_calls if call['name'] == 'emcmake']
-    assert len(core) == 2, 'The web build must independently configure both engine kits'
+    assert len(core) == 1, 'The web build configures exactly its sole multithread engine kit'
     for flags in core:
         threaded = any('/multithread/' in flag for flag in flags)
-        assert '-DCRYSTA_OPENMP=OFF' in flags, 'Both web kits must keep native OpenMP disabled'
+        assert '-DCRYSTA_OPENMP=OFF' in flags, (
+            'The shipped web kit must keep native OpenMP disabled'
+        )
         assert '-DCRYSTA_SLEEF=ON' in flags, 'Every shipped web kit must select vector maths'
         assert '-DCRYSTA_WASM_THREADS=' + ('ON' if threaded else 'OFF') in flags, (
             'Only the multithread kit may require pthreads and shared memory'
         )
         assert '-DCRYSTA_WASM_SIMD=ON' in flags, 'Every shipped web kit must enable wasm SIMD'
         assert '-DCRYSTA_REQUIRE_SIMD=ON' in flags, (
-            'Both shipped web kits must refuse configuration without their required SIMD backend'
+            'The shipped web kit must refuse configuration without their required SIMD backend'
         )
 
 
 def test_app_pthread_pool_is_preallocated_and_sized_for_the_engine(build_calls):
     apps = [call['args'] for call in build_calls if call['name'] == 'qt-cmake.py']
-    assert len(apps) == 2, 'Both Qt kits must configure through their actual kit launcher'
+    assert len(apps) == 1, (
+        'The multithread Qt kit must configure through their actual kit launcher'
+    )
     threaded = next(flags for flags in apps if any('/multithread/' in flag for flag in flags))
-    serial = next(flags for flags in apps if any('/singlethread/' in flag for flag in flags))
     text = ' '.join(threaded)
     assert 'PTHREAD_POOL_SIZE' in text, (
         'Multithread kit must preallocate enough pthread workers for its engine'
@@ -159,14 +161,9 @@ def test_app_pthread_pool_is_preallocated_and_sized_for_the_engine(build_calls):
     assert 'hardwareConcurrency' in text, (
         'Browser worker allocation must follow the device core count'
     )
-    assert 'PTHREAD_POOL_SIZE' not in ' '.join(serial), (
-        'The serial kit must remain runnable without browser shared memory or a pthread pool'
-    )
 
 
-def require_physical_build_calls(
-    calls, namespace, physical, *, cached, modes=('multithread', 'singlethread')
-):
+def require_physical_build_calls(calls, namespace, physical, *, cached, modes=('multithread',)):
     root, _scripts, env, _log = namespace
     build_events = [c for c in calls if c['name'] in {'emcmake', 'qt-cmake.py', 'cmake'}]
     expected = []
@@ -184,7 +181,7 @@ def require_physical_build_calls(
     )
     for call, (name, operation, graph) in zip(build_events, expected, strict=True):
         assert call['name'] == name, (
-            'Both kits retain configure/build/install order and actual launchers'
+            'The shipped kit retain configure/build/install order and actual launchers'
         )
         args = call['args']
         graph_arg = args[args.index(operation) + 1]
@@ -298,11 +295,11 @@ def physical_build_runs(request, tmp_path_factory):
         'CMAKE_C_COMPILER_LAUNCHER',
     ]:
         env[name] = 'transport-host-only'
-    first, cold = run_build(namespace, ['multithread', 'singlethread'])
-    assert first.returncode == 0, 'Both cold kits must complete offline transport: ' + first.stderr
+    first, cold = run_build(namespace, ['multithread'])
+    assert first.returncode == 0, 'The cold kit must complete offline transport: ' + first.stderr
     keys = {
         mode: (physical / mode / 'crysta-prefix/.edi-wasm-key').read_bytes()
-        for mode in ['multithread', 'singlethread']
+        for mode in ['multithread']
     }
     second, warm = run_build(namespace, [])
     assert second.returncode == 0, (
@@ -318,7 +315,7 @@ def test_normal_wasm_graph_arguments_are_physical_for_both_kits(physical_build_r
     require_physical_build_calls(calls, namespace, physical, cached=cached)
     pack = [i for i, call in enumerate(calls) if call['name'] == 'pack']
     assert pack == ([len(calls) - 1] if cached else []), (
-        'Default both-kit invocation packs once after completion; explicit kits do not pack'
+        'Default invocation packs once after completion; explicit multithread does not pack'
     )
     for mode, key in keys.items():
         path = physical / mode
@@ -421,18 +418,25 @@ def test_missing_actual_configuration_cannot_publish_an_app_or_pack(tmp_path, dr
     )
 
 
-def test_unknown_kit_refuses_before_any_configuration(tmp_path):
+@pytest.mark.parametrize(
+    'modes',
+    [
+        ['singlethread'],
+        ['not-a-kit'],
+        ['multithread', 'singlethread'],
+        ['multithread', 'multithread'],
+    ],
+)
+def test_unknown_kit_refuses_before_any_configuration(tmp_path, modes):
     namespace = build_namespace(tmp_path)
-    result, calls = run_build(namespace, ['not-a-kit'])
-    assert result.returncode != 0 and 'unknown build' in result.stderr, (
+    result, calls = run_build(namespace, modes)
+    assert result.returncode != 0 and 'multithread' in result.stderr, (
         'The original kit refusal stays visible'
     )
-    assert [c['name'] for c in calls] == ['emcc'], (
-        'The intended mode refusal happens before any CMake/kit/pack execution'
-    )
+    assert calls == [], 'The intended mode refusal happens before any CMake/kit/pack execution'
 
 
-@pytest.mark.parametrize('mode', ['multithread', 'singlethread'])
+@pytest.mark.parametrize('mode', ['multithread'])
 def test_explicit_individual_kit_keeps_its_own_physical_graph_and_no_pack(tmp_path, mode):
     namespace = build_namespace(tmp_path)
     root = namespace[0]
@@ -442,10 +446,8 @@ def test_explicit_individual_kit_keeps_its_own_physical_graph_and_no_pack(tmp_pa
     result, calls = run_build(namespace, [mode])
     assert result.returncode == 0, 'The individual public kit mode completes: ' + result.stderr
     require_physical_build_calls(calls, namespace, physical.resolve(), cached=False, modes=[mode])
-    assert not any(c['name'] == 'pack' for c in calls), (
-        'An explicit single kit does not publish the combined site'
-    )
-    other = 'singlethread' if mode == 'multithread' else 'multithread'
+    assert not any(c['name'] == 'pack' for c in calls), 'An explicit kit does not publish the site'
+    other = 'singlethread'
     assert not (physical / other).exists(), (
         'An explicit kit never configures or writes its sibling graph'
     )

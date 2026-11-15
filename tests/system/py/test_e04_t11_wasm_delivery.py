@@ -74,6 +74,13 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
     )
     with zipfile.ZipFile(root / 'build/wasm/edi-webapp.zip') as archive:
         names = archive.namelist()
+        builds = json.loads(archive.read('build.json'))
+        assert set(builds) - {'release'} == {'multithread'}, (
+            'The packed manifest exposes exactly the sole multithread kit'
+        )
+        assert not any('singlethread' in name for name in names), (
+            'A stale cached serial source tree cannot leak into the delivered site'
+        )
         assert not any(Path(name).name in native or name.startswith('build/') for name in names), (
             'public webapp packaging must exclude native libraries, objects and build trees'
         )
@@ -82,8 +89,8 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
         } == {'report/vendor/' + Path(name).name: (ROOT / name).read_bytes() for name in VENDOR}, (
             'The transport carries exactly the three declared report vendor files byte for byte'
         )
-        assert sum(Path(name).name == 'edi_app.wasm' for name in names) == 2, (
-            'excluding native objects must retain both prescribed WebAssembly transport outputs'
+        assert sum(Path(name).name == 'edi_app.wasm' for name in names) == 1, (
+            'excluding native objects retains exactly the sole multithread WebAssembly output'
         )
     docs = root / 'site'
     docs.mkdir()
@@ -246,8 +253,8 @@ def test_toolchain_tasks_declare_reproducible_pins():
     assert any(value and '3.3.0' in str(value) and '==' in str(value) for value in aqt), (
         'aqtinstall 3.3.0 must be pinned as a pixi dependency'
     )
-    assert 'wasm_singlethread' in text and 'wasm_multithread' in text, (
-        'toolchain acquisition must cover the independent single- and multi-thread kits'
+    assert 'wasm_singlethread' not in text and 'wasm_multithread' in text, (
+        'toolchain acquisition covers the sole multithread kit without acquiring a serial kit'
     )
 
 
@@ -277,7 +284,6 @@ def test_webassembly_ci_builds_uploads_and_runs_the_browser_gate():
         token in checker
         for token in (
             'export EDI_WASM_ZIP=',
-            'export EDI_WASM_CLI_SINGLETHREAD=',
             'export EDI_WASM_CLI_MULTITHREAD=',
             'python -m pytest',
         )
@@ -327,8 +333,8 @@ def test_zip_contains_two_real_modules_loader_shim_and_licences():
             not Path(name).is_absolute() and '..' not in Path(name).parts for name in names
         ), 'static-site zip paths must stay inside the published webapp folder'
         wasm = [name for name in names if name.endswith('.wasm')]
-        assert len(wasm) >= 2 and len({str(Path(name).parent) for name in wasm}) >= 2, (
-            'zip must carry separate single-thread and multithread wasm applications'
+        assert len(wasm) == 1 and 'multithread' in wasm[0] and 'singlethread' not in wasm[0], (
+            'zip carries exactly one multithread application and no serial artifact'
         )
         assert all(archive.read(name)[:8] == b'\0asm\x01\0\0\0' for name in wasm), (
             'shipped wasm entries must be actual wasm binaries'
@@ -359,12 +365,14 @@ def test_zip_contains_two_real_modules_loader_shim_and_licences():
         readmes = [name for name in names if Path(name).name.lower().startswith('readme')]
         assert readmes, 'zip must include its hosting README'
         text = '\n'.join(archive.read(name).decode() for name in readmes).lower()
-        assert ('cross-origin' in text or 'coop' in text) and 'single' in text, (
-            'hosting README must state isolation requirements and the single-thread fallback'
-        )
+        assert (
+            ('cross-origin' in text or 'coop' in text)
+            and 'multithread' in text
+            and 'sharedarraybuffer' in text
+        ), 'hosting README states threading, isolation and shared-memory requirements'
 
 
-@pytest.mark.parametrize('mode', ['singlethread', 'multithread'])
+@pytest.mark.parametrize('mode', ['multithread'])
 def test_each_build_has_browser_runtime_assets(mode):
     with zipfile.ZipFile(site_zip()) as archive:
         names = archive.namelist()
