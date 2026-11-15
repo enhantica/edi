@@ -357,7 +357,7 @@ TestCase {
         const header = control("parameters.freeHeader");
         verify(Ui.exposed(header) && !header.interactionEnabled, "Without measured data the Free header retains its visible column geometry");
         const variability = control("parameters.variability");
-        verify(Ui.exposed(variability), "The parameter variability selector remains visible without measured data");
+        verify(Ui.exposed(variability) && !variability.enabled, "The parameter variability selector remains visible and disabled without measured data");
         compare(control("statusBar.fit.button").keyIcon, "play", "The idle Fit button uses the plain play icon");
     }
     function test_measured_load_fits_common_scale_with_fixed_background_and_one_undo() {
@@ -396,6 +396,109 @@ TestCase {
         fuzzyCompare(scale().value, originalScale, 1e-12, "One undo restores the pre-load scale together with the measured-data load");
         verify(project.currentExperiment.calculationOnly, "One undo restores the pre-load calculation-only experiment");
         fuzzyCompare(loadedScale, originalScale * expectedK, 1e-5, "Loading powder data fits the closed-form common factor without an explicit Fit action");
+    }
+
+    function phaseScales() {
+        return Probe.rows(Session.project.currentExperiment.linkedStructures).map(row => ({id: row.structureId, value: row.scale.value}));
+    }
+    function test_powder_phase_change_data() {
+        return [{tag: "add", action: "add"}, {tag: "remove", action: "remove"}];
+    }
+    function test_powder_phase_change(data) {
+        open(true);
+        const project = Session.project;
+        const structure = SettingsProof.text(source, "structures/phase.edi");
+        verify(SettingsProof.write(source, "extra.edi", structure.replace("data_phase", "data_extra").replace(/_cell.length_([abc]) 4/g, "_cell.length_$1 5")), "A second phase has a distinct lattice and independent peaks");
+        verify(project.loadStructure(Qt.resolvedUrl(source + "/extra.edi")), "The actual structure loader supplies the second phase");
+        ready();
+        const links = project.currentExperiment.linkedStructures;
+        if (data.action === "remove") {
+            links.append();
+            ready();
+            verify(SettingsProof.write(source, "third.edi", structure.replace("data_phase", "data_third").replace(/_cell.length_([abc]) 4/g, "_cell.length_$1 6")), "The removal witness keeps two independent phase scales after removing a third");
+            verify(project.loadStructure(Qt.resolvedUrl(source + "/third.edi")), "The actual structure loader supplies the third phase");
+            links.append();
+            ready();
+        }
+        let rows = Probe.rows(links);
+        rows.forEach((row, index) => row.scale.value = [2, 3, 5][index]);
+        ready();
+        const before = phaseScales();
+        const undoText = project.currentExperiment.text.inputText;
+        if (data.action === "add")
+            links.append();
+        else
+            links.remove(2);
+        ready();
+        const scales = phaseScales();
+        compare(scales.length, 2, "A phase edit leaves two live scales whose ratio can distinguish one common factor from independent fitting");
+        const expectedRatio = data.action === "add" ? 2 : 2 / 3;
+        fuzzyCompare(scales[0].value / scales[1].value, expectedRatio, 1e-8, "Automatic scale adjustment preserves the pre-edit ratio, including the newly added phase's default scale");
+        const pattern = Probe.rows(project.currentExperiment.pattern);
+        let numerator = 0, denominator = 0, admitted = 0;
+        for (const row of pattern) {
+            if (!isFinite(row.intensityCalc) || !isFinite(row.intensityMeas) || !(row.intensityMeasSu > 0))
+                continue;
+            const background = 40 + (row.x - 10) / 2;
+            fuzzyCompare(row.intensityBkg, background, 1e-8, "A phase-triggered common-factor fit holds the linear background fixed");
+            const net = row.intensityCalc - background, weight = 1 / (row.intensityMeasSu * row.intensityMeasSu);
+            numerator += weight * net * (row.intensityMeas - background);
+            denominator += weight * net * net;
+            admitted++;
+        }
+        verify(admitted > 2 && denominator > 0, "The phase-change normal equation reaches measured peaks and unequal observation weights");
+        const remainingFactor = numerator / denominator;
+        project.undo();
+        ready();
+        compare(JSON.stringify(phaseScales()), JSON.stringify(before), "One undo restores every prior phase scale and the phase membership");
+        compare(project.currentExperiment.text.inputText, undoText, "Undo restores the complete pre-edit experiment declaration");
+        fuzzyCompare(remainingFactor, 1, 3e-5, "Adding or removing a phase automatically reaches the closed-form common-factor optimum");
+    }
+
+    function test_single_crystal_phase_replacement_fits_scale_and_undoes_once() {
+        Session.closeProject();
+        source = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/fitting_correctness/single_crystal"));
+        const structure = SettingsProof.text(source, "structures/phase.edi");
+        verify(SettingsProof.write(source, "extra.edi", structure.replace("data_phase", "data_extra")), "The single-crystal replacement has the same independently known one-atom Ni amplitude");
+        verify(Session.openProject(source), "The authored single-crystal scale witness opens through the actual Session");
+        const project = Session.project;
+        tryVerify(() => !project.calculating, 10000, "The single-crystal calculation settles before changing its linked phase");
+        verify(project.loadStructure(Qt.resolvedUrl(source + "/extra.edi")), "A replacement single-crystal phase enters through the actual structure loader");
+        tryVerify(() => !project.calculating, 10000, "The replacement structure load settles before the phase-link edit");
+        const experiment = project.currentExperiment;
+        experiment.scale.value = 2.3;
+        const before = experiment.text.inputText;
+        const oldId = experiment.linkedStructureId;
+        experiment.linkedStructureId = "extra";
+        tryVerify(() => !project.calculating, 10000, "Replacing the single-crystal phase publishes its later calculation");
+        compare(experiment.linkedStructureId, "extra", "The phase selector really replaces the enabled single-crystal link");
+        const loadedScale = experiment.scale.value;
+        const basis = 1.03 * 1.03;
+        const observed = [1000, 10, 14, -2], sigma = [1, 1, 2, 3];
+        let numerator = 0, denominator = 0;
+        for (let index = 0; index < observed.length; ++index) {
+            numerator += basis * observed[index] / (sigma[index] * sigma[index]);
+            denominator += basis * basis / (sigma[index] * sigma[index]);
+        }
+        project.undo();
+        tryVerify(() => !project.calculating, 10000, "Undo of the single-crystal phase replacement settles");
+        compare(experiment.linkedStructureId, oldId, "One undo restores the former single-crystal phase link");
+        fuzzyCompare(experiment.scale.value, 2.3, 1e-12, "One undo restores the scale before the automatic phase-change fit");
+        compare(experiment.text.inputText, before, "Undo restores the full pre-replacement single-crystal declaration");
+        fuzzyCompare(loadedScale, numerator / denominator, 1e-5, "Replacing the single-crystal phase automatically fits the independent weighted scale with no background");
+    }
+    function test_running_fit_uses_plain_stop_then_plain_play() {
+        open(true);
+        scale().free = true;
+        const fit = Session.project.fit;
+        const button = control("statusBar.fit.button");
+        compare(button.keyIcon, "play", "An idle measured-data fit exposes the plain play icon");
+        fit.start();
+        verify(fit.running, "The icon transition is observed during an actual started fit");
+        compare(button.keyIcon, "stop", "An actual running fit exposes the plain stop icon");
+        fit.cancel();
+        tryVerify(() => !fit.running, 10000, "The actual fit settles after Stop");
+        compare(button.keyIcon, "play", "A settled fit restores the plain play icon");
     }
 
 }
