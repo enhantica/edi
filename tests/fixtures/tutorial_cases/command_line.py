@@ -34,7 +34,9 @@ def actions(markdown):  # noqa: PLR0912, PLR0914, PLR0915 - finite written instr
                 'Gate 5: a visible project-file edit names one unambiguous .edi file'
             )
             instruction = '\n'.join(context).casefold()
-            if 'remove' in instruction and 'every value' in instruction:
+            if re.search(r'\bdelete the loop\b.*\band its rows\b', instruction):
+                result.append(('delete-loop', names[-1], code))
+            elif 'remove' in instruction and 'every value' in instruction:
                 result.append(('clear-free', names[-1], ''))
             elif 'add' in instruction and '()' in instruction and 'free' in instruction:
                 headings = re.findall(r'^##+ (.+)$', markdown[: fence.start()], re.MULTILINE)
@@ -679,6 +681,44 @@ def edit_project(project, filename, excerpt, schemas=()):  # noqa: PLR0912, PLR0
                 )
         index += 1
     target.write_text(original)
+
+
+def delete_loop(project, filename, excerpt):
+    """Delete only the complete loop explicitly named by the written instruction."""
+    name = Path(filename)
+    assert not name.is_absolute() and '..' not in name.parts, (
+        'Gate 5: a loop deletion names a relative file inside its actual project'
+    )
+    target = project / name
+    assert target.is_file() and target.resolve().is_relative_to(project.resolve()), (
+        'Gate 5: a loop deletion cannot select an absent file or escape through a symlink'
+    )
+    headers = [line.strip() for line in excerpt.splitlines() if line.strip()]
+    assert (
+        headers
+        and len(headers) == len(set(headers))
+        and all(re.fullmatch(r'_[A-Za-z0-9_]+\.[A-Za-z0-9_]+', header) for header in headers)
+    ), 'Gate 5: a loop deletion lists complete unique column tags, without data or placeholders'
+    original = target.read_bytes().decode('utf-8')
+    blocks = list(
+        re.finditer(
+            r'(?ms)^loop_[ \t]*\r?\n((?:_[^\r\n]+\r?\n)+)'
+            r'(.*?)(?=^loop_|^data_|^_[^\s]+[ \t]+\S|\Z)',
+            original,
+        )
+    )
+    matches = [block for block in blocks if set(block[1].splitlines()) == set(headers)]
+    assert len(matches) == 1, (
+        'Gate 5: a loop deletion identifies exactly one entire original column set'
+    )
+    block = matches[0]
+    # Separators and comments following the final data row belong to the retained text.
+    end = position = block.start(2)
+    for line in block[2].splitlines(keepends=True):
+        position += len(line)
+        if line.strip() and not line.lstrip().startswith('#'):
+            end = position
+    target.write_bytes((original[: block.start()] + original[end:]).encode('utf-8'))
 
 
 def workspace_path(workspace, filename):

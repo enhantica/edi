@@ -18,7 +18,12 @@ from tests.fixtures.tutorial_recipe.native import (
     native_records,
     run_native_observation,
 )
-from tests.fixtures.tutorial_recipe.reference import boundary_contracts, significant, state_errors
+from tests.fixtures.tutorial_recipe.reference import (
+    boundary_contracts,
+    recipe_action_error,
+    significant,
+    state_errors,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 RECIPES = json.loads((ROOT / 'tests/fixtures/tutorial_recipe/recipes.json').read_text())
@@ -92,43 +97,22 @@ def test_every_declared_scientific_action_affects_translation_or_is_refused(
     recipe = RECIPES[case]['plan']
     monkeypatch.setattr(translator, 'plan', lambda _case: copy.deepcopy(recipe))
     baseline = translator.tutorial_steps(case)
+
+    def translate(changed):
+        monkeypatch.setattr(translator, 'plan', lambda _case: copy.deepcopy(changed))
+        return translator.tutorial_steps(case)
+
     ignored = []
     for index, item in enumerate(recipe['steps']):
         for action_index, action in enumerate(item['actions']):
             if not significant(item, action):
                 continue
-            damaged = copy.deepcopy(recipe)
-            del damaged['steps'][index]['actions'][action_index]
-            monkeypatch.setattr(
-                translator, 'plan', lambda _case, changed=damaged: copy.deepcopy(changed)
-            )
-            try:
-                observed = translator.tutorial_steps(case)
-            except (ValueError, RuntimeError, SystemExit) as error:
-                named_output = any(
-                    'step ' + repr(row['check']) in str(error)
-                    for row in baseline
-                    if row.get('check')
-                )
-                if (
-                    named_output
-                    or item['id'] in str(error)
-                    or any(
-                        word in str(error).casefold()
-                        for word in ['action', 'recipe', 'plan', 'translate']
-                    )
-                ):
-                    continue
-                ignored.append((item['id'], action, 'unnamed refusal'))
-                continue
-            except Exception as error:  # noqa: BLE001 - arbitrary translator crashes do not prove a named refusal
-                ignored.append((item['id'], action, type(error).__name__))
-                continue
-            if observed == baseline:
-                ignored.append((item['id'], action, 'no effect'))
+            error = recipe_action_error(translate, baseline, recipe, index, action_index)
+            if error:
+                ignored.append((item['id'], action, error))
     assert not ignored, (
-        'Each declared scientific action affects translation or gets a named refusal: '
-        + repr(ignored)
+        'Scientific actions change translation, consume their exact literal target/value, '
+        'or are refused: ' + repr(ignored)
     )
 
 
@@ -268,7 +252,10 @@ def declared_good_state(expected):
         analysis += 'loop_\n_constraint.expression\n' + ''.join(
             json.dumps(value) + '\n' for value in expected['constraints'].values()
         )
-    text = 'data_experiment\n'
+    text = 'data_experiment\n' + ''.join(
+        '_experiment_type.' + key + ' ' + json.dumps(value) + '\n'
+        for key, value in expected.get('experiment_types', {}).items()
+    )
     if expected['regions']:
         text += 'loop_\n_excluded_region.start\n_excluded_region.end\n' + ''.join(
             str(value['start']) + ' ' + str(value['end']) + '\n'
@@ -283,6 +270,17 @@ def declared_good_state(expected):
     return {
         'free': expected['free'].copy(),
         'analysis': analysis,
+        'structures': [
+            {
+                'text': 'data_structure\nloop_\n_atom_site.id\n'
+                '_atom_site.wyckoff_letter\n'
+                + ''.join(
+                    key + ' ' + value + '\n' for key, value in expected.get('wyckoff', {}).items()
+                )
+            }
+        ]
+        if expected.get('wyckoff')
+        else [],
         'values': expected['values'].copy(),
         'targets': ['background.estimate'] * expected['estimate_calls'],
         'fileAlternativeSeen': True,
@@ -353,6 +351,73 @@ def test_missing_action_controls_keep_the_docs_expectation(case, stage, damage):
         'Omitting a scientific action cannot change its independent docs expectation into a pass: '
         + damage
     )
+
+
+@pytest.mark.parametrize('damage', ['peak', 'type', 'wyckoff'])
+def test_an_incorrect_default_cannot_satisfy_the_original_declared_model(damage):
+    expected = boundary_contracts(RECIPES['pd-neut-cwl_lbco-hrpt'])[0]
+    good = declared_good_state(expected)
+    assert not state_errors(expected, good), (
+        'The declared default-state control satisfies every original model obligation'
+    )
+    bad = copy.deepcopy(good)
+    if damage == 'peak':
+        bad['values']['hrpt.peak.broad_gauss_v'] += 0.2
+    elif damage == 'type':
+        bad['experiments'][0]['text'] = bad['experiments'][0]['text'].replace(
+            'powder', 'single crystal'
+        )
+    else:
+        bad['structures'][0]['text'] = bad['structures'][0]['text'].replace('La a', 'La b')
+    assert state_errors(expected, bad), (
+        'An idempotent source-write adaptation cannot admit an incorrect actual default: ' + damage
+    )
+
+
+@pytest.mark.parametrize('changed', ['page', 'scientific-source'])
+def test_page_custody_refresh_preserves_actions_and_refuses_changed_scientific_source(
+    tmp_path, changed
+):
+    from tests.fixtures.tutorial_recipe.generate import refresh_page_custody  # noqa: PLC0415
+
+    files = {
+        'website/surfaces/docs/cli/tutorials/cases/case.md': 'Original visible page.\n',
+        'docs/user/tutorials/case.py': 'The original declared scientific recipe.\n',
+    }
+    for relative, content in files.items():
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+    original = {
+        'case': {
+            'plan': {'steps': []},
+            'fits': [],
+            'boundaries': [],
+            'sources': {
+                relative: hashlib.sha256((tmp_path / relative).read_bytes()).hexdigest()
+                for relative in files
+            },
+        }
+    }
+    path = tmp_path / next(
+        key for key in files if key.endswith('.md' if changed == 'page' else '.py')
+    )
+    path.write_text(path.read_text() + 'A declared transport change.\n')
+    witness = copy.deepcopy(original)
+    if changed == 'page':
+        refreshed = refresh_page_custody(original, tmp_path)
+        assert (
+            refreshed['case']['plan'] == original['case']['plan']
+            and refreshed['case']['fits'] == []
+        ), 'Page custody refresh preserves every frozen scientific action and free-set expectation'
+        assert (
+            refreshed['case']['sources'][path.relative_to(tmp_path).as_posix()]
+            == hashlib.sha256(path.read_bytes()).hexdigest()
+        ), 'Page custody records the exact current published transport bytes'
+    else:
+        with pytest.raises(ValueError, match='review the recipe source'):
+            refresh_page_custody(original, tmp_path)
+    assert original == witness, 'A custody refresh never mutates its independently retained input'
 
 
 def test_docs_recipe_sources_are_unchanged():

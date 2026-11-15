@@ -759,7 +759,24 @@
         "constraints": {},
         "values": {
           "lbco.atom_site.La.occupancy": 0.5,
-          "lbco.atom_site.Ba.occupancy": 0.5
+          "lbco.atom_site.Ba.occupancy": 0.5,
+          "hrpt.instrument.setup_wavelength": 1.494,
+          "hrpt.instrument.calib_twotheta_offset": 0.3,
+          "hrpt.peak.broad_gauss_u": 0.08,
+          "hrpt.peak.broad_gauss_v": -0.1,
+          "hrpt.peak.broad_gauss_w": 0.1,
+          "hrpt.peak.broad_lorentz_y": 0.08
+        },
+        "experiment_types": {
+          "sample_form": "powder",
+          "beam_mode": "constant wavelength",
+          "radiation_probe": "neutron"
+        },
+        "wyckoff": {
+          "La": "a",
+          "Ba": "a",
+          "Co": "b",
+          "O": "c"
         },
         "regions": {
           "0": {
@@ -816,6 +833,17 @@
           "lbco.atom_site.La.occupancy": 0.5,
           "lbco.atom_site.Ba.occupancy": 0.5
         },
+        "experiment_types": {
+          "sample_form": "powder",
+          "beam_mode": "constant wavelength",
+          "radiation_probe": "neutron"
+        },
+        "wyckoff": {
+          "La": "a",
+          "Ba": "a",
+          "Co": "b",
+          "O": "c"
+        },
         "regions": {
           "0": {
             "start": 0.0,
@@ -869,6 +897,17 @@
         "values": {
           "lbco.atom_site.La.occupancy": 0.5,
           "lbco.atom_site.Ba.occupancy": 0.5
+        },
+        "experiment_types": {
+          "sample_form": "powder",
+          "beam_mode": "constant wavelength",
+          "radiation_probe": "neutron"
+        },
+        "wyckoff": {
+          "La": "a",
+          "Ba": "a",
+          "Co": "b",
+          "O": "c"
         },
         "regions": {
           "0": {
@@ -927,6 +966,17 @@
         "values": {
           "lbco.atom_site.La.occupancy": 0.5,
           "lbco.atom_site.Ba.occupancy": 0.5
+        },
+        "experiment_types": {
+          "sample_form": "powder",
+          "beam_mode": "constant wavelength",
+          "radiation_probe": "neutron"
+        },
+        "wyckoff": {
+          "La": "a",
+          "Ba": "a",
+          "Co": "b",
+          "O": "c"
         },
         "regions": {
           "0": {
@@ -989,6 +1039,17 @@
         "values": {
           "lbco.atom_site.La.occupancy": 0.5,
           "lbco.atom_site.Ba.occupancy": 0.5
+        },
+        "experiment_types": {
+          "sample_form": "powder",
+          "beam_mode": "constant wavelength",
+          "radiation_probe": "neutron"
+        },
+        "wyckoff": {
+          "La": "a",
+          "Ba": "a",
+          "Co": "b",
+          "O": "c"
         },
         "regions": {
           "0": {
@@ -1778,6 +1839,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -1811,6 +1874,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -1848,6 +1913,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -1896,6 +1963,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -1950,6 +2019,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -2010,6 +2081,8 @@
         "values": {
           "structure.atom_sites.Co1.adp_iso": 0.5
         },
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -2071,6 +2144,8 @@
           "biso_Co2": "biso_Co2=biso_Co1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -2743,7 +2818,7 @@
     "sources": {
       "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
       "docs/user/tutorials/pd-neut-cwl_cosio-d20_2k.py": "f37f01f1d3c982adc797867359f130a5138a4c79717658063368844ef1c1711c",
-      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_cosio-d20_2k.md": "6519c88ac021967ab22e414c9fbb31a997a0ac6c8f78245fd0aa491ce25329cf",
+      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_cosio-d20_2k.md": "eebaee875bed333634830315022fe56b52497053751cdc65f214597d255a085c",
       "docs/user/cli/pd-neut-cwl_cosio-d20_2k/project/analysis/analysis.edi": "fc3edb415512ca536353f603603646ad83eddedd88d50a81019b54e4e165a616"
     },
     "boundaries": [
@@ -2773,6 +2848,8 @@
           "dl": "dl=sl"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -2821,6 +2898,8 @@
           "dl": "dl=sl"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -2885,6 +2964,8 @@
           "dl": "dl=sl"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -2953,6 +3034,8 @@
           "dl": "dl=sl"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -3022,6 +3105,8 @@
           "dl": "dl=sl"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -3783,6 +3868,8 @@
           "occ_Ni2": "occ_Ni2=occ_Li1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -3818,6 +3905,8 @@
           "occ_Ni2": "occ_Ni2=occ_Li1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -3862,6 +3951,8 @@
           "occ_Ni2": "occ_Ni2=occ_Li1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -3910,6 +4001,8 @@
           "occ_Ni2": "occ_Ni2=occ_Li1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -3959,6 +4052,8 @@
           "occ_Ni2": "occ_Ni2=occ_Li1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -4011,6 +4106,8 @@
           "occ_Ni2": "occ_Ni2=occ_Li1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -4064,6 +4161,8 @@
           "occ_Ni2": "occ_Ni2=occ_Li1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -4878,7 +4977,7 @@
     "sources": {
       "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
       "docs/user/tutorials/pd-neut-tof_ferrite-austenite-beer.py": "1aac20fa4f880c5b231ff2cb45343a88dcab289d71bb2e8f1e04ab55d0ddbb0c",
-      "website/surfaces/docs/cli/tutorials/cases/pd-neut-tof_ferrite-austenite-beer.md": "51a5330fb33c03596e6a1e5e0745812618b76174e86c669196cd0f02a83e29d5",
+      "website/surfaces/docs/cli/tutorials/cases/pd-neut-tof_ferrite-austenite-beer.md": "ebacf92f8a8aa24b379bf78b652d4b3ccb65a57f19a8b61187fa10d2da002780",
       "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/analysis/analysis.edi": "1c24e1088d024dfe9edfd8784920133ad4476690edf8d925284411ef3c65700b"
     },
     "boundaries": [
@@ -4905,6 +5004,8 @@
           "n2_austenite_scale": "n2_austenite_scale=s2_austenite_scale"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -4994,6 +5095,8 @@
           "n2_austenite_scale": "n2_austenite_scale=s2_austenite_scale"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -5091,6 +5194,8 @@
           "n2_austenite_scale": "n2_austenite_scale=s2_austenite_scale"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -5189,6 +5294,8 @@
           "n2_austenite_scale": "n2_austenite_scale=s2_austenite_scale"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -5972,7 +6079,7 @@
     "sources": {
       "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
       "docs/user/tutorials/pd-xray-cwl_lam7o3-p021.py": "49659882d29dcf8e1d0fa21846dd0ccd7a1b48996a3d87787d01005fb80e0e00",
-      "website/surfaces/docs/cli/tutorials/cases/pd-xray-cwl_lam7o3-p021.md": "c4fd4b13d90a19e10ab08fee1785c8c6064b152e3abba6f0c38432b7bdc9a41c",
+      "website/surfaces/docs/cli/tutorials/cases/pd-xray-cwl_lam7o3-p021.md": "ae50674b923dd038e1d173d53fa99ede88ebbb6c100556ab9961f52ab6e68bef",
       "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/analysis/analysis.edi": "487e082c579f3bbc602f285738f6169844c7413774acc1d9b1df60030054bd36"
     },
     "boundaries": [
@@ -6007,6 +6114,8 @@
           "biso_O2": "biso_O2=biso_O1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -6064,6 +6173,8 @@
           "biso_O2": "biso_O2=biso_O1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -6125,6 +6236,8 @@
           "biso_O2": "biso_O2=biso_O1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -6186,6 +6299,8 @@
           "biso_O2": "biso_O2=biso_O1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -6257,6 +6372,8 @@
           "biso_O2": "biso_O2=biso_O1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -6331,6 +6448,8 @@
           "biso_O2": "biso_O2=biso_O1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -7540,7 +7659,7 @@
     "sources": {
       "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
       "docs/user/tutorials/sc-neut-tof_taurine-senju.py": "bc43153c88e6485898b58c3b8773f7937fe7198412bf7547993e15fb6c6e03ef",
-      "website/surfaces/docs/cli/tutorials/cases/sc-neut-tof_taurine-senju.md": "3a6c58b7d7e818cc503922bb776e1e475b01468caf6416d47ddaca409bbd1d09",
+      "website/surfaces/docs/cli/tutorials/cases/sc-neut-tof_taurine-senju.md": "05452e14d0c5ac9325fbfefbb3c2156348f150c4c26b936eeef30fc05602ab10",
       "docs/user/cli/sc-neut-tof_taurine-senju/project/analysis/analysis.edi": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469"
     },
     "boundaries": [
@@ -7593,6 +7712,8 @@
           "x33_6": "x33_6=x33_1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -7662,6 +7783,8 @@
           "x33_6": "x33_6=x33_1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -7734,6 +7857,8 @@
           "x33_6": "x33_6=x33_1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -7848,6 +7973,8 @@
           "x33_6": "x33_6=x33_1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -8032,6 +8159,8 @@
           "x33_6": "x33_6=x33_1"
         },
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {},
@@ -8606,7 +8735,7 @@
     "sources": {
       "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
       "docs/user/tutorials/pd-neut-cwl_y2o3-spodi.py": "83c56831547c1acd42e98352d4db49b86b87d0bf4b8b9234ccae14a39364446f",
-      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_y2o3-spodi.md": "1924a61a69b22f9cf783ec2c5c8b10c900bfc610e5caff73313d555ce20f1697",
+      "website/surfaces/docs/cli/tutorials/cases/pd-neut-cwl_y2o3-spodi.md": "3330963867980b76c460ea7cc07c62050b422db6f9add23a1e68a15fe9c56926",
       "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e"
     },
     "boundaries": [
@@ -8621,6 +8750,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -8661,6 +8792,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -8704,6 +8837,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -8751,6 +8886,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -8810,6 +8947,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -9424,7 +9563,7 @@
     "sources": {
       "tools/docs/app_tutorial_plan.py": "05486e93f2e9c234ae3475668eedc0c8b11c0109f6feb87c9e3c65dcdcfc717d",
       "docs/user/tutorials/pd-neut-tof_si-sepd.py": "a3c2cf12bc72f14af65bfbec168bdc55d9f784943eb095370310e87b8db01783",
-      "website/surfaces/docs/cli/tutorials/cases/pd-neut-tof_si-sepd.md": "6ff08836a47aadc07b90a070aed3a9197566a8884bf9dabf3d3ec68f4e86d2e6",
+      "website/surfaces/docs/cli/tutorials/cases/pd-neut-tof_si-sepd.md": "ad4777c42a755bc80d1fc7bb38f77f9b5decfbd75e20f85a4b9efa3b8b3d1e03",
       "docs/user/cli/pd-neut-tof_si-sepd/project/analysis/analysis.edi": "7d828f50cfa11d9e21c6493d25e287388293d6b0de36760c45f1eca6c8a3d84e"
     },
     "boundaries": [
@@ -9439,6 +9578,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -9472,6 +9613,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -9507,6 +9650,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -9543,6 +9688,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -9580,6 +9727,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {
@@ -9619,6 +9768,8 @@
         "aliases": {},
         "constraints": {},
         "values": {},
+        "experiment_types": {},
+        "wyckoff": {},
         "regions": {},
         "points": {},
         "estimate": {

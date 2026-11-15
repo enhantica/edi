@@ -1,13 +1,16 @@
 """Owner 4cf15ae54: execute visible Command line stages against Python and regression pins."""
 
+import os
 import re
 import shutil
+import subprocess
 
 import pytest
 
 from tests.fixtures.tutorial_cases.command_line import (
     actions,
     compare_staged_regression_pin,
+    delete_loop,
     edit_project,
     visible_flag_edits,
 )
@@ -159,3 +162,79 @@ def test_staged_pin_keeps_outcomes_strict_and_checks_its_own_work_trace():
     ]:
         with pytest.raises(AssertionError, match=r'Gate [25]:'):
             compare_staged_regression_pin({**actual, **damage}, quantities)
+
+
+def test_visible_loop_deletion_is_read_from_the_actual_taurine_instruction():
+    page = ROOT / 'website/surfaces/docs/cli/tutorials/cases/sc-neut-tof_taurine-senju.md'
+    operations = actions(page.read_text())
+    deletions = [step for step in operations if step[0] == 'delete-loop']
+    assert len(deletions) == 1 and deletions[0][1] == 'structures/taurine.edi', (
+        'Gate 5: the published deletion names exactly its real anisotropic loop and file'
+    )
+    assert deletions[0][2].splitlines() == [
+        '_atom_site_aniso.id',
+        '_atom_site_aniso.adp_11',
+        '_atom_site_aniso.adp_22',
+        '_atom_site_aniso.adp_33',
+        '_atom_site_aniso.adp_12',
+        '_atom_site_aniso.adp_13',
+        '_atom_site_aniso.adp_23',
+    ], 'Gate 5: the written deletion retains the complete actual tensor column declaration'
+
+
+@pytest.mark.parametrize('newline', ['\n', '\r\n'])
+def test_visible_loop_deletion_preserves_every_other_original_byte(tmp_path, newline):
+    before = 'data_sample\n_cell.length_a 3.14159\n# retained prefix β\n'
+    loop = 'loop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_11\nS1 0.125\nO1 0.25\n'
+    after = '\n# retained suffix β\nloop_\n_atom_site.id\n_atom_site.fract_z\nS1 0.375\n'
+    path = tmp_path / 'sample.edi'
+    path.write_bytes((before + loop + after).replace('\n', newline).encode())
+    delete_loop(tmp_path, 'sample.edi', '_atom_site_aniso.id\n_atom_site_aniso.adp_11\n')
+    assert path.read_bytes() == (before + after).replace('\n', newline).encode(), (
+        'Gate 5: deletion removes only its named loop; all other bytes and line endings survive'
+    )
+
+
+@pytest.mark.parametrize(
+    'damage', ['partial', 'missing', 'duplicate', 'row', 'outside', 'symlink']
+)
+def test_visible_loop_deletion_refuses_ambiguous_or_escaping_targets(tmp_path, damage):
+    project = tmp_path / 'project'
+    project.mkdir()
+    text = 'data_sample\nloop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_11\nS1 0.125\n'
+    path = project / 'sample.edi'
+    path.write_text(text)
+    filename = 'sample.edi'
+    tags = '_atom_site_aniso.id\n_atom_site_aniso.adp_11\n'
+    if damage == 'partial':
+        tags = '_atom_site_aniso.id\n'
+    elif damage == 'missing':
+        tags = '_background.id\n_background.intensity\n'
+    elif damage == 'duplicate':
+        path.write_text(text + text.removeprefix('data_sample\n'))
+    elif damage == 'row':
+        tags += 'S1 0.125\n'
+    elif damage == 'outside':
+        filename = '../sample.edi'
+    elif damage == 'symlink':
+        path.unlink()
+        external = tmp_path / 'outside'
+        external.mkdir()
+        (external / 'sample.edi').write_text(text)
+        alias = project / 'external'
+        if os.name == 'nt':
+            subprocess.run(
+                ['cmd.exe', '/d', '/c', 'mklink', '/J', str(alias), str(external)],
+                check=True,
+                capture_output=True,
+            )
+        else:
+            alias.symlink_to(external, target_is_directory=True)
+        filename = 'external/sample.edi'
+        path = alias / 'sample.edi'
+    before = path.read_bytes()
+    with pytest.raises(AssertionError, match='Gate 5:'):
+        delete_loop(project, filename, tags)
+    assert path.read_bytes() == before, (
+        'Gate 5: an inadmissible loop deletion leaves the original target unchanged'
+    )

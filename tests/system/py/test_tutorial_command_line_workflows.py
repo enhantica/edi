@@ -11,6 +11,7 @@ import pytest
 from tests.fixtures.tutorial_cases.command_line import (
     actions,
     compare_staged_regression_pin,
+    delete_loop,
     edit_project,
     loop_schemas,
     setup_action,
@@ -85,6 +86,8 @@ def test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin( 
                 'Gate 5: the displayed download obtains its actual collection member: '
                 + run.stderr
             )
+        elif operation == 'delete-loop':
+            delete_loop(project, argument, body)
         elif operation == 'edit':
             schemas.setdefault(argument, loop_schemas((project / argument).read_text()))
             edit_project(project, argument, body, schemas=schemas[argument])

@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-15T08:17:09Z
+# measured_utc = 2026-11-15T09:31:25Z
 #
-# Recorded from: measured test run (11 node(s) measured once, 176798 banked, 4 stale row(s) dropped)
-# Collected tests: 245274; with a reported duration: 77593
-# Module-scoped fixture costs recorded: 198
+# Recorded from: measured test run (95 node(s) measured once, 176779 banked, 28 stale row(s) dropped)
+# Collected tests: 245302; with a reported duration: 77603
+# Module-scoped fixture costs recorded: 199
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245274
+# inventory_python = 245302
 # inventory_cpp = 402
-# inventory_measured = 176809
-# inventory_unmeasured = 68867
+# inventory_measured = 176843
+# inventory_unmeasured = 68861
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 85969
+# inventory_pr_python = 85997
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -238059,16 +238059,25 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_cli_stream_parity.py
 0.000	tests/system/py/test_tutorial_cli_stream_parity.py::test_time_normalizer_never_hides_other_output_changes[starting-row]
 0.000	tests/system/py/test_tutorial_cli_stream_parity.py::test_time_normalizer_never_hides_other_output_changes[summary]
 0.230	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[extra-model]
-0.240	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[measured-file]
-0.300	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[redirected-input]
+0.250	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[measured-file]
+0.290	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[redirected-input]
 0.130	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[staged-model]
-0.130	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[unchanged]
-0.000	tests/system/py/test_tutorial_command_line_stages.py::test_staged_pin_keeps_outcomes_strict_and_checks_its_own_work_trace
+0.140	tests/system/py/test_tutorial_command_line_stages.py::test_stage_fit_admission_preserves_the_catalogue_measurements[unchanged]
+0.010	tests/system/py/test_tutorial_command_line_stages.py::test_staged_pin_keeps_outcomes_strict_and_checks_its_own_work_trace
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_edit_observer_applies_real_scalar_and_loop_brackets_without_changing_other_values
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_edit_observer_refuses_missing_context_and_escaping_paths[ambiguous-row]
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_edit_observer_refuses_missing_context_and_escaping_paths[no-file]
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_edit_observer_refuses_missing_context_and_escaping_paths[outside]
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_flag_instructions_keep_previous_fit_values_and_expand_counted_uniform_rows
+0.010	tests/system/py/test_tutorial_command_line_stages.py::test_visible_loop_deletion_is_read_from_the_actual_taurine_instruction
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_loop_deletion_preserves_every_other_original_byte[\n]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_loop_deletion_preserves_every_other_original_byte[\r\n]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_loop_deletion_refuses_ambiguous_or_escaping_targets[duplicate]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_loop_deletion_refuses_ambiguous_or_escaping_targets[missing]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_loop_deletion_refuses_ambiguous_or_escaping_targets[outside]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_loop_deletion_refuses_ambiguous_or_escaping_targets[partial]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_loop_deletion_refuses_ambiguous_or_escaping_targets[row]
+0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_loop_deletion_refuses_ambiguous_or_escaping_targets[symlink]
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_relation_edits_can_add_and_update_alias_and_constraint_loops
 0.000	tests/system/py/test_tutorial_command_line_stages.py::test_visible_stage_reader_executes_one_route_of_the_linked_command_tabs
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_command_line_workflows.py::test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin[pd-neut-cwl_cosio-d20]
@@ -238092,7 +238101,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_command_line_
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_command_line_workflows.py::test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin[sc-neut-cwl_cosio-heidi]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_command_line_workflows.py::test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin[sc-neut-cwl_pr2nio4-5c2]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_command_line_workflows.py::test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin[sc-neut-cwl_tb2ti2o7-heidi]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_command_line_workflows.py::test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin[sc-neut-tof_taurine-senju]
+UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_command_line_workflows.py::test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin[sc-neut-tof_taurine-senju]
 0.000	tests/system/py/test_tutorial_command_tabs.py::test_command_pair_observer_refuses_unpaired_or_inequivalent_examples[broken-label]
 0.000	tests/system/py/test_tutorial_command_tabs.py::test_command_pair_observer_refuses_unpaired_or_inequivalent_examples[different-command]
 0.000	tests/system/py/test_tutorial_command_tabs.py::test_command_pair_observer_refuses_unpaired_or_inequivalent_examples[missing-panel]
@@ -238669,31 +238678,32 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_2k-9]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-10]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-11]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-13]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-15]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-12]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-14]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-16]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-18]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-17]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-19]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-1]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-20]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-21]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-22]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-23]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-24]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-26]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-25]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-27]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-29]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-28]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-2]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-31]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-30]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-32]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-34]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-36]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-33]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-35]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-37]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-39]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-38]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-3]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-41]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-46]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-5]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-7]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-40]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-42]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-47]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-4]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-6]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-8]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_cosio-d20_scan-213f-9]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_has_an_explicit_group_and_tab_predecessor:pd-neut-cwl_hs-hrpt-10]
@@ -240097,31 +240107,32 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_2k-9]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-10]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-11]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-13]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-15]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-12]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-14]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-16]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-18]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-17]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-19]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-1]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-20]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-21]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-22]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-23]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-24]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-26]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-25]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-27]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-29]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-28]
 UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-2]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-31]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-30]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-32]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-34]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-36]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-33]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-35]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-37]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-39]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-38]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-3]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-41]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-46]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-5]
-UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-7]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-40]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-42]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-47]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-4]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-6]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-8]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_cosio-d20_scan-213f-9]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_navigation.py::test_written_tutorial_navigation[field_pointer_aims_at_the_input_center:pd-neut-cwl_hs-hrpt-10]
@@ -241633,6 +241644,9 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_recipe_native
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_recipe_native_states.py::test_builtin_pre_fit_state_equals_the_declared_docs_recipe[pd-xray-cwl_lam7o3-p021]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_recipe_native_states.py::test_builtin_pre_fit_state_equals_the_declared_docs_recipe[sc-neut-tof_taurine-senju]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_recipe_native_states.py::test_recipe_observer_has_a_real_positive_control
+0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_an_incorrect_default_cannot_satisfy_the_original_declared_model[peak]
+0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_an_incorrect_default_cannot_satisfy_the_original_declared_model[type]
+0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_an_incorrect_default_cannot_satisfy_the_original_declared_model[wyckoff]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_current_published_recipe_translates_without_a_caption_substitute[pd-neut-cwl_cosio-d20]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_current_published_recipe_translates_without_a_caption_substitute[pd-neut-cwl_cosio-d20_2k]
 0.006	tests/system/py/test_tutorial_recipe_preservation.py::test_current_published_recipe_translates_without_a_caption_substitute[pd-neut-cwl_lbco-hrpt]
@@ -241643,15 +241657,15 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_tutorial_recipe_native
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_current_published_recipe_translates_without_a_caption_substitute[pd-xray-cwl_lam7o3-p021]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_current_published_recipe_translates_without_a_caption_substitute[sc-neut-tof_taurine-senju]
 0.010	tests/system/py/test_tutorial_recipe_preservation.py::test_docs_recipe_sources_are_unchanged
-UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-cwl_cosio-d20]
-UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-cwl_cosio-d20_2k]
-UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-cwl_lbco-hrpt]
-UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-cwl_lmo-echidna]
-UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-cwl_y2o3-spodi]
-UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-tof_ferrite-austenite-beer]
-UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-tof_si-sepd]
-UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-xray-cwl_lam7o3-p021]
-1.540	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[sc-neut-tof_taurine-senju]
+2.040	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-cwl_cosio-d20]
+0.290	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-cwl_cosio-d20_2k]
+2.939	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-cwl_lbco-hrpt]
+1.110	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-cwl_lmo-echidna]
+0.130	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-cwl_y2o3-spodi]
+2.950	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-tof_ferrite-austenite-beer]
+0.280	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-neut-tof_si-sepd]
+0.730	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[pd-xray-cwl_lam7o3-p021]
+1.570	tests/system/py/test_tutorial_recipe_preservation.py::test_every_declared_scientific_action_affects_translation_or_is_refused[sc-neut-tof_taurine-senju]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_missing_action_controls_keep_the_docs_expectation[pd-neut-cwl_cosio-d20-6-values]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_missing_action_controls_keep_the_docs_expectation[pd-neut-cwl_lbco-hrpt-1-points]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_missing_action_controls_keep_the_docs_expectation[pd-neut-cwl_lbco-hrpt-1-regions]
@@ -241665,6 +241679,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_tutorial_recipe_preservation.
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_missing_action_controls_keep_the_docs_expectation[pd-xray-cwl_lam7o3-p021-4-residual]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_native_progress_retires_old_fit_guards_and_ignores_diagnostic_activity
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_native_record_reader_keeps_diagnostic_bytes_outside_the_scientific_transport
+0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_page_custody_refresh_preserves_actions_and_refuses_changed_scientific_source[page]
+0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_page_custody_refresh_preserves_actions_and_refuses_changed_scientific_source[scientific-source]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_unclassified_actions_cannot_be_declared_inert[aliasXparameter.0]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_unclassified_actions_cannot_be_declared_inert[appBar.tab.missing]
 0.000	tests/system/py/test_tutorial_recipe_preservation.py::test_unclassified_actions_cannot_be_declared_inert[background.unhandledOperation]
@@ -245563,6 +245579,18 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_tutorial_package.py::test_every
 0.000	tests/unit/py/test_tutorial_package.py::test_notebook_rules_accept_a_plain_workflow_and_reject_missing_displays
 UNMEASURED:failed-in-this-run	tests/unit/py/test_tutorial_package.py::test_tutorial_install_is_one_plain_cell_before_the_public_import
 0.000	tests/unit/py/test_tutorial_package.py::test_wheel_declares_the_public_module_package_paths
+0.000	tests/unit/py/test_tutorial_recipe_effects.py::test_default_action_adaptation_never_accepts_a_silent_or_misdirected_translator[crash]
+0.000	tests/unit/py/test_tutorial_recipe_effects.py::test_default_action_adaptation_never_accepts_a_silent_or_misdirected_translator[ignored]
+0.000	tests/unit/py/test_tutorial_recipe_effects.py::test_default_action_adaptation_never_accepts_a_silent_or_misdirected_translator[malformed]
+0.000	tests/unit/py/test_tutorial_recipe_effects.py::test_default_action_adaptation_never_accepts_a_silent_or_misdirected_translator[text-only]
+0.000	tests/unit/py/test_tutorial_recipe_effects.py::test_default_action_adaptation_never_accepts_a_silent_or_misdirected_translator[unnamed]
+0.000	tests/unit/py/test_tutorial_recipe_effects.py::test_default_action_adaptation_never_accepts_a_silent_or_misdirected_translator[wrong-target]
+0.000	tests/unit/py/test_tutorial_recipe_effects.py::test_default_action_adaptation_never_accepts_a_silent_or_misdirected_translator[wrong-value]
+0.000	tests/unit/py/test_tutorial_recipe_effects.py::test_named_refusal_keeps_the_original_action_preservation_contract
+0.000	tests/unit/py/test_tutorial_recipe_effects.py::test_nonliteral_actions_cannot_claim_the_redundant_assignment_adaptation
+0.000	tests/unit/py/test_tutorial_recipe_effects.py::test_redundant_literal_still_has_to_control_its_actual_target_and_operand[choose-token:experimentType.sampleForm=powder]
+0.000	tests/unit/py/test_tutorial_recipe_effects.py::test_redundant_literal_still_has_to_control_its_actual_target_and_operand[fill:peak.broad_gauss_v=-0.1]
+0.000	tests/unit/py/test_tutorial_recipe_effects.py::test_redundant_literal_still_has_to_control_its_actual_target_and_operand[type:a:]
 0.000	tests/unit/py/test_verification_helpers.py::test_agreeing_pair_passes_the_default_gate
 0.000	tests/unit/py/test_verification_helpers.py::test_array_layout_bac_reconstructs_grid_from_header
 0.000	tests/unit/py/test_verification_helpers.py::test_bac_zero_shift_realigns_axis_before_subtraction
@@ -245896,6 +245924,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 951.380	tests/system/py/test_tutorial_clean_wheel.py
 # module-cost: 0.672	tests/system/py/test_tutorial_cli_stream_parity.py
 # module-cost: 3.021	tests/system/py/test_tutorial_command_line_stages.py
+# module-cost: 3.004	tests/system/py/test_tutorial_command_line_workflows.py
 # module-cost: 6.295	tests/system/py/test_tutorial_continuation_requests.py
 # module-cost: 9.913	tests/system/py/test_tutorial_dialog_scrolling.py
 # module-cost: 2.831	tests/system/py/test_tutorial_large_population_stages.py
@@ -245904,7 +245933,7 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 39.089	tests/system/py/test_tutorial_notebook_pipeline.py
 # module-cost: 52.271	tests/system/py/test_tutorial_official_site.py
 # module-cost: 5.339	tests/system/py/test_tutorial_project_ownership.py
-# module-cost: 60.184	tests/system/py/test_tutorial_recipe_preservation.py
+# module-cost: 57.051	tests/system/py/test_tutorial_recipe_preservation.py
 # module-cost: 85.543	tests/system/py/test_tutorial_screenshot_pages.py
 # module-cost: 77.682	tests/system/py/test_tutorial_subset_catalogue.py
 # module-cost: 139.961	tests/system/py/test_user_action_logging.py

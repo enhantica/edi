@@ -16,7 +16,13 @@ action is refused, including strings that resemble the permitted vocabulary.
 
 The translator gate removes each scientific action from its input independently.
 The original expectation stays fixed; deletion must affect the built-in output or
-produce a named refusal. Stage captions are cached unchanged setup prose, never
+produce a named refusal. A literal assignment already satisfied in the app may
+leave the output unchanged: a nontrivial operand probe must then reach the exact
+original target and value, or get a named refusal. Ignored operands, another
+target, changed prose alone and arbitrary crashes cannot satisfy that check.
+Actual pre-fit inputs independently check initial peak settings, experiment
+types, Wyckoff choices and repeated background intensities, so a false default
+assumption still fails. Stage captions are cached unchanged setup prose, never
 the expected action inventory. Separate unknown-action controls check refusal.
 
 The Qt observer reads the actual model immediately before each fit, including
@@ -31,3 +37,8 @@ that already violates these obligations; later unvisited stages remain failures,
 not evidence that the whole tutorial ran. A real independently authored onboarding
 model qualifies observation, and synthetic omission controls exercise each state
 comparison without deriving its expectation from a damaged manifest.
+
+`generate.py --refresh-page-custody` updates only changed published CLI-page
+identities and derives input obligations from the unchanged frozen plan. Any
+other changed source is refused. It preserves every plan action and free-set
+expectation, and never captures fitted output or updates a numerical pin.

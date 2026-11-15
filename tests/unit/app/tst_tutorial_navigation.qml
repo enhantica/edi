@@ -2642,9 +2642,12 @@ TestCase {
             experiments.push({text: recipeText(model.text.text), n_points: model.backgroundEstimatePoints,
                 use_model: model.backgroundEstimateUseModel, estimate_points: model.estimatePoints, estimate_note: model.estimateNote});
         }
+        const structures = [];
+        for (const row of Probe.rows(project.structures))
+            structures.push({text: recipeText(row.structure.text.text)});
         console.info("TUTORIAL_RECIPE_BOUNDARY " + JSON.stringify({id: id, stage: stage,
             free: rows.filter(row => row.free).map(row => recipePath(row)), values: values,
-            analysis: project.analysis.text.text, experiments: experiments,
+            analysis: project.analysis.text.text, structures: structures, experiments: experiments,
             targets: targets, fileAlternativeSeen: fileSeen}));
         if (id !== "observer-control") {
             const recipes = JSON.parse(OnboardingProbe.sourceText("tests/fixtures/tutorial_recipe/recipes.json"));
