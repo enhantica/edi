@@ -87,10 +87,15 @@ def test_unknown_descent_error_names_the_registry(tmp_path):
     for name in (
         'ladder',
         'fast_descent',
-        'multistart_prune',
+        'fast_descent_and_ladder',
     ):
         assert name in str(caught.value), (
             ' unknown descent must identify the complete valid registry'
+        )
+
+    for name in ('fast_descent_linear_snap', 'fast_descent_guarded_linear_snap'):
+        assert name not in str(caught.value), (
+            'The unknown-selector diagnostic must not advertise a retired descent'
         )
 
 

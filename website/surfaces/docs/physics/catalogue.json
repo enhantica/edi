@@ -314,7 +314,7 @@
       "status": "implemented"
     },
     {
-      "id": "multistart_prune",
+      "id": "fast_descent_and_ladder",
       "category": "descent",
       "scope": "least-squares; selected strategies have bound restrictions",
       "explanation_url": "minimization/#eq-lm",

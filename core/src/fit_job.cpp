@@ -47,7 +47,7 @@ FitInputs inputs_of(Project& project) {
     }
     std::ostringstream settings;
     settings.imbue(std::locale::classic());
-    settings << std::setprecision(17) << project.fitting_mode << '\x1f' << project.descent << '\x1f'
+    settings << std::setprecision(17) << project.fitting_mode << '\x1f' << current_descent_id(project.descent) << '\x1f'
              << project.minimizer_max_iterations << '\x1f' << project.minimizer_chi_square_tolerance << '\x1f'
              << project.minimizer_stop_rules << '\x1f' << project.minimizer_shift_tolerance << '\x1f'
              << project.minimizer_moments_near_zero << '\x1f'

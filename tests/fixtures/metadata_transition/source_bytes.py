@@ -6,6 +6,7 @@ import json
 import zipfile
 from pathlib import Path
 
+from tests.fixtures.c06_t8 import seed_updates
 from tests.fixtures.metadata_transition import (
     pin_sources,
     release_pin_bytes,
@@ -19,6 +20,7 @@ HERE = Path(__file__).parent
 
 
 def previous_bytes(name, data):
+    data = seed_updates.previous_bytes(name, data)
     data = pin_sources.previous_bytes(name, data)
     data = release_pin_bytes.previous_bytes(name, data)
     data = retired_source_fields.previous_bytes(name, data)
@@ -56,7 +58,7 @@ def archived_content_pairs():
 
 
 def previous_content(data):
-    data = task_inputs.previous_content(data)
+    data = task_inputs.previous_content(seed_updates.previous_content(data))
     before_hash = archived_content_pairs().get(hashlib.sha256(data).hexdigest())
     if before_hash is None:
         return data

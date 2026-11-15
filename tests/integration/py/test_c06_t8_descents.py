@@ -163,16 +163,16 @@ def test_python_registry_and_default_match_the_owner_decision():
     assert set(engine._descent_ids()) == VALID, (
         'The live Python registry must contain exactly the three retained descents'
     )
-    assert engine._default_descent() == 'multistart_prune', (
+    assert engine._default_descent() == 'fast_descent_and_ladder', (
         'The engine-advertised default must be the two-probe flow'
     )
     project = engine.Project()
-    assert project.descent == project.analysis.descent == 'multistart_prune', (
+    assert project.descent == project.analysis.descent == 'fast_descent_and_ladder', (
         'Both public Python selectors must resolve an absent declaration to the two-probe flow'
     )
     project.analysis.descent = 'ladder'
     project.analysis.descent = None
-    assert project.analysis.descent == 'multistart_prune', (
+    assert project.analysis.descent == 'fast_descent_and_ladder', (
         'Clearing an explicit choice must restore the new effective default'
     )
 
@@ -193,3 +193,29 @@ def test_retired_token_cannot_remain_an_active_python_selection(token, surface):
     assert owner.descent == 'fast_descent', (
         'A compatibility alias must normalize to the retained fast descent'
     )
+
+
+@pytest.mark.parametrize('surface', ['declaration', 'project', 'analysis'])
+def test_former_default_id_normalizes_and_saves_canonically_twice(tmp_path, surface):
+    engine = module()
+    if surface == 'declaration':
+        project = engine.Project.load(copied(tmp_path, 'multistart_prune'))
+    else:
+        project = engine.Project.load(copied(tmp_path, None))
+        owner = project if surface == 'project' else project.analysis
+        owner.descent = 'multistart_prune'
+    for index in range(2):
+        assert project.descent == project.analysis.descent == 'fast_descent_and_ladder', (
+            'Every former-default input must expose the canonical effective selector'
+        )
+        destination = tmp_path / f'canonical-{index}'
+        project.save_as(destination)
+        rows = re.findall(
+            r'^_minimizer\.descent\s+(\S+)\s*$',
+            (destination / 'analysis/analysis.edi').read_text(),
+            re.MULTILINE,
+        )
+        assert rows == ['fast_descent_and_ladder'], (
+            'Each save must write exactly one canonical default declaration'
+        )
+        project = engine.Project.load(destination)

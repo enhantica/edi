@@ -1,17 +1,21 @@
 """Freeze the pre-integration dev codec; never derive expected bytes from new code."""
 
+import argparse
 import hashlib
+import json
 import subprocess
 import sys
 from pathlib import Path
 
-if sys.argv[1:] not in ([], ['--active-domain']):
-    raise SystemExit('usage: freeze_stamp_codec.py [--active-domain]')
+if sys.argv[1:] not in ([], ['--active-domain'], ['--retire-abscor2']):
+    raise SystemExit('usage: freeze_stamp_codec.py [--active-domain | --retire-abscor2]')
 
 BASE = 'e782d2d84a984c8d9df86e6e6c4df361baf89f2c'
 ROOT = Path(__file__).resolve().parents[3]
 if '--active-domain' in sys.argv[1:]:
-    frozen = Path(__file__).with_name('prechange_stamp_codec.inc').read_bytes()
+    frozen = json.loads(Path(__file__).with_name('stamp_codec_retirement.json').read_text())[
+        'before'
+    ].encode()
     digest = '8b300f35b31f9f5b9bf54a5af9e4e470255f8983817ef4f463b91d46707d7800'
     if hashlib.sha256(frozen).hexdigest() != digest:
         raise RuntimeError('The independent frozen codec bytes changed')
@@ -23,6 +27,70 @@ if '--active-domain' in sys.argv[1:]:
         header + frozen.replace(retired, b'')
     )
     raise SystemExit(0)
+
+FROZEN_CODEC_SHA256 = '8b300f35b31f9f5b9bf54a5af9e4e470255f8983817ef4f463b91d46707d7800'
+
+
+def write_projection(original, reference):
+    if hashlib.sha256(original.encode()).hexdigest() != FROZEN_CODEC_SHA256:
+        message = 'Refusing to rebase the independently frozen stamp reference'
+        raise ValueError(message)
+    retired = '    put_optional_parameter(out, experiment.absorption.abscor2, scope);\n'
+    if original.count(retired) != 1:
+        message = 'The ADR-0123 projection requires exactly the original retired slot'
+        raise ValueError(message)
+    projected = (
+        '// Active-domain projection of the immutable frozen codec; see README.md.\n'
+        + original.replace(retired, '')
+    )
+    Path(__file__).with_name('prechange_stamp_codec.inc').write_bytes(original.encode())
+    Path(__file__).with_name('active_stamp_codec.inc').write_bytes(projected.encode())
+    Path(__file__).with_name('stamp_codec_retirement.json').write_text(
+        json.dumps(
+            {
+                'reference': reference,
+                'historical_source_label': BASE,
+                'decision': 'ADR-0123 removes ABSCOR2 from the model and its input stamp',
+                'before': original,
+                'before_sha256': hashlib.sha256(original.encode()).hexdigest(),
+                'after_sha256': hashlib.sha256(projected.encode()).hexdigest(),
+                'removed_statement': retired.strip(),
+                'unchanged': 'Every other codec byte, peak order and independent alias binding',
+                'command': (
+                    'python tests/fixtures/assistant_dev_integration/freeze_stamp_codec.py '
+                    '--retire-abscor2'
+                ),
+            },
+            indent=2,
+        )
+        + '\n'
+    )
+
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--retire-abscor2', action='store_true')
+args = parser.parse_args()
+if args.retire_abscor2:
+    # The inherited pre-port commit is absent in this integrated checkout. The
+    # exact committed frozen reference remains independent of today's codec.
+    reference = {
+        'commit': 'a0a116e1a7a11e6944978c09e249e5b6514976f4',
+        'path': 'tests/fixtures/assistant_dev_integration/prechange_stamp_codec.inc',
+    }
+    receipt = Path(__file__).with_name('stamp_codec_retirement.json')
+    recorded = json.loads(receipt.read_text()) if receipt.exists() else {}
+    frozen = recorded.get('before')
+    if frozen is None:
+        frozen = subprocess.check_output([
+            'git',
+            '-C',
+            str(ROOT),
+            'show',
+            reference['commit'] + ':' + reference['path'],
+        ]).decode()
+    write_projection(frozen, reference)
+    raise SystemExit(0)
+
 
 source = subprocess.check_output([
     'git',
@@ -102,4 +170,4 @@ header = (
     '// Export namespace relocated; duplicate templates removed; '
     'peak order frozen from same dev commit.\n'
 )
-Path(__file__).with_name('prechange_stamp_codec.inc').write_text(header + text)
+write_projection(header + text, {'commit': BASE, 'path': 'core/src/canonical_encoding.cpp'})

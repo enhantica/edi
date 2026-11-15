@@ -5454,6 +5454,11 @@
       "not_storage": "a fit report"
     },
     {
+      "member": "FitResultBase::fast_descent",
+      "type": "bool",
+      "not_storage": "a fit report"
+    },
+    {
       "member": "FitResultBase::n_points_loaded",
       "type": "std::size_t",
       "not_storage": "a fit report"

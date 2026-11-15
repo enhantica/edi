@@ -28,3 +28,5 @@ experiment settings of the joint PbSO4 case (`catalogue_joint.py`).
 **Re-pinned 2026-11-11.** The default descent now runs fast descent and the ladder for three iterations each from the
 start and continues with the one at the lower χ². Measured with `python -m edi fit --report machine --verbosity full`
 linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: iterations 12 → 9. No `reference` value moved.
+
+**Re-pinned 2026-11-14.** A refused step now raises crysta's damping to at least 1e-4 (crysta `763e1f16`). Same minimum (chi-square 8e-9 relative, values within 0.011 s.u.), so the FullProf references still hold. Measured with `python -m edi fit --report machine` linked against crysta `81b4f6db`, `OMP_NUM_THREADS=4`: iterations 9 → 11.

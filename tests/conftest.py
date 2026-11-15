@@ -250,6 +250,8 @@ def session_joint_fit(tmp_path_factory: pytest.TempPathFactory) -> SessionJointF
     library, preload_variable = _build_native_observer(workdir)
     log_path = workdir / 'fit-native.log'
     environment = os.environ.copy()
+    # One full observed fit proves I/O and write-back; threading has its own gates.
+    environment['OMP_NUM_THREADS'] = '1'
     environment['EDI_C08_NATIVE_OBSERVER_LOG'] = str(log_path)
     previous = environment.get(preload_variable)
     environment[preload_variable] = (

@@ -129,9 +129,9 @@ TestCase {
         const control = selectors().find(item => item.objectName === "minimizer.descent");
         verify(control !== undefined, "The gate must inspect the real Minimizer descent selector");
         const rows = Probe.rows(control.options);
-        compare(JSON.stringify(rows.map(row => row.token).sort()), JSON.stringify(["fast_descent", "ladder", "multistart_prune"]), "The real GUI offers exactly the three retained descents");
-        compare(JSON.stringify(rows.filter(row => row.isDefault).map(row => row.token)), JSON.stringify(["fast_descent"]), "Only fast descent carries the GUI default role");
-        compare(control.token, "fast_descent", "The omitted project declaration selects fast descent in the GUI");
+        compare(JSON.stringify(rows.map(row => row.token).sort()), JSON.stringify(["fast_descent", "fast_descent_and_ladder", "ladder"]), "The real GUI offers exactly the three retained descents");
+        compare(JSON.stringify(rows.filter(row => row.isDefault).map(row => row.token)), JSON.stringify(["fast_descent_and_ladder"]), "Only fast descent and ladder carries the GUI default role");
+        compare(control.token, "fast_descent_and_ladder", "The omitted project declaration selects fast descent and ladder in the GUI");
     }
     function test_caller_policy(data) {
         caller(data);

@@ -313,11 +313,12 @@ def restore(source, destination):
     migration = json.loads((ROOT / 'tests/fixtures/metadata_transition/sources.json').read_text())[
         'files'
     ]
+    updates = json.loads((ROOT / 'tests/fixtures/c06_t8/seed-updates.json').read_text())['files']
     for path in source.rglob('*'):
         if not path.is_file():
             continue
         name = path.relative_to(ROOT).as_posix()
-        if name not in pins and name not in migration:
+        if name not in pins and name not in migration and name not in updates:
             continue
         (destination / path.relative_to(source)).write_bytes(pre_catalogue_bytes(path))
     return destination

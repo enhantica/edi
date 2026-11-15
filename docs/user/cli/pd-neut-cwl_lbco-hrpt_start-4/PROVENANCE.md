@@ -47,3 +47,5 @@ minimum on three examples. Their variants and pins went with them; the values ab
 after two consecutive iterations), and the project no longer declares the Shift/s.u. rule alone. Measured with `python
 -m edi fit --report machine --verbosity full` linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: multistart-prune
 iterations 1 → 6. No `reference` value moved.
+
+**Renamed 2026-11-14.** The default descent is now called `fast_descent_and_ladder`, so the `multistart-prune` variant is now `fast-descent-and-ladder`. Same fit; no value moved.

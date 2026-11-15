@@ -1,4 +1,4 @@
-"""Generate Bragg boundary values from owner colours and ADR-0038's position rule."""
+"""Generate Bragg boundaries from approved design bytes and ADR-0084 positions."""
 
 import hashlib
 import json

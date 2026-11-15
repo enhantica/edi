@@ -53,3 +53,5 @@ under which every path stops at 36 iterations with reduced χ² 9.731270484: ite
 start and continues with the one at the lower χ². Measured with `python -m edi fit --report machine --verbosity full`
 linked against crysta `edab5435`, `OMP_NUM_THREADS=4`: iterations 36 → 33; asymmetry-off iterations 18 → 16;
 asymmetry-off reduced_chi_square 12.88691907 → 12.88658333. No `reference` value moved.
+
+**Re-pinned 2026-11-14 (asymmetry-off).** A refused step now raises crysta's damping to at least 1e-4 (crysta `763e1f16`), so this variant's descent follows a different path and stops on the chi-square change two parts in 1e5 higher on the same shallow slope: continuing a fit from either end point reaches 12.88650. Measured with `python -m edi fit --report machine` linked against crysta `81b4f6db`, `OMP_NUM_THREADS=4`: iterations 16 → 10; reduced_chi_square 12.88658333 → 12.88670416. No `reference` value moved.

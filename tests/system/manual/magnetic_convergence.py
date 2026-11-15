@@ -124,7 +124,7 @@ def check_moment_trend(rows):
     )
 
 
-def check_file_convergence(directory, rows):
+def check_file_convergence(directory, rows, selected_rules):
     assert not (directory / 'analysis/results-provenance.csv').exists(), (
         'Fresh scan conditions share their results.csv rows'
     )
@@ -132,12 +132,18 @@ def check_file_convergence(directory, rows):
     assert [row['file_path'] for row in provenance] == [row['file_path'] for row in rows], (
         'Every result has its own termination record in the same file order'
     )
+    selected = set(selected_rules.split())
+    assert selected and selected <= {'chi_square_change', 'shift_su'}, (
+        'Convergence must use the actual declared stop-rule set'
+    )
+    eligible = {'chi_converged': 'chi_square_change', 'step_small': 'shift_su'}
     stalled = [
         (Path(row['file_path']).name, row['fit_result.termination'])
         for row in provenance
-        if row['fit_result.termination'] != 'chi_converged'
+        if eligible.get(row['fit_result.termination']) not in selected
+        or row['fit_result.success'].lower() != 'true'
     ]
-    assert not stalled, f'Every file reaches chi_converged, observed {stalled}'
+    assert not stalled, f'Every file reaches a converged stop under ADR-0124, observed {stalled}'
 
 
 def fit_scan(cold_first):
@@ -171,7 +177,7 @@ def fit_scan(cold_first):
         assert all(row['fit_result.success'].lower() == 'true' for row in rows), (
             'Every frame contributes a converged objective'
         )
-        check_file_convergence(directory, rows)
+        check_file_convergence(directory, rows, project.analysis.stop_rules)
         check_moment_trend(rows)
         return {
             Path(row['file_path']).name: float(row['fit_result.reduced_chi_square'])
@@ -256,11 +262,11 @@ def check_stall(frame_only):
         assert all(row['fit_result.descent'] == 'ladder' for row in provenance[len(seeded) :]), (
             'Every newly fitted stalled-path file uses the explicit ladder'
         )
-        check_file_convergence(directory, rows)
+        check_file_convergence(directory, rows, project.analysis.stop_rules)
         assert result.success, 'The stalled-path replay reaches a successful terminal state'
         print(
             f'Stalled-path {"frame" if frame_only else "scan"}: '
-            f'{len(rows) - len(seeded)} new files, {len(rows)}/{expected} chi_converged; '
+            f'{len(rows) - len(seeded)} new files, {len(rows)}/{expected} converged; '
             f'last fit {result.iterations} iterations, chi2 {result.reduced_chi_square:.12g}'
         )
 
@@ -274,7 +280,7 @@ def nuclear_snapshot():
         assert result.success, 'The nuclear control fit converges'
         with (directory / 'analysis/results.csv').open(newline='') as stream:
             rows = list(csv.DictReader(stream))
-        check_file_convergence(directory, rows)
+        check_file_convergence(directory, rows, project.analysis.stop_rules)
         outputs = sorted(directory.rglob('*.edi')) + sorted(directory.rglob('*.csv'))
         assert (directory / 'analysis/results.csv') in outputs, 'The control produces fit bytes'
         return {

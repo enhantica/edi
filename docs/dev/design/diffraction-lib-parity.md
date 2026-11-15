@@ -153,7 +153,7 @@ aliases, minimizer selection, …), which arrives incrementally behind
 
 | diffraction-lib name | note |
 | --- | --- |
-| `absorption.mu_r` | upstream's CW cylinder absorption surface; edi's TOF `abscor1`/`abscor2` pair is a declared divergence — see table (a) |
+| `absorption.mu_r` | upstream's CW cylinder absorption surface; edi's TOF `abscor1` is a declared divergence — see table (a) |
 | `aliases.id` | the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) — the facade exists, this category is not yet ported |
 | `aliases.param` | the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) — the facade exists, this category is not yet ported |
 | `aliases.parameter_unique_name` | the `analysis.*` surface, arriving incrementally behind `project.analysis` (ruled C) — the facade exists, this category is not yet ported |

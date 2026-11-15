@@ -78,6 +78,8 @@ def test_absorption_family_acceptance_and_contents_match_crysta(
     cli = os.environ.get('E09_T58_CRYSTA_CLI', str(crysta_reference_prefix() / 'bin/crysta'))
     reference = subprocess.run(
         [cli, 'fit', str(tmp_path / 'crysta'), '--verbosity', 'off'],
+        # Keep the full one-step family witness on one worker; no thread behavior is asserted.
+        env={**os.environ, 'OMP_NUM_THREADS': '1'},
         capture_output=True,
         text=True,
         timeout=30,
@@ -136,12 +138,13 @@ def test_switching_a_loaded_cylinder_to_none_clears_calculation_state(
     for file in sorted((staged / 'experiments').glob('*.edi')):
         text = file.read_text(encoding='utf-8')
         assert text.count(original) == 1, (
-            'F4 each loaded witness bank must begin with one declared cylinder coefficient pair'
+            'F4 each loaded witness bank begins with the single declared live coefficient'
         )
         file.write_text(text.replace(original, nonzero), encoding='utf-8')
 
     project = edi.Project.load(staged)
-    # Start the exact roundtrip witness at the declared serialized precision.
+    # Establish the writer's reported precision before this family-state witness.
+    # The subsequent switch still requires exact pattern equality across save/load.
     canonical = tmp_path / 'canonical-cylinder'
     project.save_as(canonical)
     project = edi.Project.load(canonical)

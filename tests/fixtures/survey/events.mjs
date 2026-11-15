@@ -2,11 +2,16 @@ import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {join,resolve,extname} from 'node:path';
+import {fileURLToPath} from 'node:url';
 
-const [root,pagePath,eventPath,instant] = process.argv.slice(2);
 const toolchain = process.env.EDI_WASM_TOOLCHAIN || join(process.env.HOME,'.cache/edi-wasm');
 const {chromium} = await import(join(toolchain,'playwright/node_modules/playwright-core/index.mjs'));
 const chrome = process.env.EDI_CHROME || join(toolchain,'chrome-146.0.7680.153/chrome-headless-shell/linux-146.0.7680.153/chrome-headless-shell-linux64/chrome-headless-shell');
+export async function openBrowser() {
+  return chromium.launch({executablePath:chrome,headless:true,args:['--no-sandbox']});
+}
+
+export async function observeEvent(root,pagePath,eventPath,instant,browser) {
 const document = JSON.parse(await readFile(eventPath,'utf8'));
 const original = Array.isArray(document) ? document : document.events;
 assert(Array.isArray(original),'The single events file must declare an event list');
@@ -36,23 +41,34 @@ const server = createServer(async (request,response) => {
   } catch {response.writeHead(404);response.end();}
 });
 await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
-const browser = await chromium.launch({executablePath:chrome,headless:true,args:['--no-sandbox']});
+let page;
 try {
-  const page = await browser.newPage();
+  page = await browser.newPage();
   await page.clock.install({time:new Date(instant)});
+  await page.clock.setFixedTime(new Date(instant));
   await page.goto(`http://127.0.0.1:${server.address().port}/${pagePath}`);
   const config = await readFile(join(root,'../mkdocs.yml'),'utf8');
   const scripts = config.split('extra_javascript:')[1]?.split(/^\S/m)[0] || '';
-  for (const match of scripts.matchAll(/^\s+-\s+(assets\/[^\s]+\.js(?:\?[^\s]+)?)/gm))
+  const surveyScripts = [...scripts.matchAll(/^\s+-\s+(assets\/survey\/[^\s]+\.js(?:\?[^\s]+)?)/gm)];
+  assert.equal(surveyScripts.length, 1, 'The site must load the real survey script once');
+  for (const match of surveyScripts)
     await page.addScriptTag({url:`http://127.0.0.1:${server.address().port}/${match[1]}`});
   const event = page.getByRole('combobox',{name:/event/i});
   await event.waitFor({timeout:3000});
   const expected = instant.slice(0,10)>='2030-05-10' && instant.slice(0,10)<='2030-05-12';
   await page.waitForFunction(() => [...document.querySelectorAll('select option')].some(o=>o.textContent.includes('General')),{},{timeout:3000});
+  assert.equal(await page.evaluate(() => new Date().toISOString()), new Date(instant).toISOString(), 'The date witness stays at its supplied instant throughout browser setup');
   const options = await event.locator('option').allTextContents();
   assert(fetched,'The event combobox must read the single events file');
   assert(options.some(value=>value.trim()==='General'),'General must always be offered');
   assert.equal(options.some(value=>value.includes('Window witness')),expected,'The event must be offered exactly during its inclusive date window');
   assert(!options.some(value=>value.includes('Past witness')) || instant.startsWith('2030-05-09'),'Expired events must be absent');
   assert(!options.some(value=>value.includes('Future witness')) || instant.startsWith('2030-05-13'),'Future events must be absent');
-} finally {await browser.close();await new Promise(ok=>server.close(ok));}
+} finally {if (page) await page.context().close();await new Promise(ok=>server.close(ok));}
+}
+
+if (resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const browser = await openBrowser();
+  try {await observeEvent(...process.argv.slice(2),browser);}
+  finally {await browser.close();}
+}

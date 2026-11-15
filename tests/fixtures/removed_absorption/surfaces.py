@@ -8,6 +8,9 @@ from pathlib import Path
 FIELD = re.compile(r'abscor[\s_-]*2', re.IGNORECASE)
 # Unicode IGNORECASE also matches long s; retain that UTF-8 spelling in the byte prefilter.
 FULLPROF_INPUTS = {'.pcr', '.inp', '.new'}
+# Python's Unicode case-insensitive spelling also admits the long s (U+017F).
+# JSON is decoded before matching; raw non-JSON files may use this byte filter.
+_FIELD_PREFIXES = (b'abscor', b'ab\xc5\xbfcor')
 
 
 def surface_text(path):
@@ -55,7 +58,15 @@ def violations(root, scopes):
                 if jobs and (titled or (patterns and weights)):
                     continue
             checked.append(path)
-            if FIELD.search(surface_text(path)):
+            if path.suffix.lower() in {'.json', '.ipynb', *FULLPROF_INPUTS}:
+                text = surface_text(path)
+            else:
+                raw = path.read_bytes()
+                folded = raw.lower()
+                if not any(prefix in folded for prefix in _FIELD_PREFIXES):
+                    continue
+                text = raw.decode('utf-8', errors='replace')
+            if FIELD.search(text):
                 hits.append(path.relative_to(root).as_posix())
         assert checked, 'Each public surface must contain nonexempt content: ' + name
     return sorted(set(hits))

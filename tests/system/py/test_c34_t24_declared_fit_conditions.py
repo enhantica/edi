@@ -199,13 +199,21 @@ def test_absent_conditions_equal_explicit_engine_defaults(tmp_path):
         ('absent', {'descent': None, 'chi_square_tolerance': None, 'max_iterations': None}),
         (
             'explicit',
+            {
+                'descent': 'fast_descent_and_ladder',
+                'chi_square_tolerance': 1e-6,
+                'max_iterations': 50,
+            },
+        ),
+        (
+            'former',
             {'descent': 'multistart_prune', 'chi_square_tolerance': 1e-6, 'max_iterations': 50},
         ),
     ]:
         project = copy_case(tmp_path, 'cosio-d20-s1', name=name, **values)
         records.append(run_fit(project))
     for key in ('descent', 'iterations', 'reduced_chi_square', 'rwp'):
-        assert records[0][key] == records[1][key], (
+        assert records[0][key] == records[1][key] == records[2][key], (
             ' absent conditions must execute the engine defaults'
         )
 

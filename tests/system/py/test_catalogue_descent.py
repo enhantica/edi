@@ -13,7 +13,7 @@ PROJECT = ROOT / 'docs/user/cli/pd-xray-cwl_lam7o3-p021/project'
 def fitted():
     project = edi.Project.load(PROJECT)
     project.analysis.descent = None
-    assert project.analysis.descent == 'multistart_prune', (
+    assert project.analysis.descent == 'fast_descent_and_ladder', (
         'Clearing the selector must exercise the declared two-probe default'
     )
     outcome = project.analysis.fit()
