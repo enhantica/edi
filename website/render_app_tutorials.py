@@ -212,7 +212,7 @@ def listed(items: list[str]) -> str:
     return items[0] if len(items) == 1 else ', '.join(items[:-1]) + ' and ' + items[-1]
 
 
-def loop_groups(text: str, state: str, part: bool = False) -> list[str]:
+def loop_groups(text: str, state: str, *, part: bool = False) -> list[str]:
     """The categories of a stage's loops that set `.free` to `state`; others refuse.
 
     With `part` set, only the loops that pick some of a category's rows.
