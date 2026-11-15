@@ -407,7 +407,11 @@ def _assert_licence_delivery(jobs, active):
             for core_state in ('success', 'failure'):
                 context = {
                     'states': {'changes': 'success', 'core': core_state, 'crysta-sdk': 'success'},
-                    'outputs': {('inputs', 'run'): 'true'},
+                    'outputs': {
+                        ('inputs', 'run'): 'true',
+                        ('apphost', 'outcome'): 'success',
+                        ('site', 'outcome'): 'success',
+                    },
                 }
                 assert active(job, event, **context), (
                     'Delegated licence checks remain reachable on main, nightly '
@@ -430,7 +434,14 @@ def _assert_licence_steps(job, positions, name, event, context, active):
                     'if': condition.replace('matrix.platform', repr(platform)),
                 }
                 expected = name == 'app-wasm' or platform == 'Linux'
-                assert active(platform_step, event, **context) is expected, (
+                selected = {
+                    **context,
+                    'outputs': {
+                        **context['outputs'],
+                        ('surfaces', 'outcome'): 'success' if expected else 'skipped',
+                    },
+                }
+                assert active(platform_step, event, **selected) is expected, (
                     'Delegated licence staging and checks execute after preceding '
                     'failures on their declared build platform'
                 )

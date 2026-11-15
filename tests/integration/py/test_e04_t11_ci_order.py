@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.fixtures.e09_t75_workflow import active
+from tests.fixtures.e09_t75_workflow import active, require_reporting_step
 from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e09_t75_native_workflow import (
     public_build_boundary,
@@ -178,12 +178,19 @@ def assert_core_failure_reporting(core):
     split = 'pixi run core-tests' in '\n'.join(commands)
     system = any('pixi run system-tests-part' in c for c in commands)
     if split or system:
-        expected = (
-            'pixi run system-tests-part ${{ matrix.part }} 3'
-            if system
-            else 'pixi run cpp-test\npixi run core-tests'
-        )
-        required = [s for s in core['steps'] if s.get('run', '').strip() == expected]
+        expected = 'pixi run system-tests-part ${{ matrix.part }} 3' if system else None
+        required = [
+            s
+            for s in core['steps']
+            if (
+                s.get('run', '').strip() == expected
+                if system
+                else all(
+                    task in s.get('run', '')
+                    for task in ('pixi run cpp-test', 'pixi run core-tests')
+                )
+            )
+        ]
         assert len(required) == 1, (
             'both CI cadences execute the required core selection or actual system part'
         )
@@ -192,9 +199,13 @@ def assert_core_failure_reporting(core):
         assert len(required) == 1 and 'pixi run group-full' in required[0]['run'], (
             'the red-run control must reach both real event-selected core test groups'
         )
-    assert 'if' not in required[0] and not any(
-        step.get('continue-on-error') for step in core['steps']
-    ), 'core commands must propagate failures rather than convert or skip a red result'
+    if split:
+        require_reporting_step(required[0], 'build')
+    else:
+        assert 'if' not in required[0], 'The system tier retains its full event-selected scope'
+    assert not any(step.get('continue-on-error') for step in core['steps']), (
+        'core commands must propagate failures rather than convert or skip a red result'
+    )
 
 
 @pytest.mark.parametrize('event', ['pull_request', 'push', 'schedule', 'workflow_dispatch'])
@@ -304,7 +315,14 @@ def test_split_test_step_propagates_each_real_command_failure(tmp_path, failed_t
         timeout=2,
         check=False,
     )
-    assert result.returncode == 37, 'a red in each split test command must stay a red Actions step'
+    assert result.returncode == (37 if failed_task == 'system-tests-part' else 1), (
+        'Each real command failure keeps its Actions step red, including aggregated core exits'
+    )
+    if failed_task != 'system-tests-part':
+        assert (tmp_path / 'calls').read_text().splitlines() == [
+            'run cpp-test',
+            'run core-tests',
+        ], 'Both independent core tiers execute even when the first command fails'
     assert f'run {failed_task}' in (tmp_path / 'calls').read_text(), (
         'the red control must reach its actual workflow-selected test task'
     )

@@ -468,7 +468,8 @@ def sequence_sandbox(tmp_path, *, copy_fixtures=True):
             'if [ "$#" -ne 0 ]; then echo query >> "$E04_CALLS"; exit 97; fi\n'
             f'echo build:{task} >> "$E04_CALLS"\nexit "${{E04_BUILD_RC:-0}}"',
         )
-    script('bin/pixi', f'exec {shlex.quote(Path(sys.executable).as_posix())} task_spy.py "$@"')
+    # The dispatcher uses only stdlib; editable-package startup is outside this witness.
+    script('bin/pixi', f'exec {shlex.quote(Path(sys.executable).as_posix())} -S task_spy.py "$@"')
     script(
         'bin/python',
         'if [ "${1:-}" = -m ] && [ "${2:-}" = pytest ]; then\n'
@@ -610,8 +611,8 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event
     # Actions stringifies YAML env values (EDI_NATIVE_ARTIFACT is declared as 1).
     env.update({key: str(value) for key, value in job.get('env', {}).items()})
     nightly_condition = (
-        "${{ (!cancelled() && (github.event_name == 'schedule' || "
-        "github.event_name == 'workflow_dispatch')) && steps.inputs.outputs.run == 'true' }}"
+        "${{ !cancelled() && (github.event_name == 'schedule' || "
+        "github.event_name == 'workflow_dispatch') && steps.apphost.outcome == 'success' }}"
     )
     for step in job['steps']:
         cmd = step.get('run', '')
@@ -631,15 +632,20 @@ def test_desktop_ci_sequence_builds_once_before_checks(tmp_path, platform, event
             if not enabled:
                 continue
         elif re.search(r'\bgroup-app(?:\s|$)', cmd):
-            assert active(step, event, outputs={('inputs', 'run'): 'true'}) == (
-                event != 'pull_request'
-            ), 'The app group runs on push, nightly and full manual, and skips PRs'
+            assert active(
+                step,
+                event,
+                outputs={('inputs', 'run'): 'true', ('onboarding', 'outcome'): 'success'},
+            ) == (event != 'pull_request'), (
+                'The app group runs on push, nightly and full manual, and skips PRs'
+            )
             if event == 'pull_request':
                 continue
         else:
-            assert (
-                str(condition).removeprefix('${{').removesuffix('}}').strip()
-                == "steps.inputs.outputs.run == 'true'"
+            assert str(condition).removeprefix('${{').removesuffix('}}').strip() == (
+                "!cancelled() && steps.inputs.outputs.run == 'true'"
+                if re.search(r'\bapp-(?:lint|format-check)\b', cmd)
+                else "steps.inputs.outputs.run == 'true'"
             ), (
                 'Build and ordinary app checks remain unconditional within the desktop job; '
                 f'platform={platform}, command={cmd}, actual condition={condition!r}'

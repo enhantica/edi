@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.fixtures.e09_t75_workflow import active, reached
+from tests.fixtures.e09_t75_workflow import active, reached, require_reporting_step
 from tests.fixtures.native_process import environment_bash
 from tests.integration.py.ci_runner_contract import platform_job, self_hosted_runners
 
@@ -147,9 +147,19 @@ def public_build_boundary(data, name, platform=None):
     assert uses and index < uses[0], (
         'Each native build or restore finishes before the first public native use'
     )
-    assert steps[uses[0]].get('if') == expected_condition and not steps[uses[0]].get(
-        'continue-on-error'
-    ), 'The first public native use executes whenever its protected restore succeeds'
+    assert_first_public_use(name, build, steps[uses[0]], expected_condition)
+
+
+def assert_first_public_use(name, build, use, expected_condition):
+    if name in {'native', 'core'}:
+        assert build.get('id') == 'build', (
+            'A guarded native use must name its actual core-build producer'
+        )
+        require_reporting_step(use, 'build')
+    else:
+        assert use.get('if') == expected_condition and not use.get('continue-on-error'), (
+            'The first public native use executes whenever its protected restore succeeds'
+        )
 
 
 @pytest.mark.parametrize(
@@ -447,6 +457,7 @@ def test_native_producer_contract_refuses_missing_reordered_or_nonbuilding_work(
         'steps': [
             {
                 'run': 'pixi run core-build',
+                'id': 'build',
                 'env': {'EDI_CORE_TARGETS': 'edi_tests edi_integration_tests'},
             },
             {'run': 'pixi run python tools/ci/edi_native.py pack --out "$RUNNER_TEMP/edi-native"'},
@@ -502,6 +513,7 @@ def require_public_producer_escapes(defect):
         'steps': [
             {
                 'run': 'pixi run core-build',
+                'id': 'build',
                 'env': {'EDI_CORE_TARGETS': 'edi_tests edi_integration_tests'},
             },
             {'run': 'pixi run python tools/ci/edi_native.py pack --out native-objects'},
@@ -512,7 +524,10 @@ def require_public_producer_escapes(defect):
                     'path': 'build/edi-native-artifact',
                 },
             },
-            {'run': 'pixi run --skip-deps cpp-test'},
+            {
+                'run': 'pixi run --skip-deps cpp-test',
+                'if': "${{ !cancelled() && steps.build.outcome == 'success' }}",
+            },
         ],
     }
     public_build_boundary({'native': public_job}, 'native', 'linux-64')
@@ -536,7 +551,7 @@ def require_public_producer_escapes(defect):
     if defect == 'build-if':
         disabled_use = copy.deepcopy(public_job)
         disabled_use['steps'][3]['if'] = False
-        with pytest.raises(AssertionError, match='first public native use'):
+        with pytest.raises(AssertionError, match='independent check'):
             public_build_boundary({'native': disabled_use}, 'native', 'linux-64')
 
 
@@ -730,3 +745,23 @@ def test_browser_diagnostics_wait_for_native_completion_without_requiring_native
     assert not active(job, 'pull_request', states=states, core_only=True), (
         'Native diagnostic independence must retain the explicit core-only selection'
     )
+
+
+@pytest.mark.parametrize('escape', ['producer-id', 'unguarded', 'implicit-success', 'optional'])
+def test_native_reporting_requires_actual_build_and_retains_earlier_reds(escape):
+    data = jobs()
+    public_build_boundary(data, 'native', 'linux-64')
+    bad = copy.deepcopy(data)
+    steps = bad['native']['steps']
+    build = next(step for step in steps if step.get('id') == 'build')
+    use = next(step for step in steps if 'cpp-test' in step.get('run', ''))
+    if escape == 'producer-id':
+        build['id'] = 'unrelated'
+    elif escape == 'unguarded':
+        use['if'] = '!cancelled()'
+    elif escape == 'implicit-success':
+        use['if'] = "steps.build.outcome == 'success'"
+    else:
+        use['continue-on-error'] = True
+    with pytest.raises(AssertionError):
+        public_build_boundary(bad, 'native', 'linux-64')

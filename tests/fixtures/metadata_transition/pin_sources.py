@@ -9,6 +9,7 @@ from pathlib import Path
 
 import yaml
 
+from tests.fixtures.metadata_transition import joined_pin_sources
 from tests.fixtures.path_keys import repository_key
 
 HERE = Path(__file__).parent
@@ -33,6 +34,7 @@ def previous_bytes(name, data):
     row = rows().get(repository_key(name))
     if row is None:
         return data
+    data = joined_pin_sources.previous_bytes(repository_key(name), data)
     digest = hashlib.sha256(data).hexdigest()
     if digest == row['before_sha256']:
         return data

@@ -135,9 +135,12 @@ def test_required_linux_wasm_compile_routes_through_sdk_build_and_exclusion_chec
     assert [steps.index(s) for s in calls] == sorted(steps.index(s) for s in calls), (
         'Required linux wasm compile routes through sdk build and exclusion check.'
     )
-    assert not any(s.get('if') or s.get('continue-on-error') for s in [sdk, native, *calls]), (
+    assert not any(s.get('if') or s.get('continue-on-error') for s in [sdk, native, *calls[:2]]), (
         'Required linux wasm compile routes through sdk build and exclusion check.'
     )
+    from tests.fixtures.e09_t75_workflow import require_reporting_step  # noqa: PLC0415
+
+    require_reporting_step(calls[2], 'toolchain')
     build = (ROOT / 'tools/ci/wasm-build.sh').read_text()
     assert 'bash "$ROOT/tools/ci/wasm-assistant-check.sh" "$out/app"' in build, (
         'The common multithread builder retains the mandatory assistant-exclusion check'
@@ -307,9 +310,9 @@ def test_survey_browser_checks_run_after_the_shared_chrome_toolchain_is_installe
     assert len(surveys) == 1 and steps.index(toolchain) < steps.index(surveys[0]), (
         'Survey browser checks run after the shared chrome toolchain is installed.'
     )
-    assert not surveys[0].get('if') and not surveys[0].get('continue-on-error'), (
-        'The browser qualification job cannot silently skip or forgive the survey checks'
-    )
+    from tests.fixtures.e09_t75_workflow import require_reporting_step  # noqa: PLC0415
+
+    require_reporting_step(surveys[0], 'toolchain')
     core = workflow()['core']
     assert not any('test_survey_events.py' in step.get('run', '') for step in core['steps']), (
         'Survey browser checks run after the shared chrome toolchain is installed.'

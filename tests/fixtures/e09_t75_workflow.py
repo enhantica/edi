@@ -204,3 +204,28 @@ def expanded_jobs(document, root, stack=()):
             for key, value in expanded_jobs(child, root, (*stack, reference))
         )
     return result
+
+
+def require_reporting_step(node, producer=None, *, event='push', outputs=None):
+    """Independent checks report after unrelated reds, requiring only their real input."""
+    assert not node.get('continue-on-error'), 'A reporting check must retain its red conclusion'
+    for earlier in ('success', 'failure', 'skipped'):
+        for outcome in ('success', 'failure', 'skipped'):
+            selected = dict(outputs or {})
+            if producer is not None:
+                selected[producer, 'outcome'] = outcome
+            for cancelled in (False, True):
+                expected = not cancelled and (producer is None or outcome == 'success')
+                assert (
+                    active(
+                        node,
+                        event,
+                        outputs=selected,
+                        states={'earlier': earlier},
+                        cancelled=cancelled,
+                    )
+                    == expected
+                ), (
+                    'An independent check runs after unrelated failures, requires its actual '
+                    'producer, stops on cancellation and keeps failures gating'
+                )
