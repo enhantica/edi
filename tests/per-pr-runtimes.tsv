@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-15T22:43:17Z
+# measured_utc = 2026-11-15T22:49:45Z
 #
-# Recorded from: Scoped release-only presentation replay with GitHub Actions variables and undeclared sibling/SDK inputs denied; literal tag/day, plain notes and public label descriptions
+# Recorded from: Final scoped release-only presentation replay; recorded tag/day, plain notes, public short-label descriptions and current installer cards; undeclared sibling/SDK inputs denied
 # Collected tests: 245381; with a reported duration: 77720
 # Module-scoped fixture costs recorded: 205
 #

@@ -104,12 +104,14 @@ def test_interface_pills_and_legend_use_short_labels_and_the_public_label_descri
     })
     page = DOCS.render([[release(body=body)]])
     legend, _, notes = page.partition('\n## [')
+    # Emphasis is styling; the icon, short label and description carry the contract.
+    legend, notes, plain = (text.replace('**', '') for text in (legend, notes, page))
     for _, icon, short, description in LABELS:
-        pill = f'**:{icon}: {short}**{{ .ed-release-interface }}'
+        pill = f':{icon}: {short}{{ .ed-release-interface }}'
         assert '- ' + pill + ' ' + description in legend, (
             'Short interface pills use independently recorded GitHub label descriptions'
         )
-        assert notes.count(pill) == 1 and page.count(pill) == 2, (
+        assert notes.count(pill) == 1 and plain.count(pill) == 2, (
             'Every affected interface appears once beside the change and once in the legend'
         )
     assert '[interface]' not in page and '`desktop`' not in notes, (

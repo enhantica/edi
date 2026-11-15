@@ -103,7 +103,7 @@ def test_desktop_downloads_link_only_published_platform_assets():
     # The desktop page has an online and an offline button per platform, each with a size line.
     source = '<p>Desktop installers will appear here when published.</p>' + ''.join(
         f'<a data-download-platform="{platform}" data-download-kind="{kind}" aria-disabled="true">'
-        f'<small data-download-size="{platform}-{kind}">{kind.capitalize()}</small></a>'
+        f'<small data-download-size="{platform}-{kind}">{kind.capitalize()} installer</small></a>'
         for kind in ('online', 'offline')
         for platform in downloads.PLATFORMS
     )
@@ -142,7 +142,9 @@ def test_desktop_downloads_link_only_published_platform_assets():
     assert 'macos-arm64-online.zip' in page and 'linux-x86_64-online.zip' in page, (
         'Desktop downloads link only published platform assets.'
     )
-    assert 'Online · 23 MB' in page, 'Desktop downloads link only published platform assets.'
+    assert 'Online installer · 23 MB' in page, (
+        'Desktop downloads link only published platform assets.'
+    )
     assert (
         'data-download-platform="windows-x86_64" data-download-kind="online" aria-disabled="true"'
         in page
