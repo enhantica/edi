@@ -67,3 +67,8 @@ latp_304 move (0.13 s.u.) is already there with crysta `2b6b981`; the latp_288 m
 `2b6b981` it stays within the old bound) and comes from the damping changes since, the floor after a refused step and
 the restart after an undamped step, which take a different path to the same minimum. Measured with `python -m edi fit --report machine` linked against crysta
 `cfd36a55`, `OMP_NUM_THREADS=1`. No `reference` value moved.
+
+**Re-pinned 2026-11-15.** `cli_projects.py` now reads each file's result at full precision from a fresh, completed
+prefix of the scan, since `results.csv` keeps reporting precision, so the χ² pins hold the raw values: latp_312
+142228752.2, latp_304 143756683.8, latp_296 147598919.8, latp_288 142118683.2. Measured with
+`python tools/checks/cli_projects.py` linked against crysta `77f2364d`.
