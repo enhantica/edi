@@ -2684,51 +2684,69 @@ std::vector<bool> scan_points_changed(const Project& project, const ScanDatasets
     return changed;
 }
 
+namespace {
+// One point's results_experiments.csv rows, by experiment and column: what the point's fit wrote for each
+// experiment. Empty before the point is fitted, or for a scan of one experiment.
+std::map<std::string, std::map<std::string, double>> point_experiment_cells(const Project& project,
+                                                                          const std::string& point) {
+    std::map<std::string, std::map<std::string, double>> cells_of;
+    const std::filesystem::path path = scan_experiments_path(project);
+    if (!project.sequential_fit.joint() || !scan_state_present(path, "analysis/results_experiments.csv")) {
+        return cells_of;
+    }
+    std::ifstream input(path, std::ios::binary);
+    std::string line;
+    if (!std::getline(input, line)) {
+        return cells_of;
+    }
+    const std::vector<std::string> header = split_scan_row(line);
+    if (header.size() < 2 || header[0] != "point" || header[1] != "experiment") {
+        return cells_of;
+    }
+    while (std::getline(input, line) && !input.eof()) {
+        const std::vector<std::string> cells = split_scan_row(line);
+        if (cells.size() != header.size() || cells[0] != point) {
+            continue;
+        }
+        std::map<std::string, double>& row = cells_of[cells[1]];
+        for (std::size_t c = 2; c < cells.size(); ++c) {
+            double value = 0.0;
+            if (parse_scan_number(cells[c], value)) {
+                row[header[c]] = value;
+            }
+        }
+    }
+    return cells_of;
+}
+
+// A value the point's row holds for the experiment, else the model's.
+double point_value(const std::map<std::string, std::map<std::string, double>>& cells_of,
+                   const std::string& experiment, const std::string& column, double model_value) {
+    const auto row = cells_of.find(experiment);
+    if (row == cells_of.end()) {
+        return model_value;
+    }
+    const auto cell = row->second.find(column);
+    return cell != row->second.end() ? cell->second : model_value;
+}
+}  // namespace
+
 std::vector<double> series_point_scales(const Project& project, const std::string& point) {
+    const auto cells_of = point_experiment_cells(project, point);
     std::vector<double> scales;
-    std::map<std::string, std::size_t> place;
     for (const auto& experiment : project.experiments) {
+        // Each experiment's pattern is divided by its own first enabled link's scale, as fitted at the point.
         double scale = 1.0;
         for (const auto& link : experiment->linked_structures) {
             if (link->enabled.get()) {
-                scale = link->scale.value.get();
+                const std::string column =
+                    "linked_structure." + datablock_key(link->structure_id.value(), "structure") + ".scale";
+                scale = point_value(cells_of, datablock_key(experiment->name, "experiment"), column,
+                                    link->scale.value.get());
                 break;
             }
         }
-        place.emplace(datablock_key(experiment->name, "experiment"), scales.size());
-        scales.push_back(scale);
-    }
-    const std::filesystem::path path = scan_experiments_path(project);
-    if (project.sequential_fit.joint() && scan_state_present(path, "analysis/results_experiments.csv")) {
-        std::ifstream input(path, std::ios::binary);
-        std::string line;
-        if (std::getline(input, line)) {
-            const std::vector<std::string> header = split_scan_row(line);
-            // The point's experiment rows come together; the first scale column in the header is the first link's.
-            const auto scale_column = std::find_if(header.begin(), header.end(), [](const std::string& name) {
-                return name.starts_with("linked_structure.") && name.ends_with(".scale");
-            });
-            if (header.size() >= 2 && header[0] == "point" && header[1] == "experiment" &&
-                scale_column != header.end()) {
-                const auto at = static_cast<std::size_t>(scale_column - header.begin());
-                while (std::getline(input, line) && !input.eof()) {
-                    const std::vector<std::string> cells = split_scan_row(line);
-                    if (cells.size() != header.size() || cells[0] != point) {
-                        continue;
-                    }
-                    double value = 0.0;
-                    const auto found = place.find(cells[1]);
-                    if (found != place.end() && parse_scan_number(cells[at], value)) {
-                        scales[found->second] = value;
-                    }
-                }
-            }
-        }
-    }
-    for (double& scale : scales) {
-        if (!std::isfinite(scale) || scale <= 0.0) {
-            scale = 1.0;
-        }
+        scales.push_back(std::isfinite(scale) && scale > 0.0 ? scale : 1.0);
     }
     return scales;
 }
@@ -2737,6 +2755,8 @@ ScanColumns series_row_columns(const Project& project, const ScanDatasets& datas
                                const std::vector<std::size_t>& experiments, const std::vector<double>& scales,
                                double d_min, double d_max, std::size_t columns) {
     const std::vector<std::string>& files = datasets.point_files.at(point);
+    // The point's own fitted calibration, by experiment; the model's before the point is fitted.
+    const auto cells_of = point_experiment_cells(project, datasets.files.at(point));
     std::vector<ScanColumns> parts;
     parts.reserve(experiments.size());
     for (const std::size_t place : experiments) {
@@ -2753,14 +2773,20 @@ ScanColumns series_row_columns(const Project& project, const ScanDatasets& datas
                                               ? crysta::BeamModeEnum::ConstantWavelength
                                               : crysta::BeamModeEnum::TimeOfFlight;
         const double scale = place < scales.size() ? scales[place] : 1.0;
-        const double wavelength = instrument.setup_wavelength ? instrument.setup_wavelength->value.get()
-                                                               : std::numeric_limits<double>::quiet_NaN();
+        const std::string key = datablock_key(experiment.name, "experiment");
+        const double wavelength = point_value(cells_of, key, "instrument.wavelength",
+                                              instrument.setup_wavelength ? instrument.setup_wavelength->value.get()
+                                                                          : std::numeric_limits<double>::quiet_NaN());
+        const double offset =
+            point_value(cells_of, key, "instrument.d_to_tof_offset", instrument.calib_d_to_tof_offset.value.get());
+        const double linear =
+            point_value(cells_of, key, "instrument.d_to_tof_linear", instrument.calib_d_to_tof_linear.value.get());
+        const double quadratic = point_value(cells_of, key, "instrument.d_to_tof_quadratic",
+                                             instrument.calib_d_to_tof_quadratic.value.get());
         std::vector<double> d(x.size());
         std::vector<double> intensity(y.size());
         for (std::size_t i = 0; i < x.size() && i < y.size(); ++i) {
-            d[i] = crysta::measured_point_d_spacing(
-                kind, x[i], instrument.calib_d_to_tof_offset.value.get(), instrument.calib_d_to_tof_linear.value.get(),
-                instrument.calib_d_to_tof_quadratic.value.get(), wavelength);
+            d[i] = crysta::measured_point_d_spacing(kind, x[i], offset, linear, quadratic, wavelength);
             intensity[i] = y[i] / scale;
         }
         parts.push_back(scan_columns(d, intensity, d_min, d_max, columns));
@@ -4765,7 +4791,7 @@ SphericalMoment spherical_moment(const AtomSiteMoment& moment) {
                 if (row.site_id.value() == moment.id.value()) {
                     const crysta::SphericalMoment form =
                         crysta::spherical_moment(converted.project.get(), engine, row);
-                    return {quantity(form.modulus), quantity(form.polar), quantity(form.azimuthal)};
+                    return {quantity(form.modulus), quantity(form.polar), quantity(form.azimuth)};
                 }
             }
         }
