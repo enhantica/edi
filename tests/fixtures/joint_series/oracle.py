@@ -75,11 +75,17 @@ def link(text, project_dir, external, patterns):
         )
 
 
-def starts(actual, template, successful, *, chained):
+def starts(actual, template, successful, *, chained, chunks=None):
     assert len(actual) == len(successful), (
         'Every fitted joint point must publish its actual start vector'
     )
     wanted = [template, *successful[:-1]] if chained else [template] * len(successful)
+    if chained and chunks is not None:
+        wanted, offset, start = [], 0, template
+        for count in chunks:
+            wanted.extend([start] * count)
+            offset += count
+            start = successful[offset - 1]
     for observed, expected in zip(actual, wanted, strict=True):
         np.testing.assert_allclose(
             observed,

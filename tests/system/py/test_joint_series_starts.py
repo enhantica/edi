@@ -62,8 +62,11 @@ def start_probe(tmp_path_factory):
 
 @pytest.mark.parametrize('mode', ['sequential', 'independent'])
 @pytest.mark.parametrize('skip', [False, True])
-def test_actual_joint_fit(tmp_path, start_probe, mode, skip):
-    root = cases.generated_series(tmp_path / 'project', engine, mode=mode)
+@pytest.mark.parametrize('workers', [1, 3])
+def test_actual_joint_fit(tmp_path, start_probe, mode, skip, workers):
+    root = cases.generated_series(
+        tmp_path / 'project', engine, mode=mode, keys=('0007', '07', 'T300K', 'T500K', 'T900K')
+    )
     structure = root / 'structures/phase.edi'
     structure.write_text(structure.read_text().replace('4.1()', '4.09()'))
     for index, old, new in [(0, '2.0()', '1.8()'), (1, '5.0()', '4.7()')]:
@@ -72,7 +75,11 @@ def test_actual_joint_fit(tmp_path, start_probe, mode, skip):
     if skip:
         (root / 'scan/T300K_b1.xy').write_text('broken numeric input\n')
     run = subprocess.run(
-        [str(start_probe), str(root)], capture_output=True, text=True, check=False, timeout=20
+        [str(start_probe), str(root), str(workers)],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=20,
     )
     assert run.returncode == 0, (
         'A bad point must not prevent observing subsequent actual joint starts: ' + run.stderr
@@ -113,4 +120,10 @@ def test_actual_joint_fit(tmp_path, start_probe, mode, skip):
     assert not np.allclose(fitted[0], [4.09, 1.8, 4.7]), (
         'The first successful fit must differ from the template to expose a skip reset'
     )
-    oracle.starts(actual, [4.09, 1.8, 4.7], fitted, chained=mode == 'sequential')
+    oracle.starts(
+        actual,
+        [4.09, 1.8, 4.7],
+        fitted,
+        chained=mode == 'sequential',
+        chunks=((2, 2) if skip else (3, 2)) if workers == 3 else None,
+    )

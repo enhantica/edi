@@ -125,3 +125,19 @@ def test_tied_saved_fraction_error_is_numerical():
             oracle.category(
                 text.replace('0.33(4)', token), '_linked_structure.weight_fraction', 0.33, 0.04
             )
+
+
+def test_worker_chunks_reject_both_restart_and_accidental_full_chain():
+    template = [4.09, 1.8, 4.7]
+    fitted = [[4.1, 2, 5], [4.16, 2.6, 4.2], [4.08, 1.7, 6], [4.1, 2, 5], [4.16, 2.6, 4.2]]
+    valid = [template] * 3 + [fitted[2]] * 2
+    oracle.starts(valid, template, fitted, chained=True, chunks=(3, 2))
+    for bad in ([template] * 5, [template, *fitted[:-1]]):
+        with pytest.raises(AssertionError):
+            oracle.starts(bad, template, fitted, chained=True, chunks=(3, 2))
+    after_skip = [fitted[0], fitted[1], fitted[3], fitted[4]]
+    oracle.starts(
+        [template] * 2 + [fitted[1]] * 2, template, after_skip, chained=True, chunks=(2, 2)
+    )
+    with pytest.raises(AssertionError):
+        oracle.starts([template] * 4, template, after_skip, chained=True, chunks=(2, 2))
