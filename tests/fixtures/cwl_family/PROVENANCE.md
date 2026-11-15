@@ -62,3 +62,14 @@ arrays against the retained Darwin capture. Its SDK manifest comes from the
 actual `osx-arm64` producer artifact `11719509241`. The log and job-context
 digests are recorded. No Linux output supplies a Darwin pin. Same-platform
 comparisons stay exact; the cross-platform rounding comparison remains separate.
+
+## Native Windows historical capture
+
+The Windows reference is still owed; Linux or Darwin bytes cannot be relabelled
+as an original Windows capture. `Windows-capture.md` gives the exact original
+product/engine commits, locked native build command, source/artifact guards and
+output files. `capture_windows.ps1` and `capture_windows.py` perform that capture
+without changing numerical sources. A real Windows historical archive digest
+supplies the original build identity. The existing same-build exact comparison,
+cross-build/platform ADR-0057 bound, complete sample population, physical inputs
+and separately sealed continuous-integral FCJ model reference remain unchanged.

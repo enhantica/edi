@@ -2,10 +2,10 @@
 
 import csv
 import os
-import shutil
 import stat
 import subprocess
 import tempfile
+import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -57,7 +57,11 @@ def unwritable_directory(directory):
                         os.close(descriptor)
                         Path(path).unlink()
                     else:
-                        shutil.rmtree(tempfile.mkdtemp(dir=directory))
+                        # CMake creates an ordinary directory with inherited security.
+                        # tempfile.mkdtemp uses Python's Windows-only 0700 protected ACL.
+                        path = directory / ('permission-probe-' + uuid.uuid4().hex)
+                        path.mkdir()
+                        path.rmdir()
                 except PermissionError:
                     continue
                 raise RuntimeError(

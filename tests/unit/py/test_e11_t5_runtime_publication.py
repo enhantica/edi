@@ -450,10 +450,7 @@ def _assert_no_verified_source_copy(run, fixture):
     )
 
 
-@pytest.mark.parametrize(
-    ('system', 'dedicated'), [('Linux', False), ('Darwin', False), ('Linux', True)]
-)
-def test_real_runtime_configure_reuses_verified_publication_without_stage_copy(
+def check_real_runtime_configure_reuses_verified_publication_without_stage_copy(
     tmp_path, system, dedicated
 ):
     fixture = RuntimeFixture(tmp_path, system=system, dedicated=dedicated)

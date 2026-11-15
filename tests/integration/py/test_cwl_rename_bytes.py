@@ -39,7 +39,8 @@ def test_tch_rename_preserves_pre_change_regression_bytes(tmp_path, name, token)
         (crysta_reference_prefix() / 'share/crysta-sdk/manifest.json').read_text()
     )
     assert (
-        manifest['platform'] == {'Linux': 'linux-64', 'Darwin': 'osx-arm64'}[platform.system()]
+        manifest['platform']
+        == {'Linux': 'linux-64', 'Darwin': 'osx-arm64', 'Windows': 'win-64'}[platform.system()]
     ), 'The calculation and sealed native pin must name their actual SDK platform'
     native_build = sdk_build_identity(manifest)
     compare_pin(actual, record, name, platform.system(), native_build=native_build)
@@ -261,3 +262,30 @@ def test_fcj_model_retake_cannot_escape_its_sealed_values_or_cause(field):
     actual = base64.b64decode(record['fcj_reference']['pin'], validate=True)
     with pytest.raises(AssertionError, match='sealed values and complete provenance'):
         compare_pin(actual, altered, 'fcj', platform.system())
+
+
+@pytest.mark.parametrize('damage', ['unchanged', 'source', 'platform', 'archive'])
+def test_windows_reference_selector_requires_its_original_compiled_identity(tmp_path, damage):
+    # Synthetic metadata selector control, never a Windows engine expectation.
+    record = json.loads((ROOT / 'tests/fixtures/cwl_family/tch-regression-Linux.json').read_text())
+    record['platform'] = 'Windows'
+    record['sdk_manifest'] = {
+        'source_sha': record['engine_source'],
+        'platform': 'win-64',
+        'tested': {'sha256': {'lib/crysta_core.lib': 'c' * 64}},
+    }
+    if damage == 'source':
+        record['sdk_manifest']['source_sha'] = 'a' * 40
+    elif damage == 'platform':
+        record['sdk_manifest']['platform'] = 'linux-64'
+    elif damage == 'archive':
+        record['sdk_manifest']['tested']['sha256']['lib/crysta_core.lib'] = ''
+    (tmp_path / 'tch-regression-Windows.json').write_text(json.dumps(record))
+    if damage == 'unchanged':
+        selected = read_reference(tmp_path, 'Windows')
+        assert selected['historical_build'] == record['engine_source'] + ':' + 'c' * 64, (
+            'Windows selects its original source and actual native core archive identity'
+        )
+    else:
+        with pytest.raises(AssertionError):
+            read_reference(tmp_path, 'Windows')

@@ -528,6 +528,7 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
                 'pytest',
                 'tests/unit',
                 'tests/integration',
+                'tests/system/py/test_runtime_publication_reuse.py',
                 '--ignore=tests/integration/app',
                 '-q',
                 *ignores,

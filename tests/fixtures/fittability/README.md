@@ -49,3 +49,16 @@ whole-file hashes stay unchanged. New stop-diagnostic scalars first have to
 match the real result at serialization precision, uniquely and finitely; only
 those later fields and the now-explicit historical solver selectors leave the
 in-memory historical comparison. The actual saved record is never rewritten.
+
+The calculated reflection-intensity column is also a derived fitted output. Its
+cross-build/platform comparison uses the same existing ADR-0057 numeric bound as
+the other fitted outputs; row identities, Miller indices, measured data, inclusion
+status, column order and every remaining file byte stay exact. The historical
+spelling is restored only after every derived value passes that check, and the
+original complete-file hash must still be recovered. The saved files are never
+rewritten by this projection.
+
+`fitted-experiment-main.json` recovers the two original experiment documents by
+their existing `saved-main.json` SHA-256 anchors. It introduces no new numeric pin
+or changed endpoint. `freeze_fitted_experiment.py` refuses any candidate whose
+entire bytes do not match those original hashes, including an extra newline.

@@ -17,6 +17,10 @@ from tests.fixtures.cif_import_baseline.canonical_positions import (
     SILICON,
     restore_representative,
 )
+from tests.fixtures.fittability.calculated_bytes import (
+    reference_experiment,
+    restore_calculated_reflections,
+)
 from tests.fixtures.fittability.saved_reference import (
     fingerprints,
     fit_snapshot,
@@ -191,6 +195,7 @@ def test_main_fitted_descriptor_bytes_regression_pin(tmp_path, case, rule):
         experiment = _pin_fitted_line(
             experiment, prefix.encode(), pinned('experiments/experiment.edi', prefix)
         )
+    experiment = restore_calculated_reflections(experiment, reference_experiment(rule))
     actual['experiments/experiment.edi'] = prior_digest(
         experiment,
         REFERENCE['fit_projects'][case][rule]['experiments/experiment.edi'],
