@@ -751,6 +751,7 @@ void ExperimentViewModel::capturePattern(bool categories) {
     if (!d_charts_.isEmpty()) {
         d_source_ = edi::capture_pattern(project_, place(), edi::PatternAxis::DSpacing);
         d_source_->experiment_place = colourPlace();
+        ++d_revision_;
     }
     ++pattern_generation_;
     emit patternSourceChanged();
@@ -765,6 +766,7 @@ void ExperimentViewModel::showPattern(edi::PatternSource source, std::optional<e
     if (d_source) {
         d_source_ = std::move(d_source);
         d_source_->experiment_place = colourPlace();
+        ++d_revision_;
     }
     ++pattern_generation_;
     emit patternSourceChanged();
@@ -799,7 +801,8 @@ void ExperimentViewModel::setColourPlace(std::optional<std::size_t> place, std::
 
 void ExperimentViewModel::setChartAxis(const QObject* chart, edi::PatternAxis axis) {
     const bool wanted = !d_charts_.isEmpty();
-    if (axis == edi::PatternAxis::DSpacing) {
+    // Every axis but the experiment's own is drawn from the d capture.
+    if (axis != edi::PatternAxis::Native) {
         d_charts_.insert(chart);
     } else {
         d_charts_.remove(chart);
@@ -809,6 +812,7 @@ void ExperimentViewModel::setChartAxis(const QObject* chart, edi::PatternAxis ax
     } else if (!wanted) {
         d_source_ = edi::capture_pattern(project_, place(), edi::PatternAxis::DSpacing);
         d_source_->experiment_place = colourPlace();
+        ++d_revision_;
         emit patternSourceChanged();
     }
 }

@@ -41,7 +41,7 @@ struct ReportOptions {
     /// In a fit of several experiments, the one whose parameters the correlation chart shows, as the Correlations tab
     /// shows the experiment it is on: the app's shown experiment, else the first.
     std::size_t correlation_experiment = 0;
-    bool d_spacing = false;                   ///< charts on d instead of 2θ or TOF
+    PatternAxis x_axis = PatternAxis::Native;  ///< the charts' x axis: 2θ or TOF, d, Q or sinθ/λ
     bool residual = true;                     ///< the residual pane
     bool bragg_ticks = true;                  ///< the Bragg tick rows
     std::string generated;                    ///< the report's time; empty: now, in UTC
@@ -61,7 +61,7 @@ struct ReportOptions {
 struct ReportOverrides {
     std::optional<bool> html_offline;
     std::optional<double> correlation_threshold;
-    std::optional<std::string> x_axis;  ///< "native" or "d_spacing"
+    std::optional<std::string> x_axis;  ///< "native", "d_spacing", "q" or "sin_theta_over_lambda"
     std::optional<std::vector<std::string>> excluded;
     std::optional<std::string> colour_scheme;  ///< a token of colour_scheme_from_name; absent, the default scheme
     /// In a fit of several experiments, the name of the one whose parameters the correlation chart shows; absent, the

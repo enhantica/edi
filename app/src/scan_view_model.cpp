@@ -483,13 +483,30 @@ void ScanViewModel::setConversion(const edi::Project* project) {
 }
 
 void ScanViewModel::setDSpacing(bool on) {
-    if (on != d_spacing_) {
-        d_spacing_ = on;
-        emit dSpacingChanged();
-        placeAxis();
-        ++revision_;
-        emit revisionChanged();
+    if (on != dSpacing()) {
+        setXAxis(QLatin1String(on ? "d_spacing" : "native"));
     }
+}
+
+QString ScanViewModel::xAxis() const {
+    const std::string_view token = edi::pattern_axis_token(axis_);
+    return QString::fromLatin1(token.data(), static_cast<qsizetype>(token.size()));
+}
+
+void ScanViewModel::setXAxis(const QString& token) {
+    const edi::PatternAxis axis = edi::pattern_axis_from_token(token.toStdString());
+    if (axis == axis_) {
+        return;
+    }
+    const bool was_d = dSpacing();
+    axis_ = axis;
+    emit xAxisChanged();
+    if (dSpacing() != was_d) {
+        emit dSpacingChanged();
+    }
+    placeAxis();
+    ++revision_;
+    emit revisionChanged();
 }
 
 void ScanViewModel::setIncludedOnly(bool on) {
@@ -549,6 +566,20 @@ void ScanViewModel::placePattern(Pattern& pattern) {
         pattern.excluded_shown = pattern.excluded;
         return;
     }
+    // Q and sinθ/λ: the values placed on d, converted.
+    const auto onAxis = [this, &pattern] {
+        if (axis_ != edi::PatternAxis::Q && axis_ != edi::PatternAxis::SinThetaOverLambda) {
+            return;
+        }
+        for (double& x : pattern.shown) {
+            x = edi::d_on_axis(axis_, x);
+        }
+        for (auto& [a, b] : pattern.excluded_shown) {
+            const double ca = edi::d_on_axis(axis_, a), cb = edi::d_on_axis(axis_, b);
+            a = std::min(ca, cb);
+            b = std::max(ca, cb);
+        }
+    };
     if (joint_) {
         pattern.shown = pattern.d;
         std::vector<double> xs, ds;
@@ -564,6 +595,7 @@ void ScanViewModel::placePattern(Pattern& pattern) {
                 pattern.excluded_shown.emplace_back(std::min(da, db), std::max(da, db));
             }
         }
+        onAxis();
         return;
     }
     pattern.shown.resize(pattern.x.size());
@@ -576,6 +608,7 @@ void ScanViewModel::placePattern(Pattern& pattern) {
             pattern.excluded_shown.emplace_back(std::min(da, db), std::max(da, db));
         }
     }
+    onAxis();
 }
 
 void ScanViewModel::placeRange() {
@@ -617,7 +650,7 @@ void ScanViewModel::placeAxis() {
         publish(d_available_, template_x_.size() >= 2, &ScanViewModel::dAvailableChanged);
     }
     // d when asked for, and always for experiments that share no native axis, once it is given.
-    const bool d = (d_spacing_ || !native_shared_) && d_available_;
+    const bool d = (axis_ != edi::PatternAxis::Native || !native_shared_) && d_available_;
     publish(d_shown_, d, &ScanViewModel::dShownChanged);
     for (Pattern& pattern : patterns_) {
         placePattern(pattern);
@@ -628,8 +661,11 @@ void ScanViewModel::placeAxis() {
     const char* const axis = d || !native_shared_                                  ? "data.d_spacing"
                              : mode_ == edi::BeamModeEnum::CONSTANT_WAVELENGTH ? "data.two_theta"
                                                                                : "data.time_of_flight";
-    publish(x_title_, QString::fromStdString(edi::label(axis) + " (" + edi::units_label(axis) + ")"),
-            &ScanViewModel::xTitleChanged);
+    std::string title = edi::label(axis) + " (" + edi::units_label(axis) + ")";
+    if (d && (axis_ == edi::PatternAxis::Q || axis_ == edi::PatternAxis::SinThetaOverLambda)) {
+        title = edi::pattern_axis_title(axis_);
+    }
+    publish(x_title_, QString::fromStdString(title), &ScanViewModel::xTitleChanged);
 }
 
 bool ScanViewModel::excludedAt(const Pattern& pattern, double x) {

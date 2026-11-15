@@ -143,8 +143,8 @@ Item {
     // follow the Evolution tab's x, the scan value or the file index.
     Binding {
         target: chart.scan
-        property: "dSpacing"
-        value: chart.project !== null && chart.project.patternDSpacing
+        property: "xAxis"
+        value: chart.project !== null ? chart.project.patternXAxis : "native"
         when: chart.scan !== null
     }
     // Only the included range, the pattern charts' one setting.
@@ -660,16 +660,19 @@ Item {
         ToolbarComboBox {
             objectName: "scanView." + chart.mode + ".toolbar.xaxis"
             toolbarGroup: "axes"
-            // As the pattern chart's: d once a calculation has given it, and the closed box names the list's entry.
+            // As the pattern chart's: d, Q and sinθ/λ once a calculation has given d, and the closed box names the
+            // list's entry.
             enabled: chart.scan !== null && chart.scan.dAvailable
-            toolTip: chart.scan !== null && chart.scan.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
-            // A joint fit whose experiments share no native axis has d only.
+            toolTip: chart.scan !== null && chart.scan.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing, Q and sinθ/λ can be chosen after a calculation")
+            // A joint fit whose experiments share no native axis has no native entry.
             readonly property bool nativeOffered: chart.scan === null || chart.scan.nativeShared
-            readonly property string dEntry: qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing"))
-            readonly property var entries: nativeOffered ? [Session.label(chart.scan !== null && chart.scan.timeOfFlight ? "data.time_of_flight" : "data.two_theta"), dEntry] : [dEntry]
+            readonly property var fromD: [qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing")), qsTr("x: Q"), qsTr("x: %1").arg(Session.label("refln.sin_theta_over_lambda"))]
+            readonly property var tokens: nativeOffered ? ["native", "d_spacing", "q", "sin_theta_over_lambda"] : ["d_spacing", "q", "sin_theta_over_lambda"]
+            readonly property var entries: nativeOffered ? [Session.label(chart.scan !== null && chart.scan.timeOfFlight ? "data.time_of_flight" : "data.two_theta")].concat(fromD) : fromD
             model: entries
             closedTexts: ApplicationInfo.scanClosedTexts(0)
-            shownIndex: nativeOffered && chart.scan !== null && chart.scan.dShown ? 1 : 0
+            // Without the native axis, d stands for it until another is chosen.
+            shownIndex: chart.scan === null || !chart.scan.dShown ? 0 : Math.max(0, tokens.indexOf(chart.scan.xAxis === "native" ? "d_spacing" : chart.scan.xAxis))
             onActivated: index => ApplicationInfo.scanChoice(index, 0)
         }
         ToolbarComboBox {

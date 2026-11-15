@@ -9206,8 +9206,9 @@ void ApplicationInfo::patternChoice(const QJSValue& index, int kind) const {
             assistantMemberWrite(f, preferences, "patternYScale", textIndex(f, tokens, index));
         } else projectWrite(f, "controller", "yScale", index);
     } else if (kind == 1) {
-        if (panelUsageTruth(assistantContextField(f, "chart", "axisProject"))) assistantMemberWrite(f, assistantContextField(f, "chart", "axisProject"), "patternDSpacing", QJSValue(index.strictlyEquals(QJSValue(1))));
-        else projectWrite(f, "controller", "dSpacing", QJSValue(index.strictlyEquals(QJSValue(1))));
+        const auto token = textIndex(f, panelUsageContextRead(f, "tokens"), index);
+        if (panelUsageTruth(assistantContextField(f, "chart", "axisProject"))) assistantMemberWrite(f, assistantContextField(f, "chart", "axisProject"), "patternXAxis", token);
+        else projectWrite(f, "controller", "xAxis", token);
     } else {
         const auto preferences = panelUsageContextRead(f, "Preferences");
         assistantMemberWrite(f, preferences, "patternMeasuredStyle", textIndex(f, panelUsageContextRead(f, "tokens"), index));
@@ -9986,7 +9987,7 @@ QJSValue ApplicationInfo::scanClosedTexts(int kind) const {
 void ApplicationInfo::scanChoice(const QJSValue& index, int kind) const {
     const auto f = panelUsageEngine(this);
     if (kind == 0) {
-        if (panelUsageTruth(assistantContextField(f, "chart", "project")) && panelUsageTruth(panelUsageContextRead(f, "nativeOffered"))) assistantMemberWrite(f, assistantContextField(f, "chart", "project"), "patternDSpacing", QJSValue(index.strictlyEquals(QJSValue(1))));
+        if (panelUsageTruth(assistantContextField(f, "chart", "project"))) assistantMemberWrite(f, assistantContextField(f, "chart", "project"), "patternXAxis", textIndex(f, panelUsageContextRead(f, "tokens"), index));
     } else if (kind == 1) {
         if (panelUsageTruth(assistantContextField(f, "chart", "project")) && panelUsageTruth(panelUsageRead(f, assistantContextField(f, "chart", "project"), "evolution"))) {
             const auto evolution = panelUsageRead(f, assistantContextField(f, "chart", "project"), "evolution"); assistantMemberWrite(f, evolution, "xMode", panelUsageTruth(panelUsageContextRead(f, "hasValue")) ? index : QJSValue(1));

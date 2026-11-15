@@ -2,6 +2,8 @@
 #include "edi/presentation.hpp"
 
 #include <algorithm>
+#include <array>
+#include <numbers>
 #include <cmath>
 #include <functional>
 #include <iomanip>
@@ -458,7 +460,92 @@ void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnD
     }
 }
 
+// The source on the Q or sinθ/λ axis, from the source on the d axis: every x value, band end and tick converted,
+// and the columns reversed, since both fall as d grows.
+void to_reciprocal_axis(PatternSource& source, PatternAxis axis) {
+    const auto converted = [axis](const PatternSource::Column& values) -> PatternSource::Column {
+        if (!values) {
+            return values;
+        }
+        std::vector<double> out(values->size());
+        std::transform(values->begin(), values->end(), out.begin(), [axis](double d) { return d_on_axis(axis, d); });
+        return std::make_shared<const std::vector<double>>(std::move(out));
+    };
+    for (ExcludedBand& band : source.excluded) {
+        const double a = d_on_axis(axis, band.x_min), b = d_on_axis(axis, band.x_max);
+        band = {std::min(a, b), std::max(a, b)};
+    }
+    source.x = converted(source.x);
+    for (PatternSource::Column* column : {&source.x, &source.meas, &source.su, &source.calc, &source.bkg,
+                                          &source.resid}) {
+        *column = reversed(*column);
+    }
+    for (PatternSource::Component& component : source.components) {
+        component.net = reversed(component.net);
+    }
+    for (PatternSource::Phase& phase : source.phases) {
+        phase.position = converted(phase.position);
+        phase.readout = converted(phase.readout);
+    }
+    source.x_title = pattern_axis_title(axis);
+    // The dictionary has no Q item: Q's readouts take the plain number format.
+    source.x_item = axis == PatternAxis::Q ? std::string() : std::string("refln.sin_theta_over_lambda");
+}
+
 }  // namespace
+
+double d_on_axis(PatternAxis axis, double d) {
+    if (!(d > 0.0)) {
+        return kNaN;
+    }
+    switch (axis) {
+        case PatternAxis::DSpacing:
+            return d;
+        case PatternAxis::Q:
+            return 2.0 * std::numbers::pi / d;
+        case PatternAxis::SinThetaOverLambda:
+            return 0.5 / d;
+        case PatternAxis::Native:
+            break;
+    }
+    return kNaN;
+}
+
+namespace {
+constexpr std::array<std::string_view, 4> kAxisTokens{"native", "d_spacing", "q", "sin_theta_over_lambda"};
+}  // namespace
+
+PatternAxis pattern_axis_from_token(std::string_view token) {
+    for (std::size_t i = 0; i < kAxisTokens.size(); ++i) {
+        if (token == kAxisTokens[i]) {
+            return static_cast<PatternAxis>(i);
+        }
+    }
+    return PatternAxis::Native;
+}
+
+std::string_view pattern_axis_token(PatternAxis axis) { return kAxisTokens[static_cast<std::size_t>(axis)]; }
+
+std::string pattern_axis_title(PatternAxis axis) {
+    switch (axis) {
+        case PatternAxis::DSpacing:
+            return axis_title("data.d_spacing");
+        case PatternAxis::Q:
+            return "Q (1/Å)";  // the dictionary has no Q item
+        case PatternAxis::SinThetaOverLambda:
+            return axis_title("refln.sin_theta_over_lambda");
+        case PatternAxis::Native:
+            break;
+    }
+    return {};
+}
+
+PatternSource pattern_on_axis(PatternSource on_d, PatternAxis axis) {
+    if ((axis == PatternAxis::Q || axis == PatternAxis::SinThetaOverLambda) && on_d.d_available) {
+        to_reciprocal_axis(on_d, axis);
+    }
+    return on_d;
+}
 
 PatternSource capture_pattern(const Project& project, std::size_t experiment_index, PatternAxis axis) {
     PatternSource source;
@@ -515,8 +602,9 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
     source.components = structure_components(data.component_order.values(), data.component_intensities_net.values(),
                                               data.axis().size(), names, data.component_intensities_magnetic.values(),
                                               data.component_intensities_nuclear.values());
-    if (axis == PatternAxis::DSpacing) {
+    if (axis != PatternAxis::Native) {
         to_d_axis(source, data, refln);
+        return pattern_on_axis(std::move(source), axis);
     }
     return source;
 }

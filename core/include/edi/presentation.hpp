@@ -10,6 +10,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "edi/palette.hpp"
@@ -71,15 +72,29 @@ struct PatternSource {
     bool d_available = false;          // a current d column, so the pattern can be shown on the d axis
 };
 
-// The x axis a pattern is captured on: the experiment's own (2θ or TOF), or d-spacing.
-enum class PatternAxis : std::uint8_t { Native, DSpacing };
+// The x axis a pattern is captured on: the experiment's own (2θ or TOF), d-spacing, Q or sinθ/λ.
+enum class PatternAxis : std::uint8_t { Native, DSpacing, Q, SinThetaOverLambda };
+
+// A d-spacing on another axis, the one conversion every pattern chart and export uses: d itself, Q = 2π/d or
+// sinθ/λ = 1/(2d), all in Å or 1/Å. The native axis and a d of 0 or less give NaN.
+double d_on_axis(PatternAxis axis, double d);
+// An axis by its token, as the app and the report name it: "native", "d_spacing", "q" or "sin_theta_over_lambda";
+// an unknown token is the native axis.
+PatternAxis pattern_axis_from_token(std::string_view token);
+std::string_view pattern_axis_token(PatternAxis axis);
+// The title of the d, Q or sinθ/λ axis, with its units: `d (Å)`, `Q (1/Å)`, `sin θ/λ (1/Å)`; empty for the native one.
+std::string pattern_axis_title(PatternAxis axis);
+// A pattern captured on the d axis, shown on `axis`: unchanged on the d axis, converted by d_on_axis onto the Q or
+// sinθ/λ axis (capture_pattern's contract); a source without a current d column is returned as it is.
+PatternSource pattern_on_axis(PatternSource on_d, PatternAxis axis);
 
 // Owner thread. The computed columns and the reflections are taken only when the experiment's
 // computed categories are current; otherwise they are absent and `current` is false.
 // On the d axis x is `_pd_data.d_spacing`, titled `d (Å)`; every column is reversed when d descends (constant
 // wavelength), so x ascends (a presented point's row then counts from the last `_data` row), and each excluded band's
 // ends and each tick's `_refln.position` are mapped to d along the data, so a tick meets its peak; a tick's readout is
-// its `_refln.d_spacing`. Without a current d column the pattern stays on its own axis.
+// its `_refln.d_spacing`. On the Q and sinθ/λ axes every value placed on the d axis is converted by d_on_axis and
+// the columns are reversed again, so x still ascends. Without a current d column the pattern stays on its own axis.
 PatternSource capture_pattern(const Project& project, std::size_t experiment_index,
                               PatternAxis axis = PatternAxis::Native);
 

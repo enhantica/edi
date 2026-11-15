@@ -276,7 +276,7 @@ Item {
         // Hiding a curve from the legend keeps the y range, or fits it to the curves still shown (Preferences).
         hiddenFitsRange: Preferences.chartHiddenRange === "fit"
         // The app's one pattern chart follows the project's x axis (which the report follows too) and the app's y scale.
-        dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : false
+        xAxis: chart.axisProject ? chart.axisProject.patternXAxis : "native"
         includedOnly: !chart.report && Preferences.chartIncludedOnly
         subtractBackground: !chart.report && Preferences.chartSubtractBackground
         yScale: chart.settingsPage === "pattern" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.patternYScale)) : PatternChartController.Linear
@@ -404,15 +404,16 @@ Item {
         }
         ToolbarComboBox {
             objectName: "chart.toolbar.xaxis"
-            // d can be chosen once a calculation has given the experiment its d column (the owner, 2026-10-22);
-            // the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing" in both
-            // (the owner, 2026-10-22). The axis names are the dictionary's.
+            // d, Q and sinθ/λ can be chosen once a calculation has given the experiment its d column (the owner,
+            // 2026-10-22); the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing"
+            // in both (the owner, 2026-10-22). Q = 4π sinθ/λ and sinθ/λ come from d (the owner, 2026-11-14).
             enabled: chart.experiment !== null && controller.dAvailable
-            toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
-            readonly property var entries: [Session.label(chart.nativeAxis === "timeOfFlight" ? "data.time_of_flight" : "data.two_theta"), qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing"))]
+            toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing, Q and sinθ/λ can be chosen after a calculation")
+            readonly property var tokens: ["native", "d_spacing", "q", "sin_theta_over_lambda"]
+            readonly property var entries: [Session.label(chart.nativeAxis === "timeOfFlight" ? "data.time_of_flight" : "data.two_theta"), qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing")), qsTr("x: Q"), qsTr("x: %1").arg(Session.label("refln.sin_theta_over_lambda"))]
             model: entries
             closedTexts: ApplicationInfo.patternClosedTexts(false)
-            shownIndex: controller.dSpacing && controller.dAvailable ? 1 : 0
+            shownIndex: controller.dAvailable ? Math.max(0, tokens.indexOf(controller.xAxis)) : 0
             onActivated: index => ApplicationInfo.patternChoice(index, 1)
         }
         // How the measured pattern is drawn (the owner, 2026-10-22), one box of four choices named as the axis boxes
@@ -816,9 +817,13 @@ Item {
 
     // The legend, inside the main plot's top right corner.
     // The experiment's own x axis, "twoTheta" or "timeOfFlight", and the one the pattern is drawn on, that or
-    // "dSpacing" (the toolbar's x box).
+    // "dSpacing", "q" or "sinThetaOverLambda" (the toolbar's x box).
     readonly property string nativeAxis: chart.experiment && chart.experiment.beamMode === ExperimentViewModel.TimeOfFlight ? "timeOfFlight" : "twoTheta"
-    readonly property string xAxis: controller.dSpacing ? "dSpacing" : nativeAxis
+    readonly property string xAxis: ({
+            "d_spacing": "dSpacing",
+            "q": "q",
+            "sin_theta_over_lambda": "sinThetaOverLambda"
+        })[controller.xAxis] ?? nativeAxis
 
     EaElements.Label {
         objectName: "chart.reliability"
@@ -830,8 +835,8 @@ Item {
         text: FactorText.rich(chart.reliability)
     }
 
-    // The legend starts at the top right on a 2θ axis and at the top left on a time-of-flight or d-spacing one,
-    // where the strong peaks are at the other end (owner, 2026-10-05).
+    // The legend starts at the top right on a 2θ, Q or sinθ/λ axis and at the top left on a time-of-flight or
+    // d-spacing one, where the strong peaks are at the other end (owner, 2026-10-05).
     ChartLegend {
         id: chartLegend
 
@@ -839,7 +844,7 @@ Item {
         // Over the pointer's area for its hover cue; a click reaches the pointer area, which passes it back.
         z: 1
         colors: chart.colors
-        x: chart.xAxis === "twoTheta" ? mainView.x + mainView.plotArea.x + mainView.plotArea.width - width - chart.em : mainView.x + mainView.plotArea.x + chart.em
+        x: chart.xAxis === "twoTheta" || chart.xAxis === "q" || chart.xAxis === "sinThetaOverLambda" ? mainView.x + mainView.plotArea.x + mainView.plotArea.width - width - chart.em : mainView.x + mainView.plotArea.x + chart.em
         y: mainView.y + mainView.plotArea.y + chart.em
         visible: toolbar.legendShown && controller.hasData
         entries: controller.legend

@@ -188,8 +188,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // ("linked") or asks ("ask"). Kept by the app for the project's folder; until chosen, all up to 20 files and
     // 50 MB, linked above.
     Q_PROPERTY(QString includeDataOnSave READ includeDataOnSave WRITE setIncludeDataOnSave NOTIFY includeDataOnSaveChanged)
-    // The Analysis pattern chart's x axis, the project's `_pattern_chart.x_axis`: d-spacing, or the experiment's own.
-    // The report's charts follow it. An undoable edit.
+    // The Analysis pattern chart's x axis, the project's `_pattern_chart.x_axis`, by PatternChartController's token:
+    // the experiment's own, d-spacing, Q or sinθ/λ. The report's charts and the scan views follow it. The native axis
+    // and d-spacing are saved, as an undoable edit; Q and sinθ/λ are kept for the session until the project file can
+    // name them.
+    Q_PROPERTY(QString patternXAxis READ patternXAxis WRITE setPatternXAxis NOTIFY patternXAxisChanged)
+    // Whether that axis is d-spacing; setting it chooses d-spacing or the native axis.
     Q_PROPERTY(bool patternDSpacing READ patternDSpacing WRITE setPatternDSpacing NOTIFY patternDSpacingChanged)
     // The Evolution chart's view settings, the project's `_evolution_chart` (edi ADR-0017 §19): the error bars drawn
     // (absent: yes), and the y range fitted to the values with their error bars (absent: the values only).
@@ -313,6 +317,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void recordReportFiles(std::vector<edi::ReportFile> rows);
     void setReportCorrelationThreshold(double threshold);
     bool patternDSpacing() const;
+    QString patternXAxis() const;
+    void setPatternXAxis(const QString& token);
     void setPatternDSpacing(bool on);
     bool evolutionErrorBars() const;
     void setEvolutionErrorBars(bool on);
@@ -706,6 +712,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void suRuleChanged();
     void includeDataOnSaveChanged();
     void patternDSpacingChanged();
+    void patternXAxisChanged();
     void evolutionErrorBarsChanged();
     void evolutionRangeWithSuChanged();
     void lastModifiedChanged();
@@ -1257,6 +1264,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;
     bool published_pattern_d_spacing_ = false;
+    QString published_pattern_x_axis_;
+    QString session_pattern_x_axis_;  // Q or sinθ/λ, which the file cannot name yet; empty: the project's axis
     bool published_evolution_error_bars_ = true;
     bool published_evolution_range_with_su_ = false;
     StructureViewModel* published_structure_ = nullptr;

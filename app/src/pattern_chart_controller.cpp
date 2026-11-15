@@ -727,19 +727,37 @@ void PatternChartController::setYScale(YScale scale) {
     }
 }
 
-void PatternChartController::setDSpacing(bool on) {
-    if (on != d_spacing_) {
-        finishAnimation();
-        d_spacing_ = on;
-        x_min_.reset();  // another axis: the view starts over
-        x_max_.reset();
-        y_min_.reset();
-        y_max_.reset();
-        if (experiment_) {
-            experiment_->setChartAxis(this, axis());
-        }
+QString PatternChartController::xAxis() const {
+    const std::string_view token = edi::pattern_axis_token(axis_);
+    return QString::fromLatin1(token.data(), static_cast<qsizetype>(token.size()));
+}
+
+// An unknown token is the native axis.
+void PatternChartController::setXAxis(const QString& token) {
+    const edi::PatternAxis axis = edi::pattern_axis_from_token(token.toStdString());
+    if (axis == axis_) {
+        return;
+    }
+    const bool was_d = dSpacing();
+    finishAnimation();
+    axis_ = axis;
+    x_min_.reset();  // another axis: the view starts over
+    x_max_.reset();
+    y_min_.reset();
+    y_max_.reset();
+    if (experiment_) {
+        experiment_->setChartAxis(this, axis_);
+    }
+    emit xAxisChanged();
+    if (dSpacing() != was_d) {
         emit dSpacingChanged();
-        invalidate();
+    }
+    invalidate();
+}
+
+void PatternChartController::setDSpacing(bool on) {
+    if (on != dSpacing()) {
+        setXAxis(QLatin1String(on ? "d_spacing" : "native"));
     }
 }
 
