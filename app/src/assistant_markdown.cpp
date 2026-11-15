@@ -554,6 +554,7 @@ void AssistantMarkdown::restoreClipboardSource(int requestedMode) noexcept {
             image.insertText(format.stringProperty(mathSourceProperty),QTextCharFormat{});
         }
         auto data=std::make_unique<QMimeData>();
+        // cppcheck-suppress nullPointerRedundantCheck ; checked again below, after calls that can delete it
         const auto formats=original->formats();
         for(const auto& format:formats)if(format!="text/plain" && format!="text/html" && format!="text/markdown") {
             if(!current() || !original || clipboard->mimeData(mode)!=original)return;
@@ -605,6 +606,7 @@ void AssistantMarkdown::setBodyFont(const QFont& font) {
         const QPointer<AssistantMarkdown> receiver(this);
         const QPointer<QTextDocument> document(document_);
         const auto revision = presentation_revision_;
+        // cppcheck-suppress nullPointerRedundantCheck ; checked again below, after calls that can delete it
         document->setDefaultFont(font);
         if (!receiver || !document || receiver->document_ != document || receiver->presentation_revision_ != revision) return;
         if (markdown_) render();
@@ -860,7 +862,7 @@ void AssistantMarkdown::render() noexcept {
     const auto current = [&] { return receiver && document && receiver->document_ == document && receiver->presentation_revision_ == revision; };
     MathSource captured;bool parsed=false;
     const auto restoreMetadata=[&] {
-        struct Metadata {int position,length;QTextCharFormat format;};
+        struct Metadata {int position{},length{};QTextCharFormat format;};
         std::vector<Metadata> metadata;
         for(auto block=document->begin();block.isValid();block=block.next())for(auto it=block.begin();!it.atEnd();++it) {
             const auto fragment=it.fragment();if(!fragment.isValid())continue;

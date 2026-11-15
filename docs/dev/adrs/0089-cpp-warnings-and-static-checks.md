@@ -34,8 +34,12 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
    error. A `.clang-tidy` file replaces clang-tidy's default checks, so it names `clang-analyzer-*` itself; its one
    exception, as in crysta, is the opt-in Padding hint, which asks for members in size order and reports layout, never
    a fault. It reads the compile commands of the app's build tree, and the core's tree for the Python bindings.
-4. **cppcheck** (`pixi run -e cpp-lint cpp-cppcheck`, `tools/ci/cpp-cppcheck.sh`) checks the same directories for warning,
-   performance and portability findings, with its Qt library for Qt's macros; any finding is an error.
+4. **cppcheck** (`pixi run -e cpp-lint cpp-cppcheck`, `tools/ci/cpp-cppcheck.sh`) checks the same sources for warning,
+   performance and portability findings; any finding is an error. It reads the same compile commands as clang-tidy, so
+   it sees Qt's and crysta's headers and the build's macros: without them it took Qt's smart pointers for integers and
+   reported dozens of findings that are not there. One check is off, with its reason: `returnByReference`, which asks
+   Qt-style getters to return their implicitly shared members (`QString`, `QStringList`) by reference, where a copy is
+   a reference count.
 5. **clang-tidy and clang-format come at one version on every platform**, the one crysta pins, from the `cpp-lint`
    environment that holds only the tools.
 6. **A finding is fixed in the code.** Where the code is right and the check cannot see it, the line carries

@@ -64,9 +64,9 @@ ParameterItem::ParameterItem(const edi::DescriptorEntry& entry, ProjectEditor& e
       block_name_(QString::fromStdString(entry.block_name)),
       category_(QString::fromStdString(entry.category)),
       row_label_(QString::fromStdString(entry.row_label)),
-      name_(QString::fromStdString(entry.name)) {
-    display_name_ = QString::fromStdString(edi::label(entry.uid));
-    display_units_ = QString::fromStdString(edi::units_label(entry.uid));
+      name_(QString::fromStdString(entry.name)),
+      display_name_(QString::fromStdString(edi::label(entry.uid))),
+      display_units_(QString::fromStdString(edi::units_label(entry.uid))) {
     short_name_ = display_name_;
     minimum_ = -std::numeric_limits<double>::infinity();
     maximum_ = std::numeric_limits<double>::infinity();

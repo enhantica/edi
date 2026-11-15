@@ -555,7 +555,6 @@ void FitViewModel::startImpl(std::uint64_t attempt) {
         }
         setFollowing(true);
         if (owner_.retired_) return;
-        if (owner_.retired_) return;
         job_->follow(true);
         if (owner_.retired_) return;
     }

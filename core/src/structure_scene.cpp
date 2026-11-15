@@ -1160,7 +1160,7 @@ const std::vector<SceneStyle>& structure_style_table() {
 }
 
 SharedSiteBasis shared_site_browser_basis(const StructureScene& scene) {
-    const auto normalized = [](Vec3 value) {
+    const auto normalized = [](const Vec3& value) {
         const double length = std::sqrt(value.x * value.x + value.y * value.y + value.z * value.z);
         const double scale = 1.0 / (length == 0.0 || std::isnan(length) ? 1.0 : length);
         return Vec3{value.x * scale, value.y * scale, value.z * scale};

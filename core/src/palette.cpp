@@ -326,7 +326,8 @@ std::string figure_colour(ColourScheme scheme, std::size_t position, std::size_t
     const std::size_t before = figure.size() - 1;
     const std::size_t last = std::max(count, position + 1);
     const double t = static_cast<double>(position - before) / static_cast<double>(last - before);
-    return mix_colours(figure[0][side], figure[1][side], t);
+    const auto& second = figure.size() > 1 ? figure[1] : figure.front();
+    return mix_colours(figure.front()[side], second[side], t);
 }
 
 std::string role_colour(ColourScheme scheme, ChartRole role, bool dark) {

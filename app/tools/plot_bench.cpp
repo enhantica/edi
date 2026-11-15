@@ -47,6 +47,7 @@
 #include <limits>
 #include <cstdarg>
 #include <cstdio>
+#include <exception>
 #include <functional>
 #include <map>
 #include <memory>
@@ -729,7 +730,7 @@ QString slug(QString text) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int run(int argc, char** argv) {
     QGuiApplication app(argc, argv);
     edi_app::use_design_font();
     const QStringList arguments = QCoreApplication::arguments();
@@ -906,4 +907,13 @@ int main(int argc, char** argv) {
     }
     log("wrote %s", qPrintable(out));
     return 0;
+}
+
+int main(int argc, char** argv) {
+    try {
+        return run(argc, argv);
+    } catch (const std::exception& error) {
+        std::fprintf(stderr, "edi_app_plot_bench: %s\n", error.what());
+        return 1;
+    }
 }

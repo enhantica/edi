@@ -238,6 +238,7 @@ void ExampleListModel::refresh() {
     std::sort(choices.begin(), choices.end(), [](const QString& a, const QString& b) {
         return label(a).localeAwareCompare(label(b)) < 0;
     });
+    // cppcheck-suppress intToPointerCast ; a key that names the first row and is never dereferenced
     QList<Row> options{{reinterpret_cast<const void*>(1),
                         {QString(),
                          tr(qPrintable(allTitles[keys.indexOf(filter_property_)])) +

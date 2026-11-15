@@ -326,8 +326,8 @@ class ScanLayer : public QQuickPaintedItem {
     std::vector<double> lows_, highs_, baselines_;
     struct RangeKey {
         QString scale;
-        bool included, subtract, visible;
-        double from, to;
+        bool included{}, subtract{}, visible{};
+        double from{}, to{};
         bool operator==(const RangeKey&) const = default;
     };
     struct Range {

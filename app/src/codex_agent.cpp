@@ -781,13 +781,16 @@ void CodexAgent::retire() {
     if (!process) return;
     retired_process_=process;
     process->disconnect(this);
+    // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can delete it
     if (!process) return;
     // Only the detached original process is touched after these callbacks. A
     // replacement facade/process owns its own channels, maps and first deadline.
     process->setParent(nullptr);
+    // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can delete it
     if (!process) return;
     // Shutdown must outlive the facade without a blocking QProcess destructor.
     process->terminate();
+    // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can delete it
     if (!process) return;
     QTimer::singleShot(static_cast<int>(Limits::callback_ms), process.data(), [process] { if (process && process->state() != QProcess::NotRunning) process->kill(); });
     connect(process.data(), qOverload<int, QProcess::ExitStatus>(&QProcess::finished), process.data(), &QObject::deleteLater);

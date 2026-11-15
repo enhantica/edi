@@ -77,7 +77,7 @@ const char* write_history_file(const QString& path,const QJsonArray& rows) {
     return file.commit()?nullptr:"commit";
 }
 }
-AssistantHistoryArchive::AssistantHistoryArchive(QObject* receiver,QString requested,Notice notice,bool provisional)
+AssistantHistoryArchive::AssistantHistoryArchive(QObject* receiver,const QString& requested,Notice notice,bool provisional)
     : pending_receiver_(receiver),pending_notice_(std::move(notice)) {
     // A replacement VM reuses the same file owner, including its accepted final
     // snapshot. An older worker can never land after a newer archive revision.

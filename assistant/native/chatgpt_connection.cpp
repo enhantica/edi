@@ -270,7 +270,7 @@ struct ChatGptConnection::State : QObject {
         operations.emplace(op->id, op);
         const QPointer<State> owner(this);
         HttpCallbacks callbacks;
-        callbacks.headers = [owner, op](int status, HttpHeaders headers) {
+        callbacks.headers = [owner, op](int status, const HttpHeaders& headers) {
             if (!owner || !owner->admit_callback(op)) return;
             try {
                 if (owner->requesting || op->headers || status < 100 || status > 599) throw std::invalid_argument("Invalid HTTP headers phase");
@@ -310,12 +310,12 @@ struct ChatGptConnection::State : QObject {
         HttpHeaders headers;
         if (authorized) headers.emplace_back("Authorization", "Bearer " + credentials.value("access_token").toString().toUtf8());
         request({HttpMethod::get, url, std::move(headers), {}, Limits::http_json_bytes, Limits::http_json_ms},
-            [done = std::move(done)](int status, QByteArray bytes) { if (status != 200) throw std::invalid_argument("Provider refused request"); done(document(bytes)); });
+            [done = std::move(done)](int status, const QByteArray& bytes) { if (status != 200) throw std::invalid_argument("Provider refused request"); done(document(bytes)); });
     }
     void token(const QUrlQuery& fields, std::function<void(Object)> done) {
         request({HttpMethod::post, QUrl("https://auth.openai.com/api/accounts/oauth/token"),
                  {{"Content-Type", "application/x-www-form-urlencoded"}}, fields.query(QUrl::FullyEncoded).toUtf8(), Limits::http_json_bytes, Limits::http_json_ms},
-            [done = std::move(done)](int status, QByteArray body) { if (status != 200) throw std::invalid_argument("Authorization refused"); done(document(body)); });
+            [done = std::move(done)](int status, const QByteArray& body) { if (status != 200) throw std::invalid_argument("Authorization refused"); done(document(body)); });
     }
     std::uint64_t record_usage() const {
         auto used = loaded_record_bytes;
@@ -529,7 +529,7 @@ void ChatGptConnection::State::revoke() {
     if (revoking.value("refresh_token").toString().isEmpty()) { end_sign_out(!revoke_uncertain); return; }
     if (revocation_endpoint.isEmpty()) {
         request({HttpMethod::get, QUrl("https://auth.openai.com/.well-known/openid-configuration"), {}, {}, Limits::http_json_bytes, Limits::revoke_ms},
-            [this](int code, QByteArray reply) {
+            [this](int code, const QByteArray& reply) {
                 try {
                     if (code != 200) { end_sign_out(false); return; }
                     const auto metadata = document(reply);
@@ -549,7 +549,7 @@ void ChatGptConnection::State::revoke() {
     };
     request({HttpMethod::post, revocation_endpoint, {{"Content-Type", "application/x-www-form-urlencoded"}},
              form.query(QUrl::FullyEncoded).toUtf8(), Limits::http_json_bytes, Limits::revoke_ms},
-        [this, retry](int code, QByteArray reply) {
+        [this, retry](int code, const QByteArray& reply) {
             if (code == 200 && reply.isEmpty()) end_sign_out(true);
             else if (code >= 500) retry(); else end_sign_out(false);
         }, {}, retry);
@@ -626,7 +626,7 @@ Reply ChatGptConnection::sign_in() {
     } catch (const detail::Refusal& e) { s.fail("Native sign-in input exceeded the assistant limit.", "edi.assistant." + q(e.code)); return no(s.error, s.error_code); }
     catch (...) { s.fail("ChatGPT sign-in could not start. Check the private connection store and system browser."); return no(s.error); }
 }
-Reply ChatGptConnection::connect_saved(std::string id) {
+Reply ChatGptConnection::connect_saved(const std::string& id) {
     auto& s = *state_;
     if (!registration_id(id)) return no("Invalid saved registration.");
     if (s.signing_in || s.renewing || s.signing_out || s.active_inference) return no("Stop the active native operation before reconnecting.");
@@ -817,7 +817,7 @@ Reply ChatGptConnection::send(const JsonText& input) {
     } catch (const detail::Refusal& e) { return no("Assistant request was refused.", "edi.assistant." + q(e.code)); }
     catch (...) { s.inference_failed("The native provider request could not start."); return no("The native provider request could not start."); }
 }
-void ChatGptConnection::cancel(std::string turn_id) {
+void ChatGptConnection::cancel(const std::string& turn_id) {
     auto& s = *state_;
     if (s.active_inference && s.request_context.value("turn_id").toString() == q(turn_id)) s.inference_failed("The provider request was cancelled.");
 }

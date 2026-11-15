@@ -32,6 +32,7 @@
 #include <cstdlib>
 #include <cstdarg>
 #include <cstdio>
+#include <exception>
 #include <functional>
 #include <string>
 #include <vector>
@@ -179,7 +180,7 @@ void idle(int ms) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int run(int argc, char** argv) {
     QGuiApplication app(argc, argv);
     edi_app::use_design_font();
     const QString directory = argc > 1 ? QString::fromLocal8Bit(argv[1])
@@ -455,4 +456,13 @@ int main(int argc, char** argv) {
                 offset.median, offset.p95, range.missing + restyle.missing + offset.missing,
                 qPrintable(QGuiApplication::platformName()), static_cast<long long>(read_ms), line_width);
     return range.missing + restyle.missing + offset.missing == 0 && first >= 0.0 && misses < kMaxMisses ? 0 : 1;
+}
+
+int main(int argc, char** argv) {
+    try {
+        return run(argc, argv);
+    } catch (const std::exception& error) {
+        std::fprintf(stderr, "edi_app_scan_bench: %s\n", error.what());
+        return 1;
+    }
 }

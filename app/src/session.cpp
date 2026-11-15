@@ -847,6 +847,7 @@ bool Session::saveAsWith(const SaveOperation& operation, const QUrl& directory) 
     {
         const QPointer<ProjectViewModel> target(project_);
         const auto origin = std::exchange(project_->assistant_save_origin_, 0);
+        // cppcheck-suppress nullPointerRedundantCheck ; checked again below, after calls that can delete it
         target->notifyProjectEdited(origin);
         if (!target || !owns(operation)) return false;
     }
@@ -2573,12 +2574,12 @@ bool Session::commitAssistantNativeModel(std::unique_ptr<ProjectViewModel> model
     try {
         const bool published = replaceProject(adopted, {}, {}, true, &committed);
         if (!committed) return false; // Still a genuinely local, unexposed candidate.
-        model.release(); // May already have been retired/deleted by a later observer.
+        static_cast<void>(model.release()); // May already have been retired/deleted by a later observer.
         presentationComplete = published && adopted && project_ == adopted && replacement_generation_ == replacement;
         return true; // Real adoption, independently of later presentation/current owner.
     } catch (...) {
         if (committed) {
-            model.release();
+            static_cast<void>(model.release());
             if (replacement_generation_ == replacement && adopted && project_ == adopted)
                 try { setLastError(tr("The native project opened, but some presentation did not complete.")); } catch (...) {}
             return true;

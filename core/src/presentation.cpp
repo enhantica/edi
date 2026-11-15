@@ -190,6 +190,7 @@ Kept union_of(const Kept& first, const Kept& second) {
     std::size_t a = 0, b = 0;
     while (a < first.rows.size() || b < second.rows.size()) {
         const bool take_a = b == second.rows.size() || (a < first.rows.size() && first.rows[a] <= second.rows[b]);
+        // cppcheck-suppress containerOutOfBounds ; take_a is false only while b < second.rows.size()
         const std::size_t row = take_a ? first.rows[a] : second.rows[b];
         const std::size_t run = take_a ? first.runs[a] : second.runs[b];
         if (take_a && b < second.rows.size() && second.rows[b] == row) {

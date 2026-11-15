@@ -1316,6 +1316,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         positions.insert(positions.end(), held.begin(), held.end());
     }
     model.pattern_styles = pattern_style_table(options.colour_scheme, scan && scan->place ? scan->files : experiments,
+                                               // cppcheck-suppress invalidLifetime ; positions holds copies, not references
                                                structures, positions, scan && scan->place);
     model.structure_styles = structure_style_table();
     return model;

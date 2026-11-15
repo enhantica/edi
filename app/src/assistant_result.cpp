@@ -965,6 +965,7 @@ quint64 AssistantWorkingFolder::preparationBytes(const QString& selected) {
 #endif
 }
 quint64 AssistantWorkingFolder::retainedBytes() const noexcept {
+    // cppcheck-suppress throwInNoexceptFunction ; sizes and a unique_ptr read, none of which throws
     return sizeof(AssistantWorkingFolder)+sizeof(State)+
         static_cast<quint64>(state_->path.capacity()+state_->selected.capacity())*sizeof(QChar);
 }

@@ -544,7 +544,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     }
 
     Reply update_files(std::string collection_id, std::uint64_t expected_generation,
-                       std::vector<SelectedFile> added, std::vector<std::string> removed) {
+                       std::vector<SelectedFile> added, const std::vector<std::string>& removed) {
         selected_id(collection_id);
         if (!turn.empty() || !active_job.empty() || !question_call.empty() ||
             (plan && plan->approved) || !holds.empty() || !retentions.empty() || trial)
@@ -1627,8 +1627,8 @@ Reply Controller::attach(Project* project, std::string project_id) {
 
 
 Reply Controller::update_selected_files(std::string collection_id, std::uint64_t expected_generation,
-                                        std::vector<SelectedFile> added, std::vector<std::string> removed) {
-    try { return state_->update_files(std::move(collection_id), expected_generation, std::move(added), std::move(removed)); }
+                                        std::vector<SelectedFile> added, const std::vector<std::string>& removed) {
+    try { return state_->update_files(std::move(collection_id), expected_generation, std::move(added), removed); }
     catch (const Refusal& error) { return failure(error.code, error.what()); }
     catch (const std::bad_alloc&) { return failure("resource_exhausted", "Selected-file admission could not be prepared"); }
     catch (const std::length_error&) { return failure("resource_exhausted", "Selected-file admission exceeds its capacity"); }

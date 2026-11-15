@@ -15,7 +15,7 @@ CategoryPresentation category_presentation(const QString& id) {
     // Titles and icons are crysta's dictionary's, through the core's bridge, which the report reads too; the app keeps
     // only where a category sits: the Basic or the Extras group, and whether it also shows in Extras.
     struct Place {
-        T tier;
+        T tier{};
         bool extras_part = false;
         bool needs_data = false;
         bool extras_needs_data = false;

@@ -762,7 +762,7 @@ void ScanSession::readWanted() {
     const QPointer<ScanSession> self(this);
     run_in_background([self, stop, source, directory, generation, batch = std::move(batch)] {
         struct Read {
-            int dataset;
+            int dataset{};
             std::vector<std::string> values;
             QString error;
         };

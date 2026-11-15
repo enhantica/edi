@@ -191,7 +191,8 @@ const edi::ReportStructure* ReportViewModel::structure(const QString& id) const 
 
 QStringList ReportViewModel::hidden() const {
     QStringList keys;
-    for (const std::string& key : edi::effective_report_options(project_.project()).hidden) {
+    const edi::ReportOptions options = edi::effective_report_options(project_.project());
+    for (const std::string& key : options.hidden) {
         keys.append(QString::fromStdString(key));
     }
     return keys;

@@ -81,7 +81,7 @@ struct AssistantSkillWebImport::State {
         body.clear();status=0;const auto weak=owner;
         HttpCallbacks callbacks;
         callbacks.headers=[weak](int code,HttpHeaders){if(auto task=weak.lock();task && task->state_->current())task->state_->status=code;};
-        callbacks.data=[weak](QByteArray bytes) {
+        callbacks.data=[weak](const QByteArray& bytes) {
             if(auto task=weak.lock();task && task->state_->current())try {
                 auto& s=*task->state_;
                 if(static_cast<quint64>(bytes.size())>edi::assistant::Limits::context_bytes-static_cast<quint64>(s.body.size()))

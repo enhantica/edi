@@ -425,7 +425,7 @@ bool AssistantWorkReports::artifactCurrent(const Object& artifact,QStringView st
 #endif
 }
 
-QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkReportCoverage counts,QStringView storageRoot,
+QVariantMap AssistantWorkReports::capture(bool automaticTrigger,const AssistantWorkReportCoverage& counts,QStringView storageRoot,
         const std::function<AssistantWorkReportSnapshot(quint64)>& build,const QString& expectedScope,quint64 expectedRevision,bool projectionBlocked) {
     // The original worker and owner-thread completion retain their own snapshots.
     struct WorkCapture {
@@ -444,7 +444,7 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
         QByteArray encoded;
         QString scope;
         QPointer<AssistantViewModel> receiver;
-        bool fallbackOnly;
+        bool fallbackOnly{};
     };
     const QPointer<AssistantViewModel> receiver(owner_);
     if(QThread::currentThread()!=receiver->thread())throw std::logic_error("Work report capture requires its native owner thread");

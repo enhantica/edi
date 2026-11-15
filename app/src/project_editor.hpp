@@ -83,7 +83,7 @@ class ProjectEditor {
     // the original alias/constraint controls do. No provider callable/edit exists.
     struct CreationAction {
         enum class Kind { ExperimentAppend, ExperimentType, ExperimentName, PeakProfile, AbsorptionType, ExtinctionType, MosaicDistribution, CutoffFwhm, DatasetWeight, ExclusionAppend, ExclusionStart, ExclusionEnd, ExclusionRemove, StructureAppend, StructureName, SpaceGroupName, SpaceGroupNumber, SpaceGroupSetting, AtomAppend, AtomText, AtomRemove, AtomAdpType, PhaseAppend, PhaseRetarget, PhaseEnabled, PhaseRemove };
-        Kind kind;
+        Kind kind{};
         const void* row = nullptr;
         QString field{}, text{};
         double number = 0;
