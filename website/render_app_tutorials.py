@@ -212,14 +212,20 @@ def listed(items: list[str]) -> str:
     return items[0] if len(items) == 1 else ', '.join(items[:-1]) + ' and ' + items[-1]
 
 
-def loop_groups(text: str, state: str) -> list[str]:
-    """The categories of a stage's loops that set `.free` to `state`; others refuse."""
+def loop_groups(text: str, state: str, part: bool = False) -> list[str]:
+    """The categories of a stage's loops that set `.free` to `state`; others refuse.
+
+    With `part` set, only the loops that pick some of a category's rows.
+    """
     groups = []
     for block in re.split(r'^(?=\S)', text, flags=re.MULTILINE):
         frees = re.search(rf'\.free = (?:not .+|{state})$', block, flags=re.MULTILINE)
         if not block.startswith('for ') or not frees or (state == 'False' and 'not ' in block):
             continue
         if re.match(r'for \w+ in list\(\w+\.background_terms\)\[:\d+\]:', block):
+            continue
+        # A loop that picks some rows (`if site.type_symbol != 'O'`) is not the whole category.
+        if bool(re.search(r'^\s+if ', block, flags=re.MULTILINE)) != part:
             continue
         title = next(
             (title for pattern, title in GROUPS if re.search(pattern, block, re.MULTILINE)), ''
@@ -315,6 +321,11 @@ def stage_sentence(
                 f'filter {listed(parts)}, click the **Free** column header and choose **{word}**'
             )
         sentences.extend(again_rows)
+        sentences.extend(
+            f'tick **Free** for the {title} rows the stage names'
+            for title in dict.fromkeys(loop_groups(text, state, part=True))
+            if state == 'True'
+        )
         other = 'Fixed · all' if state == 'True' else 'Free · all'
         sentences.extend(
             f'type **{rest}** in the name filter and choose **{other}** in the same menu'
