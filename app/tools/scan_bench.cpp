@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <limits>
 #include <cstdlib>
 #include <cstdarg>
 #include <cstdio>
@@ -43,6 +44,8 @@
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 namespace {
+
+constexpr double kInf = std::numeric_limits<double>::infinity();
 
 constexpr int kRepeats = 30;
 // The first population may take seconds (Qt Graphs without a GPU); every later change waits three times as long as it
@@ -145,7 +148,7 @@ class Painted : public QQuickPaintedItem {
             QPainterPath path;
             bool drawing = false;
             for (std::size_t k = 0; k < traces[d].x.size(); ++k) {
-                const double x = traces[d].x[k], y = base - static_cast<double>(traces[d].v[k]) * lift;
+                const double x = static_cast<double>(traces[d].x[k]), y = base - static_cast<double>(traces[d].v[k]) * lift;
                 if (!std::isfinite(x) || !std::isfinite(y)) {
                     drawing = false;
                 } else if (drawing) {
@@ -196,7 +199,7 @@ int main(int argc, char** argv) {
         log("no .dat files in %s", qPrintable(directory));
         return 1;
     }
-    double lo = INFINITY, hi = -INFINITY, low = INFINITY, high = -INFINITY;
+    double lo = kInf, hi = -kInf, low = kInf, high = -kInf;
     std::size_t points = 0;
     for (const Dataset& d : scan) {
         points += d.x.size();

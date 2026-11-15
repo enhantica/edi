@@ -9,6 +9,7 @@
 #include "edi/selectors.hpp"
 #include "edi/symmetry.hpp"
 #include <cmath>
+#include <limits>
 #include <algorithm>
 #include <QJsonArray>
 #include <QSet>
@@ -230,7 +231,6 @@ NativeCwlRecipe parse_native_cwl_recipe(const Object& recipe) {
 }
 NativeCwlCandidate prepare_native_cwl_project(const std::string& cif, const std::string& data,
                                              const NativeCwlRecipe& recipe, const Object& mapped) {
-    using Limits = edi::assistant::Limits;
     if ((cif.empty() && mapped.isEmpty()) || (!cif.empty() && !mapped.isEmpty()) || cif.size() > edi::assistant::SelectedFileLimits::file_bytes ||
         recipe.project_name.size() > Limits::id_bytes || recipe.experiment_name.size() > Limits::id_bytes ||
         recipe.peak_profile.size() > Limits::id_bytes)
@@ -259,7 +259,7 @@ NativeCwlCandidate prepare_native_cwl_project(const std::string& cif, const std:
     if(!recipe.background.empty())edi::Edit::background_estimate_mode(experiment,"manual")();
     edi::select_background_type(experiment, "line-segment");
     experiment.background.clear();
-    double previous = -INFINITY;
+    double previous = -std::numeric_limits<double>::infinity();
     for (const auto& [position, intensity] : recipe.background) {
         if (!std::isfinite(position) || !std::isfinite(intensity) || position <= previous)
             throw edi::IoError("Background anchors must have finite, strictly increasing positions");

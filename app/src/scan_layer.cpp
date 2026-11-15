@@ -604,7 +604,7 @@ int ScanLayer::datasetNear(double x, double y) const {
             high = std::max(high, v);
         };
         for (std::size_t k = 0; k < reduction.x.size(); ++k) {
-            const double xa = reduction.x[k], va = reduction.v[k];
+            const double xa = static_cast<double>(reduction.x[k]), va = static_cast<double>(reduction.v[k]);
             if (!std::isfinite(xa) || !std::isfinite(va)) {
                 continue;
             }
@@ -614,7 +614,7 @@ int ScanLayer::datasetNear(double x, double y) const {
             if (k + 1 == reduction.x.size()) {
                 continue;
             }
-            const double xb = reduction.x[k + 1], vb = reduction.v[k + 1];
+            const double xb = static_cast<double>(reduction.x[k + 1]), vb = static_cast<double>(reduction.v[k + 1]);
             if (!std::isfinite(xb) || !std::isfinite(vb) || xb == xa) {
                 continue;
             }
@@ -697,7 +697,7 @@ void ScanLayer::reduce() {
     const edi::YScale scale = scale_of(scale_);
     const auto columns = static_cast<std::size_t>(key.columns);
     const double column_width = (x_max_ - x_min_) / static_cast<double>(columns);
-    constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
+    constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
     int built = 0;
     for (std::size_t d = 0; d < patterns.size(); ++d) {
         const ScanViewModel::Pattern& pattern = patterns[d];
@@ -726,8 +726,8 @@ void ScanLayer::reduce() {
             for (std::size_t c = 0; c < values.size(); ++c) {
                 const double centre = x_min_ + (static_cast<double>(c) + 0.5) * column_width;
                 reduction.v[c] = column_excluded(pattern, included_only_, centre, column_width)
-                                     ? kNaN
-                                     : static_cast<float>(edi::to_display(values[c], scale));
+                                     ? std::numeric_limits<float>::quiet_NaN()
+                                     : static_cast<float>(edi::to_display(static_cast<double>(values[c]), scale));
             }
             continue;
         }
@@ -745,7 +745,7 @@ void ScanLayer::reduce() {
         bool was_excluded = false;
         double last_x = kNaN, last_v = kNaN;
         for (std::size_t k = 0; k < trace.x.size(); ++k) {
-            const double v = edi::to_display(trace.low[k], scale);
+            const double v = edi::to_display(static_cast<double>(trace.low[k]), scale);
             const double x = (trace.x[k] - x_min_) / (x_max_ - x_min_) * width();
             if (!std::isfinite(trace.x[k]) || !std::isfinite(v)) {
                 add(reduction.x, reduction.v, kNaN, kNaN);
@@ -854,7 +854,9 @@ QColor ScanLayer::lineColour(int dataset, int top) const {
 QColor ScanLayer::blendedColour(const QColor& colour, double keep) const {
     // Blended toward the background rather than made translucent: a line crossing itself, up and down a narrow peak,
     // stays one even colour, as the pattern chart's opaque lines do.
-    const auto mix = [keep](double ink, double paper) { return keep * ink + (1.0 - keep) * paper; };
+    const auto mix = [keep](float ink, float paper) {
+        return keep * static_cast<double>(ink) + (1.0 - keep) * static_cast<double>(paper);
+    };
     return QColor::fromRgbF(static_cast<float>(mix(colour.redF(), background_.redF())),
                             static_cast<float>(mix(colour.greenF(), background_.greenF())),
                             static_cast<float>(mix(colour.blueF(), background_.blueF())), 1.0F);
@@ -1151,7 +1153,7 @@ void ScanLayer::paint(QPainter* painter) {
             QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(j));
             for (int i = 0; i < pixel_columns; ++i) {
                 const auto at = static_cast<std::size_t>(i);
-                const double va = a[at], vb = b[at];
+                const double va = static_cast<double>(a[at]), vb = static_cast<double>(b[at]);
                 // A band is its own dataset's, out to halfway to each neighbouring row, empty where that dataset has no
                 // point. Stepped, its edges are hard; smooth, it blends into its neighbour's only in the edge zone, and
                 // never into or out of an empty column, so no band shows a neighbour's data. One rule for scan values,
@@ -1209,8 +1211,8 @@ void ScanLayer::paint(QPainter* painter) {
             Line line;
             bool drawing = false;
             for (std::size_t k = 0; k < xs.size(); ++k) {
-                const double x = xs[k];
-                const double y = py(stackedY(d, vs[k]));
+                const double x = static_cast<double>(xs[k]);
+                const double y = py(stackedY(d, static_cast<double>(vs[k])));
                 if (!std::isfinite(x) || !std::isfinite(y)) {
                     drawing = false;
                 } else if (drawing) {

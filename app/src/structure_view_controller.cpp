@@ -40,10 +40,10 @@ edi::SceneInstance arrow_part(const edi::SceneArrow& arrow, double from, double 
     edi::SceneInstance part;
     const QVector3D direction = vec(arrow.direction);
     const QVector3D centre = vec(arrow.origin) + direction * static_cast<float>(from + length / 2.0);
-    part.position = {centre.x(), centre.y(), centre.z()};
+    part.position = {static_cast<double>(centre.x()), static_cast<double>(centre.y()), static_cast<double>(centre.z())};
     part.scale = {radius, length, radius};
     const QQuaternion turn = QQuaternion::rotationTo(QVector3D(0.0f, 1.0f, 0.0f), direction);
-    part.rotation = {turn.scalar(), turn.x(), turn.y(), turn.z()};
+    part.rotation = {static_cast<double>(turn.scalar()), static_cast<double>(turn.x()), static_cast<double>(turn.y()), static_cast<double>(turn.z())};
     part.color = arrow.color;
     return part;
 }
@@ -66,8 +66,8 @@ StructureViewController::StructureViewController(QObject* parent)
         const QQuaternion turn = QQuaternion::slerp(rotation(a), rotation(b), static_cast<float>(t));
         const QVector3D direction = turn.rotatedVector(QVector3D(0.0f, 0.0f, 1.0f)).normalized();
         const QVector3D up = turn.rotatedVector(QVector3D(0.0f, 1.0f, 0.0f)).normalized();
-        view_.direction = {direction.x(), direction.y(), direction.z()};
-        view_.up = {up.x(), up.y(), up.z()};
+        view_.direction = {static_cast<double>(direction.x()), static_cast<double>(direction.y()), static_cast<double>(direction.z())};
+        view_.up = {static_cast<double>(up.x()), static_cast<double>(up.y()), static_cast<double>(up.z())};
         view_.magnification = a.magnification > 0.0 && b.magnification > 0.0
                                   ? a.magnification * std::pow(b.magnification / a.magnification, t)
                                   : b.magnification;

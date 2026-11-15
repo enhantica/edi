@@ -44,6 +44,7 @@
 #include <array>
 #include <atomic>
 #include <cmath>
+#include <limits>
 #include <cstdarg>
 #include <cstdio>
 #include <functional>
@@ -63,6 +64,8 @@
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 
 namespace {
+
+constexpr double kInf = std::numeric_limits<double>::infinity();
 
 constexpr int kRepeats = 5;
 constexpr qint64 kBudgetMs = 10000;
@@ -117,7 +120,7 @@ QColor colour_of(std::size_t i, std::size_t count, float saturation) {
 
 struct Scan {
     std::vector<std::vector<double>> x, intensity;
-    double lo = INFINITY, hi = -INFINITY, low = INFINITY, high = -INFINITY;
+    double lo = kInf, hi = -kInf, low = kInf, high = -kInf;
 };
 
 Scan read_scan(const QString& directory) {
@@ -187,7 +190,7 @@ Shown stacked(const Scan& scan, std::size_t count, int columns, double width_px,
 // `factor` scales every calculated column (a fit's update).
 edi::PatternSource pattern_source(const edi::PatternSource& captured, double factor) {
     edi::PatternSource source = captured;
-    const auto scaled = [factor](const edi::PatternSource::Column& column, double by) -> edi::PatternSource::Column {
+    const auto scaled = [](const edi::PatternSource::Column& column, double by) -> edi::PatternSource::Column {
         if (!column) {
             return column;
         }
@@ -367,7 +370,7 @@ class Painted : public QQuickPaintedItem {
             QPainterPath path;
             bool drawing = false;
             for (std::size_t k = 0; k < traces[d].x.size(); ++k) {
-                const double x = traces[d].x[k], y = base - static_cast<double>(traces[d].v[k]) * lift;
+                const double x = static_cast<double>(traces[d].x[k]), y = base - static_cast<double>(traces[d].v[k]) * lift;
                 if (!std::isfinite(x) || !std::isfinite(y)) {
                     drawing = false;
                 } else if (drawing) {

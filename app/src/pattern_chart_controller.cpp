@@ -157,7 +157,6 @@ double labelled_step(double low, double high, double pixels, const QFont& font, 
 
 namespace {
 
-const double kNaN = std::numeric_limits<double>::quiet_NaN();
 constexpr double kWheelNotch = 120.0;
 constexpr double kWheelFactor = 0.8;  // one notch away from the user multiplies the x span by this
 

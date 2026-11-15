@@ -1303,7 +1303,7 @@ bool Session::openExampleNamed(const QString& exampleId) {
         return receiver && receiver->example_request_ == request && receiver->replacement_generation_ == binding &&
                receiver->project_ == before;
     };
-    collection_examples_->whenRead(exampleId, [receiver, exampleId, aside, request, binding, before, finish, current] {
+    collection_examples_->whenRead(exampleId, [receiver, exampleId, aside, request, before, finish, current] {
         if (!receiver || receiver->example_request_ != request) return;
         if (!current()) {
             qCInfo(lcApp, "example %s not opened: the project changed meanwhile", qPrintable(exampleId));

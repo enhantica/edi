@@ -41,7 +41,6 @@ J parameters(Project& project) {
     std::map<const Parameter*, std::string> names;
     for (const auto& slot : named_slots(project)) names[slot.parameter] = slot.unique_name;
     A rows;
-    std::uint64_t bytes = 2;
     for (const auto& entry : parameter_entries(project)) {
         const Parameter& p = *entry.parameter;
         const auto named = names.find(&p);
@@ -52,8 +51,7 @@ J parameters(Project& project) {
                             {"refinable",entry.refinable},{"fittable",independently_fittable(entry)},
                             {"fit_reason",p.fit_reason},
                             {"unit", p.spec ? p.spec->units : "dimensionless"}};
-        const auto growth = payload_size(row) + (rows.empty() ? 0 : 1);
-        bytes += growth; rows.push_back(std::move(row));
+        rows.push_back(std::move(row));
     }
     return rows;
 }
@@ -1230,9 +1228,12 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             const auto elapsed = now >= plan->started ? now - plan->started : plan->max_ms;
             const auto remaining = plan->max_ms - std::min(plan->max_ms, elapsed);
             const auto wall_start = std::chrono::steady_clock::now();
+#if EDI_WORKER_OWNER_THREAD
+            // The owner-thread build also stops at the policy clock's limit.
             const auto policy_start = hooks.monotonic_ms();
             const auto clock = hooks.monotonic_ms;
-            const auto expired = [remaining, wall_start, policy_start, clock]() noexcept {
+#endif
+            const auto expired = [=]() noexcept {
                 try {
 #if EDI_WORKER_OWNER_THREAD
                 const auto value = clock();
@@ -1378,13 +1379,13 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             }
             if (question.empty() || question_id != question) refuse("invalid_argument", "No matching live question");
             if (answer.size() > Limits::question_answer_bytes) refuse("resource_exhausted", "Question answer exceeds limit");
-            bool selected = false;
-            for (const auto& option : question_record.at("options").array("options")) if (string(option, "id") == answer) selected = true;
-            if (!selected && (!question_record.at("allow_free_text").boolean("allow_free_text") || answer.find_first_not_of(" \t\r\n") == std::string::npos))
+            bool listed = false;
+            for (const auto& option : question_record.at("options").array("options")) if (string(option, "id") == answer) listed = true;
+            if (!listed && (!question_record.at("allow_free_text").boolean("allow_free_text") || answer.find_first_not_of(" \t\r\n") == std::string::npos))
                 refuse("invalid_argument", "Choose an offered option or provide permitted free text");
             if (string(question_record, "connection_id") != connection || string(question_record, "project_id", true) != version.project_id || detail::revision(question_record) != version.revision)
                 refuse("invalid_argument", "Question scope changed");
-            const auto result = success(O{{"question_id", question}, {"answer", answer}, {"selected_option_id", selected ? J(answer) : J(nullptr)}});
+            const auto result = success(O{{"question_id", question}, {"answer", answer}, {"selected_option_id", listed ? J(answer) : J(nullptr)}});
 
             AnswerMap staged; staged.emplace(question, std::make_pair(answer, result));
             user_scope_committed = true;
@@ -1401,12 +1402,12 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         // must settle before a new conversation action can replace its identity.
         if (question.empty() && !question_call.empty()) require_stopped();
         if (!turn.empty() || !active_job.empty()) refuse("busy", "A conversation turn is running");
-        auto selected = string(command, "model");
+        auto model_id = string(command, "model");
         auto selected_effort = has(command, "effort") ? string(command, "effort") : "";
         bool supported = false;
-        const auto mapped_model = openai_efforts(selected);
+        const auto mapped_model = openai_efforts(model_id);
         if (mapped_model.array("efforts").empty()) refuse("invalid_argument", "Model has no reviewed capability mapping");
-        for (const J& item : capabilities.array("capabilities")) if (string(item, "id") == selected) {
+        for (const J& item : capabilities.array("capabilities")) if (string(item, "id") == model_id) {
             supported = selected_effort.empty();
             for (const J& option : item.at("efforts").array("efforts")) if (option.string("effort") == selected_effort) supported = true;
         }
@@ -1433,14 +1434,14 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         const J user_row = O{{"type", "message"}, {"role", "user"}, {"text", next_text}, {"turn_id", next_turn}, {"request_id", ""}};
         check_history({&user_row});
         J next_history = history; std::get<A>(next_history.data).push_back(user_row);
-        const auto outgoing = json::write(request_payload(next_turn, next_request, next_conversation, next_text, selected, selected_effort, next_history));
+        const auto outgoing = json::write(request_payload(next_turn, next_request, next_conversation, next_text, model_id, selected_effort, next_history));
         const auto growth = payload_size(user_row) + (history.array("history").empty() ? 0 : 1);
         auto admitted_message = success(O{{"turn_id", next_turn}, {"request_id", next_request}});
         auto next_trial = trial ? trial->id : std::string();
         auto captured = version;
         // All context/history/wire/return construction succeeded before admission commits.
         user_scope_committed = true;
-        text = std::move(next_text); model = std::move(selected); effort = std::move(selected_effort); attachments = A{};
+        text = std::move(next_text); model = std::move(model_id); effort = std::move(selected_effort); attachments = A{};
         turn = std::move(next_turn); request = std::move(next_request); conversation = std::move(next_conversation);
         history_used += growth;
         history = std::move(next_history); request_trial = std::move(next_trial); request_version = std::move(captured); response_done = false; had_tools = false;

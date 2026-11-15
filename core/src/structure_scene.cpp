@@ -1193,7 +1193,7 @@ SharedSiteMesh shared_site_mesh(const StructureScene& scene, std::span<const std
     for (std::size_t k = 0; k < sites.size(); ++k) {
         const SceneAtom& atom = scene.atoms[sites[k]];
         Vec3 centre = atom.centre; double radius = atom.radius;
-        if (qt) { centre = {static_cast<float>(centre.x), static_cast<float>(centre.y), static_cast<float>(centre.z)}; radius = static_cast<float>(radius); }
+        if (qt) { centre = {static_cast<double>(static_cast<float>(centre.x)), static_cast<double>(static_cast<float>(centre.y)), static_cast<double>(static_cast<float>(centre.z))}; radius = static_cast<double>(static_cast<float>(radius)); }
         else { centre = {std::isfinite(centre.x) ? centre.x : 0.0, std::isfinite(centre.y) ? centre.y : 0.0, std::isfinite(centre.z) ? centre.z : 0.0}; if (!std::isfinite(radius)) radius = 0.0; }
         const auto bound = [qt](double a, double b, bool high) { return qt ? static_cast<double>(high ? static_cast<float>(a) + static_cast<float>(b) : static_cast<float>(a) - static_cast<float>(b)) : high ? a + b : a - b; };
         out.low = {std::min(out.low.x, bound(centre.x, radius, false)), std::min(out.low.y, bound(centre.y, radius, false)), std::min(out.low.z, bound(centre.z, radius, false))};

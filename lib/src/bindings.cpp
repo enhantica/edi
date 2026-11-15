@@ -214,14 +214,6 @@ static constexpr auto renew_peak = [](edi::views::PeakNode& view) {
     view.experiment->peak.epoch = edi::detail::Epoch();
 };
 
-static nb::tuple names_tuple(std::span<const char* const> names) {
-    nb::list out;
-    for (const char* name : names) {
-        out.append(nb::str(name));
-    }
-    return nb::tuple(out);
-}
-
 // The Python attribute boundary is one of the three declared validation stages — a value
 // outside its spec's admissible range refuses (ValueError) instead of landing.
 static void check_range(const edi::ParameterSpec* spec, double value, const char* where) {

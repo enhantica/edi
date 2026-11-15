@@ -529,10 +529,10 @@ void ChatGptConnection::State::revoke() {
     if (revoking.value("refresh_token").toString().isEmpty()) { end_sign_out(!revoke_uncertain); return; }
     if (revocation_endpoint.isEmpty()) {
         request({HttpMethod::get, QUrl("https://auth.openai.com/.well-known/openid-configuration"), {}, {}, Limits::http_json_bytes, Limits::revoke_ms},
-            [this](int status, QByteArray body) {
+            [this](int code, QByteArray reply) {
                 try {
-                    if (status != 200) { end_sign_out(false); return; }
-                    const auto metadata = document(body);
+                    if (code != 200) { end_sign_out(false); return; }
+                    const auto metadata = document(reply);
                     const QUrl endpoint(metadata.value("revocation_endpoint").toString());
                     if (metadata.value("issuer") != "https://auth.openai.com" || !issuer_url(endpoint)) { end_sign_out(false); return; }
                     revocation_endpoint = endpoint; revoke();
@@ -549,9 +549,9 @@ void ChatGptConnection::State::revoke() {
     };
     request({HttpMethod::post, revocation_endpoint, {{"Content-Type", "application/x-www-form-urlencoded"}},
              form.query(QUrl::FullyEncoded).toUtf8(), Limits::http_json_bytes, Limits::revoke_ms},
-        [this, retry](int status, QByteArray body) {
-            if (status == 200 && body.isEmpty()) end_sign_out(true);
-            else if (status >= 500) retry(); else end_sign_out(false);
+        [this, retry](int code, QByteArray reply) {
+            if (code == 200 && reply.isEmpty()) end_sign_out(true);
+            else if (code >= 500) retry(); else end_sign_out(false);
         }, {}, retry);
 }
 void ChatGptConnection::State::poll() {

@@ -31,7 +31,10 @@ void SharedSiteGeometry::setSites(const edi::StructureScene& scene, const edi::S
     const QVector3D axis = vec(scene.frame.view_direction).normalized();
     const QVector3D up = vec(scene.frame.view_up).normalized();
     const QVector3D right = QVector3D::crossProduct(up, axis).normalized();
-    const edi::SharedSiteBasis basis{{axis.x(), axis.y(), axis.z()}, {up.x(), up.y(), up.z()}, {right.x(), right.y(), right.z()}};
+    const auto triple = [](const QVector3D& v) {
+        return edi::Vec3{static_cast<double>(v.x()), static_cast<double>(v.y()), static_cast<double>(v.z())};
+    };
+    const edi::SharedSiteBasis basis{triple(axis), triple(up), triple(right)};
     const auto mesh = edi::shared_site_mesh(scene, drawing.shared, segments, rings, edi::SharedSiteMeshProfile::QtFloat, basis);
     std::vector<Vertex> vertices;
     vertices.reserve(mesh.vertices.size());
