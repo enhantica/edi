@@ -282,9 +282,10 @@ std::optional<int> whole_su_place(const std::string& su) {
 // An s.u. shown alone: a decimal inside the range, else in its own power of ten with its own digits ("0.00025" is
 // "2.5×10⁻⁴", "1600" is "1.6×10³").
 std::string su_alone(const std::string& su, bool display) {
+    if (su.empty()) return su;
     char* end = nullptr;
-    const double number = su.empty() ? 0.0 : std::strtod(su.c_str(), &end);
-    if (su.empty() || end == su.c_str() || *end != '\0' || number == 0.0 || in_decimal_range(number)) return su;
+    const double number = std::strtod(su.c_str(), &end);
+    if (end == su.c_str() || *end != '\0' || number == 0.0 || in_decimal_range(number)) return su;
     const int power = power_of(number);
     std::string mantissa = shifted(su, power);
     if (const std::optional<int> place = whole_su_place(su); place.has_value()) mantissa = cut(mantissa, power - *place);

@@ -131,10 +131,11 @@ int main(int argc, char** argv) {
                     QMetaObject::invokeMethod(&process, [&] { process.closeWriteChannel(); }, Qt::QueuedConnection);
                     return;
                 }
-                std::unique_lock lock(mutex);
-                writable.wait(lock, [&] { return pending < 1024 * 1024; });
-                pending += static_cast<std::size_t>(size);
-                lock.unlock();
+                {
+                    std::unique_lock lock(mutex);
+                    writable.wait(lock, [&] { return pending < 1024 * 1024; });
+                    pending += static_cast<std::size_t>(size);
+                }
                 const QByteArray bytes(buffer, size);
                 QMetaObject::invokeMethod(&process, [&, bytes] { if (process.write(bytes) != bytes.size()) stop(); }, Qt::QueuedConnection);
             }

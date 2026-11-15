@@ -1322,6 +1322,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (!safe_emit("trial_finished", [&] { return O{{"result", result}}; })) return admitted();
         trial.reset();
         return admitted();
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks) — std::function's own storage, freed by its destructor
     }
     Reply user(const J& command) {
         output_failure = OutputFailure::none;

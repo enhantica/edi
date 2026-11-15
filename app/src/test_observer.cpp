@@ -624,7 +624,7 @@ void cycle_emit_terminal() {
     const std::vector<std::string> row =
         session != nullptr ? session->row(cycle.model->project(), cycle.model->currentExperimentIndex())
                            : std::vector<std::string>();
-    if (!row.empty()) {  // the shown dataset's recorded result, as `result` and at the top level
+    if (session != nullptr && !row.empty()) {  // the shown dataset's recorded result, as `result` and at the top level
         const edi::ScanResultIndex& index = session->index();
         const QJsonObject result{{"success", row[index.success] == "True"},
                                  {"iterations", std::stoi(row[index.iterations])},
