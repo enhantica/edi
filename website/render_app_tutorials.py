@@ -294,6 +294,11 @@ def stage_sentence(
         for name in re.findall(r'^(?:for \w+ in )?(\w+)\.', text, flags=re.MULTILINE)
         if name in (datablocks or {})
     }
+    # A loop over the project's structures or experiments acts on every one of them, never on one
+    # datablock alone.
+    owners |= set(
+        re.findall(r'^for \w+ in project\.(structures|experiments):', text, flags=re.MULTILINE)
+    )
     # A loop setting every site's displacement type is a choice in each row on the Structure page.
     sentences += [
         f"on **Structure**, choose **{kind}** as every site's type in the **Atomic displacement** "

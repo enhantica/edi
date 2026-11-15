@@ -9,8 +9,9 @@ The same staged fit as the Python and Command line tutorials, in the app. Its st
 Fit the amino-sulfonic acid taurine to six time-of-flight neutron single-crystal datasets from
 SENJU at J-PARC together, each reflection measured at its own wavelength.
 
-The project is the catalogue case `sc-neut-tof_taurine-senju`, the one the command line and the
-app's Examples open. Banks 2 to 6 share bank 1's three extinction terms, from the start.
+It builds the catalogue case `sc-neut-tof_taurine-senju` step by step: the same project the
+command line fits and the app's Examples open. Banks 2 to 6 share bank 1's three extinction
+terms.
 
 ## Create a project
 
@@ -102,7 +103,7 @@ The project ties some parameters together from the start. On **Analysis → Extr
 
 Each bank's scale, with every site's displacement isotropic for now.
 
-Choose **taurine** in the datablock filter, then on **Structure**, choose **Biso** as every site's type in the **Atomic displacement** table; then filter the **Linked structures** parameters using the category filter, click the **Free** column header and choose **Free · all**, then press **Fit** in the status bar.
+On **Structure**, choose **Biso** as every site's type in the **Atomic displacement** table; then filter the **Linked structures** parameters using the category filter, click the **Free** column header and choose **Free · all**, then press **Fit** in the status bar.
 
 <figure class="gui-figure" data-gui-figure>
 <a class="gui-image-link" href="../../../assets/gui/cases/sc-neut-tof_taurine-senju/stage-1-fit.webp?v=939649ec8a7a" data-gui-dark="edcce646d36c" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Fit: Scales, every site isotropic"><svg class="gui-capture" data-gui-view="overview" viewBox="0 0 1480 800" width="1480" height="800" role="img" aria-label="Fit: Scales, every site isotropic"><title>Fit: Scales, every site isotropic</title><defs><clipPath id="gui-clip-stage-1-fit-overview"><rect width="1480" height="800" rx="17.76" /></clipPath></defs><image href="../../../assets/gui/cases/sc-neut-tof_taurine-senju/stage-1-fit.webp?v=939649ec8a7a" data-gui-dark="edcce646d36c" width="1480" height="800" clip-path="url(#gui-clip-stage-1-fit-overview)" /><rect class="gui-image-frame" width="1480" height="800" rx="17.76" /><path class="is-active" data-gui-region="stage-1-fit-overview-1" data-gui-area="main" data-gui-parts="[[0,77,770,681]]" d="M1.000 82.000 Q1.000 78.000 5.000 78.000 L765.000 78.000 Q769.000 78.000 769.000 82.000 L769.000 753.000 Q769.000 757.000 765.000 757.000 L5.000 757.000 Q1.000 757.000 1.000 753.000 Z" /><path class="" data-gui-region="stage-1-fit-overview-2" data-gui-area="sidebar" data-gui-parts="[[770,119,710,609.5]]" d="M771.000 124.000 Q771.000 120.000 775.000 120.000 L1475.000 120.000 Q1479.000 120.000 1479.000 124.000 L1479.000 723.500 Q1479.000 727.500 1475.000 727.500 L775.000 727.500 Q771.000 727.500 771.000 723.500 Z" /><path data-gui-navigation data-gui-area="navigation" data-gui-parts="[[812.359375,0,67.84375,77]]" d="M813.359 5.000 Q813.359 1.000 817.359 1.000 L875.203 1.000 Q879.203 1.000 879.203 5.000 L879.203 72.000 Q879.203 76.000 875.203 76.000 L817.359 76.000 Q813.359 76.000 813.359 72.000 Z" /></svg></a>
