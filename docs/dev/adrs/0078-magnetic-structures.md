@@ -53,8 +53,9 @@ without computing any of them itself.
   moments live on atom sites. Every structure's Structure page lists the Magnetic moments group, one row per site,
   each "none" at first, with the form selector greyed. Choosing an ion for a site gives it a moment, and the
   magnetic groups (magnetic space group, parent group, propagation vectors, operators, form factors) appear; setting
-  every site back to "none" hides them again. The Structures table's read-only Model column says how each
-  structure is described: Atom-based for every structure Create makes or a CIF of atom sites loads.
+  every site back to "none" hides them again. The Structures table's Type column, right after the name and
+  shown disabled, says how each structure is described: Atom-based for every structure Create makes or a CIF of
+  atom sites loads.
 - **Symmetry from the operators** (2026-11-08). When a structure's magnetic operators form no table setting, crysta
   decides it once and edi reads that decision: no position, cell or displacement ties, the cell and positions not
   fittable, no Wyckoff letter (the site table shows none, and the multiplicity is the operators' orbit), and an
