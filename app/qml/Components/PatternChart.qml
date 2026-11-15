@@ -332,9 +332,11 @@ Item {
         }
     }
 
+    // Save image's background (SaveImageButton): none while a transparent image is taken.
+    property bool transparentImage: false
     Rectangle {
         anchors.fill: parent
-        color: chart.colors.chartBackground
+        color: chart.transparentImage ? "transparent" : chart.colors.chartBackground
     }
 
     PaneGrid {

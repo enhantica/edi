@@ -29,9 +29,13 @@ Row {
     }
     // The image as Save image takes it, handed to `done` with the share of its height to cut off at the top: the
     // toolbar is hidden for the grab, and a chart's toolbar band is cut. `scale` renders it larger, sharp.
+    // A target with a `transparentImage` property drops its background while it is grabbed, as Preferences asks.
     function capture(done, scale) {
         const line = toolbarLine();
         const shownOpacity = line ? line.opacity : 1;
+        const clears = save.target !== null && save.target.transparentImage !== undefined;
+        if (clears)
+            save.target.transparentImage = Preferences.imageBackground !== "chart";
         // Below the toolbar's band when it is at the top, as a fraction of the height.
         const cut = line && cropToolbar && line.y + line.height < target.height / 2 ? (line.y + line.height) / target.height : 0;
         if (line)
@@ -39,6 +43,8 @@ Row {
         save.target.grabToImage(result => {
             if (line)
                 line.opacity = shownOpacity;
+            if (clears)
+                save.target.transparentImage = false;
             done(result, cut);
         }, Qt.size(Math.round(target.width * (scale || 1)), Math.round(target.height * (scale || 1))));
     }

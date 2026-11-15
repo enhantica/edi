@@ -66,6 +66,9 @@ QtObject {
     // The folder every Save image starts in, the last one an image was saved to; empty until then, when the
     // project's reports folder is the start (the owner, 2026-11-10).
     property string imageFolder: ""
+    // What Save image puts behind a chart or the structure view: "transparent" (the default) or "chart", the chart's
+    // own background colour (the owner, 2026-11-01).
+    property string imageBackground: "transparent"
     // The sidebar groups kept open when another opens, by object name, separated by commas (the owner, 2026-11-10).
     property string pinnedGroups: ""
     // Where the workflow pages show their sidebar: "Right" (the default) or "Left" (WorkflowPage).
@@ -161,6 +164,7 @@ QtObject {
         property alias autoCollapse: preferences.autoCollapse
         property alias sideBarSide: preferences.sideBarSide
         property alias imageFolder: preferences.imageFolder
+        property alias imageBackground: preferences.imageBackground
         property alias pinnedGroups: preferences.pinnedGroups
     }
 

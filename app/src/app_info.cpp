@@ -4703,7 +4703,7 @@ void ApplicationInfo::resetPreferences() const {
     const auto f = panelUsageEngine(this);
     projectWrite(f, "preferences", "assistantWidth", assistantContextField(f, "AppSizes", "assistantDefaultWidth"));
     const std::pair<const char*, QJSValue> defaults[] = {
-        {"toolTipLevel", QJSValue(QStringLiteral("Important"))}, {"toolTipDelay", QJSValue(1000)}, {"autoCollapse", QJSValue(true)}, {"sideBarSide", QJSValue(QStringLiteral("Right"))},
+        {"toolTipLevel", QJSValue(QStringLiteral("Important"))}, {"toolTipDelay", QJSValue(1000)}, {"autoCollapse", QJSValue(true)}, {"sideBarSide", QJSValue(QStringLiteral("Right"))}, {"imageBackground", QJSValue(QStringLiteral("transparent"))},
         {"engineThreads", QJSValue(0)}, {"scanWorkers", QJSValue(1)}, {"loggingLevel", QJSValue(QStringLiteral("Warning"))}, {"scanPatternUpdates", QJSValue(2)}, {"analysisShowNotMeasured", QJSValue(true)},
         {"analysisShowBySymmetry", QJSValue(false)}, {"analysisShowByConstraint", QJSValue(false)}, {"analysisShowFixedSettings", QJSValue(false)},
         {"showFitResults", QJSValue(true)}, {"scanRenderer", QJSValue(QStringLiteral("auto"))}, {"newProjectSuRule", QJSValue(QStringLiteral("iucr_99"))},
