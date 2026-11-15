@@ -41,6 +41,7 @@
 #include <QDateTime>
 #include <QEvent>
 #include <QGuiApplication>
+#include <QStyleHints>
 #include <QJSManagedValue>
 #include <QJSPrimitiveValue>
 #include <QJsonDocument>
@@ -11117,6 +11118,12 @@ QJSValue ApplicationInfo::windowUnsavedText() const {
             name = panelUsageMemberCall(f, first, "replace", {panelRegex(f, QStringLiteral("<"), QV4::CompiledData::RegExp::RegExp_Global), QJSValue(QStringLiteral("&lt;"))});
         } return QJSValueList{name};
     });
+}
+
+void ApplicationInfo::applyColorScheme(int theme) const {
+    // The owner, 2026-11-15: edi's Light and Dark override the platform's scheme; System follows it.
+    const auto scheme = theme == 0 ? Qt::ColorScheme::Light : theme == 1 ? Qt::ColorScheme::Dark : Qt::ColorScheme::Unknown;
+    QGuiApplication::styleHints()->setColorScheme(scheme);
 }
 
 void ApplicationInfo::finishUiEvent(int kind, const QJSValue& value) const {

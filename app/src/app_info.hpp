@@ -874,6 +874,9 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue windowUnsavedText() const;
     /// Final guarded focus/refresh/sort/warning and visual-feedback event procedures.
     Q_INVOKABLE void finishUiEvent(int kind, const QJSValue& value) const;
+    /// Hands edi's Theme (0 light, 1 dark, 2 system) to Qt's colour scheme, so what Qt draws itself, such as the
+    /// Windows title bar's buttons, follows edi's theme; system gives the choice back to the platform.
+    Q_INVOKABLE void applyColorScheme(int theme) const;
     /// Preserve the generic loaded text item's original dirty-property relation without narrowing its type.
     Q_INVOKABLE void workflowTextItemChanged() const;
 #if EDI_APP_ASSISTANT
