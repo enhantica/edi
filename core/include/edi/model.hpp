@@ -4792,6 +4792,21 @@ struct WeightFraction {
 /// the only enabled structure. Otherwise absent when the link belongs to no project, takes no part,
 /// or a structure's cell mass is unknown.
 std::optional<WeightFraction> weight_fraction(const LinkedStructure& link);
+/// A derived value and its standard uncertainty, absent when nothing determines one.
+struct DerivedQuantity {
+    double value = 0.0;
+    std::optional<double> uncertainty;
+};
+/// A moment's spherical form, computed by crysta: the modulus in μB, the polar angle from +z and the
+/// azimuth from +x about +z in degrees (Cartesian x along a, z along c*), each with its s.u. through
+/// the constraints from the fit's covariance. Values only, with the components' s.u. taken as
+/// uncorrelated, for a moment no project holds.
+struct SphericalMoment {
+    DerivedQuantity modulus;
+    DerivedQuantity polar;
+    DerivedQuantity azimuthal;
+};
+SphericalMoment spherical_moment(const AtomSiteMoment& moment);
 std::uint64_t engine_structure_factor_evaluations() noexcept;
 // The chi-square tolerance a fit uses when `_minimizer.chi_square_tolerance` is not declared: the
 // LINKED crysta's default, forwarded like default_descent() (the app shows the value the minimizer
@@ -4849,6 +4864,49 @@ struct KeyTraits<SequentialExtractRule> {
     static const char* category() { return "sequential-fit extract rule"; }
 };
 
+// ADR-0087: one experiment of a series of joint fits and the file pattern its points' files
+// match; the text the pattern's one `*` matches is the point. Mirrors crysta's row.
+struct SequentialFitExperiment {
+    ItemKey experiment_id;
+    detail::WrittenText file_pattern;
+};
+
+template <>
+struct KeyTraits<SequentialFitExperiment> {
+    static ItemKey& key(SequentialFitExperiment& row) { return row.experiment_id; }
+    static const ItemKey& key(const SequentialFitExperiment& row) { return row.experiment_id; }
+    static std::string canonical(const std::string& id) { return datablock_key(id, "experiment"); }
+    static const char* category() { return "sequential-fit experiment"; }
+};
+
+// ADR-0086: an experiment set, a template experiment and its members, each an ordinary experiment.
+struct ExperimentSet {
+    ItemKey id;
+    detail::WrittenText template_experiment_id;
+};
+
+template <>
+struct KeyTraits<ExperimentSet> {
+    static ItemKey& key(ExperimentSet& row) { return row.id; }
+    static const ItemKey& key(const ExperimentSet& row) { return row.id; }
+    static std::string canonical(const std::string& id) { return id; }
+    static const char* category() { return "experiment set"; }
+};
+
+// One member of an experiment set, keyed by the experiment (it belongs to one set).
+struct ExperimentSetMember {
+    ItemKey experiment_id;
+    detail::WrittenText set_id;
+};
+
+template <>
+struct KeyTraits<ExperimentSetMember> {
+    static ItemKey& key(ExperimentSetMember& row) { return row.experiment_id; }
+    static const ItemKey& key(const ExperimentSetMember& row) { return row.experiment_id; }
+    static std::string canonical(const std::string& id) { return datablock_key(id, "experiment"); }
+    static const char* category() { return "experiment set member"; }
+};
+
 }  // namespace edi
 
 // ADR-0018: the columns of the `_sequential_fit_extract` table.
@@ -4858,6 +4916,25 @@ struct RowSchema<edi::SequentialExtractRule> {
     static constexpr const char* name = "_sequential_fit_extract";
     static constexpr auto fields = std::tuple{&edi::SequentialExtractRule::id, &edi::SequentialExtractRule::target, &edi::SequentialExtractRule::pattern, &edi::SequentialExtractRule::required};
     static constexpr std::array items{"id", "target", "pattern", "required"};
+};
+template <>
+struct RowSchema<edi::SequentialFitExperiment> {
+    static constexpr const char* name = "_sequential_fit_experiment";
+    static constexpr auto fields =
+        std::tuple{&edi::SequentialFitExperiment::experiment_id, &edi::SequentialFitExperiment::file_pattern};
+    static constexpr std::array items{"experiment_id", "file_pattern"};
+};
+template <>
+struct RowSchema<edi::ExperimentSet> {
+    static constexpr const char* name = "_experiment_set";
+    static constexpr auto fields = std::tuple{&edi::ExperimentSet::id, &edi::ExperimentSet::template_experiment_id};
+    static constexpr std::array items{"id", "template_experiment_id"};
+};
+template <>
+struct RowSchema<edi::ExperimentSetMember> {
+    static constexpr const char* name = "_experiment_set_member";
+    static constexpr auto fields = std::tuple{&edi::ExperimentSetMember::experiment_id, &edi::ExperimentSetMember::set_id};
+    static constexpr std::array items{"experiment_id", "set_id"};
 };
 }  // namespace crysta
 
@@ -4962,7 +5039,11 @@ struct SequentialFitConfig {
     // The template dataset: the scan file whose data the template experiment holds (set_scan_template_file).
     std::string template_file;
     ItemVec<SequentialExtractRule> extract;  // Ids unique by construction
+    // ADR-0087: a series of joint fits, one file pattern per experiment; empty for a scan of one
+    // experiment, which reads `file_pattern`.
+    ItemVec<SequentialFitExperiment> experiments;
     bool declared() const { return !data_dir.empty(); }
+    bool joint() const { return !experiments.empty(); }
     // ADR-0018: the row of this object's non-loop categories.
     detail::CategoryRow table_row;
 };
@@ -5309,6 +5390,10 @@ class Project : public detail::ProjectAnchor {
     // The declared parameter aliases and constraints (analysis.edi `_alias`, `_constraint`).
     ItemVec<ParameterAlias> aliases;
     ItemVec<ParameterConstraint> constraints;
+    // ADR-0086: the experiment sets and their members (analysis.edi `_experiment_set`,
+    // `_experiment_set_member`).
+    ItemVec<ExperimentSet> experiment_sets;
+    ItemVec<ExperimentSetMember> experiment_set_members;
     // The last fit's result (`_fit_result`; see FitResultRecord).
     FitResultRecord fit_result;
     // ADR-0018: the row of this object's non-loop categories.
