@@ -515,4 +515,62 @@ ScanMapColour scan_table_colour(std::span<const ScanMapColour> table, double t) 
     return table[static_cast<std::size_t>(std::lround(clamped * static_cast<double>(table.size() - 1)))];
 }
 
+ScanColumns merge_scan_columns(std::span<const ScanColumns> parts) {
+    if (parts.empty()) {
+        return {};
+    }
+    ScanColumns merged = parts.front();
+    for (const ScanColumns& part : parts.subspan(1)) {
+        if (part.low.size() != merged.low.size() || part.high.size() != merged.high.size()) {
+            continue;
+        }
+        for (std::size_t i = 0; i < merged.low.size(); ++i) {
+            // std::fmin and std::fmax take the number when one side is NaN.
+            merged.low[i] = std::fmin(merged.low[i], part.low[i]);
+            merged.high[i] = std::fmax(merged.high[i], part.high[i]);
+        }
+    }
+    return merged;
+}
+
+std::size_t ScanSummaryCache::cost(const Entry& entry) {
+    return entry.first.size() + ((entry.second.low.size() + entry.second.high.size()) * sizeof(float));
+}
+
+const ScanColumns* ScanSummaryCache::find(const std::string& key) {
+    const auto found = where_.find(key);
+    if (found == where_.end()) {
+        return nullptr;
+    }
+    order_.splice(order_.begin(), order_, found->second);
+    return &found->second->second;
+}
+
+void ScanSummaryCache::insert(const std::string& key, ScanColumns columns) {
+    if (const auto found = where_.find(key); found != where_.end()) {
+        bytes_ -= cost(*found->second);
+        order_.erase(found->second);
+        where_.erase(found);
+    }
+    Entry entry{key, std::move(columns)};
+    const std::size_t size = cost(entry);
+    if (size > budget_) {
+        return;
+    }
+    while (bytes_ + size > budget_ && !order_.empty()) {
+        bytes_ -= cost(order_.back());
+        where_.erase(order_.back().first);
+        order_.pop_back();
+    }
+    order_.push_front(std::move(entry));
+    where_.emplace(order_.front().first, order_.begin());
+    bytes_ += size;
+}
+
+void ScanSummaryCache::clear() {
+    order_.clear();
+    where_.clear();
+    bytes_ = 0;
+}
+
 }  // namespace edi

@@ -1921,6 +1921,9 @@ ScanDatasets scan_datasets(const Project& project) {
             datasets.files.push_back(point.key);
             datasets.point_files.push_back(std::move(point.files));
         }
+        for (crysta::SequentialIncompletePoint& point : points.incomplete) {
+            datasets.incomplete.push_back({std::move(point.key), std::move(point.files), std::move(point.reason)});
+        }
         return datasets;
     }
     // A project opened from a .zip has no directory of its own yet, only the folder it was unpacked into; its scan is
@@ -1928,6 +1931,20 @@ ScanDatasets scan_datasets(const Project& project) {
     crysta::SequentialScanFiles files = crysta::sequential_scan_files(
         config, project.path.empty() ? project.scan_data_root : project.path, project.scan_data_root);
     return {std::move(files.directory), std::move(files.names)};
+}
+
+std::vector<std::string> scan_data_files(const ScanDatasets& datasets) {
+    if (!datasets.joint()) {
+        return datasets.files;
+    }
+    std::vector<std::string> files;
+    for (const std::vector<std::string>& point : datasets.point_files) {
+        files.insert(files.end(), point.begin(), point.end());
+    }
+    for (const ScanDatasets::IncompletePoint& point : datasets.incomplete) {
+        files.insert(files.end(), point.files.begin(), point.files.end());
+    }
+    return files;
 }
 
 PdDataBase read_scan_dataset(const std::string& directory, const std::string& file, BeamModeEnum mode) {
@@ -2618,6 +2635,138 @@ std::filesystem::path scan_experiments_path(const Project& project) {
 }
 
 }  // namespace
+
+std::vector<bool> scan_points_changed(const Project& project, const ScanDatasets& datasets,
+                                      const std::vector<std::string>& points) {
+    std::vector<bool> changed(points.size(), false);
+    const std::filesystem::path path = scan_experiments_path(project);
+    if (!project.sequential_fit.joint() || points.empty() ||
+        !scan_state_present(path, "analysis/results_experiments.csv")) {
+        return changed;
+    }
+    std::unordered_map<std::string, std::vector<std::size_t>> wanted;
+    for (std::size_t i = 0; i < points.size(); ++i) {
+        wanted[points[i]].push_back(i);
+    }
+    std::ifstream input(path, std::ios::binary);
+    std::string line;
+    if (!std::getline(input, line)) {
+        return changed;
+    }
+    const std::vector<std::string> header = split_scan_row(line);
+    const auto at = [&header](const char* name) {
+        return static_cast<std::size_t>(std::find(header.begin(), header.end(), name) - header.begin());
+    };
+    const std::size_t point = at("point"), file = at("file_path"), size = at("file_size"), modified = at("file_modified");
+    if (point >= header.size() || file >= header.size() || size >= header.size() || modified >= header.size()) {
+        return changed;
+    }
+    // A last line still being written has no line break yet and is left for later.
+    while (std::getline(input, line) && !input.eof()) {
+        const std::vector<std::string> cells = split_scan_row(line);
+        if (cells.size() != header.size()) {
+            continue;
+        }
+        const auto found = wanted.find(cells[point]);
+        if (found == wanted.end()) {
+            continue;
+        }
+        // The row names the file as crysta wrote it, under the scan's folder; the folder is where it is now.
+        const std::string name = std::filesystem::path(cells[file]).filename().string();
+        const auto [now_size, now_modified] =
+            crysta::sequential_file_receipt((std::filesystem::path(datasets.directory) / name).string());
+        if (now_size != cells[size] || now_modified != cells[modified]) {
+            for (const std::size_t i : found->second) {
+                changed[i] = true;
+            }
+        }
+    }
+    return changed;
+}
+
+std::vector<double> series_point_scales(const Project& project, const std::string& point) {
+    std::vector<double> scales;
+    std::map<std::string, std::size_t> place;
+    for (const auto& experiment : project.experiments) {
+        double scale = 1.0;
+        for (const auto& link : experiment->linked_structures) {
+            if (link->enabled.get()) {
+                scale = link->scale.value.get();
+                break;
+            }
+        }
+        place.emplace(datablock_key(experiment->name, "experiment"), scales.size());
+        scales.push_back(scale);
+    }
+    const std::filesystem::path path = scan_experiments_path(project);
+    if (project.sequential_fit.joint() && scan_state_present(path, "analysis/results_experiments.csv")) {
+        std::ifstream input(path, std::ios::binary);
+        std::string line;
+        if (std::getline(input, line)) {
+            const std::vector<std::string> header = split_scan_row(line);
+            // The point's experiment rows come together; the first scale column in the header is the first link's.
+            const auto scale_column = std::find_if(header.begin(), header.end(), [](const std::string& name) {
+                return name.starts_with("linked_structure.") && name.ends_with(".scale");
+            });
+            if (header.size() >= 2 && header[0] == "point" && header[1] == "experiment" &&
+                scale_column != header.end()) {
+                const auto at = static_cast<std::size_t>(scale_column - header.begin());
+                while (std::getline(input, line) && !input.eof()) {
+                    const std::vector<std::string> cells = split_scan_row(line);
+                    if (cells.size() != header.size() || cells[0] != point) {
+                        continue;
+                    }
+                    double value = 0.0;
+                    const auto found = place.find(cells[1]);
+                    if (found != place.end() && parse_scan_number(cells[at], value)) {
+                        scales[found->second] = value;
+                    }
+                }
+            }
+        }
+    }
+    for (double& scale : scales) {
+        if (!std::isfinite(scale) || scale <= 0.0) {
+            scale = 1.0;
+        }
+    }
+    return scales;
+}
+
+ScanColumns series_row_columns(const Project& project, const ScanDatasets& datasets, std::size_t point,
+                               const std::vector<std::size_t>& experiments, const std::vector<double>& scales,
+                               double d_min, double d_max, std::size_t columns) {
+    const std::vector<std::string>& files = datasets.point_files.at(point);
+    std::vector<ScanColumns> parts;
+    parts.reserve(experiments.size());
+    for (const std::size_t place : experiments) {
+        if (place >= project.experiments.size()) {
+            throw std::out_of_range("series_row_columns: no experiment at place " + std::to_string(place));
+        }
+        const BraggPdExperiment& experiment = *project.experiments[place];
+        const BeamModeEnum mode = experiment.effective_beam_mode();
+        PdDataBase data = read_scan_dataset(datasets.directory, files.at(place), mode);
+        const std::vector<double>& x = data.axis();
+        const std::vector<double>& y = data.intensity_meas.get();
+        const InstrumentBase& instrument = experiment.instrument;
+        const crysta::BeamModeEnum kind = mode == BeamModeEnum::CONSTANT_WAVELENGTH
+                                              ? crysta::BeamModeEnum::ConstantWavelength
+                                              : crysta::BeamModeEnum::TimeOfFlight;
+        const double scale = place < scales.size() ? scales[place] : 1.0;
+        const double wavelength = instrument.setup_wavelength ? instrument.setup_wavelength->value.get()
+                                                               : std::numeric_limits<double>::quiet_NaN();
+        std::vector<double> d(x.size());
+        std::vector<double> intensity(y.size());
+        for (std::size_t i = 0; i < x.size() && i < y.size(); ++i) {
+            d[i] = crysta::measured_point_d_spacing(
+                kind, x[i], instrument.calib_d_to_tof_offset.value.get(), instrument.calib_d_to_tof_linear.value.get(),
+                instrument.calib_d_to_tof_quadratic.value.get(), wavelength);
+            intensity[i] = y[i] / scale;
+        }
+        parts.push_back(scan_columns(d, intensity, d_min, d_max, columns));
+    }
+    return merge_scan_columns(parts);
+}
 
 std::vector<std::string> evolution_experiment_parameters(const Project& project) {
     std::vector<std::string> names;
@@ -6455,6 +6604,22 @@ std::optional<int> count_scan_files(const std::filesystem::path& scan_dir,
     return count;
 }
 
+// A series of joint fits' size: its complete points, as crysta lists them; nullopt when they cannot be listed.
+std::optional<int> count_series_points(const Project& project, const crysta::SequentialFitConfig& config,
+                                       const std::string& working_root) {
+    std::vector<std::string> names;
+    names.reserve(project.experiments.size());
+    for (const auto& experiment : project.experiments) {
+        names.push_back(experiment->name);
+    }
+    try {
+        return static_cast<int>(
+            crysta::sequential_scan_points(config, names, working_root, project.scan_data_root).points.size());
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
 // The one numeric-cell device for this reader, mirroring io.cpp's `to_double` device-for-device:
 // a classic-("C")-locale-imbued istringstream, fully consumed or refused. BOTH properties are
 // load-bearing and neither may be traded for the other:
@@ -6647,7 +6812,9 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                                     "' - the scan body serves only 'sequential' and 'independent'");
     }
     require_fittable_free(*this);  // ADR-0053: a free flag the fit cannot honour is refused by name
-    if (experiments.size() != 1) {
+    // A series of joint fits (one file pattern per experiment) fits each point over every experiment.
+    const bool joint = sequential_fit.joint();
+    if (experiments.size() != 1 && !joint) {
         throw std::invalid_argument(
             "edi fit_sequential: the project has " + std::to_string(experiments.size()) +
             " experiments (a sequential fit iterates scan data files against exactly one "
@@ -6674,9 +6841,22 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // column grammar; the scan block and iteration bound are the declared inputs).
         // Several structures (phases) are all handed over, as the single fit does, and crysta
         // fits each scan file through its phase-sum residual.
-        const bool phases = structures.size() > 1 || experiment().linked_structures.size() != 1 ||
-                            !experiment().linked_structure().enabled.get();
+        const bool phases =
+            structures.size() > 1 || std::any_of(experiments.begin(), experiments.end(), [](const auto& experiment) {
+                return experiment->linked_structures.size() != 1 || !experiment->linked_structure().enabled.get();
+            });
+        BuiltExperiments built;
         crysta::Project cproject = [&]() -> crysta::Project {
+            if (joint) {
+                // Every experiment, as a joint fit builds them; crysta reads each point's files into them.
+                for (const auto& experiment_item : experiments) {
+                    make_fit_ready(build_on_heap(built, *experiment_item));
+                }
+                if (phases) {
+                    return crysta::Project(to_crysta_structures(*this), experiment_list(built));
+                }
+                return crysta::Project(to_crysta_structure(structure()), experiment_list(built));
+            }
             if (phases) {
                 return crysta::Project(to_crysta_structures(*this),
                                        std::vector<crysta::BraggPdExperiment>{detail::to_crysta_experiment(experiment())});
@@ -6685,7 +6865,9 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         }();
         detail::require_populated_participants(cproject, "edi fit_sequential");
         fill_crysta_relations(*this, cproject);
-        make_fit_ready(cproject.experiment());
+        if (!joint) {
+            make_fit_ready(cproject.experiment());
+        }
         // Review-1 F4: forward the DECLARED mode, never a hard-coded one — pinning
         // "sequential" here would have run an `independent` project chained, silently answering
         // a different question than the project declares.
@@ -6729,7 +6911,8 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         bool preamble_delivered = false;
         if (on_scan_start) {
             const std::optional<int> total_files =
-                count_scan_files(data_root / sequential_fit.data_dir, sequential_fit.file_pattern);
+                joint ? count_series_points(*this, cproject.sequential_fit, working_root)
+                      : count_scan_files(data_root / sequential_fit.data_dir, sequential_fit.file_pattern);
             if (total_files.has_value()) {
                 ScanPreamble scan_preamble;
                 scan_preamble.total_files = *total_files;
@@ -6835,7 +7018,8 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         refined.reserve(result.values.size());
         for (const auto& [label, value] : result.values) {
             std::optional<detail::ResolvedParameter> resolved =
-                detail::resolve_project_label(*this, experiment(), label);
+                joint ? detail::resolve_joint_project_label(*this, label)
+                      : detail::resolve_project_label(*this, experiment(), label);
             if (!resolved) {
                 throw std::invalid_argument(
                     "edi fit_sequential: crysta result label '" + label +

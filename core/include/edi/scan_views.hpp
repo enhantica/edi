@@ -3,10 +3,13 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <list>
 #include <optional>
 #include <span>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 // The two views of a sequential fit's patterns (edi ADR-0041): every dataset's measured pattern one above another,
@@ -22,6 +25,35 @@ struct ScanColumns {
 };
 ScanColumns scan_columns(std::span<const double> x, std::span<const double> intensity, double x_min, double x_max,
                          std::size_t columns);
+
+/// A series' merged row (edi ADR-0088 point 5): per column the lowest low and highest high over its experiments'
+/// columns, NaN only where none has a value. Parts of other widths than the first are ignored.
+ScanColumns merge_scan_columns(std::span<const ScanColumns> parts);
+
+/// The views' summaries of the rows on screen (edi ADR-0088 point 5): at most `budget` bytes of columns and keys, the
+/// least recently used dropped first; nothing else keeps them. Keys are the caller's description of a row, its range
+/// and its width. Not thread safe: the worker that builds summaries owns it.
+class ScanSummaryCache {
+   public:
+    static constexpr std::size_t kDefaultBudget = std::size_t{64} << 20U;
+    explicit ScanSummaryCache(std::size_t budget = kDefaultBudget) : budget_(budget) {}
+    /// The summary under `key`, now the most recently used; null when there is none.
+    const ScanColumns* find(const std::string& key);
+    /// Keeps `columns` under `key`, replacing any summary there and dropping the least recently used to stay within
+    /// the budget. A summary larger than the whole budget is not kept.
+    void insert(const std::string& key, ScanColumns columns);
+    void clear();
+    std::size_t bytes() const { return bytes_; }
+    std::size_t size() const { return order_.size(); }
+
+   private:
+    using Entry = std::pair<std::string, ScanColumns>;
+    static std::size_t cost(const Entry& entry);
+    std::list<Entry> order_;  // most recently used first
+    std::unordered_map<std::string, std::list<Entry>::iterator> where_;
+    std::size_t budget_;
+    std::size_t bytes_ = 0;
+};
 
 /// What the Stacked view draws of one pattern over [x_min, x_max] at `columns` pixel columns, always from the measured
 /// points (never from a reduction made for another range): while the range holds no more points than columns, the
