@@ -7,6 +7,7 @@ import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
 import OnboardingAcceptance 1.0
+import "NativeTurn.js" as Turn
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
 import "TutorialGeometry.js" as Geometry
@@ -18,6 +19,8 @@ TestCase {
     name: "TutorialNavigation"
     when: windowShown
     property var app
+    property string gateTurnSelector: ""
+    property int geometryIndex: -1
     property var panel
     property var chooser
     property var popupButton
@@ -70,7 +73,7 @@ TestCase {
         compare(found.length, 1, "The actual tutorial exposes exactly one control named " + name);
         return found[0];
     }
-    function init() {
+    function initTestCase() {
         Session.closeProject();
         tourFitStarted = false;
         requiredFitStarts = 0;
@@ -89,8 +92,27 @@ TestCase {
         tryCompare(homes[0], "introRunning", false, 15000, "The startup intro visibly finishes before any tutorial input; it is neither skipped nor disabled");
         panel = one(app, "tutorialPanel");
         chooser = one(app, "tutorials");
+        const selections = Qt.application.arguments.filter(value => value.startsWith("TutorialNavigation::test_"));
+        if (selections.length && selections.every(value => value.startsWith("TutorialNavigation::test_callout_is_next_to_its_named_control")))
+            reach(0);
     }
-    function cleanup() {
+    function geometryRow() {
+        return gateTurnSelector.startsWith("TutorialNavigation::test_callout_is_next_to_its_named_control:");
+    }
+    function init() {
+        gateTurnSelector = Turn.begin(test, Probe);
+        tourFitStarted = false;
+        requiredFitStarts = 0;
+        const viewport = /@(\d+)x(\d+)$/.exec(gateTurnSelector);
+        app.width = viewport ? Number(viewport[1]) : 1200;
+        app.height = viewport ? Number(viewport[2]) : 800;
+        if (!geometryRow() || geometryIndex < 0)
+            AppState.open(AppState.Page.Home);
+        app.raise();
+        app.requestActivate();
+        tryVerify(() => app.active, 2000, "Each row receives the same original active tutorial window");
+    }
+    function resetContext() {
         sentinel.stop();
         lessonWalking = false;
         if (tourLogOpen)
@@ -101,15 +123,21 @@ TestCase {
         if (panel && panel.visible)
             panel.stop();
         if (app) {
-            // A failed setup still owns its original popups. Reject them through
-            // genuine Escape input so singleton dialog visibility cannot poison
-            // the next independently created window.
             for (const dialog of Probe.visibleDialogs(app))
                 if (dialog.contentItem)
                     SettingsProof.key(dialog.contentItem, Qt.Key_Escape);
             OnboardingProbe.incubate(app);
         }
         Session.closeProject();
+        geometryIndex = -1;
+    }
+    function cleanup() {
+        if (!geometryRow())
+            resetContext();
+        Turn.end(gateTurnSelector);
+    }
+    function cleanupTestCase() {
+        resetContext();
         if (app)
             app.destroy();
         app = null;
@@ -206,13 +234,21 @@ TestCase {
         return tour.steps;
     }
     function reach(index) {
-        verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))), "A populated real project exposes every workflow control for callout placement");
-        AppState.open(AppState.Page.Home);
-        start("interface");
+        const reuse = geometryRow() && geometryIndex >= 0 && index >= geometryIndex;
+        if (!reuse) {
+            if (panel.visible)
+                panel.stop();
+            verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))), "A populated real project exposes every workflow control for callout placement");
+            AppState.open(AppState.Page.Home);
+            start("interface");
+            geometryIndex = 0;
+        }
         const steps = tourSteps();
         verify(index < steps.length, "The requested tour step exists in the shipped script");
-        for (let n = 1; n <= index; ++n)
+        progress(geometryIndex + 1, steps.length);
+        for (let n = geometryIndex + 1; n <= index; ++n)
             next(n + 1, steps.length);
+        geometryIndex = index;
         finishPages();
         verify(waitForPolish(app), "The callout and target finish their layout before scene measurement");
         return steps[index];
@@ -239,24 +275,27 @@ TestCase {
                 }));
     }
     function test_callout_is_next_to_its_named_control_data() {
-        return targetRows();
+        const rows = [];
+        for (const size of [[1200, 800], [1440, 1000]])
+            for (const target of targetRows())
+                rows.push({tag: target.tag + "@" + size[0] + "x" + size[1], index: target.index,
+                    width: size[0], height: size[1]});
+        return rows;
     }
     function test_callout_is_next_to_its_named_control(data) {
         const step = reach(data.index);
-        for (const size of [[1200, 800], [1440, 1000]]) {
-            app.width = size[0];
-            app.height = size[1];
-            verify(waitForPolish(app), "Callout placement responds to the actual resized window");
-            if (mainAreaStep(step)) {
-                pageAreaCallout(step);
-                continue;
-            }
-            const item = target(step.target), body = panel.background;
-            const bodyBox = test.bodyBox(), targetBox = Geometry.rect(item, app.contentItem);
-            const gap = Geometry.distance(bodyBox, targetBox);
-            verify(Geometry.overlap(bodyBox, targetBox) <= 0.05 * Math.min(bodyBox.width * bodyBox.height, targetBox.width * targetBox.height), "An adjacent callout does not obscure the control it explains");
-            verify(gap <= 2 * one(panel, "tutorial.text").font.pixelSize, "A callout is within two text heights of its named control, not fixed in a window corner: " + step.target + " gap=" + gap);
+        compare(app.width, data.width, "Each geometry row observes its declared actual window width");
+        compare(app.height, data.height, "Each geometry row observes its declared actual window height");
+        verify(waitForPolish(app), "Callout placement responds to the actual resized window");
+        if (mainAreaStep(step)) {
+            pageAreaCallout(step);
+            return;
         }
+        const item = target(step.target), body = panel.background;
+        const bodyBox = test.bodyBox(), targetBox = Geometry.rect(item, app.contentItem);
+        const gap = Geometry.distance(bodyBox, targetBox);
+        verify(Geometry.overlap(bodyBox, targetBox) <= 0.05 * Math.min(bodyBox.width * bodyBox.height, targetBox.width * targetBox.height), "An adjacent callout does not obscure the control it explains");
+        verify(gap <= 2 * one(panel, "tutorial.text").font.pixelSize, "A callout is within two text heights of its named control, not fixed in a window corner: " + step.target + " gap=" + gap);
     }
     function test_pointer_faces_and_reaches_the_named_control_data() {
         return targetRows();
@@ -2386,7 +2425,7 @@ TestCase {
             return false;
         if (check.startsWith("example:"))
             return !Session.openingExample && project.name === check.slice("example:".length);
-        const match = /^download:(structure|experiment|data):([^=]+)=(.+)$/.exec(check);
+        const match = /^(?:download|web-row):(structure|experiment|data):([^=]+)=(.+)$/.exec(check);
         if (match === null)
             return false;
         if (match[1] !== "data") {
@@ -2465,10 +2504,16 @@ TestCase {
         }
     }
 
+    function requiredFitStep(step) {
+        return ["fitted", "fit-done"].includes(step.check);
+    }
     function requiredFitWaitMs(datasets) {
         return Math.max(60000, datasets * 5000);
     }
     function test_required_fit_guard_tracks_dataset_work() {
+        verify(requiredFitStep({check: "fitted"}), "The native walker retains its original explicit fit-completion grammar");
+        verify(requiredFitStep({check: "fit-done"}), "The native walker observes the current explicit fit-completion grammar");
+        verify(!requiredFitStep({check: "results-closed"}), "Acknowledging fit results cannot impersonate a newly executed fit");
         compare(requiredFitWaitMs(1), 60000, "One dataset retains the existing bounded fit-completion floor");
         compare(requiredFitWaitMs(12), 60000, "Twelve datasets meet the existing completion floor");
         compare(requiredFitWaitMs(13), 65000, "Further datasets each add the unchanged system-tier five-second work allowance");
@@ -2493,8 +2538,8 @@ TestCase {
             finishPages();
             const step = steps[index];
             const fitStartsBefore = requiredFitStarts;
-            const scanFit = step.check === "fitted" && Session.project && Session.project.scan && Session.project.fit.scanMode;
-            const fitDatasets = step.check === "fitted" && Session.project ? (Session.project.scan && !scanFit ? 1 : Session.project.experiments.count) : 0;
+            const scanFit = requiredFitStep(step) && Session.project && Session.project.scan && Session.project.fit.scanMode;
+            const fitDatasets = requiredFitStep(step) && Session.project ? (Session.project.scan && !scanFit ? 1 : Session.project.experiments.count) : 0;
             verify(typeof step.target === "string" && step.target.length > 0, "Every tutorial step names its current GUI target");
             tryVerify(() => {
                 OnboardingProbe.advanceClock(16);
@@ -2505,7 +2550,7 @@ TestCase {
             if (data.recipe) {
                 observeRecipeMenu();
                 recipeTargets.push(step.target);
-                if (step.check === "fitted")
+                if (requiredFitStep(step))
                     recordRecipeBoundary(data.tutorial, ++recipeStage, recipeTargets, recipeFileSeen);
             }
             if (index + 1 === steps.length)
@@ -2516,8 +2561,8 @@ TestCase {
                 dialog.projectParentDirectory = String(SettingsProof.emptyDirectory());
             }
             if (panel.step === index)
-                press(one(panel, "tutorial.next"), "Replay the written step " + (index + 1), step.check === "fitted");
-            if (step.check === "fitted") {
+                press(one(panel, "tutorial.next"), "Replay the written step " + (index + 1), requiredFitStep(step));
+            if (requiredFitStep(step)) {
                 verify(Number.isInteger(fitDatasets) && fitDatasets > 0, "A fit-completion guard has a positive actual dataset count");
                 const fitWaitMs = requiredFitWaitMs(fitDatasets);
                 console.info("TUTORIAL_FIT_WAIT " + JSON.stringify({id: data.tutorial, step: index + 1, datasets: fitDatasets, milliseconds: fitWaitMs}));
@@ -2540,11 +2585,11 @@ TestCase {
                 return panel.step > index;
             }, 60000, "The panel advances after the declared action completes, including asynchronous loads");
             compare(panel.step, index + 1, "The panel reaches the next written step without skipping its target");
-            if (/^(example|download):/.test(step.check || "")) {
+            if (/^(example|download|web-row):/.test(step.check || "")) {
                 verify(requiredAsyncState(step.check), "The async step leaves its declared project, block or measured data in the actual model");
                 console.info("TUTORIAL_ASYNC_COMPLETE " + JSON.stringify({id: data.tutorial, check: step.check, from: index, to: panel.step, state: true}));
             }
-            if (step.check === "fitted") {
+            if (requiredFitStep(step)) {
                 verify(requiredFitStarts > fitStartsBefore && Session.project.fit.outcome === "success", "The fit stage completes a fresh successful fit rather than reusing an earlier result");
                 console.info("TUTORIAL_FIT_COMPLETE " + JSON.stringify({id: data.tutorial, check: step.check, from: index, to: panel.step, state: true}));
             }
@@ -2640,7 +2685,7 @@ TestCase {
     function test_required_async_next_waits_for_the_real_state(data) {
         start(data.tutorial);
         const prefix = data.operation === "example" ? "example:" : "download:" + data.operation + ":";
-        const index = panel.steps.findIndex(step => data.operation === "fit" ? step.check === "fitted" : (step.check || "").startsWith(prefix));
+        const index = panel.steps.findIndex(step => data.operation === "fit" ? requiredFitStep(step) : (step.check || "").startsWith(prefix));
         verify(index >= 0 && index + 1 < panel.steps.length, "The declared case teaches its asynchronous action before the final step");
         walkRequiredTutorial(data, index);
         compare(panel.step, index + 1, "The async prefix reaches the following instruction through actual Next");

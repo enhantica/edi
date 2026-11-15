@@ -38,7 +38,21 @@ def group(path):
     return 'other: ' + path
 
 
-def observe(source, bindings=None):  # noqa: PLR0914, PLR0915 - finite AST effects kept in execution order
+def observe(source, bindings=None):
+    project = (bindings or {}).get('project')
+    original = [
+        (site, site.adp_type)
+        for block in getattr(project, 'structures', [])
+        for site in block.atom_sites
+    ]
+    try:
+        return _observe(source, bindings)
+    finally:
+        for site, selected in original:
+            site.adp_type = selected
+
+
+def _observe(source, bindings=None):  # noqa: PLR0914, PLR0915 - finite AST effects kept in execution order
     source = python_syntax(source)
     tree = ast.parse(source)
     aliases = {}
@@ -512,6 +526,7 @@ def app_cycles(steps, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - ord
     cycles = []
     previous_active = set()
     awaiting_completion = False
+    population_dirty = False
     for step in steps:
         check = step.get('check', '')
         type_change = re.fullmatch(r'pick:atomSiteAdp\.type\.(\d+)=(.+)', check)
@@ -520,9 +535,18 @@ def app_cycles(steps, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - ord
                 raise ValueError(
                     'ADP type steps require the independently observed selected structure'
                 )
-            model.structures[0].atom_sites[int(type_change[1])].adp_type = type_change[2]
+            site = model.structures[0].atom_sites[int(type_change[1])]
+            if str(site.adp_type) != type_change[2]:
+                site.adp_type = type_change[2]
+                population_dirty = True
+        if population_dirty and (
+            check.startswith(('tick:', 'untick:', 'free:', 'fixed:', 'free-choice:'))
+            or check in {'fit-done', 'fitted'}
+            or step.get('target') == 'statusBar.fit.button'
+        ):
             population = app_population(project=model)
             active.intersection_update(population)
+            population_dirty = False
         if check.startswith(('tick:', 'untick:', 'free:', 'fixed:', 'free-choice:')):
             if check.startswith('free-choice:'):
                 _, action, category, *block = check.split(':')
@@ -651,16 +675,18 @@ def prose_cycles(source, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - 
                 explicitly_fixed.add('isotropic displacement')
         setting_type = re.search(r'choose\s+(biso|uiso|beta|bani)\s+as every site', lower)
         if setting_type and model is not None:
+            selected = {'biso': 'Biso', 'uiso': 'Uiso', 'beta': 'beta', 'bani': 'Bani'}[
+                setting_type[1]
+            ]
+            changed = False
             for structure in model.structures:
                 for site in structure.atom_sites:
-                    site.adp_type = {
-                        'biso': 'Biso',
-                        'uiso': 'Uiso',
-                        'beta': 'beta',
-                        'bani': 'Bani',
-                    }[setting_type[1]]
-            members = dict(app_population(project=model))
-            active.intersection_update(members)
+                    if str(site.adp_type) != selected:
+                        site.adp_type = selected
+                        changed = True
+            if changed:
+                members = dict(app_population(project=model))
+                active.intersection_update(members)
         context += '\n' + lower
         # Separate explicit instructions so each datablock/category selector retains its scope.
         selected_block = None

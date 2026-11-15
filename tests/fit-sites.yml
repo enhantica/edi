@@ -20,6 +20,11 @@ sites:
     catalogue: true
   - file: tests/system/py/test_tutorial_command_line_stages.py
     tutorial_stages: true
+    why: Positive and damaged-input controls retain the actual tutorial-origin admission boundary after the full workflows move to nightly.
+    assertion_feed: Invalid-operand admission controls, exact catalogue input bytes, native measured arrays and refusal of redirected or extra inputs.
+    audit: 2026-11-15; the unchanged controls never enter a solver with their deliberately invalid operand.
+  - file: tests/system/py/test_tutorial_command_line_workflows.py
+    tutorial_stages: true
     why: Owner 4cf15ae54 requires successive visible file edits and actual CLI fits of the declared tutorial catalogue.
     assertion_feed: Labelled regression pins and Python stage order; admission freezes canonical input bytes and the actual measured arrays.
     audit: 2026-11-09; exact registered file only, canonical .edi path set, unchanged measured coordinates, intensities and uncertainties after loading.

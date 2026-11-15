@@ -181,3 +181,21 @@ The native catalogue snapshot is refreshed through the documented import command
 including the existing single-crystal cases and full Crystal structure / Magnetic
 structure labels. Its receipt names the actual source commit and file hashes;
 no numerical or screenshot references are regenerated.
+
+## Tutorial test execution
+
+The lightweight source, chapter, parser and damaged-input controls run in the PR groups. Real CLI lessons execute
+several numerical fits, and native recipe journeys construct the GUI project and execute its fit stages; these full
+workflows run in the declared nightly system group with their existing predicates, cases and completion guards.
+Neither their expected numerical pins nor tier thresholds change with that scheduling choice.
+
+Navigation reuses the on-demand host protocol already used for shared controls (ADR-0076). One module owns one real
+Main window and waits for its ordinary Home intro once. Each requested Qt row still waits for its own Python permit,
+executes its own input and assertions, and reports its own native result. Adjacent callout geometry rows retain the
+actual forward interface walk instead of opening the project and replaying every earlier step again. Missing earlier
+requested rows are traversed by genuine Next input. Other cases close their project and original popups between rows.
+Native and Python lifecycle costs stay recorded as module setup; each row's action cost remains separately measured.
+
+The source observer restores borrowed model ADP representations after observing a lesson. Independent initial
+parameter eligibility is prepared once per module; selecting an already selected representation does not rebuild it.
+A real representation change still rebuilds the offered parameter population before its next stage is observed.
