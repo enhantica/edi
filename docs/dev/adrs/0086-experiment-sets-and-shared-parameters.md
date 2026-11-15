@@ -55,10 +55,16 @@ pdffit2, bumps, lmfit, cctbx, EasyScience, diffraction-lib, SasView and the othe
 4. **Phase ratios shared across patterns.** A set's Linked structures group has "Phase ratios shared". On, with `a` the
    leader, `r` its first enabled linked structure and every member linking the same structures: for each other member
    `e` and structure `p ≠ r`, the constraint `s(e,p) = s(e,r) * s(a,p) / s(a,r)` on the linked scales. Each pattern's
-   `s(e,r)` stays free as its overall scale; the ratios come from the leader. Members linking different structures, or
-   a reference scale fixed at zero, refuse the switch with a plain message. The weight fractions are then the same for
-   every member.
+   `s(e,r)` stays free as its overall scale; the ratios come from the leader. The reference `r` is the leader's first
+   enabled linked structure whose scale is not zero; when every leader scale is zero, or members link different
+   structures, the switch refuses with a plain message ("Give a phase of the template a starting scale first"). The
+   reference stays the one chosen when the switch was turned on; a fit trial that drives `s(a,r)` to zero makes the
+   ratio undefined and is rejected like any trial a constraint cannot evaluate, and a series point that starts from a
+   zero reference scale is skipped and listed with that cause. The weight fractions are then the same for every
+   member, and so are their s.u., which crysta takes through the constraints from the leader's scales.
 5. **Nothing else changes.** The fit, the s.u. of a dependent, the free flags and the refusals are crysta's (ADR-0024).
+   crysta fits a constraint from one experiment to another in every joint fit: powder data with one structure or
+   several, and single crystals.
    A set is not a fitting mode: a joint fit, an independent fit or a series fits its members as experiments.
 6. **Python and the CLI.** `project.experiment_sets.create(id=, template=, members=)`, `ExperimentSet.share(path)`,
    `.unshare(path)`, `.shared` and `.phase_ratios_shared`, each writing or removing the same rows. A CLI user writes the

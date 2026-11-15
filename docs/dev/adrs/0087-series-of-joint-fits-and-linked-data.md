@@ -35,7 +35,7 @@ project: GSAS-II powder data, Z-Rietveld, SasView, cryspy. NeXus containers read
    named after its group, and the experiments form an experiment set (ADR-0086). The grouping reads names only, on a
    worker; the first point's file of each experiment is read as that experiment's template data.
 2. **What is saved.** The scan's `data_dir` and, per experiment, its file pattern; no per-file entry, read or hash at
-   Save (the owner's rule for scans, kept here).
+   Save.
 3. **Copy or link.** The series folder is copied into `scans/<name>` or linked as a folder, by ADR-0069's rules and
    defaults unchanged (copy on for up to 20 files and 50 MB, the question above 100 MB), counting every file the
    patterns match. One link per series: the folder. A series of collection files waits for collection scans.
@@ -45,8 +45,11 @@ project: GSAS-II powder data, Z-Rietveld, SasView, cryspy. NeXus containers read
      crysta skips it.
    - During a fit: a file that has gone, cannot be read or is malformed makes crysta skip that point and list it with
      the cause; the series goes on.
-   - A file whose content changed is not detected: no file is hashed (point 2). Its row names the file; a Reset fits
-     it again. A single experiment's linked file keeps the receipt ADR-0069 gives it.
+   - A file changed after its point was fitted is marked "changed since fitted": each experiment row of
+     `results_experiments.csv` records the file's size and modification time from when crysta read it, and the dataset
+     list compares them with the file as it is, on a worker and only for the rows it shows. Continue does not refit
+     such a point; Reset does. No file is read or hashed for this (point 2). A file changed before its point is fitted
+     is fitted as it then is. A single experiment's linked file keeps the receipt ADR-0069 gives it.
 5. **The Save as dialog's Measured data row.** For a project with linked data the dialog shows "Measured data: Copy
    into the project / Keep linked", preset from Data on save and the size defaults. It is the per-save decision
    ADR-0069 point 5 already makes, shown in the dialog; built with this ADR, consumed as it is by later work that
@@ -60,13 +63,14 @@ project: GSAS-II powder data, Z-Rietveld, SasView, cryspy. NeXus containers read
 ## Consequences
 
 - A WISH temperature series loads in one step and saves as a few lines.
-- A changed file in a linked series is fitted as it now is; users who replace data files in place should Reset.
+- A file replaced in place after its point was fitted is shown as changed, never silently taken as the data the
+  result came from; a file with the same size and time but other bytes is not detected.
 
 ## Alternatives considered
 
 | Alternative | Verdict (why rejected / deferred) |
 |---|---|
-| A link per file or per point | Rejected: Save and open would cost per file, against the owner's rule for scans |
+| A link per file or per point | Rejected: Save and open would cost per file |
 | Hash every series file at open, as RietX and PhaseSmith do on load | Rejected: 100,000 reads before anything shows |
 | Ask the user to arrange files one folder per point | Rejected: data arrive as one folder per run with bank suffixes |
 | Embed series data in the project | Rejected (ADR-0069): large series make projects and saves slow |

@@ -51,7 +51,9 @@ table to draw curves per dataset from. Displayed-resolution reductions are edi's
    in a cache of at most 64 MiB, dropped when the views are hidden. Nothing is stored in the project. A pattern read
    for a summary is released once summarised.
 6. **Derived values in the tables.** The Linked structures table keeps its weight fraction column; the moments table
-   gains read-only |M|, θ and φ columns with their s.u. under the red s.u. rule (ADR-0085). The structure view's
+   gains read-only |M|, θ and φ columns with their s.u. under the red s.u. rule (ADR-0085). Every derived value and
+   s.u. the app shows (tables, Evolution, report) is crysta's one result for it, taken through the constraints from the
+   fit's covariance; edi computes none of them. The structure view's
    moment form (crystal axes, Cartesian, spherical) is unchanged.
 7. **The GUI thread.** Reading results rows, building summaries, grouping files and listing folders run on workers.
    The scale run (ADR-0026, "Two results files") also records the longest GUI-thread stall.
