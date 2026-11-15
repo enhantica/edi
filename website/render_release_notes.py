@@ -65,12 +65,12 @@ def _flatten_headings(body: str) -> str:
 
 
 def _title(release: dict) -> str:
-    """The release title, as GitHub shows it: version and release date."""
+    """The release title, as GitHub shows it: tag and release day (the tag names the year)."""
     recorded = RELEASE_DATE.search(release['body'] or '')
-    year, month, day = map(
+    _, month, day = map(
         int, (recorded[1] if recorded else release['published_at'][:10]).split('-')
     )
-    title = f'{release["tag_name"].removeprefix("v")} ({day} {MONTHS[month - 1]} {year})'
+    title = f'{release["tag_name"]} ({day} {MONTHS[month - 1]})'
     return escape(title) + (' preview' if release['prerelease'] else '')
 
 

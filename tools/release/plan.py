@@ -149,9 +149,12 @@ MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 
 
 
 def release_title(version: str, date: str, *, preview: bool = False) -> str:
-    """A GitHub release's title, its version and release date: ``2026.11.14 (13 Nov 2026)``."""
+    """A GitHub release's title, its tag and release day: ``v2026.11.14 (13 Nov)``.
+
+    The tag already names the year, so the date leaves it out.
+    """
     day = datetime.date.fromisoformat(date)
-    title = f'{version} ({day.day} {MONTHS[day.month - 1]} {day.year})'
+    title = f'v{version} ({day.day} {MONTHS[day.month - 1]})'
     return title + ' preview' if preview else title
 
 
