@@ -12,7 +12,7 @@
 # measurement_source = local
 # measured_utc = 2026-11-15T19:28:32Z
 #
-# Recorded from: seq38+39 actual scoped Linux receipts core-final, cadence-public-final, recipe-controls-final; expensive workflow tier moves preserve PR cadence; no bound changed
+# Recorded from: measured test runs on Linux (moved tiers keep their PR cadence; no bound changed)
 # Collected tests: 245366; with a reported duration: 77389
 # Module-scoped fixture costs recorded: 202
 #
