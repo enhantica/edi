@@ -1,6 +1,6 @@
 {
   "source_sha256": "3124c9ac68d6e6d87f4e8ead791feca698d6b04a9900283832129828626937dd",
-  "convention": "SHELX-97 section 2; unweighted rms about the weighted mean divided by sqrt(n-1). Weighted scatter is retained separately, not chosen for the product.",
+  "convention": "SHELX-97 section 2; unweighted rms about the weighted mean divided by sqrt(n-1). The adapters use the separately retained CCSL weighted-scatter convention.",
   "cases": {
     "tbti": {
       "input_rows": [

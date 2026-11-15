@@ -569,7 +569,20 @@ TestCase {
         scale().value=data.zero?0:2.3;
         ready();
         const before=scale().value;
-        const observations=data.zero?"20 10 1\n30 20 2\n40 30 3\n50 40 4\n":"20 10 1\n30 20 2\n40 30 3\n50 40 4\n";
+        let observations="", numerator=0, denominator=0;
+        const rows=Probe.rows(project.currentExperiment.pattern);
+        for(let index=0;index<rows.length;++index) {
+            const row=rows[index];
+            if(!isFinite(row.intensityCalc)||!isFinite(row.intensityBkg)) continue;
+            const observed=row.intensityBkg/2, sigma=1+index%3, net=row.intensityCalc-row.intensityBkg;
+            observations+=row.x+" "+observed+" "+sigma+"\n";
+            numerator+=net*(observed-row.intensityBkg)/(sigma*sigma);
+            denominator+=net*net/(sigma*sigma);
+        }
+        if(data.zero)
+            fuzzyCompare(denominator,0,1e-20,"The zero-signal guard genuinely has a zero normal-equation denominator");
+        else
+            verify(denominator>0 && numerator<0,"The nonpositive-factor guard genuinely has calculated signal and a negative weighted optimum");
         verify(SettingsProof.write(source,"guard.xye",observations),"The no-change witness declares either zero calculated signal or a negative optimum");
         verify(project.loadDataInto(project.currentExperiment,Qt.resolvedUrl(source+"/guard.xye")),"The no-change guard is reached by a real measured-data load: "+project.lastError);
         ready();

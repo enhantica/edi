@@ -91,7 +91,7 @@ def main():
         'source_sha256': hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
         'convention': (
             'SHELX-97 section 2; unweighted rms about the weighted mean divided by sqrt(n-1). '
-            'Weighted scatter is retained separately, not chosen for the product.'
+            'The adapters use the separately retained CCSL weighted-scatter convention.'
         ),
         'cases': {},
     }
