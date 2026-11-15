@@ -72,3 +72,8 @@ the restart after an undamped step, which take a different path to the same mini
 prefix of the scan, since `results.csv` keeps reporting precision, so the χ² pins hold the raw values: latp_312
 142228752.2, latp_304 143756683.8, latp_296 147598919.8, latp_288 142118683.2. Measured with
 `python tools/checks/cli_projects.py` linked against crysta `77f2364d`.
+
+**Re-pinned 2026-11-15, Auto descent.** crysta's default descent is now Auto: each chained point
+of a sequential fit runs fast descent alone. latp_288 settles slightly lower, χ² 141022536.2 and `length_c` 20.84994;
+the other files stay within their bounds. Measured with `python tools/checks/cli_projects.py` linked against crysta
+`5dcfe9f0`, whose fitting code is the same as `5747d2de`'s.
