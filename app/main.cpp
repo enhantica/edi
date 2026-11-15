@@ -5,10 +5,6 @@
 #include <QFile>
 #include <QUrl>
 #include <QTimer>
-#ifdef Q_OS_WIN
-#include "../core/src/windows_sdk.hpp"  // the one place edi includes windows.h
-#include <uxtheme.h>
-#endif
 #include <QQmlApplicationEngine>
 #include <QScreen>
 #include <QSettings>
@@ -149,9 +145,10 @@ int main(int argc, char* argv[]) {
         merged->setFlag(Qt::ExpandedClientAreaHint, true);
         merged->setFlag(Qt::NoTitleBarBackgroundHint, true);
 #ifdef Q_OS_WIN
-        // Windows still draws the app icon and title in the merged strip; hide both, keeping its window buttons.
-        WTA_OPTIONS hide{WTNCA_NODRAWCAPTION | WTNCA_NODRAWICON, WTNCA_NODRAWCAPTION | WTNCA_NODRAWICON};
-        SetWindowThemeAttribute(reinterpret_cast<HWND>(merged->winId()), WTA_NONCLIENT, &hide, sizeof(hide));
+        // Qt draws this strip itself on Windows (qwindowswindow.cpp, updateCustomTitlebar): the icon and title only
+        // when the window has a title hint, the three buttons from their own hints. Keep the buttons, drop the title.
+        merged->setFlags(Qt::Window | Qt::CustomizeWindowHint | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint
+                         | Qt::ExpandedClientAreaHint | Qt::NoTitleBarBackgroundHint);
 #endif
 #ifdef Q_OS_MACOS
         // The app bar's first button lines up with the red traffic light (Main.qml).
