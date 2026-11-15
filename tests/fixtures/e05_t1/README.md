@@ -154,3 +154,14 @@ The schema projection preserves the captured machine record without rerunning it
 The original numeric/input/producer provenance above is retained; the wire-only
 projection and unavailable stop metadata are documented in
 [the machine report schema projection](../c06_t8/README.md).
+
+
+C32-T5 follow-up: ADR-0123's retired zero ABSCOR2 fields are removed by a narrow historical-input mapping,
+with active and unrelated byte changes refused. ADR-0125 changed the default algorithm, so private CLI copies
+explicitly declare the captured fixture's descent rather than inheriting that new default. Iteration serialization
+checks the actual producing run; the retained named model projection excludes only ADR-0123's retired slots.
+No profile metric is re-captured or promoted to an independent accuracy reference by these adaptations.
+
+The real CLI paths run as two bounded workflows: fit/save/reopen and fit/save/Undo. Each performs the
+complete fit-result and bank checks before its final action. The independent CIF reader inspects bank loops
+without Python-tokenizing unrelated correlation rows; no native save/load behavior is mocked.

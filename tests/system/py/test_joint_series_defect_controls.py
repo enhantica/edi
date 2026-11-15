@@ -1,12 +1,25 @@
 """Defect controls for the runtime boundary predicates."""
 
+import copy
+import json
 import shutil
 import tomllib
 from pathlib import Path
+from types import SimpleNamespace
 
+import gemmi
+import numpy as np
 import pytest
 
-from tests.fixtures.joint_series import oracle, subject
+from tests.fixtures.cif2 import read_block
+from tests.fixtures.e05_t1.iteration_record import (
+    check_persisted_iterations,
+    pin_declared_descent,
+    selected_parameter_count,
+)
+from tests.fixtures.e05_t1.start_bytes import absorption_start_bytes
+from tests.fixtures.joint_series import ncaf, oracle, persistence, prepare_native, subject
+from tests.integration.py.test_relation_derived_values import moment_project
 
 
 @pytest.mark.parametrize(
@@ -128,20 +141,17 @@ def test_tied_saved_fraction_error_is_numerical():
             )
 
 
-def test_worker_chunks_reject_both_restart_and_accidental_full_chain():
+def test_sequential_workers_reject_chunk_restart_and_preserve_skip_chain():
     template = [4.09, 1.8, 4.7]
-    fitted = [[4.1, 2, 5], [4.16, 2.6, 4.2], [4.08, 1.7, 6], [4.1, 2, 5], [4.16, 2.6, 4.2]]
-    valid = [template] * 3 + [fitted[2]] * 2
-    oracle.starts(valid, template, fitted, chained=True, chunks=(3, 2))
-    for bad in ([template] * 5, [template, *fitted[:-1]]):
+    written = [[4.1, 2, 5], [4.16, 2.6, 4.2], [4.08, 1.7, 6], [4.1, 2, 5], [4.16, 2.6, 4.2]]
+    oracle.starts([template, *written[:-1]], template, written, chained=True)
+    for wrong in ([template] * 5, [template] * 3 + [written[2]] * 2):
         with pytest.raises(AssertionError):
-            oracle.starts(bad, template, fitted, chained=True, chunks=(3, 2))
-    after_skip = [fitted[0], fitted[1], fitted[3], fitted[4]]
-    oracle.starts(
-        [template] * 2 + [fitted[1]] * 2, template, after_skip, chained=True, chunks=(2, 2)
-    )
+            oracle.starts(wrong, template, written, chained=True)
+    after_skip = [written[0], written[1], written[3], written[4]]
+    oracle.starts([template, *after_skip[:-1]], template, after_skip, chained=True)
     with pytest.raises(AssertionError):
-        oracle.starts([template] * 4, template, after_skip, chained=True, chunks=(2, 2))
+        oracle.starts([template] * 4, template, after_skip, chained=True)
 
 
 @pytest.mark.parametrize(
@@ -170,19 +180,12 @@ def test_valid_report_rounding_and_corruption(value, sigma, shown, error):
     )
 
 
-def test_start_chain_admits_rounded_predecessor_and_rejects_reset():
-    template, fitted = [1.8], [[2.1635], [2.1635]]
-    oracle.starts(
-        [template, [2.16352]], template, fitted, chained=True, uncertainties=[[0.0049], [0.0049]]
-    )
-    with pytest.raises(AssertionError):
-        oracle.starts(
-            [template, template],
-            template,
-            fitted,
-            chained=True,
-            uncertainties=[[0.0049], [0.0049]],
-        )
+def test_written_predecessor_rejects_full_precision_and_template_carry():
+    template, written = [1.8], [[2.1635], [2.1635]]
+    oracle.starts([template, written[0]], template, written, chained=True)
+    for wrong in (template, [2.16352], [2.1635000001], [float('nan')], [float('inf')]):
+        with pytest.raises(AssertionError):
+            oracle.starts([template, wrong], template, written, chained=True)
 
 
 @pytest.mark.parametrize('channel', ['spherical_polar', 'spherical_azimuthal', 'follower'])
@@ -243,3 +246,212 @@ def test_native_subject_mismatch_is_refused(tmp_path, defect):
 
     with pytest.raises(AssertionError):
         rejected()
+
+
+@pytest.mark.parametrize('defect', ['stale-value', 'stale-error', 'wrong-value'])
+def test_saved_fraction_admits_adoption_and_rejects_stale_state(defect):
+    values, errors = np.array([2.16352, 1.23456, 3.78654]), np.array([0.00481, 0.01001, 0.00678])
+    covariance = np.diag(errors**2)
+    covariance[0, 1] = covariance[1, 0] = 0.35 * errors[0] * errors[1]
+    cells = [[4.1, 5.3, 6.7, 90, 90, 90], [4.7, 4.9, 4.1 * 5.3 * 6.7 / (4.7 * 4.9), 90, 90, 90]]
+    adopted = persistence.adopted_fraction(values, errors, covariance, cells)
+    old_value = values[1] / sum(values[:2])
+    gradient = np.array([-values[1], values[0], 0]) / sum(values[:2]) ** 2
+    old_error = np.sqrt(gradient @ covariance @ gradient)
+
+    def text(value, error):
+        return (
+            'data_bank\nloop_\n_linked_structure.structure_id\n'
+            '_linked_structure.weight_fraction\nphase .6(.1)\n'
+            f'other {value:.17g}({error:.17g})\n'
+        )
+
+    oracle.category(
+        text(adopted['fraction'], adopted['sigma']),
+        '_linked_structure.weight_fraction',
+        adopted['fraction'],
+        adopted['sigma'],
+    )
+    value = old_value if defect == 'stale-value' else adopted['fraction']
+    error = old_error if defect == 'stale-error' else adopted['sigma']
+    if defect == 'wrong-value':
+        value += 0.01
+    with pytest.raises(AssertionError):
+        oracle.category(
+            text(value, error),
+            '_linked_structure.weight_fraction',
+            adopted['fraction'],
+            adopted['sigma'],
+        )
+
+
+@pytest.mark.parametrize('defect', ['correlation', 'marginal'])
+def test_saved_moment_covariance_corruption_is_rejected(tmp_path, defect):
+    root = tmp_path / 'moment'
+    _, inputs, covariance = moment_project(root)
+    persistence.moment_reference(root, inputs, covariance)
+    path = root / ('analysis/analysis.edi' if defect == 'correlation' else 'structures/phase.edi')
+    text = path.read_text()
+    changed = (
+        text.replace(' 0.35\n', ' 0\n')
+        if defect == 'correlation'
+        else text.replace('1.2(0.04)', '1.2(0.4)')
+    )
+    assert changed != text, (
+        'The corruption control must actually alter a supplied covariance input'
+    )
+    path.write_text(changed)
+    with pytest.raises(AssertionError):
+        persistence.moment_reference(root, inputs, covariance)
+
+
+@pytest.mark.parametrize('defect', ['missing', 'stale-source', 'changed-binary'])
+def test_native_preparation_never_compiles_to_repair_bad_evidence(tmp_path, monkeypatch, defect):
+    spec = {'engine': 'crysta', 'source': 'authored-selected-observer'}
+    build = prepare_native.directory(tmp_path, spec)
+    build.mkdir(parents=True)
+    binary = build / 'starts'
+    binary.write_bytes(b'authored prepared observation')
+    receipt = {'spec': spec, 'binary_sha256': subject.digest(binary).hex()}
+    manifest = build / 'prepared.json'
+    manifest.write_text(json.dumps(receipt))
+    assert prepare_native.validate(build, spec) == binary, (
+        'A prepared observer must be admitted only with matching source and executable evidence'
+    )
+    if defect == 'missing':
+        manifest.unlink()
+    elif defect == 'stale-source':
+        receipt['spec'] = {'engine': 'crysta', 'source': 'unrelated observer'}
+        manifest.write_text(json.dumps(receipt))
+    else:
+        binary.write_bytes(b'unrelated binary')
+    monkeypatch.setattr(prepare_native, 'configuration', lambda *_: (spec, [], [], []))
+
+    def forbidden(*_args, **_kwargs):
+        message = 'The behavior gate may not invoke a compiler or repair its preparation'
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(prepare_native.subprocess, 'run', forbidden)
+    with pytest.raises(AssertionError):
+        prepare_native.prepared(tmp_path, SimpleNamespace(__name__='crysta'))
+
+
+def test_native_preparation_is_declared_before_its_consumers():
+    root = Path(__file__).resolve().parents[3]
+    tasks = tomllib.loads((root / 'pixi.toml').read_text())['tasks']
+    consumers = (
+        ('test', 'suite-coverage', 'group-nightly', 'per-pr-measure')
+        if root.name == 'crysta'
+        else ('test', 'quick-tests', 'system-tests-part', 'per-pr-measure')
+    )
+    prepare_native.declared_for(tasks, consumers)
+    bad = copy.deepcopy(tasks)
+    bad[consumers[0]]['depends-on'] = []
+    with pytest.raises(AssertionError):
+        prepare_native.declared_for(bad, consumers)
+
+
+@pytest.mark.parametrize(
+    'compound', ['[1 2]', '[1 [2 3]]', '[1 # kept comment\n 2]', '["a]b" [1 2] \'x#y\']']
+)
+def test_cif2_list_cells_preserve_scalar_category_checks(compound):
+    text = (
+        '#\\#CIF_2.0\ndata_bank\nloop_\n_linked_structure.structure_id\n'
+        '_linked_structure.weight_fraction\nphase 0.67(.04)\nother 0.33(.04)\n'
+        'loop_\n_data.axis\n_data.intensity_calc\n_pd_calc.component_intensities_net\n'
+        f'1 9 {compound}\n2 10 {compound}\n_caption "literal [caption]"\n'
+    )
+    block = read_block(text)
+    assert len(list(block.find_values('_data.axis'))) == 2, (
+        'Each CIF2 component list must remain one loop cell for independent scalar checks'
+    )
+    assert [
+        gemmi.cif.as_string(t) for t in block.find_values('_pd_calc.component_intensities_net')
+    ] == [compound, compound], 'The scalar projection must retain a whole CIF2 list in one cell'
+    assert gemmi.cif.as_string(block.find_value('_caption')) == 'literal [caption]', (
+        'Quoted scalar bracket text must never be treated as a compound token'
+    )
+    oracle.category(text, '_linked_structure.weight_fraction', 0.33, 0.04)
+    with pytest.raises(AssertionError):
+        oracle.category(
+            text.replace('other 0.33', 'other 0.99'),
+            '_linked_structure.weight_fraction',
+            0.33,
+            0.04,
+        )
+
+
+def test_cli_iteration_record_follows_its_producing_run():
+    check_persisted_iterations({'_fit_result.iterations': '4'}, {'iterations': '4'})
+    with pytest.raises(AssertionError):
+        check_persisted_iterations({'_fit_result.iterations': '7'}, {'iterations': '4'})
+
+
+@pytest.mark.parametrize('points', [0, 101])
+def test_seeded_cadence_ceiling_refuses_before_generating_data(tmp_path, monkeypatch, points):
+    def forbidden(*_args, **_kwargs):
+        message = 'An out-of-policy point count must be refused before copying observations'
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(ncaf.shutil, 'copytree', forbidden)
+    with pytest.raises(AssertionError):
+        ncaf.prepare(tmp_path / 'series', points=points, descent='fast_descent')
+
+
+def test_seeded_scale_policy_is_100_points_and_five_banks():
+    assert ncaf.MAX_POINTS == 100, (
+        'Owner 6c4f7a9d9 sets the slow seeded cadence ceiling at 100 points'
+    )
+    assert len(ncaf.BANKS) == 5, 'Owner 6c4f7a9d9 retains the five actual NCAF WISH banks'
+
+
+def test_cli_model_count_drops_only_the_retired_named_slot():
+    row = {
+        'n_parameters': 4,
+        'parameter_names': [
+            'cell.length_a',
+            'bank.scale',
+            'bank.absorption.abscor1',
+            'bank.absorption.abscor2',
+        ],
+    }
+    assert selected_parameter_count(row) == 3, (
+        'ADR-0123 removes only the inactive named slot from the independent model projection'
+    )
+    with pytest.raises(AssertionError):
+        selected_parameter_count({**row, 'n_parameters': 3})
+
+
+def test_cli_fixture_declares_its_historical_descent_without_overwriting_it(tmp_path):
+    path = tmp_path / 'analysis.edi'
+    path.write_text('_fitting_mode.type joint\n')
+    pin_declared_descent(path, 'ladder')
+    first = path.read_bytes()
+    assert b'_minimizer.descent ladder' in first, (
+        'The historical ladder fixture must not inherit the newer fast-descent default'
+    )
+    pin_declared_descent(path, 'ladder')
+    assert path.read_bytes() == first, (
+        'An already explicit historical descent must retain its bytes'
+    )
+    with pytest.raises(AssertionError):
+        pin_declared_descent(path, 'fast_descent')
+
+
+@pytest.mark.parametrize('defect', ['active-input', 'retired-nonzero', 'unrelated-byte'])
+def test_cli_corpus_identity_accepts_only_the_inert_field_transition(defect):
+    original = b'data_wish\n_absorption.abscor1 0.0(10)\n_absorption.abscor2 0.0\n'
+    current = original.replace(b'_absorption.abscor2 0.0\n', b'')
+    name = 'experiments/wish_5_6.edi'
+    assert absorption_start_bytes(name, current) == original, (
+        'Only the committed inactive zero-field deletion may adapt the CLI corpus identity'
+    )
+    if defect == 'active-input':
+        bad = current.replace(b'0.0(10)', b'0.1(10)')
+    elif defect == 'retired-nonzero':
+        bad = original.replace(b'abscor2 0.0', b'abscor2 1.0')
+    else:
+        bad = current + b'# changed unrelated byte\n'
+    assert absorption_start_bytes(name, bad) != original, (
+        'The corpus identity rejects active, nonzero retired and unrelated changes'
+    )

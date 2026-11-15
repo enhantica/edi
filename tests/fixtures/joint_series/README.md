@@ -18,7 +18,7 @@ The engine fixture copies `project` and `expected.json` from edi's
 `docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof` at `7ed17b57213c4c8fbb1595a94b55794c64ec5fce`.
 Only the project description changes the old fit verb to “fit”; the numeric inputs are unchanged.
 That case's PROVENANCE identifies FullProf 8.40's converged five-bank input and saved run. The generator copies the
-measured observations into two points for the small gate and twenty for the nightly gate, each with five banks.
+measured observations into two points for the small gate and one hundred for the nightly gate, each with five banks.
 Only `kind: reference` atomic values from that file are correctness references. Engine regression pins in the same
 file are retained for source fidelity and are not read by these gates. FullProf never runs in a test.
 
@@ -28,7 +28,7 @@ calculation and the follower recomputed for every perturbation. It tests the sin
 
 Scale is measured separately on the producer-to-view path; these fixtures impose no timing assertions.
 
-The engine PR witness uses two points and two banks; this product retains its two-point, five-bank PR witness. The slow witness retains twenty points and five banks. Actual start vectors are observed at the native scan-driver boundary, with a template different from the first successful point. The series-derived witness uses three points and two experiments; magnetic components follow non-collinear functions of the cell parameter, so the magnitude and both angular errors are nonzero. Five separate channels check the magnitude, polar angle, azimuth, shared phase fraction and relation follower at each point.
+The engine PR witness uses two points and two banks; this product retains its two-point, five-bank PR witness. The slow witness retains one hundred points and five banks. Actual start vectors are observed at the native scan-driver boundary, with a template different from the first successful point. The series-derived witness uses three points and two experiments; magnetic components follow non-collinear functions of the cell parameter, so the magnitude and both angular errors are nonzero. Five separate channels check the magnitude, polar angle, azimuth, shared phase fraction and relation follower at each point.
 
 The producer's reduced fixture checks fixed atomic references separately from its fitted scale columns; the consumer's full-free-set witness continues to check fitted atomic columns.
 Live fitted checks precede mutation or adopting Save. Each series prefix retains its terminal fitted values and errors;
@@ -40,3 +40,32 @@ persisted correlations. The angular reference identifies azimuths modulo one tur
 The native crysta probe finds the CMake build whose extension bytes match the imported extension, checks the linked
 core's embedded source identity, and checks its headers against that committed source. Archive and header overrides
 must match that selected build; timestamps cannot choose another subject. Baseline exports remain identifiable.
+
+
+Review-5 persistence checks derive the post-adoption Hill–Howard value from rounded independent scales,
+rounded marginals/correlations and six-digit fixed cells; equal pre-save volumes are not assumed to survive Save.
+The supplied moment reload reference is transformed from the authored inputs/covariance, after separately checking
+that every saved marginal and every correlation pair preserves that expectation. Corrupt written covariance cannot
+become the reference. Legal CIF2 list cells are retained as single compound tokens for Gemmi scalar checks
+(`tests/fixtures/cif2.py`, ADR-0097), including multiline, nested, quoted and commented lists.
+
+Native preparation has one owner: `pixi run joint-series-prepare`. The consuming suite and runtime-measurement
+entry points declare it; the direct producer Python-tier script also prepares before selecting the system tier.
+The command has a 45-second envelope and a 30-second compiler deadline. It caches an executable with a receipt
+binding selected extension/archive/header bytes and observer/preparation sources. The behavior fixture validates
+that receipt and embedded source identity, then runs it; it never builds or repairs missing/stale artifacts.
+Preparation cost is outside behavioral test cost, and cold preparation remains bounded rather than hidden in import
+or collection. No test bound or breach exemption changes.
+
+
+The owner decision `a2fe1e722` (2026-11-15) supersedes live-precision sequential carry: each point starts from
+its preceding successful **written** row, also when multiple workers were requested. Worker count cannot create
+chunk restart state in a sequential chain. Independent points still restart from the template. Start controls reject
+both full-precision carry and chunk restart; orphan-tail recovery also compares uninterrupted and resumed outputs
+exactly. The azimuth reference follows the ADR-0108 convention modulo one turn, represented in `[0,360)`.
+
+
+Owner decision `6c4f7a9d9` limits the slow cadence witness to 100 points × the five actual NCAF WISH banks.
+The per-PR witnesses remain two points, with two selected banks in the reduced producer case and five in the
+consumer case. The generator refuses larger counts before filesystem generation; no larger synthetic scale target
+is asserted or executed by these gates. The slow fits remain separate from this scoped repair replay.

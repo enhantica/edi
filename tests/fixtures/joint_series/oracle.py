@@ -8,6 +8,8 @@ import gemmi
 import numpy as np
 import pytest
 
+from tests.fixtures.cif2 import read_block
+
 
 def outcome(row):
     assert row['fit_result.success'] == 'True', 'A seeded point must complete successfully'
@@ -68,7 +70,7 @@ def reported(actual_value, actual_error, value, sigma):
 
 
 def category(text, tag, expected, sigma, *, rule='exact'):
-    block = gemmi.cif.read_string(text).sole_block()
+    block = read_block(text)
     tokens = list(block.find_values(tag))
     assert tokens, 'Every derived category must persist its value and uncertainty column'
     row = -1
@@ -109,37 +111,23 @@ def link(text, project_dir, external, patterns):
         )
 
 
-def starts(actual, template, successful, *, chained, chunks=None, uncertainties=None):
+def starts(actual, template, successful, *, chained):
     assert len(actual) == len(successful), (
         'Every fitted joint point must publish its actual start vector'
     )
+    # Owner decision a2fe1e722: results.csv is the only inter-point carry state.
     wanted = [template, *successful[:-1]] if chained else [template] * len(successful)
-    if chained and chunks is not None:
-        wanted, offset, start = [], 0, template
-        for count in chunks:
-            wanted.extend([start] * count)
-            offset += count
-            start = successful[offset - 1]
-    expected_errors = [None] * len(wanted)
-    if uncertainties is not None and chained:
-        expected_errors = [None, *uncertainties[:-1]]
-        if chunks is not None:
-            expected_errors, offset, errors = [], 0, None
-            for count in chunks:
-                expected_errors.extend([errors] * count)
-                offset += count
-                errors = uncertainties[offset - 1]
-    for observed, expected, errors in zip(actual, wanted, expected_errors, strict=True):
-        comparable = observed
-        if errors is not None:
-            # CSV predecessors have reporting precision; the native chain retains fitted precision.
-            comparable = [reported_pair(v, su)[0] for v, su in zip(observed, errors, strict=True)]
-        np.testing.assert_allclose(
-            comparable,
+    for observed, expected in zip(actual, wanted, strict=True):
+        assert np.isfinite(observed).all(), (
+            'Actual start vectors must contain finite fitted values'
+        )
+        assert np.isfinite(expected).all(), (
+            'Written predecessor vectors must contain finite values'
+        )
+        np.testing.assert_array_equal(
+            observed,
             expected,
-            rtol=1e-8,
-            atol=1e-10,
-            err_msg='Start vectors must follow the declared previous-successful or template rule',
+            err_msg='Every sequential point must start from its previous written CSV values',
         )
 
 

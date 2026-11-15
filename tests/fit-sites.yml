@@ -310,7 +310,7 @@ sites:
     why: The five-bank FullProf extension repeats committed observations and the external optimum for two series points.
   - file: tests/system/py/test_joint_series_seeded_nightly.py
     case: ncaf-wish-3bank-s5
-    why: The same five-bank external reference repeats twenty points from identical starts for each explicit descent.
+    why: The same five-bank external reference repeats one hundred points from identical starts for each explicit descent.
 
   - file: tests/system/py/test_joint_series_starts.py
     case: constraint-covariance

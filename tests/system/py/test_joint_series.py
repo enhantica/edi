@@ -6,7 +6,7 @@ import edi as engine
 import numpy as np
 import pytest
 
-from tests.fixtures.joint_series import cases, oracle
+from tests.fixtures.joint_series import cases, oracle, persistence
 
 
 def result_tables(directory):
@@ -97,10 +97,17 @@ def test_resume_is_noop_then_appends_only_the_new_point(tmp_path):
 def test_uncommitted_complete_experiment_rows_are_removed_before_resume(tmp_path):
     root = cases.generated_series(tmp_path / 'series', engine)
     engine.Project.load(root).analysis.fit()
-    (header, points), (_, _) = result_tables(root)
+    (header, points), (_, original_banks) = result_tables(root)
+    original_points = points
     cases.write_rows(root / 'analysis/results.csv', header, points[:-1])
     engine.Project.load(root).analysis.fit()
     (_, points), (_, banks) = result_tables(root)
+    assert points == original_points, (
+        'Owner a2fe1e722 requires resumed and uninterrupted point results to agree exactly'
+    )
+    assert banks == original_banks, (
+        'Owner a2fe1e722 requires resumed experiment results to equal uninterrupted results'
+    )
     assert len(points) == 3, 'Recovering an orphan tail must finish the three points once'
     assert len(banks) == 6, 'Recovering an orphan tail must retain six experiment rows'
     assert [(r['point'], r['experiment']) for r in banks] == [
@@ -313,14 +320,7 @@ def test_two_phase_ratio_fit_retains_three_independents_and_joint_covariance(tmp
         rtol=0.03,
         err_msg='The phase-sum joint covariance must use the relation Jacobian and N minus three',
     )
-    project.save_as(tmp_path / 'fitted-saved')
-    for file in (tmp_path / 'fitted-saved/experiments').glob('*.edi'):
-        oracle.category(
-            file.read_text(),
-            '_linked_structure.weight_fraction',
-            v / (u + v),
-            fraction_values[0][1],
-        )
+    check_saved_fitted_fraction(project, parameters, covariance, tmp_path / 'fitted-saved')
     assert fraction_values[0][0] == pytest.approx(fraction_values[1][0], abs=1e-12), (
         'Shared phase ratios must produce the same weight fractions in unequal-scale banks'
     )
@@ -366,3 +366,34 @@ def test_invalid_shared_relation_is_scan_level_before_any_dataset_skip(tmp_path)
     assert not (root / 'analysis/scan-notes.csv').exists(), (
         'A shared configuration error must not be reported as a skip for every dataset'
     )
+
+
+def check_saved_fitted_fraction(project, parameters, covariance, destination):
+    cells = [
+        [getattr(project.structures[phase].cell, item).value for item in persistence.CELL_ITEMS]
+        for phase in ('phase', 'other')
+    ]
+    adopted = persistence.adopted_fraction(
+        [p.value for p in parameters], [p.uncertainty for p in parameters], covariance, cells
+    )
+    project.save_as(destination)
+    parameters = [
+        project.experiments[b].linked_structures[p].scale
+        for b, p in [('zeta', 'phase'), ('zeta', 'other'), ('alpha', 'phase')]
+    ]
+    persistence.check_adopted(project, parameters, adopted)
+    persistence.correlations(
+        (destination / 'analysis/analysis.edi').read_text(),
+        [
+            b + '.linked_structure.' + p + '.scale'
+            for b, p in [('zeta', 'phase'), ('zeta', 'other'), ('alpha', 'phase')]
+        ],
+        adopted['rho'],
+    )
+    for file in (destination / 'experiments').glob('*.edi'):
+        oracle.category(
+            file.read_text(),
+            '_linked_structure.weight_fraction',
+            adopted['fraction'],
+            adopted['sigma'],
+        )

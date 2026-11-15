@@ -13,8 +13,11 @@ ROOT = Path(__file__).resolve().parents[3]
 CASE = ROOT / 'docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof'
 BANKS = ('wish_5_6', 'wish_4_7', 'wish_3_8', 'wish_2_9', 'wish_1_10')
 
+MAX_POINTS = 100
+
 
 def prepare(destination, *, points, descent, small=False):
+    assert 1 <= points <= MAX_POINTS, 'Owner 6c4f7a9d9 caps seeded cadence at 100 points'
     shutil.copytree(CASE / 'project', destination)
     (destination / 'scan').mkdir()
     banks = BANKS[:2] if small else BANKS
