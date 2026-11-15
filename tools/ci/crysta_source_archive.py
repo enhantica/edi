@@ -2,6 +2,9 @@
 """Append source receipts and extract SDK source archives using native Python paths."""
 
 import argparse
+import os
+import posixpath
+import shutil
 import sys
 import tarfile
 from pathlib import Path
@@ -20,7 +23,19 @@ def append_receipt(archive: Path, receipt: Path) -> None:
 def extract(archive: Path, destination: Path) -> None:
     """Extract the source with the same data filter as the SDK reader."""
     with tarfile.open(archive) as source:
-        source.extractall(destination, filter='data')
+        members = source.getmembers()
+        # Windows cannot follow a link whose target is spelled with '/', and a tree walk over
+        # one fails, so there each link becomes a copy of the file it names.
+        links = [member for member in members if member.issym()] if os.name == 'nt' else []
+        source.extractall(destination, [m for m in members if m not in links], filter='data')
+        for link in links:
+            folder = posixpath.dirname(link.name)
+            target = posixpath.normpath(posixpath.join(folder, link.linkname))
+            if target.startswith('../') or posixpath.isabs(target):
+                raise ValueError(f'{link.name} links outside the source: {link.linkname}')
+            copy = destination / link.name
+            copy.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(destination / target, copy)
 
 
 def main() -> int:
