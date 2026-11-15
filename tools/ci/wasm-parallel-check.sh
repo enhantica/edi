@@ -52,10 +52,15 @@ python -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv
 PW="$(wasm_playwright_dir)"
 export PLAYWRIGHT_BROWSERS_PATH="$PW/browsers" WEB_PARALLEL_PLAYWRIGHT="$PW/node_modules/playwright-core/index.mjs"
 
-REFERENCE="$(mktemp -d "$OUT/native-written.XXXXXX")"
-bash "$ROOT/tools/ci/wasm-written-reference.sh" "$REFERENCE"
-
+# A reference that cannot be written fails the run, but the witness builds below still run; the matrix finds the
+# folder empty and refuses.
 status=0
+REFERENCE="$(mktemp -d "$OUT/native-written.XXXXXX")"
+if ! bash "$ROOT/tools/ci/wasm-written-reference.sh" "$REFERENCE"; then
+  echo "wasm-parallel-check: the native-written reference could not be made; the matrix will refuse" >&2
+  find "$REFERENCE" -mindepth 1 -delete
+  status=1
+fi
 echo "wasm-parallel-check: the browser matrix"
 node --experimental-websocket tests/system/manual/web_parallel.mjs "$SITE" "$OUT/matrix" "$CHROME" --written-reference="$REFERENCE" || status=1
 

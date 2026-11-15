@@ -39,11 +39,17 @@ python -c 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv
 export EDI_WASM_ZIP="$ZIP"
 export EDI_WASM_CLI_MULTITHREAD="$ROOT/build/wasm/multithread/crysta-prefix/bin/crysta.js"
 
+# A reference that cannot be written fails the run, but the checks that do not read it still run; those that
+# do find the folder empty and refuse.
+status=0
 REFERENCE="$(mktemp -d "$OUT/native-written.XXXXXX")"
-bash "$ROOT/tools/ci/wasm-written-reference.sh" "$REFERENCE"
+if ! bash "$ROOT/tools/ci/wasm-written-reference.sh" "$REFERENCE"; then
+  echo "wasm-check: the native-written reference could not be made; checks that need it will refuse" >&2
+  find "$REFERENCE" -mindepth 1 -delete
+  status=1
+fi
 export EDI_WASM_WRITTEN_REFERENCE="$REFERENCE"
 
-status=0
 python -m pytest -q "$@" || status=1
 for mode in multithread shim; do
   echo "wasm-check: browser, $mode"

@@ -37,23 +37,27 @@ if [ "${case_files:-0}" -lt 1 ]; then
 fi
 
 suffix="$(python -c 'import sys; print(".exe" if sys.platform == "win32" else "")')"
+# Both tiers run whenever they were built: a failed unit case says nothing about the integration
+# cases, so the script reports every tier and fails at the end.
+failed=0
 log="$TREE/edi_tests.log"
 status=0
 "$TREE/core/edi_tests$suffix" >"$log" 2>&1 || status=$?
 cat "$log"
 if [ "$status" -ne 0 ]; then
     echo "cpp-test: edi_tests exited $status" >&2
-    exit "$status"
+    failed=1
+else
+    # Non-vacuity: doctest exits 0 on "no test cases ran", so the reported count is what proves
+    # the binary did work. Parsed from doctest's own summary line.
+    ran=$(grep -oE 'test cases: *[0-9]+' "$log" | grep -oE '[0-9]+' | head -1)
+    if [ "${ran:-0}" -lt 1 ]; then
+        echo "cpp-test: edi_tests reported ${ran:-no} test cases — a green run that asserted nothing" >&2
+        failed=1
+    else
+        echo "cpp-test: $ran C++ unit case(s) green"
+    fi
 fi
-
-# Non-vacuity: doctest exits 0 on "no test cases ran", so the reported count is what proves
-# the binary did work. Parsed from doctest's own summary line.
-ran=$(grep -oE 'test cases: *[0-9]+' "$log" | grep -oE '[0-9]+' | head -1)
-if [ "${ran:-0}" -lt 1 ]; then
-    echo "cpp-test: edi_tests reported ${ran:-no} test cases — a green run that asserted nothing" >&2
-    exit 1
-fi
-echo "cpp-test: $ran C++ unit case(s) green"
 
 # The integration tier's native cases, when the tree built them.
 if [ -x "$TREE/core/edi_integration_tests$suffix" ]; then
@@ -63,7 +67,9 @@ if [ -x "$TREE/core/edi_integration_tests$suffix" ]; then
     cat "$ilog"
     if [ "$istatus" -ne 0 ]; then
         echo "cpp-test: edi_integration_tests exited $istatus" >&2
-        exit "$istatus"
+        failed=1
+    else
+        echo "cpp-test: C++ integration cases green"
     fi
-    echo "cpp-test: C++ integration cases green"
 fi
+exit "$failed"
