@@ -768,7 +768,7 @@ std::string scan_progress_heading(const std::string& project_name, bool sequenti
 std::string scan_progress_row(int completed, std::optional<int> total_files,
                               double elapsed_seconds, int measured_completed, int ok_count,
                               int fail_count, double reduced_chi_square, double chi2_low, double chi2_high,
-                              const std::string& file_name, std::size_t columns) {
+                              const std::string& file_name, std::size_t columns, bool final_row) {
     const bool known = total_files && *total_files > 0;
     std::string progress;
     if (known) {
@@ -787,7 +787,7 @@ std::string scan_progress_row(int completed, std::optional<int> total_files,
     progress += (progress.empty() ? "" : "  ") + std::string(count.size() < 2 * digits + 1 ? 2 * digits + 1 - count.size() : 0, ' ') + count;
     const auto range = std::isfinite(chi2_low) && std::isfinite(chi2_high)
         ? scan_number(chi2_low) + "-" + scan_number(chi2_high) : std::string{};
-    const auto eta = scan_eta(completed, total_files, elapsed_seconds, measured_completed);
+    const auto eta = final_row ? std::optional<double>{} : scan_eta(completed, total_files, elapsed_seconds, measured_completed);
     const std::vector<std::string> values{
         progress, std::to_string(ok_count), std::to_string(fail_count), scan_duration(elapsed_seconds),
         eta ? scan_duration(*eta) : "", scan_number(reduced_chi_square), range, scan_display_name(file_name)};
@@ -829,7 +829,7 @@ std::string scan_progress_row(int completed, std::optional<int> total_files,
     changed = changed || visible != state.visible;
     state.visible = visible;
     state.heading_pending = state.heading_pending || changed;
-    const bool last_row = total_files && *total_files > 0 && completed >= *total_files;
+    const bool last_row = final_row || (total_files && *total_files > 0 && completed >= *total_files);
     if (!last_row && state.last_draw && elapsed_seconds - *state.last_draw < kScanTableUpdateInterval) {
         return {};  // throttled: the next drawn update shows these values' widths
     }

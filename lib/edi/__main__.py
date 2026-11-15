@@ -563,7 +563,6 @@ def human_fit(
         # Prose note: this function must not contain the scan line's format literals — the core
         # owns every one of them — so the groups are described here by name, never quoted.
         state = {'total': None, 'elapsed': 0.0}
-        live = [False]
         tally = _ScanTally()
         prior = [0]
         previous = [0.0]
@@ -573,7 +572,6 @@ def human_fit(
             if tty:
                 # The core returns the whole terminal update, or nothing when it throttles.
                 sys.stdout.write(line)
-                live[0] = live[0] or bool(line)
             else:
                 sys.stdout.write(line + '\n')
             sys.stdout.flush()
@@ -599,7 +597,9 @@ def human_fit(
             )
             sys.stdout.flush()
 
-        def _row(chi2: float, file_name: str, measured: int) -> str:
+        def _row(chi2: float, file_name: str, measured: int, *, final_row: bool = False) -> str:
+            # Only the closing row names final_row; the others are the plain eleven-value call.
+            extra = {'final_row': True} if final_row else {}
             return edi._edi._scan_progress_row(
                 tally.completed,
                 state['total'],
@@ -612,6 +612,7 @@ def human_fit(
                 tally.chi2_max,
                 file_name,
                 _terminal_columns(tty=tty),
+                **extra,
             )
 
         def on_file_complete(record: object) -> None:
@@ -644,17 +645,15 @@ def human_fit(
                 on_scan_start=on_scan_start,
                 on_file_complete=on_file_complete,
             )
-        # The last row is the scan's summary, every column filled (the core owns its format): the
-        # in-place line stays, and a run that fitted no new file prints that row once from what the
-        # earlier runs left.
-        fitted_none = tally.completed == prior[0]
-        sys.stdout.write(
-            _row(tally.last_chi2, tally.last_file, 0) + '\n'
-            if fitted_none
-            else '\n'
-            if live[0]
-            else ''
-        )
+        # The last row is the scan's summary at the count it reached, every column filled and
+        # no time left (the core owns its format): a run that fitted no new file prints it once
+        # from what the earlier runs left; on a terminal it replaces the in-place row whatever
+        # the throttle kept back (a partial or cancelled scan included).
+        if tally.completed == prior[0] or tty:
+            state['elapsed'] = clock() - started
+            measured = tally.completed - prior[0]
+            final = _row(tally.last_chi2, tally.last_file, measured, final_row=True)
+            sys.stdout.write(final + '\n')
         skipped = _skipped_line(project)
         if skipped:
             sys.stdout.write(skipped + '\n')

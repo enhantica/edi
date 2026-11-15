@@ -154,7 +154,6 @@ void fit(const std::string& source, const std::string& output, bool dry,
     double elapsed = 0.0;
     const bool scan_rows = verbosity == edi::VerbosityEnum::FULL;
     const bool in_place = scan && !scan_rows && stdout_is_terminal();
-    bool live = false;
     double last_chi2 = std::numeric_limits<double>::quiet_NaN();
     std::string last_file;
     if (human && !scan) {
@@ -198,7 +197,6 @@ void fit(const std::string& source, const std::string& output, bool dry,
                 // On a terminal the core returns the whole update (the row, or the heading and the row when a
                 // column's width changed), or nothing when it throttles.
                 std::cout << line;
-                live = live || !line.empty();
             } else {
                 std::cout << line << '\n';
             }
@@ -224,15 +222,17 @@ void fit(const std::string& source, const std::string& output, bool dry,
     if (machine) {
         std::cout << edi::machine_report(project, result, verbosity);
     } else if (human && scan) {
-        // The last row is the scan's summary, every column filled; a run that fitted no new file prints
-        // that row once from what the earlier runs left.
-        if (tally.completed == tally.prior) {
-            std::cout << edi::detail::scan_progress_row(tally.completed, total, elapsed, 0, tally.ok,
-                                                        tally.completed - tally.ok, last_chi2, tally.chi2_min,
-                                                        tally.chi2_max, last_file, in_place ? terminal_columns() : 0)
+        // The last row is the scan's summary at the count it reached, every column filled and no time left: a
+        // run that fitted no new file prints it once from what the earlier runs left; on a terminal it replaces
+        // the in-place row whatever the throttle kept back (a partial or cancelled scan included).
+        const bool fitted_none = tally.completed == tally.prior;
+        if (fitted_none || in_place) {
+            elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+            std::cout << edi::detail::scan_progress_row(tally.completed, total, elapsed, tally.completed - tally.prior,
+                                                        tally.ok, tally.completed - tally.ok, last_chi2,
+                                                        tally.chi2_min, tally.chi2_max, last_file,
+                                                        in_place ? terminal_columns() : 0, true)
                       << '\n';
-        } else if (live) {
-            std::cout << '\n';
         }
     } else if (human) {
         std::cout << edi::summary_line(result, variant);

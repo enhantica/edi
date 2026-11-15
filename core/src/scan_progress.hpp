@@ -8,10 +8,12 @@
 namespace edi::detail {
 std::string scan_progress_heading(const std::string& project_name, bool sequential,
                                   std::optional<int> total_files, bool resumed, std::size_t columns);
+// `final_row` is the scan's closing row: drawn whatever the throttle, with no time left, at the count reached
+// (a cancelled or partial scan keeps its partial count).
 std::string scan_progress_row(int completed, std::optional<int> total_files,
                               double elapsed_seconds, int measured_completed, int ok_count,
                               int fail_count, double reduced_chi_square, double chi2_low, double chi2_high,
-                              const std::string& file_name, std::size_t columns);
+                              const std::string& file_name, std::size_t columns, bool final_row = false);
 std::string scan_progress_rewrite(const std::string& line, std::size_t previous_width,
                                   std::size_t columns);
 // The terminal columns a progress line takes (characters, not bytes), for the next rewrite's erase.
