@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-15T02:43:31Z
+# measured_utc = 2026-11-15T13:08:01Z
 #
-# Recorded from: serial focused measurement of seven affected saved-byte and browser nodes; all out-of-scope bank and inherited debt retained
-# Collected tests: 242976; with a reported duration: 75716
+# Recorded from: focused joint-series replay; new failures are declared unmeasured, inherited rows retained
+# Collected tests: 243018; with a reported duration: 75717
 # Module-scoped fixture costs recorded: 190
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 240583
+# inventory_python = 240625
 # inventory_cpp = 402
-# inventory_measured = 173336
-# inventory_unmeasured = 67649
+# inventory_measured = 173338
+# inventory_unmeasured = 67689
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 81798
+# inventory_pr_python = 81838
 
 UNMEASURED:not-completed-in-this-run	tests/fixtures/assistant_fixes/test_grouped_flags.py::test_grouped_adp_flags_after_fit_and_relation[normal]
 UNMEASURED:not-completed-in-this-run	tests/fixtures/assistant_fixes/test_grouped_flags.py::test_grouped_adp_flags_after_fit_and_relation[shown]
@@ -167570,6 +167570,12 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py
 UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py::test_every_project_load_route_has_a_per_attempt_visible_failure_channel[zip-GetStartedGroup.qml-openProject]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_final_write.py::test_final_save_write_contains_the_adopted_complement_and_optional_dependent[calculated]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_final_write.py::test_final_save_write_contains_the_adopted_complement_and_optional_dependent[uncalculated]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_moment_category_columns_are_saved_and_recomputed_on_load
+UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_oblique_moment_spherical_view_matches_independent_full_covariance
+UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_shared_ratio_weight_fraction_uses_the_leader_covariance[False-leader]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_shared_ratio_weight_fraction_uses_the_leader_covariance[False-member]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_shared_ratio_weight_fraction_uses_the_leader_covariance[True-leader]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_shared_ratio_weight_fraction_uses_the_leader_covariance[True-member]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_calendar_refuses_clock_rollback
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_calendar_uses_numeric_monthly_sequence[known0-2026-11-07-2026.11.0]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_calendar_uses_numeric_monthly_sequence[known1-2026-11-07-2026.11.11]
@@ -230224,6 +230230,42 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_independent_experiments_cli.p
 UNMEASURED:failed-in-this-run	tests/system/py/test_independent_experiments_cli.py::test_each_command_preserves_its_independent_dataset_result[copper-standalone]
 UNMEASURED:failed-in-this-run	tests/system/py/test_independent_experiments_cli.py::test_each_command_preserves_its_independent_dataset_result[violet-module]
 UNMEASURED:failed-in-this-run	tests/system/py/test_independent_experiments_cli.py::test_each_command_preserves_its_independent_dataset_result[violet-standalone]
+1.110	tests/system/py/test_joint_bank_ties.py::test_two_bank_powder_ties_remove_one_joint_column_each[0]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_bank_ties.py::test_two_bank_powder_ties_remove_one_joint_column_each[1]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_bank_ties.py::test_two_bank_powder_ties_remove_one_joint_column_each[2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_bad_point_is_listed_and_later_points_are_fitted[malformed]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_bad_point_is_listed_and_later_points_are_fitted[missing]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_bad_point_is_listed_and_later_points_are_fitted[zero-signal]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_completion_event_sees_both_tables_and_a_vanished_next_file_is_skipped
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_damaged_join_refuses_before_changing_either_results_file[duplicate-point]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_damaged_join_refuses_before_changing_either_results_file[experiment-tail]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_damaged_join_refuses_before_changing_either_results_file[foreign-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_damaged_join_refuses_before_changing_either_results_file[foreign-header]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_damaged_join_refuses_before_changing_either_results_file[missing-experiment]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_damaged_join_refuses_before_changing_either_results_file[point-tail]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_invalid_group_declaration_is_scan_level[both-forms]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_invalid_group_declaration_is_scan_level[duplicate-bank]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_invalid_group_declaration_is_scan_level[foreign-bank]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_invalid_group_declaration_is_scan_level[missing-bank]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_invalid_group_declaration_is_scan_level[no-star]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_invalid_group_declaration_is_scan_level[two-stars]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_invalid_shared_relation_is_scan_level_before_any_dataset_skip
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_known_cells_and_unequal_bank_scales_recover_at_their_point[independent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_known_cells_and_unequal_bank_scales_recover_at_their_point[sequential]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_resume_is_noop_then_appends_only_the_new_point
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_single_experiment_keeps_legacy_file_and_refuses_foreign_sidecar
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_single_structure_cross_bank_equality_has_joint_free_count_and_covariance
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_two_phase_ratio_fit_retains_three_independents_and_joint_covariance
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series.py::test_uncommitted_complete_experiment_rows_are_removed_before_resume
+0.000	tests/system/py/test_joint_series_edi.py::test_scan_adr_amendment_defines_the_join_and_single_experiment_rule
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_edi.py::test_series_save_keeps_one_external_folder_and_patterns_without_per_file_entries
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_edi.py::test_shared_phase_ratios_keep_distinct_overall_scales_and_three_independents
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_edi.py::test_sharing_switch_writes_constraints_and_recognizes_hand_edits
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_edi.py::test_zero_leader_ratio_reference_refuses_without_partial_constraints
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_seeded.py::test_small_fullprof_seeded_series[fast_descent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_seeded.py::test_small_fullprof_seeded_series[ladder]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_seeded_nightly.py::test_twenty_fullprof_seeded_points[fast_descent]
+UNMEASURED:failed-in-this-run	tests/system/py/test_joint_series_seeded_nightly.py::test_twenty_fullprof_seeded_points[ladder]
 0.300	tests/system/py/test_latest_fit_uncertainty.py::test_cli_fit_clears_fixed_uncertainty_on_disk
 0.080	tests/system/py/test_latest_fit_uncertainty.py::test_every_fit_path_clears_fixed_su_and_keeps_dependent_su[independent]
 0.090	tests/system/py/test_latest_fit_uncertainty.py::test_every_fit_path_clears_fixed_su_and_keeps_dependent_su[joint]

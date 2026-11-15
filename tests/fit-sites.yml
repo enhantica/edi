@@ -298,3 +298,16 @@ sites:
     why: Both real commands fit the explicitly authored Sears Ni independent-experiment variant of the single-crystal joint family.
     assertion_feed: Weighted normal equations, Fisher covariance, named dataset agreement and independent saved-value rounding.
     audit: 2026-11-09; no CLI-produced value supplies an expected physical answer.
+
+  - file: tests/system/py/test_joint_series.py
+    case: constraint-covariance
+    why: Authored joint-series extension checks known generating parameters, normal equations and damaged filesystem states.
+  - file: tests/system/py/test_joint_bank_ties.py
+    case: ncaf-wish-3bank-s5
+    why: Two banks of the five-bank FullProf extension isolate the hand-counted equality free set.
+  - file: tests/system/py/test_joint_series_seeded.py
+    case: ncaf-wish-3bank-s5
+    why: The five-bank FullProf extension repeats committed observations and the external optimum for two series points.
+  - file: tests/system/py/test_joint_series_seeded_nightly.py
+    case: ncaf-wish-3bank-s5
+    why: The same five-bank external reference repeats twenty points from identical starts for each explicit descent.

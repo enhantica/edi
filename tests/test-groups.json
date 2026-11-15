@@ -50,7 +50,8 @@
         "tests/system/py/test_scan_native_boundary.py",
         "tests/system/py/test_scan_correlation_save_stability.py",
         "tests/system/py/test_shared_correlation_app_state.py",
-        "tests/system/py/test_project_transactions.py"
+        "tests/system/py/test_project_transactions.py",
+        "tests/system/py/test_joint_series_seeded_nightly.py"
       ],
       "app_builders": [
         "tests/fixtures/plain_data/build_probe.py",
