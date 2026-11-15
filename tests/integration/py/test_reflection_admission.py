@@ -250,6 +250,20 @@ def test_range_and_hkl_save_reload_preserve_declared_rows(tmp_path, axis, start,
     assert column(first, '_excluded_region.axis') == [axis], (
         'Saving must retain the explicit range axis'
     )
+    for tag, expected in (
+        ('_excluded_reflection.index_k', '8'),
+        ('_excluded_reflection.index_l', '7'),
+    ):
+        assert column(first, tag) == [expected], (
+            'The first save must retain every originally declared signed hkl index'
+        )
+    for tag, expected in (('_excluded_region.start', start), ('_excluded_region.end', end)):
+        assert float(column(first, tag)[0]).hex() == float(expected).hex(), (
+            'The first save must preserve each originally declared range endpoint exactly'
+        )
+    assert list(map(float, column(first, '_refln.intensity_meas'))) == [
+        row[3] for row in MERGE_ROWS
+    ], 'Saving exclusions must retain all signed observations in their original order'
     assert column(first, '_excluded_reflection.index_h') == ['9'], (
         'An unmatched hkl omission must persist without excluding another row'
     )
