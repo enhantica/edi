@@ -298,3 +298,8 @@ sites:
     why: Both real commands fit the explicitly authored Sears Ni independent-experiment variant of the single-crystal joint family.
     assertion_feed: Weighted normal equations, Fisher covariance, named dataset agreement and independent saved-value rounding.
     audit: 2026-11-09; no CLI-produced value supplies an expected physical answer.
+
+  - file: tests/integration/py/test_fitting_corpus_witness.py
+    case: single-crystal-cwl-tbti-basic
+    why: Fit a byte-identical copy of the pinned measured project.
+    assertion_feed: Independent FullProf structure factors and weighted normal equations from the corpus reference.

@@ -15,12 +15,21 @@ Sources:
   https://dictionary.iucr.org/Reflection_conditions
 - Sears neutron scattering lengths, Neutron News 3(3), 26–37 (1992).
 
-These initial executable gates cover the existing include_status file boundary,
-absence admission, residual degrees of freedom, legacy no-exclusion fitting and
-a scale finite difference at scale 2.3. They do not yet cover range exclusions,
-merging, automatic scale initialization, GUI actions or undo. Those tests need
-the implementation's declared file/API surfaces; no proposed spelling here
-requires an otherwise unrequested public API.
+Executable checks now include single-crystal automatic scale initialization on
+project load. The engine checks also compose user exclusion with body centring.
+The edi QML checks exercise powder measured-data loading and one undo, hold the
+authored linear background fixed, and inspect visible disabled Free controls and
+the plain idle Fit icon in the production host. Their generated observations
+exercise a linearity invariant; they are not an independent diffraction model.
+A separate edi fit witness copies the pinned Tb2Ti2O7 corpus unchanged and uses
+its independently computed FullProf normal-equation references. It does not
+admit synthetic fit inputs or change the fit policy.
+
+Still requiring a declared product contract: single-crystal range serialization,
+merge/absence settings and result fields, the scatter estimator, reflection-table
+toggle/undo and chart reasons. Neither current category census nor public Python
+surface declares those features. The common-scale phase-add/remove trigger and
+two-phase ratio gate also remain open. These are coverage gaps, not passing gates.
 
 The following independent reference cases are ready for those adapters:
 - Cubic cell a=6 A: d(100)=6, d(200)=3, d(211)=sqrt(6), d(220)=3/sqrt(2).
@@ -43,7 +52,3 @@ The following independent reference cases are ready for those adapters:
   with calculated=(2,7,12,9). The same scalar problem applies to single
   crystal F squared. This is the normal equation, derived from differentiating
   the weighted sum of squared residuals; background is held fixed.
-
-Edi currently runs only the saved-status and scale finite-difference gates.
-Its fit policy requires a pinned-corpus witness before synthetic fits can run.
-The crysta half additionally exercises residual admission and degrees of freedom.

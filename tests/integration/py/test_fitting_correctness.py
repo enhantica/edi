@@ -42,3 +42,16 @@ def test_single_crystal_scale_derivative_matches_finite_difference(tmp_path):
         rtol=1e-9,
         err_msg='At a non-unit scale, dI/dscale must equal the one-atom closed-form F squared',
     )
+
+
+def test_loading_single_crystal_initializes_scale_to_weighted_optimum(tmp_path):
+    project = load(tmp_path)
+    basis = np.full(4, B_SQUARED)
+    sigma = np.array([1.0, 1.0, 2.0, 3.0])
+    expected = np.dot(basis / sigma**2, OBSERVED) / np.dot(basis / sigma**2, basis)
+    np.testing.assert_allclose(
+        project.experiments[0].linked_structure.scale.value,
+        expected,
+        rtol=3e-5,
+        err_msg='Loading measured single-crystal data must initialize its overall scale by WLS',
+    )

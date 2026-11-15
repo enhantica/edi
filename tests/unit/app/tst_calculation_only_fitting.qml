@@ -349,4 +349,53 @@ TestCase {
         verify(running.count > 0, "The unchanged measured-data application command really starts a fit");
         tryVerify(() => !Session.project.fit.running && Session.project.fit.canUndo, 10000, "The measured-data control completes an actual fit with an undoable result");
     }
+    function test_visible_disabled_controls_without_measurements() {
+        open(false);
+        scaleRow();
+        const free = control("parameters.free.0");
+        verify(Ui.exposed(free) && !free.enabled, "Without measured data the Free column stays visible and disabled");
+        const header = control("parameters.freeHeader");
+        verify(Ui.exposed(header) && !header.interactionEnabled, "Without measured data the Free header retains its visible column geometry");
+        const variability = control("parameters.variability");
+        verify(Ui.exposed(variability), "The parameter variability selector remains visible without measured data");
+        compare(control("statusBar.fit.button").keyIcon, "play", "The idle Fit button uses the plain play icon");
+    }
+    function test_measured_load_fits_common_scale_with_fixed_background_and_one_undo() {
+        open(false);
+        const project = Session.project;
+        const rows = Probe.rows(project.currentExperiment.pattern);
+        const originalScale = scale().value;
+        const k = 2.7;
+        let data = "", numerator = 0, denominator = 0;
+        for (let i = 0; i < rows.length; ++i) {
+            const row = rows[i];
+            if (!isFinite(row.intensityCalc) || !isFinite(row.intensityBkg))
+                continue;
+            // This constructs observations for a linearity invariant, not an engine accuracy reference.
+            const net = row.intensityCalc - row.intensityBkg;
+            const sigma = 1 + i % 3;
+            const observed = row.intensityBkg + k * net;
+            data += row.x + " " + observed + " " + sigma + "\n";
+            numerator += net * (observed - row.intensityBkg) / (sigma * sigma);
+            denominator += net * net / (sigma * sigma);
+        }
+        verify(denominator > 0, "The automatic scale witness contains real Bragg intensity with unequal weights");
+        const expectedK = numerator / denominator;
+        verify(SettingsProof.write(source, "scaled.xye", data), "The automatic-scale control stages measured intensities with a known linear scale");
+        verify(project.loadDataInto(project.currentExperiment, Qt.resolvedUrl(source + "/scaled.xye")), "Loading measurements exercises the actual automatic scale trigger");
+        ready();
+        const loadedScale = scale().value;
+        const after = Probe.rows(project.currentExperiment.pattern);
+        verify(after.length > 0, "The scaled powder calculation publishes measured-grid rows");
+        for (const row of after) {
+            if (isFinite(row.intensityBkg))
+                fuzzyCompare(row.intensityBkg, 40 + (row.x - 10) / 2, 1e-8, "The common-factor fit holds the authored linear background fixed");
+        }
+        project.undo();
+        ready();
+        fuzzyCompare(scale().value, originalScale, 1e-12, "One undo restores the pre-load scale together with the measured-data load");
+        verify(project.currentExperiment.calculationOnly, "One undo restores the pre-load calculation-only experiment");
+        fuzzyCompare(loadedScale, originalScale * expectedK, 1e-5, "Loading powder data fits the closed-form common factor without an explicit Fit action");
+    }
+
 }
