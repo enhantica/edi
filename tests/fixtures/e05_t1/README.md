@@ -156,7 +156,7 @@ projection and unavailable stop metadata are documented in
 [the machine report schema projection](../c06_t8/README.md).
 
 
-C32-T5 follow-up: ADR-0123's retired zero ABSCOR2 fields are removed by a narrow historical-input mapping,
+Historical input authentication handles ADR-0123's retired zero ABSCOR2 fields through a narrow mapping,
 with active and unrelated byte changes refused. ADR-0125 changed the default algorithm, so private CLI copies
 explicitly declare the captured fixture's descent rather than inheriting that new default. Iteration serialization
 checks the actual producing run; the retained named model projection excludes only ADR-0123's retired slots.
