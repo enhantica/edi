@@ -54,6 +54,40 @@ replaces the old components, so existing users keep their preferences and update
 
 The team id and identity are variables, not secrets, because every signed app shows them.
 
+**Preparing the secrets.** Done once per certificate, and again when one expires.
+
+macOS, on a Mac with the Developer ID Application certificate in Keychain Access:
+
+1. In Keychain Access, open **My Certificates**, right-click "Developer ID Application: European Spallation
+   Source Eric (W2AG9MPZ43)" and choose **Export**. Save it as `cert.p12` with a password. Exporting from My
+   Certificates includes the private key.
+2. Check the file: `openssl pkcs12 -in cert.p12 -nokeys -legacy | grep subject` shows the identity, and
+   `openssl pkcs12 -in cert.p12 -nocerts -nodes -legacy | head -1` prints a private key line.
+3. Encode it: `base64 -i cert.p12 -o cert.b64` (or `base64 -i cert.p12 | pbcopy` to copy it). The output has
+   no header lines and no line breaks.
+4. Paste `cert.b64` into `CODESIGN_MAC_CERT_P12_BASE64` and the export password into
+   `CODESIGN_MAC_CERT_P12_PASSWORD`.
+5. At account.apple.com, under **Sign-In and Security → App-Specific Passwords**, create a password for the
+   notarising Apple ID and store it in `CODESIGN_MAC_NOTARY_PASSWORD`, with the Apple ID email in
+   `CODESIGN_MAC_NOTARY_APPLE_ID`.
+6. Delete `cert.p12` and `cert.b64` from the disk.
+
+Windows, with the DigiCert ONE account:
+
+1. In DigiCert ONE, download the client authentication certificate as `cert.p12` and note its password.
+2. Encode it in a Command Prompt: `certutil -encode cert.p12 cert.b64`. Remove the
+   `-----BEGIN CERTIFICATE-----` and `-----END CERTIFICATE-----` lines before pasting. In PowerShell,
+   `[Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.p12")) | Set-Content cert.b64` writes it without
+   them; on macOS or Linux, `base64 -i cert.p12 -o cert.b64` does the same.
+3. Store the result in `CODESIGN_WIN_CERT_P12_BASE64` and the password in `CODESIGN_WIN_CERT_P12_PASSWORD`.
+4. From DigiCert ONE, store the API key in `CODESIGN_WIN_KEYLOCKER_API_KEY` and the key pair alias in
+   `CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS`; `CODESIGN_WIN_KEYLOCKER_HOST` is
+   `https://clientauth.one.digicert.com`.
+5. Delete `cert.p12` and `cert.b64` from the disk.
+
+The workflow `.github/workflows/codesign-check.yml` checks the macOS entries without building anything:
+it imports the certificate, signs a test file and logs in to the notary service.
+
 **macOS steps**, in the installer job:
 
 1. Import the `.p12` into a temporary keychain that the job deletes at the end.
