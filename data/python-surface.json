@@ -5568,7 +5568,7 @@
     "create": {
      "need": {
       "by": "counterpart",
-      "ref": "SequentialFitExtract.create",
+      "ref": "SequentialFitExtractCollection.create",
       "verdict": "keep"
      },
      "reason": "C",
@@ -7384,7 +7384,7 @@
    "SequentialFitExtract": {
     "need": {
      "by": "counterpart",
-     "ref": "SequentialFitExtract",
+     "ref": "SequentialFitExtractCollection",
      "verdict": "keep"
     },
     "reason": "C",
