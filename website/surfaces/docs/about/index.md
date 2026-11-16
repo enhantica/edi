@@ -14,7 +14,7 @@ User experience has always been at the centre of the project. One encouraging mi
 
 EasyDiffraction has also benefited from contributors, testers and users who shared ideas, reported problems, suggested improvements, or contributed code and documentation. Their support has helped to shape the project.
 
-You are very welcome to take part too: use EasyDiffraction, share feedback, suggest features, report problems, contribute to the code or documentation, or simply tell us about your experience. If you are interested, write to me directly at <span class="ed-email" data-mail="dWUuc3NlQHZvbm96YXMud2VyZG5h"><noscript>andrew.sazonov [at] ess [dot] eu</noscript></span>, or use the [feedback form](community.md), with your name or anonymously. I read every message and do my best to reply.
+You are very welcome to take part too: use EasyDiffraction, share feedback, suggest features, report problems, contribute to the code or documentation, or simply tell us about your experience. If you are interested, write to me directly (<span class="ed-email" data-label="show e-mail" data-mail="dWUuc3NlQHZvbm96YXMud2VyZG5h"><noscript>andrew.sazonov [at] ess [dot] eu</noscript></span>), or use the [feedback form](community.md), with your name or anonymously. I read every message and do my best to reply.
 
 I'm also happy to discuss your data analysis needs or ideas for collaboration. If you are unsure whether EasyDiffraction fits your experiment, tell me what kind of data you work with. Another great way to help is the [user survey](survey.md). It is anonymous, takes about 10-15 minutes, and helps us understand what you need and what matters most to you.
 

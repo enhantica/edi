@@ -45,7 +45,7 @@ extra_javascript:
   - assets/feedback-form.js
   - assets/contact-form.js?v=3
   - assets/survey/survey.js?v=10
-  - assets/about/email-link.js?v=1
+  - assets/about/email-link.js?v=2
   - assets/code-breaks.js?v=2
 extra:
   interface_icons:
