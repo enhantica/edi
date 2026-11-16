@@ -10,11 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T05:48:53Z
+# measured_utc = 2026-11-16T09:14:10Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 177035 banked, 0 stale row(s) dropped)
-# Collected tests: 245459; with a reported duration: 77740
-# Module-scoped fixture costs recorded: 206
+# Recorded from: banked rows after main merge; inventory metadata regenerated only
+# No new measurement or collection claimed; measured values, declared holes and module costs retained
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +28,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245459
+# inventory_python = 245594
 # inventory_cpp = 0
-# inventory_measured = 177036
-# inventory_unmeasured = 68423
+# inventory_measured = 177128
+# inventory_unmeasured = 68466
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 86154
+# inventory_pr_python = 86289
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -167934,6 +167933,12 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_fina
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_trial_refuses_changes_to_the_annotated_original_reference[pin-provenance]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_trial_refuses_changes_to_the_annotated_original_reference[scientific-value]
 0.000	tests/integration/py/test_published_prompt_evidence.py::test_published_trial_refuses_changes_to_the_annotated_original_reference[tolerance]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_moment_category_columns_are_saved_and_recomputed_on_load
+UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_oblique_moment_spherical_view_matches_independent_full_covariance
+UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_shared_ratio_weight_fraction_uses_the_leader_covariance[False-leader]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_shared_ratio_weight_fraction_uses_the_leader_covariance[False-member]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_shared_ratio_weight_fraction_uses_the_leader_covariance[True-leader]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_shared_ratio_weight_fraction_uses_the_leader_covariance[True-member]
 0.050	tests/integration/py/test_release_pin_source_bytes.py::test_complete_release_source_pairs_retain_their_archived_byte_identities
 0.000	tests/integration/py/test_release_pin_source_bytes.py::test_iteration_classification_exception_is_bound_to_its_exact_source
 0.060	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/pd-neut-cwl_cosio-d20/expected.json]
@@ -167979,12 +167984,6 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_project_save_fina
 0.070	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/sc-neut-cwl_pr2nio4-5c2/expected.json]
 0.000	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/expected.json]
 0.880	tests/integration/py/test_release_pin_source_bytes.py::test_rebinding_a_source_hash_cannot_launder_reference_changes[docs/user/cli/sc-neut-tof_taurine-senju/expected.json]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_moment_category_columns_are_saved_and_recomputed_on_load
-UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_oblique_moment_spherical_view_matches_independent_full_covariance
-UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_shared_ratio_weight_fraction_uses_the_leader_covariance[False-leader]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_shared_ratio_weight_fraction_uses_the_leader_covariance[False-member]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_shared_ratio_weight_fraction_uses_the_leader_covariance[True-leader]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_relation_derived_values.py::test_shared_ratio_weight_fraction_uses_the_leader_covariance[True-member]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_calendar_refuses_clock_rollback
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_calendar_uses_numeric_monthly_sequence[known0-2026-11-07-2026.11.0]
 UNMEASURED:not-completed-in-this-run	tests/integration/py/test_release_reference_contracts.py::test_calendar_uses_numeric_monthly_sequence[known1-2026-11-07-2026.11.11]
