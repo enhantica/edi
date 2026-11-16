@@ -153,7 +153,7 @@ void EvolutionViewModel::syncExperiments() {
     if (names != experiments_) {
         experiments_ = names;
         if (experiments_.isEmpty()) per_experiment_ = false;
-        current_experiment_ = std::min(current_experiment_, std::max(0, static_cast<int>(experiments_.size()) - 1));
+        current_experiment_ = std::min(current_experiment_, static_cast<int>(experiments_.size()) - 1);
         emit seriesChanged();
         emit perExperimentChanged();
         emit currentExperimentChanged();
@@ -170,7 +170,7 @@ void EvolutionViewModel::setPerExperiment(bool on) {
 }
 
 void EvolutionViewModel::setCurrentExperiment(int index) {
-    if (index == current_experiment_ || index < 0 || index >= experiments_.size()) return;
+    if (index == current_experiment_ || index < -1 || index >= experiments_.size()) return;
     current_experiment_ = index;
     emit currentExperimentChanged();
     if (per_experiment_) rebuild();
@@ -324,11 +324,13 @@ void EvolutionViewModel::readPoints() {
         const bool by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
         const auto points = [&](const std::function<void(const edi::EvolutionPoint&)>& visit) {
             if (per_experiment_) {
-                const auto chosen = static_cast<std::size_t>(current_experiment_);
                 edi::evolution_experiment_series(
                     *project_, session_->places(), session_->index(), name, by_value,
                     [&](std::size_t experiment, const edi::EvolutionPoint& point) {
-                        if (experiment == chosen) visit(point);
+                        if (current_experiment_ < 0 || experiment == static_cast<std::size_t>(current_experiment_)) {
+                            bank_ = static_cast<int>(experiment);
+                            visit(point);
+                        }
                     });
                 return;
             }
@@ -343,7 +345,7 @@ void EvolutionViewModel::readPoints() {
         });
         if (count <= static_cast<std::size_t>(kThinningLimit)) {
             points([this](const edi::EvolutionPoint& point) {
-                points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset)});
+                points_.push_back({point.x, point.y, point.su, static_cast<int>(point.dataset), allBanks() ? bank_ : -1});
             });
         } else {
             const int buckets = kThinningLimit / 2;
@@ -459,7 +461,36 @@ void EvolutionViewModel::draw() {
             high.append(point.y + point.error);
         }
     }
+    // Every bank shown: each bank's points on its own layer, the chart's own layer empty.
+    if (allBanks()) {
+        for (int bank = 0; bank < bank_layers_.size(); ++bank) {
+            if (!bank_layers_[bank]) continue;
+            QList<QPointF> own;
+            QList<double> own_low, own_high;
+            for (const Point& point : points_) {
+                if (point.bank != bank) continue;
+                own.append(QPointF(point.x, point.y));
+                if (bars) {
+                    own_low.append(point.y - point.error);
+                    own_high.append(point.y + point.error);
+                }
+            }
+            bank_layers_[bank]->setData(own, own_low, own_high);
+        }
+        layer_->setData({}, {}, {});
+        return;
+    }
+    for (const QPointer<MeasuredLayer>& layer : bank_layers_) {
+        if (layer) layer->setData({}, {}, {});
+    }
     layer_->setData(points, low, high);
+}
+
+void EvolutionViewModel::setBankLayer(int bank, MeasuredLayer* layer) {
+    if (bank < 0) return;
+    if (bank >= bank_layers_.size()) bank_layers_.resize(bank + 1);
+    bank_layers_[bank] = layer;
+    draw();
 }
 
 int EvolutionViewModel::datasetAt(double x, double y, double x_tolerance, double y_tolerance) const {
