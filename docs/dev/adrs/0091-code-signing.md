@@ -103,13 +103,23 @@ through KeyLocker and verifies it.
 
 **Windows steps**, in the same job:
 
-1. Decode the client `.p12` and set `SM_CLIENT_CERT_FILE`; `SM_HOST`, `SM_API_KEY` and
-   `SM_CLIENT_CERT_PASSWORD` are set only on the signing steps.
-2. `digicert/code-signing-software-trust-action@v1` in simple-signing mode signs the app and the Qt Installer
-   Framework template `installerbase.exe`, before packaging. The maintenance tool is written from that
-   template, so it carries the signature too. After packaging, the same action signs each installer `.exe`.
-3. `signtool verify /pa` checks the app and the template, and `package.py seal` checks each installer before
-   archiving it again.
+1. Decode the client `.p12` and set `SM_CLIENT_CERT_FILE`. `digicert/code-signing-software-trust-action@v1` in
+   simple-signing mode, without an input, installs `smctl`. `SM_HOST`, `SM_API_KEY` and
+   `SM_CLIENT_CERT_PASSWORD` are set only on the steps that sign.
+2. `tools/installer/build.py` signs every unsigned `.exe` in the staged app with `smctl sign --simple` once the
+   bundled assistant runtime has passed its vendor hash check: the app, `edi_assistant_guard.exe` and the
+   runtime's helpers. Executables that already carry a valid vendor signature keep their bytes, and the build
+   fails if signing changed any other file. `build/installer/windows-signing.json` lists each file it signed
+   with its hash before and after.
+3. `tools/installer/standalone_cli.py` signs `edi.exe` before archiving the command-line download, and
+   `package.py seal` signs each installer before archiving it again.
+4. `signtool verify /pa` checks every signed file, every `.exe` in the stage, and every `.exe` of each test
+   installation, so a missed executable fails the job.
+
+The installed maintenance tool is not signed yet. Qt Installer Framework writes it from the running
+installer's executable segment, which `binarycreator` changes, so signing the installer does not reach it.
+Signing it needs a maintenance-tool component carrying a signed `installerbase.exe`, which belongs with the
+installer component changes listed above.
 
 **When signing runs.** Only for runs of the installer workflow on `main` in this repository: pushes to `main`
 and the release builds started there. `EDI_CODESIGN` is set for those runs and every signing step depends on
