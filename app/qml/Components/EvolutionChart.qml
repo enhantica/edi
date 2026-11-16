@@ -129,11 +129,34 @@ Item {
         onActivated: index => chart.evolution.xMode = index
     }
 
+    // A series of joint fits (edi ADR-0089): its shared parameters, or one experiment's own.
+    ToolbarComboBox {
+        id: scopeBox
+
+        objectName: "evolution.toolbar.scope"
+        x: xBox.x + xBox.width + AppSizes.toolbarSpacing * 4
+        y: xBox.y
+        visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series
+        width: visible ? implicitWidth : 0
+        toolTip: qsTr("Parameters shared by the experiments, or one experiment's own")
+        readonly property var entries: chart.evolution !== null ? [qsTr("Shared")].concat(chart.evolution.experiments) : []
+        model: entries
+        shownIndex: chart.evolution !== null && chart.evolution.perExperiment ? chart.evolution.currentExperiment + 1 : 0
+        onActivated: index => {
+            if (index === 0) {
+                chart.evolution.perExperiment = false;
+            } else {
+                chart.evolution.currentExperiment = index - 1;
+                chart.evolution.perExperiment = true;
+            }
+        }
+    }
+
     // The parameter drawn, one of those results.csv records, with the previous and next buttons.
     BlockSelector {
         objectName: "evolution.parameters"
         visible: !chart.fromReport
-        x: xBox.x + xBox.width + AppSizes.toolbarSpacing * 4
+        x: (scopeBox.visible ? scopeBox.x + scopeBox.width : xBox.x + xBox.width) + AppSizes.toolbarSpacing * 4
         y: xBox.y + (xBox.height - height) / 2
         width: Math.max(0, viewButtons.x - x - AppSizes.toolbarSpacing * 4)
         backgroundColor: chart.colors.chartBackground

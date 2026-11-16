@@ -59,6 +59,12 @@ class EvolutionViewModel : public QObject {
     Q_PROPERTY(bool outOfDate READ outOfDate NOTIFY outOfDateChanged)
     // Some dataset of the scan has a row in its results: until then the chart has no axes.
     Q_PROPERTY(bool fitted READ fitted NOTIFY fittedChanged)
+    // A series of joint fits (edi ADR-0089): its parameters Shared (results.csv, one row per point) or Per experiment
+    // (results_experiments.csv), the latter for the experiment `currentExperiment` (a place in `experiments`).
+    Q_PROPERTY(bool series READ series NOTIFY seriesChanged)
+    Q_PROPERTY(bool perExperiment READ perExperiment WRITE setPerExperiment NOTIFY perExperimentChanged)
+    Q_PROPERTY(QStringList experiments READ experiments NOTIFY seriesChanged)
+    Q_PROPERTY(int currentExperiment READ currentExperiment WRITE setCurrentExperiment NOTIFY currentExperimentChanged)
     // The layer the points are drawn on (the chart's).
     Q_PROPERTY(edi_app::MeasuredLayer* layer READ layer WRITE setLayer NOTIFY layerChanged)
 
@@ -79,6 +85,12 @@ class EvolutionViewModel : public QObject {
     void setTemplate(const edi::Project* project) { template_ = project; }
 
     EvolutionParameterListModel* parameters() const { return parameters_; }
+    bool series() const { return !experiments_.isEmpty(); }
+    bool perExperiment() const { return per_experiment_; }
+    void setPerExperiment(bool on);
+    QStringList experiments() const { return experiments_; }
+    int currentExperiment() const { return current_experiment_; }
+    void setCurrentExperiment(int index);
     int currentParameter() const { return current_; }
     void setCurrentParameter(int index);
     int xMode() const { return x_mode_; }
@@ -127,6 +139,9 @@ class EvolutionViewModel : public QObject {
     void countChanged();
     void outOfDateChanged();
     void fittedChanged();
+    void seriesChanged();
+    void perExperimentChanged();
+    void currentExperimentChanged();
     void layerChanged();
 
    private:
@@ -156,6 +171,10 @@ class EvolutionViewModel : public QObject {
     EvolutionParameterListModel* parameters_;
     QPointer<MeasuredLayer> layer_;
     QStringList names_;
+    QStringList experiments_;  // a series of joint fits' experiments, in project order; empty otherwise
+    bool per_experiment_ = false;
+    int current_experiment_ = 0;
+    void syncExperiments();
     QString extracted_title_;
     const ScanSession* session_ = nullptr;
     const edi::Project* project_ = nullptr;

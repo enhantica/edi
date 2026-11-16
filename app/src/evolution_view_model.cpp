@@ -145,11 +145,48 @@ void EvolutionViewModel::syncFitted() {
     }
 }
 
-bool EvolutionViewModel::syncNames() {
-    // The core's list (edi::evolution_parameters), the report's too: every free parameter, listed before any dataset
-    // is fitted, then the ones results.csv records that are no longer free; the shown one kept, else the first.
+void EvolutionViewModel::syncExperiments() {
     QStringList names;
-    if (project_ != nullptr) {
+    if (project_ != nullptr && project_->sequential_fit.joint()) {
+        for (const auto& experiment : project_->experiments) names.append(QString::fromStdString(experiment->name));
+    }
+    if (names != experiments_) {
+        experiments_ = names;
+        if (experiments_.isEmpty()) per_experiment_ = false;
+        current_experiment_ = std::min(current_experiment_, std::max(0, static_cast<int>(experiments_.size()) - 1));
+        emit seriesChanged();
+        emit perExperimentChanged();
+        emit currentExperimentChanged();
+    }
+}
+
+void EvolutionViewModel::setPerExperiment(bool on) {
+    on = on && series();
+    if (on == per_experiment_) return;
+    per_experiment_ = on;
+    emit perExperimentChanged();
+    syncNames();
+    rebuild();
+}
+
+void EvolutionViewModel::setCurrentExperiment(int index) {
+    if (index == current_experiment_ || index < 0 || index >= experiments_.size()) return;
+    current_experiment_ = index;
+    emit currentExperimentChanged();
+    if (per_experiment_) rebuild();
+}
+
+bool EvolutionViewModel::syncNames() {
+    syncExperiments();
+    // The core's list (edi::evolution_parameters), the report's too: every free parameter, listed before any dataset
+    // is fitted, then the ones results.csv records that are no longer free; the shown one kept, else the first. Per
+    // experiment, the columns results_experiments.csv records (edi::evolution_experiment_parameters).
+    QStringList names;
+    if (project_ != nullptr && per_experiment_) {
+        for (const std::string& name : edi::evolution_experiment_parameters(*project_)) {
+            names.append(QString::fromStdString(name));
+        }
+    } else if (project_ != nullptr) {
         static const edi::ScanResultIndex kNoResults;
         for (const std::string& name :
              edi::evolution_parameters(*project_, session_ != nullptr ? session_->index() : kNoResults)) {
@@ -190,7 +227,8 @@ void EvolutionViewModel::addRow(int dataset, const std::vector<std::string>& cel
     // A fresh run's first row brings the header, and with it the axes and any recorded parameter not listed yet: the
     // points are read once then; every later row adds its own point.
     // The template's own point, shown before the scan had rows, gives way to the scan's points.
-    if (!fitted_ || current_ < 0 || template_point_) {
+    // Per experiment the row's points are in results_experiments.csv, which the point's row follows: read them all.
+    if (!fitted_ || current_ < 0 || template_point_ || per_experiment_) {
         syncNames();
         syncFitted();
         rebuild();
@@ -273,7 +311,7 @@ void EvolutionViewModel::rebuild() {
 }
 
 void EvolutionViewModel::readPoints() {
-    template_point_ = templatePoint();
+    template_point_ = per_experiment_ ? std::nullopt : templatePoint();
     if (template_point_) {
         points_.push_back(*template_point_);
         return;
@@ -285,6 +323,15 @@ void EvolutionViewModel::readPoints() {
         const std::string name = names_[current_].toStdString();
         const bool by_value = x_mode_ == 0 && !extracted_title_.isEmpty();
         const auto points = [&](const std::function<void(const edi::EvolutionPoint&)>& visit) {
+            if (per_experiment_) {
+                const auto chosen = static_cast<std::size_t>(current_experiment_);
+                edi::evolution_experiment_series(
+                    *project_, session_->places(), session_->index(), name, by_value,
+                    [&](std::size_t experiment, const edi::EvolutionPoint& point) {
+                        if (experiment == chosen) visit(point);
+                    });
+                return;
+            }
             edi::evolution_series(*project_, session_->places(), session_->index(), name, by_value, visit);
         };
         double low = std::numeric_limits<double>::infinity(), high = -low;
