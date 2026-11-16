@@ -1137,6 +1137,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     int current_structure_ = -1;
     int current_experiment_ = -1;
     int series_revision_ = 0;
+    // Each run's profile factors as its record arrived this session, by its file or point key (the summary's ranges).
+    std::map<std::string, std::vector<edi::ScanFileRecord::Factors>> run_factors_;
     void syncSeries();
     // A scan project (edi ADR-0017 §19, ADR-0026): its results (the session), the dataset shown, and the template.
     // While a dataset is shown the model holds that dataset's projection (its data, the template's parameters with

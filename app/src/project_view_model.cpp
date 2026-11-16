@@ -4715,6 +4715,23 @@ ScanSummary ProjectViewModel::scanSummary(const QString& run_outcome, double sec
         }
         ++summary.fitted;
         ++(rows[index].converged ? summary.ok : summary.failed);
+        // Its profile factors, when this session's run sent them: each bank's for a series of several, else pooled.
+        const auto& files = scan_session_->datasets().files;
+        if (index < files.size()) {
+            if (const auto found = run_factors_.find(files[index]); found != run_factors_.end()) {
+                const bool banks = found->second.size() > 2;
+                for (const edi::ScanFileRecord::Factors& factors : found->second) {
+                    if (banks == factors.experiment.empty()) continue;
+                    if (!std::isfinite(factors.rp) || !std::isfinite(factors.rwp)) continue;
+                    const bool start = !summary.factors;
+                    summary.rp_min = start ? factors.rp : std::min(summary.rp_min, factors.rp);
+                    summary.rp_max = start ? factors.rp : std::max(summary.rp_max, factors.rp);
+                    summary.rwp_min = start ? factors.rwp : std::min(summary.rwp_min, factors.rwp);
+                    summary.rwp_max = start ? factors.rwp : std::max(summary.rwp_max, factors.rwp);
+                    summary.factors = true;
+                }
+            }
+        }
         const double chi2 = rows[index].reduced_chi_square;
         if (!std::isnan(chi2)) {  // a refused file has none
             summary.chi_min = first ? chi2 : std::min(summary.chi_min, chi2);
@@ -4752,6 +4769,9 @@ ScanSummary ProjectViewModel::scanSummary(const QString& run_outcome, double sec
 int ProjectViewModel::scanFileFitted(const edi::ScanFileRecord& record) {
     if (scan_session_ == nullptr) {
         return -1;
+    }
+    if (!record.factors.empty()) {
+        run_factors_[record.file_name] = record.factors;
     }
     // The event's own row: checked and indexed where the driver appended it, never read from the moving tail.
     QString error;

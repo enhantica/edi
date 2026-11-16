@@ -317,6 +317,18 @@ void FitResultListModel::setScan(const ScanSummary& summary) {
     if (summary.fitted > 0) {
         row(QStringLiteral("ruler"), tr("Goodness-of-fit range (%1)").arg(chi_label()), chi_range(summary));
     }
+    // Rp and Rwp as ranges like χ² (the owner, 2026-11-16), each in its dictionary format.
+    if (summary.factors) {
+        const auto range = [](const char* uid, double low, double high) {
+            const QString a = QString::fromStdString(edi::shown_text(uid, low));
+            const QString b = QString::fromStdString(edi::shown_text(uid, high));
+            return a == b ? a : QStringLiteral("%1–%2").arg(a, b);
+        };
+        row(QStringLiteral("ruler"), tr("%1 range").arg(QString::fromStdString(edi::label("fit_result.prof_r_factor"))),
+            range("fit_result.prof_r_factor", summary.rp_min, summary.rp_max));
+        row(QStringLiteral("ruler"), tr("%1 range").arg(QString::fromStdString(edi::label("fit_result.prof_wr_factor"))),
+            range("fit_result.prof_wr_factor", summary.rwp_min, summary.rwp_max));
+    }
     setTableRows(rows);
 }
 

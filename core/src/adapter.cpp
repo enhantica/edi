@@ -7228,6 +7228,9 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
                     return;
                 }
                 record->result = scan_file_result(cproject, file_result, *scan);
+                for (const auto& factors : file_result.profile_agreement) {
+                    record->factors.push_back({factors.experiment, factors.rp, factors.rwp});
+                }
                 scan->results[record->file_name] = record->result;
                 scan->fitted.insert(record->file_name);
                 if (on_file_complete) {
