@@ -421,8 +421,17 @@ SideBarGroup {
         property ExperimentViewModel target: null
         property bool replacing: false
         bottomPadding: 0
-        // As wide as its widest item, never the row's cell: every label and hint shows whole (LoadMenuItem).
-        width: Math.max(EaStyle.Sizes.fontPixelSize * 24, implicitWidth)
+        // As wide as its widest item, never the row's cell: every label and hint shows whole (LoadMenuItem's
+        // implicitWidth; a Menu's own does not follow its items').
+        width: {
+            let widest = EaStyle.Sizes.fontPixelSize * 24;
+            for (let i = 0; i < count; ++i) {
+                const entry = itemAt(i);
+                if (entry)
+                    widest = Math.max(widest, entry.implicitWidth);
+            }
+            return Math.ceil(widest) + leftPadding + rightPadding;
+        }
         readonly property real labelWidth: Math.max(EaStyle.Sizes.fontPixelSize * 7.5, Math.ceil(dataLabels.advanceWidth) + EaStyle.Sizes.fontPixelSize * 0.25)
         TextMetrics {
             id: dataLabels
