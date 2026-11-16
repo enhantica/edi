@@ -828,15 +828,49 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // (`--demo-only stall-`).
     // The synthetic 100-point series opened from the examples list (its collection entry downloaded), then shown on the
     // Experiment page with its views. Run only when asked (`--demo-only examplecheck-`).
+    // The chart-consistency review's set: every chart view of the Experiment and Analysis pages for the series
+    // EDI_DEMO_SCAN_PROJECT after its fit, then a single crystal's Pattern and Meas vs calc. Run only when asked
+    // (`--demo-only review-`).
+    if (only.startsWith(QLatin1String("review-"))) {
+        const QString experimentTab = QStringLiteral("appBar.tab.experiment");
+        steps_.push_back({"review-00-fitted",
+                          {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"), analysis,
+                           basic, "statusBar.fit.button", "wait-files:100", "wait-fit", "choose:OK"}});
+        steps_.push_back({"review-01-experiment-pattern", {experimentTab, basic, "mainArea.tab.pattern"}});
+        steps_.push_back({"review-02-experiment-meascalc", {"mainArea.tab.measCalc"}});
+        steps_.push_back({"review-03-experiment-stacked-byrun", {"mainArea.tab.stacked"}});
+        steps_.push_back({"review-04-experiment-stacked-bybank", {"mainArea.series.rows", "choose:by bank"}});
+        steps_.push_back({"review-05-experiment-map-bybank", {"mainArea.tab.map"}});
+        steps_.push_back({"review-06-experiment-map-byrun", {"mainArea.series.rows", "choose:by run"}});
+        steps_.push_back({"review-07-analysis-pattern", {analysis, basic, "mainArea.tab.pattern"}});
+        steps_.push_back({"review-08-analysis-meascalc", {"mainArea.tab.measCalc"}});
+        steps_.push_back({"review-09-analysis-structure", {"mainArea.tab.structure"}});
+        steps_.push_back({"review-10-analysis-evolution-shared", {"mainArea.tab.evolution"}});
+        steps_.push_back({"review-11-analysis-evolution-perbank", {"evolution.toolbar.scope", "choose:Per bank"}});
+        steps_.push_back({"review-12-analysis-stacked", {"mainArea.tab.stacked"}});
+        steps_.push_back({"review-13-analysis-map", {"mainArea.tab.map"}});
+        steps_.push_back({"review-14-analysis-correlations", {"mainArea.tab.correlations"}});
+    }
+    // The review's single crystal, from a fresh start (`--demo-only reviewsc-`).
+    if (only.startsWith(QLatin1String("reviewsc-"))) {
+        steps_.push_back({"reviewsc-1-sc-pattern", QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
+                                                       open_example("sc-neut-cwl_tb2ti2o7-heidi") +
+                                                       QStringList{"appBar.tab.experiment", basic, "mainArea.tab.pattern"}});
+        steps_.push_back({"reviewsc-2-sc-meascalc", {"mainArea.tab.measCalc"}});
+    }
     if (only.startsWith(QLatin1String("examplecheck-"))) {
         steps_.push_back({"examplecheck-1-opened",
-                          QStringList{"resize:1480x800"} + open_example("pd-neut-tof_ncaf-wish-5bank_synthetic-100p")});
+                          QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
+                              open_example("pd-neut-tof_ncaf-wish-5bank_synthetic-100p")});
         steps_.push_back({"examplecheck-2-experiment", {"appBar.tab.experiment", basic}});
         steps_.push_back({"examplecheck-3-stacked", {"mainArea.tab.stacked"}});
-        // An experiment without data shows Load data… in its row: its menu, open.
-        steps_.push_back({"examplecheck-4-load-data-menu", open_example("pd-neut-cwl_lbco_simulation") +
-                                                            QStringList{"appBar.tab.experiment", basic,
-                                                                        "experiments.loadData.0"}});
+    }
+    // An experiment without data shows Load data… in its row: its menu, open, from a fresh start
+    // (`--demo-only datamenu-`).
+    if (only.startsWith(QLatin1String("datamenu-"))) {
+        steps_.push_back({"datamenu-1-open", QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
+                                                 open_example("pd-neut-cwl_lbco_simulation") +
+                                                 QStringList{"appBar.tab.experiment", basic, "experiments.loadData.0"}});
     }
     if (only.startsWith(QLatin1String("stall-"))) {
         steps_.push_back({"stall-1-opened",
