@@ -319,10 +319,13 @@ void FitResultListModel::setScan(const ScanSummary& summary) {
     }
     // Rp and Rwp as ranges like χ² (the owner, 2026-11-16), each in its dictionary format.
     if (summary.factors) {
+        // With the dictionary's unit, as the pattern header shows an R value ("7.23 %").
         const auto range = [](const char* uid, double low, double high) {
             const QString a = QString::fromStdString(edi::shown_text(uid, low));
             const QString b = QString::fromStdString(edi::shown_text(uid, high));
-            return a == b ? a : QStringLiteral("%1–%2").arg(a, b);
+            const QString unit = QString::fromStdString(edi::units_label(uid));
+            const QString text = a == b ? a : QStringLiteral("%1–%2").arg(a, b);
+            return unit.isEmpty() ? text : text + u' ' + unit;
         };
         row(QStringLiteral("ruler"), tr("%1 range").arg(QString::fromStdString(edi::label("fit_result.prof_r_factor"))),
             range("fit_result.prof_r_factor", summary.rp_min, summary.rp_max));
