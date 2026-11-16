@@ -626,13 +626,33 @@ def test_public_artifacts_exclude_engine_object_code_and_runner_names():
     )
 
 
+def required_artifact_programs(job):
+    outcomes, programs = {}, []
+    resolved = True
+    for candidate in job.get('steps', []):
+        try:
+            enabled = active(candidate, 'pull_request', outputs=outcomes)
+        except AssertionError:
+            resolved = False
+            enabled = False
+        if enabled and not candidate.get('continue-on-error'):
+            programs.append(candidate.get('run', ''))
+        if 'id' in candidate:
+            outcomes[candidate['id'], 'outcome'] = 'success' if enabled else 'skipped'
+    return '\n'.join(programs), resolved
+
+
 def public_artifact_findings(documents):
-    from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
     from tests.fixtures.public_artifact_contract import reviewed_delivery  # noqa: PLC0415
 
     findings = []
     for filename, doc in documents:
         for name, job in doc.get('jobs', {}).items():
+            required_programs = ''
+            if name == 'app-wasm':
+                required_programs, resolved = required_artifact_programs(job)
+                if not resolved:
+                    findings.append(filename + ':' + name + ':unresolved producer condition')
             for step in job.get('steps', []):
                 if 'upload-artifact' not in step.get('uses', ''):
                     continue
@@ -641,15 +661,6 @@ def public_artifact_findings(documents):
                 reviewed = reviewed_delivery(filename, name, job, step)
                 if 'runner.name' in artifact or ('edi-native' in artifact and not reviewed):
                     findings.append(filename + ':' + name + ':private artifact identity')
-                required_programs = (
-                    '\n'.join(
-                        s.get('run', '')
-                        for s in job.get('steps', [])
-                        if active(s, 'pull_request') and not s.get('continue-on-error')
-                    )
-                    if name == 'app-wasm'
-                    else ''
-                )
                 webapp = (
                     filename == 'ci.yml'
                     and name == 'app-wasm'

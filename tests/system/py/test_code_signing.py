@@ -4,11 +4,14 @@
 import ast
 import copy
 import re
+from functools import cache
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 import yaml
+
+from tests.fixtures.e09_t75_workflow import actions_equal
 
 ROOT = Path(__file__).resolve().parents[3]
 SECRET_NAMES = {
@@ -28,6 +31,7 @@ VARIABLE_NAMES = {
 }
 
 
+@cache
 def workflow():
     return yaml.load(
         (ROOT / '.github/workflows/installers.yml').read_text(), Loader=yaml.BaseLoader
@@ -93,10 +97,11 @@ def expression(value, atoms):
     return condition_value(tree.body)
 
 
-def context_atoms(event, ref, release, platform, repository, *, preview=False):
+def context_atoms(event, ref, release, platform, repository, *, preview=False, fork=False):
     atoms = {
         'github.event_name': event,
         'github.repository': repository,
+        'github.event.pull_request.head.repo.fork': fork if event == 'pull_request' else '',
         'github.ref': ref,
         'runner.os': platform,
         'inputs.release_plan_run': '1234' if release else '',
@@ -109,9 +114,18 @@ def context_atoms(event, ref, release, platform, repository, *, preview=False):
 
 
 def condition(  # noqa: PLR0913 - each argument is an Actions context input
-    step, event, ref, release, platform, *, repository='enhantica/edi', failed=False, preview=False
+    step,
+    event,
+    ref,
+    release,
+    platform,
+    *,
+    repository='enhantica/edi',
+    failed=False,
+    preview=False,
+    fork=False,
 ):
-    atoms = context_atoms(event, ref, release, platform, repository, preview=preview)
+    atoms = context_atoms(event, ref, release, platform, repository, preview=preview, fork=fork)
     if 'EDI_CODESIGN' in step.get('env', {}):
         atoms['env.EDI_CODESIGN'] = expression(step['env']['EDI_CODESIGN'], atoms)
     value = str(step.get('if', 'success()'))
@@ -127,10 +141,12 @@ def condition(  # noqa: PLR0913 - each argument is an Actions context input
     return bool(expression(value, atoms))
 
 
-def private_access(
-    step, event, ref, release, platform, *, repository='enhantica/edi', preview=False
+def private_access(  # noqa: PLR0913 - each argument is an Actions context input
+    step, event, ref, release, platform, *, repository='enhantica/edi', preview=False, fork=False
 ):
-    if not condition(step, event, ref, release, platform, repository=repository, preview=preview):
+    if not condition(
+        step, event, ref, release, platform, repository=repository, preview=preview, fork=fork
+    ):
         return False
     values = [
         value
@@ -140,7 +156,7 @@ def private_access(
     ]
     if not values:
         return True
-    atoms = context_atoms(event, ref, release, platform, repository, preview=preview)
+    atoms = context_atoms(event, ref, release, platform, repository, preview=preview, fork=fork)
     if 'EDI_CODESIGN' in step.get('env', {}):
         atoms['env.EDI_CODESIGN'] = expression(step['env']['EDI_CODESIGN'], atoms)
     for value in values:
@@ -149,11 +165,11 @@ def private_access(
     return any(expression(value, atoms) for value in values)
 
 
-def job_environment(event, ref, release, platform, repository, *, preview=False):
+def job_environment(event, ref, release, platform, repository, *, preview=False, fork=False):
     environment = workflow()['jobs']['installers'].get('environment')
     if isinstance(environment, dict):
         environment = environment.get('name')
-    atoms = context_atoms(event, ref, release, platform, repository, preview=preview)
+    atoms = context_atoms(event, ref, release, platform, repository, preview=preview, fork=fork)
     return expression(environment, atoms) if '${{' in str(environment) else environment
 
 
@@ -173,12 +189,7 @@ def condition_value(node):
         return result
     values = [condition_value(item) for item in [node.left, *node.comparators]]
     return all(
-        (
-            left.casefold() == right.casefold()
-            if isinstance(left, str) and isinstance(right, str)
-            else left == right
-        )
-        == isinstance(operator, ast.Eq)
+        actions_equal(left, right) == isinstance(operator, ast.Eq)
         for left, operator, right in zip(values, node.ops, values[1:], strict=False)
     )
 
@@ -245,6 +256,15 @@ def test_signing_is_present_and_never_reaches_pull_requests_or_other_branches(pl
         'Unsigned builds, including main pushes, must disable the signing flag: '
         + repr(enabled_guards)
     )
+    for ref in ('refs/pull/53/merge', 'refs/heads/main'):
+        assert not any(
+            private_access(step, 'pull_request', ref, True, platform, fork=True)
+            for step in selected
+        ), 'A fork PR in the base repository must never reach signing credentials'
+        assert (
+            job_environment('pull_request', ref, True, platform, 'enhantica/edi', fork=True)
+            != 'codesign'
+        ), 'Fork PRs must never select the codesign environment'
 
 
 @pytest.mark.parametrize('platform', ['macOS', 'Windows'])
@@ -274,6 +294,38 @@ def test_condition_observer_keeps_guard_values_and_refuses_unknown_context():
     with pytest.raises(AssertionError, match='Signing conditions must resolve'):
         expression("env.UNRECOGNISED == '1'", {})
 
+    for event, fork, expected in [
+        ('pull_request', False, False),
+        ('pull_request', True, True),
+        ('push', False, ''),
+        ('workflow_dispatch', False, ''),
+    ]:
+        atoms = context_atoms(event, 'refs/heads/main', False, 'macOS', 'enhantica/edi', fork=fork)
+        assert atoms['github.event.pull_request.head.repo.fork'] == expected, (
+            'PR contexts carry the real fork boolean; events without a PR carry an empty property'
+        )
+        probe = {
+            'if': 'github.event.pull_request.head.repo.fork == false',
+            'env': {'KEY': '${{ secrets.CODESIGN_MAC_CERT_P12_PASSWORD }}'},
+        }
+        assert condition(probe, event, 'refs/heads/main', False, 'macOS', fork=fork) == (
+            not fork
+        ), 'The per-step fork guard must admit same-repo PRs and absent PR objects, refusing forks'
+        assert private_access(probe, event, 'refs/heads/main', False, 'macOS', fork=fork) == (
+            not fork
+        ), 'Private credential observation must preserve the same fork and absent-object semantics'
+    for left, right, equal in [
+        ('', False, True),
+        (False, False, True),
+        (True, False, False),
+        ('0', False, True),
+        ('false', False, False),
+        (None, False, True),
+    ]:
+        assert expression('left == right', {'left': left, 'right': right}) == equal, (
+            'The bounded observer must use GitHub numeric coercion for loose equality'
+        )
+
 
 def test_pull_request_bundle_build_keeps_the_internal_ad_hoc_path():
     candidates = [
@@ -292,6 +344,9 @@ def test_pull_request_bundle_build_keeps_the_internal_ad_hoc_path():
             assert not private_access(
                 build, 'pull_request', 'refs/pull/53/merge', False, platform
             ), 'PR bundle construction must receive no effective private signing credentials'
+    assert not condition(build, 'pull_request', 'refs/pull/53/merge', False, 'macOS', fork=True), (
+        'The real per-step guard must reject fork PR bundle builds'
+    )
     tree = ast.parse((ROOT / 'tools/installer/build.py').read_text())
     function = next(
         node

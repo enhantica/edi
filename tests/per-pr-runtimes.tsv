@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T18:34:07Z
+# measured_utc = 2026-11-16T23:40:46Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 177066 banked, 0 stale row(s) dropped)
-# Collected tests: 245490; with a reported duration: 77762
+# Recorded from: measured test run (39 node(s) measured once, 177030 banked, 0 stale row(s) dropped)
+# Collected tests: 245490; with a reported duration: 77750
 # Module-scoped fixture costs recorded: 206
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 245490
 # inventory_cpp = 0
-# inventory_measured = 177069
-# inventory_unmeasured = 68421
+# inventory_measured = 177060
+# inventory_unmeasured = 68430
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 86185
 
@@ -227862,20 +227862,20 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_frames.py::test_pu
 0.040	tests/system/py/test_code_signing.py::test_app_signing_omits_hardened_runtime_while_installer_requires_it
 0.000	tests/system/py/test_code_signing.py::test_assistant_tutorial_has_one_plain_dated_sentence[cli]
 0.000	tests/system/py/test_code_signing.py::test_assistant_tutorial_has_one_plain_dated_sentence[python]
-0.000	tests/system/py/test_code_signing.py::test_condition_observer_keeps_guard_values_and_refuses_unknown_context
-0.110	tests/system/py/test_code_signing.py::test_macos_installer_is_hardened_timestamped_notarised_stapled_and_verified
-0.450	tests/system/py/test_code_signing.py::test_non_release_main_dispatch_receives_no_signing_credentials[Windows]
-0.460	tests/system/py/test_code_signing.py::test_non_release_main_dispatch_receives_no_signing_credentials[macOS]
-0.090	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[macos-app]
-0.050	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[macos-cli]
-0.070	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[macos-offline]
-0.060	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[macos-online]
-0.050	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[windows-app]
-0.080	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[windows-cli]
-0.060	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[windows-offline]
-0.050	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[windows-online]
+0.040	tests/system/py/test_code_signing.py::test_condition_observer_keeps_guard_values_and_refuses_unknown_context
+0.040	tests/system/py/test_code_signing.py::test_macos_installer_is_hardened_timestamped_notarised_stapled_and_verified
+0.000	tests/system/py/test_code_signing.py::test_non_release_main_dispatch_receives_no_signing_credentials[Windows]
+0.000	tests/system/py/test_code_signing.py::test_non_release_main_dispatch_receives_no_signing_credentials[macOS]
+0.020	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[macos-app]
+0.020	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[macos-cli]
+0.020	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[macos-offline]
+0.030	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[macos-online]
+0.060	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[windows-app]
+0.030	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[windows-cli]
+0.030	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[windows-offline]
+0.040	tests/system/py/test_code_signing.py::test_owner_declared_app_cli_and_installer_signatures[windows-online]
 0.020	tests/system/py/test_code_signing.py::test_prompt_trial_records_live_only_in_contributor_docs
-0.300	tests/system/py/test_code_signing.py::test_pull_request_bundle_build_keeps_the_internal_ad_hoc_path
+0.010	tests/system/py/test_code_signing.py::test_pull_request_bundle_build_keeps_the_internal_ad_hoc_path
 0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[macos-app]
 0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[macos-cli]
 0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[macos-offline]
@@ -227884,11 +227884,11 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_cif_public_frames.py::test_pu
 0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[windows-cli]
 0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[windows-offline]
 0.000	tests/system/py/test_code_signing.py::test_signature_coverage_refuses_each_omitted_required_member[windows-online]
-0.210	tests/system/py/test_code_signing.py::test_signing_entries_keep_the_exact_secret_and_variable_split
-0.560	tests/system/py/test_code_signing.py::test_signing_failure_cannot_upload_release_artifacts
-3.550	tests/system/py/test_code_signing.py::test_signing_is_present_and_never_reaches_pull_requests_or_other_branches[Windows]
-3.470	tests/system/py/test_code_signing.py::test_signing_is_present_and_never_reaches_pull_requests_or_other_branches[macOS]
-0.140	tests/system/py/test_code_signing.py::test_windows_uses_digicert_simple_signing_and_verifies_declared_executables
+0.000	tests/system/py/test_code_signing.py::test_signing_entries_keep_the_exact_secret_and_variable_split
+0.000	tests/system/py/test_code_signing.py::test_signing_failure_cannot_upload_release_artifacts
+0.030	tests/system/py/test_code_signing.py::test_signing_is_present_and_never_reaches_pull_requests_or_other_branches[Windows]
+0.020	tests/system/py/test_code_signing.py::test_signing_is_present_and_never_reaches_pull_requests_or_other_branches[macOS]
+0.070	tests/system/py/test_code_signing.py::test_windows_uses_digicert_simple_signing_and_verifies_declared_executables
 UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[absent-data]
 UNMEASURED:failed-in-this-run	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[absent-experiment]
 0.910	tests/system/py/test_collection_app_boundaries.py::test_app_download_content_claims[absent-project]
@@ -229434,7 +229434,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_e04_t11_wasm_delivery.
 0.080	tests/system/py/test_e04_t12_public_release.py::test_private_token_guards_still_refuse_forks_after_public_switch[unguarded]
 4.840	tests/system/py/test_e04_t12_public_release.py::test_process_references_are_confined_to_test_names
 0.000	tests/system/py/test_e04_t12_public_release.py::test_production_sources_carry_bsd_spdx
-0.080	tests/system/py/test_e04_t12_public_release.py::test_public_artifacts_exclude_engine_object_code_and_runner_names
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_public_artifacts_exclude_engine_object_code_and_runner_names
 0.070	tests/system/py/test_e04_t12_public_release.py::test_public_ci_uses_hosted_runners_and_guards_private_tokens
 0.000	tests/system/py/test_e04_t12_public_release.py::test_python_distribution_includes_binding_licences
 0.190	tests/system/py/test_e04_t12_public_release.py::test_reviewed_delivery_artifacts_reject_identity_and_qualification_escapes[comment-only]
@@ -229517,14 +229517,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::te
 0.180	tests/system/py/test_e04_t12_public_release.py::test_vendor_process_allowance_requires_exact_declared_release_bytes[data/report/vendor/plotly-cartesian-3.7.0.min.js]
 0.000	tests/system/py/test_e04_t12_public_release.py::test_vendor_process_allowance_requires_exact_declared_release_bytes[data/report/vendor/three-0.160.0-OrbitControls.js]
 0.060	tests/system/py/test_e04_t12_public_release.py::test_vendor_process_allowance_requires_exact_declared_release_bytes[data/report/vendor/three-0.160.0.module.min.js]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[disabled-check]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[native-name]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[native-path]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[no-build]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[no-check]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[optional-check]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[other-job]
-0.030	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[runner-name]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[disabled-check]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[native-name]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[native-path]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[no-build]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[no-check]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[optional-check]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[other-job]
+UNMEASURED:failed-in-this-run	tests/system/py/test_e04_t12_public_release.py::test_webapp_artifact_allowance_refuses_native_object_escapes[runner-name]
 0.139	tests/system/py/test_e04_t9_latency.py::test_real_publication_probe_reports_all_datasets_scenarios_and_requested_states
 0.060	tests/system/py/test_e05_t1_background_provenance.py::test_producing_background_survives_fit_save_reopen_and_settings_change[cancelled-chebyshev+chebyshev+chebyshev]
 0.070	tests/system/py/test_e05_t1_background_provenance.py::test_producing_background_survives_fit_save_reopen_and_settings_change[cancelled-chebyshev+line-segment+chebyshev]
