@@ -12,8 +12,8 @@ import edi.app
 // A series of joint fits' two selectors above its charts (the owner, 2026-11-16): the series variable, labelled by
 // what the points record ("Temperature 15.9 K", "Run" when nothing is), and Bank, shown only with more than one bank;
 // each with a previous and a next button, which repeat while held. On Stacked and Map the Rows switch chooses rows by
-// the variable (one bank across the series: the variable selector inactive) or by bank (every bank at one point: the
-// Bank selector inactive). ← and → step the bank.
+// the variable (one bank across the series) or by bank (every bank at one point); the rows' own selector stays active
+// and picks the highlighted row, the other the shown bank or point (the owner, 2026-11-17). ← and → step the bank.
 Row {
     id: row
 
@@ -49,7 +49,7 @@ Row {
     // ← and → step the bank, as its buttons do, unless a text field has the keys (the owner, 2026-11-16).
     function stepBank(offset) {
         const next = (project ? project.currentBank : 0) + offset;
-        if (project !== null && bankBox.enabled && next >= 0 && next < banks.length)
+        if (project !== null && next >= 0 && next < banks.length)
             project.currentBank = next;
     }
     readonly property bool keysFree: Window.activeFocusItem === null || Window.activeFocusItem.cursorPosition === undefined
@@ -111,7 +111,6 @@ Row {
         id: pointBox
         objectName: "mainArea.series.point"
         width: row.groupWidth
-        enabled: !(row.rowsShown && !row.byBank)
         backgroundColor: EaStyle.Colors.chartBackground
         blocks: runModel
         blocksTextRole: "label"
@@ -125,7 +124,6 @@ Row {
         objectName: "mainArea.series.bank"
         visible: row.banks.length > 1
         width: row.groupWidth
-        enabled: !row.byBank
         backgroundColor: EaStyle.Colors.chartBackground
         blocks: bankModel
         blocksTextRole: "label"
