@@ -102,7 +102,7 @@ Rectangle {
         viewportWidth: view.width
         viewportHeight: view.height
         // The band kept clear at the top for the toolbar: its height with its margins.
-        topBand: view.report ? 0 : toolbar.height + 2 * view.margin
+        topBand: view.report ? 0 : toolbarRow.height + 2 * view.margin
         // And at either side for the legend: its width with its margin, and a gap before the drawing. Kept while the
         // atoms are hidden, which hides the legend, so a show or hide keeps the camera (the owner, 2026-11-03).
         sideBand: view.legendWidth > 0 && controller.hasSites ? view.sideMargin + view.legendWidth + view.margin : 0
@@ -207,13 +207,18 @@ Rectangle {
 
     // The colour scheme and the toolbar, a toolbar group's spacing apart, in one line centred under the block
     // selector row (owner, 2026-10-11).
-    Row {
+    // The controls row every chart has (ToolbarLines): the colour scheme, then the structure toolbar's controls.
+    ToolbarLines {
         id: toolbarRow
 
-        x: Math.round(view.sideMargin + (view.width - view.toolbarRightInset - view.sideMargin - width) / 2)
+        objectName: "structure.toolbar"
+        x: 0
         y: view.margin
+        width: view.width
+        height: implicitHeight
         visible: !view.report
-        spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
+        leftEdge: view.sideMargin
+        rightEdge: view.width - view.toolbarRightInset
 
         ToolbarComboBox {
             objectName: "structure.toolbar.colors"

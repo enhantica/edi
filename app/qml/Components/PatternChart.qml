@@ -404,6 +404,7 @@ Item {
     ToolbarLines {
         id: toolbarLines
 
+        objectName: "chart.toolbar"
         x: 0
         y: chart.topMargin
         width: chart.width
@@ -496,6 +497,9 @@ Item {
             // The y titles carry the series' colours, so the legend box waits behind its button.
             legendShown: false
             structureCurvesAvailable: !chart.report && controller.hasCalculated
+            // A single crystal's reflections have no excluded regions or background, and leaving their buttons out keeps
+            // its controls on one row (two rows above every chart, the owner, 2026-11-16).
+            includedRangeAvailable: !chart.singleCrystal
             includedOnly: Preferences.chartIncludedOnly
             subtractBackground: Preferences.chartSubtractBackground
             backgroundAvailable: controller.backgroundAvailable

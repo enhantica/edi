@@ -222,15 +222,19 @@ Item {
         text: chart.reportMode ? chart.reportData.title : ""
     }
 
-    // The toolbar line, centred as the pattern chart's: what both axes plot, then the pattern chart's buttons.
+    // The controls row (ToolbarLines), as the pattern chart's: what both axes plot, then the pattern chart's buttons.
     // Hidden while the reflections are drawn on an axis: the pattern chart below has its own.
-    Row {
+    ToolbarLines {
         id: toolbar
 
+        objectName: "singleCrystal.toolbar"
         visible: !chart.reportMode && !chart.onAxis
-        x: Math.round(chart.toolbarLeft + (chart.width - chart.toolbarRightInset - chart.toolbarLeft - width) / 2)
+        x: 0
         y: chart.topMargin
-        spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
+        width: chart.width
+        height: implicitHeight
+        leftEdge: chart.toolbarLeft
+        rightEdge: chart.width - chart.toolbarRightInset
 
         ToolbarComboBox {
             objectName: "singleCrystal.toolbar.quantity"
