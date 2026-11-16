@@ -6233,6 +6233,14 @@ std::vector<FitParameterCorrelation> correlation_rows(const CorrelationTable& ta
     return rows;
 }
 
+std::vector<ExperimentTypeTokens> supported_experiment_types() {
+    std::vector<ExperimentTypeTokens> out;
+    for (const crysta::ExperimentTypeChoice& choice : crysta::supported_experiment_types()) {
+        out.push_back({choice.sample_form, choice.beam_mode, choice.radiation_probe, choice.scattering_type});
+    }
+    return out;
+}
+
 std::vector<std::string> descent_ids() { return crysta::descent_ids(); }
 
 std::string default_descent() { return crysta::kDefaultDescent; }
