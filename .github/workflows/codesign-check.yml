@@ -51,7 +51,7 @@ jobs:
           APPLE_ID: ${{ secrets.CODESIGN_MAC_NOTARY_APPLE_ID }}
           PASSWORD: ${{ secrets.CODESIGN_MAC_NOTARY_PASSWORD }}
           TEAM_ID: ${{ vars.CODESIGN_MAC_TEAM_ID }}
-        run: xcrun notarytool history --apple-id "$APPLE_ID" --password "$PASSWORD" --team-id "$TEAM_ID" | head -5
+        run: xcrun notarytool history --apple-id "$APPLE_ID" --password "$PASSWORD" --team-id "$TEAM_ID" > history.txt && head -5 history.txt
 
       - name: Remove the temporary keychain
         if: always()
