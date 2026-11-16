@@ -114,7 +114,7 @@ void write_map(const Score& score, const QSize& size, const QString& path) {
         uchar* line = map.scanLine(y);
         for (int x = 0; x < size.width(); ++x) {
             const double ssim = score.windows[cell(y / kWindow, score.windows_x, x / kWindow)];
-            line[x] = static_cast<uchar>(std::clamp(ssim, 0.0, 1.0) * 255.0 + 0.5);
+            line[x] = static_cast<uchar>(std::lround(std::clamp(ssim, 0.0, 1.0) * 255.0));
         }
     }
     map.save(path);

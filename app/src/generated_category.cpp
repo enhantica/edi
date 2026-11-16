@@ -178,8 +178,8 @@ void GeneratedCategory::read() {
     for (const std::string& name : category.names) {
         // A file spells some names as CIF does (`name_H-M_alt`, `IT_number`), so the item is found by its `.edi` name,
         // compared as CIF compares names, and the dictionary's uid is used from there; the name is kept as written.
-        const crysta::DictionaryItem* item = crysta::find_dictionary_item_by_edi_name("_" + id + "." + name);
-        const std::string uid = item != nullptr ? item->uid : id + "." + name;
+        const crysta::DictionaryItem* item = crysta::find_dictionary_item_by_edi_name(std::string("_").append(id).append(".").append(name));
+        const std::string uid = item != nullptr ? item->uid : std::string(id).append(".").append(name);
         const bool known = edi::has_item(uid);
         names_.append(QString::fromStdString(name));
         labels_.append(QString::fromStdString(known ? edi::label(uid) : name));

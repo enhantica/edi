@@ -99,6 +99,7 @@ const Palette& palette_of(ColourScheme scheme) {
             throw std::logic_error("the embedded palettes are not one per colour scheme");
         }
         std::vector<Palette> out;
+        out.reserve(detail::kPaletteTsvCount);
         for (std::size_t i = 0; i < detail::kPaletteTsvCount; ++i) {
             out.push_back(parse(detail::kPaletteTsv[i]));
         }
@@ -268,17 +269,18 @@ std::vector<std::size_t> colour_positions(ColourScheme /*scheme*/, std::span<con
     std::vector<std::size_t> positions(items.size());
     std::array<std::size_t, 2> next{};
     for (std::size_t i = 0; i < items.size(); ++i) {
-        if (!out[i]) {
-            auto& cursor = next[items[i].kind == FigureKind::Experiment ? 0 : 1];
-            std::size_t position = cursor;
-            while (!allowed(items[i].kind, position) || !vacant(position)) {
-                ++position;
-            }
-            out[i] = position;
-            take(position);
-            cursor = position + 1;
+        if (const std::optional<std::size_t>& placed = out[i]) {
+            positions[i] = *placed;
+            continue;
         }
-        positions[i] = *out[i];
+        auto& cursor = next[items[i].kind == FigureKind::Experiment ? 0 : 1];
+        std::size_t position = cursor;
+        while (!allowed(items[i].kind, position) || !vacant(position)) {
+            ++position;
+        }
+        take(position);
+        cursor = position + 1;
+        positions[i] = position;
     }
     return positions;
 }

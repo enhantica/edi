@@ -651,7 +651,7 @@ void LinkedStructureListModel::append() {
             [&](const auto& link){return (link->structure_id.value().empty()?std::string_view("structure"):std::string_view(link->structure_id.value()))==name;});
         if(!linked) {
             edi::LinkedStructure link;link.structure_id=std::string(name);
-            editor_.apply_creation_control(edi::Edit::append(experiment_.linked_structures,std::move(link)),true,
+            editor_.apply_creation_control(edi::Edit::append(experiment_.linked_structures,link),true,
                 {ProjectEditor::CreationAction::Kind::PhaseAppend,&experiment_,{},QString::fromUtf8(name.data(),static_cast<qsizetype>(name.size()))});
             return;
         }
@@ -730,7 +730,7 @@ void PrefOrientListModel::append() {
         if (!textured) {
             edi::PrefOrient row;
             row.structure_id = link->structure_id.value();
-            editor_.apply(edi::Edit::append(experiment.preferred_orientation, std::move(row)), true);
+            editor_.apply(edi::Edit::append(experiment.preferred_orientation, row), true);
             return;
         }
     }

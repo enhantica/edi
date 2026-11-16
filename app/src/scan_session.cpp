@@ -376,7 +376,7 @@ std::string ScanSession::templateIdentity(const edi::Project& project) {
     // Hashed from a copy, which is never calculated: a save of a calculated project adds its computed columns and
     // categories (and a newer schema version), so the same inputs would hash differently before and after a
     // calculation, e.g. the shown model at a scan's start against the template copy at its end.
-    const edi::Project inputs = project;
+    const edi::Project inputs = project;  // NOLINT(performance-unnecessary-copy-initialization): see above.
     for (const auto& [path, body] : edi::project_edi_files(inputs)) {
         if (path == "project.edi" || path == "reports/report.edi") {
             continue;
@@ -704,7 +704,8 @@ const std::vector<std::string>* ScanSession::extracted(int dataset) const {
     if (index_.rows[static_cast<std::size_t>(dataset)].offset >= 0) {
         return &index_.rows[static_cast<std::size_t>(dataset)].extracted;
     }
-    return metadata_[static_cast<std::size_t>(dataset)] ? &*metadata_[static_cast<std::size_t>(dataset)] : nullptr;
+    const auto& metadata = metadata_[static_cast<std::size_t>(dataset)];
+    return metadata.has_value() ? &*metadata : nullptr;
 }
 
 QString ScanSession::metadataError(int dataset) const {

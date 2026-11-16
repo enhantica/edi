@@ -280,7 +280,7 @@ void start_fit(ScreenObservation& o, const QString& mode) {
 // Open the scan, choose the pattern-update mode in Extras, then fit once the first frame is drawn.
 // Poll until `ready` holds, then run `then`: the pages are built in the background after a project opens (edi
 // ADR-0052). Past half a minute the observation ends naming `what` did not happen.
-void when_ready(ScreenObservation& o, std::function<bool()> ready, std::function<void()> then, const char* what) {
+void when_ready(ScreenObservation& o, const std::function<bool()>& ready, const std::function<void()>& then, const char* what) {
     auto* timer = new QTimer(o.window);
     auto waited = std::make_shared<QElapsedTimer>();
     waited->start();
@@ -574,7 +574,7 @@ void cycle_emit(QJsonObject event) {
 }
 
 // On the main thread, in the order the worker reported it.
-void cycle_post(QJsonObject event) {
+void cycle_post(const QJsonObject& event) {
     QMetaObject::invokeMethod(QCoreApplication::instance(), [event] { cycle_emit(event); }, Qt::QueuedConnection);
 }
 

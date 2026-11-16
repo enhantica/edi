@@ -139,7 +139,7 @@ CodexAgent::OutputOwnerState CodexAgent::outputOwnerState() const noexcept {
 }
 void CodexAgent::maybeOwnersReleased() noexcept {
     if(outputOwnerState()!=OutputOwnerState::Released)return;
-    try {emit outputOwnersReleased();}catch(...){} // NOLINT(bugprone-empty-catch): terminal; the receiver may delete this.
+    try {emit outputOwnersReleased();}catch(...){} // Terminal: receiver may delete this.
 }
 void CodexAgent::processOwnerReleased(quint64 birth) noexcept {
     if(!release_owner_ || birth!=process_birth_)return;
@@ -149,9 +149,9 @@ void CodexAgent::processOwnerReleased(quint64 birth) noexcept {
 CodexAgent::CodexAgent(QObject* parent,std::shared_ptr<const void> releaseOwner) : QObject(parent),release_owner_(std::move(releaseOwner)) {
     clock_.start(); timer_.setInterval(100);
     connect(&timer_, &QTimer::timeout, this, [this] {
-        const QPointer<CodexAgent> receiver(this); const auto scope = generation_;
+        const QPointer<CodexAgent> receiver(this); const auto scope = generation_;  // NOLINT(clang-analyzer-core.NullDereference): this is the timer's owner.
         try { checkDeadline(); }
-        catch (...) { if (receiver && generation_ == scope) fail("The official agent deadline could not be checked."); }  // NOLINT(clang-analyzer-core.NullDereference): receiver holds this.
+        catch (...) { if (receiver && generation_ == scope) fail("The official agent deadline could not be checked."); }
     });
     timer_.start();
 }
@@ -456,7 +456,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
             flushRequired(); // Can synchronously retire this exact process scope.
             if(!alive || !original || process_!=original.data() || generation_!=scope || failed_ ||
                 original->state()!=QProcess::Running || optionalUsageBackpressured())return;
-            try {emit optionalUsageReady();}catch(...){} // NOLINT(bugprone-empty-catch): an optional hint, never a required-write failure.
+            try {emit optionalUsageReady();}catch(...){} // Optional terminal hint, never a required-write failure.
         });
         connect(process, &QProcess::readyReadStandardOutput, this, [this, original = prepared, scope] { if (original) read(original.data(), scope); });
         connect(process, &QProcess::readyReadStandardError, this, [this, original = prepared, scope] {
@@ -489,7 +489,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
             // Name what went wrong: the guard could not start, crashed, or stopped reading before the runtime's answer.
             static const char* const kinds[] = {"start error", "crashed", "timed out", "read error", "write error", "unknown error"};
             const auto kind = kinds[std::clamp(static_cast<int>(error), 0, 5)];
-            try { exit_detail_ = QString::fromLatin1(kind) + QStringLiteral(": ") + original->errorString(); } catch (...) {}  // NOLINT(bugprone-empty-catch): the detail is optional.
+            try { exit_detail_ = QString::fromLatin1(kind) + QStringLiteral(": ") + original->errorString(); } catch (...) {}
             fail("The official agent process could not continue (%1).");
         });
         connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
@@ -772,8 +772,8 @@ void CodexAgent::fail(const char* explanation, FailureKind kind) noexcept {
         if (!exit_detail_.isEmpty()) text = text.arg(exit_detail_);
         exit_detail_.clear();
         emit failed(text);
-    } catch (...) {}  // NOLINT(bugprone-empty-catch): noexcept teardown; reporting is best effort.
-    try { if (original && original->state() != QProcess::NotRunning) original->terminate(); } catch (...) {}  // NOLINT(bugprone-empty-catch): noexcept teardown.
+    } catch (...) {}
+    try { if (original && original->state() != QProcess::NotRunning) original->terminate(); } catch (...) {}
 }
 void CodexAgent::retire() {
     if (generation_ != std::numeric_limits<quint64>::max()) ++generation_;

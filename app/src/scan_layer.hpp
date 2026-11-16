@@ -208,7 +208,7 @@ class ScanLayer : public QQuickPaintedItem {
     void xMaxChanged();
     void yMinChanged();
     void yMaxChanged();
-    void scaleChanged();
+    void scaleChanged();  // NOLINT(bugprone-derived-method-shadowing-base-method): the y scale QML binds by this name.
     void colourSchemeChanged();
     void colourMapChanged();
     void backgroundChanged();

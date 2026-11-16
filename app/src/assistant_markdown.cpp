@@ -102,7 +102,7 @@ std::optional<MathPlacementFont> mathPlacementFont(const QFont& original,qreal r
 struct MathSpan { QString token,literal,formula;bool display=false; };
 struct MathSource { QString markdown;std::vector<MathSpan> spans; };
 bool escapedAt(QStringView text,qsizetype at) {
-    qsizetype slashes=0;while(at>0 && text[--at]==u'\\')++slashes;return slashes%2;
+    qsizetype slashes=0;while(at>0 && text[at-1]==u'\\'){--at;++slashes;}return slashes%2;
 }
 MathSource captureMath(QStringView source) {
     MathSource result;const auto nonce=QUuid::createUuid().toString(QUuid::Id128);

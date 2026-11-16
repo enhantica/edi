@@ -764,6 +764,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         admission.emplace(std::move(prepared));
     }
     void commit_admission(bool interrupted_question = false) noexcept {
+        if (!admission) return;
         if (interrupted_question && !admission->interrupted_call.empty()) {
             history = std::move(admission->interrupted_history); history_used = admission->interrupted_history_bytes;
             cache_used = admission->interrupted_cache_bytes; calls.insert(std::move(admission->interrupted_call));
@@ -996,6 +997,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (!plan || !plan->approved || !has(event, "plan_id") || string(event, "plan_id") != plan->id)
             refuse("approval_required", "Approve this plan in the assistant before execution");
         current();
+        if (!plan) refuse("approval_required", "Approve this plan in the assistant before execution");
         if (const auto now = hooks.monotonic_ms(); now < plan->started || now - plan->started >= plan->max_ms) {
             require_stopped(); refuse("out_of_scope", "The approved elapsed-time budget is exhausted");
         }
@@ -1087,7 +1089,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 if (next.groups.count(group_id)) refuse("invalid_argument", "Duplicate group ID");
                 std::set<std::string> group_paths;
                 for (const J& path : group.at("paths").array("paths")) {
-                    const auto key = path.string("path");
+                    const auto& key = path.string("path");
                     if (!rows.count(key) || !group_paths.insert(key).second) refuse("invalid_argument", "Unknown or duplicate parameter path: " + key);
                     next.allowed.insert(key);
                 }
@@ -1152,12 +1154,14 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         static const std::set<std::string> mutations{"set_parameters", "set_free", "begin_trial", "fit_trial", "evaluate_trial", "discard_trial"};
         if (!mutations.count(name)) refuse("unknown_tool", "Unknown tool: " + name);
         approved(event);
+        if (!plan) refuse("approval_required", "Approve this plan in the assistant before execution");
+        Plan& active_plan = *plan;
         if (request_trial != (trial ? trial->id : "")) refuse("stale_revision", "This request belongs to another candidate generation");
         if (name == "set_parameters" || name == "set_free") {
             if (!active_job.empty()) refuse("busy", "A fit is running");
             if (trial && trial->report) refuse("invalid_argument", "Discard the fitted trial before changing its setup");
             Project& target = trial ? *trial->project : *live;
-            const auto& allowed = trial ? plan->groups.at(trial->group) : plan->allowed;
+            const auto& allowed = trial ? active_plan.groups.at(trial->group) : active_plan.allowed;
             const bool values = name == "set_parameters";
             shape(args, {values ? "values" : "flags"});
             std::vector<std::pair<std::string, double>> edits;
@@ -1178,14 +1182,14 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (name == "begin_trial") {
             shape(args, {"group_id"}); const auto group = string(args, "group_id");
             if (trial || !active_job.empty()) refuse("busy", "A trial already exists");
-            if (!plan->groups.count(group)) refuse("out_of_scope", "Unknown parameter group");
-            if (plan->trials >= plan->max_trials) refuse("out_of_scope", "Trial budget exhausted");
+            if (!active_plan.groups.count(group)) refuse("out_of_scope", "Unknown parameter group");
+            if (active_plan.trials >= active_plan.max_trials) refuse("out_of_scope", "Trial budget exhausted");
             auto next = std::make_shared<Trial>();
             next->id = id("trial"); next->group = group; next->project = std::make_shared<Project>(*live);
             refresh_relations(*next->project);
             refresh_fittability(*next->project);
             const auto candidate_paths = paths(*next->project);
-            const auto group_paths = plan->groups.at(group);
+            const auto group_paths = active_plan.groups.at(group);
             std::map<std::string, ParameterEntry> metadata;
             for (const auto& row : parameter_entries(*next->project)) metadata.emplace(row.path, row);
             for (auto* parameter : next->project->parameters()) parameter->free = false;
@@ -1201,7 +1205,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             next->accepted_stamps = work_stamps(*live); next->accepted_inputs = edi::detail::inputs_of(*live);
             preflight(success(O{{"trial_id", next->id}}));
             auto next_trial = next->id;
-            trial = std::move(next); request_trial = std::move(next_trial); ++plan->trials;
+            trial = std::move(next); request_trial = std::move(next_trial); ++active_plan.trials;
             return admitted();
         }
         shape(args, {"trial_id"});
@@ -1213,7 +1217,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             const auto mode = effective_fitting_mode(*trial->project);
             if (mode == "sequential" || mode == "independent")
                 refuse("out_of_scope", "Assistant scan trials require the pending checked result-artifact unit");
-            const auto max_iterations = static_cast<int>(plan->max_iterations);
+            const auto max_iterations = static_cast<int>(active_plan.max_iterations);
             const auto job_id = id("job"); preflight(success(O{{"job_id", job_id}}), true);
             auto next_call = admitting_call; auto next_scope = event;
             auto next_job = job_id; auto next_candidate_job = job_id; auto next_active_call = admitting_call;
@@ -1225,8 +1229,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             };
             callbacks.finished = [self, job_id](const FitReport& report) noexcept { self->settle_fit(job_id, report); };
             const auto now = hooks.monotonic_ms();
-            const auto elapsed = now >= plan->started ? now - plan->started : plan->max_ms;
-            const auto remaining = plan->max_ms - std::min(plan->max_ms, elapsed);
+            const auto elapsed = now >= active_plan.started ? now - active_plan.started : active_plan.max_ms;
+            const auto remaining = active_plan.max_ms - std::min(active_plan.max_ms, elapsed);
             const auto wall_start = std::chrono::steady_clock::now();
 #if EDI_WORKER_OWNER_THREAD
             // The owner-thread build also stops at the policy clock's limit.
@@ -1307,7 +1311,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         const double objective = record.objective_value.value_or(std::numeric_limits<double>::quiet_NaN());
         accepted = accepted && record.held() && record.objective_name == "chi_square" && std::isfinite(objective);
         if (std::isfinite(candidate->baseline))
-            accepted = accepted && objective < candidate->baseline - std::max(plan->absolute, std::abs(candidate->baseline) * plan->relative);
+            accepted = accepted && objective < candidate->baseline - std::max(active_plan.absolute, std::abs(candidate->baseline) * active_plan.relative);
         else accepted = false;
         for (const auto& row : parameter_entries(*candidate->project)) {
             const Parameter& p = *row.parameter;
@@ -1354,8 +1358,13 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (string(command, "project_id") != version.project_id) refuse("stale_project", "Project changed");
             if (detail::revision(command) != version.revision) refuse("stale_revision", "Project revision changed");
             if (!plan || string(command, "plan_id") != plan->id) refuse("approval_required", "Plan is no longer pending");
-            if (plan->approved) { approved(command); return success(O{{"plan_id", plan->id}}); }
+            if (plan->approved) {
+                const std::string plan_id = plan->id;
+                approved(command);
+                return success(O{{"plan_id", plan_id}});
+            }
             current(); const auto started = hooks.monotonic_ms();
+            if (!plan) refuse("approval_required", "Plan is no longer pending");
             user_scope_committed = true;
             plan->approved = true; plan->started = started;
             if (!safe_emit("plan_approved", [&] { return O{{"plan_id", plan ? plan->id : ""}}; }) ||
@@ -1372,7 +1381,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (!pending_answer.empty()) {
                 if (pending_answer.key() != question_id || pending_answer.mapped().first != answer)
                     refuse("invalid_argument", "This question already has a pending different answer");
-                const Reply result = pending_answer.mapped().second;
+                Reply result = pending_answer.mapped().second;
                 user_scope_committed = true;
                 if (!finish_question(result)) return output_refusal();
                 if (!continue_turn()) return output_refusal();
@@ -1386,7 +1395,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 refuse("invalid_argument", "Choose an offered option or provide permitted free text");
             if (string(question_record, "connection_id") != connection || string(question_record, "project_id", true) != version.project_id || detail::revision(question_record) != version.revision)
                 refuse("invalid_argument", "Question scope changed");
-            const auto result = success(O{{"question_id", question}, {"answer", answer}, {"selected_option_id", listed ? J(answer) : J(nullptr)}});
+            auto result = success(O{{"question_id", question}, {"answer", answer}, {"selected_option_id", listed ? J(answer) : J(nullptr)}});
 
             AnswerMap staged; staged.emplace(question, std::make_pair(answer, result));
             user_scope_committed = true;
@@ -1477,7 +1486,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 const auto mapped = openai_efforts(string(item, "id"));
                 if (mapped.array("efforts").empty()) refuse("invalid_argument", "Model has no reviewed capability mapping");
                 for (const J& option : item.at("efforts").array("efforts")) {
-                    const auto tag = option.string("effort");
+                    const auto& tag = option.string("effort");
                     if (!effort_tag(tag)) refuse("invalid_argument", "Unsupported reasoning effort tag");
                     if (!mapped.array("efforts").empty() && std::none_of(mapped.array("efforts").begin(), mapped.array("efforts").end(), [&](const J& x) { return x.string("effort") == tag; }))
                         refuse("invalid_argument", "Unsupported model effort combination");

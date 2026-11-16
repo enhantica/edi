@@ -6,7 +6,8 @@
 # The analyzer's opt-in Padding hint is off: it asks for members in size order, and the code orders them
 # by meaning; it reports memory layout, never a fault. performance-enum-size is off too: most of edi's
 # enums are Qt's (model roles from Qt::UserRole, Q_ENUM types QML reads), which the meta-object system
-# handles as int.
+# handles as int. bugprone-empty-catch is off: edi's teardown and optional presentation steps are noexcept and
+# drop a failure on purpose. performance-no-int-to-ptr is off: Qt table models here key rows by small integers.
 Checks: >
   -*,
   clang-analyzer-*,
@@ -18,6 +19,8 @@ Checks: >
   -bugprone-throwing-static-initialization,
   -cert-err58-cpp,
   -cert-err33-c,
-  -performance-enum-size
+  -performance-enum-size,
+  -bugprone-empty-catch,
+  -performance-no-int-to-ptr
 WarningsAsErrors: ''
 HeaderFilterRegex: 'core/.*'

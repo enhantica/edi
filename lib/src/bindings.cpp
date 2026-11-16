@@ -194,7 +194,7 @@ static edi::ViewWindow view_window(
 // untouched — and a write to a non-input attribute renews nothing.
 template <typename T, typename Renew>
 static auto renewing_setattr(std::vector<std::string> non_inputs, Renew renew) {
-    return [non_inputs = std::move(non_inputs), renew](nb::handle self, nb::str name,
+    return [non_inputs = std::move(non_inputs), renew](nb::handle self, const nb::str& name,
                                                        nb::handle value) {
         if (PyObject_GenericSetAttr(self.ptr(), name.ptr(), value.ptr()) != 0) {
             throw nb::python_error();
@@ -1313,7 +1313,7 @@ static void def_keyed_collection(nb::class_<View>& view_cls, nb::class_<Iter>& i
             [](const View& self) { return Iter{self, edi::views::IterMode::Values}; },
             nb::keep_alive<0, 1>())
         .def("__contains__",
-             [](const View& self, nb::object key) {
+             [](const View& self, const nb::object& key) {
                  if (nb::isinstance<nb::str>(key)) {
                      return self.find_last(nb::cast<std::string>(key)) >= 0;
                  }
@@ -1325,7 +1325,7 @@ static void def_keyed_collection(nb::class_<View>& view_cls, nb::class_<Iter>& i
                  return false;
              })
         .def("__getitem__",
-             [](const View& self, nb::object key) -> nb::object {
+             [](const View& self, const nb::object& key) -> nb::object {
                  if (nb::isinstance<nb::int_>(key)) {
                      std::ptrdiff_t i = nb::cast<std::ptrdiff_t>(key);
                      const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(self.vec().size());
@@ -1522,9 +1522,9 @@ static void def_collection_views(nb::module_& m) {
     experiments_view.def(
         "create",
         [](ExperimentsView& self, const std::string& name,
-           std::optional<std::string> sample_form, std::optional<std::string> beam_mode,
-           std::optional<std::string> radiation_probe,
-           std::optional<std::string> scattering_type) {
+           const std::optional<std::string>& sample_form, const std::optional<std::string>& beam_mode,
+           const std::optional<std::string>& radiation_probe,
+           const std::optional<std::string>& scattering_type) {
             // Upstream Experiments.create delegates to the factory; edi's factory is the
             // committed Python-side ExperimentFactory (D4) — delegated, never duplicated.
             nb::object from_scratch =
@@ -1584,9 +1584,9 @@ static void def_collection_views(nb::module_& m) {
     experiments_view.def(
         "add_from_data_path",
         [](ExperimentsView& self, const std::string& name, const std::filesystem::path& data_path,
-           std::optional<std::string> sample_form, std::optional<std::string> beam_mode,
-           std::optional<std::string> radiation_probe,
-           std::optional<std::string> scattering_type) {
+           const std::optional<std::string>& sample_form, const std::optional<std::string>& beam_mode,
+           const std::optional<std::string>& radiation_probe,
+           const std::optional<std::string>& scattering_type) {
             nb::object built =
                 nb::module_::import_("edi").attr("ExperimentFactory").attr("from_data_path")(
                     "name"_a = name, "data_path"_a = data_path,
@@ -1625,7 +1625,7 @@ static void def_collection_views(nb::module_& m) {
                                                                       atom_sites_iter);
     atom_sites_view.def(
         "create",
-        [](AtomSitesView& self, nb::kwargs kwargs) {
+        [](AtomSitesView& self, const nb::kwargs& kwargs) {
             // Upstream CategoryCollection.create: default-construct, then a plain setattr loop
             // routed through the bound setters.
             auto built = std::make_shared<edi::AtomSite>();
@@ -1675,7 +1675,7 @@ static void def_collection_views(nb::module_& m) {
                                                                           pref_orients_iter);
     pref_orients_view.def(
         "create",
-        [](PrefOrientsView& self, nb::kwargs kwargs) {
+        [](PrefOrientsView& self, const nb::kwargs& kwargs) {
             // Upstream CategoryCollection.create, as AtomSites.create above.
             auto built = std::make_shared<edi::PrefOrient>();
             nb::object obj = nb::cast(built);
@@ -1803,7 +1803,7 @@ static void def_collection_views(nb::module_& m) {
     constraints_view
         .def(
             "create",
-            [](ConstraintsView& self, const std::string& expression, std::optional<std::string> id) {
+            [](ConstraintsView& self, const std::string& expression, const std::optional<std::string>& id) {
                 const std::string key = id.value_or(split_constraint(expression).first);
                 if (key.empty()) {
                     throw nb::value_error(("constraint '" + expression +
@@ -2686,9 +2686,10 @@ NB_MODULE(_edi, m) {
             // diffraction-lib's name_h_m setter resets the code); a name crysta's table lacks is kept as given.
             [](edi::SpaceGroup& self, const std::string& value) {
                 change_setting(self, [&value](edi::SpaceGroup& group) {
-                    if (edi::same_space_group_name(value, group.name_h_m.value())) {
-                        group.name_h_m = value;
-                    } else if (const auto setting = edi::space_group_setting_for_name(value)) {
+                    const auto setting = edi::same_space_group_name(value, group.name_h_m.value())
+                                             ? std::nullopt
+                                             : edi::space_group_setting_for_name(value);
+                    if (setting) {
                         edi::assign_space_group_setting(group, *setting, false);
                     } else {
                         group.name_h_m = value;
@@ -3275,7 +3276,7 @@ NB_MODULE(_edi, m) {
                 }
                 return nb::cast(stored);
             },
-            [](edi::views::PeakNode& self, nb::object value) {
+            [](edi::views::PeakNode& self, const nb::object& value) {
                 // The selector accepts any REGISTERED token (seam 20 / I15 — registration-live),
                 // the enum, or None (presence-tracked); an unknown token refuses fail-closed.
                 // Every switch reshapes the block to the slots the new profile carries, as the
@@ -3445,9 +3446,9 @@ NB_MODULE(_edi, m) {
         },
         [](edi::views::InstrumentNode& self, const std::string& value) { self.storage().facility = value; });
 
-    nb::class_<edi::views::CwlInstrumentBase, edi::views::InstrumentNode>(m, "CwlInstrumentBase");
-    nb::class_<edi::views::CwlPdInstrumentBase, edi::views::CwlInstrumentBase>(
-        m, "CwlPdInstrumentBase");
+    static_cast<void>(nb::class_<edi::views::CwlInstrumentBase, edi::views::InstrumentNode>(m, "CwlInstrumentBase"));
+    static_cast<void>(nb::class_<edi::views::CwlPdInstrumentBase, edi::views::CwlInstrumentBase>(
+        m, "CwlPdInstrumentBase"));
 
     nb::class_<edi::views::TofPdInstrument, edi::views::InstrumentNode> tof_pd_instrument(
         m, "TofPdInstrument");
@@ -3541,7 +3542,7 @@ NB_MODULE(_edi, m) {
         linked_structures_view, linked_structures_iter);
     linked_structures_view.def(
         "create",
-        [](edi::views::LinkedStructuresView& self, nb::kwargs kwargs) {
+        [](edi::views::LinkedStructuresView& self, const nb::kwargs& kwargs) {
             // Upstream CategoryCollection.create, as AtomSites.create.
             auto built = std::make_shared<edi::LinkedStructure>();
             nb::object obj = nb::cast(built);
@@ -3558,7 +3559,7 @@ NB_MODULE(_edi, m) {
     absorption.def("__setattr__", renewing_setattr<edi::views::AbsorptionNode>({}, renew_storage), nb::arg("name"), nb::arg("value").none());
     absorption.def_prop_rw(
         "type", [](edi::views::AbsorptionNode& self) { return self.storage().type; },
-        [](edi::views::AbsorptionNode& self, std::optional<std::string> value) {
+        [](edi::views::AbsorptionNode& self, const std::optional<std::string>& value) {
             // Review-8 F4: mutation goes through the ruled family contract — none clears the
             // family body, a typed token initialises it, anything else refuses. None spells
             // the loader's absent-means-none state. The vocabulary is beam-scoped exactly as
@@ -3770,11 +3771,11 @@ NB_MODULE(_edi, m) {
                 }
                 return nb::tuple(out);
             },
-            [](edi::ExperimentBase& self, std::vector<std::pair<double, double>> regions) {
+            [](edi::ExperimentBase& self, const std::vector<std::pair<double, double>>& regions) {
                 self.excluded_regions = edi::excluded_region_rows(regions);
             });
 
-    nb::class_<edi::ScExperimentBase, edi::ExperimentBase>(m, "ScExperimentBase");
+    static_cast<void>(nb::class_<edi::ScExperimentBase, edi::ExperimentBase>(m, "ScExperimentBase"));
 
     // The concrete experiment leaf: the loader builds it and Python constructs it — the bases above
     // carry the shared surface, the leaf its own categories.
@@ -3922,7 +3923,7 @@ NB_MODULE(_edi, m) {
         .def_static("registry", [] { return copy_registry(*g_peak_registry); })
         .def_static(
             "register",
-            [](nb::object token_or_cls, nb::object cls, const std::string& beam_mode) {
+            [](const nb::object& token_or_cls, const nb::object& cls, const std::string& beam_mode) {
                 std::string token;
                 nb::object klass;
                 if (cls.is_none()) {
@@ -3966,7 +3967,7 @@ NB_MODULE(_edi, m) {
         .def_static("registry", [] { return copy_registry(*g_instrument_registry); })
         .def_static(
             "register",
-            [](nb::object token_or_cls, nb::object cls) {
+            [](const nb::object& token_or_cls, const nb::object& cls) {
                 std::string token;
                 nb::object klass;
                 if (cls.is_none()) {
@@ -4030,7 +4031,7 @@ NB_MODULE(_edi, m) {
         .def_static("registry", [] { return copy_registry(*g_absorption_registry); })
         .def_static(
             "register",
-            [](nb::object token_or_cls, nb::object cls) {
+            [](const nb::object& token_or_cls, const nb::object& cls) {
                 std::string token;
                 nb::object klass;
                 if (cls.is_none()) {
@@ -4266,7 +4267,7 @@ NB_MODULE(_edi, m) {
                      })
         .def_prop_ro("intensity_calc",
                      [](const edi::views::ScReflnView& self) { return readonly_array(self.calculated().intensity_calc); });
-    nb::class_<edi::views::ScCwlReflnView, edi::views::ScReflnView>(m, "CwlReflnData");
+    static_cast<void>(nb::class_<edi::views::ScCwlReflnView, edi::views::ScReflnView>(m, "CwlReflnData"));
     nb::class_<edi::views::ScTofReflnView, edi::views::ScReflnView>(m, "TofReflnData")
         .def_prop_ro("wavelength",
                      [](const edi::views::ScReflnView& self) { return copied_array(self.measured().wavelength.get()); });
@@ -4474,7 +4475,7 @@ NB_MODULE(_edi, m) {
             "Fitting time in seconds (diffraction-lib FitResultBase.fitting_time; None until a "
             "solve ran).");
 
-    nb::class_<edi::LeastSquaresFitResult, edi::FitResultBase>(m, "LeastSquaresFitResult");
+    static_cast<void>(nb::class_<edi::LeastSquaresFitResult, edi::FitResultBase>(m, "LeastSquaresFitResult"));
 
     nb::class_<edi::ProjectMetadata>(m, "ProjectMetadata")
         .def(nb::init<>())
@@ -4542,7 +4543,7 @@ NB_MODULE(_edi, m) {
                 }
                 return nb::cast(self.timestamp);
             },
-            [](edi::ProjectMetadata& self, nb::object value) {
+            [](edi::ProjectMetadata& self, const nb::object& value) {
                 self.timestamp = value.is_none() ? "" : nb::cast<std::string>(value);
             },
             "The latest fit timestamp (None until set).")

@@ -208,7 +208,7 @@ void OnlineSourcesModel::load() {
     sources_ = builtin_sources();
     const QSettings store(settings_file_path(), QSettings::IniFormat);
     const QJsonArray rows = QJsonDocument::fromJson(store.value(kStoreKey).toString().toUtf8()).array();
-    for (const QJsonValue& value : rows) {
+    for (const auto& value : rows) {
         const QJsonObject row = value.toObject();
         const QString id = row.value(QStringLiteral("id")).toString();
         const int at = indexOf(id);
@@ -222,7 +222,7 @@ void OnlineSourcesModel::load() {
         s.id = id;
         s.name = row.value(QStringLiteral("name")).toString();
         s.url = row.value(QStringLiteral("url")).toString();
-        for (const QJsonValue& k : row.value(QStringLiteral("kinds")).toArray())
+        for (const auto& k : row.value(QStringLiteral("kinds")).toArray())
             if (kAllKinds.contains(k.toString())) s.kinds.append(k.toString());
         s.enabled = row.value(QStringLiteral("enabled")).toBool(true);
         sources_.append(s);

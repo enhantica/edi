@@ -482,7 +482,7 @@ QString write_download(QTemporaryDir& downloads, const QString& name, const QByt
         return {};
     }
     out.close();
-    return path;
+    return QString(path);
 }
 }  // namespace
 
@@ -790,13 +790,13 @@ void OnlineSearch::withIndex(const QStringList& bases, const std::function<void(
     });
 }
 
-void OnlineSearch::fetch(const QUrl& url, Bytes done) { fetch_url(this, network_, url, std::move(done)); }
-void OnlineSearch::fetchFrom(const QStringList& bases, const QString& path, Bytes done) { fetch_from(this, network_, bases, path, std::move(done)); }
+void OnlineSearch::fetch(const QUrl& url, const Bytes& done) { fetch_url(this, network_, url, done); }
+void OnlineSearch::fetchFrom(const QStringList& bases, const QString& path, const Bytes& done) { fetch_from(this, network_, bases, path, done); }
 
 // A file checked against the size and digest its index records. One that disagrees may come from a collection
 // published after the index was read: the index is read again and the file once more before the download is refused.
 void OnlineSearch::fetchChecked(const QStringList& bases, const QString& path, long long bytes, const QString& digest, const QString& name,
-                                Bytes done) {
+                                const Bytes& done) {
     fetchFrom(bases, path, [this, bases, path, bytes, digest, name, done](const QByteArray& data, const QString& error, bool unreachable) {
         if (!error.isEmpty()) {
             done({}, error, unreachable);

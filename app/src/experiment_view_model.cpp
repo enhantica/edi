@@ -127,7 +127,7 @@ void set_description_options(OptionListModel* options, std::vector<std::string> 
 }
 }  // namespace
 
-ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project, edi::ExperimentBase& experiment,
+ExperimentViewModel::ExperimentViewModel(const SavedFile& saved, edi::Project& project, edi::ExperimentBase& experiment,
                                          ProjectEditor& editor, ParameterRegistry& registry, QObject* parent)
     : QObject(parent),
       project_(project),

@@ -126,7 +126,7 @@ bool AssistantHistoryArchive::ClearBarrier::retry() noexcept {
         return true;
     }catch(...) {return false;}
 }
-std::vector<AssistantHistoryArchive::ClearBarrier> AssistantHistoryArchive::clearCaches(QObject* receiver,Notice notice) {
+std::vector<AssistantHistoryArchive::ClearBarrier> AssistantHistoryArchive::clearCaches(QObject* receiver,const Notice& notice) {
     const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant";
     QStringList paths{root+"/history.json"};
     const auto recovery=[](const QString& name) {return name.startsWith("history-recovered-") && !QUuid(name.mid(18)).isNull();};

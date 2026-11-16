@@ -80,7 +80,7 @@ struct AssistantSkillWebImport::State {
         if(!current())return;
         body.clear();status=0;const auto weak=owner;
         HttpCallbacks callbacks;
-        callbacks.headers=[weak](int code,HttpHeaders){if(auto task=weak.lock();task && task->state_->current())task->state_->status=code;};
+        callbacks.headers=[weak](int code,const HttpHeaders&){if(auto task=weak.lock();task && task->state_->current())task->state_->status=code;};
         callbacks.data=[weak](const QByteArray& bytes) {
             if(auto task=weak.lock();task && task->state_->current())try {
                 auto& s=*task->state_;

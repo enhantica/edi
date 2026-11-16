@@ -78,6 +78,7 @@ constexpr int kMaxMisses = 3;
 constexpr const char* kScan = "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20_scan";
 constexpr const char* kPattern = "docs/user/cli/pd-xray-cwl_latp_scan-4f/project";
 
+// NOLINTNEXTLINE(cert-dcl50-cpp): printf-style, every format a literal at its call.
 void log(const char* format, ...) {
     std::va_list args;
     va_start(args, format);

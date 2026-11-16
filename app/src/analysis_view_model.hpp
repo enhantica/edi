@@ -207,7 +207,7 @@ class AnalysisViewModel : public QObject {
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
 
    public:
-    AnalysisViewModel(edi::Project& project, ProjectEditor& editor, SavedFile saved, QObject* parent);
+    AnalysisViewModel(edi::Project& project, ProjectEditor& editor, const SavedFile& saved, QObject* parent);
 
     QString fittingMode() const { return fitting_mode_; }
     void setFittingMode(const QString& mode);

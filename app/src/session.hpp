@@ -428,7 +428,7 @@ class Session : public QObject {
     qint64 example_download_received_ = 0;
     qint64 example_download_total_ = -1;
     quint64 example_request_ = 0;
-    void fetchTutorialFiles(std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)> done);
+    void fetchTutorialFiles(const std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)>& done);
     WarningListModel* warnings_;
     int project_messages_ = 0;  // the keys of the project's messages
     QString opened_example_;

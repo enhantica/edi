@@ -591,6 +591,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t17-50-axis-scientific",
                       QStringList{"key:Escape"} + start + open_example("pd-neut-cwl_lbco-hrpt")
                           + QStringList{experiment, basic,
+                                        // NOLINTNEXTLINE(bugprone-suspicious-missing-comma): one step over two lines.
                                         "load-experiments:pd-neut-cwl_lbco-hrpt/project/experiments/"
                                         "hrpt.edi|data_hrpt=data_large|lbco 9()=lbco 30000000()",
                                         analysis, "mainArea.tab.pattern"}});
@@ -707,7 +708,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         if (QFile manifest(QStringLiteral(":/edi/tutorials/manifest.json")); manifest.open(QIODevice::ReadOnly)) {
             const QJsonDocument document = QJsonDocument::fromJson(manifest.readAll());
             const QJsonArray list = document.isObject() ? document.object().value(QStringLiteral("tutorials")).toArray() : document.array();
-            for (const QJsonValue& tutorial : list) ids.append(tutorial.toObject().value(QStringLiteral("id")).toString());
+            for (const auto& tutorial : list) ids.append(tutorial.toObject().value(QStringLiteral("id")).toString());
         }
         steps_.push_back({"tutorials-00-start", QStringList{"resize:1280x768", "theme:light"}});
         for (qsizetype i = 0; i < ids.size(); ++i) {
@@ -1818,7 +1819,7 @@ bool DemoDriver::tutorial_fit_check(QObject* panel, int step) {
     return true;
 }
 
-void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int waited_ms, int clicked_ms) {
+void DemoDriver::tutorial_next_then(const std::function<void()>& next, int step, int waited_ms, int clicked_ms) {
     // A step that waits for a fit, a download or a save keeps Next off meanwhile; one that stays off this long cannot
     // be left by Next alone.
     constexpr int kPollMs = 250;
@@ -1920,7 +1921,7 @@ void DemoDriver::tutorial_next_then(std::function<void()> next, int step, int wa
     });
 }
 
-void DemoDriver::wait_fit_then(std::function<void()> next, int waited_ms, int files) {
+void DemoDriver::wait_fit_then(const std::function<void()>& next, int waited_ms, int files) {
     QQmlEngine* engine = qmlEngine(window_.contentItem());
     auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
     const FitViewModel* fit = session != nullptr && session->project() != nullptr ? session->project()->fit() : nullptr;
@@ -2390,7 +2391,7 @@ void DemoDriver::park_pointer() {
     QCoreApplication::sendEvent(&window_, &move);
 }
 
-void DemoDriver::settle_then(std::function<void()> next) {
+void DemoDriver::settle_then(const std::function<void()>& next) {
     settle_attempts_ = 0;
     preparing_attempts_ = 0;
     previous_frame_ = QImage();
@@ -2516,7 +2517,7 @@ QString DemoDriver::scan_work(int files) const {
     return {};
 }
 
-void DemoDriver::idle_then(std::function<void()> next, int waited_ms) {
+void DemoDriver::idle_then(const std::function<void()>& next, int waited_ms) {
     ProjectViewModel* project = open_project(window_);
     if (project == nullptr || !project->calculating()) {
         next();
@@ -2529,10 +2530,10 @@ void DemoDriver::idle_then(std::function<void()> next, int waited_ms) {
     QTimer::singleShot(kIdlePollMs, this, [this, next, waited_ms] { idle_then(next, waited_ms + kIdlePollMs); });
 }
 
-void DemoDriver::drawn_then(std::function<void()> next, int waited_ms) {
+void DemoDriver::drawn_then(const std::function<void()>& next, int waited_ms) {
     ProjectViewModel* project = open_project(window_);
     if (project == nullptr || project->fit() == nullptr || !project->fit()->catchingUp()) {
-        idle_then(std::move(next));
+        idle_then(next);
         return;
     }
     if (waited_ms > kFitWaitMs) {
@@ -2542,7 +2543,7 @@ void DemoDriver::drawn_then(std::function<void()> next, int waited_ms) {
     QTimer::singleShot(kIdlePollMs, this, [this, next, waited_ms] { drawn_then(next, waited_ms + kIdlePollMs); });
 }
 
-void DemoDriver::timed_fit_then(std::function<void()> next, int files, int stop_after) {
+void DemoDriver::timed_fit_then(const std::function<void()>& next, int files, int stop_after) {
     ProjectViewModel* project = open_project(window_);
     FitViewModel* fit = project != nullptr ? project->fit() : nullptr;
     if (fit == nullptr || fit->running()) {
@@ -2664,7 +2665,7 @@ void DemoDriver::record_samples(const QString& label, std::vector<double> sample
     }
 }
 
-void DemoDriver::wait_scan_then(std::function<void()> next, const QString& mode, int waited_ms) {
+void DemoDriver::wait_scan_then(const std::function<void()>& next, const QString& mode, int waited_ms) {
     QQuickItem* layer = find(QStringLiteral("scanView.%1.layer").arg(mode), false);
     auto* model = layer != nullptr ? layer->property("model").value<ScanViewModel*>() : nullptr;
     if (model != nullptr && model->count() > 0 && model->loaded() == model->count()) {
@@ -2679,7 +2680,7 @@ void DemoDriver::wait_scan_then(std::function<void()> next, const QString& mode,
                        [this, next, mode, waited_ms] { wait_scan_then(next, mode, waited_ms + kSettleIntervalMs); });
 }
 
-void DemoDriver::wait_assistant_then(std::function<void()> next, int waited_ms, int idle_polls) {
+void DemoDriver::wait_assistant_then(const std::function<void()>& next, int waited_ms, int idle_polls) {
 #if !EDI_APP_ASSISTANT
     // A build without the assistant has no turn to wait for.
     (void)waited_ms;
@@ -2708,7 +2709,7 @@ void DemoDriver::wait_assistant_then(std::function<void()> next, int waited_ms, 
 #endif
 }
 
-void DemoDriver::wait_online_then(std::function<void()> next, int waited_ms) {
+void DemoDriver::wait_online_then(const std::function<void()>& next, int waited_ms) {
     QObject* dialog = window_.findChild<QObject*>(QStringLiteral("onlineLoad"));
     auto* search = dialog != nullptr ? dialog->property("search").value<QObject*>() : nullptr;
     if (search != nullptr && !search->property("busy").toBool()) {

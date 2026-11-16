@@ -94,7 +94,7 @@ std::optional<Rgb> parse_color(const std::string& token) {
     }
     std::uint8_t bytes[3] = {};
     for (int i = 0; i != 3; ++i) {
-        const char* first = token.data() + 1 + 2 * i;
+        const char* first = token.data() + 1 + (2 * static_cast<std::ptrdiff_t>(i));
         const auto [ptr, ec] = std::from_chars(first, first + 2, bytes[i], 16);
         if (ec != std::errc() || ptr != first + 2) {
             return std::nullopt;
@@ -205,7 +205,7 @@ std::size_t column_size(const SceneSource::Column<T>& column) {
     return column ? column->size() : 0;
 }
 template <class T>
-T column_value(const SceneSource::Column<T>& column, std::size_t row, T fallback) {
+T column_value(const SceneSource::Column<T>& column, std::size_t row, const T& fallback) {
     return column && row < column->size() ? (*column)[row] : fallback;
 }
 

@@ -167,7 +167,7 @@ class ExperimentViewModel : public QObject {
     enum ScatteringType { Bragg, Total };
     Q_ENUM(ScatteringType)
 
-    ExperimentViewModel(SavedFile saved, edi::Project& project, edi::ExperimentBase& experiment,
+    ExperimentViewModel(const SavedFile& saved, edi::Project& project, edi::ExperimentBase& experiment,
                         ProjectEditor& editor, ParameterRegistry& registry, QObject* parent);
 
     QString name() const { return name_; }

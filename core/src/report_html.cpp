@@ -847,7 +847,7 @@ private:
         if (charts() && document()) {
             // The figure's image, by its kind and index: a structure view framed as a table is, a chart with no border.
             DocumentCell cell{"<img src=\"" + std::string(figure) + "-" + whole(index) + "\" width=\"" +
-                                  fixed2(*figure_width_) + "\">",
+                                  fixed2(figure_width_.value_or(0.0)) + "\">",
                               "left", 1, 0.0, 0.0};
             document_table(nullptr, {{cell}}, false, std::string_view(figure) == "structure");
         } else if (charts()) {
@@ -865,6 +865,7 @@ private:
     // A scan's evolution charts, one to a row with no border round them: in the HTML report a column of figures, in
     // the static report their images, each a table of its own so a page break never splits a chart.
     void evolution_figures() {
+        if (!model_.evolution) return;
         const std::size_t count = model_.evolution->size();
         if (!document()) {
             out_ += "<div class=\"evolution-grid\">\n";
@@ -876,7 +877,7 @@ private:
         }
         for (std::size_t index = 0; index < count; ++index) {
             const DocumentCell cell{
-                "<img src=\"evolution-" + whole(index) + "\" width=\"" + fixed2(*figure_width_) + "\">", "left", 1, 0.0,
+                "<img src=\"evolution-" + whole(index) + "\" width=\"" + fixed2(figure_width_.value_or(0.0)) + "\">", "left", 1, 0.0,
                 0.0};
             document_table(nullptr, {{cell}}, false, false);
         }
@@ -1026,6 +1027,7 @@ private:
         const std::vector<ColumnLayout> columns = layout_of(data.rows, data.columns.size());
         if (document()) {
             std::vector<DocumentCell> header;
+            header.reserve(data.columns.size());
             for (std::size_t i = 0; i < data.columns.size(); ++i) {
                 header.push_back({escaped(data.columns[i]), columns[i].numeric ? "center" : "left",
                                   columns[i].numeric ? 2U : 1U});
@@ -1113,11 +1115,11 @@ private:
     // bordered.
     void correlations() {
         const std::optional<ReportCorrelations>& matrix = model_.correlations;
-        const std::size_t count = matrix ? matrix->labels.size() : 0;
-        if (count < 2 || matrix->values.size() != count * count) {
+        if (!matrix || matrix->labels.size() < 2 || matrix->values.size() != matrix->labels.size() * matrix->labels.size()) {
             note(matrix && !matrix->empty_text.empty() ? matrix->empty_text : "No correlations yet");
             return;
         }
+        const std::size_t count = matrix->labels.size();
         if (document()) {
             document_correlations(*matrix);
             return;
@@ -1166,15 +1168,23 @@ private:
                 const std::string size = "width=\"43\" style=\"padding-top: 13px; padding-bottom: 13px; ";
                 if (!std::isfinite(value)) {
                     // An empty cell keeps its border, as in the HTML report and the preview (the owner, 2026-10-13).
-                    out_ += "<td " + size + border + "\"></td>";
+                    out_ += "<td ";
+                    out_ += size;
+                    out_ += border;
+                    out_ += "\"></td>";
                     continue;
                 }
                 const std::string text = std::fabs(value) >= 0.5 ? "<span style=\"color: #f5f5f5\">" + fixed2(value) +
                                                                        "</span>"
                                                                  : fixed2(value);
-                out_ += "<td align=\"center\" valign=\"middle\" bgcolor=\"" + correlation_colour(value) + "\" " + size +
-                        border + "\">" +
-                        text + "</td>";
+                out_ += "<td align=\"center\" valign=\"middle\" bgcolor=\"";
+                out_ += correlation_colour(value);
+                out_ += "\" ";
+                out_ += size;
+                out_ += border;
+                out_ += "\">";
+                out_ += text;
+                out_ += "</td>";
             }
             out_ += "</tr>\n";
         }

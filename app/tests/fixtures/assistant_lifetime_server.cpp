@@ -23,13 +23,13 @@ int main(int argc, char** argv) {
             const auto request = QJsonDocument::fromJson(QByteArray::fromStdString(line)).object();
             if (!request.contains("id")) continue;
             const QJsonObject response{{"id", request.value("id")}, {"result", QJsonObject{{"userAgent", "recorded"}}}};
-            std::cout << QJsonDocument(response).toJson(QJsonDocument::Compact).toStdString() << std::endl;
+            std::cout << QJsonDocument(response).toJson(QJsonDocument::Compact).toStdString() << '\n' << std::flush;
         }
     }).detach();
     QTimer stream;
     if (QByteArray(role) == "server" && qEnvironmentVariableIsSet("EDI_LIFETIME_STREAM")) {
         QObject::connect(&stream, &QTimer::timeout, &app, [] {
-            std::cout << "{\"method\":\"recorded/heartbeat\",\"params\":{}}" << std::endl;
+            std::cout << "{\"method\":\"recorded/heartbeat\",\"params\":{}}" << '\n' << std::flush;
         });
         stream.start(1);
     }

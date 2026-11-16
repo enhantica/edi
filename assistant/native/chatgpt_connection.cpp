@@ -371,7 +371,7 @@ struct ChatGptConnection::State : QObject {
         registrations = next;
     }
     void catalog();
-    void verify(Object tokens, const QString& client, bool renewal);
+    void verify(const Object& tokens, const QString& client, bool renewal);
     void arrival();
     void poll();
     void revoke();
@@ -379,7 +379,7 @@ struct ChatGptConnection::State : QObject {
 };
 
 void ChatGptConnection::State::catalog() {
-    get(QUrl("https://api.openai.com/v1/models"), [this](Object result) {
+    get(QUrl("https://api.openai.com/v1/models"), [this](const Object& result) {
         if (!result.value("models").isArray() || result.value("models").toArray().size() > static_cast<qsizetype>(Limits::models))
             detail::refuse("resource_exhausted", "Provider catalog exceeds limit");
         QJsonArray next; QSet<QString> seen; bool eligible = false;
@@ -405,7 +405,7 @@ void ChatGptConnection::State::catalog() {
         signing_in = false; renewing = false; error.clear(); error_code.clear(); emit_connection("ready");
     }, true);
 }
-void ChatGptConnection::State::verify(Object tokens, const QString& client, bool renewal) {
+void ChatGptConnection::State::verify(const Object& tokens, const QString& client, bool renewal) {
     if (!tokens.value("access_token").isString() || tokens.value("access_token").toString().isEmpty() ||
         tokens.value("token_type").toString().compare("Bearer", Qt::CaseInsensitive) != 0 ||
         !tokens.value("expires_in").isDouble() || tokens.value("expires_in").toDouble() <= 0 ||
@@ -442,13 +442,13 @@ void ChatGptConnection::State::verify(Object tokens, const QString& client, bool
         nonce.clear(); verifier.clear(); expected_state.clear(); callback.close(); catalog();
     };
     if (renewal && tokens.value("id_token").toString().isEmpty()) { complete(subject, label); return; }
-    get(QUrl("https://auth.openai.com/.well-known/openid-configuration"), [this, tokens, client, renewal, complete](Object metadata) {
+    get(QUrl("https://auth.openai.com/.well-known/openid-configuration"), [this, tokens, client, renewal, complete](const Object& metadata) {
         const QUrl jwks(metadata.value("jwks_uri").toString());
         const QUrl revoke(metadata.value("revocation_endpoint").toString());
         if (metadata.value("issuer") != "https://auth.openai.com" || !issuer_url(jwks) ||
             (!revoke.isEmpty() && !issuer_url(revoke))) throw std::invalid_argument("Unexpected issuer metadata");
         revocation_endpoint = revoke;
-        get(jwks, [this, tokens, client, renewal, complete](Object keys) {
+        get(jwks, [this, tokens, client, renewal, complete](const Object& keys) {
             if (!keys.value("keys").isArray() || keys.value("keys").toArray().size() > static_cast<qsizetype>(Limits::jwk_keys))
                 detail::refuse("resource_exhausted", "Verification key count exceeds limit");
             const auto decoded = jwt::decode(tokens.value("id_token").toString().toStdString());
@@ -511,7 +511,7 @@ void ChatGptConnection::State::arrival() {
                     throw std::invalid_argument("Incomplete registration");
                 QUrlQuery fields; fields.addQueryItem("grant_type", "authorization_code"); fields.addQueryItem("client_id", client);
                 fields.addQueryItem("code", code); fields.addQueryItem("code_verifier", verifier); fields.addQueryItem("redirect_uri", redirect); fields.addQueryItem("resource", "https://api.openai.com/v1");
-                token(fields, [this, client](Object tokens) { verify(tokens, client, false); });
+                token(fields, [this, client](const Object& tokens) { verify(tokens, client, false); });
             } catch (...) { fail("ChatGPT sign-in or consent could not be completed."); }
         });
     }
@@ -648,7 +648,7 @@ Reply ChatGptConnection::connect_saved(const std::string& id) {
         s.credentials = saved->take(); s.renewing = true;
         QUrlQuery form; form.addQueryItem("grant_type", "refresh_token"); form.addQueryItem("client_id", client);
         form.addQueryItem("refresh_token", s.credentials.value("refresh_token").toString()); form.addQueryItem("resource", "https://api.openai.com/v1");
-        s.token(form, [&s, client](Object tokens) { s.verify(tokens, client, true); });
+        s.token(form, [&s, client](const Object& tokens) { s.verify(tokens, client, true); });
         return ok();
     } catch (const detail::Refusal& e) { s.fail("Saved authorization exceeded the assistant limit.", "edi.assistant." + q(e.code)); return no(s.error, s.error_code); }
     catch (...) { s.fail("Saved ChatGPT authorization could not be renewed. Sign in again."); return no(s.error); }
@@ -769,7 +769,7 @@ Reply ChatGptConnection::send(const JsonText& input) {
             } else if (event.value("type") == "turn_finished") s.pending_terminal = event;
             else if (s.sink) s.sink(json(event));
         });
-        const auto done = [&s, source](int status, QByteArray) {
+        const auto done = [&s, source](int status, const QByteArray&) {
             s.active_inference = 0;
             if (status != 200 || !s.stream) { s.inference_failed("The provider request did not complete. Retry or reconnect."); return; }
             const auto decoded = s.stream->finish();
@@ -805,7 +805,7 @@ Reply ChatGptConnection::send(const JsonText& input) {
             s.request_context = {};
             if (s.sink) s.sink(json(terminal));
         };
-        const auto data = [&s](QByteArray chunk) {
+        const auto data = [&s](const QByteArray& chunk) {
             if (!s.stream) return;
             const auto result = s.stream->feed(std::string_view(chunk.constData(), static_cast<std::size_t>(chunk.size())));
             if (!result.ok) s.inference_failed(decoder_reason(result, false), q(result.code));

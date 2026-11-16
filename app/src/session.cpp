@@ -279,7 +279,7 @@ void Session::retainTemporaryRoots(const QStringList& candidates) {
 }
 
 void Session::releaseTemporaryRoots(const QStringList& candidates,const QString& openedFrom) noexcept {
-    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
     const auto binding=replacement_generation_;
     const auto current=[&]{return receiver && project_==target && replacement_generation_==binding;};
     try {
@@ -411,7 +411,7 @@ bool Session::openProjectAt(const QUrl& location, const QString& example) {
         source = given.absolutePath();
     } else if (given.isFile() && edi::is_project_archive(source.toStdString())) {
         return open(source,example,[this,given] {
-        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
         const auto binding=replacement_generation_;auto pathBinding=path_generation_;
         const auto current=[&]{return receiver && target && project_==target && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
         temporary_folder_ = QString::fromStdString(target->project().scan_data_root);
@@ -447,7 +447,7 @@ bool Session::openProjectAt(const QUrl& location, const QString& example) {
         const auto cleanup=qScopeGuard([copyOwner,copyRoot]{if(copyOwner)copyOwner->releaseTemporaryRoots({copyRoot});});
         const QString target=QDir(copyRoot).filePath(folder.fileName());
         return openCopy(source,target,{},[this,folder] {
-        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> openedOwner(project_);
+        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> openedOwner(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
         const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
         const auto current=[&]{return receiver && openedOwner && project_==openedOwner && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
         read_only_copy_ = true;
@@ -461,7 +461,7 @@ bool Session::openProjectAt(const QUrl& location, const QString& example) {
         });
     }
     return open(source,{},[this,folder] {
-        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
         const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
         emit projectDirectoryUsed(folder.absoluteFilePath());
         return receiver && target && project_==target && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;
@@ -1361,7 +1361,7 @@ const QList<QPair<QString, QString>> kTutorialFiles{{QStringLiteral("tutorial-lb
 }  // namespace
 
 // Downloads the tutorials' files one after the other; `done` gets every (name, bytes) pair or the first error.
-void Session::fetchTutorialFiles(std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)> done) {
+void Session::fetchTutorialFiles(const std::function<void(const QList<QPair<QString, QByteArray>>&, const QString&)>& done) {
     const QPointer<Session> receiver(this);
     auto fetched = std::make_shared<QList<QPair<QString, QByteArray>>>();
     auto step = std::make_shared<std::function<void(int)>>();
@@ -1909,7 +1909,7 @@ void Session::setColourScheme(const QString& scheme) {
 }
 
 void Session::setOpenedArchive(const QString& name) {
-    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     if (name != opened_archive_) {
         opened_archive_ = name;
@@ -2001,7 +2001,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     if (project_ != nullptr) {
         // Collection-linked data is fetched through the collections the app reads (edi ADR-0069).
         project_->setCollectionFetcher([examples = QPointer<CollectionExamples>(collection_examples_)](
-                                           const QString& id, std::function<void(const QByteArray&, const QString&)> done) {
+                                           const QString& id, const std::function<void(const QByteArray&, const QString&)>& done) {
             if (examples.isNull()) {
                 done({}, tr("The data collections are not available"));
                 return;
@@ -2066,7 +2066,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
 // ---- The web app's places (edi ADR-0052 §9) ---------------------------------------------------------
 
 void Session::setWebPlace(const WebPlace& place) {
-    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);  // NOLINT(clang-analyzer-core.NullDereference): this is live here.
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     web_place_ = place;
     emit locationTextChanged();
@@ -2574,12 +2574,12 @@ bool Session::commitAssistantNativeModel(std::unique_ptr<ProjectViewModel> model
     try {
         const bool published = replaceProject(adopted, {}, {}, true, &committed);
         if (!committed) return false; // Still a genuinely local, unexposed candidate.
-        static_cast<void>(model.release()); // May already have been retired/deleted by a later observer.
+        static_cast<void>(model.release()); // NOLINT(bugprone-unused-return-value): may already have been retired/deleted by a later observer.
         presentationComplete = published && adopted && project_ == adopted && replacement_generation_ == replacement;
         return true; // Real adoption, independently of later presentation/current owner.
     } catch (...) {
         if (committed) {
-            static_cast<void>(model.release());
+            static_cast<void>(model.release());  // NOLINT(bugprone-unused-return-value): the adopted owner holds it.
             if (replacement_generation_ == replacement && adopted && project_ == adopted)
                 try { setLastError(tr("The native project opened, but some presentation did not complete.")); } catch (...) {}
             return true;
@@ -2597,7 +2597,7 @@ bool Session::assistantSaveAsCurrent(const QString& token) const {
         choice->epoch==assistant_epoch_ && !assistant_epoch_exhausted_ && choice->current && choice->current();
 }
 QUrl Session::assistantSaveAsTarget(const QString& token,bool zip) const {
-    const auto ordinary=suggestedSaveTarget(zip);
+    auto ordinary=suggestedSaveTarget(zip);
     if(!assistantSaveAsCurrent(token) || assistant_save_choice_->suggestion.isEmpty())return ordinary;
     return QUrl::fromLocalFile(QFileInfo(ordinary.toLocalFile()).dir().filePath(assistant_save_choice_->suggestion+(zip?QStringLiteral(".zip"):QString())));
 }

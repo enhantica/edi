@@ -247,7 +247,7 @@ NativeCwlCandidate prepare_native_cwl_project(const std::string& cif, const std:
     // optional-Wyckoff normalization. No new crystallographic parser or matcher.
     auto structure = mapped.isEmpty() ? edi::structure_from_edi_text(cif) : mapped_structure(mapped);
     const auto phase = structure.name.value();
-    edi::Edit::add_structure(candidate.project, std::move(structure))();
+    edi::Edit::add_structure(candidate.project, structure)();
     auto experiment = edi::simulation_experiment(recipe.experiment_name, recipe.type, phase);
     edi::select_peak_profile(experiment, recipe.peak_profile);
     if (!experiment.instrument.setup_wavelength || !experiment.instrument.calib_twotheta_offset)

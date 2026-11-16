@@ -170,7 +170,7 @@ QJsonArray native_tool_specs(bool include_profiles) {
     // Each operation shape is closed; only Add may omit its ID.
     auto tool=tools.last().toObject();auto schema=tool.value("inputSchema").toObject();
     const auto properties=schema.value("properties").toObject();
-    const auto branch=[&](Array operations,Array fields) {
+    const auto branch=[&](const Array& operations,const Array& fields) {
         Object selected;
         for(const auto& field:fields)selected[field.toString()]=properties.value(field.toString());
         selected["operation"]=Object{{"type","string"},{"enum",operations}};
@@ -486,6 +486,7 @@ void assistant_native_arguments(const QString& name, const Object& args) {
         };
         if(!id_ok(args.value("experiment")))throw ActionRefusal("target_unavailable","experiment");
         const auto op=args.value("operation").toString();
+        // NOLINTNEXTLINE(bugprone-branch-clone): one branch per operation, as the tool schema lists them.
         if(op=="select")shape(args,{"purpose","experiment","operation"});
         else if(op=="peak_profile" || op=="absorption_type" || op=="extinction_type" || op=="mosaic_distribution") {
             shape(args,{"purpose","experiment","operation","value"});
@@ -515,6 +516,7 @@ void assistant_native_arguments(const QString& name, const Object& args) {
         if(name=="create_structure")shape(args,{"purpose"});
         else {
             if(!args.value("structure").isString() || args.value("structure").toString().isEmpty())throw ActionRefusal("target_unavailable","structure");
+            // NOLINTNEXTLINE(bugprone-branch-clone): one branch per operation, as the tool schema lists them.
             if(name=="edit_structure" && args.value("operation")=="select")shape(args,{"purpose","structure","operation"});
             else if(name=="edit_structure")shape(args,{"purpose","structure","operation","value"});
             else if(args.value("operation")=="append")shape(args,{"purpose","structure","operation"});

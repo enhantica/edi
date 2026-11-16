@@ -576,7 +576,7 @@ FitResultBase fit_experiments_independently(Project& project, const IterationCal
         for (const auto& row : own.correlations) {
             FitParameterCorrelation copy = *row;
             copy.id = std::to_string(record.correlations.size() + 1);
-            record.correlations.push_back(std::move(copy));
+            record.correlations.push_back(copy);
         }
         message += (message.empty() ? "" : "; ") + fitted.name.value() + ": " + own.exit_reason +
                    ", reduced chi-square " +
@@ -664,13 +664,14 @@ FitResultBase Project::fit(const IterationCallback& on_iteration,
     if (experiment().reflections.has_value()) {  // a single crystal fits its own reflections
         return fit({}, {}, {}, on_iteration, on_start, should_cancel);
     }
-    if (!experiment().data.has_value() || experiment().calculation_only) {
+    const std::optional<PdDataBase>& measured = experiment().data;
+    if (!measured.has_value() || experiment().calculation_only) {
         throw std::invalid_argument("edi fit: experiment() '" + experiment().name +
                                     "' carries no measured data (a calculation-only or "
                                     "hand-assembled experiment cannot fit; pass the pattern "
                                     "explicitly to refine with one)");
     }
-    const PdDataBase& data = *experiment().data;
+    const PdDataBase& data = *measured;
     return fit(data.axis(), data.intensity_meas, data.intensity_meas_su, on_iteration, on_start,
                should_cancel);
 }

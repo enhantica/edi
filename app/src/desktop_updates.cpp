@@ -84,7 +84,7 @@ QString markdown_title(QString text) {
 QVariantList release_changes(const QByteArray& content, const QString& current, bool* valid, bool allow_preview) {
     if (valid) *valid = false;
     const auto upper = calendar_version(current);
-    if ((!current.isEmpty() && !upper) || content.size() > 1024 * 1024) return {};
+    if ((!current.isEmpty() && !upper) || content.size() > qsizetype{1024} * 1024) return {};
     const auto document = QJsonDocument::fromJson(content);
     const auto object = document.object();
     const auto schema = object.value(QStringLiteral("schema")).toString();
@@ -197,11 +197,11 @@ void DesktopUpdates::fetchNext() {
     request.setTransferTimeout(15000);
     request.setMaximumRedirectsAllowed(4);
     auto* reply = network_.get(request);
-    reply->setReadBufferSize(64 * 1024);
+    reply->setReadBufferSize(qint64{64} * 1024);
     auto bytes = std::make_shared<QByteArray>();
     const auto read = [reply, bytes] {
         bytes->append(reply->read(1024 * 1024 + 1 - bytes->size()));
-        if (bytes->size() > 1024 * 1024) reply->abort();
+        if (bytes->size() > qsizetype{1024} * 1024) reply->abort();
     };
     connect(reply, &QIODevice::readyRead, this, read);
     connect(reply, &QNetworkReply::finished, this, [this, reply, bytes, read] {

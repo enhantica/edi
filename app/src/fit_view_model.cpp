@@ -650,7 +650,7 @@ bool FitViewModel::undo() {
     const QPointer<FitViewModel> self(this);
     restoring_ = true;
     const auto restoration = qScopeGuard([self] { if (self) self->restoring_ = false; });
-    const bool undone = owner_.applyUndo(std::move(edit), whole).isEmpty();
+    const bool undone = owner_.applyUndo(edit, whole).isEmpty();
     if (!self) return undone;
     restoring_ = false;
     if (undone && whole) {
@@ -1308,6 +1308,7 @@ void FitViewModel::presentEnded(const edi::FitReport& report, bool automatic_res
             // A fit stopped part way is not accepted: a candidate it ends goes back to the accepted state.
             if (report.status != edi::FitStatus::CANCELLED) pending_accept_ = std::make_shared<const edi::Project>(project_);
         }
+        if (!report.result) return;
         const edi::FitResultBase& result = *report.result;
         setProgress(QString::number(result.iterations),
                     QStringLiteral("%1 → %2").arg(chi(result.pre_fit.reduced_chi_square), chi(result.reduced_chi_square)),

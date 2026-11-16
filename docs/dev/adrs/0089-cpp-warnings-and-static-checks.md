@@ -38,7 +38,9 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
    `.clang-tidy` file replaces clang-tidy's default checks, so it names `clang-analyzer-*` itself; its one exception,
    as in crysta, is the opt-in Padding hint, which asks for members in size order and reports layout, never a fault.
    edi also turns off `performance-enum-size`: most of its enums are Qt's (model roles counted from `Qt::UserRole`,
-   `Q_ENUM` types that QML reads), which the meta-object system handles as `int`. crysta's style groups (`readability`, `modernize`, `misc`, `cppcoreguidelines`) follow in a sweep of their own:
+   `Q_ENUM` types that QML reads), which the meta-object system handles as `int`; `bugprone-empty-catch`, since its
+   teardown and optional presentation steps are `noexcept` and drop a failure on purpose; and
+   `performance-no-int-to-ptr`, since its Qt table models key rows by small integers. crysta's style groups (`readability`, `modernize`, `misc`, `cppcoreguidelines`) follow in a sweep of their own:
    measured over edi's code they hold about 14 000 of the curated set's 15 200 findings, most of them braces around
    one statement, implicit conversions to bool and several declarations on one line. It reads the compile commands of the app's
    build tree, and the core's tree for the Python bindings.

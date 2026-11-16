@@ -421,7 +421,7 @@ double d_at(const std::vector<double>& native, const std::vector<double>& d, dou
 // The source on the d axis: x, the ticks and the excluded bands in d (capture_pattern's contract).
 void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnDataBase& refln) {
     const std::vector<double>& d = data.d_spacing.values();
-    const std::vector<double> native = data.axis();
+    const std::vector<double>& native = data.axis();
     if (!source.d_available) {
         return;
     }
