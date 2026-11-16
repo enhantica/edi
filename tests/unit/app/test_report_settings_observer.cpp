@@ -705,6 +705,27 @@ public:
     static bool localDirectory(const QUrl& project) {
         return absoluteLocalFileUrl(project) && QFileInfo(project.toLocalFile()).isDir();
     }
+    // Platform chooser input, like chooseProjectLocation: the actual dialog receives the user's choice.
+    Q_INVOKABLE QVariantList colourDialogs(QObject* root) const {
+        QVariantList result;
+        if (!root) return result;
+        for (auto* object : root->findChildren<QObject*>())
+            if (object->inherits("QQuickColorDialog") && object->property("visible").toBool())
+                result.append(QVariant::fromValue(object));
+        return result;
+    }
+    Q_INVOKABLE bool chooseColour(QObject* dialog, const QString& value) const {
+        const QColor colour(value);
+        if (!dialog || !colour.isValid() || !dialog->property("visible").toBool() ||
+            !dialog->inherits("QQuickColorDialog") ||
+            !dialog->setProperty("selectedColor", colour) ||
+            dialog->property("selectedColor").value<QColor>() != colour)
+            return false;
+        const bool accepted = QMetaObject::invokeMethod(dialog, "accepted", Qt::DirectConnection);
+        QMetaObject::invokeMethod(dialog, "close", Qt::DirectConnection);
+        return accepted;
+    }
+
     // Observe the actual stored PNG, without changing its bytes or using the exporter's image.
     Q_INVOKABLE QVariantMap savedImageFacts(const QUrl& location) const {
         if (!absoluteLocalFileUrl(location)) return {{"valid", false}};

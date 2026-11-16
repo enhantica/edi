@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T03:05:08Z
+# measured_utc = 2026-11-16T03:12:31Z
 #
-# Recorded from: measured test run (4 node(s) measured once, 176637 banked, 0 stale row(s) dropped)
-# Collected tests: 245413; with a reported duration: 77413
+# Recorded from: measured test run (5 node(s) measured once, 176637 banked, 0 stale row(s) dropped)
+# Collected tests: 245418; with a reported duration: 77413
 # Module-scoped fixture costs recorded: 202
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245413
+# inventory_python = 245418
 # inventory_cpp = 0
 # inventory_measured = 176637
-# inventory_unmeasured = 68776
+# inventory_unmeasured = 68781
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 86108
+# inventory_pr_python = 86113
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -237822,6 +237822,11 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_status_start]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_unavailable_action_matches_analysis]
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_visibility_tracks_analysis_on_every_page]
+UNMEASURED:failed-in-this-run	tests/system/py/test_structure_appearance_completion.py::test_real_structure_appearance_completion[test_atom_view_toolbar_and_extra_share_saved_state]
+UNMEASURED:failed-in-this-run	tests/system/py/test_structure_appearance_completion.py::test_real_structure_appearance_completion[test_existing_toolbar_switches_have_the_same_full_extra_settings]
+UNMEASURED:failed-in-this-run	tests/system/py/test_structure_appearance_completion.py::test_real_structure_appearance_completion[test_polyhedra_colour_and_opacity_affect_the_actual_3d_render]
+UNMEASURED:failed-in-this-run	tests/system/py/test_structure_appearance_completion.py::test_real_structure_appearance_completion[test_polyhedra_settings_survive_reload_and_do_not_leak_to_another_project]
+UNMEASURED:failed-in-this-run	tests/system/py/test_structure_appearance_completion.py::test_real_structure_appearance_completion[test_polyhedra_toolbar_and_extra_change_actual_geometry_visibility]
 0.000	tests/system/py/test_structure_backend.py::test_structure_view_matches_actual_backend_capability[graphics-api]
 0.000	tests/system/py/test_structure_backend.py::test_structure_view_matches_actual_backend_capability[software]
 UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_active_probe_types_and_element_colour_regression_pin:neutron-sears]
