@@ -158,6 +158,7 @@ void EvolutionViewModel::syncExperiments() {
         emit seriesChanged();
         emit perExperimentChanged();
         emit currentExperimentChanged();
+        emit xTitleChanged();  // a series that records nothing is placed by its runs
     }
 }
 
@@ -200,6 +201,7 @@ bool EvolutionViewModel::syncNames() {
         names_ = names;
         QStringList labels;
         for (const QString& name : names_) labels.append(labeller_ ? labeller_(name, per_experiment_) : QString());
+        labels_ = labels;
         parameters_->setNames(names_, labels);
     }
     const int current = names_.isEmpty() ? -1 : std::max(0, static_cast<int>(names_.indexOf(shown)));
@@ -287,12 +289,18 @@ void EvolutionViewModel::setXMode(int mode) {
 }
 
 QStringList EvolutionViewModel::xModes() const {
-    return {extracted_title_.isEmpty() ? tr("value") : extracted_title_, tr("file index")};
+    // A series that records nothing is placed by its runs (the owner, 2026-11-16).
+    return {extracted_title_.isEmpty() ? (series() ? tr("Run") : tr("value")) : extracted_title_, tr("file index")};
 }
 
 QString EvolutionViewModel::xTitle() const { return xModes().value(x_mode_); }
 
 QString EvolutionViewModel::yTitle() const { return current_ >= 0 ? names_.value(current_) : QString(); }
+
+QString EvolutionViewModel::yLabel() const {
+    const QString label = current_ >= 0 ? labels_.value(current_) : QString();
+    return label.isEmpty() ? yTitle() : label;
+}
 
 void EvolutionViewModel::setLayer(MeasuredLayer* layer) {
     if (layer != layer_) {

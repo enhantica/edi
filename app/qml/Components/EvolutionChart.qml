@@ -53,6 +53,10 @@ Item {
     readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
     readonly property int yTicks: Math.max(2, Math.min(6, Math.floor((height - em * 7 - xTitleHeight) / (em * 2.5))))
     readonly property real toolbarRightInset: sideMargin
+    // The toolbar's outer edges, its x box on the left and its view buttons on the right, where the block selector row
+    // above lines up with it (the owner, 2026-11-16).
+    readonly property real toolbarSpanLeft: xBox.x
+    readonly property real toolbarSpanRightInset: width - (viewButtons.x + viewButtons.width)
     readonly property real titleGutter: Math.round(em * 1.6)
     readonly property real xTitleHeight: Math.round(em * 1.7)
     // The zoomed ranges, [xMin, xMax, yMin, yMax]; empty: the whole data.
@@ -347,22 +351,27 @@ Item {
                     chart.evolution.setBankLayer(bankLayer.index, null)
             }
         }
-        // The banks' colours, while every bank is shown.
-        Column {
+        // The banks' colours while every bank is shown: the app's chart legend at the plot's top left, its translucent box
+        // over the points (the owner, 2026-11-16).
+        ListedLegendModel {
+            id: bankLegendRows
+        }
+        ChartLegend {
             objectName: "evolution.bankLegend"
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.margins: EaStyle.Sizes.fontPixelSize * 0.5
+            z: 1
+            x: chart.em
+            y: chart.em
+            colors: chart.colors
+            entries: bankLegendRows
             visible: chart.evolution !== null && !chart.fromReport && chart.evolution.perExperiment && chart.evolution.currentExperiment < 0
-            Repeater {
-                model: chart.evolution !== null ? chart.evolution.experiments : []
-                delegate: EaElements.Label {
-                    required property string modelData
-                    required property int index
-                    color: AppColors.experiment(index, chart.colors.isDarkPalette)
-                    text: modelData
-                }
+            readonly property var banks: chart.evolution !== null ? chart.evolution.experiments : []
+            readonly property bool dark: chart.colors.isDarkPalette
+            function refill() {
+                bankLegendRows.setRows(banks, banks.map((name, i) => String(AppColors.experiment(i, dark))), -1);
             }
+            onBanksChanged: refill()
+            onDarkChanged: refill()
+            Component.onCompleted: refill()
         }
         // The shown dataset, from its own x: it moves only when the shown dataset, the x mode or the axis does. The
         // Stacked and Map charts mark it with the same look. Over the points, so the line shows across a marker too.
@@ -504,7 +513,7 @@ Item {
         // Centred in the margin, clear of the tick labels, which Qt Graphs lets reach into the plot's left margin.
         x: (chart.sideMargin - width) / 2
         y: plot.y + (plot.height - height) / 2
-        text: chart.evolution ? chart.evolution.yTitle : ""
+        text: chart.evolution ? chart.evolution.yLabel : ""
     }
     EaElements.Label {
         objectName: "evolution.title.x"

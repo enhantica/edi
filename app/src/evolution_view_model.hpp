@@ -53,6 +53,8 @@ class EvolutionViewModel : public QObject {
     Q_PROPERTY(QStringList xModes READ xModes CONSTANT)
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
     Q_PROPERTY(QString yTitle READ yTitle NOTIFY yTitleChanged)
+    // The y title as the parameter table names it (yTitle is the results column, the tooltip's full name).
+    Q_PROPERTY(QString yLabel READ yLabel NOTIFY yTitleChanged)
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
     Q_PROPERTY(double xMax READ xMax NOTIFY xMaxChanged)
     Q_PROPERTY(double yMin READ yMin NOTIFY yMinChanged)
@@ -102,6 +104,7 @@ class EvolutionViewModel : public QObject {
     QStringList xModes() const;
     QString xTitle() const;
     QString yTitle() const;
+    QString yLabel() const;
     double xMin() const { return x_min_; }
     double xMax() const { return x_max_; }
     double yMin() const { return y_min_; }
@@ -183,6 +186,7 @@ class EvolutionViewModel : public QObject {
     int bank_ = -1;  // the bank whose points a read visits now
     bool allBanks() const { return per_experiment_ && current_experiment_ < 0; }
     QStringList names_;
+    QStringList labels_;  // names_' labels, as the selector shows them
     std::function<QString(const QString&, bool)> labeller_;
     QStringList experiments_;  // a series of joint fits' experiments, in project order; empty otherwise
     bool per_experiment_ = false;
