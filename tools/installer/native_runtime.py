@@ -16,8 +16,8 @@ from package import SYSTEM, collect_dependency_licenses, run, sha256
 # refuses the build, which is how a library missing from a user's system is caught here. Each ships
 # with every supported system, so it is admitted, never bundled. On Windows WinHTTP carries the
 # downloads (edi ADR-0075) and names compare case-insensitively; on Linux libdl loads the system
-# libcurl only when a download needs it; on macOS the C++ runtime is the system's (libc++ and the
-# libc++abi it is built on) and libSystem carries the rest.
+# libcurl only when a download needs it; on macOS libSystem carries the rest. The SDK carries its
+# libc++, so that one is bundled by name, and it loads the system libc++abi beneath it.
 SYSTEM_LIBRARIES = {
     'linux': frozenset({
         'ld-linux-x86-64.so.2',
@@ -121,7 +121,12 @@ def dependencies(binary: Path) -> list[str]:
     if SYSTEM == 'linux':
         return linux_dependencies(subprocess.check_output(['readelf', '-d', binary], text=True))
     if SYSTEM == 'macos':
-        return macos_dependencies(subprocess.check_output(['otool', '-L', binary], text=True))
+        names = macos_dependencies(subprocess.check_output(['otool', '-L', binary], text=True))
+        # otool -L lists a library's own install name first; that is its identity, not a load.
+        own = subprocess.check_output(['otool', '-D', binary], text=True).splitlines()[1:]
+        if own and names and names[0] == own[0].strip():
+            names = names[1:]
+        return names
     listing = subprocess.check_output(
         ['dumpbin', '/dependents', binary], text=True, env={**os.environ, 'VSLANG': '1033'}
     )
