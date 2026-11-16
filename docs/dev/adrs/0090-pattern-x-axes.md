@@ -45,6 +45,15 @@ compare patterns from different instruments and probes, and expect Q = 4π sinθ
    `ExperimentViewModel::measCalcPoints`). It is its own main-view tab, right after Pattern on the Experiment and
    Analysis pages, with its own settings, and is disabled until the shown experiment has measured and calculated
    values. The single-crystal Pattern tab's x box offers Q and sinθ/λ only.
+7. **Two rows above every chart** (the owner, 2026-11-16): the selector row and one controls row, both centred, of the
+   same heights on every view, so the plot starts at the same height everywhere. One component draws the controls row
+   (`ToolbarLines`, laid out by `ToolbarRow`): its comboboxes, then its button groups; when they do not fit, controls
+   leave the row for a ⋯ popup at its end, least important first, by one priority for every view (`ToolbarRow::rank`;
+   subtract background, the intensity scale, the x axis and reset leave last). A control in the popup stays in the row out
+   of sight, and the popup's copy acts on it. Pattern, Meas vs calc, Structure, the single-crystal chart and Correlations
+   use it. The powder Meas vs calc row has the axes' scale (linear, square root or log), the legend, pan, box zoom and
+   reset; the single-crystal Pattern row leaves out the included-range and background buttons, which have nothing to
+   act on there.
 
 ## Consequences
 

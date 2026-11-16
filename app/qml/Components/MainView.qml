@@ -202,7 +202,7 @@ EaComponents.MainContent {
             readonly property bool singleCrystal: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
             readonly property var reflections: singleCrystal ? experiment.singleCrystalReflections : null
             readonly property bool available: experiment !== null && (singleCrystal ? reflections !== null && !reflections.simulated && reflections.calculated.length > 0 : !experiment.calculationOnly)
-            readonly property real toolbarRightInset: singleCrystal ? measCalcCrystal.toolbarRightInset : EaStyle.Sizes.fontPixelSize
+            readonly property real toolbarRightInset: singleCrystal ? measCalcCrystal.toolbarRightInset : measCalcPowder.toolbarRightInset
 
             SingleCrystalChart {
                 id: measCalcCrystal

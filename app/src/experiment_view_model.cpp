@@ -831,15 +831,26 @@ void ExperimentViewModel::setColourPlace(std::optional<std::size_t> place, std::
     emit patternSourceChanged();
 }
 
-QVariantMap ExperimentViewModel::measCalcPoints() const {
+QVariantMap ExperimentViewModel::measCalcPoints(int scale) const {
     QList<double> calc, meas, su;
     double low = std::numeric_limits<double>::infinity(), high = -low;
+    // The value on the scale, NaN where it has none; the s.u. carried to first order.
+    const auto scaled = [scale](double v) {
+        if (scale == 1) return v >= 0.0 ? std::sqrt(v) : qQNaN();
+        if (scale == 2) return v > 0.0 ? std::log10(v) : qQNaN();
+        return v;
+    };
+    const auto scaledSu = [scale](double s, double v) {
+        if (scale == 1) return v > 0.0 ? s / (2.0 * std::sqrt(v)) : qQNaN();
+        if (scale == 2) return s / (v * std::log(10.0));
+        return s;
+    };
     const edi::PatternSource& source = pattern_source_;
     if (source.current && source.meas && source.calc && source.meas->size() == source.calc->size()) {
         for (std::size_t i = 0; i < source.meas->size(); ++i) {
-            const double m = (*source.meas)[i], c = (*source.calc)[i];
+            const double rawM = (*source.meas)[i], m = scaled(rawM), c = scaled((*source.calc)[i]);
             if (!std::isfinite(m) || !std::isfinite(c)) continue;
-            const double s = source.su && i < source.su->size() ? (*source.su)[i] : qQNaN();
+            const double s = source.su && i < source.su->size() ? scaledSu((*source.su)[i], rawM) : qQNaN();
             calc.append(c);
             meas.append(m);
             su.append(s);
