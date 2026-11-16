@@ -319,7 +319,8 @@ std::vector<std::size_t> decimate_min_max(std::span<const double> x, std::span<c
 
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t experiments, std::size_t structures,
                                              std::span<const std::size_t> positions, bool pattern_set,
-                                             std::optional<std::size_t> measured_place) {
+                                             std::optional<std::size_t> measured_place,
+                                             std::span<const std::size_t> spare_taken) {
     // edi ADR-0017 §15: easydiffractionbeta's chart widths (its QtCharts1dTab.qml; the residual's 1 px line and the
     // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02). Every colour is the palette's (ADR-0038): an
     // experiment's and a structure's at its position, the calculated, background and residual colours its role colours.
@@ -337,7 +338,7 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
     // positions further structures would: the next ones after those held, in palette order, as a second phase's
     // contribution would (the owner, 2026-11-03).
     const std::vector<std::size_t> spare_structure =
-        free_positions(scheme, FigureKind::Structure, structure_rows - structures, held);
+        free_positions(scheme, FigureKind::Structure, structure_rows - structures, spare_taken.empty() ? held : spare_taken);
     // Shades past the palette spread over the positions the project itself uses.
     const std::size_t count = held.empty() ? 0 : *std::max_element(held.begin(), held.end()) + 1;
     const auto colour = [&](std::size_t position, bool dark) { return figure_colour(scheme, position, count, dark); };

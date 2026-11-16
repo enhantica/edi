@@ -638,11 +638,26 @@ std::vector<edi::SeriesStyle> PatternChartController::styles() const {
         measured.dark = edi::pattern_set_colour(scheme(), selected, experiments, scan_styles_->structure_positions, true);
         return scan_styles_->table;
     }
-    return edi::pattern_style_table(scheme(), experiments, experiment_ ? experiment_->structureCount() : 0,
+    const std::size_t structures = experiment_ ? experiment_->structureCount() : 0;
+    // A single crystal's chart shows one experiment and one structure: its magnetic part takes the colour it would in a
+    // project of that structure alone, as the powder chart gives it (the owner, 2026-11-16).
+    std::vector<std::size_t> spare;
+    if (experiment_ && experiment_->sampleForm() == ExperimentViewModel::SingleCrystal) {
+        const edi::PatternSource& source = experiment_->singleCrystalPattern(axis_, squared_);
+        const std::vector<std::size_t> held = experiment_->colourPositions().size() == experiments + structures
+                                                  ? experiment_->colourPositions()
+                                                  : edi::colour_positions(scheme(), experiments, structures);
+        const std::size_t place = experiment_->colourPlace();
+        if (!experiment_->showsDataset() && !source.phases.empty() && place < experiments && source.phases.front().place < structures) {
+            spare = {held[place], held[experiments + source.phases.front().place]};
+        }
+    }
+    return edi::pattern_style_table(scheme(), experiments, structures,
                                     experiment_ ? experiment_->colourPositions() : std::vector<std::size_t>{},
                                     experiment_ != nullptr && experiment_->showsDataset(),
                                     experiment_ && experiment_->showsDataset()
-                                        ? std::optional<std::size_t>(experiment_->colourPlace()) : std::nullopt);
+                                        ? std::optional<std::size_t>(experiment_->colourPlace()) : std::nullopt,
+                                    spare);
 }
 
 void PatternChartController::setPlotWidth(qreal width) {
@@ -1072,6 +1087,11 @@ void PatternChartController::refresh() {
             const double padding = kFitPadding * (y_high - y_low);
             y_low -= padding;
             y_high += padding;
+        }
+        // A single crystal's bars (or their lines) stand on zero, and its intensities are not negative: the range, fitted
+        // or zoomed, starts there, whatever a weak reflection's error bar reaches (the owner, 2026-11-16).
+        if (measured_drawing_ == QLatin1String("bars") && !report_ && y_high > 0.0) {
+            y_low = 0.0;
         }
         y_step = axis_step(y_low, y_high, false);
         y_anchor = std::ceil(y_low / y_step) * y_step;
