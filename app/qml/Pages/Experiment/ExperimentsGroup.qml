@@ -663,7 +663,7 @@ SideBarGroup {
             // A scan's files are read from its folder, so a collection's files are copied for one (edi ADR-0069).
             // Separate experiments may keep their files linked, a powder pattern and a single crystal's reflections
             // alike; a file of several datasets is refused for linking when it is loaded.
-            readonly property bool mustCopy: datasetsChoice.asScan && datasetsChoice.origins.length > 0
+            readonly property bool mustCopy: (datasetsChoice.asScan || datasetsChoice.asSeries) && datasetsChoice.origins.length > 0
             title: qsTr("Load %1 datasets as").arg(files.length)
             standardButtons: Dialog.Ok | Dialog.Cancel
             contentWidth: AppSizes.messagesDialogContentWidth
@@ -671,7 +671,7 @@ SideBarGroup {
             onClosed: destroy()
             onAccepted: {
                 if (group.project !== null && datasetsChoice.experiment !== null && datasetsChoice.asSeries) {
-                    group.project.loadSeriesOfJointFits(datasetsChoice.experiment, datasetsChoice.files);
+                    group.project.loadSeriesOfJointFits(datasetsChoice.experiment, datasetsChoice.files, datasetsChoice.copy || datasetsChoice.mustCopy);
                     return;
                 }
                 if (group.project !== null && datasetsChoice.experiment !== null)
@@ -725,14 +725,13 @@ SideBarGroup {
                     width: datasetsColumn.width
                     wrapMode: Text.Wrap
                     visible: datasetsChoice.asSeries
-                    text: qsTr("The files' folder is linked and each experiment shows its first point. Choose Sequential in Analysis to fit the points one after another.")
+                    text: qsTr("Each experiment shows its first point. Choose Sequential in Analysis to fit the points one after another.")
                 }
                 EaElements.CheckBox {
                     id: copyBox
-                    visible: !datasetsChoice.asSeries
                     objectName: "datasets.copy"
                     // What the choice means is its tool tip (the owner, 2026-11-04).
-                    ToolTip.text: datasetsChoice.asScan ? (datasetsChoice.copy ? qsTr("The files are copied into the project's folder; the project must be saved and hold this one experiment.") : qsTr("The scan reads the files where they are; the project keeps their folder's location.")) : (datasetsChoice.copy ? qsTr("Each experiment holds its data in the project.") : datasetsChoice.origins.length > 0 ? qsTr("Each experiment keeps its collection entry and downloads the file again when a fit needs it.") : qsTr("Each experiment reads its file where it is; the project keeps the file's location."))
+                    ToolTip.text: datasetsChoice.asSeries ? (datasetsChoice.copy ? qsTr("The files are copied into the project's folder, a folder of the series' own.") : qsTr("The series reads the files where they are; the project keeps their folder's location.")) : datasetsChoice.asScan ? (datasetsChoice.copy ? qsTr("The files are copied into the project's folder; the project must be saved and hold this one experiment.") : qsTr("The scan reads the files where they are; the project keeps their folder's location.")) : (datasetsChoice.copy ? qsTr("Each experiment holds its data in the project.") : datasetsChoice.origins.length > 0 ? qsTr("Each experiment keeps its collection entry and downloads the file again when a fit needs it.") : qsTr("Each experiment reads its file where it is; the project keeps the file's location."))
                     // The same spacing as between the two choices.
                     height: jointChoice.height
                     text: qsTr("Copy data into the project")

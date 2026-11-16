@@ -2366,7 +2366,7 @@ void ProjectViewModel::loadDatasetFolder(ExperimentViewModel* experiment, const 
     });
 }
 
-bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, const QList<QUrl>& files) {
+bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, const QList<QUrl>& files, bool copy) {
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
     if (retired_) return false;
@@ -2395,11 +2395,50 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
     if (groups.size() < 2)
         return refuse(tr("The file names do not split into one pattern per experiment: name each point's files alike, "
                          "the point as the one number that changes"));
+    // Copied (edi ADR-0088 point 3, as a scan's): the files go into scans/<name> in the project's folder, or a working
+    // folder before the project has one; linked, the series reads the files' own folder.
+    QString declared = declared_folder(project.path, folder);
+    QString directory, freshRoot, target;
+    const auto discard = [&] {
+        if (!freshRoot.isEmpty()) edi::remove_archive_directory(freshRoot.toStdString());
+        else if (!target.isEmpty()) QDir(target).removeRecursively();
+    };
+    if (copy) {
+        directory = QString::fromStdString(project.path.empty() ? project.scan_data_root : project.path);
+        if (directory.isEmpty()) {
+            try {
+                freshRoot = QString::fromStdString(edi::fresh_archive_directory("scan-data"));
+                directory = freshRoot;
+            } catch (const std::exception& error) {
+                return refuse(tr("A working folder for the datasets could not be made: %1").arg(QString::fromUtf8(error.what())));
+            }
+        }
+        if (!QFileInfo(directory).isDir()) return refuse(tr("The project's data folder is unavailable"));
+        const QDir root(directory);
+        const QString name = QStringLiteral("series");
+        QString relative = QStringLiteral("scans/") + name;
+        for (int n = 2; root.exists(relative); ++n) relative = QStringLiteral("scans/%1_%2").arg(name).arg(n);
+        target = root.filePath(relative);
+        if (!root.mkpath(relative)) {
+            discard();
+            return refuse(tr("The folder %1 could not be made in the project").arg(relative));
+        }
+        for (const std::string& file : names) {
+            const QString base = QString::fromStdString(file);
+            if (!QFile::copy(QDir(folder).filePath(base), QDir(target).filePath(base))) {
+                discard();
+                return refuse(tr("%1 could not be copied into the project").arg(base));
+            }
+        }
+        folder = target;
+        declared = relative;
+    }
     edi::Project next(project);
     next.sequential_fit = edi::SequentialFitConfig{};
+    if (copy && next.path.empty()) next.scan_data_root = directory.toStdString();
     try {
         const std::vector<std::string> made = edi::declare_series_of_joint_fits(
-            next, next.experiments.front()->name, declared_folder(project.path, folder).toStdString(), groups, "series");
+            next, next.experiments.front()->name, declared.toStdString(), groups, "series");
         // Each experiment shows its first point's pattern; the fit reads every point from the folder.
         std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held;
         for (std::size_t g = 0; g < next.experiments.size(); ++g) {
@@ -2415,12 +2454,16 @@ bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, co
         next.adopt_experiments();
         next.fitting_mode = "sequential";
     } catch (const std::exception& problem) {
+        discard();
         return refuse(tr("The series could not be made: %1").arg(QString::fromUtf8(problem.what())));
     }
     auto before = std::make_shared<const edi::Project>(project);
     const QString error = apply(edi::Edit::replace_project(project, std::move(next)), true);
     if (!self || retired_) return false;
-    if (!error.isEmpty()) return refuse(error);
+    if (!error.isEmpty()) {
+        discard();
+        return refuse(error);
+    }
     undo_history_.emplace_back(AppliedText{std::move(before)});
     syncUndo();
     syncLoadState();
