@@ -919,6 +919,25 @@ std::shared_ptr<ProjectViewModel::WidgetCreationInput> ProjectViewModel::prepare
 void ProjectViewModel::finishWidgetCreation(const std::shared_ptr<WidgetCreationInput>& input) noexcept {
     if (widget_creation_input_ == input) widget_creation_input_.reset();
 }
+// Data loaded by replacing the project: each experiment of `next` that is new or whose data source changed, and that
+// holds measured data, takes the common scale factor before the replacement, so it is the same undo step.
+void ProjectViewModel::rescaleLoaded(const edi::Project& current, edi::Project& next) {
+    for (std::size_t i = 0; i < next.experiments.size(); ++i) {
+        const edi::BraggPdExperiment& bank = *next.experiments[i];
+        const bool measured = bank.reflections ? !bank.reflections->index_h.get().empty()
+                                               : bank.data.has_value() && !bank.calculation_only;
+        if (!measured) continue;
+        const auto key = edi::KeyTraits<edi::BraggPdExperiment>::canonical(bank.name);
+        const auto same = std::find_if(current.experiments.begin(), current.experiments.end(), [&](const auto& held) {
+            return edi::KeyTraits<edi::BraggPdExperiment>::canonical(held->name) == key;
+        });
+        const bool fresh = same == current.experiments.end() || (*same)->data_file != bank.data_file ||
+                           (*same)->data_path != bank.data_path || (*same)->collection_id != bank.collection_id ||
+                           (*same)->calculation_only;
+        if (fresh) noteUnscaled(bank, edi::apply_common_scale(next, i));
+    }
+}
+
 // An experiment with measured data whose phase scales the common factor left as they were: one line in Messages.
 // Without measured data there is nothing to bring the calculation to, so nothing is said.
 void ProjectViewModel::noteUnscaled(const edi::ExperimentBase& experiment, bool scaled) {
@@ -2350,6 +2369,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
     const auto fileName = [](const QUrl& url) { return QFileInfo(url.toLocalFile()).fileName(); };
     // The replacement published as one undoable change.
     const auto replace = [&](edi::Project next) {
+        rescaleLoaded(project, next);
         auto before = std::make_shared<const edi::Project>(project);
         const QString error = apply(edi::Edit::replace_project(project, std::move(next)), true);
         if (!self || retired_) return false;
@@ -3014,6 +3034,7 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         try {
             next.experiments.assign(std::move(held));
             next.adopt_experiments();
+            rescaleLoaded(project, next);
             auto before = std::make_shared<const edi::Project>(project);
             // The admitted original file keeps its receipt: its outcome and the experiments it produced are this one
             // change's, recorded by the edit itself before anything is published.
