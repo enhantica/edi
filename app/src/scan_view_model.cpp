@@ -664,13 +664,12 @@ void ScanViewModel::setConversion(const edi::Project* project) {
         return;
     }
     if (series_) {
+        // Each row its bank's background and excluded regions again, then every row placed and the range taken anew.
         readSeriesBanks(project);
         for (Pattern& pattern : patterns_) {
-            if (pattern.x.empty()) continue;
-            applySeriesBank(pattern);
-            placePattern(pattern);
+            if (!pattern.x.empty()) applySeriesBank(pattern);
         }
-        publishBackground();
+        placeAxis();
         ++revision_;
         emit revisionChanged();
         return;
@@ -772,8 +771,10 @@ void ScanViewModel::placePattern(Pattern& pattern) {
         if (axis_ != edi::PatternAxis::Q && axis_ != edi::PatternAxis::SinThetaOverLambda) {
             return;
         }
+        // Q and sinθ/λ only from a positive d: a time-of-flight channel before the offset has d at or below zero, whose
+        // Q is infinite or negative and would stretch the axis over nothing.
         for (double& x : pattern.shown) {
-            x = edi::d_on_axis(axis_, x);
+            x = std::isfinite(x) && x > 0.0 ? edi::d_on_axis(axis_, x) : kNaN;
         }
         for (auto& [a, b] : pattern.excluded_shown) {
             const double ca = edi::d_on_axis(axis_, a), cb = edi::d_on_axis(axis_, b);
