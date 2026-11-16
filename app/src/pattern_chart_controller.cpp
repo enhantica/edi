@@ -861,6 +861,12 @@ edi::PatternView PatternChartController::view() const {
     view.residual_band = measured_drawing_ == QLatin1String("band") && !report_;
     view.included_only = included_only_;
     view.subtract_background = subtract_background_ && !report_;
+    for (const QString& key : hidden_) {
+        view.hidden.push_back(key.toStdString());
+        if (key.startsWith(QLatin1String("bragg/"))) {
+            view.hidden.push_back("structure/" + key.mid(6).toStdString());
+        }
+    }
     if (hidden_fits_range_) {
         for (const QString& key : hidden_) {
             view.uncounted.push_back(key.toStdString());
