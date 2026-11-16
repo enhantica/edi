@@ -1,7 +1,7 @@
 """Test-only access macros must not rewrite installed SDK declarations."""
 
+import hashlib
 import re
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -72,14 +72,13 @@ def test_existing_transaction_probe_preloads_the_sdk_before_its_access_macro():
 
 
 def test_committed_probe_preimage_reaches_the_access_macro_gate():
-    previous = subprocess.check_output(
-        [
-            'git',
-            'show',
-            '7d9b79240e2b3b51ae1c2b2a8258bc7954486c4e:tests/unit/cpp/c09_t7_internal_probe.cpp',
-        ],
-        cwd=ROOT,
-        text=True,
-    )
+    # Retain the original negative source as repository content across squash merges.
+    previous = (
+        ROOT / 'tests/fixtures/native_keyword_macro_boundary/unloaded-sdk.cpp.txt'
+    ).read_bytes()
+    assert (
+        hashlib.sha256(previous).hexdigest()
+        == 'bc7bfd132e27585e8d9076f4f97e42e03b2f70402f79fe78dcb1e8b7b8d18459'
+    ), 'The original native probe preimage must retain every archived byte'
     with pytest.raises(AssertionError, match='Access macros cannot rewrite SDK'):
-        require_sdk_access_identity(previous)
+        require_sdk_access_identity(previous.decode('utf-8'))

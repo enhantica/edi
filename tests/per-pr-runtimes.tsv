@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T04:26:40Z
+# measured_utc = 2026-11-16T05:48:53Z
 #
-# Recorded from: Full declared Python and Qt app tier transport plus the loaded-correlation matrix with complete activated native dependency PATH; serial Linux diagnostics, unchanged tier bounds
-# Collected tests: 245459; with a reported duration: 77741
+# Recorded from: measured test run (1 node(s) measured once, 177035 banked, 0 stale row(s) dropped)
+# Collected tests: 245459; with a reported duration: 77740
 # Module-scoped fixture costs recorded: 206
 #
 # Breaches are decided PER TIER against the table
@@ -167120,7 +167120,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_multiphase_constraints.p
 0.000	tests/integration/py/test_native_example_source_paths.py::test_real_example_description_matches_committed_metadata_on_both_path_styles[sc-neut-cwl_tb2ti2o7-heidi_simulation-PurePosixPath]
 0.000	tests/integration/py/test_native_example_source_paths.py::test_real_example_description_matches_committed_metadata_on_both_path_styles[sc-neut-cwl_tb2ti2o7-heidi_simulation-PureWindowsPath]
 0.100	tests/integration/py/test_native_keyword_macro_boundary.py::test_authored_native_test_sources_preserve_sdk_access_identity
-0.010	tests/integration/py/test_native_keyword_macro_boundary.py::test_committed_probe_preimage_reaches_the_access_macro_gate
+0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_committed_probe_preimage_reaches_the_access_macro_gate
 0.020	tests/integration/py/test_native_keyword_macro_boundary.py::test_existing_transaction_probe_preloads_the_sdk_before_its_access_macro
 0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[private-#if 0\n#include "crysta/model.hpp"\n#endif\n]
 0.000	tests/integration/py/test_native_keyword_macro_boundary.py::test_unloaded_sdk_macro_cannot_hide_behind_comments_strings_or_conditionals[private-/*\n#include "crysta/model.hpp"\n*/\n]
