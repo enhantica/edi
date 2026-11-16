@@ -13,40 +13,40 @@
       "tol_rel": null
     },
     "results[p000].fit_result.reduced_chi_square": {
-      "value": 1.0,
+      "value": 0.9997341821332594,
       "kind": "regression-pin",
-      "tol_abs": 1e-06,
-      "tol_rel": null
+      "tol_abs": null,
+      "tol_rel": 1e-05
     },
     "results[p001].fit_result.reduced_chi_square": {
-      "value": 0.99,
+      "value": 0.9868758055561904,
       "kind": "regression-pin",
-      "tol_abs": 1e-06,
-      "tol_rel": null
+      "tol_abs": null,
+      "tol_rel": 1e-05
     },
     "results[p002].fit_result.reduced_chi_square": {
-      "value": 1.0,
+      "value": 0.9984817900040638,
       "kind": "regression-pin",
-      "tol_abs": 1e-06,
-      "tol_rel": null
+      "tol_abs": null,
+      "tol_rel": 1e-05
     },
     "results[p003].fit_result.reduced_chi_square": {
-      "value": 0.99,
+      "value": 0.9897259325200511,
       "kind": "regression-pin",
-      "tol_abs": 1e-06,
-      "tol_rel": null
+      "tol_abs": null,
+      "tol_rel": 1e-05
     },
     "results[p004].fit_result.reduced_chi_square": {
-      "value": 0.99,
+      "value": 0.9869409077614594,
       "kind": "regression-pin",
-      "tol_abs": 1e-06,
-      "tol_rel": null
+      "tol_abs": null,
+      "tol_rel": 1e-05
     },
     "results[p005].fit_result.reduced_chi_square": {
-      "value": 0.98,
+      "value": 0.9786150984623625,
       "kind": "regression-pin",
-      "tol_abs": 1e-06,
-      "tol_rel": null
+      "tol_abs": null,
+      "tol_rel": 1e-05
     },
     "results[p000].fit_result.iterations": {
       "value": 3.0,

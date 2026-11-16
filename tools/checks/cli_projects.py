@@ -432,7 +432,9 @@ def _check_prefix_rows(rows: list[dict], reproduced: list[dict]) -> None:
     if len(reproduced) != len(rows):
         raise ValueError('raw scan prefix did not complete its exact file walk')
     for original, actual in zip(rows, reproduced, strict=True):
-        if Path(original['file_path']).name != Path(actual['file_path']).name:
+        # A one-experiment scan names its file per row; a series of joint fits names its point.
+        walked = 'file_path' if 'file_path' in original else 'point'
+        if Path(original[walked]).name != Path(actual.get(walked, '')).name:
             raise ValueError('raw scan prefix changed the file order')
         # Exact reported agreement with the CLI proves the prefix retained its predecessor chain.
         for column, value in original.items():
@@ -467,6 +469,19 @@ def _raw_outcome_columns(project, outcome) -> dict[str, float]:
     return values
 
 
+def _prefix_files(project: Path, rows: list[dict]) -> list[str]:
+    """The data files the scan read for these rows; a series lists them per experiment."""
+    if all('file_path' in row for row in rows):
+        return [row['file_path'] for row in rows]
+    points = {row['point'] for row in rows}
+    path = project / 'analysis/results_experiments.csv'
+    with path.open(encoding='utf-8', newline='') as handle:
+        files = [row['file_path'] for row in csv.DictReader(handle) if row['point'] in points]
+    if not files:
+        raise ValueError(f'{path} lists no file for the points {sorted(points)}')
+    return files
+
+
 def _prefix_outcome(template: Path, project: Path, rows: list[dict]) -> dict[str, float]:
     import edi  # noqa: PLC0415
 
@@ -475,8 +490,8 @@ def _prefix_outcome(template: Path, project: Path, rows: list[dict]) -> dict[str
         shutil.copytree(template, prefix, symlinks=True)
         data = prefix / 'raw-scan-prefix'
         data.mkdir()
-        for row in rows:
-            source = Path(row['file_path'])
+        for name in _prefix_files(project, rows):
+            source = Path(name)
             source = source if source.is_absolute() else project / source
             shutil.copy2(source, data / source.name)
         analysis = prefix / 'analysis/analysis.edi'
