@@ -16,8 +16,8 @@ from package import SYSTEM, collect_dependency_licenses, run, sha256
 # refuses the build, which is how a library missing from a user's system is caught here. Each ships
 # with every supported system, so it is admitted, never bundled. On Windows WinHTTP carries the
 # downloads (edi ADR-0075) and names compare case-insensitively; on Linux libdl loads the system
-# libcurl only when a download needs it; on macOS the C++ runtime is the system's (the release
-# rewrites its install name to /usr/lib/libc++.1.dylib) and libSystem carries the rest.
+# libcurl only when a download needs it; on macOS the C++ runtime is the system's (libc++ and the
+# libc++abi it is built on) and libSystem carries the rest.
 SYSTEM_LIBRARIES = {
     'linux': frozenset({
         'ld-linux-x86-64.so.2',
@@ -40,7 +40,11 @@ SYSTEM_LIBRARIES = {
         'oleaut32.dll',
         'ntdll.dll',
     }),
-    'macos': frozenset({'/usr/lib/libSystem.B.dylib', '/usr/lib/libc++.1.dylib'}),
+    'macos': frozenset({
+        '/usr/lib/libSystem.B.dylib',
+        '/usr/lib/libc++.1.dylib',
+        '/usr/lib/libc++abi.dylib',
+    }),
 }
 
 SYSTEM_LIBRARIES['windows'] |= frozenset({
