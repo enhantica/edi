@@ -2296,6 +2296,67 @@ void ProjectViewModel::loadDatasetFolder(ExperimentViewModel* experiment, const 
     });
 }
 
+bool ProjectViewModel::loadSeriesOfJointFits(ExperimentViewModel* experiment, const QList<QUrl>& files) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    if (retired_) return false;
+    const auto refuse = [&](const QString& message) {
+        setLastError(message);
+        if (self && !retired_) emit refused(message);
+        return false;
+    };
+    const int index = experiment_models_.indexOf(experiment);
+    if (index < 0) return refuse(tr("The experiment the data was chosen for is no longer in the project"));
+    if (files.isEmpty()) return false;
+    if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) return refuse(refusal);
+    edi::Project& project = *project_;
+    if (project.experiments.size() != 1)
+        return refuse(tr("A series of joint fits starts from a project of one experiment, its template"));
+    QString folder;
+    std::vector<std::string> names;
+    for (const QUrl& file : files) {
+        if (!file.isLocalFile()) return refuse(QStringLiteral("not a local file: %1").arg(file.toString()));
+        const QFileInfo info(file.toLocalFile());
+        if (folder.isEmpty()) folder = info.absolutePath();
+        if (info.absolutePath() != folder) return refuse(tr("The files of a series of joint fits come from one folder"));
+        names.push_back(info.fileName().toStdString());
+    }
+    const std::vector<edi::SeriesGroup> groups = edi::group_series_files(names);
+    if (groups.size() < 2)
+        return refuse(tr("The file names do not split into one pattern per experiment: name each point's files alike, "
+                         "the point as the one number that changes"));
+    edi::Project next(project);
+    next.sequential_fit = edi::SequentialFitConfig{};
+    try {
+        const std::vector<std::string> made = edi::declare_series_of_joint_fits(
+            next, next.experiments.front()->name, declared_folder(project.path, folder).toStdString(), groups, "series");
+        // Each experiment shows its first point's pattern; the fit reads every point from the folder.
+        std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held;
+        for (std::size_t g = 0; g < next.experiments.size(); ++g) {
+            if (g >= made.size()) {
+                held.push_back(next.experiments[g]);
+                continue;
+            }
+            const std::string path = (std::filesystem::path(folder.toStdString()) / groups[g].files.front()).string();
+            edi::PlainDataLoad read = edi::experiment_with_plain_data(*next.experiments[g], path, false);
+            held.push_back(std::make_shared<edi::BraggPdExperiment>(std::move(read.experiment)));
+        }
+        next.experiments.assign(std::move(held));
+        next.adopt_experiments();
+        next.fitting_mode = "sequential";
+    } catch (const std::exception& problem) {
+        return refuse(tr("The series could not be made: %1").arg(QString::fromUtf8(problem.what())));
+    }
+    auto before = std::make_shared<const edi::Project>(project);
+    const QString error = apply(edi::Edit::replace_project(project, std::move(next)), true);
+    if (!self || retired_) return false;
+    if (!error.isEmpty()) return refuse(error);
+    undo_history_.emplace_back(AppliedText{std::move(before)});
+    syncUndo();
+    syncLoadState();
+    return true;
+}
+
 bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan, bool copy,
                                     const QList<CollectionOrigin>& origins) {
     const PublicationScope publication(*this);

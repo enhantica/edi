@@ -500,6 +500,9 @@ SideBarGroup {
             property var files: []
             property ExperimentViewModel experiment: null
             property bool asScan: false
+            // A series of joint fits (edi ADR-0088 point 1): the files grouped by name into one experiment each, fitted
+            // point by point; its folder is linked.
+            property bool asSeries: false
             property bool copy: true
             property var origins: []
             // A scan's files are read from its folder, so a collection's files are copied for one (edi ADR-0069).
@@ -512,6 +515,10 @@ SideBarGroup {
             contentHeight: datasetsColumn.implicitHeight
             onClosed: destroy()
             onAccepted: {
+                if (group.project !== null && datasetsChoice.experiment !== null && datasetsChoice.asSeries) {
+                    group.project.loadSeriesOfJointFits(datasetsChoice.experiment, datasetsChoice.files);
+                    return;
+                }
                 if (group.project !== null && datasetsChoice.experiment !== null)
                     group.project.loadDatasets(datasetsChoice.experiment, datasetsChoice.files, datasetsChoice.asScan, datasetsChoice.copy || datasetsChoice.mustCopy, datasetsChoice.origins);
             }
@@ -527,15 +534,31 @@ SideBarGroup {
                     width: datasetsColumn.width
                     // Named by the fit each choice is for (the owner, 2026-11-04).
                     text: qsTr("Joint fit: one experiment per file, fitted together")
-                    checked: !datasetsChoice.asScan
-                    onClicked: datasetsChoice.asScan = false
+                    checked: !datasetsChoice.asScan && !datasetsChoice.asSeries
+                    onClicked: {
+                        datasetsChoice.asScan = false;
+                        datasetsChoice.asSeries = false;
+                    }
                 }
                 ChoiceRadioButton {
                     objectName: "datasets.scan"
                     width: datasetsColumn.width
                     text: qsTr("Sequential fit: one experiment for all datasets")
-                    checked: datasetsChoice.asScan
-                    onClicked: datasetsChoice.asScan = true
+                    checked: datasetsChoice.asScan && !datasetsChoice.asSeries
+                    onClicked: {
+                        datasetsChoice.asScan = true;
+                        datasetsChoice.asSeries = false;
+                    }
+                }
+                ChoiceRadioButton {
+                    objectName: "datasets.series"
+                    width: datasetsColumn.width
+                    text: qsTr("Series of joint fits: one experiment per file name pattern, each point fitted jointly")
+                    checked: datasetsChoice.asSeries
+                    onClicked: {
+                        datasetsChoice.asSeries = true;
+                        datasetsChoice.asScan = false;
+                    }
                 }
                 EaElements.Label {
                     width: datasetsColumn.width
@@ -543,8 +566,15 @@ SideBarGroup {
                     visible: datasetsChoice.asScan
                     text: qsTr("First fit the template dataset in Single mode. When it is ready, choose Sequential in Analysis to fit the folder. Evolution is available as soon as the scan is loaded.")
                 }
+                EaElements.Label {
+                    width: datasetsColumn.width
+                    wrapMode: Text.Wrap
+                    visible: datasetsChoice.asSeries
+                    text: qsTr("The files' folder is linked and each experiment shows its first point. Choose Sequential in Analysis to fit the points one after another.")
+                }
                 EaElements.CheckBox {
                     id: copyBox
+                    visible: !datasetsChoice.asSeries
                     objectName: "datasets.copy"
                     // What the choice means is its tool tip (the owner, 2026-11-04).
                     ToolTip.text: datasetsChoice.asScan ? (datasetsChoice.copy ? qsTr("The files are copied into the project's folder; the project must be saved and hold this one experiment.") : qsTr("The scan reads the files where they are; the project keeps their folder's location.")) : (datasetsChoice.copy ? qsTr("Each experiment holds its data in the project.") : datasetsChoice.origins.length > 0 ? qsTr("Each experiment keeps its collection entry and downloads the file again when a fit needs it.") : qsTr("Each experiment reads its file where it is; the project keeps the file's location."))

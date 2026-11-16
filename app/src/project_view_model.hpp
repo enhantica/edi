@@ -508,6 +508,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     /// data folder lies inside the project); the project must be saved and hold that one experiment.
     Q_INVOKABLE bool loadDatasets(edi_app::ExperimentViewModel* experiment, const QList<QUrl>& files, bool asScan,
                                   bool copy = true, const QList<edi_app::CollectionOrigin>& origins = {});
+    /// A series of joint fits from `files` (edi ADR-0088 point 1): the names grouped into one file pattern per
+    /// experiment, `experiment` the template and a copy of it for each further group, the experiments an experiment set,
+    /// the folder linked and each experiment holding its first point's data. One undoable change; a project of more than
+    /// one experiment, files from several folders or names that do not group refuse with why.
+    Q_INVOKABLE bool loadSeriesOfJointFits(edi_app::ExperimentViewModel* experiment, const QList<QUrl>& files);
     /// The files' total size in bytes, for the Copy data into the project default (20 files, 50 MB).
     Q_INVOKABLE qint64 filesBytes(const QList<QUrl>& files) const;
     /// List a local folder off the GUI thread, then link its datasets through the normal scan loader.
