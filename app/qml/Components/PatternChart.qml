@@ -19,6 +19,13 @@ import edi.app
 Item {
     id: chart
 
+    // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
+    // is taken), the file name, and whether the toolbar's band is cut off.
+    readonly property Item imageItem: chart
+    readonly property Item imageToolbar: toolbarLines
+    readonly property string imageName: "pattern"
+    readonly property bool imageCropsToolbar: true
+
     objectName: "chart"
 
     property ExperimentViewModel experiment: null
@@ -483,8 +490,6 @@ Item {
 
             // The y titles carry the series' colours, so the legend box waits behind its button.
             legendShown: false
-            saveTarget: chart
-            saveName: "pattern"
             structureCurvesAvailable: !chart.report && controller.hasCalculated
             includedOnly: Preferences.chartIncludedOnly
             subtractBackground: Preferences.chartSubtractBackground
@@ -586,7 +591,7 @@ Item {
         AreaSeries {
             id: calculatedBars
             objectName: "chart.series.calc.bars"
-            color: Qt.alpha(chart.singleCrystal ? chart.structureColor : controller.calculatedColor, 0.3)
+            color: Qt.alpha(chart.singleCrystal ? chart.structureColor : controller.calculatedColor, chart.singleCrystal ? 0.6 : 0.3)
             borderWidth: 0
             upperSeries: LineSeries {}
             lowerSeries: LineSeries {}
@@ -689,10 +694,13 @@ Item {
             readonly property bool drawn: controller.structureCurves && area.index < controller.structureCurveColors.length
             readonly property color lineColour: controller.structureCurveColors[index] ?? "transparent"
             readonly property color fillColour: controller.structureCurveFills[index] ?? "transparent"
+            // As bars (a single crystal's nuclear and magnetic parts), the line is each bar's fill, as wide as the bar and
+            // opaque enough to tell the two parts apart, or a thin line in the part's colour.
             property LineSeries outline: LineSeries {
                 objectName: "chart.series.structure.outline." + area.index
-                color: area.drawn ? area.lineColour : "transparent"
-                width: 1.5
+                color: !area.drawn ? "transparent" : controller.componentBars && !controller.thinBars ? Qt.alpha(area.lineColour, 0.6) : area.lineColour
+                width: controller.componentBars ? controller.barWidth : 1.5
+                capStyle: controller.componentBars ? Qt.FlatCap : Qt.SquareCap
             }
 
             objectName: "chart.series.structure." + area.index

@@ -748,9 +748,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                QStringList{"preference:chartIncludedOnly=true", "preference:patternMeasuredStyle=line", "theme:light", analysis, basic,
                                                            "statusBar.fit.button", "wait-fit", "choose:OK"}
                                          : QStringList{"theme:dark", analysis};
-            steps_.push_back({name + "1-fit", open + QStringList{"mainArea.tab.pattern", "save-image:chart.toolbar.save|" + name + "refinement.png|2"}});
+            steps_.push_back({name + "1-fit", open + QStringList{"mainArea.tab.pattern", "save-image:mainArea.saveImage|" + name + "refinement.png|2"}});
             steps_.push_back({name + "2-model", {structure, "mainArea.tab.structure",
-                                                 "save-image:structure.toolbar.save|" + name + "model.png|2"}});
+                                                 "save-image:mainArea.saveImage|" + name + "model.png|2"}});
         }
         // The measured pattern alone: the fitted experiment's chart with every other curve hidden, as legend clicks
         // hide them, and so its residual and tick panes. Last, so the fitted figures come first.
@@ -764,7 +764,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                 actions.append(QStringLiteral("preference:structureCurves=false"));
                 actions.append(QStringLiteral("measured-only"));
             }
-            actions.append("save-image:chart.toolbar.save|" + name + "pattern.png|2");
+            actions.append("save-image:mainArea.saveImage|" + name + "pattern.png|2");
             steps_.push_back({name + "3-pattern", actions});
         }
     }

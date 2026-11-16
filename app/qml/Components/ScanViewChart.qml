@@ -20,6 +20,13 @@ import edi.app
 Item {
     id: chart
 
+    // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
+    // is taken), the file name, and whether the toolbar's band is cut off.
+    readonly property Item imageItem: chart
+    readonly property Item imageToolbar: scanToolbar
+    readonly property string imageName: chart.mode
+    readonly property bool imageCropsToolbar: true
+
     property ProjectViewModel project: null
     // "stacked" or "map".
     property string mode: "stacked"
@@ -825,11 +832,6 @@ Item {
                 fontIcon: "home"
                 toolTip: qsTr("Reset axes")
                 onClicked: chart.resetZoom()
-            }
-            SaveImageButton {
-                objectName: "scanView." + chart.mode + ".toolbar.save"
-                target: chart
-                fileName: chart.mode
             }
         }
     }

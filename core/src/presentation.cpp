@@ -319,7 +319,8 @@ std::vector<std::size_t> decimate_min_max(std::span<const double> x, std::span<c
 
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t experiments, std::size_t structures,
                                              std::span<const std::size_t> positions, bool pattern_set,
-                                             std::optional<std::size_t> measured_place) {
+                                             std::optional<std::size_t> measured_place,
+                                             std::span<const std::size_t> spare_taken) {
     // edi ADR-0017 §15: easydiffractionbeta's chart widths (its QtCharts1dTab.qml; the residual's 1 px line and the
     // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02). Every colour is the palette's (ADR-0038): an
     // experiment's and a structure's at its position, the calculated, background and residual colours its role colours.
@@ -337,7 +338,7 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
     // positions further structures would: the next ones after those held, in palette order, as a second phase's
     // contribution would (the owner, 2026-11-03).
     const std::vector<std::size_t> spare_structure =
-        free_positions(scheme, FigureKind::Structure, structure_rows - structures, held);
+        free_positions(scheme, FigureKind::Structure, structure_rows - structures, spare_taken.empty() ? held : spare_taken);
     // Shades past the palette spread over the positions the project itself uses.
     const std::size_t count = held.empty() ? 0 : *std::max_element(held.begin(), held.end()) + 1;
     const auto colour = [&](std::size_t position, bool dark) { return figure_colour(scheme, position, count, dark); };
@@ -440,6 +441,7 @@ void to_d_axis(PatternSource& source, const PdDataBase& data, const PowderReflnD
         }
         for (PatternSource::Component& component : source.components) {
             component.net = reversed(component.net);
+            component.base = reversed(component.base);
         }
     }
     // A tick is drawn where its peak is: its native position mapped as the points are, so the zero and line shifts
@@ -482,6 +484,7 @@ void to_reciprocal_axis(PatternSource& source, PatternAxis axis) {
     }
     for (PatternSource::Component& component : source.components) {
         component.net = reversed(component.net);
+        component.base = reversed(component.base);
     }
     for (PatternSource::Phase& phase : source.phases) {
         phase.position = converted(phase.position);
@@ -548,7 +551,7 @@ PatternSource pattern_on_axis(PatternSource on_d, PatternAxis axis) {
 }
 
 PatternSource single_crystal_pattern(const Project& project, std::size_t experiment_index, PatternAxis axis,
-                                     bool squared) {
+                                     bool squared, std::span<const double> nuclear_share) {
     PatternSource source;
     const ExperimentBase& experiment = *project.experiments[experiment_index];
     source.experiment_place = experiment_index;
@@ -615,7 +618,9 @@ PatternSource single_crystal_pattern(const Project& project, std::size_t experim
     const auto column = [](std::vector<double> values) -> PatternSource::Column {
         return values.empty() ? nullptr : std::make_shared<const std::vector<double>>(std::move(values));
     };
-    // The linked structure's ticks, in its colour and named by it, as a powder pattern's phase.
+    // The linked structure's ticks, in its colour and named by it, as a powder pattern's phase. With a magnetic part,
+    // two rows and two components, as a powder pattern's magnetic structure has (edi ADR-0078): the nuclear
+    // reflections and part, and the magnetic ones in the colour of the next structure, its part stacked on the nuclear.
     if (!experiment.linked_structures.empty()) {
         PatternSource::Phase phase;
         phase.structure_id = experiment.linked_structures[0]->structure_id;
@@ -625,9 +630,52 @@ PatternSource single_crystal_pattern(const Project& project, std::size_t experim
                 phase.place = place;
             }
         }
-        phase.position = std::make_shared<const std::vector<double>>(xs);
-        phase.hkl = std::move(hkl);
-        source.phases.push_back(std::move(phase));
+        const bool split = nuclear_share.size() == count && !calcs.empty() &&
+                           std::any_of(nuclear_share.begin(), nuclear_share.end(), [](double v) { return v < 1.0; });
+        if (!split) {
+            phase.position = std::make_shared<const std::vector<double>>(xs);
+            phase.hkl = std::move(hkl);
+            source.phases.push_back(std::move(phase));
+        } else {
+            PatternSource::Phase magnetic = phase;
+            magnetic.magnetic = true;
+            magnetic.place = std::max<std::size_t>(project.structures.size(), 1);
+            std::vector<double> nuclear_x, magnetic_x, nuclear_part(count), magnetic_part(count);
+            std::vector<std::array<std::int32_t, 3>> nuclear_hkl, magnetic_hkl;
+            for (std::size_t k = 0; k < count; ++k) {
+                const double share = nuclear_share[order[k]];
+                nuclear_part[k] = calcs[k] * share;
+                magnetic_part[k] = calcs[k] - nuclear_part[k];
+                if (share > 0.0) {
+                    nuclear_x.push_back(xs[k]);
+                    nuclear_hkl.push_back((*hkl)[k]);
+                    phase.rows.push_back(k);
+                }
+                if (share < 1.0) {
+                    magnetic_x.push_back(xs[k]);
+                    magnetic_hkl.push_back((*hkl)[k]);
+                    magnetic.rows.push_back(k);
+                }
+            }
+            phase.position = std::make_shared<const std::vector<double>>(std::move(nuclear_x));
+            phase.hkl = std::make_shared<const std::vector<std::array<std::int32_t, 3>>>(std::move(nuclear_hkl));
+            magnetic.position = std::make_shared<const std::vector<double>>(std::move(magnetic_x));
+            magnetic.hkl = std::make_shared<const std::vector<std::array<std::int32_t, 3>>>(std::move(magnetic_hkl));
+            PatternSource::Component nuclear_component;
+            nuclear_component.structure_id = phase.structure_id;
+            nuclear_component.label = phase.label;
+            nuclear_component.place = phase.place;
+            nuclear_component.net = std::make_shared<const std::vector<double>>(std::move(nuclear_part));
+            PatternSource::Component magnetic_component = nuclear_component;
+            magnetic_component.magnetic = true;
+            magnetic_component.place = magnetic.place;
+            magnetic_component.base = nuclear_component.net;
+            magnetic_component.net = std::make_shared<const std::vector<double>>(std::move(magnetic_part));
+            source.components.push_back(std::move(nuclear_component));
+            source.components.push_back(std::move(magnetic_component));
+            source.phases.push_back(std::move(phase));
+            source.phases.push_back(std::move(magnetic));
+        }
     }
     source.x = column(std::move(xs));
     source.resid = column(std::move(resid));
@@ -1000,15 +1048,19 @@ PatternPresentation present_pattern(const PatternSource& given, const PatternVie
         const std::vector<double>* bkg = column_for(source.bkg);
         for (const PatternSource::Component& component : source.components) {
             const std::vector<double>* net = column_for(component.net);
-            if (!view.structure_curves || bkg == nullptr || net == nullptr) {
+            // A single crystal has no background: its parts stand on zero, or on another part.
+            const std::vector<double>* stands_on = component.base ? column_for(component.base) : bkg;
+            if (!view.structure_curves || net == nullptr || (stands_on != nullptr && stands_on->size() != net->size())) {
                 continue;
             }
+            const std::vector<double> zeros(stands_on == nullptr ? net->size() : 0, 0.0);
+            const std::vector<double>& under = stands_on == nullptr ? zeros : *stands_on;
             std::vector<double> upper(net->size());
             for (std::size_t row = 0; row < upper.size(); ++row) {
-                upper[row] = (*bkg)[row] + (*net)[row];
+                upper[row] = under[row] + (*net)[row];
             }
             const std::vector<double> display = masked(displayed(upper, view.y_scale));
-            const std::vector<double> base = masked(displayed(*bkg, view.y_scale));
+            const std::vector<double> base = masked(displayed(under, view.y_scale));
             // A background the log scale cannot show still leaves the curve drawn: its rows are kept by the curve.
             std::vector<double> kept_low(base.size());
             for (std::size_t row = 0; row < base.size(); ++row) {

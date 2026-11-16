@@ -511,6 +511,9 @@ class ExperimentViewModel : public QObject {
     mutable std::array<DerivedSource, 2> derived_;
     // singleCrystalPattern's, by axis (Q, sinθ/λ) and quantity (F², F), each made at pattern generation `revision`.
     mutable std::array<DerivedSource, 4> single_crystal_patterns_;
+    // Each reflection's nuclear share of F² (edi::single_crystal_nuclear_share), made once per pattern generation.
+    mutable std::vector<double> nuclear_share_;
+    mutable std::optional<quint64> nuclear_share_revision_;
     quint64 d_revision_ = 0;  // counts the d captures
     BlockText* text_;
 };

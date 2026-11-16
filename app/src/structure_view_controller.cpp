@@ -83,7 +83,8 @@ StructureViewController::StructureViewController(QObject* parent)
     });
     for (const auto signal : {&StructureViewController::spheresChanged, &StructureViewController::cylindersChanged,
                               &StructureViewController::triadShaftsChanged, &StructureViewController::triadHeadsChanged,
-                              &StructureViewController::sharedChanged, &StructureViewController::labelsChanged}) {
+                              &StructureViewController::sharedChanged, &StructureViewController::labelsChanged,
+                              &StructureViewController::polyhedraChanged}) {
         connect(this, signal, this, [this] { refresh(); });
     }
 }
@@ -115,7 +116,7 @@ void StructureViewController::setOptions(StructureViewOptions* options) {
     disconnect(options_connection_);
     options_ = options;
     if (options_ != nullptr) {
-        options_connection_ = connect(options_, &StructureViewOptions::changed, this, [this] { refresh(); });
+        options_connection_ = connect(options_, &StructureViewOptions::drawn, this, [this] { refresh(); });
     }
     emit optionsChanged();
     refresh();
@@ -540,6 +541,9 @@ void StructureViewController::draw() {
     }
     if (shared_ != nullptr) {
         shared_->setSites(scene_, drawing_, sphere_segments_, sphere_rings_);
+    }
+    if (polyhedra_ != nullptr) {
+        polyhedra_->setPolyhedra(scene_);
     }
     ++revision_;
     emit revisionChanged();

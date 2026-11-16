@@ -62,6 +62,8 @@ struct PatternSource {
         // A magnetic structure's magnetic part, placed as its magnetic reflections are; its
         // other component is then its nuclear part (edi ADR-0078).
         bool magnetic = false;
+        // What it stands on instead of the background: a single crystal's magnetic part stands on its nuclear part.
+        Column base;
     };
     std::vector<Component> components;
     std::vector<ExcludedBand> excluded;
@@ -105,8 +107,16 @@ PatternSource capture_pattern(const Project& project, std::size_t experiment_ind
 // a tick at every reflection and its h k l, laid out as a powder pattern's (the owner, 2026-11-16). Without measured
 // reflections, the reflections a calculation generated, calculated only. Empty, with `current` false, until the
 // experiment's computed columns are current, and for any other axis or experiment.
+// With `nuclear_share` (single_crystal_nuclear_share, one per reflection in its order) the bars split into the linked
+// structure's nuclear part and its magnetic part stacked on it, each a component, and its ticks into two rows, nuclear
+// and magnetic, as a powder pattern's (the owner, 2026-11-16); on F the bar splits in the F² proportion.
 PatternSource single_crystal_pattern(const Project& project, std::size_t experiment_index, PatternAxis axis,
-                                     bool squared);
+                                     bool squared, std::span<const double> nuclear_share = {});
+
+// Owner thread. Each reflection's nuclear share of its calculated F², |F_N|² / (|F_N|² + |M⊥|²), for a single crystal
+// whose linked structure has moments: crysta reports only the sum, so it is calculated once more with every moment at
+// zero, which leaves |F_N|². Empty for any other experiment, when a calculation refuses, or when no moment is set.
+std::vector<double> single_crystal_nuclear_share(const Project& project, std::size_t experiment_index);
 
 // One experiment's `_refln` rows grouped into phases, one per structure id in the order the ids first
 // appear. A phase's place is its structure's place in `structure_names` (its first place when there
@@ -240,10 +250,14 @@ struct SeriesStyle {
 // With `pattern_set`, the `experiments` are one view's patterns (a scan's datasets) and take pattern_set_colour beside
 // the structures' positions, as the Stacked view colours them. With measured_place, only that measured row is
 // built; the role and structure rows are unchanged, so a scan's Pattern view need not build every dataset's style.
+// `spare_taken`, when given, are the positions the structure rows past the project's avoid instead of every held one:
+// a chart of one experiment and one structure (a single crystal's) passes those two, so a magnetic part takes the
+// colour it has in a project of that structure alone, as on the powder chart.
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = kDefaultColourScheme, std::size_t experiments = 3,
                                              std::size_t structures = 0, std::span<const std::size_t> positions = {},
                                              bool pattern_set = false,
-                                             std::optional<std::size_t> measured_place = std::nullopt);
+                                             std::optional<std::size_t> measured_place = std::nullopt,
+                                             std::span<const std::size_t> spare_taken = {});
 
 // The display scales. Linear: the value. Sqrt: sign(y) × sqrt(|y|). Log10: log10(y) for y > 0,
 // NaN otherwise.

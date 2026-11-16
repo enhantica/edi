@@ -15,6 +15,13 @@ import edi.app
 Item {
     id: chart
 
+    // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
+    // is taken), the file name, and whether the toolbar's band is cut off.
+    readonly property Item imageItem: chart
+    readonly property Item imageToolbar: null
+    readonly property string imageName: "meas-vs-calc"
+    readonly property bool imageCropsToolbar: false
+
     objectName: "measCalc.chart"
 
     property ExperimentViewModel experiment: null
@@ -62,23 +69,10 @@ Item {
         color: chart.transparentImage ? "transparent" : chart.colors.chartBackground
     }
 
-    Row {
-        id: toolbar
-
-        anchors.right: parent.right
-        anchors.rightMargin: AppSizes.mainAreaMargin
-        y: chart.em
-        SaveImageButton {
-            objectName: "measCalc.toolbar.save"
-            target: chart
-            fileName: "meas-vs-calc"
-        }
-    }
-
     GraphsView {
         id: view
 
-        y: toolbar.y + toolbar.height + AppSizes.mainAreaMargin
+        y: chart.em + AppSizes.mainAreaMargin
         width: parent.width
         height: parent.height - y - chart.em * 3
         marginLeft: AppSizes.mainAreaMargin + chart.em * 2

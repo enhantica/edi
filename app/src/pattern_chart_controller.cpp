@@ -638,11 +638,26 @@ std::vector<edi::SeriesStyle> PatternChartController::styles() const {
         measured.dark = edi::pattern_set_colour(scheme(), selected, experiments, scan_styles_->structure_positions, true);
         return scan_styles_->table;
     }
-    return edi::pattern_style_table(scheme(), experiments, experiment_ ? experiment_->structureCount() : 0,
+    const std::size_t structures = experiment_ ? experiment_->structureCount() : 0;
+    // A single crystal's chart shows one experiment and one structure: its magnetic part takes the colour it would in a
+    // project of that structure alone, as the powder chart gives it (the owner, 2026-11-16).
+    std::vector<std::size_t> spare;
+    if (experiment_ && experiment_->sampleForm() == ExperimentViewModel::SingleCrystal) {
+        const edi::PatternSource& source = experiment_->singleCrystalPattern(axis_, squared_);
+        const std::vector<std::size_t> held = experiment_->colourPositions().size() == experiments + structures
+                                                  ? experiment_->colourPositions()
+                                                  : edi::colour_positions(scheme(), experiments, structures);
+        const std::size_t place = experiment_->colourPlace();
+        if (!experiment_->showsDataset() && !source.phases.empty() && place < experiments && source.phases.front().place < structures) {
+            spare = {held[place], held[experiments + source.phases.front().place]};
+        }
+    }
+    return edi::pattern_style_table(scheme(), experiments, structures,
                                     experiment_ ? experiment_->colourPositions() : std::vector<std::size_t>{},
                                     experiment_ != nullptr && experiment_->showsDataset(),
                                     experiment_ && experiment_->showsDataset()
-                                        ? std::optional<std::size_t>(experiment_->colourPlace()) : std::nullopt);
+                                        ? std::optional<std::size_t>(experiment_->colourPlace()) : std::nullopt,
+                                    spare);
 }
 
 void PatternChartController::setPlotWidth(qreal width) {
@@ -1073,6 +1088,11 @@ void PatternChartController::refresh() {
             y_low -= padding;
             y_high += padding;
         }
+        // A single crystal's bars (or their lines) stand on zero, and its intensities are not negative: the range, fitted
+        // or zoomed, starts there, whatever a weak reflection's error bar reaches (the owner, 2026-11-16).
+        if (measured_drawing_ == QLatin1String("bars") && !report_ && y_high > 0.0) {
+            y_low = 0.0;
+        }
         y_step = axis_step(y_low, y_high, false);
         y_anchor = std::ceil(y_low / y_step) * y_step;
     }
@@ -1180,6 +1200,8 @@ void PatternChartController::refresh() {
     // so bars widen when zoomed in, or one pixel at any zoom with thin bars (the owner, 2026-11-16). Its fill is a line
     // barWidth wide (the bottom series) and its outline is drawn round it. One area for all the bars was not used:
     // Qt Graphs filled the gaps between them as slivers fanned from the first point.
+    const bool component_bars = bars && !structure_curves.empty();
+    publish(component_bars_, component_bars, &PatternChartController::componentBarsChanged);
     const auto fill_bars = [&](const edi::PatternSeries* series, std::size_t pane, double low_edge, double high_edge) {
         if (pane >= band_series_.size() || (held && pane == 0)) return;
         const BandSeries& target = band_series_[pane];
@@ -1197,13 +1219,17 @@ void PatternChartController::refresh() {
             }
         }
         QList<QPointF> fill, outline;
-        if (bars && series != nullptr && half > 0.0) {
+        // With its parts drawn as bars of their own, the total is its outline alone; in thin lines, the parts alone.
+        const bool parts = pane == 2 && component_bars;
+        if (bars && series != nullptr && half > 0.0 && !(parts && thin_bars_)) {
             for (const auto& point : series->points) {
                 if (!std::isfinite(point.x) || !std::isfinite(point.y)) continue;
                 const double low = std::min(point.y, zero), high = std::max(point.y, zero);
-                fill.append(QPointF(point.x, low));
-                fill.append(QPointF(point.x, high));
-                fill.append(QPointF(nan, nan));
+                if (!parts) {
+                    fill.append(QPointF(point.x, low));
+                    fill.append(QPointF(point.x, high));
+                    fill.append(QPointF(nan, nan));
+                }
                 for (const QPointF& corner : {QPointF(point.x - half, low), QPointF(point.x - half, high),
                                               QPointF(point.x + half, high), QPointF(point.x + half, low),
                                               QPointF(point.x - half, low), QPointF(nan, nan)}) {
@@ -1242,6 +1268,23 @@ void PatternChartController::refresh() {
         const double lift = plot_height_ > 0.0 ? 0.05 * (shown_y_max_ - shown_y_min_) / plot_height_ : 0.0;
         const QList<QPointF> curve = points_of(series);
         const StructureSeries& target = structure_series_[static_cast<qsizetype>(index)];
+        if (component_bars) {
+            // Each part a bar from what it stands on to its top, drawn as a line barWidth wide.
+            QList<QPointF> segments;
+            const double nan = std::numeric_limits<double>::quiet_NaN();
+            for (std::size_t k = 0; k < series.points.size(); ++k) {
+                const double x = series.points[k].x, y = series.points[k].y;
+                const double low = k < series.bar_low.size() && std::isfinite(series.bar_low[k]) ? series.bar_low[k] : 0.0;
+                if (!std::isfinite(x) || !std::isfinite(y) || y == low) continue;
+                segments.append(QPointF(x, low));
+                segments.append(QPointF(x, y));
+                segments.append(QPointF(nan, nan));
+            }
+            replace(target.upper, {});
+            replace(target.lower, {});
+            replace(target.outline, segments);
+            continue;
+        }
         if (clear_fills) {
             replace(target.upper, {});
             replace(target.lower, {});

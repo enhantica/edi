@@ -12,14 +12,12 @@ import edi.app
 // its buttons and behaviour, drawn as ChartToolButton with the chart toolbar's spacing and spacer. The features
 // first, one control per feature the structure has, in diffraction-lib's order: the atoms shown (a drop-down),
 // labels, bonds, cell, magnetic moments (when the structure has them), axes. Then the camera group, ending in Home: projection, view along a, b and c, reset view
-// (owner, 2026-10-05). Save image last, in its own group. The colour scheme drop-down precedes it in the view's centred toolbar line (StructureView).
+// (owner, 2026-10-05). The colour scheme drop-down precedes it in the view's centred toolbar line (StructureView); Save image is the main view's.
 Row {
     id: toolbar
 
     property StructureViewController controller: null
     property StructureViewOptions options: null
-    // Save image's item (SaveImageButton): the view as shown.
-    property Item saveTarget: null
     readonly property real buttonSize: AppSizes.toolbarControlSize
 
     spacing: AppSizes.toolbarSpacing
@@ -61,6 +59,15 @@ Row {
         toolTip: qsTr("Bonds")
         checked: toolbar.options !== null && toolbar.options.bonds
         onClicked: toolbar.options.bonds = !toolbar.options.bonds
+    }
+    // Coordination polyhedra, built from the same bonds; colour and opacity are in Extra's Appearance group.
+    ChartToolButton {
+        objectName: "structure.toolbar.polyhedra"
+        visible: toolbar.controller !== null && toolbar.controller.hasSites && toolbar.controller.hasBonds
+        fontIcon: "cube"
+        toolTip: qsTr("Polyhedra")
+        checked: toolbar.options !== null && toolbar.options.polyhedra
+        onClicked: toolbar.options.polyhedra = !toolbar.options.polyhedra
     }
     ChartToolButton {
         objectName: "structure.toolbar.cell"
@@ -134,11 +141,5 @@ Row {
         fontIcon: "home"
         toolTip: qsTr("Reset view")
         onClicked: toolbar.controller.resetView()
-    }
-    SaveImageButton {
-        objectName: "structure.toolbar.save"
-        target: toolbar.saveTarget
-        fileName: "structure"
-        cropToolbar: false
     }
 }

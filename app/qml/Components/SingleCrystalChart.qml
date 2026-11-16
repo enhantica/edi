@@ -21,6 +21,13 @@ import edi.app
 Item {
     id: chart
 
+    // What the main view's Save image takes when this is the shown tab: the item, its toolbar (hidden while the image
+    // is taken), the file name, and whether the toolbar's band is cut off.
+    readonly property Item imageItem: chart.onAxis ? axisChart : chart
+    readonly property Item imageToolbar: chart.onAxis ? axisChart.imageToolbar : toolbar
+    readonly property string imageName: chart.onAxis ? "pattern" : chart.stacked ? "stacked" : "single-crystal"
+    readonly property bool imageCropsToolbar: true
+
     objectName: "singleCrystal.chart"
 
     property ExperimentViewModel experiment: null
@@ -216,10 +223,11 @@ Item {
     }
 
     // The toolbar line, centred as the pattern chart's: what both axes plot, then the pattern chart's buttons.
+    // Hidden while the reflections are drawn on an axis: the pattern chart below has its own.
     Row {
         id: toolbar
 
-        visible: !chart.reportMode
+        visible: !chart.reportMode && !chart.onAxis
         x: Math.round(chart.toolbarLeft + (chart.width - chart.toolbarRightInset - chart.toolbarLeft - width) / 2)
         y: chart.topMargin
         spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
@@ -242,8 +250,6 @@ Item {
             legendShown: chart.stacked ? true : Preferences.patternLegendShown
             onLegendShownChanged: ApplicationInfo.singleStateChanged(2)
             includedRangeAvailable: false
-            saveTarget: chart
-            saveName: chart.stacked ? "stacked" : "single-crystal"
             hoverShown: Preferences.patternHoverShown
             onHoverShownChanged: Preferences.patternHoverShown = hoverShown
             pointerMode: Preferences.patternPointerMode
@@ -566,6 +572,8 @@ Item {
 
     // The reflections on Q or sinθ/λ, with the pattern chart's styles, Bars and colours (onAxis).
     PatternChart {
+        id: axisChart
+
         anchors.fill: parent
         visible: chart.onAxis
         shown: chart.shown && chart.onAxis

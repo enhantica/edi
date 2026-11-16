@@ -126,6 +126,7 @@ qt_add_qml_module(edi_app_module
         src/structure_view_options.hpp src/structure_view_options.cpp
         src/structure_instances.hpp src/structure_instances.cpp
         src/shared_site_geometry.hpp src/shared_site_geometry.cpp
+        src/polyhedra_geometry.hpp src/polyhedra_geometry.cpp
         src/structure_label_layer.hpp src/structure_label_layer.cpp
         src/structure_view_controller.hpp src/structure_view_controller.cpp
         src/experiment_models.hpp src/experiment_models.cpp

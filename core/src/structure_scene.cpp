@@ -642,6 +642,65 @@ SceneSource capture_scene(const Structure& structure) {
     return source;
 }
 
+std::vector<std::array<std::uint32_t, 3>> convex_hull(const std::vector<Vec3>& points) {
+    std::vector<std::array<std::uint32_t, 3>> faces;
+    const std::size_t n = points.size();
+    if (n < 4 || n > 64) {
+        return faces;
+    }
+    double size = 0.0;
+    for (const Vec3& point : points) {
+        size = std::max(size, norm(sub(point, points[0])));
+    }
+    const double eps = 1e-6 * std::max(size, 1.0);
+    std::set<std::vector<std::size_t>> planes;  // each face's points, found once
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = i + 1; j < n; ++j) {
+            for (std::size_t k = j + 1; k < n; ++k) {
+                Vec3 normal = cross(sub(points[j], points[i]), sub(points[k], points[i]));
+                const double length = norm(normal);
+                if (length < eps * eps) {
+                    continue;
+                }
+                normal = mul(normal, 1.0 / length);
+                std::vector<std::size_t> on;
+                bool above = false, below = false;
+                for (std::size_t m = 0; m < n; ++m) {
+                    const double d = dot(sub(points[m], points[i]), normal);
+                    if (std::abs(d) <= eps) {
+                        on.push_back(m);
+                    } else {
+                        (d > 0.0 ? above : below) = true;
+                    }
+                }
+                if ((above && below) || !planes.insert(on).second) {
+                    continue;
+                }
+                if (above) {
+                    normal = mul(normal, -1.0);  // outwards: away from the other points
+                }
+                // The face's points in turn about its centre, counter-clockwise seen from outside, as one fan.
+                Vec3 centre;
+                for (const std::size_t m : on) {
+                    centre = add(centre, points[m]);
+                }
+                centre = mul(centre, 1.0 / static_cast<double>(on.size()));
+                const Vec3 u = mul(sub(points[on[0]], centre), 1.0 / std::max(norm(sub(points[on[0]], centre)), eps));
+                const Vec3 v = cross(normal, u);
+                std::sort(on.begin(), on.end(), [&](std::size_t a, std::size_t b) {
+                    const Vec3 pa = sub(points[a], centre), pb = sub(points[b], centre);
+                    return std::atan2(dot(pa, v), dot(pa, u)) < std::atan2(dot(pb, v), dot(pb, u));
+                });
+                for (std::size_t m = 1; m + 1 < on.size(); ++m) {
+                    faces.push_back({static_cast<std::uint32_t>(on[0]), static_cast<std::uint32_t>(on[m]),
+                                     static_cast<std::uint32_t>(on[m + 1])});
+                }
+            }
+        }
+    }
+    return faces;
+}
+
 StructureScene present_structure(const SceneSource& source, const SceneOptions& options) {
     StructureScene scene;
     scene.current = source.current;
@@ -786,8 +845,9 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
     substituted.erase(std::unique(substituted.begin(), substituted.end()), substituted.end());
     scene.substituted_elements = std::move(substituted);
 
-    // I7: one bond per `_geom_bond` row; an id naming no row is skipped.
-    if (options.bonds) {
+    // I7: one bond per `_geom_bond` row; an id naming no row is skipped. The polyhedra read them when bonds are hidden.
+    std::vector<SceneBond> bond_list;
+    if (options.bonds || options.polyhedra) {
         const std::size_t bonds = std::min({column_size(source.bond_site_1), column_size(source.bond_site_2),
                                             column_size(source.bond_distance)});
         for (std::size_t b = 0; b != bonds; ++b) {
@@ -807,8 +867,43 @@ StructureScene present_structure(const SceneSource& source, const SceneOptions& 
             const SceneAtom& atom_2 = scene.atoms[bond.atom_2];
             bond.color_1 = atom_1.parts[atom_1.major].color;
             bond.color_2 = atom_2.parts[atom_2.major].color;
-            scene.bonds.push_back(bond);
+            bond_list.push_back(bond);
         }
+    }
+    if (options.polyhedra) {
+        // Round a drawn metal atom with at least four bonded neighbours (oxygen, halogens and the other non-metals are
+        // the corners, never a centre).
+        static const std::set<std::string> kNonMetals{"H",  "He", "B",  "C",  "N",  "O",  "F",  "Ne", "Si", "P",
+                                                      "S",  "Cl", "Ar", "As", "Se", "Br", "Kr", "Te", "I",  "Xe"};
+        std::vector<std::vector<Vec3>> shells(scene.atoms.size());
+        for (const SceneBond& bond : bond_list) {
+            shells[bond.atom_1].push_back(bond.end);
+            shells[bond.atom_2].push_back(bond.start);
+        }
+        for (std::size_t i = 0; i != scene.atoms.size(); ++i) {
+            const SceneAtom& atom = scene.atoms[i];
+            const ScenePart& part = atom.parts[atom.major];
+            if ((!atom.drawn && options.atoms != AtomSubset::None) || shells[i].size() < 4 ||
+                kNonMetals.count(part.element) != 0 || part.element.empty()) {
+                continue;
+            }
+            std::vector<Vec3> corners;
+            for (const Vec3& point : shells[i]) {
+                if (std::none_of(corners.begin(), corners.end(),
+                                 [&](const Vec3& kept) { return norm(sub(kept, point)) < 1e-6; })) {
+                    corners.push_back(point);
+                }
+            }
+            auto faces = convex_hull(corners);
+            if (faces.empty()) {
+                continue;
+            }
+            const Rgb grey{0xA0, 0xA0, 0xA0};
+            scene.polyhedra.push_back({i, options.polyhedra_grey ? grey : part.color, std::move(corners), std::move(faces)});
+        }
+    }
+    if (options.bonds) {
+        scene.bonds = std::move(bond_list);
     }
 
     // I2: the 12 edges, along a, then b, then c, each group ordered by the other two indices.

@@ -28,14 +28,11 @@ Row {
     // A chart without a legend or excluded regions (the single-crystal chart) leaves those buttons out.
     property bool legendAvailable: true
     property bool includedRangeAvailable: true
-    // A chart of several datasets: the selected one on top and the others faded, before the zoom and Save image
-    // groups, where the scan views have it.
+    // A chart of several datasets: the selected one on top and the others faded, before the zoom group, where the scan
+    // views have it.
     property bool highlightAvailable: false
     property bool highlightShown: false
     property string highlightName: "chart.toolbar.highlight"
-    // Save image's item and file name (SaveImageButton).
-    property Item saveTarget: null
-    property string saveName: "chart"
     signal resetClicked
     signal includedOnlyToggled
     signal subtractBackgroundToggled
@@ -114,10 +111,5 @@ Row {
         fontIcon: "home"
         toolTip: qsTr("Reset axes")
         onClicked: toolbar.resetClicked()
-    }
-    SaveImageButton {
-        objectName: "chart.toolbar.save"
-        target: toolbar.saveTarget
-        fileName: toolbar.saveName
     }
 }

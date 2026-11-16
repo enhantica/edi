@@ -33,8 +33,13 @@ compare patterns from different instruments and probes, and expect Q = 4π sinθ
    colour), with its own F | F² setting and one more measured style, **Bars**: one calculated bar per reflection, red
    outline filled in the structure's colour, 0.012 Å⁻¹ wide in Q (the same width in sinθ/λ), so they widen when
    zoomed in, with the measured values as points with their error bars; a toolbar toggle draws the bars as one-pixel
-   lines at any zoom. Contributions are named by the structure, with the powder chart's icons. The residual is drawn as bars from zero. Without measured reflections the
-   calculated ones are drawn as bars with their ticks.
+   lines at any zoom. Contributions are named by the structure, with the powder chart's icons. The residual is drawn as
+   bars from zero. Without measured reflections the calculated ones are drawn as bars with their ticks.
+   A magnetic structure's bar splits into its nuclear part, from zero, and its magnetic part stacked on it, each in its
+   powder colour inside the red outline (thin lines: the two parts only), with two Bragg rows and a legend entry each,
+   which hides that part as on a powder chart. crysta reports a single crystal's |F_N|² + |M⊥|² as one value, so edi
+   calculates it once more with every moment at zero (`edi::single_crystal_nuclear_share`); on F the bar splits in the
+   F² proportion. The split follows the structure-contributions toggle.
 6. **Meas vs calc** (the owner, 2026-11-16): measured against calculated, with the y = x line, for a single crystal per
    reflection (F or F², its existing comparison chart) and for a powder per data point (`MeasCalcChart`,
    `ExperimentViewModel::measCalcPoints`). It is its own main-view tab, right after Pattern on the Experiment and
