@@ -1,0 +1,72 @@
+{
+  "claim": "Closed forms for a P1 atom at the origin, Biso=0, unit scale, unpolarised beam",
+  "cell": [
+    4.3,
+    5.1,
+    6.7
+  ],
+  "intensity_units": "10^-24 cm^2 (1 fm = 0.1 times 10^-12 cm)",
+  "neutron_source": "Sears (1992), Co b=2.4900 fm",
+  "magnetic_source": "Brown, International Tables C (2006), Co2+ j0; j2 coefficient zero",
+  "magnetic_table_sha256": "ca9ae8796fce64b60906af27646894324709356071ff09074e6fc96404df91b6",
+  "constant_source": "CODATA 2018, NIST neutron magnetic moment and electron radius",
+  "relations": "s=1/(2d), Q=4*pi*s, F2_total=F2_nuclear+F2_magnetic",
+  "rows": [
+    {
+      "hkl": [
+        1,
+        0,
+        0
+      ],
+      "sine": 0.11627906976744186,
+      "q": 1.4612058853906014,
+      "measured": 0.25,
+      "su": 0.02,
+      "nuclear": 0.062001000000000014,
+      "magnetic": 0.22857610680239587,
+      "total": 0.2905771068023959
+    },
+    {
+      "hkl": [
+        0,
+        1,
+        1
+      ],
+      "sine": 0.12321062004694695,
+      "q": 1.5483103151349273,
+      "measured": 0.64,
+      "su": 0.03,
+      "nuclear": 0.062001000000000014,
+      "magnetic": 0.14064325014887316,
+      "total": 0.20264425014887316
+    },
+    {
+      "hkl": [
+        1,
+        1,
+        1
+      ],
+      "sine": 0.16941569867735026,
+      "q": 2.1289404574701827,
+      "measured": 1.21,
+      "su": 0.04,
+      "nuclear": 0.062001000000000014,
+      "magnetic": 0.1424659930523399,
+      "total": 0.2044669930523399
+    },
+    {
+      "hkl": [
+        0,
+        0,
+        2
+      ],
+      "sine": 0.14925373134328357,
+      "q": 1.8755777036356973,
+      "measured": 0.09,
+      "su": 0.01,
+      "nuclear": 0.062001000000000014,
+      "magnetic": 0.0,
+      "total": 0.062001000000000014
+    }
+  ]
+}

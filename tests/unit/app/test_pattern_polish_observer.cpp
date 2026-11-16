@@ -109,6 +109,13 @@ public:
         }
         return points;
     }
+    Q_INVOKABLE QVariantList layerPoints(QObject* object) const {
+        const auto* layer = qobject_cast<edi_app::MeasuredLayer*>(object);
+        QVariantList points;
+        if (layer) for (const auto& point : layer->points())
+            points.append(QVariantMap{{"x", point.x()}, {"y", point.y()}});
+        return points;
+    }
     Q_INVOKABLE QVariantList measured(QObject* chart) const {
         QVariantList result;
         if (!chart) return result;

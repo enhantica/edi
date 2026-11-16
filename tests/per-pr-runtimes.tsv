@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T00:53:13Z
+# measured_utc = 2026-11-16T01:10:04Z
 #
-# Recorded from: measured test run (8 node(s) measured once, 176618 banked, 0 stale row(s) dropped)
-# Collected tests: 245379; with a reported duration: 77394
+# Recorded from: measured test run (22 node(s) measured once, 176618 banked, 0 stale row(s) dropped)
+# Collected tests: 245401; with a reported duration: 77394
 # Module-scoped fixture costs recorded: 202
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245379
+# inventory_python = 245401
 # inventory_cpp = 0
 # inventory_measured = 176618
-# inventory_unmeasured = 68761
+# inventory_unmeasured = 68783
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 86074
+# inventory_pr_python = 86096
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -237702,6 +237702,28 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_simulation_parameter_filters.
 0.020	tests/system/py/test_single_crystal_edges.py::test_unsupported_free_slots_refuse_instead_of_zero_columns[none-crystal_radius]
 0.030	tests/system/py/test_single_crystal_edges.py::test_unsupported_free_slots_refuse_instead_of_zero_columns[none-domain_radius]
 0.030	tests/system/py/test_single_crystal_edges.py::test_unsupported_free_slots_refuse_instead_of_zero_columns[none-mosaic_spread]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_bar_width_and_thin_line_zoom_invariants:q]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_bar_width_and_thin_line_zoom_invariants:sine]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_comparison_quantities_remain_separate_from_pattern:magnetic]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_comparison_quantities_remain_separate_from_pattern:nuclear]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_creating_single_crystal_experiment_immediately_draws_simulated_bars]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-q-f2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-q-f]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-sine-f2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:magnetic-sine-f]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:nuclear-q-f2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:nuclear-q-f]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:nuclear-sine-f2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_independent_reflections_and_stacked_contributions:nuclear-sine-f]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_legend_hides_real_contributions:magnetic]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_legend_hides_real_contributions:nuclear]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_measured_points_and_uncertainties_in_both_modes:q-f2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_measured_points_and_uncertainties_in_both_modes:q-f]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_measured_points_and_uncertainties_in_both_modes:sine-f2]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_measured_points_and_uncertainties_in_both_modes:sine-f]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_powder_comparison_has_one_point_per_data_row_and_identity_line]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_simulation_has_calculated_bars_and_ticks_without_measured_data:magnetic]
+UNMEASURED:failed-in-this-run	tests/system/py/test_single_crystal_pattern.py::test_single_crystal_pattern_from_independent_references[test_simulation_has_calculated_bars_and_ticks_without_measured_data:nuclear]
 0.730	tests/system/py/test_single_crystal_taurine_converged.py::test_actual_taurine_fit_matches_all_fullprof_parameters_and_uncertainties
 0.040	tests/system/py/test_single_crystal_taurine_converged.py::test_converged_artifacts_and_parameter_conventions_are_independent
 3.905	tests/system/py/test_slider_pointer_release.py::test_real_analysis_slider_has_one_release_and_one_undo
