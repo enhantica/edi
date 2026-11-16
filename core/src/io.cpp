@@ -1230,7 +1230,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
     if (const Loop* lengths = block.loop_with("_scattering_length.type_symbol")) {
         std::map<std::string, double> declared;
         for (const auto& row : lengths->rows) {
-            const std::string& symbol =
+            const std::string symbol =
                 loop_cell(*lengths, row, "_scattering_length.type_symbol", where);
             const double length_fm =
                 to_double(loop_cell(*lengths, row, "_scattering_length.length_fm", where), where);
@@ -2048,7 +2048,7 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
     }
     if (const Loop* omitted = block.loop_with("_excluded_reflection.index_h"); omitted != nullptr) {
         const auto miller = [&](const std::vector<std::string>& row, const char* tag) {
-            const std::string& text = loop_cell(*omitted, row, tag, where);
+            const std::string text = loop_cell(*omitted, row, tag, where);
             const double value = to_double(text, where);
             if (value != std::floor(value) || std::abs(value) > 1.0e6) {
                 fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");
@@ -2151,7 +2151,7 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
         return experiment;
     }
     const auto index = [&](const std::vector<std::string>& row, const char* tag) {
-        const std::string& text = loop_cell(*refln, row, tag, where);
+        const std::string text = loop_cell(*refln, row, tag, where);
         const double value = to_double(text, where);
         if (value != std::floor(value) || std::abs(value) > 1.0e6) {
             fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");
@@ -2835,7 +2835,7 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
 
 // ---- .edi writing ---------------------------------------------------------------------------------
 
-std::string format_double(double value) {
+[[maybe_unused]] std::string format_double(double value) {
     char buffer[64];
     const auto result = std::to_chars(buffer, buffer + sizeof(buffer), value);
     return std::string(buffer, result.ptr);
@@ -2858,7 +2858,7 @@ double parse_fixed(const std::string& text) {
 // i.e. the shortest FIXED-POINT (no exponent) rendering. `format_double` uses exponent notation for
 // extreme magnitudes (`1e-07`), which the mantissa grammar rejects inside a bracket, so a bracketed
 // value must go through this instead.
-int fixed_round_trip_ndec(double value) {
+[[maybe_unused]] int fixed_round_trip_ndec(double value) {
     for (int ndec = 0; ndec <= 340; ++ndec) {
         if (parse_fixed(format_fixed(value, ndec)) == value) {
             return ndec;
@@ -3989,8 +3989,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 const std::vector<std::string> ids = descent_ids();
                 if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
                     std::string registered;
-                    for (const std::string& id : ids) {
-                        registered += (registered.empty() ? "" : ", ") + id;
+                    for (const std::string& known : ids) {
+                        registered += (registered.empty() ? "" : ", ") + known;
                     }
                     throw IoError("unknown _minimizer.descent '" + *descent +
                                   "' (registered descents: " + registered +
@@ -4169,7 +4169,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         const Loop* weights = block.loop_with("_joint_fit.experiment_id");
         if (weights != nullptr) {
             for (const auto& row : weights->rows) {
-                const std::string& id =
+                const std::string id =
                     loop_cell(*weights, row, "_joint_fit.experiment_id", analysis_file.string());
                 const double weight =
                     to_double(loop_cell(*weights, row, "_joint_fit.weight", analysis_file.string()),
@@ -4252,7 +4252,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             if (const Loop* banks = block.loop_with("_fit_result_bank.experiment_id")) {
                 std::set<const ExperimentBase*> seen;
                 for (const auto& row : banks->rows) {
-                    const std::string& id = loop_cell(*banks, row, "_fit_result_bank.experiment_id", where);
+                    const std::string id = loop_cell(*banks, row, "_fit_result_bank.experiment_id", where);
                     ExperimentBase* bank = nullptr;
                     for (auto& experiment_item : project.experiments) {
                         bank = experiment_item->name == id ? experiment_item.get() : bank;
@@ -4263,7 +4263,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     if (!seen.insert(bank).second) {
                         throw IoError(std::string("_fit_result_bank has two rows for experiment '").append(id).append("': ").append(where));
                     }
-                    const std::string& points = loop_cell(*banks, row, "_fit_result_bank.n_data_points", where);
+                    const std::string points = loop_cell(*banks, row, "_fit_result_bank.n_data_points", where);
                     if (points != ".") {
                         const double value = to_double(points, where);
                         if (!(value >= 0.0) || value > 2.0e9 || value != std::floor(value)) {
@@ -4284,9 +4284,9 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             if (const Loop* phases = block.loop_with("_fit_result_phase.experiment_id")) {
                 std::set<const LinkedStructure*> seen;
                 for (const auto& row : phases->rows) {
-                    const std::string& experiment_id =
+                    const std::string experiment_id =
                         loop_cell(*phases, row, "_fit_result_phase.experiment_id", where);
-                    const std::string& structure_id = loop_cell(*phases, row, "_fit_result_phase.structure_id", where);
+                    const std::string structure_id = loop_cell(*phases, row, "_fit_result_phase.structure_id", where);
                     loop_cell(*phases, row, "_fit_result_phase.bragg_r_factor", where);
                     const std::string wanted = KeyTraits<Structure>::canonical(structure_id);
                     LinkedStructure* phase = nullptr;
@@ -4333,7 +4333,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     loop_cell(*correlations, row, "_fit_parameter_correlation.parameter_unique_name_j", where);
                 refuse_older_correlation_name(pair->parameter_unique_name_i.value());
                 refuse_older_correlation_name(pair->parameter_unique_name_j.value());
-                const std::string& text = loop_cell(*correlations, row, "_fit_parameter_correlation.correlation", where);
+                const std::string text = loop_cell(*correlations, row, "_fit_parameter_correlation.correlation", where);
                 const double value = to_double(text, where);
                 if (std::isnan(value) || value < -1.0 || value > 1.0) {
                     throw IoError(std::string("_fit_parameter_correlation row '").append(pair->id.value()).append("' has correlation '")
@@ -4391,7 +4391,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     loop_cell(*fit_rows, row, "_fit_parameter.start_value",
                               analysis_file.string()),
                     analysis_file.string());
-                const std::string& su = loop_cell(*fit_rows, row,
+                const std::string su = loop_cell(*fit_rows, row,
                                                   "_fit_parameter.start_uncertainty",
                                                   analysis_file.string());
                 slot->second->start_uncertainty =
@@ -4767,7 +4767,7 @@ std::string text_field_paragraphs(const std::vector<std::string>& lines) {
             line.pop_back();
         }
         if (line.empty()) {
-            breaks += text.empty() ? 0 : 1;
+            breaks += text.empty() ? 0U : 1U;
             continue;
         }
         if (!text.empty()) {
@@ -5194,22 +5194,22 @@ bool adopt_values(Project& project, const Project& saved) {
     // An auto background's record of its points follows the rounded values the file holds, so the saved points are
     // still the estimate's (ADR-0040) and a changed setting estimates again rather than refusing them as edited.
     for (const auto& experiment : project.experiments) {
-        for (const auto& held : saved.experiments) {
-            if (held->name.value() == experiment->name.value() &&
-                (experiment->background_estimate_inputs != held->background_estimate_inputs ||
-                 experiment->background_estimate_points != held->background_estimate_points)) {
-                experiment->background_estimate_inputs = held->background_estimate_inputs;
-                experiment->background_estimate_points = held->background_estimate_points;
+        for (const auto& stored : saved.experiments) {
+            if (stored->name.value() == experiment->name.value() &&
+                (experiment->background_estimate_inputs != stored->background_estimate_inputs ||
+                 experiment->background_estimate_points != stored->background_estimate_points)) {
+                experiment->background_estimate_inputs = stored->background_estimate_inputs;
+                experiment->background_estimate_points = stored->background_estimate_points;
                 changed = true;
             }
         }
     }
     // A time-of-flight bank angle is a setting, not a fit parameter: the project takes the six digits its file holds.
     for (const auto& experiment : project.experiments) {
-        for (const auto& held : saved.experiments) {
+        for (const auto& stored : saved.experiments) {
             Parameter& bank = experiment->instrument.setup_twotheta_bank;
-            const double written = held->instrument.setup_twotheta_bank.value.get();
-            if (held->name.value() == experiment->name.value() && bank.value.get() != written) {
+            const double written = stored->instrument.setup_twotheta_bank.value.get();
+            if (stored->name.value() == experiment->name.value() && bank.value.get() != written) {
                 bank.value = written;
                 changed = true;
             }
@@ -5254,28 +5254,28 @@ bool adopt_values(Project& project, const Project& saved) {
     // The fit's agreement records the save recomputed from the rounded values: each bank's, its phases' and every
     // bank's together.
     for (const auto& experiment : project.experiments) {
-        for (const auto& written : saved.experiments) {
-            if (written->name.value() != experiment->name.value()) {
+        for (const auto& stored : saved.experiments) {
+            if (stored->name.value() != experiment->name.value()) {
                 continue;
             }
             const auto record = std::tie(experiment->fit_n_data_points, experiment->fit_prof_r_factor,
                                          experiment->fit_prof_wr_factor, experiment->fit_prof_wr_expected,
                                          experiment->fit_prof_cr_factor, experiment->fit_prof_cwr_factor,
                                          experiment->fit_chi_square);
-            const auto kept = std::tie(written->fit_n_data_points, written->fit_prof_r_factor,
-                                       written->fit_prof_wr_factor, written->fit_prof_wr_expected,
-                                       written->fit_prof_cr_factor, written->fit_prof_cwr_factor,
-                                       written->fit_chi_square);
+            const auto kept = std::tie(stored->fit_n_data_points, stored->fit_prof_r_factor,
+                                       stored->fit_prof_wr_factor, stored->fit_prof_wr_expected,
+                                       stored->fit_prof_cr_factor, stored->fit_prof_cwr_factor,
+                                       stored->fit_chi_square);
             if (record != kept) {
                 std::tie(experiment->fit_n_data_points, experiment->fit_prof_r_factor, experiment->fit_prof_wr_factor,
                          experiment->fit_prof_wr_expected, experiment->fit_prof_cr_factor,
                          experiment->fit_prof_cwr_factor, experiment->fit_chi_square) = kept;
                 changed = true;
             }
-            const std::size_t links = std::min(experiment->linked_structures.size(), written->linked_structures.size());
+            const std::size_t links = std::min(experiment->linked_structures.size(), stored->linked_structures.size());
             for (std::size_t index = 0; index < links; ++index) {
                 LinkedStructure& link = *experiment->linked_structures[index];
-                const LinkedStructure& held_link = *written->linked_structures[index];
+                const LinkedStructure& held_link = *stored->linked_structures[index];
                 if (link.fit_bragg_r_factor != held_link.fit_bragg_r_factor ||
                     link.fit_f_r_factor != held_link.fit_f_r_factor) {
                     link.fit_bragg_r_factor = held_link.fit_bragg_r_factor;

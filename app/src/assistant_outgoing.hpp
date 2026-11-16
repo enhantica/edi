@@ -135,7 +135,8 @@ inline const Field* fields(Role role, std::size_t& count) {
     throw std::invalid_argument("Outgoing role is unavailable");
 }
 inline void add(quint64& size, quint64 growth) {
-    if(growth>std::numeric_limits<quint64>::max()-size)throw std::overflow_error("Outgoing byte count overflow");size+=growth;
+    if(growth>std::numeric_limits<quint64>::max()-size)throw std::overflow_error("Outgoing byte count overflow");
+    size+=growth;
 }
 inline quint64 scalar_size(const QJsonValue& value) {
     quint64 size=0;
@@ -193,7 +194,8 @@ inline QJsonValue field_value(const QJsonValue& value,const Field& field,quint64
         if(!value.isArray())throw std::invalid_argument("Outgoing rows have an invalid native type");
         QJsonArray result;add(size,2);bool comma=false;
         for(const auto& item:value.toArray()) {
-            if(comma)add(size,1);comma=true;
+            if(comma)add(size,1);
+            comma=true;
             const auto projected=field.type==Type::TextArray?field_value(item,Field{"",Type::Text},size,materialize):
                 field.type==Type::NumberArray?field_value(item,Field{"",Type::Number},size,materialize):walk(item,field.child,size,materialize);
             if(materialize)result.append(projected);
@@ -243,7 +245,8 @@ inline QJsonValue walk(const QJsonValue& value,Role role,quint64& size,bool mate
         if(top && QLatin1StringView(field.name)==QLatin1StringView("schema"))continue;
         const auto member=source.constFind(QLatin1StringView(field.name));
         if(member==source.constEnd())continue;
-        if(comma)add(size,1);comma=true;
+        if(comma)add(size,1);
+        comma=true;
         // All field keys are fixed ASCII identifiers with no JSON escapes.
         add(size,std::char_traits<char>::length(field.name)+3);
         const auto projected=field_value(*member,field,size,materialize);

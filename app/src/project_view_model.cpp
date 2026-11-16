@@ -407,7 +407,8 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const 
     // designation before it is kept for the fit's Undo.
     connect(fit_, &FitViewModel::runningChanged, this, [this] {
         if (scan_ && fit_->running() && !fit_->scanning()) {
-            fit_template_before_ = TemplateState{scanTemplateOrModel().sequential_fit.template_file, scan_template_};
+            fit_template_before_ = TemplateState{scanTemplateOrModel().sequential_fit.template_file, scan_template_, std::nullopt,
+                                                 false, {}, {}, {}};
             fit_template_before_->run_file_known = scan_session_->runFile(*project_, fit_template_before_->run_file);
             if (projected_dataset_ >= 0) {
                 const std::string& file = scan_session_->datasets().files[static_cast<std::size_t>(projected_dataset_)];
@@ -942,7 +943,7 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
             (!generated_atom && expected.text!=actual.text) || expected.number!=actual.number)
             return tr("A different creation control cannot enter this original input");
         if (generated_atom && input->bounded_result &&
-            (actual.text.isEmpty() || actual.text.contains(QChar(0)) || actual.text.toUtf8().size()>edi::assistant::Limits::id_bytes)) {
+            (actual.text.isEmpty() || actual.text.contains(QChar(0)) || static_cast<std::uint64_t>(actual.text.toUtf8().size())>edi::assistant::Limits::id_bytes)) {
             input->consumed=true;input->result_identity_refused=true;
             input->outcome.message=tr("The generated atom identity exceeds the assistant result limit; no edit was made");
             return input->outcome.message;
@@ -2217,24 +2218,24 @@ void ProjectViewModel::fetchCollectionFor(CollectionWaiter waiter) {
         collection_fetch_targets_.clear();
         const auto waiters = std::exchange(collection_waiters_, {});
         auto later = std::exchange(collection_later_, {});
-        for (const auto& waiter : waiters) {
+        for (const auto& held : waiters) {
             if (!self || retired_) return;
             if (outcome.isEmpty()) {
-                if (const QString changed = collectionTargetsChanged(waiter.targets); !changed.isEmpty()) {
-                    if (waiter.done) waiter.done(changed);
+                if (const QString changed = collectionTargetsChanged(held.targets); !changed.isEmpty()) {
+                    if (held.done) held.done(changed);
                     continue;
                 }
-                if (!collectionTargetsFilled(waiter.targets)) {
-                    later.push_back(waiter);
+                if (!collectionTargetsFilled(held.targets)) {
+                    later.push_back(held);
                     continue;
                 }
             }
-            if (waiter.done) waiter.done(outcome);
+            if (held.done) held.done(outcome);
         }
         // Requests needing what this fetch did not fill get theirs now, for their own targets.
-        for (auto& waiter : later) {
+        for (auto& next : later) {
             if (!self || retired_) return;
-            fetchCollectionFor(std::move(waiter));
+            fetchCollectionFor(std::move(next));
         }
     };
     auto filledAny = std::make_shared<bool>(false);
@@ -2362,7 +2363,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
     // linked, a file keeps its place and a collection's file its entry and digest, a powder pattern and a single
     // crystal's reflections alike. A file of several datasets (a FullProf file's codes) is copied, one experiment
     // each: a link names one file, not one of its datasets.
-    const auto linkSource = [&](edi::BraggPdExperiment& experiment, const QUrl& file, bool several = false) -> QString {
+    const auto linkSource = [&](edi::BraggPdExperiment& bank, const QUrl& file, bool several = false) -> QString {
         if (copy) return {};
         if (several)
             return tr("%1 holds several datasets: choose Copy data into the project to load each as its own experiment")
@@ -2370,23 +2371,23 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         const qsizetype at = files.indexOf(file);
         const CollectionOrigin origin = at >= 0 && at < origins.size() ? origins.at(at) : CollectionOrigin{};
         if (!origin.id.isEmpty()) {
-            experiment.collection_id = origin.id.toStdString();
-            experiment.data_digest = origin.digest.toStdString();
+            bank.collection_id = origin.id.toStdString();
+            bank.data_digest = origin.digest.toStdString();
         } else {
-            experiment.data_path = declared_folder(project.path, file.toLocalFile()).toStdString();
+            bank.data_path = declared_folder(project.path, file.toLocalFile()).toStdString();
         }
         return {};
     };
     // A file holding several datasets (a FullProf reflection file's codes) gives one experiment each, every one kept.
     std::set<std::string> taken;
     for (const auto& held : base.experiments) taken.insert(edi::KeyTraits<edi::BraggPdExperiment>::canonical(held->name));
-    const auto uniqueName = [&taken](edi::BraggPdExperiment& experiment) {
-        std::string name = experiment.name.value();
+    const auto uniqueName = [&taken](edi::BraggPdExperiment& bank) {
+        std::string name = bank.name.value();
         const std::string stem = name;
         for (int n = 2; taken.contains(edi::KeyTraits<edi::BraggPdExperiment>::canonical(name)); ++n)
             name = stem + "_" + std::to_string(n);
         taken.insert(edi::KeyTraits<edi::BraggPdExperiment>::canonical(name));
-        experiment.name = name;
+        bank.name = name;
     };
     if (replacing && files.size() == 1 && !asScan) {
         // One file in place of a scan: the template experiment takes its data, as Load data does elsewhere; further
@@ -2440,7 +2441,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
             std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held;
             held.reserve(next.experiments.size() + batch.size());
             for (std::size_t i = 0; i < next.experiments.size(); ++i) held.push_back(next.experiments[i]);
-            for (auto& experiment : batch) held.push_back(std::make_shared<edi::BraggPdExperiment>(std::move(experiment)));
+            for (auto& bank : batch) held.push_back(std::make_shared<edi::BraggPdExperiment>(std::move(bank)));
             next.experiments.assign(std::move(held));
             next.adopt_experiments();
             next.fitting_mode = "joint";
@@ -3046,14 +3047,14 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         if (!self || retired_) return true;
         // The assistant's admitted input: the first went into this experiment, each other one becomes its own.
         if (!load.more.empty()) {
-            QString error;
+            QString added;
             try {
-                error = apply(edi::Edit::add_experiments(project, std::move(load.more)), true);
+                added = apply(edi::Edit::add_experiments(project, std::move(load.more)), true);
             } catch (const std::exception& refusal) {
-                error = QString::fromUtf8(refusal.what());
+                added = QString::fromUtf8(refusal.what());
             }
-            if (!error.isEmpty()) {
-                return refuse(error);
+            if (!added.isEmpty()) {
+                return refuse(added);
             }
             syncLoadState();
             noteAddedExperiments(project.experiments.size() - (datasets - 1));

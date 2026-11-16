@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <iterator>
 #include <random>
 #include <stdexcept>
@@ -104,7 +105,10 @@ std::string lowercase(std::string text) {
 
 std::string read_file(const fs::path& path) {
     std::ifstream in(path, std::ios::binary);
-    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+    // Through rdbuf rather than istreambuf_iterator, which GCC 14 reports as a null dereference once inlined.
+    std::ostringstream text;
+    text << in.rdbuf();
+    return std::move(text).str();
 }
 
 // The project folder inside an unpacked archive's folder, as unpack_project_archive answers it: the folder itself when
@@ -430,7 +434,9 @@ Reply read_local(const std::string& url) {
     if (!fs::is_regular_file(path, ec)) return {false, {}, path + " does not exist", true};
     std::ifstream in(path, std::ios::binary);
     if (!in) return {false, {}, path + " cannot be read", false};
-    return {true, {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()}, {}, false};
+    std::ostringstream text;
+    text << in.rdbuf();
+    return {true, std::move(text).str(), {}, false};
 }
 
 std::string read_through(FileRead read, const Transport& transport, std::string* served) {

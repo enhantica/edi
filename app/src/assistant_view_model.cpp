@@ -353,7 +353,8 @@ quint64 skill_json_string_bytes(QStringView text, quint64 cap = edi::assistant::
             next=4;
         } else if(QChar::isLowSurrogate(c))throw std::runtime_error("Skill text has invalid Unicode");
         else next=3;
-        if(next>cap-bytes)throw std::length_error("Skill catalog text exceeds capacity");bytes+=next;
+        if(next>cap-bytes)throw std::length_error("Skill catalog text exceeds capacity");
+        bytes+=next;
     }
     return bytes;
 }
@@ -361,7 +362,7 @@ quint64 skill_json_text_units(const QJsonValue& value) {
     if(!value.isString())throw std::runtime_error("Skill catalog text is malformed");
     return value.toStringView().visit([](auto text)->quint64 {
         if constexpr(std::is_same_v<decltype(text),QUtf8StringView>)
-            return skill_utf16_units(std::string_view(text.data(),text.size()));
+            return skill_utf16_units(std::string_view(text.data(),static_cast<std::size_t>(text.size())));
         else return static_cast<quint64>(text.size()); // Latin-1 or UTF-16 storage.
     });
 }
@@ -436,7 +437,7 @@ static std::shared_ptr<AssistantSkillInventory> capture_skill_sources(const QJso
     const auto addFile=[&](const QString& relative,QByteArray bytes) {
         if(result->files.size()>=static_cast<qsizetype>(edi::assistant::SelectedFileLimits::files) || relative.isEmpty() || relative.size()>static_cast<qsizetype>(L::id_bytes) || bytes.size()<0 || static_cast<quint64>(bytes.size())>L::context_bytes-payload)
             throw std::length_error("Skill file collection exceeds capacity");
-        payload+=bytes.size();
+        payload+=static_cast<quint64>(bytes.size());
         result->files.append({relative,std::move(bytes)});
     };
     const auto declaration=[&](const QString& path,const QByteArray& bytes) {
@@ -446,7 +447,7 @@ static std::shared_ptr<AssistantSkillInventory> capture_skill_sources(const QJso
         if(!bytes.startsWith("---\n") && !bytes.startsWith("---\r\n"))throw std::runtime_error("SKILL.md requires standard front matter");
         const auto first=bytes.indexOf('\n');auto end=bytes.indexOf("\n---",first);
         if(end<0 || (end+4<bytes.size() && bytes[end+4]!='\n' && bytes[end+4]!='\r') || bytes.contains('\0'))throw std::runtime_error("Skill front matter is incomplete or malformed");
-        if(!edi::assistant::detail::utf8(std::string_view(bytes.constData(),bytes.size())))throw std::runtime_error("Skill text is not canonical UTF-8");
+        if(!edi::assistant::detail::utf8(std::string_view(bytes.constData(),static_cast<std::size_t>(bytes.size()))))throw std::runtime_error("Skill text is not canonical UTF-8");
 
         const auto decoded=QString::fromUtf8(bytes);
         const auto headerEnd=decoded.indexOf("\n---",decoded.indexOf('\n'));
@@ -471,12 +472,12 @@ static std::shared_ptr<AssistantSkillInventory> capture_skill_sources(const QJso
             if(key==u"version"){versionMentioned=true;continue;}
             if(key!=u"name" && key!=u"description")continue;
             bool& seen=key==u"name" ? seenName : seenDescription;
-            if(seen)throw std::runtime_error("Skill front matter repeats a required field");seen=true;
+            if(seen)throw std::runtime_error("Skill front matter repeats a required field");
+            seen=true;
 
             QString value;
             if(literal.startsWith('"')) {
                 // The encoded scalar, strict AST and decoded result coexist.
-                const quint64 encodedMaximum=input_utf8_bytes(literal);
 
                 const auto encoded=literal.toUtf8();
 
@@ -525,7 +526,7 @@ static std::shared_ptr<AssistantSkillInventory> capture_skill_sources(const QJso
 
                     const auto relative_bytes=relative.toStdString();
                     const auto digest=QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex();
-                    const auto digest_view=std::string_view(digest.constData(),digest.size());
+                    const auto digest_view=std::string_view(digest.constData(),static_cast<std::size_t>(digest.size()));
                     bool bonded=false;
                     for(const auto& entry:declared)if(entry.at("path").string("skill text")==relative_bytes && entry.at("sha256").string("skill text")==digest_view) {bonded=true;break;}
                     if(!bonded)throw std::runtime_error("Built-in skill bytes differ from their manifest");
@@ -631,9 +632,9 @@ static std::shared_ptr<AssistantSkillInventory> capture_skill_sources(const QJso
 QString command_human_description(const Object& source) {
     const QString workflow="cat .agents/skills/project-assistance/SKILL.md";
     const QString refinement="cat .agents/skills/refinement-strategy/SKILL.md";
-    const auto guidance=[](bool workflow,bool refinement) {
-        return workflow && refinement?QObject::tr("Read assistant workflow and fitting instructions"):
-            workflow?QObject::tr("Read assistant workflow instructions"):QObject::tr("Read assistant fitting instructions");
+    const auto guidance=[](bool inWorkflow,bool refining) {
+        return inWorkflow && refining?QObject::tr("Read assistant workflow and fitting instructions"):
+            inWorkflow?QObject::tr("Read assistant workflow instructions"):QObject::tr("Read assistant fitting instructions");
     };
     const auto command=source.value("command").toString();
     if(command==workflow)return guidance(true,false);
@@ -1057,8 +1058,8 @@ struct AssistantViewModel::State {
         if(work_registration.isEmpty())gap("schema_body","not_observed");
         if(work_reports.missedAutomaticCaptures()) {
             gap("automatic_export","busy");
-            for(qsizetype i=0;i<gaps.size();++i){auto omitted=gaps[i].toObject();if(omitted.value("kind")=="automatic_export"){
-                omitted["count"]=work_report_observed(QString::number(work_reports.missedAutomaticCaptures()));gaps[i]=omitted;break;}}
+            for(qsizetype i=0;i<gaps.size();++i){auto gapRow=gaps[i].toObject();if(gapRow.value("kind")=="automatic_export"){
+                gapRow["count"]=work_report_observed(QString::number(work_reports.missedAutomaticCaptures()));gaps[i]=gapRow;break;}}
         }
         if(work_reports.coverageUnknown())gap("row_supplement","not_observed");
         bool currentAttempt=false;
@@ -1220,11 +1221,11 @@ struct AssistantViewModel::State {
     QString sessions_error;
     Object session_archive_persistence_errors;
     QString session_browser_error() const {
-        QStringList messages;if(!sessions_error.isEmpty())messages.append(sessions_error);
+        QStringList messageList;if(!sessions_error.isEmpty())messageList.append(sessions_error);
         for(const auto& value:session_archive_persistence_errors) {
-            const auto message=value.toString();if(!messages.contains(message))messages.append(message);
+            const auto message=value.toString();if(!messageList.contains(message))messageList.append(message);
         }
-        return messages.join(QLatin1Char('\n'));
+        return messageList.join(QLatin1Char('\n'));
     }
     Rows models{{"id", "displayName", "efforts", "available"}, &owner};
     QJsonArray skill_catalog_rows;
@@ -1455,19 +1456,19 @@ struct AssistantViewModel::State {
         const auto scope=work_reports.scope();
         if(!session || session->assistant()!=&owner || !target || session->project()!=target || scope.isEmpty())
             return work_report_missing("unbound_owner");
-        const QPointer<WarningListModel> model(session->loadWarnings());
-        if(!model)return work_report_missing("not_present");
-        const auto count=model->count();const auto keys=model->keys(QString{});
+        const QPointer<WarningListModel> warningModel(session->loadWarnings());
+        if(!warningModel)return work_report_missing("not_present");
+        const auto count=warningModel->count();const auto keys=warningModel->keys(QString{});
         QJsonArray rows;
         for(int i=0;i<count;++i) {
-            Object row{{"row",i},{"text",model->get(i,QStringLiteral("message")).toString()},
-                {"severity",model->get(i,QStringLiteral("severity")).toString()}};
+            Object row{{"row",i},{"text",warningModel->get(i,QStringLiteral("message")).toString()},
+                {"severity",warningModel->get(i,QStringLiteral("severity")).toString()}};
             if(keys.size()==count)row["key"]=keys.at(i);
             rows.append(row);
         }
-        if(!session || !target || !model || session->assistant()!=&owner || session->project()!=target ||
-            project!=target || session->loadWarnings()!=model || work_reports.scope()!=scope ||
-            model->count()!=count || model->keys(QString{})!=keys)return work_report_missing("owner_changed");
+        if(!session || !target || !warningModel || session->assistant()!=&owner || session->project()!=target ||
+            project!=target || session->loadWarnings()!=warningModel || work_reports.scope()!=scope ||
+            warningModel->count()!=count || warningModel->keys(QString{})!=keys)return work_report_missing("owner_changed");
         return work_report_observed(Object{{"source","Session.loadWarnings"},{"scope_id",scope},
             {"meaning","currently published UI messages; not a claim that each historical entry is a current error"},
             {"count",count},{"rows",rows}});
@@ -1650,7 +1651,8 @@ struct AssistantViewModel::State {
         history_base_included=true;history_cache_was_cleared=true;history_legacy_archive.reset();
 #ifndef __EMSCRIPTEN__
         retire_session_history();session_history_explicit_target.clear();
-        if(sessions_epoch!=UINT64_MAX)++sessions_epoch;mark_session_caches_cleared();
+        if(sessions_epoch!=UINT64_MAX)++sessions_epoch;
+        mark_session_caches_cleared();
 #endif
         messages.assign(history);
         if(!proof.input_current())return;
@@ -2019,14 +2021,14 @@ struct AssistantViewModel::State {
     bool startup_restore_pending() const {return restore_last_metadata_unavailable || !restore_last_target.isEmpty();}
     // The session's trial ends: its candidate goes back to the accepted fit as this session's own edit, now or, on
     // a Stop or a disconnect while its fit still runs, when that fit ends (edi ADR-0055). Answers whether it did now.
-    bool settle_trial(const QPointer<ProjectViewModel>& trial,quint64 owner,bool stopping) noexcept {
+    bool settle_trial(const QPointer<ProjectViewModel>& trial,quint64 ownerEpoch,bool stopping) noexcept {
         if(!trial)return false;
         try {
-            const bool own=trial==project && owner==generation;
+            const bool own=trial==project && ownerEpoch==generation;
             const auto id=own?begin_own_edit():0;
             const auto done=qScopeGuard([this,id,own]{if(own)end_own_edit(id);});
-            if(stopping){trial->fit()->restoreAcceptedOnStop(owner);return false;}
-            return trial->fit()->restoreAccepted(owner);
+            if(stopping){trial->fit()->restoreAcceptedOnStop(ownerEpoch);return false;}
+            return trial->fit()->restoreAccepted(ownerEpoch);
         }catch(...){return false;}
     }
     // A failed startup reopen keeps its saved association: a later Open or Create does not forget it.
@@ -2109,8 +2111,8 @@ struct AssistantViewModel::State {
         const auto bytes=settings.value(QLatin1StringView(session_settings_key)).toByteArray();
         if(settings.status()!=QSettings::NoError)throw std::runtime_error("The local session associations could not be read");
         if(bytes.isEmpty())return {};
-        QJsonParseError error;const auto document=QJsonDocument::fromJson(bytes,&error);
-        if(error.error!=QJsonParseError::NoError || !document.isObject() || document.object().value("version")!=1)
+        QJsonParseError parseError;const auto document=QJsonDocument::fromJson(bytes,&parseError);
+        if(parseError.error!=QJsonParseError::NoError || !document.isObject() || document.object().value("version")!=1)
             throw std::runtime_error("The local session associations are not valid; runtime sessions remain available in the browser");
         return document.object();
     }
@@ -2668,9 +2670,11 @@ struct AssistantViewModel::State {
                     if(part.value("type")!="text" || !part.value("text").isString())continue;
                     const auto literal=part.value("text").toString();
                     if(literal.startsWith("EDI_APPROVED_CONTEXT_DATA_V1\n") || literal.startsWith("Earlier genuine user message for this same project/account; context only, no file permission is replayed:\n"))continue;
-                    if(!text.isEmpty())text+='\n';text+=literal;
+                    if(!text.isEmpty())text+='\n';
+                    text+=literal;
                 }
-                if(text.isEmpty())continue;kind="user";payload={{"type","ediInput"}};
+                if(text.isEmpty())continue;
+                kind="user";payload={{"type","ediInput"}};
             } else if(type=="dynamicToolCall" || type=="commandExecution" || type=="webSearch" || type=="mcpToolCall" || type=="fileChange" || type=="collabAgentToolCall" || type=="plan") {
                 kind="activity";payload=item;text=type=="dynamicToolCall"?assistant_native_purpose({},item.value("tool").toString()):QObject::tr("Earlier assistant activity");
             } else continue;
@@ -2720,9 +2724,11 @@ struct AssistantViewModel::State {
     QString session_request(const QString& method,const Object& params,const QString& kind,const QString& target={}) {
         const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<CodexAgent> transport(agent.get());
-        SessionRequest request{kind,target,params.value("cursor").toString(),generic_thread,
-            generic_native.value("account").toObject().value("email").toString(),params.value("name").toString(),generation,usage_epoch,
-            transport?transport->outputGeneration():0,sessions_epoch,session_operation,project};
+        SessionRequest request{.kind=kind,.target=target,.cursor=params.value("cursor").toString(),.currentThread=generic_thread,
+            .email=generic_native.value("account").toObject().value("email").toString(),.name=params.value("name").toString(),
+            .binding=generation,.account=usage_epoch,.transport=transport?transport->outputGeneration():0,.epoch=sessions_epoch,
+            .operation=session_operation,.project=project,.account_reply={},.account_params={},.account_method={},
+            .account_unwritten=false,.account_issuing=false,.current_thread_archived=false};
         const auto current=[&] {return receiver && receiver->state_.get()==this && transport && agent.get()==transport && session_request_current(request);};
         if(!current())return {};
         QString prepared;
@@ -3080,7 +3086,7 @@ struct AssistantViewModel::State {
         if(!value.isObject())throw std::runtime_error("Dedicated Edi policy proof is unavailable");
         const auto proof=value.toObject();
         const std::array<QLatin1StringView,17> fields{QLatin1StringView{"schema"},QLatin1StringView{"flavour"},QLatin1StringView{"upstreamVersion"},QLatin1StringView{"upstreamCommit"},QLatin1StringView{"sourcePatchSha256"},QLatin1StringView{"threadId"},QLatin1StringView{"turnId"},QLatin1StringView{"isolation"},QLatin1StringView{"toolMode"},QLatin1StringView{"sandbox"},QLatin1StringView{"approvalPolicy"},QLatin1StringView{"modelNetwork"},QLatin1StringView{"requestedTools"},QLatin1StringView{"advertisedTools"},QLatin1StringView{"dispatchEqualsAdvertisement"},QLatin1StringView{"model"},QLatin1StringView{"reasoningEffort"}};
-        if(proof.size()!=fields.size())throw std::runtime_error("Dedicated Edi policy proof is malformed");
+        if(static_cast<std::size_t>(proof.size())!=fields.size())throw std::runtime_error("Dedicated Edi policy proof is malformed");
         for(auto at=proof.constBegin();at!=proof.constEnd();++at)if(std::none_of(fields.begin(),fields.end(),[&](auto key){return at.key()==key;}))throw std::runtime_error("Dedicated Edi policy proof is malformed");
         if(proof.value("schema")!="edi.runtime-policy/1" || proof.value("flavour")!="edi-app-server/1" ||
             proof.value("upstreamVersion")!=QString::fromLatin1(EDI_CODEX_RUNTIME_VERSION) || proof.value("upstreamCommit")!="092d3acd6bec3e3a14bdc7e7a2810ab628ab759d" ||
@@ -3138,8 +3144,8 @@ struct AssistantViewModel::State {
     }
     QByteArray raw_input_identity(ProjectViewModel* target) {
         if (!target) return {};
-        const auto* model = target->assistantProject();
-        if (!model) throw std::runtime_error("The original project input owner is unavailable");
+        const auto* projectModel = target->assistantProject();
+        if (!projectModel) throw std::runtime_error("The original project input owner is unavailable");
         const auto stamp = [](const auto& experiment) {
             RawInputStamp result;
             result.experiment = experiment.get(); result.name = experiment->name.written();
@@ -3159,11 +3165,11 @@ struct AssistantViewModel::State {
             }
             return result;
         };
-        bool unchanged = disclosure_raw && disclosure_raw->project == target && disclosure_raw->model == model &&
-            disclosure_raw->membership == model->experiments.record() && disclosure_raw->generation == model->experiments.generation() &&
-            disclosure_raw->stamps.size() == model->experiments.size();
-        if (unchanged) for (std::size_t i = 0; i < model->experiments.size(); ++i) {
-            if (!(disclosure_raw->stamps[i] == stamp(model->experiments[i]))) { unchanged = false; break; }
+        bool unchanged = disclosure_raw && disclosure_raw->project == target && disclosure_raw->model == projectModel &&
+            disclosure_raw->membership == projectModel->experiments.record() && disclosure_raw->generation == projectModel->experiments.generation() &&
+            disclosure_raw->stamps.size() == projectModel->experiments.size();
+        if (unchanged) for (std::size_t i = 0; i < projectModel->experiments.size(); ++i) {
+            if (!(disclosure_raw->stamps[i] == stamp(projectModel->experiments[i]))) { unchanged = false; break; }
         }
         if (unchanged) return disclosure_raw->digest;
         // Admit all borrowed raw columns before hashing; never copy scientific
@@ -3181,7 +3187,7 @@ struct AssistantViewModel::State {
                 throw std::length_error("Project raw input column exceeds capacity");
             admit(values.size() * sizeof(Value));
         };
-        for (const auto& experiment : model->experiments) {
+        for (const auto& experiment : projectModel->experiments) {
             admit(experiment->name.value().size());
             if(experiment->reflections) {
                 const auto& data=*experiment->reflections;
@@ -3196,16 +3202,16 @@ struct AssistantViewModel::State {
         }
 
         RawInputCache next;
-        next.project = target; next.model = model; next.membership = model->experiments.record(); next.generation = model->experiments.generation();
-        next.stamps.reserve(model->experiments.size());
+        next.project = target; next.model = projectModel; next.membership = projectModel->experiments.record(); next.generation = projectModel->experiments.generation();
+        next.stamps.reserve(projectModel->experiments.size());
         QCryptographicHash hash(QCryptographicHash::Sha256);
-        scope_integer(hash, model->experiments.size());
+        scope_integer(hash, projectModel->experiments.size());
         const auto values = [&](const auto& vector) {
             scope_integer(hash, vector.size());
             using Value=typename std::remove_cvref_t<decltype(vector)>::value_type;
             scope_bytes(hash, reinterpret_cast<const char*>(vector.data()), vector.size() * sizeof(Value));
         };
-        for (const auto& experiment : model->experiments) {
+        for (const auto& experiment : projectModel->experiments) {
             next.stamps.push_back(stamp(experiment));
             scope_text(hash, experiment->name.value());scope_integer(hash,experiment->calculation_only);
             scope_integer(hash,experiment->experiment_type.effective_sample_form()==edi::SampleFormEnum::POWDER);
@@ -3229,12 +3235,12 @@ struct AssistantViewModel::State {
         if (files.size() > static_cast<qsizetype>(edi::assistant::SelectedFileLimits::files))
             throw std::length_error("Selected input identity exceeds capacity");
         QCryptographicHash hash(QCryptographicHash::Sha256);
-        scope_integer(hash, files.size());
+        scope_integer(hash, static_cast<quint64>(files.size()));
         for (auto it = files.constBegin(); it != files.constEnd(); ++it) {
             if (it.key().size() > static_cast<qsizetype>(Limits::id_bytes) || it.value().size() > 2 * qsizetype{QCryptographicHash::hashLength(QCryptographicHash::Sha256)})
                 throw std::length_error("Selected input identity exceeds capacity");
-            scope_integer(hash, it.key().size()); scope_bytes(hash, reinterpret_cast<const char*>(it.key().utf16()), it.key().size() * sizeof(QChar));
-            scope_integer(hash, it.value().size()); scope_bytes(hash, it.value().constData(), it.value().size());
+            scope_integer(hash, static_cast<quint64>(it.key().size())); scope_bytes(hash, reinterpret_cast<const char*>(it.key().utf16()), static_cast<quint64>(it.key().size()) * sizeof(QChar));
+            scope_integer(hash, static_cast<quint64>(it.value().size())); scope_bytes(hash, it.value().constData(), static_cast<std::size_t>(it.value().size()));
         }
         return hash.result();
     }
@@ -3263,9 +3269,9 @@ struct AssistantViewModel::State {
         // Projection keeps a subset of the complete context fields. Admit its
         // JSON value and compact encoding simultaneously, plus the proof shell
         // and returned selected-input digest, before constructing that subset.
-        const auto& model = context; // Structures/datasets are top-level context members.
+        const auto& contextModel = context; // Structures/datasets are top-level context members.
         QJsonArray datasets;
-        for (const auto& value : model.value("datasets").toArray()) {
+        for (const auto& value : contextModel.value("datasets").toArray()) {
             const auto row = value.toObject();
             datasets.append(Object{{"id",row.value("id")},{"sample_form",row.value("sample_form")},{"beam_mode",row.value("beam_mode")},
                 {"probe",row.value("probe")},{"calculation_only",row.value("calculation_only")}});
@@ -3274,7 +3280,7 @@ struct AssistantViewModel::State {
         // from an example has none until it is saved, so a saved and reopened project would otherwise ask for
         // approval again.
         QJsonArray structures;
-        for (const auto& value : model.value("structures").toArray()) {
+        for (const auto& value : contextModel.value("structures").toArray()) {
             auto row = value.toObject();
             if (row.value("space_group").isObject()) {
                 auto group = row.value("space_group").toObject();
@@ -3331,19 +3337,19 @@ struct AssistantViewModel::State {
     void append_native_context(Object& context,ProjectViewModel* target) {
         const auto publication=file_projection();
         const QPointer<ProjectViewModel> original(target);
-        const auto* model=target?target->assistantProject():nullptr;
-        if(target && !model)throw std::runtime_error("The original calculation model is unavailable");
-        const auto membership=model?model->experiments.record():nullptr;
-        const auto epoch=model?model->experiments.generation():0;
-        const auto structure_membership=model?model->structures.record():nullptr;
-        const auto structure_epoch=model?model->structures.generation():0;
+        const auto* projectModel=target?target->assistantProject():nullptr;
+        if(target && !projectModel)throw std::runtime_error("The original calculation model is unavailable");
+        const auto membership=projectModel?projectModel->experiments.record():nullptr;
+        const auto epoch=projectModel?projectModel->experiments.generation():0;
+        const auto structure_membership=projectModel?projectModel->structures.record():nullptr;
+        const auto structure_epoch=projectModel?projectModel->structures.generation():0;
         const QPointer<StructureViewModel> current_structure(target?target->currentStructure():nullptr);
         const QPointer<ExperimentViewModel> current_experiment(target?target->currentExperiment():nullptr);
         const auto* structure_owner=current_structure.data();const auto* experiment_owner=current_experiment.data();
         const auto current=[&] {
             return publication.input_current() && original==target && (!target ||
-                (target->assistantProject()==model && model->experiments.record()==membership && model->experiments.generation()==epoch &&
-                 model->structures.record()==structure_membership && model->structures.generation()==structure_epoch &&
+                (target->assistantProject()==projectModel && projectModel->experiments.record()==membership && projectModel->experiments.generation()==epoch &&
+                 projectModel->structures.record()==structure_membership && projectModel->structures.generation()==structure_epoch &&
                  (!structure_owner || current_structure) && (!experiment_owner || current_experiment) &&
                  target->currentStructure()==structure_owner && target->currentExperiment()==experiment_owner));
         };
@@ -3367,8 +3373,6 @@ struct AssistantViewModel::State {
             const auto native_bytes=std::max<quint64>(name.size(),sizeof("experiment")-1);
             if(native_bytes>Limits::id_bytes)throw std::length_error("Interface member identity exceeds capacity");
             if(!edi::assistant::detail::utf8(name))throw std::runtime_error("Interface member identity is not valid UTF-8");
-            // Canonical native copy and decoded Qt member ID precede JSON growth.
-            const auto minimum=sizeof(QArrayData)+alignof(std::max_align_t)+sizeof(QChar);
             if(!owned())throw std::runtime_error("The original interface category owner changed");
             // The selected-ID child outlives this temporary spelling and owns
             // its decoded/encoded role beside the original interface rows.
@@ -3391,18 +3395,12 @@ struct AssistantViewModel::State {
                 if(category_id.isEmpty() || (category_tier!=QStringLiteral("Basic") && category_tier!=QStringLiteral("Extras")))
                     throw std::runtime_error("The original interface category roles are invalid");
                 if(category_tier!=tier && !(tier==QStringLiteral("Extras") && extras.toBool()))continue;
-                quint64 text_units=0,wire=sizeof("{\"page\":,\"member_id\":,\"category_id\":,\"tier\":,\"admitted\":false}")-1;
+                quint64 wire=sizeof("{\"page\":,\"member_id\":,\"category_id\":,\"tier\":,\"admitted\":false}")-1;
                 for(const auto text:{QStringView(page),QStringView(member),QStringView(category_id),QStringView(tier)}) {
                     const auto bytes=skill_json_string_bytes(text);
                     if(bytes>Limits::context_bytes-wire)throw std::length_error("Interface category row exceeds capacity");
-                    wire+=bytes;text_units+=text.size();
+                    wire+=bytes;
                 }
-                constexpr std::size_t key_units=sizeof("pagemember_idcategory_idtieradmitted");
-                constexpr auto keys=key_units*sizeof(QChar);
-                const auto owned_row=sizeof(Object)+10*sizeof(QJsonValue)+keys+4*minimum+2*(text_units+4)*sizeof(QChar);
-                // New row/input and both old/replacement growing array owners
-                // coexist until append returns. Retain their joint role with context.
-                const auto role=2*(owned_row+wire+sizeof(QJsonValue));
 
                 if(!owned())throw std::runtime_error("The original interface category owner changed");
                 interface_groups.append(Object{{"page",page},{"member_id",member},{"category_id",category_id},
@@ -3413,20 +3411,20 @@ struct AssistantViewModel::State {
         if(current_structure) {
             if(!current() || !target->structureModels().contains(current_structure))throw std::runtime_error("The original structure interface owner changed");
             const auto* member=current_structure->structure();
-            if(std::none_of(model->structures.begin(),model->structures.end(),[&](const auto& held){return held.get()==member;}))
+            if(std::none_of(projectModel->structures.begin(),projectModel->structures.end(),[&](const auto& held){return held.get()==member;}))
                 throw std::runtime_error("The original structure interface member changed");
             append_groups(current_structure->categories(),member->name.value(),true);
         }
         if(current_experiment) {
             if(!current() || !target->experimentModels().contains(current_experiment))throw std::runtime_error("The original experiment interface owner changed");
             const auto* member=current_experiment->experiment();
-            if(std::none_of(model->experiments.begin(),model->experiments.end(),[&](const auto& held){return held.get()==member;}))
+            if(std::none_of(projectModel->experiments.begin(),projectModel->experiments.end(),[&](const auto& held){return held.get()==member;}))
                 throw std::runtime_error("The original experiment interface member changed");
             append_groups(current_experiment->categories(),member->name.value(),false);
         }
         if(!current())throw std::runtime_error("The original interface read owner changed");
         QJsonArray calculations;
-        if(model)for(const auto& held:model->experiments) {
+        if(projectModel)for(const auto& held:projectModel->experiments) {
             if(!current())throw std::runtime_error("The original calculation read owner changed");
             ExperimentViewModel* view=nullptr;
             for(auto* candidate:target->experimentModels())if(candidate && candidate->experiment()==held.get()) {
@@ -3434,12 +3432,12 @@ struct AssistantViewModel::State {
                 view=candidate;
             }
             const auto* pattern=view?view->pattern():nullptr;
-            const auto error=pattern?pattern->calculationError():QString{}; // Implicit shared copy of existing published text.
+            const auto calculationError=pattern?pattern->calculationError():QString{}; // Implicit shared copy of existing published text.
             if(!current())throw std::runtime_error("The original calculation read owner changed");
             Object row{{"dataset_id",QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(held->name.value()))},
                 {"pattern_available",bool(pattern)}};
             if(pattern) {
-                const auto text=bounded_error(error);
+                const auto text=bounded_error(calculationError);
                 const bool sc=held->experiment_type.effective_sample_form()==edi::SampleFormEnum::SINGLE_CRYSTAL;
                 const bool nativeCurrent=held->computed_current();
                 const auto& reflections=held->reflections;
@@ -3447,8 +3445,8 @@ struct AssistantViewModel::State {
                 if(points>(quint64(1)<<std::numeric_limits<double>::digits))
                     throw std::length_error("Calculation point count is not exactly representable");
                 row["stale"]=!nativeCurrent || (!sc && pattern->stale());row["calculated_points"]=static_cast<double>(points);
-                row["calculated_available"]=points>0;row["calculation_error_present"]=!error.isEmpty();
-                row["calculation_error"]=text;row["calculation_error_complete"]=text==error;
+                row["calculated_available"]=points>0;row["calculation_error_present"]=!calculationError.isEmpty();
+                row["calculation_error"]=text;row["calculation_error_complete"]=text==calculationError;
             }
             calculations.append(std::move(row));
         }
@@ -3532,7 +3530,8 @@ struct AssistantViewModel::State {
                 const auto identity=row.value("canonical").toString()+"\n"+row.value("identity").toString();
                 const auto expected="local-"+QString::fromLatin1(QCryptographicHash::hash(identity.toUtf8(),QCryptographicHash::Sha256).toHex());
                 if(id!=expected)throw std::runtime_error("Skill source identity is malformed");
-                if(physical.contains(identity))throw std::runtime_error("Skill source is already configured");physical.insert(identity);
+                if(physical.contains(identity))throw std::runtime_error("Skill source is already configured");
+                physical.insert(identity);
                 if(!QDir::isAbsolutePath(row.value("path").toString()) || !QDir::isAbsolutePath(row.value("canonical").toString()))throw std::runtime_error("Skill source path is invalid");
             }
         }
@@ -3621,14 +3620,14 @@ struct AssistantViewModel::State {
                 // The strict AST is still live. Admit its Qt projection's exact
                 // compact representation plus decoded UTF-16 strings before
                 // the first replacement object/string/container is built.
-                quint64 projected=2,decoded=0;
+                quint64 projected=2;
                 for(const auto& source:sources) {
                     const auto& object=validated([&]() -> decltype(auto) {return source.object("skill source");});
                     if(object.size()>8)invalid("Skill source settings are malformed");
                     for(const auto& [key,item]:object) {
                         if(!std::holds_alternative<bool>(item.data) && !std::holds_alternative<std::string>(item.data))invalid("Skill source settings are malformed");
-                        decoded+=validated([&] {return skill_utf16_units(key);})*sizeof(QChar);
-                        if(const auto* text=std::get_if<std::string>(&item.data))decoded+=validated([&] {return skill_utf16_units(*text);})*sizeof(QChar);
+                        (void)validated([&] {return skill_utf16_units(key);});
+                        if(const auto* text=std::get_if<std::string>(&item.data))(void)validated([&] {return skill_utf16_units(*text);});
                     }
                     const auto encoded=validated([&] {return edi::json::encoded_size(source,Limits::context_bytes);});
                     if(encoded>Limits::context_bytes-projected)invalid("Skill source configuration exceeds capacity");
@@ -3688,7 +3687,8 @@ struct AssistantViewModel::State {
             if(!codex_encoded_size(row.value("id"),Limits::context_bytes,id) ||
                 !codex_encoded_size(row.value("builtin").toBool()?QJsonValue("EasyDiffraction"):row.value("path"),Limits::context_bytes,label))throw std::length_error("Skill source disclosure exceeds capacity");
             const quint64 next=sizeof("{\"id\":,\"label\":}")-1+id+label+(first?0:1);
-            if(next>Limits::context_bytes-bytes)throw std::length_error("Skill source disclosure exceeds capacity");bytes+=next;first=false;
+            if(next>Limits::context_bytes-bytes)throw std::length_error("Skill source disclosure exceeds capacity");
+            bytes+=next;first=false;
         }
         return bytes;
     }
@@ -3849,7 +3849,8 @@ struct AssistantViewModel::State {
                 qsizetype component=0;
                 for(qsizetype at=0;at<=spelling.size();++at)if(at==spelling.size() || spelling[at]==u'/' || spelling[at]==u'\\') {
                     const auto part=spelling.mid(component,at-component);
-                    if(part==u"." || part==u"..")source->failure="unavailable";component=at+1;
+                    if(part==u"." || part==u"..")source->failure="unavailable";
+                    component=at+1;
                 }
                 if(source->failure.isEmpty()) {
 #if defined(Q_OS_UNIX) && defined(PATH_MAX)
@@ -3888,7 +3889,8 @@ struct AssistantViewModel::State {
             if(line.size()>=2 && (line.front()==u'\'' || line.front()==u'"' || line.front()==u'`')) {
                 if(line.back()!=line.front())continue;
                 const auto quote=line.front();line=line.mid(1,line.size()-2);
-                if(line.contains(quote))continue;quoted=true;
+                if(line.contains(quote))continue;
+                quoted=true;
             }
             if(!(line.startsWith(u'/') || line.startsWith(u"~/") || line.startsWith(u"file:",Qt::CaseInsensitive)
 #if defined(Q_OS_WIN)
@@ -4038,6 +4040,12 @@ struct AssistantViewModel::State {
     struct NativeCreation;
     struct NativeCreateWidget {
         struct Input {
+            // The members in order, each with its default, so a step names only what it needs.
+            Input(AssistantWidgetInput::Kind kind_ = {}, QString target_ = {}, QString text_ = {}, int option_ = -1,
+                  int section_ = -1, int row_ = -1, std::optional<ProjectEditor::CreationAction::Kind> structure_action_ = {},
+                  QString field_ = {})
+                : kind(kind_), target(std::move(target_)), text(std::move(text_)), option(option_), section(section_), row(row_),
+                  structure_action(structure_action_), field(std::move(field_)) {}
             AssistantWidgetInput::Kind kind{}; QString target, text; int option = -1, section = -1, row = -1;
             std::optional<ProjectEditor::CreationAction::Kind> structure_action;
             QString field;
@@ -4936,7 +4944,8 @@ struct AssistantViewModel::State {
             run->relation_input = input;run->step_counted = false;
              // Own the exact original row action before its ordinary method.
             if(!receiver || receiver->state_.get()!=this || !target || !widget_owned(run) || run->relation_input!=input) {
-                if(target)target->finishWidgetRelations(input);return;
+                if(target)target->finishWidgetRelations(input);
+                return;
             }
         } else if (run->tool == "run_fit") {
             auto* fit = run->project->fit();
@@ -5403,21 +5412,21 @@ struct AssistantViewModel::State {
                                 reachable=title && title==wanted && run->window && viewport && original_field && wanted && (!had_group || group) && (!had_row || wholeRow);
                             }
                             if(reachable && wholeRow)reachable=widget_row_scope(original_field).first==wholeRow && widget_full_row_visible(original_field);
-                            const QPointer<QQuickItem> geometry(wholeRow?wholeRow.data():wanted.data());
+                            const QPointer<QQuickItem> rowItem(wholeRow?wholeRow.data():wanted.data());
                             bool withinViewport=false;
                             if(reachable) {
-                                const QRectF bounds(0,0,geometry->width(),geometry->height());
-                                const auto scene=geometry->mapRectToScene(bounds);
-                                reachable=bounds.width()>0 && bounds.height()>0 && std::isfinite(scene.x()) && std::isfinite(scene.y()) &&
+                                const QRectF rowBounds(0,0,rowItem->width(),rowItem->height());
+                                const auto scene=rowItem->mapRectToScene(rowBounds);
+                                reachable=rowBounds.width()>0 && rowBounds.height()>0 && std::isfinite(scene.x()) && std::isfinite(scene.y()) &&
                                     std::isfinite(scene.width()) && std::isfinite(scene.height()) &&
                                     QRectF(0,0,run->window->width(),run->window->height()).contains(scene);
-                                for(auto* a=geometry.data();reachable && a;a=a->parentItem()) {
+                                for(auto* a=rowItem.data();reachable && a;a=a->parentItem()) {
                                     if(a==viewport)withinViewport=true;
                                     if(!a->isVisible() || !a->isEnabled() || a->opacity()<=0 ||
-                                        (a->clip() && !a->clipRect().contains(geometry->mapRectToItem(a,bounds))))reachable=false;
+                                        (a->clip() && !a->clipRect().contains(rowItem->mapRectToItem(a,rowBounds))))reachable=false;
                                 }
                                 reachable=reachable && withinViewport &&
-                                    QRectF(0,0,viewport->width(),viewport->height()).contains(geometry->mapRectToItem(viewport,bounds)) &&
+                                    QRectF(0,0,viewport->width(),viewport->height()).contains(rowItem->mapRectToItem(viewport,rowBounds)) &&
                                     widget_input->usableTarget(*wanted);
                             }
                             if(!run->receiver || run->receiver->state_.get()!=this || !widget_entry_owned(run,entry))return;
@@ -5725,8 +5734,8 @@ struct AssistantViewModel::State {
         auto captured_finishCommit=[this,run,opened] {
             if(!opened)return;
             const auto receiver=run->receiver;const auto input=run->input;const auto scope=run->edit_scope;
-            const QPointer<ProjectViewModel> target(run->project);
-            if(target)target->finishWidgetInput(input);
+            const QPointer<ProjectViewModel> runProject(run->project);
+            if(runProject)runProject->finishWidgetInput(input);
             if(receiver && receiver->state_.get()==this && run->edit_scope==scope){run->edit_scope=0;end_own_edit(scope);}
         };
         auto captured_completed=[this,run,entry,header,menu,filter,opened](bool delivered,const QString& message, ControlCause cause) {
@@ -6038,12 +6047,13 @@ struct AssistantViewModel::State {
     Object work_call_evidence(const NativeCall& call,const char* disposition) {
         const auto& record=*call.record;const auto m=work_report_missing();
         const bool same=record.original==record.canonical;
-        QJsonArray skills,ui,science;
+        QJsonArray skillRows,ui,science;
         for(const auto& value:history){const auto row=value.toObject();if(row.value("id")!=record.row)continue;
-            for(const auto& v:row.value("workSkills").toArray())skills.append(v.toObject().value("capture_id"));
-            for(const auto& v:row.value("workSkillRefs").toArray())skills.append(v);
+            for(const auto& v:row.value("workSkills").toArray())skillRows.append(v.toObject().value("capture_id"));
+            for(const auto& v:row.value("workSkillRefs").toArray())skillRows.append(v);
             for(const auto& v:row.value("workUI").toArray())ui.append(v.toObject().value("event_id"));
-            for(const auto& v:row.value("workScience").toArray())science.append(v.toObject().value("event_id"));break;}
+            for(const auto& v:row.value("workScience").toArray())science.append(v.toObject().value("event_id"));
+            break;}
         return {{"event_id",work_reports.newEvent()},{"thread_id",work_report_observed(record.thread)},
             {"turn_id",work_report_observed(record.turn)},{"call_id",work_report_observed(record.call)},
             {"rpc_id",work_report_observed(call.rpc)},{"tool",work_report_observed(record.tool)},
@@ -6053,7 +6063,7 @@ struct AssistantViewModel::State {
             {"reply_disposition",QLatin1StringView(disposition)},
             {"completed",work_report_observed(record.completed)},{"retired",work_report_observed(record.retired)},
             {"elapsed_ms",work_clock.isValid()?work_report_observed(QString::number(work_clock.elapsed())):m},
-            {"skill_capture_ids",skills},{"ui_event_ids",ui},{"science_event_ids",science}};
+            {"skill_capture_ids",skillRows},{"ui_event_ids",ui},{"science_event_ids",science}};
     }
     void work_latch_call(const NativeCall& call,const char* disposition) noexcept {
         if(!work_reports.collecting() || !call.record)return;
@@ -6081,7 +6091,8 @@ struct AssistantViewModel::State {
                 QString scienceEvent;
                 for(const auto& value:history){const auto row=value.toObject();if(row.value("id")!=call.record->row)continue;
                     const auto previous=row.value("workScience").toArray();
-                    if(!previous.isEmpty())scienceEvent=previous.first().toObject().value("event_id").toString();break;}
+                    if(!previous.isEmpty())scienceEvent=previous.first().toObject().value("event_id").toString();
+                    break;}
                 if(scienceEvent.isEmpty())scienceEvent=work_reports.newEvent();
                 if(scienceEvent.isEmpty())throw std::length_error("Scientific observation identity unavailable");
                 fields["workScience"]=QJsonArray{Object{{"event_id",scienceEvent},{"row_id",work_report_observed(call.record->row)},
@@ -6114,7 +6125,8 @@ struct AssistantViewModel::State {
                 const auto declaration=item.toObject();const auto id=declaration.value("id").toString();
                 auto body=work_report_missing("skill_body_not_retained");
                 for(const auto& file:inventory->files)if(file.path==declaration.value("path").toString()) {
-                    if(file.bytes.size()<=static_cast<qsizetype>(Limits::message_bytes))body=work_report_observed(QString::fromUtf8(file.bytes));break;
+                    if(file.bytes.size()<=static_cast<qsizetype>(Limits::message_bytes))body=work_report_observed(QString::fromUtf8(file.bytes));
+                    break;
                 }
                 captured.append(Object{{"capture_id",capture},{"skill_id",id},
                     {"version",inventory->versions.contains(id)?inventory->versions.value(id):QJsonValue(work_report_missing("not_present"))},
@@ -6197,8 +6209,6 @@ struct AssistantViewModel::State {
         try {
             // Fixed schema slots only. No model getter, object text, new input
             // access or fresh geometry action is introduced by this observation.
-            constexpr quint64 scalars=8*(sizeof(QJsonObject)+12*sizeof(QJsonValue)+4*sizeof(QRectF));
-            constexpr quint64 labels=32*Limits::id_bytes*sizeof(QChar);
             auto event=work_ui_event(run,phase,cause,items,rowIndex);
             if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
             if(work_first_cause.isEmpty() && (std::string_view(phase)=="target_reveal" ||
@@ -6259,8 +6269,8 @@ struct AssistantViewModel::State {
                 if(!current())return;
                 if(item) {const auto active=item->property("current");if(!current() || !item)return;
                     page["current"]=work_report_observed(active.toBool());
-                    const auto owner=item->property("project").value<ProjectViewModel*>();if(!current())return;
-                    page["same_project"]=work_report_observed(owner==project);}
+                    const auto itemProject=item->property("project").value<ProjectViewModel*>();if(!current())return;
+                    page["same_project"]=work_report_observed(itemProject==project);}
                 break;
             }
             const QPointer<QQuickItem> focus(window->activeFocusItem());
@@ -6326,8 +6336,8 @@ struct AssistantViewModel::State {
             if(!widget_owned(run) || !workflow || !loader || !page || actualLoader!=loader)return false;
             const auto actualPage=loader->property("item").value<QObject*>();
             if(!widget_owned(run) || !workflow || !loader || !page || actualPage!=page)return false;
-            const auto owner=page->property("project").value<ProjectViewModel*>();
-            return widget_owned(run) && workflow && loader && page && owner==run->project && page->window()==run->window;
+            const auto pageProject=page->property("project").value<ProjectViewModel*>();
+            return widget_owned(run) && workflow && loader && page && pageProject==run->project && page->window()==run->window;
         };
         if(!original()){if(cause)*cause="main_original_page_unavailable";return nullptr;}
         QPointer<QQuickItem> found;
@@ -6504,10 +6514,10 @@ struct AssistantViewModel::State {
                 if(!owns())return;
                 names_complete=names_complete && native_estimate_target_current(original) && native_call && !native_call->retiring;
                 if(names_complete) {
-                    const auto names=edi::position_point_ids(*original.record->estimate_member);
-                    const auto& points=original.record->estimate_member->background;
-                    names_complete=names.size()==points.size();
-                    for(std::size_t i=0;names_complete && i<points.size();++i)names_complete=names[i]==points[i]->id.value();
+                    const auto pointIds=edi::position_point_ids(*original.record->estimate_member);
+                    const auto& anchors=original.record->estimate_member->background;
+                    names_complete=pointIds.size()==anchors.size();
+                    for(std::size_t i=0;names_complete && i<anchors.size();++i)names_complete=pointIds[i]==anchors[i]->id.value();
                 }
             } catch(...) {} // The real estimated prefix and any naming receipt remain factual.
             if(!owns())return;
@@ -6615,7 +6625,8 @@ struct AssistantViewModel::State {
             }
             work_latch_ui(run,"sidebar",lookupCause,facts);
             }catch(...){work_reports.missEvidence();}
-            if(widget_owned(run))widget_refuse(run, QObject::tr("The current workflow's Main sidebar tab is unavailable")); return;
+            if(widget_owned(run))widget_refuse(run, QObject::tr("The current workflow's Main sidebar tab is unavailable"));
+            return;
         }
         const bool selected=target->property("checked").toBool();
         work_latch_ui(run,"sidebar",selected?"main_already_selected":"main_navigation_required",{nullptr,target,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr});
@@ -6668,11 +6679,11 @@ struct AssistantViewModel::State {
         };
         auto captured_prepareCommit=[this,run] {
             if(!widget_entry_current(run,nullptr) || !widget_page_selected(run) || !run->project->currentExperiment() || run->project->currentExperiment()->experiment()!=run->background_experiment)return false;
-            const auto count=run->background_experiment->background.size();
             run->edit_scope=begin_own_edit();
             run->background_input=run->project->prepareWidgetBackgroundNames(*run->background_experiment);
             if(!widget_entry_current(run,nullptr))return false;
-            if (native_call) native_call->may_have_written=true;return true;
+            if (native_call) native_call->may_have_written=true;
+            return true;
         };
         auto captured_finishCommit=[this,run] {
             if(run->project)run->project->finishWidgetBackground(run->background_input);
@@ -6682,35 +6693,35 @@ struct AssistantViewModel::State {
             if(!widget_owned(run))return;
             if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
-                const auto parent=run->create_parent.lock();const auto input=run->background_input;
+                const auto parentRun=run->create_parent.lock();const auto input=run->background_input;
                 const bool settled=delivered && input && input->consumed && ((run->estimate_then_names && equal) || (input->outcome.applied && input->outcome.published));
                 if(input && input->outcome.applied){++run->completed_steps;run->step_counted=true;native_call->may_have_written=true;}
-                if(parent)create_widget_take_child(parent,run);
+                if(parentRun)create_widget_take_child(parentRun,run);
                 else widget_sequence_retain(run); // Factual applied state precedes refresh/readback.
-                if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run) || (parent && !create_widget_owned(parent)))return;
+                if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run) || (parentRun && !create_widget_owned(parentRun)))return;
                 bool actual=settled;
                 if(actual) {
                     const auto call=*native_call;native_refresh(call);
-                    if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run) || (parent && !create_widget_owned(parent)))return;
+                    if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run) || (parentRun && !create_widget_owned(parentRun)))return;
                     actual=widget_entry_current(run,nullptr) && run->project->currentExperiment() &&
                         run->project->currentExperiment()->experiment()==run->background_experiment;
                 }
                 if(actual) {
-                    const auto names=edi::position_point_ids(*run->background_experiment);
-                    const auto& points=run->background_experiment->background;
-                    if(points.size()!=input->members.size() || names.size()!=points.size())actual=false;
-                    for(std::size_t i=0;actual && i<points.size();++i)
-                        actual=points[i].get()==input->members[i] && points[i]->id.value()==names[i];
+                    const auto pointIds=edi::position_point_ids(*run->background_experiment);
+                    const auto& anchors=run->background_experiment->background;
+                    if(anchors.size()!=input->members.size() || pointIds.size()!=anchors.size())actual=false;
+                    for(std::size_t i=0;actual && i<anchors.size();++i)
+                        actual=anchors[i].get()==input->members[i] && anchors[i]->id.value()==pointIds[i];
                 }
                 if(delivered && !actual)control_failure(run,ControlCause::Commit);
-                if(!parent) {
+                if(!parentRun) {
                     if(!actual){widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
                     native_finish(true,widget_sequence_progress(run,QObject::tr("Background IDs assigned by the original button with ordinary Undo"),true));return;
                 }
                 widget_end(run);
-                if(!run->receiver || run->receiver->state_.get()!=this || !create_widget_owned(parent))return;
-                if(!actual){create_widget_refuse(parent,message.isEmpty()?widget_outcome_error:message,false,"background-names");return;}
-                create_widget_advance(parent);
+                if(!run->receiver || run->receiver->state_.get()!=this || !create_widget_owned(parentRun))return;
+                if(!actual){create_widget_refuse(parentRun,message.isEmpty()?widget_outcome_error:message,false,"background-names");return;}
+                create_widget_advance(parentRun);
             }catch(...){if(widget_owned(run))widget_refuse(run,widget_outcome_error);}
         };
         run->background_input.reset();
@@ -6792,7 +6803,7 @@ struct AssistantViewModel::State {
         if(!invoked || !revealed || !table || !widget_background_current(run) || !widget_background_member_current(run) ||
             widget_background_target(run,"background.list")!=table ||
             static_cast<std::size_t>(index)>=run->background_experiment->background.size() ||
-            run->background_experiment->background[index].get()!=run->background_key) {widget_refuse(run,widget_outcome_error);return;}
+            run->background_experiment->background[static_cast<std::size_t>(index)].get()!=run->background_key) {widget_refuse(run,widget_outcome_error);return;}
         auto next=[this,run] {
             if(!widget_owned(run))return;
             try{widget_background_next(run);}catch(...){if(widget_owned(run))widget_refuse(run,widget_outcome_error);}
@@ -7032,13 +7043,13 @@ struct AssistantViewModel::State {
     bool widget_relation_row_current(const std::shared_ptr<NativeWidget>& run) const {
         if (!widget_relation_current(run)) return false;
         if (run->relation_field == 0) return true;
-        const auto& model = *run->project->assistantProject();
+        const auto& projectModel = *run->project->assistantProject();
         const auto at = run->relation_base + run->relation_row;
         if(at<0)return false;
-        const bool member=run->relation_constraint ? at < static_cast<qsizetype>(model.constraints.size()) && model.constraints[at].get() == run->relation_key
-            : at < static_cast<qsizetype>(model.aliases.size()) && model.aliases[at].get() == run->relation_key;
+        const bool member=run->relation_constraint ? at < static_cast<qsizetype>(projectModel.constraints.size()) && projectModel.constraints[static_cast<std::size_t>(at)].get() == run->relation_key
+            : at < static_cast<qsizetype>(projectModel.aliases.size()) && projectModel.aliases[static_cast<std::size_t>(at)].get() == run->relation_key;
         if(!member || run->tool!="edit_relation")return member;
-        const auto& id=run->relation_constraint?model.constraints[at]->id.value():model.aliases[at]->id.value();
+        const auto& id=run->relation_constraint?projectModel.constraints[static_cast<std::size_t>(at)]->id.value():projectModel.aliases[static_cast<std::size_t>(at)]->id.value();
         return id==run->relation_args.value("id").toString().toStdString();
     }
     void widget_relation_scroll(const std::shared_ptr<NativeWidget>& run) {
@@ -7084,23 +7095,23 @@ struct AssistantViewModel::State {
         case Action::Kind::AliasAppend: actual = position + 1 == static_cast<qsizetype>(declaration.aliases.size()); break;
         case Action::Kind::ConstraintAppend: {
             actual = position < static_cast<qsizetype>(declaration.constraints.size()) &&
-                declaration.constraints[position].get() == input->applied_result.constraint &&
-                declaration.constraints[position]->id.value() == expected.text.toStdString() &&
-                declaration.constraints[position]->expression.value() == expected.expression.toStdString() &&
-                declaration.constraints[position]->enabled.get() == expected.enabled;
+                declaration.constraints[static_cast<std::size_t>(position)].get() == input->applied_result.constraint &&
+                declaration.constraints[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString() &&
+                declaration.constraints[static_cast<std::size_t>(position)]->expression.value() == expected.expression.toStdString() &&
+                declaration.constraints[static_cast<std::size_t>(position)]->enabled.get() == expected.enabled;
             break;
         }
-        case Action::Kind::AliasId: actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[position].get() == expected.row && declaration.aliases[position]->id.value() == expected.text.toStdString(); break;
-        case Action::Kind::AliasParameter: actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[position].get() == expected.row && declaration.aliases[position]->parameter_unique_name.value() == expected.text.toStdString(); break;
-        case Action::Kind::ConstraintId: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[position].get() == expected.row && declaration.constraints[position]->id.value() == expected.text.toStdString(); break;
-        case Action::Kind::ConstraintExpression: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[position].get() == expected.row && declaration.constraints[position]->expression.value() == expected.text.toStdString(); break;
-        case Action::Kind::ConstraintEnabled: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[position].get() == expected.row && declaration.constraints[position]->enabled.get() == expected.enabled; break;
+        case Action::Kind::AliasId: actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[static_cast<std::size_t>(position)].get() == expected.row && declaration.aliases[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString(); break;
+        case Action::Kind::AliasParameter: actual = position < static_cast<qsizetype>(declaration.aliases.size()) && declaration.aliases[static_cast<std::size_t>(position)].get() == expected.row && declaration.aliases[static_cast<std::size_t>(position)]->parameter_unique_name.value() == expected.text.toStdString(); break;
+        case Action::Kind::ConstraintId: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[static_cast<std::size_t>(position)].get() == expected.row && declaration.constraints[static_cast<std::size_t>(position)]->id.value() == expected.text.toStdString(); break;
+        case Action::Kind::ConstraintExpression: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[static_cast<std::size_t>(position)].get() == expected.row && declaration.constraints[static_cast<std::size_t>(position)]->expression.value() == expected.text.toStdString(); break;
+        case Action::Kind::ConstraintEnabled: actual = position < static_cast<qsizetype>(declaration.constraints.size()) && declaration.constraints[static_cast<std::size_t>(position)].get() == expected.row && declaration.constraints[static_cast<std::size_t>(position)]->enabled.get() == expected.enabled; break;
         default: actual = false;
         }
         if (!delivered || !input->outcome.published || !actual) { if(delivered)control_failure(run,ControlCause::Commit); widget_refuse(run, widget_outcome_error); return; }
         if (native_call) native_refresh(*native_call);
         if (!widget_relation_current(run)) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); return; }
-        const auto& model = *run->project->assistantProject();
+        const auto& projectModel = *run->project->assistantProject();
         const auto at = run->relation_base + run->relation_row;
         if (expected.kind == Action::Kind::ConstraintAppend) {
             run->constraint_model.clear();
@@ -7119,11 +7130,11 @@ struct AssistantViewModel::State {
         }
         if (run->relation_field == 0) {
             if (run->relation_constraint) {
-                if (at + 1 != static_cast<qsizetype>(model.constraints.size())) { widget_refuse(run, widget_outcome_error); return; }
-                run->relation_key = model.constraints[at].get();
+                if (at + 1 != static_cast<qsizetype>(projectModel.constraints.size())) { widget_refuse(run, widget_outcome_error); return; }
+                run->relation_key = projectModel.constraints[static_cast<std::size_t>(at)].get();
             } else {
-                if (at + 1 != static_cast<qsizetype>(model.aliases.size())) { widget_refuse(run, widget_outcome_error); return; }
-                run->relation_key = model.aliases[at].get();
+                if (at + 1 != static_cast<qsizetype>(projectModel.aliases.size())) { widget_refuse(run, widget_outcome_error); return; }
+                run->relation_key = projectModel.aliases[static_cast<std::size_t>(at)].get();
             }
         }
         ++run->relation_field; run->reveal_steps = 0;
@@ -7172,10 +7183,10 @@ struct AssistantViewModel::State {
         } else {
             action.kind = Action::Kind::ConstraintEnabled; action.row = run->relation_key; action.enabled = row.value("enabled").toBool();
         }
-        const auto& core = *run->project->assistantProject();
-        const bool unchanged = run->relation_field == 1 ? (run->relation_constraint ? core.constraints[at]->id.value() : core.aliases[at]->id.value()) == value.toStdString()
-            : run->relation_field == 2 ? (run->relation_constraint ? core.constraints[at]->expression.value() : core.aliases[at]->parameter_unique_name.value()) == value.toStdString()
-            : run->relation_field == 3 && core.constraints[at]->enabled.get() == action.enabled;
+        const auto& projectModel = *run->project->assistantProject();
+        const bool unchanged = run->relation_field == 1 ? (run->relation_constraint ? projectModel.constraints[static_cast<std::size_t>(at)]->id.value() : projectModel.aliases[static_cast<std::size_t>(at)]->id.value()) == value.toStdString()
+            : run->relation_field == 2 ? (run->relation_constraint ? projectModel.constraints[static_cast<std::size_t>(at)]->expression.value() : projectModel.aliases[static_cast<std::size_t>(at)]->parameter_unique_name.value()) == value.toStdString()
+            : run->relation_field == 3 && projectModel.constraints[static_cast<std::size_t>(at)]->enabled.get() == action.enabled;
         if (unchanged) {
             ++run->relation_field;
             if (run->relation_field == (run->relation_constraint ? 4 : 3)) { ++run->relation_row; run->relation_field = 0; run->relation_key = nullptr; }
@@ -7191,34 +7202,34 @@ struct AssistantViewModel::State {
         if(run->relation_row<0 || run->relation_row>=rows.size()) {widget_refuse(run,widget_outcome_error);return;}
         const auto receiver=run->receiver; const QPointer<ProjectViewModel> target(run->project);
         // cppcheck-suppress nullPointerRedundantCheck ; taken from the live run just above; the later check is for re-entry
-        const QPointer<ConstraintListModel> model(target->analysis()->constraints());
+        const QPointer<ConstraintListModel> constraintModel(target->analysis()->constraints());
         const QPointer<QQuickItem> control(widget_relation_named(run,QStringLiteral("constraints.append")));
-        if(!model || !control){widget_refuse(run,widget_outcome_error);return;}
+        if(!constraintModel || !control){widget_refuse(run,widget_outcome_error);return;}
         if(!widget_reveal_parameter(run,control))return;
         if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
         if(widget_input->manualDraftPresent()){control_failure(run,ControlCause::ManualInput);widget_refuse(run,QObject::tr("Finish the current manual input first"));return;}
         const auto row=run->relation_row;const auto values=rows.at(row).toObject();
-        run->constraint_model=model;run->relation_action={};
+        run->constraint_model=constraintModel;run->relation_action={};
         run->relation_action.kind=ProjectEditor::RelationAction::Kind::ConstraintAppend;
         run->relation_action.text=values.value("id").toString();run->relation_action.expression=values.value("expression").toString();
         run->relation_action.enabled=values.value("enabled").toBool();
         widget_commit_ready(run);
-        if(!receiver || receiver->state_.get()!=this || !widget_owned(run) || !target || !model || !control)return;
+        if(!receiver || receiver->state_.get()!=this || !widget_owned(run) || !target || !constraintModel || !control)return;
         AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=control;
-        auto current=[this,run,receiver,target,model,control,row]{return receiver && receiver->state_.get()==this && target && model && control && widget_relation_current(run) && run->relation_row==row && model==target->analysis()->constraints();};
+        auto current=[this,run,receiver,target,constraintModel,control,row]{return receiver && receiver->state_.get()==this && target && constraintModel && control && widget_relation_current(run) && run->relation_row==row && constraintModel==target->analysis()->constraints();};
         request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
-        request.completed=[this,run,receiver,target,model,control,row](bool delivered,const QString& message,ControlCause cause){
+        request.completed=[this,run,receiver,target,constraintModel,control,row](bool delivered,const QString& message,ControlCause cause){
             if(!receiver || receiver->state_.get()!=this || !widget_owned(run))return;
             control_failure(run,delivered?ControlCause::None:cause);
             try {
-                if(!delivered || !target || !model || !control || !widget_relation_current(run) || run->relation_row!=row){widget_refuse(run,message);return;}
+                if(!delivered || !target || !constraintModel || !control || !widget_relation_current(run) || run->relation_row!=row){widget_refuse(run,message);return;}
                 const auto input=run->relation_input;const auto scope=run->edit_scope;
                 const auto cleanup=qScopeGuard([this,run,receiver,target,input,scope]() noexcept {try {if(target)target->finishWidgetRelations(input);if(receiver && receiver->state_.get()==this && run->edit_scope==scope){run->edit_scope=0;end_own_edit(scope);}}catch(...) {}});
                 if(!input){widget_refuse(run,widget_outcome_error);return;}
                 const auto action=input->expected;
-                const auto result=model->appendComplete(action.text,action.expression,action.enabled);
+                const auto result=constraintModel->appendComplete(action.text,action.expression,action.enabled);
                 if(!result.published)input->outcome.published=false;
-                if(!receiver || receiver->state_.get()!=this || !widget_owned(run) || !target || !model || run->relation_input!=input)return;
+                if(!receiver || receiver->state_.get()!=this || !widget_owned(run) || !target || !constraintModel || run->relation_input!=input)return;
                 target->finishWidgetRelations(input);if(run->edit_scope==scope){run->edit_scope=0;end_own_edit(scope);}
                 widget_relation_done(run,true,{});
             }catch(...){if(receiver && receiver->state_.get()==this && widget_owned(run))widget_refuse(run,widget_outcome_error);}
@@ -7230,7 +7241,8 @@ struct AssistantViewModel::State {
         if(!registry || !project)throw ActionRefusal("target_unavailable","value");
         ParameterItem* found=nullptr;
         for(auto* item:registry->items())if(item && item->path()==path && registry->find(item->parameter())==item) {
-            if(found)throw ActionRefusal("target_unavailable","value");found=item;
+            if(found)throw ActionRefusal("target_unavailable","value");
+            found=item;
         }
         if(!found)throw ActionRefusal("target_unavailable","value");
         const auto name=edi::named_parameter(*project->assistantProject(),found->parameter(),Limits::id_bytes);
@@ -7239,12 +7251,12 @@ struct AssistantViewModel::State {
     }
     bool widget_relation_edit_member(const std::shared_ptr<NativeWidget>& run,bool original_id=true) const {
         if(!widget_owned(run))return false;
-        const auto& model=*run->project->assistantProject();const auto at=run->relation_base;
+        const auto& projectModel=*run->project->assistantProject();const auto at=run->relation_base;
         if(at<0)return false;
-        const bool member=run->relation_constraint?at<static_cast<qsizetype>(model.constraints.size()) && model.constraints[at].get()==run->relation_key:
-            at<static_cast<qsizetype>(model.aliases.size()) && model.aliases[at].get()==run->relation_key;
+        const bool member=run->relation_constraint?at<static_cast<qsizetype>(projectModel.constraints.size()) && projectModel.constraints[static_cast<std::size_t>(at)].get()==run->relation_key:
+            at<static_cast<qsizetype>(projectModel.aliases.size()) && projectModel.aliases[static_cast<std::size_t>(at)].get()==run->relation_key;
         if(!member || !original_id)return member;
-        return (run->relation_constraint?model.constraints[at]->id.value():model.aliases[at]->id.value())==run->relation_args.value("id").toString().toStdString();
+        return (run->relation_constraint?projectModel.constraints[static_cast<std::size_t>(at)]->id.value():projectModel.aliases[static_cast<std::size_t>(at)]->id.value())==run->relation_args.value("id").toString().toStdString();
     }
     Object widget_relation_edit_result(const std::shared_ptr<NativeWidget>& run,bool complete) const {
         const auto input=run->relation_input;
@@ -7264,7 +7276,8 @@ struct AssistantViewModel::State {
     void widget_relation_edit_apply(const std::shared_ptr<NativeWidget>& run) {
         const bool single=run->tool=="edit_relation";
         if(!widget_current(run) || !(single?widget_relation_edit_member(run):widget_relation_row_current(run))) {
-            if(widget_owned(run))widget_refuse(run,widget_outcome_error);return;
+            if(widget_owned(run))widget_refuse(run,widget_outcome_error);
+            return;
         }
         if(run->relation_input)return; // This exact ordinary prearm already owns its one entry.
         const auto receiver=run->receiver;const QPointer<ProjectViewModel> target(run->project);
@@ -7319,19 +7332,19 @@ struct AssistantViewModel::State {
         }
         if (native_call) native_call->may_have_written=input->outcome.applied;
         bool actual=false;
-        const auto& model=*target->assistantProject();
+        const auto& projectModel=*target->assistantProject();
         if(expected.kind==K::AliasRemove || expected.kind==K::ConstraintRemove) {
             actual=true;
-            if(run->relation_constraint){for(const auto& row:model.constraints)if(row.get()==run->relation_key)actual=false;}
-            else {for(const auto& row:model.aliases)if(row.get()==run->relation_key)actual=false;}
+            if(run->relation_constraint){for(const auto& constraintRow:projectModel.constraints)if(constraintRow.get()==run->relation_key)actual=false;}
+            else {for(const auto& alias:projectModel.aliases)if(alias.get()==run->relation_key)actual=false;}
         } else if(widget_relation_edit_member(run,false)) {
             const auto index=run->relation_base;
             switch(expected.kind) {
-            case K::AliasId:actual=model.aliases[index]->id.value()==expected.text.toStdString();break;
-            case K::AliasParameter:actual=model.aliases[index]->parameter_unique_name.value()==expected.text.toStdString();break;
-            case K::ConstraintId:actual=model.constraints[index]->id.value()==expected.text.toStdString();break;
-            case K::ConstraintExpression:actual=model.constraints[index]->expression.value()==expected.text.toStdString();break;
-            case K::ConstraintEnabled:actual=model.constraints[index]->enabled.get()==expected.enabled;break;
+            case K::AliasId:actual=projectModel.aliases[static_cast<std::size_t>(index)]->id.value()==expected.text.toStdString();break;
+            case K::AliasParameter:actual=projectModel.aliases[static_cast<std::size_t>(index)]->parameter_unique_name.value()==expected.text.toStdString();break;
+            case K::ConstraintId:actual=projectModel.constraints[static_cast<std::size_t>(index)]->id.value()==expected.text.toStdString();break;
+            case K::ConstraintExpression:actual=projectModel.constraints[static_cast<std::size_t>(index)]->expression.value()==expected.text.toStdString();break;
+            case K::ConstraintEnabled:actual=projectModel.constraints[static_cast<std::size_t>(index)]->enabled.get()==expected.enabled;break;
             default:break;
             }
         }
@@ -7387,8 +7400,8 @@ struct AssistantViewModel::State {
         std::function<bool()> prepare=[this,run,current,physicalChoice] {if(!current())return false;if(physicalChoice)widget_commit_ready(run);return current();};
         std::function<void()> finish=[this,run,receiver,physicalChoice] {
             if(!physicalChoice)return;
-            const auto input=run->relation_input;const auto scope=run->edit_scope;const QPointer<ProjectViewModel> target(run->project);
-            if(target)target->finishWidgetRelations(input);
+            const auto input=run->relation_input;const auto scope=run->edit_scope;const QPointer<ProjectViewModel> runProject(run->project);
+            if(runProject)runProject->finishWidgetRelations(input);
             if(receiver && receiver->state_.get()==this && run->edit_scope==scope){run->edit_scope=0;end_own_edit(scope);}
         };
         auto completed=[this,run,target,row,field,base,key,constraint,physicalChoice](bool delivered,const QString& message, ControlCause cause) {
@@ -7399,7 +7412,7 @@ struct AssistantViewModel::State {
                     if(run->tool=="add_relations") {widget_relation_done(run,delivered,message);return;}
                     const auto input=run->relation_input;
                     const bool actual=target && input && input->consumed && input->outcome.applied && input->outcome.published &&
-                        widget_relation_edit_member(run) && run->project->assistantProject()->aliases[base]->parameter_unique_name.value()==run->relation_action.text.toStdString();
+                        widget_relation_edit_member(run) && run->project->assistantProject()->aliases[static_cast<std::size_t>(base)]->parameter_unique_name.value()==run->relation_action.text.toStdString();
                     const bool complete=delivered && actual && native_owner(run->call.receipt);
                     if (native_call) native_call->may_have_written=input && input->outcome.applied;
                     if(complete)run->completed_steps=1;
@@ -7502,7 +7515,8 @@ struct AssistantViewModel::State {
         if (!receiver || receiver->state_.get() != this || !widget_current(run)) return;
         if (!run->fit_undo_visible) { apply_fit_undo(run); return; }
         if (!widget_input || !run->window || widget_input->manualDraftPresent()) {
-            if (widget_owned(run)) widget_refuse(run, widget_outcome_error); return;
+            if (widget_owned(run)) widget_refuse(run, widget_outcome_error);
+            return;
         }
         const QPointer<QQuickItem> target(widget_named(QStringLiteral("appBar.button.undo")));
         if (!target || !widget_input->usableTarget(*target)) { widget_refuse(run, widget_outcome_error); return; }
@@ -7542,10 +7556,10 @@ struct AssistantViewModel::State {
         run->relation_visible=show_actions;run->window=show_actions?action_window:nullptr;
         const auto op=args.value("operation").toString();const auto id=args.value("id").toString().toStdString();
         run->relation_constraint=op.startsWith(QLatin1String("constraint_"));run->relation_field=1;
-        const auto& model=*project->assistantProject();
+        const auto& projectModel=*project->assistantProject();
         qsizetype position=0;bool found=false;
-        if(run->relation_constraint){for(const auto& row:model.constraints){if(row->id.value()==id){if(found)throw ActionRefusal("target_unavailable","relation");found=true;run->relation_key=row.get();run->relation_base=position;}++position;}}
-        else {for(const auto& row:model.aliases){if(row->id.value()==id){if(found)throw ActionRefusal("target_unavailable","relation");found=true;run->relation_key=row.get();run->relation_base=position;}++position;}}
+        if(run->relation_constraint){for(const auto& row:projectModel.constraints){if(row->id.value()==id){if(found)throw ActionRefusal("target_unavailable","relation");found=true;run->relation_key=row.get();run->relation_base=position;}++position;}}
+        else {for(const auto& row:projectModel.aliases){if(row->id.value()==id){if(found)throw ActionRefusal("target_unavailable","relation");found=true;run->relation_key=row.get();run->relation_base=position;}++position;}}
         if(!found || run->relation_base>std::numeric_limits<int>::max())throw ActionRefusal("target_unavailable","relation");
         using K=ProjectEditor::RelationAction::Kind;
         auto& action=run->relation_action;action.row=run->relation_key;action.text=args.value("value").toString();
@@ -7563,11 +7577,11 @@ struct AssistantViewModel::State {
         bool equal=false;
         const auto at=run->relation_base;
         switch(action.kind) {
-        case K::AliasId:equal=model.aliases[at]->id.value()==action.text.toStdString();break;
-        case K::AliasParameter:equal=model.aliases[at]->parameter_unique_name.value()==action.text.toStdString();break;
-        case K::ConstraintId:equal=model.constraints[at]->id.value()==action.text.toStdString();break;
-        case K::ConstraintExpression:equal=model.constraints[at]->expression.value()==action.text.toStdString();break;
-        case K::ConstraintEnabled:equal=model.constraints[at]->enabled.get()==action.enabled;break;
+        case K::AliasId:equal=projectModel.aliases[static_cast<std::size_t>(at)]->id.value()==action.text.toStdString();break;
+        case K::AliasParameter:equal=projectModel.aliases[static_cast<std::size_t>(at)]->parameter_unique_name.value()==action.text.toStdString();break;
+        case K::ConstraintId:equal=projectModel.constraints[static_cast<std::size_t>(at)]->id.value()==action.text.toStdString();break;
+        case K::ConstraintExpression:equal=projectModel.constraints[static_cast<std::size_t>(at)]->expression.value()==action.text.toStdString();break;
+        case K::ConstraintEnabled:equal=projectModel.constraints[static_cast<std::size_t>(at)]->enabled.get()==action.enabled;break;
         default:break;
         }
         if(!projection.input_current() || !native_call || native_call->record!=run->call.record || native_call->receipt!=run->call.receipt)return;
@@ -7613,9 +7627,9 @@ struct AssistantViewModel::State {
                 QTimer::singleShot(500, &owner, [this, run, target] {
                     try {
                         if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
-                        const char* observed=!widget_page_selected(run)?"extra_page_not_current":!target?"extra_target_retired":
+                        const char* observedReason=!widget_page_selected(run)?"extra_page_not_current":!target?"extra_target_retired":
                             widget_sidebar_tab(run,"extras")!=target?"extra_target_changed":!target->property("checked").toBool()?"extra_unchecked":"extra_selected";
-                        work_latch_control(run->call,target,"sidebar_postcheck",observed,{},QStringLiteral("sideBar.tab.extras"));
+                        work_latch_control(run->call,target,"sidebar_postcheck",observedReason,{},QStringLiteral("sideBar.tab.extras"));
                         if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
                         if (!widget_page_selected(run) || !target || widget_sidebar_tab(run, "extras") != target || !target->property("checked").toBool()) {
                             control_failure(run,ControlCause::ExtraSidebar); widget_refuse(run, QObject::tr("The genuine Extra click did not select its original sidebar")); return;
@@ -8247,9 +8261,9 @@ struct AssistantViewModel::State {
         clear_own_edit();
         if (native_receipt) native_receipt->retired = true;
         native_receipt.reset(); native_pending.clear();
-        for (auto& record : native_records) {
-            record->retired = true;
-            if (discard || closing || !respond) { record->discarded = true; record->reserved = false; }
+        for (auto& held : native_records) {
+            held->retired = true;
+            if (discard || closing || !respond) { held->discarded = true; held->reserved = false; }
         }
         native_cancel_creation();
         native_cancel_save();
@@ -8257,16 +8271,16 @@ struct AssistantViewModel::State {
             // Worker sets the real cancellation flag before its fallible trace
             // notification. Keep its real report/RPC owner if that trace fails.
             const auto fit = native_fit;
-            const auto record = native_call ? native_call->record : nullptr;
+            const auto callRecord = native_call ? native_call->record : nullptr;
             try { fit->cancel(); }
             catch (...) {
-                if (!receiver || native_fit != fit || (native_call ? native_call->record : nullptr) != record) return;
+                if (!receiver || native_fit != fit || (native_call ? native_call->record : nullptr) != callRecord) return;
                 // No synchronous notification from this catch may replace the
                 // original retirement while it still owes its real response.
                 native_blocked = true; consented_context.clear();
                 try { error = native_capacity_error; } catch (...) {}
             }
-            if (!receiver || native_fit != fit || (native_call ? native_call->record : nullptr) != record) return;
+            if (!receiver || native_fit != fit || (native_call ? native_call->record : nullptr) != callRecord) return;
         }
         if (native_call) {
             native_call->receipt->retired = true; native_call->retiring = true;
@@ -8594,20 +8608,20 @@ struct AssistantViewModel::State {
                     generic_context_retention_pending=false;generic_context_retention_error.clear();
                 }
             }
-            const auto settled = native_settlement_scope(call);
+            const auto settledScope = native_settlement_scope(call);
             if(success)remember_current_session();
-            if(!receiver || !settled())return;
+            if(!receiver || !settledScope())return;
             if(success && project && (record->tool=="create_project" || record->tool=="edit_project")) {
                 const auto args=record->original.value("arguments").toObject();
                 const auto title=record->tool=="create_project"?args.value("title").toString():
                     args.value("operation")=="title"?args.value("value").toString():QString();
                 if(!title.isEmpty() && project->title()==title)name_current_session(title);
             }
-            if(!receiver || !settled())return;
+            if(!receiver || !settledScope())return;
             if (native_create_widget && native_create_widget->call.record == record) { const auto run = native_create_widget; create_widget_end(run); }
-            if (!receiver || !settled()) return;
+            if (!receiver || !settledScope()) return;
             if (native_widget && native_widget->call.record == record) { const auto run = native_widget; widget_end(run); }
-            if (!receiver || !settled()) return;
+            if (!receiver || !settledScope()) return;
             if (!retained) {
                 native_failure("FINISH_HISTORY","HISTORY",Limits::ui_history_bytes,historyCapacity?"CAPACITY":"REFUSAL",&call,&outcome,int(request_retired));
                 generic_blocked=true;error=native_capacity_error;
@@ -8615,7 +8629,7 @@ struct AssistantViewModel::State {
             }
             stage = "FINISH_NOTIFY"; role = "PUBLICATION"; bound = 0;
             work_settled_step();
-            if(!receiver || !settled())return;
+            if(!receiver || !settledScope())return;
             notify();
         } catch (...) {
             // The prepared outcome/response/row and original ID remain owned.
@@ -8658,11 +8672,11 @@ struct AssistantViewModel::State {
         try {
             const QPointer<AssistantViewModel> receiver(&owner);
             const QPointer<ProjectViewModel> target(project);
-            const auto* model=target?target->assistantProject():nullptr;
+            const auto* projectModel=target?target->assistantProject():nullptr;
             auto* context_owner=controller.get();
             const auto current=[&] {
-                return receiver && receiver->state_.get()==this && target && !target->retired_ && project==target && model &&
-                    target->assistantProject()==model && controller.get()==context_owner && context_owner && completed &&
+                return receiver && receiver->state_.get()==this && target && !target->retired_ && project==target && projectModel &&
+                    target->assistantProject()==projectModel && controller.get()==context_owner && context_owner && completed &&
                     target->fit()==completed && original.fit_attempt && completed->latest_attempt_==original.fit_attempt &&
                     completed->history_attempt_==original.fit_attempt && original.receipt && !original.receipt->stale &&
                     native_owner(original.receipt) && native_call && native_call->record==original.record &&
@@ -8670,9 +8684,9 @@ struct AssistantViewModel::State {
             };
             if(!current())return;
             const auto revision=target->revision();
-            const auto stamps=edi::work_stamps(*model);
+            const auto stamps=edi::work_stamps(*projectModel);
             const auto context=object(context_owner->context());
-            if(!current() || target->revision()!=revision || !edi::unchanged_since(*model,stamps) ||
+            if(!current() || target->revision()!=revision || !edi::unchanged_since(*projectModel,stamps) ||
                 !context.value("diagnostics").isArray() || !context.value("parameters").isArray())return;
             const auto diagnostics=context.value("diagnostics").toArray();
             QSet<QString> paths;
@@ -8701,17 +8715,17 @@ struct AssistantViewModel::State {
             // How far each powder pattern is from its data after this fit, from the engine's arrays, so the model can
             // judge the fit without reading rows (inspect_data stays for a narrow, named range).
             QJsonArray misfit;
-            for(std::size_t i=0;i<model->experiments.size();++i) {
-                const auto& member=model->experiments[i];
+            for(std::size_t i=0;i<projectModel->experiments.size();++i) {
+                const auto& member=projectModel->experiments[i];
                 if(member->experiment_type.effective_sample_form()==edi::SampleFormEnum::SINGLE_CRYSTAL)continue;
-                misfit.append(assistant_data::misfit(edi::capture_pattern(*model,i),
+                misfit.append(assistant_data::misfit(edi::capture_pattern(*projectModel,i),
                     QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(member->name.value()))));
             }
             if(!misfit.isEmpty())enriched["misfit"]=misfit;
             // Validate the same closed native projection before optional capture
             // can replace this local result; failures leave the fit facts intact.
             (void)outgoing::size(enriched,outgoing::Role::Result);
-            if(current() && target->revision()==revision && edi::unchanged_since(*model,stamps)){result.swap(enriched);attached=true;}
+            if(current() && target->revision()==revision && edi::unchanged_since(*projectModel,stamps)){result.swap(enriched);attached=true;}
         } catch(...) {} // Optional inspection cannot replace the completed native fit outcome.
     }
     void native_fit_finished(const edi::FitReport& report, bool presented, const NativeCall& original) noexcept {
@@ -8782,7 +8796,8 @@ struct AssistantViewModel::State {
         if(!admission.input_current())return false;
         if(account_confirmation_pending){if(agent)(void)agent->deferServerRequest(rpc,agent->outputGeneration());return false;}
         native_records.insert(record->key,record);
-        try {native_call.emplace(NativeCall{rpc,record,native_receipt});}
+        try {native_call.emplace(NativeCall{.rpc=rpc,.record=record,.receipt=native_receipt,.may_have_written=false,.resolved=false,
+                                            .retiring=false,.finishing=false,.fit_attempt=0,.inspection={}});}
         catch(...){native_records.remove(record->key);throw;}
         return true;
     }
@@ -8807,7 +8822,6 @@ struct AssistantViewModel::State {
         const char* readStage="METADATA";
         try {
             // Fixed metadata only; no selected source/collection byte image is copied.
-            static constexpr char keys[]="file_idcollection_idgenerationencodingtexttotal_bytesstartendnext_offseteofcompletestatusaction_erroraction_fieldmessage";
             const auto file_id=generic_id(args.value("file_id"));
             const auto offset=static_cast<quint64>(args.value("offset").toDouble());
             const auto requested=static_cast<quint64>(args.value("max_bytes").toDouble());
@@ -8973,17 +8987,17 @@ struct AssistantViewModel::State {
             outcome["message"]="The supplied scope_id does not match an input scope offered to this current call. Copy an exact input_scopes.sources.scope_id; if needed files are already in selected_files.files, use those admitted file IDs directly.";
             if(!native_prepare(rpc, id, "acquire_inputs", purpose, original))return;
             if(receiver && publication.input_current() && native_call && native_call->receipt==callReceipt && native_call->rpc==rpc)
-                native_finish(false,outcome);return;}
+                native_finish(false,outcome);
+            return;
+        }
         if(source->acquired){
             outcome=source->result;outcome["status"]="already_admitted";
             if(!native_prepare(rpc, id, "acquire_inputs", purpose, original))return;
             if(receiver && publication.input_current() && native_call && native_call->receipt==callReceipt && native_call->rpc==rpc)
-                native_finish(true,outcome);return;
+                native_finish(true,outcome);
+            return;
         }
         using Bounds=edi::assistant::SelectedFileLimits;
-        // Charge the actual bounded result representation before constructing
-        // its maximum packet. The same native record owns it after prepare.
-        constexpr quint64 descriptorCharacters=sizeof("file_idordinalreader_hintmeasurement")+36;
         if(!native_prepare(rpc, id, "acquire_inputs", purpose, original))return;
         if(!receiver || !publication.input_current() || !native_call || native_call->receipt!=callReceipt)return;
         const auto originalCall=*native_call;
@@ -9001,7 +9015,8 @@ struct AssistantViewModel::State {
                     outcome["files"]=QJsonArray{Object{{"file_id",source->attachment},{"ordinal",static_cast<double>(source->ordinal)},
                         {"reader_hint",input_reader_hint(file.value("name").toString())}}};
                     source->result=outcome;source->acquired=true;
-                    if(owned())native_finish(true,outcome);return;
+                    if(owned())native_finish(true,outcome);
+                    return;
                 }
                 native_finish(false,outcome);return;
             }
@@ -9019,12 +9034,12 @@ struct AssistantViewModel::State {
                     throw std::length_error("Existing local inputs exceed capacity");
                 total+=static_cast<quint64>(bytes);
             }
-            std::vector<edi::assistant::SelectedFile> files;files.reserve(Bounds::files-oldFiles.size());
+            std::vector<edi::assistant::SelectedFile> files;files.reserve(Bounds::files-static_cast<quint64>(oldFiles.size()));
             QMap<QString,QByteArray> physical;
 
             // Reserve before vector growth; on every failure the vector and
             // captured proofs die before either origin/path charge is released.
-            std::vector<std::shared_ptr<LocalInputSource>> origins;origins.reserve(Bounds::files-oldFiles.size());
+            std::vector<std::shared_ptr<LocalInputSource>> origins;origins.reserve(Bounds::files-static_cast<quint64>(oldFiles.size()));
             QJsonArray descriptors;
             int discovered=0,ignored=0;
             const auto capture=[&](QFile& input,const QString& name) {
@@ -9048,7 +9063,8 @@ struct AssistantViewModel::State {
                 for(;;){
                     if(!current() || !source->current())throw std::runtime_error("Input scope changed");
                     const auto count=input.read(chunk.data(),chunk.size());
-                    if(count<0)throw std::runtime_error("Input read failed");if(!count)break;
+                    if(count<0)throw std::runtime_error("Input read failed");
+                    if(!count)break;
                     if(static_cast<quint64>(count)>static_cast<quint64>(before.st_size)-verified)throw std::runtime_error("Input changed");
                     verified+=static_cast<quint64>(count);check.addData(QByteArrayView(chunk.data(),count));
                 }
@@ -9091,7 +9107,8 @@ struct AssistantViewModel::State {
             } else {
                 discovered=1;const int duplicate=duplicate_input_descriptor(source->descriptor);QFile input;
                 if(duplicate<0 || !input.open(duplicate,QIODevice::ReadOnly|QIODevice::Unbuffered,QFileDevice::AutoCloseHandle)){
-                    if(duplicate>=0)::close(duplicate);throw std::runtime_error("Input file unavailable");}
+                    if(duplicate>=0)::close(duplicate);
+                    throw std::runtime_error("Input file unavailable");}
                 if(!input.seek(0))throw std::runtime_error("Input file unavailable");
                 capture(input,QFileInfo(source->selected).fileName());
             }
@@ -9166,31 +9183,31 @@ struct AssistantViewModel::State {
         const QPointer<ProjectViewModel> target(project);
         if(!target || target->publication_depth_ || target->editing_)
             edi::assistant::detail::refuse("invalid_argument","The original project publication is not settled for numerical inspection");
-        auto* model=target->assistantProject();
+        auto* projectModel=target->assistantProject();
         const auto id=args.value("dataset_id").toString();
-        std::size_t index=model->experiments.size();
-        for(std::size_t i=0;i<model->experiments.size();++i)
-            if(QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(model->experiments[i]->name.value()))==id) {
-                if(index!=model->experiments.size())edi::assistant::detail::refuse("invalid_argument","The current dataset ID is ambiguous");
+        std::size_t index=projectModel->experiments.size();
+        for(std::size_t i=0;i<projectModel->experiments.size();++i)
+            if(QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(projectModel->experiments[i]->name.value()))==id) {
+                if(index!=projectModel->experiments.size())edi::assistant::detail::refuse("invalid_argument","The current dataset ID is ambiguous");
                 index=i;
             }
-        if(index==model->experiments.size())edi::assistant::detail::refuse("invalid_argument","The dataset_id is not an exact currently offered dataset ID");
-        const auto member=model->experiments[index];
+        if(index==projectModel->experiments.size())edi::assistant::detail::refuse("invalid_argument","The dataset_id is not an exact currently offered dataset ID");
+        const auto member=projectModel->experiments[index];
         QPointer<ExperimentViewModel> view;
         for(auto* candidate:target->experimentModels())if(candidate && candidate->experiment()==member.get()) {
             if(view)edi::assistant::detail::refuse("invalid_argument","The original dataset view is ambiguous");
             view=candidate;
         }
         if(!view)edi::assistant::detail::refuse("invalid_argument","The original native dataset publication is unavailable");
-        const auto generation=view->patternGeneration();
+        const auto patternGeneration=view->patternGeneration();
         const auto revision=target->revision();
         const auto current=[&] {
             return publication.input_current() && project==target && target && !target->publication_depth_ && !target->editing_ &&
-                native_receipt==receipt && native_owner(receipt) && target->assistantProject()==model &&
-                target->revision()==revision && index<model->experiments.size() && model->experiments[index]==member &&
+                native_receipt==receipt && native_owner(receipt) && target->assistantProject()==projectModel &&
+                target->revision()==revision && index<projectModel->experiments.size() && projectModel->experiments[index]==member &&
                 view && target->experimentModels().contains(view) && view->experiment()==member.get() &&
-                view->patternGeneration()==generation && inspection && inspection->stamps &&
-                edi::unchanged_since(*model,*inspection->stamps);
+                view->patternGeneration()==patternGeneration && inspection && inspection->stamps &&
+                edi::unchanged_since(*projectModel,*inspection->stamps);
         };
         if(!current())edi::assistant::detail::refuse("invalid_argument","The original dataset changed before its numerical capture");
         const auto start=assistant_data::index(args.value("start")),count=assistant_data::index(args.value("count"));
@@ -9200,7 +9217,7 @@ struct AssistantViewModel::State {
         const auto partitions=compact?assistant_data::index(args.value("partitions")):std::size_t{};
         Object data;
         if(source=="bragg") {
-            const auto pattern=edi::capture_pattern(*model,index);
+            const auto pattern=edi::capture_pattern(*projectModel,index);
             data=compact?assistant_data::bragg_summary(pattern,start,count,partitions):assistant_data::bragg(pattern,start,count);
         }
         else if(sc) {
@@ -9211,7 +9228,7 @@ struct AssistantViewModel::State {
             if(!reflections || view->singleCrystalReflections()!=reflections)
                 edi::assistant::detail::refuse("invalid_argument","The original single-crystal reflection publication changed during capture");
         } else {
-            const auto pattern=edi::capture_pattern(*model,index);
+            const auto pattern=edi::capture_pattern(*projectModel,index);
             if(compact) {
                 const auto status=member->data?member->data->calc_status.buffer():edi::ComputedColumn<std::string>::Buffer{};
                 data=assistant_data::powder_summary(pattern,status,member->computed_current(),start,count,partitions);
@@ -9219,12 +9236,12 @@ struct AssistantViewModel::State {
         }
         data["dataset_id"]=id;data["sample_form"]=QString::fromLatin1(edi::token(member->experiment_type.effective_sample_form()));
         data["source"]=source;data["captured_revision"]=QString::number(revision);
-        data["publication_generation"]=QString::number(generation);
+        data["publication_generation"]=QString::number(patternGeneration);
         data["calculating"]=target->calculating();data["fitting"]=target->fit()->nativeRunning();
-        const auto error=view->pattern()?view->pattern()->calculationError():QString{};
-        const auto errorText=bounded_error(error);
-        data["calculation_error"]=errorText;data["calculation_error_present"]=!error.isEmpty();
-        data["calculation_error_complete"]=errorText==error;
+        const auto calculationError=view->pattern()?view->pattern()->calculationError():QString{};
+        const auto errorText=bounded_error(calculationError);
+        data["calculation_error"]=errorText;data["calculation_error_present"]=!calculationError.isEmpty();
+        data["calculation_error_complete"]=errorText==calculationError;
         if(!current())edi::assistant::detail::refuse("invalid_argument","The original dataset changed during its numerical capture");
         inspection->data_view=view;inspection->data_member=member.get();inspection->data_generation=generation;
         return {{"data",data}};
@@ -9234,13 +9251,13 @@ struct AssistantViewModel::State {
     QJsonArray calculation_misfit() const {
         QJsonArray out;
         if(!project || project->calculating() || project->fit()->nativeRunning())return out;
-        auto* model=project->assistantProject();
-        if(!model)return out;
+        auto* projectModel=project->assistantProject();
+        if(!projectModel)return out;
         try {
-            for(std::size_t i=0;i<model->experiments.size();++i) {
-                const auto& member=model->experiments[i];
+            for(std::size_t i=0;i<projectModel->experiments.size();++i) {
+                const auto& member=projectModel->experiments[i];
                 if(member->experiment_type.effective_sample_form()==edi::SampleFormEnum::SINGLE_CRYSTAL)continue;
-                out.append(assistant_data::misfit(edi::capture_pattern(*model,i),
+                out.append(assistant_data::misfit(edi::capture_pattern(*projectModel,i),
                     QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(member->name.value())),8,5,"calculation"));
             }
         } catch(...) {return {};}
@@ -9370,7 +9387,6 @@ struct AssistantViewModel::State {
             inspection->selected_context = original_receipt->selected_context; inspection->selected_hashes = original_receipt->selected_hashes;
             inspection->project = original_receipt->project; inspection->generation = original_receipt->generation; inspection->serial = original_receipt->serial;
             if (project) {
-                const auto room = static_cast<quint64>(Limits::context_bytes);
 
                 // This overload admits canonical source buffers before growth.
                 inspection->stamps = edi::work_stamps(*project->assistantProject());
@@ -9456,16 +9472,16 @@ struct AssistantViewModel::State {
                 native_finish(false, {{"status", "unavailable"}, {"message", "Only an available single/joint fit has a visible native route"}}); return;
             }
             if (!native_call) return;
-            const auto original = *native_call;
-            const auto original_scope = native_settlement_scope(original);
+            const auto callCopy = *native_call;
+            const auto original_scope = native_settlement_scope(callCopy);
             try { native_start_widget(name, args); }
             catch (const std::exception& error) {
-                if (original_scope() && native_call && native_call->record == original.record) {
+                if (original_scope() && native_call && native_call->record == callCopy.record) {
                     try { native_finish(false, {{"status", "refused"}, {"message", bounded_error(QString::fromUtf8(error.what()))}}); }
                     catch (...) {
-                        if (!original_scope() || !native_call || native_call->record != original.record) return;
+                        if (!original_scope() || !native_call || native_call->record != callCopy.record) return;
                         native_fence();
-                        if (original_scope() && native_call && native_call->record == original.record) native_finish(false, original.record->outcome);
+                        if (original_scope() && native_call && native_call->record == callCopy.record) native_finish(false, callCopy.record->outcome);
                     }
                 }
             }
@@ -9475,7 +9491,7 @@ struct AssistantViewModel::State {
         if (name == "edit_background") {
             const auto background = assistant_native_background(*project->assistantProject(), args);
             if (!native_call) return;
-            const auto original = *native_call;
+            const auto callCopy = *native_call;
             const QPointer<ProjectViewModel> target(project);
             const QPointer<AssistantViewModel> receiver(&owner);
             const auto edit_scope = begin_own_edit();
@@ -9486,7 +9502,7 @@ struct AssistantViewModel::State {
                 if(background.names) {
                     const auto count=background.experiment->background.size();
                     const auto names=edi::position_point_ids(*background.experiment);
-                    for(const auto& id:names)if(id.size()>Limits::id_bytes)throw std::length_error("Position-derived IDs exceed their original admitted capacity");
+                    for(const auto& pointId:names)if(pointId.size()>Limits::id_bytes)throw std::length_error("Position-derived IDs exceed their original admitted capacity");
                     bool equal=names.size()==count;
                     for(std::size_t i=0;equal && i<count;++i)equal=names[i]==background.experiment->background[i]->id.value();
                     if(equal)unchanged_names=true;
@@ -9502,13 +9518,13 @@ struct AssistantViewModel::State {
             catch (...) { if (receiver) end_own_edit(edit_scope); throw; }
             if (!receiver) return;
             end_own_edit(edit_scope);
-            if (!target || project != target || !native_call || native_call->record != original.record || native_call->receipt != original.receipt) return;
+            if (!target || project != target || !native_call || native_call->record != callCopy.record || native_call->receipt != callCopy.receipt) return;
             if (native_call) native_call->may_have_written = result.applied;
             if(unchanged_names){native_finish(true,{{"status","unchanged"},{"message","Background IDs already match their positions; no Undo was needed"}});return;}
             Object outcome{{"status", !result.applied ? "refused" : result.published ? "edited" : "applied_unconfirmed"},
                 {"calculation_pending", target->calculating()}, {"message", result.message.isEmpty() ? QString("Background edited with Undo; calculation is asynchronous") : bounded_error(result.message)}};
             if(result.applied && result.published && !background.names && background.input.action!=edi::BackgroundPointInput::Action::Remove)
-                // The original editor applied this exact prepared ID. This is
+                // The callCopy editor applied this exact prepared ID. This is
                 // a completed-edit fact, not authority over a later changed row.
                 outcome["background_id"]=QString::fromStdString(background.input.id);
             native_finish(result.applied && result.published,outcome);
@@ -9519,7 +9535,7 @@ struct AssistantViewModel::State {
             if (!native_call) return;
             native_call->may_have_written = true;
             const auto original_record = native_call->record;
-            const auto original_receipt = native_call->receipt;
+            const auto callReceipt = native_call->receipt;
             const QPointer<ProjectViewModel> original_project = project;
             ProjectViewModel::EditOutcome result;
             try { result = project->applyRecordedEdit(*edit, name == "add_relations"); }
@@ -9529,7 +9545,7 @@ struct AssistantViewModel::State {
             }
             end_own_edit(edit_scope);
             if (!original_project || project != original_project || !native_call ||
-                native_call->record != original_record || native_call->receipt != original_receipt) return;
+                native_call->record != original_record || native_call->receipt != callReceipt) return;
             native_finish(result.applied && result.published, {{"status", !result.applied ? "refused" : result.published ? "edited" : "applied_unconfirmed"},
                 {"calculation_pending", project->calculating()}, {"message", result.message.isEmpty() ? QString("Native edit published with Undo; calculation is asynchronous.") : bounded_error(result.message)}});
             return;
@@ -9988,7 +10004,7 @@ struct AssistantViewModel::State {
                 start_prepared_visible_creation(creation);
                 return; // Original frame/ordinary controls now own this SAME RPC.
             } else if (creation->completing_existing) {
-                const QPointer<AssistantViewModel> receiver(&owner);
+                const QPointer<AssistantViewModel> recipient(&owner);
                 if (widget_input && widget_input->manualDraftPresent())
                     throw std::runtime_error("Finish the current manual draft before completing this project");
                 creation->population_outcome = native_creation_outcome(*creation->candidate);
@@ -10008,7 +10024,7 @@ struct AssistantViewModel::State {
                 try { result = completion_target->populateEmptyProject(creation->population); }
                 catch (...) {
                     creation->adopted = creation->population->committed();
-                    if (!receiver) return;
+                    if (!recipient) return;
                     end_own_edit(edit_scope);
                     if (original_call() && native_call) native_call->may_have_written = creation->adopted;
                     throw;
@@ -10018,7 +10034,7 @@ struct AssistantViewModel::State {
                 if(creation->adopted && creation->estimate_default && effect_current(completion_target)) {
                     estimated=completion_target->estimateBackgroundFor(estimateMember,creation->estimate_outcome.get());
                 }
-                if (!receiver || receiver->state_.get()!=this) return;
+                if (!recipient || recipient->state_.get()!=this) return;
                 end_own_edit(edit_scope);
                 if (original_call() && native_call) native_call->may_have_written = creation->adopted;
                 // Actual commit was latched inside the closed operation before any UI
@@ -10042,13 +10058,13 @@ struct AssistantViewModel::State {
                 auto outcome = native_creation_outcome(*creation->candidate);
                 const auto* estimateMember=creation->candidate->project.experiments.empty()?nullptr:creation->candidate->project.experiments[0].get();
                 if(creation->estimate_default && !estimateMember)throw std::runtime_error("The required native Estimate experiment is unavailable before setup adoption");
-                auto model = session->prepareAssistantNativeModel(std::move(creation->candidate->project), creation->epoch, current);
+                auto nativeModel = session->prepareAssistantNativeModel(std::move(creation->candidate->project), creation->epoch, current);
                 creation->candidate.reset();
-                if (!model || !current()) throw std::runtime_error("Native creation owner changed before attachment");
-                installed_attachment = prepare_creation_attachment(creation, model.get(), outcome);
-                const QPointer<ProjectViewModel> created_target(model.get());
+                if (!nativeModel || !current()) throw std::runtime_error("Native creation owner changed before attachment");
+                installed_attachment = prepare_creation_attachment(creation, nativeModel.get(), outcome);
+                const QPointer<ProjectViewModel> created_target(nativeModel.get());
                 bool presented = false;
-                const bool adopted = session->commitAssistantNativeModel(std::move(model), creation->epoch, current, presented);
+                const bool adopted = session->commitAssistantNativeModel(std::move(nativeModel), creation->epoch, current, presented);
                 std::optional<ProjectViewModel::EditOutcome> estimated;
                 if(adopted && creation->estimate_default && effect_current(created_target)) {
                     const auto scope=begin_own_edit();
@@ -10114,7 +10130,8 @@ struct AssistantViewModel::State {
         for(auto* form:action_window->findChildren<QObject*>(QStringLiteral("saveAs.choice"))) {
             if(!form->inherits("QQuickPopup") || !form->property("visible").toBool() ||
                 (opened && !form->property("opened").toBool()))continue;
-            if(found)return nullptr;found=form;
+            if(found)return nullptr;
+            found=form;
         }
         return found;
     }
@@ -10307,7 +10324,8 @@ struct AssistantViewModel::State {
         auto task=std::make_shared<NativeSave>();task->receiver=&owner;task->project=project;task->name=name;
         task->epoch=session->assistantEpoch();task->ordinary_current=current;task->current_destination=current;task->transport_generation=agent->outputGeneration();
         if(current)task->source_directory=project->path();
-        if(!native_prepare(rpc,id,"save_project",purpose,original))return;if(!receiver || !admission.input_current() || !native_call)return;
+        if(!native_prepare(rpc,id,"save_project",purpose,original))return;
+        if(!receiver || !admission.input_current() || !native_call)return;
         task->call=*native_call;native_save=task;
         try{native_start_ordinary_save(task);}catch(...){if(receiver && receiver->state_.get()==this)native_pending_save_cancelled(task);throw;}
     }
@@ -10350,7 +10368,8 @@ struct AssistantViewModel::State {
     QPointer<QQuickItem> ordinary_create_group() {
         QPointer<QQuickItem> form;
         for(auto* item:widget_items())if(item->objectName()==QStringLiteral("group.getStarted")) {
-            if(form)throw std::runtime_error("The ordinary Create form is ambiguous");form=item;
+            if(form)throw std::runtime_error("The ordinary Create form is ambiguous");
+            form=item;
         }
         if(!form)throw std::runtime_error("The current app Create form is unavailable");
         return form;
@@ -10409,8 +10428,8 @@ struct AssistantViewModel::State {
             if(current) {
                 outcome["name"]=project->name();outcome["title"]=project->title();outcome["description"]=project->description();
             }
-            const auto error=creation->ordinary_facts.error;
-            if(!error.isEmpty())outcome["message"]=bounded_error(error);
+            const auto factsError=creation->ordinary_facts.error;
+            if(!factsError.isEmpty())outcome["message"]=bounded_error(factsError);
             else if(!creation->ordinary_failure.isEmpty())outcome["message"]=bounded_error(creation->ordinary_failure);
             if(creation->prior_save_attempted && !creation->adopted) {
                 outcome["applied"]=creation->prior_saved;outcome["status"]=creation->prior_saved?"partial":"unconfirmed";outcome["uncertain"]=creation->prior_save_uncertain;
@@ -10471,8 +10490,8 @@ struct AssistantViewModel::State {
         task->transport_generation=agent->outputGeneration();task->call=*native_call;task->creation_owner=creation;
         task->source_directory=project->path();
         task->continuation=[this,creation](const std::shared_ptr<NativeSave>& saved) {
-            const auto receiver=saved->receiver;
-            if(!receiver || receiver->state_.get()!=this || native_creation!=creation || !native_call ||
+            const auto savedReceiver=saved->receiver;
+            if(!savedReceiver || savedReceiver->state_.get()!=this || native_creation!=creation || !native_call ||
                 native_call->record!=creation->record || native_call->receipt!=creation->receipt)return;
             creation->prior_saved=saved->committed;creation->prior_save_attempted=saved->call.may_have_written;
             creation->prior_save_uncertain=!saved->committed && saved->call.may_have_written;
@@ -10540,7 +10559,8 @@ struct AssistantViewModel::State {
                 edi::project_name_has_separator(recipe.project_name) || !edi::persistable_name(recipe.experiment_name) || recipe.wavelength<=0 || recipe.phase_scale<=0)
                 throw std::invalid_argument("Supply supported explicit CW/neutron/Bragg values and valid project/experiment names");
             double previous=-std::numeric_limits<double>::infinity();for(const auto& anchor:recipe.background) {
-                if(anchor.first<=previous)throw std::invalid_argument("Background anchors require increasing finite positions");previous=anchor.first;
+                if(anchor.first<=previous)throw std::invalid_argument("Background anchors require increasing finite positions");
+                previous=anchor.first;
             }
             for(const auto& range:recipe.exclusions)if(range.first>range.second)throw std::invalid_argument("Exclusion limits require ordered finite pairs");
             for(std::size_t i=0;i<recipe.initial_parameters.size();++i)for(std::size_t j=0;j<i;++j)
@@ -10691,7 +10711,8 @@ struct AssistantViewModel::State {
             if(operation!="append") {
                 const auto id=generic_id(run->arguments.value("atom"));
                 for(const auto& site:run->operation_structure->atom_sites)if(site->id.value().size()<=Limits::id_bytes && QString::fromStdString(site->id.value())==id) {
-                    if(run->operation_site)throw ActionRefusal("target_unavailable","atom");run->operation_site=site.get();
+                    if(run->operation_site)throw ActionRefusal("target_unavailable","atom");
+                    run->operation_site=site.get();
                 }
                 if(!run->operation_site)throw ActionRefusal("target_unavailable","atom");
             }
@@ -10900,7 +10921,8 @@ struct AssistantViewModel::State {
             } else {
                 const auto id=run->arguments.value("phase").toString();
                 for(const auto& row:run->operation_member->linked_structures)if(row->structure_id.value().size()<=Limits::id_bytes && QString::fromStdString(edi::KeyTraits<edi::LinkedStructure>::canonical(row->structure_id.value()))==id) {
-                    if(run->operation_phase)throw ActionRefusal("target_unavailable","phase");run->operation_phase=row.get();
+                    if(run->operation_phase)throw ActionRefusal("target_unavailable","phase");
+                    run->operation_phase=row.get();
                 }
                 if(!run->operation_phase)throw ActionRefusal("target_unavailable","phase");
                 if(op=="phase_remove" && run->operation_member->linked_structures.size()<=1)throw ActionRefusal("control_unavailable","phase");
@@ -10932,7 +10954,8 @@ struct AssistantViewModel::State {
         } else {
             const auto id=run->arguments.value("region").toString();
             for(const auto& row:run->operation_member->excluded_regions)if(row->id.value().size()<=Limits::id_bytes && QString::fromStdString(row->id.value())==id) {
-                if(run->operation_region)throw ActionRefusal("target_unavailable","region");run->operation_region=row.get();
+                if(run->operation_region)throw ActionRefusal("target_unavailable","region");
+                run->operation_region=row.get();
             }
             if(!run->operation_region)throw ActionRefusal("target_unavailable","region");
         }
@@ -11070,10 +11093,10 @@ struct AssistantViewModel::State {
         const auto* structure=structures[0].get();
         if(kind==Action::Kind::StructureName || kind==Action::Kind::SpaceGroupName || kind==Action::Kind::SpaceGroupSetting || kind==Action::Kind::AtomAppend)
             return {kind,structure,step.field,step.text};
-        if(step.row<0 || static_cast<std::size_t>(step.row)>=run->setup_sites.size() || !run->setup_sites[step.row] ||
-            static_cast<std::size_t>(step.row)>=structure->atom_sites.size() || structure->atom_sites[step.row].get()!=run->setup_sites[step.row])
+        if(step.row<0 || static_cast<std::size_t>(step.row)>=run->setup_sites.size() || !run->setup_sites[static_cast<std::size_t>(step.row)] ||
+            static_cast<std::size_t>(step.row)>=structure->atom_sites.size() || structure->atom_sites[static_cast<std::size_t>(step.row)].get()!=run->setup_sites[static_cast<std::size_t>(step.row)])
             throw std::runtime_error("The actual setup atom pin no longer identifies its original row");
-        return {kind,run->setup_sites[step.row],step.field,step.text};
+        return {kind,run->setup_sites[static_cast<std::size_t>(step.row)],step.field,step.text};
     }
     bool setup_structure_matches(const std::shared_ptr<NativeCreateWidget>& run,const NativeCreateWidget::Input& step) const {
         using Kind=ProjectEditor::CreationAction::Kind;
@@ -11087,8 +11110,8 @@ struct AssistantViewModel::State {
         if(kind==Kind::SpaceGroupName)return edi::same_space_group_name(structure.space_group.name_h_m.value(),text);
         if(kind==Kind::SpaceGroupSetting)return structure.space_group.coord_system_code.value()==text;
         if(step.row<0 || static_cast<std::size_t>(step.row)>=run->setup_sites.size() || static_cast<std::size_t>(step.row)>=structure.atom_sites.size() ||
-            !run->setup_sites[step.row] || structure.atom_sites[step.row].get()!=run->setup_sites[step.row])return false;
-        const auto& site=*structure.atom_sites[step.row];
+            !run->setup_sites[static_cast<std::size_t>(step.row)] || structure.atom_sites[static_cast<std::size_t>(step.row)].get()!=run->setup_sites[static_cast<std::size_t>(step.row)])return false;
+        const auto& site=*structure.atom_sites[static_cast<std::size_t>(step.row)];
         if(kind==Kind::AtomAppend)return true;
         if(kind==Kind::AtomAdpType)return site.adp_type.value()==text;
         return step.field=="label"?site.id.value()==text:step.field=="typeSymbol"?site.type_symbol.value()==text:site.wyckoff_letter.value()==text;
@@ -11129,7 +11152,7 @@ struct AssistantViewModel::State {
             if(item->objectName()==(structure?QStringLiteral("structures.list"):QStringLiteral("experiments.list"))) {
                 const auto source=item->property("sourceModel").value<QObject*>();
                 if(!run->receiver || run->receiver->state_.get()!=this || !original || !ancestor || ancestor->parentItem()!=parent || original->parentItem()!=original_parent || !create_widget_current(run) || !selection_target_current(run))return false;
-                bool within=false;for(auto* owner=original.data();owner;owner=owner->parentItem())if(owner==ancestor.data())within=true;
+                bool within=false;for(auto* enclosing=original.data();enclosing;enclosing=enclosing->parentItem())if(enclosing==ancestor.data())within=true;
                 return within && member && source==(structure?static_cast<QObject*>(run->project->structures()):static_cast<QObject*>(run->project->experiments()));
             }
         }
@@ -11179,9 +11202,9 @@ struct AssistantViewModel::State {
             if(!run->receiver || run->receiver->state_.get()!=this || !original || !create_widget_current(run))return false;
             if(member)return member==run->structure_view;
             if(run->individual_tool=="create_structure") {
-                const auto owner=item->property("project").value<QObject*>();
+                const auto itemProject=item->property("project").value<QObject*>();
                 if(!run->receiver || run->receiver->state_.get()!=this || !original || !create_widget_current(run))return false;
-                if(owner)return owner==run->project;
+                if(itemProject)return itemProject==run->project;
             }
         }
         return false;
@@ -11457,9 +11480,9 @@ struct AssistantViewModel::State {
         run->epoch=result_session()?result_session()->assistantEpoch():0;
         const auto original_current=[&] { return publication.input_current() && native_receipt==receipt &&
             native_current(receipt) && !native_call && policy_current() && !generic_connecting; };
-        const auto prepare_refusal=[&](const char* error,const char* field) {
+        const auto prepare_refusal=[&](const char* errorCode,const char* field) {
             Object result{{"status","refused"},{"applied",false},{"published",false},{"complete",false},
-                {"action_error",error},{"action_field",field}};
+                {"action_error",errorCode},{"action_field",field}};
             if(!original_current())return;
             if(!native_prepare(rpc, id, name, purpose, original))return;
             if(receiver && publication.input_current() && native_call && native_call->record->call==id && native_call->receipt==receipt)
@@ -11539,7 +11562,8 @@ struct AssistantViewModel::State {
                 if(selection_action(run)) {
                     const bool selected=create_widget_current(run) && selection_current(run);
                     native_finish(selected,selection_progress(run,selected));
-                    if(receiver && create_widget_owned(run))create_widget_end(run);return;
+                    if(receiver && create_widget_owned(run))create_widget_end(run);
+                    return;
                 }
                 run->result_member=run->operation_member;
                 auto result=individual_progress(run,true);result["status"]="no_change";result["applied"]=false;
@@ -11571,7 +11595,8 @@ struct AssistantViewModel::State {
                 }
                 if(!receiver || receiver->state_.get()!=this || !create_widget_current(run))return;
                 individual_normal(run);
-                if(receiver && create_widget_owned(run))create_widget_end(run);return;
+                if(receiver && create_widget_owned(run))create_widget_end(run);
+                return;
             }
             using Kind=AssistantWidgetInput::Kind;
             const bool weight=name=="edit_experiment" && args.value("operation")=="dataset_weight";
@@ -11685,8 +11710,8 @@ struct AssistantViewModel::State {
                     run->setup_sites[0]=run->control_input->applied_result.atom;
                 else if(*step.structure_action==ProjectEditor::CreationAction::Kind::AtomAppend && step.row>=0 &&
                     static_cast<std::size_t>(step.row)<run->setup_sites.size() && static_cast<std::size_t>(step.row)<sites.size() &&
-                    sites[step.row].get()==run->control_input->applied_result.atom)
-                    run->setup_sites[step.row]=run->control_input->applied_result.atom;
+                    sites[static_cast<std::size_t>(step.row)].get()==run->control_input->applied_result.atom)
+                    run->setup_sites[static_cast<std::size_t>(step.row)]=run->control_input->applied_result.atom;
             }
         }
         const auto input=run->file_input;
@@ -11876,21 +11901,21 @@ struct AssistantViewModel::State {
         if(!receiver || receiver->state_.get()!=this)return;
         const QPointer<QObject> menu(group->findChild<QObject*>(measured?QStringLiteral("experiments.load.menu"):QStringLiteral("structures.load.menu")));
         const auto targetCurrent=[this,run,load,row,targetExperiment,target_name,measured,menu] {
-            const auto receiver=run->receiver;
-            if(!receiver || receiver->state_.get()!=this || !load)return false;
+            const auto runReceiver=run->receiver;
+            if(!runReceiver || runReceiver->state_.get()!=this || !load)return false;
             const bool original=create_widget_current(run);
-            if(!receiver || receiver->state_.get()!=this || !original || !load || load->objectName()!=target_name ||
+            if(!runReceiver || runReceiver->state_.get()!=this || !original || !load || load->objectName()!=target_name ||
                 !widget_workflow_page_current(widget_workflow_tab("appBar.tab."+run->page),run->project))return false;
             const auto content=menu?menu->property("contentItem").value<QQuickItem*>():nullptr;
             if(!menu || !menu->property("visible").toBool() || !content || !content->isAncestorOf(load))return false;
             if(!measured)return true;
             if(!row || !targetExperiment || menu->property("selected").value<QObject*>()!=targetExperiment)return false;
             const auto member=row->property("experiment").value<QObject*>();
-            if(!receiver || receiver->state_.get()!=this || !row || !targetExperiment || member!=targetExperiment)return false;
+            if(!runReceiver || runReceiver->state_.get()!=this || !row || !targetExperiment || member!=targetExperiment)return false;
             const bool current=create_widget_current(run);
-            if(!receiver || receiver->state_.get()!=this || !current || !row || !targetExperiment || !load)return false;
+            if(!runReceiver || runReceiver->state_.get()!=this || !current || !row || !targetExperiment || !load)return false;
             const bool memberCurrent=run->individual_tool.isEmpty() || individual_member_current(run);
-            if(!receiver || receiver->state_.get()!=this || !memberCurrent || !run->project || !targetExperiment)return false;
+            if(!runReceiver || runReceiver->state_.get()!=this || !memberCurrent || !run->project || !targetExperiment)return false;
             return run->individual_tool.isEmpty() ||
                 (targetExperiment==run->operation_view && run->project->currentExperiment()==targetExperiment);
         };
@@ -11910,10 +11935,10 @@ struct AssistantViewModel::State {
         AssistantWidgetInput::Request cue;
         cue.kind=AssistantWidgetInput::Kind::FileLoadCue;cue.target=load;
         auto cueCurrent=[this,run,targetCurrent,origin] {
-            const auto receiver=run->receiver;
-            if(!receiver || receiver->state_.get()!=this)return false;
+            const auto runReceiver=run->receiver;
+            if(!runReceiver || runReceiver->state_.get()!=this)return false;
             const bool targetReady=targetCurrent();
-            if(!receiver || receiver->state_.get()!=this || !targetReady)return false;
+            if(!runReceiver || runReceiver->state_.get()!=this || !targetReady)return false;
             if(origin->current())return true;
             run->origin_unavailable=true;
             return false;
@@ -11921,14 +11946,14 @@ struct AssistantViewModel::State {
         cue.prepareCommit=[] { return true; };cue.finishCommit=[] {};
         const auto cue_step=run->step;
         auto cueCompleted=[this,run,measured,origin,targetCurrent,targetExperiment,cue_step,menu](bool delivered,const QString& message, ControlCause cause) {
-            const auto receiver=run->receiver;
-            if (!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
+            const auto runReceiver=run->receiver;
+            if (!runReceiver || runReceiver->state_.get()!=this || !create_widget_owned(run))return;
             if(run->receiver && run->receiver->state_.get()==this && run->step==cue_step)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 // Inspect the original target even on helper rejection: only a
                 // still-current target can attribute refusal to its source.
                 const bool targetReady=targetCurrent();
-                if(!receiver || receiver->state_.get()!=this)return;
+                if(!runReceiver || runReceiver->state_.get()!=this)return;
                 if(!targetReady) {
                     create_widget_refuse(run,message.isEmpty()?widget_outcome_error:message, false, "file-target", int(delivered), int(targetReady));return;
                 }
@@ -11946,8 +11971,8 @@ struct AssistantViewModel::State {
                 bool applied=false;
                 {
                 const auto editScope=begin_own_edit();run->edit_scope=editScope;
-                const auto releaseEdit=qScopeGuard([this,run,receiver,editScope] {
-                    if(receiver && receiver->state_.get()==this) {
+                const auto releaseEdit=qScopeGuard([this,run,runReceiver,editScope] {
+                    if(runReceiver && runReceiver->state_.get()==this) {
                         if(run->edit_scope==editScope)run->edit_scope=0;
                         end_own_edit(editScope);
                     }
@@ -11961,17 +11986,17 @@ struct AssistantViewModel::State {
                 run->file_input->bounded_result=!run->individual_tool.isEmpty();
                 run->file_input->source_current=[origin] { return origin->content_current(); };
                 run->file_input->reader_path=run->measurement_reader_path;
-                if(!receiver || receiver->state_.get()!=this)return;
+                if(!runReceiver || runReceiver->state_.get()!=this)return;
 
-                if(!receiver || receiver->state_.get()!=this)return;
+                if(!runReceiver || runReceiver->state_.get()!=this)return;
                 const bool stillTarget=targetCurrent();
-                if(!receiver || receiver->state_.get()!=this || !stillTarget)return;
+                if(!runReceiver || runReceiver->state_.get()!=this || !stillTarget)return;
                 applied=measured?run->project->loadDataInto(targetExperiment,run->measurement_path):run->project->loadStructure(run->structure_path);
                 }
-                if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
+                if(!runReceiver || runReceiver->state_.get()!=this || !create_widget_owned(run))return;
                 if(menu)QMetaObject::invokeMethod(menu,"close",Qt::DirectConnection);
                 create_widget_after_structure(run,applied,run->file_input->outcome.message);
-            } catch(...) { if(receiver && receiver->state_.get()==this && create_widget_owned(run))create_widget_refuse(run,widget_outcome_error, false, "file-cue-catch"); }
+            } catch(...) { if(runReceiver && runReceiver->state_.get()==this && create_widget_owned(run))create_widget_refuse(run,widget_outcome_error, false, "file-cue-catch"); }
         };
         // Native Request contains the function objects; their actual captured
         // targets and original local copies also coexist before helper transfer.
@@ -12248,7 +12273,8 @@ struct AssistantViewModel::State {
         } else return true;
 
         if (!create_widget_current(run)) return false;
-        if (native_call) native_call->may_have_written = true; return true;
+        if (native_call) native_call->may_have_written = true;
+        return true;
     }
     void create_widget_finish_control(const std::shared_ptr<NativeCreateWidget>& run) {
         if (run->project) { run->project->finishWidgetCreation(run->control_input); run->project->finishWidgetInput(run->parameter_input); }
@@ -12350,7 +12376,7 @@ struct AssistantViewModel::State {
         }
         int option = step.option;
         if (step.target == "peak.type") {
-            auto* model = run->project->currentExperiment()->peakTypeOptions(); option = model->indexOf(step.text);
+            auto* peakOptions = run->project->currentExperiment()->peakTypeOptions(); option = peakOptions->indexOf(step.text);
             if (option < 0) throw std::runtime_error("The requested profile is not an offered original option");
             if (target->property("currentIndex").toInt() == option) { create_widget_advance(run); return; }
         }
@@ -12362,11 +12388,11 @@ struct AssistantViewModel::State {
         }
         if (!step.structure_action && step.kind == AssistantWidgetInput::Kind::Text) {
             if (!create_widget_current(run) || !run->project) throw std::runtime_error("The original text owner is unavailable");
-            const auto* model=run->project->assistantProject();
-            const auto* experiment=!run->individual_tool.isEmpty()?run->operation_member:model->experiments.empty()?nullptr:model->experiments[0].get();
+            const auto* projectModel=run->project->assistantProject();
+            const auto* experiment=!run->individual_tool.isEmpty()?run->operation_member:projectModel->experiments.empty()?nullptr:projectModel->experiments[0].get();
             const auto action=create_text_action(experiment,step);
             if (!action) throw std::runtime_error("The original text model action is unavailable");
-            if (text_matches(*model,*action)) { create_widget_advance(run); return; }
+            if (text_matches(*projectModel,*action)) { create_widget_advance(run); return; }
         }
         if ((!widget_input->usableTarget(*target) || !widget_full_row_visible(target)) && !create_widget_reveal(run, target)) return;
         AssistantWidgetInput::Request input;
@@ -12452,19 +12478,19 @@ struct AssistantViewModel::State {
                 branch="control.tab";
                 if ((step.target.startsWith("appBar.tab.") && !widget_workflow_page_current(target,run->project)) ||
                     ((step.target == "sideBar.tab.basic" || step.target == "sideBar.tab.extras") && !target->property("checked").toBool())) {
-                    const auto cause=step.target.startsWith("appBar.tab.")?ControlCause::WorkflowPage:step.target=="sideBar.tab.basic"?ControlCause::MainSidebar:ControlCause::ExtraSidebar;
-                    control_failure(run,cause);throw std::runtime_error("The original tab was not selected");
+                    const auto stepCause=step.target.startsWith("appBar.tab.")?ControlCause::WorkflowPage:step.target=="sideBar.tab.basic"?ControlCause::MainSidebar:ControlCause::ExtraSidebar;
+                    control_failure(run,stepCause);throw std::runtime_error("The original tab was not selected");
                 }
                 branch="control.choice";
                 if (step.kind == AssistantWidgetInput::Kind::Choose && target->property("currentIndex").toInt() != option) { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original choice was refused"); };
                 branch="control.text";
                 if (step.kind == AssistantWidgetInput::Kind::FormText && target->property("text").toString() != step.text) { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original text was refused"); };
                 if (step.kind == AssistantWidgetInput::Kind::Text) {
-                    const auto* input=run->control_input.get();
+                    const auto* controlInput=run->control_input.get();
                     const auto* session=result_session();
-                    if (!input || !input->consumed || !input->outcome.applied || !input->outcome.published ||
+                    if (!controlInput || !controlInput->consumed || !controlInput->outcome.applied || !controlInput->outcome.published ||
                         !create_widget_owned(run) || !run->project || project!=run->project || !session || session->project()!=run->project ||
-                        !text_matches(*run->project->assistantProject(),input->expected))
+                        !text_matches(*run->project->assistantProject(),controlInput->expected))
                         { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original text model action was not confirmed"); };
                 }
                 if(step.structure_action && !setup_structure_matches(run,step)){ control_failure(run,ControlCause::Commit); throw std::runtime_error("The original setup Structure action was not confirmed"); };
@@ -12951,7 +12977,8 @@ struct AssistantViewModel::State {
             std::array<char,edi::assistant::SelectedFileLimits::read_bytes> buffer{};
             quint64 total=0;
             for(;;){const auto count=file.read(buffer.data(),buffer.size());if(count<0)return false;if(!count)break;
-                if(static_cast<quint64>(count)>Limits::context_bytes-total)return false;total+=static_cast<quint64>(count);
+                if(static_cast<quint64>(count)>Limits::context_bytes-total)return false;
+                total+=static_cast<quint64>(count);
                 hash.addData(QByteArrayView(buffer.data(),count));}
             if(hash.result()!=QCryptographicHash::hash(entry.bytes,QCryptographicHash::Sha256))return false;
         }
@@ -12985,7 +13012,8 @@ struct AssistantViewModel::State {
         const auto scope=scope_owner();
         if(!same_disclosure(scope,current))throw std::runtime_error("The original skill inventory changed");
         if(!generic_workspace.isEmpty()) {
-            if(!staged_skills_match(scope))throw std::runtime_error("The original staged inventory changed");return;
+            if(!staged_skills_match(scope))throw std::runtime_error("The original staged inventory changed");
+            return;
         }
         auto prepared=prepare_skill_workspace(scope->skills);
         if(!original.input_current() || scope_owner()!=scope || !same_disclosure(scope,current))throw std::runtime_error("The original skill preparation owner changed");
@@ -13371,7 +13399,8 @@ struct AssistantViewModel::State {
         if(!current() || !account_read_ready)return;
         const auto checkOnly=generic_authenticated || account_bootstrap_verified;
         const auto rpc=transport->request("account/read",{{"refreshToken",false}},[&](const QString& id){
-            if(!current())return false;account_read_rpc=id;account_read_check_only=checkOnly;
+            if(!current())return false;
+            account_read_rpc=id;account_read_check_only=checkOnly;
             session_account_observation["request_id"]=id;return true;
         });
         if(!current())return;
@@ -13431,9 +13460,8 @@ struct AssistantViewModel::State {
                     generic_response_failure(method, reason);
                 } }
             });
-        QObject::connect(agent.get(), &CodexAgent::event, &owner, [this,originalTransport](const QString& method, const Object& params) {
+        QObject::connect(agent.get(), qOverload<const QString&, const QJsonObject&>(&CodexAgent::event), &owner, [this,originalTransport](const QString& method, const Object& params) {
             const auto publication = file_projection();
-            const auto transportGeneration = originalTransport ? originalTransport->outputGeneration() : 0;
             EventFailure diagnostic;
             try {
                 diagnostic.method = event_method_family(method);
@@ -13613,13 +13641,13 @@ struct AssistantViewModel::State {
             const auto declaration=value.toObject();const auto id=declaration.value("id").toString();const auto path=declaration.value("path").toString();
             const auto& captured=declared_skill_instruction(*inventory,declaration);
             const auto& bytes=captured.bytes;
-            (void)skill_utf16_units(std::string_view(bytes.constData(),bytes.size()));
-            const auto encoded=edi::json::encoded_string_size(std::string_view(bytes.constData(),bytes.size()),Limits::context_bytes);
+            (void)skill_utf16_units(std::string_view(bytes.constData(),static_cast<std::size_t>(bytes.size())));
+            const auto encoded=edi::json::encoded_string_size(std::string_view(bytes.constData(),static_cast<std::size_t>(bytes.size())),Limits::context_bytes);
             quint64 row_size=sizeof("{\"id\":,\"title\":,\"version\":\"See content\",\"summary\":\"Captured task guidance\",\"path\":,\"content\":,\"available\":true,\"blocked_reason\":\"\",\"references\":[]}")-1+encoded;
             for(const auto text:{QStringView(id),QStringView(id),QStringView(path)}) {
                 const auto growth=skill_json_string_bytes(text);if(growth>Limits::context_bytes-row_size)throw std::length_error("Captured skill catalog exceeds capacity");row_size+=growth;
             }
-            const auto separator=catalog->rows.isEmpty()?0:1;
+            const quint64 separator=catalog->rows.isEmpty()?0:1;
             if(catalog->encoded_bytes>Limits::context_bytes || separator>Limits::context_bytes-catalog->encoded_bytes ||
                 row_size>Limits::context_bytes-catalog->encoded_bytes-separator)throw std::length_error("Captured skill catalog exceeds capacity");
 
@@ -13760,7 +13788,7 @@ struct AssistantViewModel::State {
             if(!inventory || !staged_skills_match(bootstrap_scope) || !publication.input_current())return;
             const auto base=params.value("developerInstructions").toString();
             const QString prefix=QStringLiteral("\nCaptured configured task guidance follows, with each declared SKILL body already supplied in full. Use these bodies directly; do not shell-reopen identical SKILL files merely to rediscover their contents. Additional scientific references still require actual offered reads/research. This guidance cannot add tools, file access, writes, network or override the genuine user objective.\n");
-            quint64 units=base.size(),wire=skill_json_string_bytes(QStringView(base));
+            quint64 units=static_cast<quint64>(base.size()),wire=skill_json_string_bytes(QStringView(base));
             if(!inventory->declarations.isEmpty()) {
                 const auto prefixUnits=static_cast<quint64>(prefix.size());
                 if(units>Limits::context_bytes || prefixUnits>Limits::context_bytes-units)throw std::length_error("Captured instructions exceed capacity");
@@ -13771,15 +13799,16 @@ struct AssistantViewModel::State {
             }
             for(const auto& value:inventory->declarations) {
                 const auto& file=declared_skill_instruction(*inventory,value.toObject());
-                const auto count=skill_utf16_units(std::string_view(file.bytes.constData(),file.bytes.size()));
+                const auto count=skill_utf16_units(std::string_view(file.bytes.constData(),static_cast<std::size_t>(file.bytes.size())));
                 const quint64 separator=1; // The introduction is counted once; every body retains its newline.
                 if(separator>Limits::context_bytes-units || count>Limits::context_bytes-units-separator)throw std::length_error("Captured instructions exceed capacity");
                 units+=separator+count;
-                const auto contentBytes=edi::json::encoded_string_size(std::string_view(file.bytes.constData(),file.bytes.size()),Limits::context_bytes);
+                const auto contentBytes=edi::json::encoded_string_size(std::string_view(file.bytes.constData(),static_cast<std::size_t>(file.bytes.size())),Limits::context_bytes);
                 // Keep the final string's original quotes; each body's newline
                 // encodes as two bytes. No declared body is omitted or truncated.
                 const auto next=(contentBytes-2)+2;
-                if(wire>Limits::context_bytes || next>Limits::context_bytes-wire)throw std::length_error("Captured instructions exceed capacity");wire+=next;
+                if(wire>Limits::context_bytes || next>Limits::context_bytes-wire)throw std::length_error("Captured instructions exceed capacity");
+                wire+=next;
             }
             QString instructions;instructions.reserve(static_cast<qsizetype>(units));instructions+=base;
             if(!inventory->declarations.isEmpty())instructions+=prefix;
@@ -13787,7 +13816,7 @@ struct AssistantViewModel::State {
                 const auto& file=declared_skill_instruction(*inventory,value.toObject());
                 // The decoded body coexists with the already reserved final
                 // instruction buffer; its role ends only after the text dies.
-                (void)skill_utf16_units(std::string_view(file.bytes.constData(),file.bytes.size()));
+                (void)skill_utf16_units(std::string_view(file.bytes.constData(),static_cast<std::size_t>(file.bytes.size())));
                 const auto decoded=QString::fromUtf8(file.bytes);
                 instructions+=decoded;instructions+='\n';
             }
@@ -14176,7 +14205,8 @@ struct AssistantViewModel::State {
                     quint64 row_bytes=sizeof("{\"id\":,\"title\":,\"version\":\"See content\",\"summary\":,\"path\":,\"content\":,\"available\":true,\"blocked_reason\":\"\",\"references\":[]}")-1;
                     for(const auto text:{QStringView(name),QStringView(name),QStringView(path),QStringView(content)}) {
                         const auto bytes=skill_json_string_bytes(text);
-                        if(bytes>Limits::context_bytes-row_bytes)throw std::length_error("Skill catalog row exceeds capacity");row_bytes+=bytes;
+                        if(bytes>Limits::context_bytes-row_bytes)throw std::length_error("Skill catalog row exceeds capacity");
+                        row_bytes+=bytes;
                     }
                     if(!codex_encoded_size(summary,Limits::context_bytes,row_bytes))throw std::length_error("Skill catalog summary exceeds capacity");
                     const quint64 separator=catalog->rows.isEmpty()?0:1;
@@ -14341,7 +14371,7 @@ struct AssistantViewModel::State {
                 // markers. Provider userMessage items never create this row.
                 const auto files=row.value("payload").toObject().value("files").toArray();
                 if(!files.isEmpty() && controller) {
-                    std::vector<std::string> ids;ids.reserve(files.size());
+                    std::vector<std::string> ids;ids.reserve(static_cast<std::size_t>(files.size()));
                     for(const auto& file:files)ids.push_back(file.toObject().value("id").toString().toStdString());
                     const auto consumed=controller->consume_selected_files(
                         input->selected_context.value("collection_id").toString().toStdString(),file_generation(input->selected_context),ids);
@@ -14473,9 +14503,9 @@ struct AssistantViewModel::State {
                 if (!item.value("tool").isString() || !item.value("arguments").isObject() ||
                     (!item.value("namespace").isUndefined() && !item.value("namespace").isNull() && !item.value("namespace").isString()))
                     throw std::runtime_error("Agent dynamic tool identity is invalid");
-                const auto bound = native_records.value(native_key(generic_thread, generic_turn, id));
-                record = bound;
-                const auto identity = bound ? bound->original : old;
+                const auto boundRecord = native_records.value(native_key(generic_thread, generic_turn, id));
+                record = boundRecord;
+                const auto identity = boundRecord ? boundRecord->original : old;
                 if (!identity.isEmpty() && (identity.value("tool") != item.value("tool") ||
                     identity.value("namespace") != item.value("namespace") || identity.value("arguments") != item.value("arguments")))
                     throw std::runtime_error("Agent dynamic tool identity changed");
@@ -14540,14 +14570,14 @@ struct AssistantViewModel::State {
                 if(payload.contains("purpose") || payload.contains("nativeOutcome")) {
                     payload.remove("purpose");payload.remove("nativeOutcome");row["payload"]=payload;
                 }
-                const auto record = native_records.value(native_key(generic_thread, generic_turn, id));
+                const auto boundRecord = native_records.value(native_key(generic_thread, generic_turn, id));
                 // A reentrant canonical update cannot publish new backing
                 // ahead of the original finishing call's admitted wire.
                 if (record && (record->completed || !native_call || native_call->record!=record || !native_call->finishing)) {
-                    auto payload = row.value("payload").toObject(); payload["purpose"] = record->purpose;
+                    auto rowPayload = row.value("payload").toObject(); rowPayload["purpose"] = record->purpose;
                     row["text"]=record->purpose;
-                    if (record->completed || record->outcome_ready) payload["nativeOutcome"] = record->outcome;
-                    row["payload"] = payload;
+                    if (record->completed || record->outcome_ready) rowPayload["nativeOutcome"] = record->outcome;
+                    row["payload"] = rowPayload;
                 }
             }
             stage = "ITEM_HISTORY"; role = "HISTORY"; bound = Limits::ui_history_bytes;
@@ -14706,7 +14736,8 @@ struct AssistantViewModel::State {
             const auto id=generic_id(params.value("threadId"));
             if(!settle_archived_session(id) || !publication.input_current())return;
             publish_sessions(); // Notification is not the ACK of another outstanding operation.
-            if(publication.input_current())notify();return;
+            if(publication.input_current())notify();
+            return;
         }
         if (method == "account/rateLimits/updated") {
             diagnostic.stage = "USAGE_UPDATE";
@@ -14775,9 +14806,9 @@ struct AssistantViewModel::State {
             if(!params.value("willRetry").isBool())throw std::runtime_error("Agent error notification has no retry disposition");
             const auto originalThread=generic_thread,originalTurn=generic_turn;
             const bool retry=params.value("willRetry").toBool();
-            const auto observed=retain_provider_error(params.value("error"),"notification",retry);
+            const auto observedError=retain_provider_error(params.value("error"),"notification",retry);
             if(!publication.input_current() || generic_thread!=originalThread || generic_turn!=originalTurn)return;
-            if(!retry && work_first_cause.isEmpty() && !observed.cause.isEmpty())work_first_cause=observed.cause;
+            if(!retry && work_first_cause.isEmpty() && !observedError.cause.isEmpty())work_first_cause=observedError.cause;
             // willRetry is the runtime's observation, never a client retry or a
             // terminal/scientific failure transition.
         } else if (method == "item/started" || method == "item/completed") {
@@ -14848,7 +14879,7 @@ struct AssistantViewModel::State {
                 diagnostic.stage = "REASONING_PART_CHARGE";
 
                 diagnostic.stage = "REASONING_PART_STORE";
-                generic_summary_parts[id] = part; generic_progress_bytes = generic_progress_bytes - old + next + separator;
+                generic_summary_parts[id] = part; generic_progress_bytes = generic_progress_bytes - old + next + static_cast<quint64>(separator);
                 agent->activity();
             }
         } else if (method == "turn/plan/updated") {
@@ -14861,14 +14892,14 @@ struct AssistantViewModel::State {
                 if (!step.value("step").isString() || (status != "pending" && status != "inProgress" && status != "completed")) throw std::runtime_error("Agent plan step is invalid");
                 steps.append(Object{{"step", step.value("step")}, {"status", status}});
             }
-            const Object plan{{"plan", steps}, {"explanation", params.value("explanation").isUndefined() ? QJsonValue(QJsonValue::Null) : params.value("explanation")}};
-            if (plan != generic_plan_progress) {
+            const Object planObject{{"plan", steps}, {"explanation", params.value("explanation").isUndefined() ? QJsonValue(QJsonValue::Null) : params.value("explanation")}};
+            if (planObject != generic_plan_progress) {
                 const auto old = generic_plan_progress.isEmpty() ? 0 : generic_measured_size(generic_plan_progress);
-                const auto next = generic_measured_size(plan);
+                const auto next = generic_measured_size(planObject);
                 diagnostic.stage = "PLAN_CHARGE";
 
                 diagnostic.stage = "PLAN_STORE";
-                generic_plan_progress = plan; generic_progress_bytes = generic_progress_bytes - old + next; agent->activity();
+                generic_plan_progress = planObject; generic_progress_bytes = generic_progress_bytes - old + next; agent->activity();
             }
         } else if (method == "turn/completed") {
             diagnostic.stage = "TURN_END_VALIDATE";
@@ -15203,7 +15234,8 @@ struct AssistantViewModel::State {
                 // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
                 if (!generic_prepare_thread() || !projection.current()) return {};
                 if(generic_resuming && resume_checkpoint && viewed_session && resume_checkpoint->thread==viewed_session->thread) {
-                    if(accountWaiting)*accountWaiting=true;return {}; // No turn/input admitted; original draft waits for this exact resume.
+                    if(accountWaiting)*accountWaiting=true;
+                    return {}; // No turn/input admitted; original draft waits for this exact resume.
                 }
                 error = input_refusal(QObject::tr("A fresh conversation is being prepared for the approved scope. Your draft is retained; send when ready."));
             } else error = input_refusal(QObject::tr("Approve the current project context to prepare a fresh agent conversation."));
@@ -15280,16 +15312,16 @@ struct AssistantViewModel::State {
         if (native_serial == UINT64_MAX) throw std::length_error("Native request ordering capacity is exhausted");
         // Genuine once records survive same-project queries/reconnect; only
         // intentional Clear/account/project retirement owns their discard.
-        auto native = std::make_shared<NativeReceipt>();
+        auto nativeReceipt = std::make_shared<NativeReceipt>();
          // Local/correlated request captures may outlive the pending map.
         if (!projection.input_current()) return {};
-        native->serial = ++native_serial;
+        nativeReceipt->serial = ++native_serial;
         projection.input = native_serial; // Exact own admission, before any transport/publication callback.
-        native->sources=std::move(capturedSources);
-        native->objective = text; native->approved_context = contextBytes; native->disclosure = disclosure;
-        native->project = project; native->generation = generation; native->thread = generic_thread;
-        native->selected_context = file_context(); native->selected_hashes = generic_input_hashes;
-        if (project) native->stamps = edi::work_stamps(*project->assistantProject());
+        nativeReceipt->sources=std::move(capturedSources);
+        nativeReceipt->objective = text; nativeReceipt->approved_context = contextBytes; nativeReceipt->disclosure = disclosure;
+        nativeReceipt->project = project; nativeReceipt->generation = generation; nativeReceipt->thread = generic_thread;
+        nativeReceipt->selected_context = file_context(); nativeReceipt->selected_hashes = generic_input_hashes;
+        if (project) nativeReceipt->stamps = edi::work_stamps(*project->assistantProject());
         const auto row = public_row("user", text, input_file_payload(), "pending");
         params["clientUserMessageId"] = row.value("id");
         if (steering) params["expectedTurnId"] = generic_turn;
@@ -15319,24 +15351,24 @@ struct AssistantViewModel::State {
         if(!settings_current())return {};
         bool prewriteAccountWait=false;QString attemptedRpc;
         const auto rpc = agent->request(steering ? "turn/steer" : "turn/start", params,
-            [this, row, publicId, steering, native, projection,&prewriteAccountWait,&attemptedRpc,
+            [this, row, publicId, steering, nativeReceipt, projection,&prewriteAccountWait,&attemptedRpc,
              originalThread,originalTurn,originalApproval,originalBackend,originalModel,originalEffort,
              originalEffectiveModel,originalEffectiveEffort,originalPolicy](const QString& id) {
             // This is the actual before-write boundary, after optional usage may have notified observers.
             const auto current = [&] {
-                return projection.current() && native_serial == native->serial && !native->retired &&
-                    native->generation == generation && native->project == project &&
-                    native->thread == originalThread && generic_thread == originalThread && generic_turn == originalTurn &&
+                return projection.current() && native_serial == nativeReceipt->serial && !nativeReceipt->retired &&
+                    nativeReceipt->generation == generation && nativeReceipt->project == project &&
+                    nativeReceipt->thread == originalThread && generic_thread == originalThread && generic_turn == originalTurn &&
                     approved_scope == originalApproval && backend_scope == originalBackend;
             };
-            const auto settings_current=[&] {
+            const auto settingsStillCurrent=[&] {
                 return current() && !generic_connecting && generic_policy_verified && generic_policy_epoch==originalPolicy &&
                     model==originalModel && effort==originalEffort && generic_policy_model==originalEffectiveModel &&
                     generic_policy_effort==originalEffectiveEffort && policy_current();
             };
             attemptedRpc=id; // CodexAgent::request invokes this before-write owner synchronously.
             const auto admissible = [&] {
-                const bool owned=settings_current() && generic_authenticated && !generic_retiring && !generic_revoke_pending &&
+                const bool owned=settingsStillCurrent() && generic_authenticated && !generic_retiring && !generic_revoke_pending &&
                     !generic_context_pending && !generic_clear_pending && generic_busy == steering;
                 if(owned && account_confirmation_pending)prewriteAccountWait=true;
                 return owned && !account_confirmation_pending;
@@ -15349,7 +15381,7 @@ struct AssistantViewModel::State {
                     if (at == generic_rpc_turns.cend() || at->thread != originalThread || at->turn != originalTurn) return false;
                 }
                 return (!row_owned || generic_rpc_rows.value(id) == publicId) &&
-                    (!native_owned || native_pending.value(id) == native);
+                    (!native_owned || native_pending.value(id) == nativeReceipt);
             };
             const auto entries_owned=[&] {
                 // Cleanup releases only A's exact entries, even when a same-owner
@@ -15360,7 +15392,7 @@ struct AssistantViewModel::State {
                     if(at==generic_rpc_turns.cend() || at->thread!=originalThread || at->turn!=originalTurn)return false;
                 }
                 return (!row_owned || generic_rpc_rows.value(id)==publicId) &&
-                    (!native_owned || native_pending.value(id)==native);
+                    (!native_owned || native_pending.value(id)==nativeReceipt);
             };
             const auto release = [&] {
                 if (!entries_owned()) return;
@@ -15387,13 +15419,13 @@ struct AssistantViewModel::State {
                     native_pending.contains(id)) return false;
                 if (steering) { generic_rpc_turns.insert(id, PendingSteer{originalThread, originalTurn, false}); turn_owned = true; }
                 generic_rpc_rows.insert(id, publicId); row_owned = true;
-                native_pending.insert(id, native); native_owned = true;
+                native_pending.insert(id, nativeReceipt); native_owned = true;
                  // The original pending receipt is charged before archive/wire admission.
                 if (!entries_current() || !admissible()) { release(); return false; }
                 if (!generic_present(row)) { release(); return false; }
                 presented=true;
                 if (!entries_current() || !admissible()) { release(); return false; }
-                native->input_issued=true; // This original input's write permission is spent, including uncertainty.
+                nativeReceipt->input_issued=true; // This original input's write permission is spent, including uncertainty.
                 generic_writing_input = true; generic_busy = true;
                 return true;
             } catch (...) {
@@ -15871,7 +15903,6 @@ struct AssistantViewModel::State {
 #ifndef __EMSCRIPTEN__
                 if (generic_mode && agent) {
                     const QPointer<CodexAgent> transport(agent.get());
-                    const auto transportGeneration = transport->outputGeneration();
                     // Existing queued archive presentation follows settlement
                     // stack unwinding; no timer or new scheduling owner.
                     generic_release_settled();
@@ -15905,8 +15936,8 @@ struct AssistantViewModel::State {
             known.append(public_row("tool", QObject::tr("Project tool running"),
                                     {{"call", call}, {"pending_result", pending}}, "running"));
             if (activity.value("type") == "question") {
-                const auto question = activity.value("question").toObject();
-                known.append(public_row("question", question.value("text").toString(), question, "awaiting_answer"));
+                const auto questionObject = activity.value("question").toObject();
+                known.append(public_row("question", questionObject.value("text").toString(), questionObject, "awaiting_answer"));
             } else if (activity.value("type") == "fit") {
                 job_id = activity.value("job_id").toString();
                 known.append(public_row("tool", QObject::tr("Fit trial running"), activity, "running"));
@@ -16167,7 +16198,7 @@ struct AssistantViewModel::State {
     }
     void initialize_reports(AssistantWorkReportOptions) noexcept {
         (void)work_reports.tryInitialize();
-        QObject::connect(&owner,&AssistantViewModel::workReportFinished,&owner,[this](const QVariantMap& receipt){
+        QObject::connect(&owner,&AssistantViewModel::workReportFinished,&owner,[this](const QVariantMap& /*receipt*/){
             const QPointer<AssistantViewModel> receiver(&owner);
             if(!receiver || receiver->state_.get()!=this || !work_capture_pending)return;
             // Any completed old writer releases the one writer slot. Retry the
@@ -16215,7 +16246,6 @@ struct AssistantViewModel::State {
                 if(!receiver || receiver->state_.get()!=this)return;
                 const auto publication=file_projection();
                 const QPointer<CodexAgent> transport(agent.get());
-                const auto transport_generation=transport?transport->outputGeneration():0;
 
                 // Destroy the actual callback and its task captures BEFORE
                 // reconciling the original transport's retained-output role.
@@ -17541,12 +17571,12 @@ void AssistantViewModel::setActionWindow(QQuickWindow* window) {
             try {state_->native_window_wait(helper,original);}catch(...){}
         });
         state_->action_window_destroyed=connect(window,&QObject::destroyed,this,[this,helper] {
-            auto* const original_state=state_.get();const QPointer<AssistantViewModel> receiver(this);
+            auto* const entryState=state_.get();const QPointer<AssistantViewModel> receiver(this);
             try {
                 if(state_->widget_input.get()!=helper)return;
                 if(state_->generic_question_had_window && !state_->generic_question_window) {
                     // cppcheck-suppress mismatchingContainers ; compares state pointers, not iterators
-                    if(!state_->generic_retire_question() || !receiver || receiver->state_.get()!=original_state)return;
+                    if(!state_->generic_retire_question() || !receiver || receiver->state_.get()!=entryState)return;
                 }
                 state_->native_window_wait(helper,{});
             }catch(...){}
@@ -17682,7 +17712,8 @@ void AssistantViewModel::refreshSessions(bool nextPage) {
     try {
         if(QThread::currentThread()!=thread() || !original->session_idle() || original->sessions_loading)return;
         if(nextPage && !original->sessions_more)return;
-        if(original->session_operation==UINT64_MAX)return;++original->session_operation;
+        if(original->session_operation==UINT64_MAX)return;
+        ++original->session_operation;
         original->sessions_loading=true;original->sessions_error.clear();
         if(!nextPage) {
             if(original->sessions_epoch==UINT64_MAX)throw std::runtime_error("The session browser identity is unavailable");
@@ -17707,7 +17738,8 @@ void AssistantViewModel::selectSession(const QString& threadId) {
     try {
         if(QThread::currentThread()!=thread() || (!original->session_switch_idle(false) || !original->generic_authenticated || !original->agent || original->agent->outputOwnerState()!=CodexAgent::OutputOwnerState::Live) || original->sessions_loading)return;
         if(!original->owned_session(original->session_metadata.value(threadId)))return;
-        if(original->session_operation==UINT64_MAX)return;++original->session_operation;
+        if(original->session_operation==UINT64_MAX)return;
+        ++original->session_operation;
         original->retire_startup_restore();
         original->session_history_explicit_target=threadId;
         emit sessionSelectionStarted(threadId);
@@ -17734,7 +17766,8 @@ void AssistantViewModel::archiveSession(const QString& threadId) {
     try {
         if(QThread::currentThread()!=thread() || !original->session_idle() || original->sessions_loading)return;
         if(!original->owned_session(original->session_metadata.value(threadId)))return;
-        if(original->session_operation==UINT64_MAX)return;++original->session_operation;
+        if(original->session_operation==UINT64_MAX)return;
+        ++original->session_operation;
         original->sessions_loading=true;original->sessions_error.clear();const auto epoch=original->sessions_epoch;emit sessionsChanged();
         if(!current() || original->sessions_epoch!=epoch || !original->session_idle())return;
         if(!original->owned_session(original->session_metadata.value(threadId)))throw std::runtime_error("The original listed app session changed before Archive");
@@ -18186,7 +18219,8 @@ bool AssistantViewModel::setSkillSourceEnabled(const QString& id,bool enabled,co
         if(!proof.input_current())return false;
         if(!loaded)throw std::runtime_error("Skill source preparation is temporarily unavailable");
         // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
-        if(!proof.input_current() || (!revision.isEmpty() && revision!=skillSourceRevision()))return false;serial=state_->skill_source_serial;
+        if(!proof.input_current() || (!revision.isEmpty() && revision!=skillSourceRevision()))return false;
+        serial=state_->skill_source_serial;
  // true -> false JSON spelling grows by exactly one byte.
         auto rows=state_->skill_source_rows;bool found=false;
         for(qsizetype i=0;i<rows.size();++i) {
@@ -18213,7 +18247,8 @@ bool AssistantViewModel::removeSkillSource(const QString& id,const QString& revi
         if(!proof.input_current())return false;
         if(!loaded)throw std::runtime_error("Skill source preparation is temporarily unavailable");
         // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
-        if(!proof.input_current() || (!revision.isEmpty() && revision!=skillSourceRevision()))return false;serial=state_->skill_source_serial;
+        if(!proof.input_current() || (!revision.isEmpty() && revision!=skillSourceRevision()))return false;
+        serial=state_->skill_source_serial;
         auto rows=state_->skill_source_rows;
         for(qsizetype i=0;i<rows.size();++i) if(rows[i].toObject().value("id")==id) {rows.removeAt(i);return state_->commit_source_configuration(std::move(rows),proof,serial);}
     } catch(const std::exception&) {
@@ -18831,9 +18866,11 @@ void AssistantViewModel::answerQuestion(const QString& id, const QString& answer
             if(original->generic_question_index+1<original->generic_questions.size()) {
                 original->generic_question_answers=std::move(answers);
                 if(!original->generic_present_question(original->generic_question_index+1)) {
-                    if(publication.input_current())original->generic_fail(original->storage_error);return;
+                    if(publication.input_current())original->generic_fail(original->storage_error);
+                    return;
                 }
-                if(publication.input_current())original->notify();return;
+                if(publication.input_current())original->notify();
+                return;
             }
             const bool delivered=original->agent->answer(rpc,{{"answers",answers}},nullptr,nullptr,[&] {
                 if(!receiver || receiver->state_.get()!=original || !publication.input_current() || original->account_confirmation_pending ||
@@ -18996,8 +19033,8 @@ bool AssistantViewModel::resumeConnection() {
     auto* s=state_.get();const QPointer<AssistantViewModel> receiver(this);const auto operation=s->session_operation;const auto target=s->session_selection_target;
     try {
         if(!s->resume_identity_current() || !s->resume_checkpoint) {
-            const auto target=s->session_selection_target;
-            s->fail_session_operation(s->session_operation,target,tr("The original conversation scope changed before reconnecting."));
+            const auto selectionTarget=s->session_selection_target;
+            s->fail_session_operation(s->session_operation,selectionTarget,tr("The original conversation scope changed before reconnecting."));
             return false;
         }
         if(s->generic_connecting)return true;
@@ -19078,7 +19115,8 @@ void AssistantViewModel::signIn() {
         const QPointer<AssistantViewModel> receiver(this);auto* original=state_.get();const auto operation=original->session_operation;const auto target=original->session_selection_target;
         try {original->session_preparation->approved=true;original->advance_session_preparation();}
         catch(const std::exception& failure){if(receiver && receiver->state_.get()==original)original->settle_reopen_failure(operation,target,original->bounded_error(QString::fromUtf8(failure.what())));}
-        if(receiver && receiver->state_.get()==original)original->notify();return;
+        if(receiver && receiver->state_.get()==original)original->notify();
+        return;
     }
     // Authentication is independent of local evidence maintenance. Scientific
     // mutation stays fenced until authoritative inspection reconciles actual state.

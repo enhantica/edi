@@ -1633,7 +1633,7 @@ Index build_index(Project& model, crysta::Project& cproject) {
 //
 // It runs on a COPY, so the live project's clocks are never polluted; edi builds unbounded
 // parameters, so any sentinel is legal, and the probe is never evaluated.
-void validate_index(const Project& model, const Index& index, crysta::Project& cproject) {
+[[maybe_unused]] void validate_index(const Project& model, const Index& index, crysta::Project& cproject) {
     std::vector<std::string> paths;
     paths.reserve(index.size());
     for (const auto& entry : index) paths.push_back(entry.first);
@@ -1764,7 +1764,7 @@ void validate_index(const Project& model, const Index& index, crysta::Project& c
 // which the acceptance model does; V1 already proves those coordinate pointers independently. Takes
 // the free set the caller already computed, so it can run BOTH at construction (best effort) and at
 // fit() (where a free set is required anyway and the check therefore always applies).
-void cross_check_free_set(Project& model, const Index& index,
+[[maybe_unused]] void cross_check_free_set(Project& model, const Index& index,
                           const std::vector<crysta::FreeParameter>& free_set) {
     for (const crysta::FreeParameter& free : free_set) {
         const std::optional<detail::ResolvedParameter> resolved =
@@ -3679,7 +3679,7 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
 // take. No value transformation happens here beyond marshalling (Fork 2's parity gate is what
 // would catch one). A programmatic CW model with a missing field fails closed; a loaded one cannot
 // reach that error (the per-family registry requires all seven).
-crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool for_relations) {
+crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool /*for_relations*/) {
     const auto required = [&](const OptionalParameter& field,
                               const char* name) -> const Parameter& {
         if (!field.has_value()) {
@@ -6571,7 +6571,7 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
 // The ONE scan implementation. Both public scan entries reach it after proving their own exact
 // token, so the code stays single while the public surface stays mode-specific.
 FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
-                                   const PreambleCallback& on_start,
+                                   const PreambleCallback& /*on_start*/,
                                    const ScanStartCallback& on_scan_start,
                                    const FileCompleteCallback& on_file_complete,
                                    const CancelCallback& should_cancel,
@@ -6740,7 +6740,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         // Each file's event carries its own fit result, so its correlations are crysta's from its covariance, as a
         // single fit's are, over the template project its labels name.
         const crysta::FileResultCallback engine_file_result =
-            [this, file_history, last_file_history, completed_files, scan, &on_file_complete,
+            [file_history, last_file_history, completed_files, scan, &on_file_complete,
              &cproject](const std::vector<std::string>& row, const crysta::FitResultBase& file_result) {
                 ++*completed_files;
                 std::swap(*last_file_history, *file_history);

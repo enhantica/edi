@@ -505,8 +505,9 @@ QString SingleCrystalReflectionModel::hoverText(int row, bool squared) const {
     const double su = squared ? measured_su_.value(at, qQNaN()) : measured_f_su_.value(at, qQNaN());
     const double calc = squared ? calculated_.value(at, qQNaN()) : calculated_f_.value(at, qQNaN());
     QStringList lines;
-    for (const std::string& line : edi::reflection_hover_lines(reflections->index_h[at], reflections->index_k[at],
-                                                               reflections->index_l[at], meas, su, calc, squared,
+    const auto index = static_cast<std::size_t>(row);
+    for (const std::string& line : edi::reflection_hover_lines(reflections->index_h[index], reflections->index_k[index],
+                                                               reflections->index_l[index], meas, su, calc, squared,
                                                                project_.su_rule)) {
         lines.append(QString::fromStdString(line));
     }

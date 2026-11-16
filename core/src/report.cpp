@@ -270,7 +270,7 @@ std::string trimmed(std::string text) {
 std::string cut(const std::string& text, int decimals) {
     const std::size_t dot = text.find('.');
     if (dot == std::string::npos) return text;
-    return decimals <= 0 ? text.substr(0, dot) : text.substr(0, std::min(text.size(), dot + 1 + decimals));
+    return decimals <= 0 ? text.substr(0, dot) : text.substr(0, std::min(text.size(), dot + 1 + static_cast<std::size_t>(decimals)));
 }
 
 // The power of ten of the last digit a whole-number s.u. text keeps: its last nonzero digit, or one place lower for an
@@ -287,7 +287,7 @@ std::optional<int> whole_su_place(const std::string& su) {
 
 // An s.u. shown alone: a decimal inside the range, else in its own power of ten with its own digits ("0.00025" is
 // "2.5×10⁻⁴", "1600" is "1.6×10³").
-std::string su_alone(const std::string& su, bool display) {
+[[maybe_unused]] std::string su_alone(const std::string& su, bool display) {
     if (su.empty()) return su;
     char* end = nullptr;
     const double number = std::strtod(su.c_str(), &end);
@@ -429,7 +429,7 @@ crysta::IterationRecord to_engine(const IterationRecord& record) {
 
 }  // namespace
 
-std::string machine_report(const Project& project, const FitResultBase& outcome,
+std::string machine_report(const Project& /*project*/, const FitResultBase& outcome,
                            VerbosityEnum verbosity) {
     crysta::FitReport report;
     report.kind = crysta::RecordKind::Fit;
@@ -651,7 +651,7 @@ std::vector<bool> scan_visible(const std::vector<std::size_t>& widths, std::size
     };
     const auto [used, last] = fixed();
     if (used + scan_separator(last, kScanFile) + kScanTableFileMinimum > budget) visible[kScanFile] = false;
-    for (std::size_t omit : {6, 5, 4}) {
+    for (std::size_t omit : {std::size_t{6}, std::size_t{5}, std::size_t{4}}) {
         if (fixed().first > budget) visible[omit] = false;
     }
     return visible;

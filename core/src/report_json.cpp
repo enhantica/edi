@@ -412,15 +412,18 @@ Value browser_single_crystal(const ReportSingleCrystal& crystal, const std::vect
         const double calculated = i < crystal.calc.size() ? crystal.calc[i] : std::numeric_limits<double>::quiet_NaN();
         for (double end : {measured - uncertainty, measured + uncertainty, calculated}) if (std::isfinite(end)) { low = std::min(low, end); high = std::max(high, end); }
     }
-    double pad = (high - low) * 0.05; if (pad == 0.0 || std::isnan(pad)) pad = 1.0;
+    double pad = (high - low) * 0.05;
+    if (pad == 0.0 || std::isnan(pad)) pad = 1.0;
     Object out{{"range", Array{renderer_number(std::min(0.0, low - pad)), renderer_number(high + pad)}}};
-    if (const auto* style = browser_style(styles, "meas.0")) out.emplace_back("color", style->light); return out;
+    if (const auto* style = browser_style(styles, "meas.0")) out.emplace_back("color", style->light);
+    return out;
 }
 Value browser_evolution(const ReportEvolution& series, const std::vector<SeriesStyle>& styles) {
     Array x, y, su, text;
     for (const ReportEvolutionPoint& point : series.points) { x.emplace_back(point.x); y.emplace_back(point.y); su.emplace_back(point.su); text.emplace_back(point.text); }
     Object out{{"x", std::move(x)}, {"y", std::move(y)}, {"su", std::move(su)}, {"text", std::move(text)}, {"title", series.units.empty() ? series.name : series.name + " (" + series.units + ")"}};
-    if (const auto* style = browser_style(styles, "meas.0")) out.emplace_back("color", style->light); return out;
+    if (const auto* style = browser_style(styles, "meas.0")) out.emplace_back("color", style->light);
+    return out;
 }
 
 // A read-out's wording and its values: each piece (between '\n' and '\x1e') with a ": " ends in its value.
@@ -1213,12 +1216,12 @@ ReportModel report_from_json(const std::string& text) {
         const Value& fittable = item.get("fittable");
         ReportParameter& read = model.parameters.back();
         read.fittable = fittable.is_null() || fittable.boolean("fittable");
-        for (const auto& [key, text] : {std::pair{"datablock", &read.datablock}, {"category", &read.category},
+        for (const auto& [key, target] : {std::pair{"datablock", &read.datablock}, {"category", &read.category},
                                         {"entry", &read.entry}, {"name", &read.name}, {"uid", &read.uid},
                                         {"value_cell", &read.value_cell}, {"su_cell", &read.su_cell},
                                         {"start_cell", &read.start_cell}, {"min_cell", &read.min_cell},
                                         {"max_cell", &read.max_cell}}) {
-            if (const Value& field = item.get(key); !field.is_null()) *text = field.string(key);
+            if (const Value& field = item.get(key); !field.is_null()) *target = field.string(key);
         }
     }
     const Value& relations = document.get("relations");

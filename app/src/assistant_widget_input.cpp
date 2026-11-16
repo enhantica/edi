@@ -579,7 +579,8 @@ void AssistantWidgetInput::advance() noexcept {
         // is active. Never request activation or inject into an inactive window.
         if (!window_->isActive()) { timer_.start(navigation_ms); return; }
         if ((step_ == Step::Move || step_ == Step::Press) && manualDraftPresent()) {
-            if(self)self->stop(request,id,false, interrupted_, false, ControlCause::ManualInput); return;
+            if(self)self->stop(request,id,false, interrupted_, false, ControlCause::ManualInput);
+            return;
         }
         switch (step_) {
         case Step::Move:
@@ -587,8 +588,8 @@ void AssistantWidgetInput::advance() noexcept {
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self) return;
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
-            { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            { const bool stillValid = self->current(id); if (!self) return;
+              if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             step_ = Step::Press; pace(move_ms); return;
         case Step::Press:
             if (request->kind == Kind::FileLoadCue) {
@@ -596,10 +597,10 @@ void AssistantWidgetInput::advance() noexcept {
                 emit pointerPressed();
                 // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
                 if (!self || serial_ != id || request_ != request) return;
-                const bool valid = current(id);
+                const bool stillValid = current(id);
                 // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
                 if (!self || serial_ != id || request_ != request) return;
-                if (!valid) { if(self)self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible file cue ownership changed"), false); return; }
+                if (!stillValid) { if(self)self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible file cue ownership changed"), false); return; }
                 step_ = Step::Release; pace(press_ms); return;
             }
             if (request->kind == Kind::DismissMenu) {
@@ -619,8 +620,8 @@ void AssistantWidgetInput::advance() noexcept {
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self) return;
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
-            { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            { const bool stillValid = self->current(id); if (!self) return;
+              if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             // A tooltip left by the previous step (shown below the control it belongs to, and still fading out) can lie
             // over the target and would take the press. A person's press comes later; this one waits for it to go.
             if (tooltip_waits_ < 20 && coveredByToolTip()) { ++tooltip_waits_; timer_.start(50); return; }
@@ -628,8 +629,8 @@ void AssistantWidgetInput::advance() noexcept {
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
             if (!self) return;
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
-            { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            { const bool stillValid = self->current(id); if (!self) return;
+              if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             pressed_ = true; // Own a balancing release even if the press reenters retirement.
             if (!mouse(QEvent::MouseButtonPress, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The real control did not receive its press"), true); return; }
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
@@ -643,8 +644,8 @@ void AssistantWidgetInput::advance() noexcept {
                 // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
                 if (!self) return;
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
-            { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            { const bool stillValid = self->current(id); if (!self) return;
+              if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             }
             pressed_ = false;
             if (!mouse(QEvent::MouseButtonRelease, request->kind == Kind::ContextMenu ? Qt::RightButton : Qt::LeftButton)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The real control did not receive its release"), true); return; }
@@ -787,12 +788,13 @@ void AssistantWidgetInput::advance() noexcept {
                 }
             }
             if (!self || serial_ != id || request_ != request) return;
-            const bool valid = current(id);
+            const bool stillValid = current(id);
             if (!self || serial_ != id || request_ != request) return;
-            if (!valid || !editor || !choiceKeyboardOwned() ||
+            if (!stillValid || !editor || !choiceKeyboardOwned() ||
                 (request->kind == Kind::SearchChoice && window_->activeFocusItem() != editor) ||
                 editor->property("text").toString() != request->value) {
-                if(self)self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("The original draft owner or text changed"), true); return;
+                if(self)self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("The original draft owner or text changed"), true);
+                return;
             }
             emit inputProgress();
             if (!self || serial_ != id || request_ != request) return;
@@ -803,8 +805,8 @@ void AssistantWidgetInput::advance() noexcept {
             if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The recorded native input could not be prepared"), true); return; }
             if (!self) return;
             // cppcheck-suppress identicalConditionAfterEarlyExit ; a signal or event above can delete this object
-            { const bool valid = self->current(id); if (!self) return;
-              if (!valid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
+            { const bool stillValid = self->current(id); if (!self) return;
+              if (!stillValid) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Superseded, QT_TR_NOOP("Visible action ownership changed"), true); return; } }
             if ((request->kind == Kind::StagedText) && !QMetaObject::invokeMethod(request->target, "allowAssistantCommit", Qt::DirectConnection)) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The numeric control could not admit its final key"), true); return; }
             if (!self || serial_ != id || request_ != request) return;
             // Staged/form drafts have no scientific blur/Return commit. Their

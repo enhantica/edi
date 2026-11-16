@@ -504,10 +504,10 @@ class Edit {
         const LinkedStructure* linked_structure = nullptr;
         const ParameterConstraint* constraint = nullptr;
         // Every experiment a composite load produced, `experiment` (its target) first (edi ADR-0069).
-        std::vector<const ExperimentBase*> experiments;
+        std::vector<const ExperimentBase*> experiments{};
         // Filled only by the original LivePreview editor door around its closed
         // application/note_edit, before trace/hooks. Epochs are identities, not counts.
-        std::shared_ptr<const detail::EditRecord> editor_before, editor_after;
+        std::shared_ptr<const detail::EditRecord> editor_before{}, editor_after{};
         std::uint64_t editor_before_epoch=0, editor_after_epoch=0;
     };
     // Executes this same closed operation once. The result is an identity fact,
@@ -679,10 +679,10 @@ class Edit {
                 throw std::invalid_argument("the exact background rows were replaced");
             // The affected detached/live row must still have the exact prepared state;
             // unrelated surviving rows are shared and never copied back by Undo.
-            const auto matches = [](const auto& rows, const auto& state) {
+            const auto matches = [](const auto& held, const auto& state) {
                 if (!state) return true;
-                const auto row = std::find_if(rows.begin(), rows.end(), [&](const auto& p) { return p->id.value() == state->id.value(); });
-                return row != rows.end() && BackgroundPointChange::same_point(**row, *state);
+                const auto row = std::find_if(held.begin(), held.end(), [&](const auto& p) { return p->id.value() == state->id.value(); });
+                return row != held.end() && BackgroundPointChange::same_point(**row, *state);
             };
             if (!matches(prepared->before, prepared->original) || !matches(prepared->after, prepared->replacement))
                 throw std::invalid_argument("the affected background row changed outside its prepared edit");
@@ -1414,11 +1414,11 @@ class Edit {
                 for(const auto& slot:named_slots(project))named.emplace(slot.unique_name,slot.parameter);
                 auto replaced=before->peak?experiment.peak.parameters():before->absorption?experiment.absorption.parameters():before->extinction?experiment.extinction.parameters():std::vector<Parameter*>{};
                 if(before->links)for(const auto& row:experiment.linked_structures)replaced.push_back(&row->scale);
-                for(const auto& state:before->related->parameters) {
-                    const auto at=named.find(state.unique_name);
+                for(const auto& saved:before->related->parameters) {
+                    const auto at=named.find(saved.unique_name);
                     if(at==named.end() || std::find(replaced.begin(),replaced.end(),at->second)!=replaced.end())
                         throw std::invalid_argument("undo: a related parameter is no longer in the project");
-                    targets.emplace_back(at->second,&state);
+                    targets.emplace_back(at->second,&saved);
                 }
                 std::vector<ItemVec<ParameterAlias>::Ptr> a;for(const auto& row:before->related->aliases)a.push_back(std::make_shared<ParameterAlias>(row));
                 std::vector<ItemVec<ParameterConstraint>::Ptr> c;for(const auto& row:before->related->constraints)c.push_back(std::make_shared<ParameterConstraint>(row));
@@ -1434,7 +1434,7 @@ class Edit {
                 static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
                 if(peak)peak->commit();else if(absorption)absorption->commit();else if(extinction)extinction->commit();else experiment.linked_structures=std::move(links);
                 project.aliases=std::move(aliases);project.constraints=std::move(constraints);project.fit_result=std::move(*fit_result);
-                for(const auto& [parameter,state]:targets){parameter->value=state->value;parameter->uncertainty=state->uncertainty;parameter->free=state->free;}
+                for(const auto& [parameter,saved]:targets){parameter->value=saved->value;parameter->uncertainty=saved->uncertainty;parameter->free=saved->free;}
             } else if(before->regions)experiment.excluded_regions=std::move(regions);
             else {
                 // Own the result image before either live scalar or result changes.

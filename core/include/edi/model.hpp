@@ -73,8 +73,7 @@ struct HolderSlot {
     HolderSlot() noexcept = default;
     HolderSlot(const HolderSlot& /*other*/) noexcept {}
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp): keeps its own holder, so self-assignment is a no-op
-    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
-    HolderSlot& operator=(const HolderSlot& /*other*/) noexcept { return *this; }
+    HolderSlot& operator=(const HolderSlot& /*other*/) noexcept { return *this; }  // cppcheck-suppress operatorEqVarError ; keeps its own holder and links
     ~HolderSlot() = default;
     friend bool operator==(const HolderSlot& /*a*/, const HolderSlot& /*b*/) noexcept { return true; }
 };
@@ -1143,8 +1142,7 @@ class DataSource {
     DataSource() = default;
     DataSource(const DataSource& /*other*/) noexcept {}
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — keeps its own link
-    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
-    DataSource& operator=(const DataSource& /*other*/) noexcept { return *this; }
+    DataSource& operator=(const DataSource& /*other*/) noexcept { return *this; }  // cppcheck-suppress operatorEqVarError ; keeps its own holder and links
     ~DataSource() = default;
 
     void link(ExperimentBase& experiment, std::uint64_t node) noexcept {
@@ -1168,8 +1166,7 @@ class CategoryRef {
     CategoryRef() = default;
     CategoryRef(const CategoryRef&) noexcept {}
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp): keeps its own attachment, so self-assignment is a no-op
-    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
-    CategoryRef& operator=(const CategoryRef&) noexcept { return *this; }
+    CategoryRef& operator=(const CategoryRef&) noexcept { return *this; }  // cppcheck-suppress operatorEqVarError ; keeps its own holder and links
     ~CategoryRef() = default;
 
     void point_at(const RowLink& link) noexcept { link_ = &link; }
@@ -1480,8 +1477,7 @@ class ProjectAnchor {
     // NOLINTNEXTLINE(performance-noexcept-move-constructor): a move opens a fresh record, which allocates
     ProjectAnchor(ProjectAnchor&& /*other*/) { open(); }
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — keeps its own record
-    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
-    ProjectAnchor& operator=(const ProjectAnchor& /*other*/) noexcept { return *this; }
+    ProjectAnchor& operator=(const ProjectAnchor& /*other*/) noexcept { return *this; }  // cppcheck-suppress operatorEqVarError ; keeps its own holder and links
     // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     ProjectAnchor& operator=(ProjectAnchor&& /*other*/) noexcept { return *this; }
     ~ProjectAnchor();
@@ -1502,8 +1498,7 @@ class ProjectTail {
     ProjectTail(const ProjectTail& /*other*/) { close(); }
     ProjectTail(ProjectTail&& /*other*/) noexcept { close(); }
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — relinks its own project
-    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
-    ProjectTail& operator=(const ProjectTail& /*other*/) noexcept {
+    ProjectTail& operator=(const ProjectTail& /*other*/) noexcept {  // cppcheck-suppress operatorEqVarError ; keeps its own holder and links
         relink();
         return *this;
     }
@@ -1541,8 +1536,7 @@ class KeyedBase {
     KeyedBase(const KeyedBase& /*other*/) noexcept {}
     KeyedBase(KeyedBase&& /*other*/) noexcept {}
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — keeps its own host
-    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
-    KeyedBase& operator=(const KeyedBase& /*other*/) noexcept { return *this; }
+    KeyedBase& operator=(const KeyedBase& /*other*/) noexcept { return *this; }  // cppcheck-suppress operatorEqVarError ; keeps its own holder and links
     // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     KeyedBase& operator=(KeyedBase&& /*other*/) noexcept { return *this; }
     virtual ~KeyedBase() = default;
@@ -4194,10 +4188,10 @@ struct EditRecord {
 // and the declarations are unchanged.
 struct GeometrySource {
     std::string inputs;
-    std::shared_ptr<const ProjectLink> owner;
-    std::shared_ptr<const Membership> aliases;
-    std::shared_ptr<const Membership> constraints;
-    std::string relations;
+    std::shared_ptr<const ProjectLink> owner{};
+    std::shared_ptr<const Membership> aliases{};
+    std::shared_ptr<const Membership> constraints{};
+    std::string relations{};
 };
 
 // The project's handle on its EditRecord, which is never null: a copy starts its own record; an
@@ -4547,9 +4541,9 @@ struct IterationRecord {
     int unevaluable_trials = 0;
     // The step's parameter values by edi identity path — what a live surface draws the pattern of.
     // Carried on the streamed record only (a subscriber's); the history keeps none.
-    std::map<std::string, double> values;
+    std::map<std::string, double> values{};
     /// Raw objective reported by the engine; absent when unavailable.
-    std::optional<double> objective_value;
+    std::optional<double> objective_value{};
 };
 
 
@@ -6334,7 +6328,7 @@ inline std::vector<Parameter*> Structure::parameters() {
 inline std::vector<Parameter*> Structure::free_parameters() { return detail::free_of(parameters()); }
 inline std::vector<Parameter*> PeakBase::parameters() {
     std::vector<Parameter*> out;
-    out.reserve(fixed_parameter_members.size()+std::count_if(optional_parameter_members.begin(),optional_parameter_members.end(),[this](auto member){return bool(this->*member);}));
+    out.reserve(fixed_parameter_members.size()+static_cast<std::size_t>(std::count_if(optional_parameter_members.begin(),optional_parameter_members.end(),[this](auto member){return bool(this->*member);})));
     for(auto member:fixed_parameter_members)out.push_back(&(this->*member));
     for(auto member:optional_parameter_members)detail::push_optional(out,this->*member);
     return out;

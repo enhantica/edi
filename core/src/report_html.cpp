@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <fstream>
+#include <sstream>
 #include <iterator>
 #include <optional>
 #include <stdexcept>
@@ -1218,7 +1219,10 @@ ReportLibraries read_report_libraries(const std::filesystem::path& data_dir) {
         if (!file) {
             throw std::runtime_error("cannot read the report library " + path.string());
         }
-        return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+        // Through rdbuf rather than istreambuf_iterator, which GCC 14 reports as a null dereference once inlined.
+        std::ostringstream text;
+        text << file.rdbuf();
+        return std::move(text).str();
     };
     const auto& files = report_library_files();
     return {read(files[0]), read(files[1]), read(files[2])};
