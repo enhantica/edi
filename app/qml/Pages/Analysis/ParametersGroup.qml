@@ -41,9 +41,10 @@ SideBarGroup {
     property bool freeTitleHovered: false
     readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
     readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset) + AppSizes.fieldSpacing * 2 + EaStyle.Sizes.fontPixelSize
-    // "Same for all" (edi ADR-0087 point 3): a column with several experiments, a switch on each experiment parameter
-    // that ties it in every other experiment of its set to the template's, through alias and constraint rows.
-    readonly property bool sameShown: project !== null && project.experiments.count > 1
+    // "Same for all" (edi ADR-0087 point 3): a switch on each experiment parameter tying it in every other experiment of
+    // its set to the template's, through alias and constraint rows. Not shown for now: the parametric fit will offer it
+    // through the Free box (ADR-0087, amended 2026-11-17).
+    readonly property bool sameShown: false
     readonly property real sameColumnWidth: sameShown ? Math.ceil(sameTitleText.advanceWidth) + AppSizes.fieldSpacing * 2 + EaStyle.Sizes.fontPixelSize : 0
     // Read again whenever the relation rows change.
     readonly property int relationRows: project && project.analysis ? project.analysis.constraints.count + project.analysis.aliases.count : 0
