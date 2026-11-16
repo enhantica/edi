@@ -10,10 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T09:14:10Z
+# measured_utc = 2026-11-16T12:50:04Z
 #
-# Recorded from: banked rows after main merge; inventory metadata regenerated only
-# No new measurement or collection claimed; measured values, declared holes and module costs retained
+# Recorded from: measured test run (2 node(s) measured once, 177128 banked, 0 stale row(s) dropped)
+# Collected tests: 245596; with a reported duration: 77764
+# Module-scoped fixture costs recorded: 208
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -28,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245594
+# inventory_python = 245596
 # inventory_cpp = 0
-# inventory_measured = 177128
+# inventory_measured = 177130
 # inventory_unmeasured = 68466
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 86289
+# inventory_pr_python = 86291
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -173252,6 +173253,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_lbco-si-mcstas]
 0.200	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ncaf-wish-2bank_start-3]
 0.190	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ncaf-wish-3bank_start-5]
+0.220	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ncaf-wish-5bank_scan-6p]
 0.210	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ncaf-wish-5bank_start-5]
 0.180	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_complete_manifest_dispatches_every_declared_variant[pd-neut-tof_ncaf-wish]
@@ -173320,6 +173322,7 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.p
 1.440	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ncaf-wish-2bank_start-3-0]
 1.660	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ncaf-wish-3bank_start-5-0]
 1.570	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ncaf-wish-3bank_start-5-1]
+106.540	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ncaf-wish-5bank_scan-6p-0]
 72.180	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ncaf-wish-5bank_start-5-0]
 48.760	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ncaf-wish-5bank_start-fullprof-0]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_si-sepd-0]
