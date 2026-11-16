@@ -25,6 +25,7 @@ I'm also happy to discuss your data analysis needs or ideas for collaboration. I
 <span class="ed-signature-place">European Spallation Source · DMSC</span>
 <span class="ed-signature-links"><span class="ed-email" data-mail="dWUuc3NlQHZvbm96YXMud2VyZG5h"><noscript>andrew.sazonov [at] ess [dot] eu</noscript></span> · <a href="community/">Feedback form</a></span>
 </div>
+<!-- contributors -->
 </div>
 
 ## Where to start
