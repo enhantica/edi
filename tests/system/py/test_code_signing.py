@@ -92,7 +92,7 @@ def expression(value, atoms):
     return condition_value(tree.body)
 
 
-def condition(step, event, ref, release, platform, *, repository='enhantica/edi', failed=False):
+def context_atoms(event, ref, release, platform, repository):
     atoms = {
         'github.event_name': event,
         'github.repository': repository,
@@ -101,9 +101,13 @@ def condition(step, event, ref, release, platform, *, repository='enhantica/edi'
         'inputs.release_plan_run': '1234' if release else '',
         'env.EDI_RELEASE_PLAN': '/release-plan' if release else '',
     }
-    job = workflow()['jobs']['installers']
-    guard = job.get('env', {}).get('EDI_CODESIGN', '')
+    guard = workflow()['jobs']['installers'].get('env', {}).get('EDI_CODESIGN', '')
     atoms['env.EDI_CODESIGN'] = expression(guard, atoms) if guard else ''
+    return atoms
+
+
+def condition(step, event, ref, release, platform, *, repository='enhantica/edi', failed=False):
+    atoms = context_atoms(event, ref, release, platform, repository)
     if 'EDI_CODESIGN' in step.get('env', {}):
         atoms['env.EDI_CODESIGN'] = expression(step['env']['EDI_CODESIGN'], atoms)
     value = str(step.get('if', 'success()'))
@@ -117,6 +121,26 @@ def condition(step, event, ref, release, platform, *, repository='enhantica/edi'
     ]:
         value = value.replace(name + '()', repr(result))
     return bool(expression(value, atoms))
+
+
+def private_access(step, event, ref, release, platform, *, repository='enhantica/edi'):
+    if not condition(step, event, ref, release, platform, repository=repository):
+        return False
+    values = [
+        value
+        for field in ('env', 'with')
+        for value in step.get(field, {}).values()
+        if re.search(r'secrets[.]CODESIGN_', str(value))
+    ]
+    if not values:
+        return True
+    atoms = context_atoms(event, ref, release, platform, repository)
+    if 'EDI_CODESIGN' in step.get('env', {}):
+        atoms['env.EDI_CODESIGN'] = expression(step['env']['EDI_CODESIGN'], atoms)
+    for value in values:
+        for name in re.findall(r'secrets[.](CODESIGN_[A-Z0-9_]+)', value):
+            atoms['secrets.' + name] = 'credential:' + name
+    return any(expression(value, atoms) for value in values)
 
 
 def condition_value(node):
@@ -149,11 +173,11 @@ def condition_value(node):
 def test_signing_is_present_and_never_reaches_pull_requests_or_other_branches(platform):
     selected = signing_steps()
     assert selected, 'Release installers must contain signing steps'
-    assert any(condition(s, 'push', 'refs/heads/main', False, platform) for s in selected), (
+    assert any(private_access(s, 'push', 'refs/heads/main', False, platform) for s in selected), (
         'Main pushes must sign each supported installer platform'
     )
     assert any(
-        condition(s, 'workflow_dispatch', 'refs/heads/main', True, platform) for s in selected
+        private_access(s, 'workflow_dispatch', 'refs/heads/main', True, platform) for s in selected
     ), 'Release dispatches on main must sign each supported installer platform'
     denied = [
         ('pull_request', 'refs/pull/53/merge', False, 'enhantica/edi'),
@@ -170,7 +194,7 @@ def test_signing_is_present_and_never_reaches_pull_requests_or_other_branches(pl
         (event, ref, release, repository, step.get('name', step.get('uses', '')))
         for event, ref, release, repository in denied
         for step in selected
-        if condition(step, event, ref, release, platform, repository=repository)
+        if private_access(step, event, ref, release, platform, repository=repository)
     ]
     assert not violations, (
         'Only release dispatches on main and main pushes in the original repository may '
@@ -199,15 +223,14 @@ def test_pull_request_bundle_build_keeps_the_internal_ad_hoc_path():
     ]
     assert len(candidates) == 1, 'PR installer checks must retain the ordinary bundle build'
     build = candidates[0]
-    assert build not in signing_steps(), (
-        'A public signing identity alone must not classify the ordinary build as private access'
-    )
     assert condition(build, 'pull_request', 'refs/pull/53/merge', False, 'macOS'), (
         'The ordinary macOS bundle build must still run on pull requests'
     )
-    assert not re.search(r'secrets[.]CODESIGN_', str(build)), (
-        'PR bundle construction must not receive private signing credentials'
-    )
+    for platform in ('macOS', 'Windows'):
+        if build in signing_steps():
+            assert not private_access(
+                build, 'pull_request', 'refs/pull/53/merge', False, platform
+            ), 'PR bundle construction must receive no effective private signing credentials'
     tree = ast.parse((ROOT / 'tools/installer/build.py').read_text())
     function = next(
         node
