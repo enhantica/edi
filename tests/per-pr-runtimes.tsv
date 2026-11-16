@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T03:43:40Z
+# measured_utc = 2026-11-16T03:48:38Z
 #
-# Recorded from: measured test run (6 node(s) measured once, 176638 banked, 0 stale row(s) dropped)
-# Collected tests: 245427; with a reported duration: 77415
+# Recorded from: measured test run (1 node(s) measured once, 176644 banked, 0 stale row(s) dropped)
+# Collected tests: 245428; with a reported duration: 77415
 # Module-scoped fixture costs recorded: 203
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245427
+# inventory_python = 245428
 # inventory_cpp = 0
 # inventory_measured = 176644
-# inventory_unmeasured = 68783
+# inventory_unmeasured = 68784
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 86122
+# inventory_pr_python = 86123
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -167085,6 +167085,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_magnetic_token_readers.p
 0.000	tests/integration/py/test_metadata_transition_path_spelling.py::test_retained_seed_identity_and_byte_refusal_are_independent_of_host_paths[windows-string-ncaf-wish-3bank-s5]
 0.000	tests/integration/py/test_metadata_transition_path_spelling.py::test_retained_seed_identity_and_byte_refusal_are_independent_of_host_paths[windows-string-si-sepd-s2]
 0.000	tests/integration/py/test_metadata_transition_path_spelling.py::test_retained_seed_identity_and_byte_refusal_are_independent_of_host_paths[windows-string-si-sepd-s5]
+UNMEASURED:failed-in-this-run	tests/integration/py/test_model_concept_limits.py::test_user_concept_navigation_explains_model_preconditions_and_search_limits
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_linked_structure_rows_use_available_names_and_add_remove_disable_actions
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_phase_capture_requires_real_shared_grouping[comment]
 0.000	tests/integration/py/test_multiphase_app_contract.py::test_phase_capture_requires_real_shared_grouping[quoted]
