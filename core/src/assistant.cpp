@@ -143,6 +143,33 @@ MeasurementFacts measurement_facts(const ExperimentBase& experiment) {
     return out;
 }
 
+// Which of a single crystal's reflections the fit uses, as crysta's admission counts them; null for a powder or a
+// single crystal without measured reflections. The metadata and its size both read this one object.
+J reflection_admission_summary(const Project& project, const ExperimentBase& experiment) {
+    std::size_t index = project.experiments.size();
+    for (std::size_t i = 0; i < project.experiments.size(); ++i)
+        if (project.experiments[i].get() == &experiment) index = i;
+    std::optional<ReflectionAdmission> reduced;
+    try {
+        reduced = reflection_admission(project, index);
+    } catch (const std::exception&) {
+        return J(nullptr);  // a project crysta cannot take yet has no admission
+    }
+    if (!reduced) return J(nullptr);
+    const auto ratio = [](const std::optional<double>& value) -> J {
+        return value && std::isfinite(*value) ? J(*value) : J(nullptr);
+    };
+    A omitted;
+    for (const auto& row : experiment.excluded_reflections)
+        omitted.push_back(O{{"id", row->id.value()}, {"index_h", static_cast<double>(row->index_h.get())},
+                            {"index_k", static_cast<double>(row->index_k.get())}, {"index_l", static_cast<double>(row->index_l.get())}});
+    return O{{"merge", experiment.reflns_merge.value_or("none")}, {"absences", experiment.reflns_absences.value_or("include")},
+             {"measured", static_cast<double>(reduced->measured)}, {"unique", static_cast<double>(reduced->unique)},
+             {"used", static_cast<double>(reduced->used)}, {"excluded", static_cast<double>(reduced->excluded)},
+             {"absent", static_cast<double>(reduced->absent)}, {"r_int", ratio(reduced->r_int)}, {"r_sigma", ratio(reduced->r_sigma)},
+             {"absent_mean_i_over_sigma", ratio(reduced->absent_mean_i_over_sigma)}, {"excluded_reflections", std::move(omitted)}};
+}
+
 std::uint64_t project_metadata_size(const Project* project) {
     if (!project) return encoded_fields({{"structures", 2}, {"datasets", 2},
         {"relations", encoded_fields({{"aliases", 2}, {"constraints", 2}})}});
@@ -158,7 +185,7 @@ std::uint64_t project_metadata_size(const Project* project) {
                 {"it_number", sg.it_number ? payload_size(J(*sg.it_number)) : 4}})},
             {"sites", sites}, {"anisotropic_site_ids", anisotropic}});
     });
-    const auto datasets = encoded_rows(project->experiments, [](const auto& experiment) {
+    const auto datasets = encoded_rows(project->experiments, [project](const auto& experiment) {
         const auto facts = measurement_facts(*experiment);
         std::uint64_t profile_options=2;bool profile_comma=false;
         if (facts.powder) visit_supported_peak_profiles(experiment->effective_beam_mode(),[&](const std::string& token) {
@@ -211,7 +238,8 @@ std::uint64_t project_metadata_size(const Project* project) {
             {"dataset_weight", encoded_finite(experiment->dataset_weight)}, {"excluded_regions", exclusions}, {"phases", phases},
             {"background", facts.powder ? encoded_fields({{"type", encoded_text(experiment->background_type)}, {"origin", encoded_optional(experiment->background_origin)},
                 {"x_min", encoded_optional(experiment->background_x_min)}, {"x_max", encoded_optional(experiment->background_x_max)},
-                {"anchors", anchors},{"terms",terms},{"estimate",estimate}}) : 4}});
+                {"anchors", anchors},{"terms",terms},{"estimate",estimate}}) : 4},
+            {"reflection_admission", payload_size(reflection_admission_summary(*project, *experiment))}});
     });
     const auto aliases = encoded_rows(project->aliases, [](const auto& alias) {
         return encoded_fields({{"id", encoded_text(alias->id.value(), true)}, {"parameter_unique_name", encoded_text(alias->parameter_unique_name.value(), true)}});
@@ -286,7 +314,8 @@ J project_metadata(const Project* project) {
                 {"cutoff_fwhm",facts.powder ? finite(experiment->peak.cutoff_fwhm) : J(nullptr)},{"dataset_weight", finite(experiment->dataset_weight)}, {"excluded_regions", std::move(exclusions)}, {"phases", std::move(phases)},
                 {"background",facts.powder ? J(O{{"type", experiment->background_type}, {"origin", optional(experiment->background_origin)},
                                  {"x_min", optional(experiment->background_x_min)}, {"x_max", optional(experiment->background_x_max)},
-                                 {"anchors", std::move(anchors)},{"terms",std::move(terms)},{"estimate",std::move(estimate)}}) : J(nullptr)}});
+                                 {"anchors", std::move(anchors)},{"terms",std::move(terms)},{"estimate",std::move(estimate)}}) : J(nullptr)},
+                {"reflection_admission", reflection_admission_summary(*project, *experiment)}});
         }
         for (const auto& alias : project->aliases) append(aliases, O{{"id", alias->id.value()}, {"parameter_unique_name", alias->parameter_unique_name.value()}});
         for (const auto& constraint : project->constraints)

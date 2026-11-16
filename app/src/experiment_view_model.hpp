@@ -29,6 +29,35 @@ namespace edi_app {
 class ParameterRegistry;
 class ProjectEditor;
 
+// Which of a single crystal's reflections the fit uses, as crysta's admission counts them: `available` is false
+// without measured reflections; Rint and R-sigma are NaN when undefined.
+struct ReflectionAdmissionSummary {
+    Q_GADGET
+    QML_VALUE_TYPE(reflectionAdmissionSummary)
+    Q_PROPERTY(bool available MEMBER available CONSTANT)
+    Q_PROPERTY(int measured MEMBER measured CONSTANT)
+    Q_PROPERTY(int unique MEMBER unique CONSTANT)
+    Q_PROPERTY(int used MEMBER used CONSTANT)
+    Q_PROPERTY(int excluded MEMBER excluded CONSTANT)
+    Q_PROPERTY(int absent MEMBER absent CONSTANT)
+    Q_PROPERTY(double rInt MEMBER rInt CONSTANT)
+    Q_PROPERTY(double rSigma MEMBER rSigma CONSTANT)
+    Q_PROPERTY(double absentMeanIOverSigma MEMBER absentMeanIOverSigma CONSTANT)
+
+   public:
+    bool available = false;
+    int measured = 0, unique = 0, used = 0, excluded = 0, absent = 0;
+    double rInt = qQNaN(), rSigma = qQNaN(), absentMeanIOverSigma = 0.0;
+    // NaN, an undefined factor, equals NaN here, so an unchanged admission is no change.
+    bool operator==(const ReflectionAdmissionSummary& other) const {
+        const auto same = [](double a, double b) { return a == b || (qIsNaN(a) && qIsNaN(b)); };
+        return available == other.available && measured == other.measured && unique == other.unique &&
+               used == other.used && excluded == other.excluded && absent == other.absent &&
+               same(rInt, other.rInt) && same(rSigma, other.rSigma) &&
+               same(absentMeanIOverSigma, other.absentMeanIOverSigma);
+    }
+};
+
 // One experiment of the project. The four type axes are read-only; the selectors offer the
 // core's supported set for the type and write through the D11 core functions; everything the
 // library lets a user set is editable (§15.3).
@@ -95,7 +124,7 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(QString reflnsAbsences READ reflnsAbsences WRITE setReflnsAbsences NOTIFY reflnsAbsencesChanged)
     Q_PROPERTY(edi_app::OptionListModel* reflnsAbsencesOptions READ reflnsAbsencesOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* excludedRegionAxisOptions READ excludedRegionAxisOptions CONSTANT)
-    Q_PROPERTY(QVariantMap reflectionAdmission READ reflectionAdmission NOTIFY reflectionAdmissionChanged)
+    Q_PROPERTY(edi_app::ReflectionAdmissionSummary reflectionAdmission READ reflectionAdmission NOTIFY reflectionAdmissionChanged)
     Q_PROPERTY(QStringList reflectionStatuses READ reflectionStatuses NOTIFY reflectionStatusesChanged)
     // The background model; another type replaces the background (edi::select_background_type).
     Q_PROPERTY(QString backgroundType READ backgroundType WRITE setBackgroundType NOTIFY backgroundTypeChanged)
@@ -240,7 +269,7 @@ class ExperimentViewModel : public QObject {
     void setReflnsAbsences(const QString& token);
     OptionListModel* reflnsAbsencesOptions() const { return reflns_absences_options_; }
     OptionListModel* excludedRegionAxisOptions() const { return excluded_region_axis_options_; }
-    QVariantMap reflectionAdmission() const { return reflection_admission_; }
+    ReflectionAdmissionSummary reflectionAdmission() const { return reflection_admission_; }
     QStringList reflectionStatuses() const { return reflection_statuses_; }
     // A single crystal's reflection left out of the fit by its indices, or put back (one undo step).
     Q_INVOKABLE void toggleExcludedReflection(int h, int k, int l);
@@ -478,7 +507,7 @@ class ExperimentViewModel : public QObject {
     OptionListModel* reflns_absences_options_;
     OptionListModel* excluded_region_axis_options_;
     QString reflns_merge_, reflns_absences_;
-    QVariantMap reflection_admission_;
+    ReflectionAdmissionSummary reflection_admission_;
     QStringList reflection_statuses_;
     void syncAdmission();
     OptionListModel* background_type_options_;

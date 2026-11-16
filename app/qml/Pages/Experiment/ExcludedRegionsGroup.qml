@@ -18,8 +18,7 @@ Column {
     property ExperimentViewModel experiment: null
     readonly property ExcludedRegionListModel regions: experiment ? experiment.excludedRegions : null
     readonly property bool singleCrystal: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
-    readonly property var axisTokens: ["d_spacing", "sin_theta_over_lambda"]
-    readonly property var axisLabels: ["d (Å)", "sin(θ)/λ (Å⁻¹)"]
+    readonly property OptionListModel axisOptions: experiment ? experiment.excludedRegionAxisOptions : null
 
     spacing: AppSizes.groupContentSpacing
 
@@ -104,9 +103,10 @@ Column {
                     objectName: `excludedRegion.axis.${row.index}`
                     inTable: true
                     anchors.verticalCenter: parent.verticalCenter
-                    model: group.axisLabels
-                    currentIndex: group.axisTokens.indexOf(row.axis)
-                    onActivated: index => group.regions.setAxis(row.index, group.axisTokens[index])
+                    model: group.axisOptions
+                    textRole: "label"
+                    currentIndex: group.axisOptions ? group.axisOptions.indexOf(row.axis) : -1
+                    onActivated: index => group.regions.setAxis(row.index, group.axisOptions.tokenAt(index))
                 }
             }
             EaComponents.ListViewButton {

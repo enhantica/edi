@@ -598,7 +598,7 @@ void ExperimentViewModel::toggleExcludedReflection(int h, int k, int l) {
 // The admission is crysta's, computed again on each change: it reads the exclusions, the merge mode, the
 // absences, the structure's space group and the fit's cutoff, any of which an edit may have changed.
 void ExperimentViewModel::syncAdmission() {
-    QVariantMap admission;
+    ReflectionAdmissionSummary admission;
     QStringList statuses;
     std::size_t index = project_.experiments.size();
     for (std::size_t i = 0; i < project_.experiments.size(); ++i) {
@@ -613,15 +613,16 @@ void ExperimentViewModel::syncAdmission() {
         reduced.reset();  // a project crysta cannot take yet (no structure, no cell) shows no admission
     }
     if (reduced) {
-        const auto count = [](std::size_t value) { return static_cast<qulonglong>(value); };
-        admission.insert("measured", count(reduced->measured));
-        admission.insert("unique", count(reduced->unique));
-        admission.insert("used", count(reduced->used));
-        admission.insert("excluded", count(reduced->excluded));
-        admission.insert("absent", count(reduced->absent));
-        admission.insert("rInt", reduced->r_int.value_or(qQNaN()));
-        admission.insert("rSigma", reduced->r_sigma.value_or(qQNaN()));
-        admission.insert("absentMeanIOverSigma", reduced->absent_mean_i_over_sigma);
+        const auto count = [](std::size_t value) { return static_cast<int>(value); };
+        admission.available = true;
+        admission.measured = count(reduced->measured);
+        admission.unique = count(reduced->unique);
+        admission.used = count(reduced->used);
+        admission.excluded = count(reduced->excluded);
+        admission.absent = count(reduced->absent);
+        admission.rInt = reduced->r_int.value_or(qQNaN());
+        admission.rSigma = reduced->r_sigma.value_or(qQNaN());
+        admission.absentMeanIOverSigma = reduced->absent_mean_i_over_sigma;
         statuses.reserve(static_cast<qsizetype>(reduced->status.size()));
         for (const char code : reduced->status) {
             statuses.append(QString(QChar::fromLatin1(code)));
