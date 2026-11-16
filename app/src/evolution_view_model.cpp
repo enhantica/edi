@@ -41,10 +41,11 @@ double padded(double value, double pad) {
 
 EvolutionParameterListModel::EvolutionParameterListModel(QObject* parent) : RowTableModel({"name", "label"}, parent) {}
 
-void EvolutionParameterListModel::setNames(const QStringList& names) {
+void EvolutionParameterListModel::setNames(const QStringList& names, const QStringList& labels) {
     QList<Row> rows;
     for (int i = 0; i < names.size(); ++i) {
-        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {names[i], names[i]}});
+        const QString label = i < labels.size() && !labels[i].isEmpty() ? labels[i] : names[i];
+        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {names[i], label}});
     }
     setTableRows(rows);
 }
@@ -197,7 +198,9 @@ bool EvolutionViewModel::syncNames() {
     const bool changed = names != names_;
     if (changed) {
         names_ = names;
-        parameters_->setNames(names_);
+        QStringList labels;
+        for (const QString& name : names_) labels.append(labeller_ ? labeller_(name, per_experiment_) : QString());
+        parameters_->setNames(names_, labels);
     }
     const int current = names_.isEmpty() ? -1 : std::max(0, static_cast<int>(names_.indexOf(shown)));
     if (current != current_ || changed) {

@@ -3598,6 +3598,28 @@ bool ProjectViewModel::duplicateStructure() {
 
 void ProjectViewModel::loadScan() {
     evolution_ = new EvolutionViewModel(this);
+    // The Evolution selector names a parameter as the parameter table does: its block, row and name (a bank's own
+    // without the block, which the Bank box names). A column no parameter has (a derived value) keeps its name.
+    evolution_->setLabeller([this](const QString& column, bool bank) {
+        const std::string wanted = column.toStdString();
+        const std::string first = project_->experiments.empty() ? std::string() : project_->experiments.front()->name + ".";
+        for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
+            const std::string own = edi::scan_results_column(slot.unique_name);
+            const bool match = bank ? own.size() > first.size() && own.compare(0, first.size(), first) == 0 &&
+                                          own.substr(first.size()) == wanted
+                                    : own == wanted;
+            if (!match) continue;
+            const ParameterItem* item = registry_->find(slot.parameter);
+            if (item == nullptr) break;
+            QStringList parts;
+            if (!bank) parts.append(item->blockName());
+            if (!item->rowLabel().isEmpty() && !parts.contains(item->rowLabel())) parts.append(item->rowLabel());
+            parts.append(item->shortName());
+            parts.removeAll(QString());
+            return parts.join(QStringLiteral(" · "));
+        }
+        return QString();
+    });
     scan_views_ = new ScanViewModel(this);
     // A series' charts follow the chosen point and bank (the owner, 2026-11-16).
     const auto focus = [this] {
