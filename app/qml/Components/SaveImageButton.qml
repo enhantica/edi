@@ -4,7 +4,7 @@ import QtQuick.Dialogs
 
 import edi.app
 
-// Save image, one button in the main view's bottom-right corner for the shown tab (the owner, 2026-11-16): a PNG of
+// Save image, one button in the main view's bottom-left corner for the shown tab (the owner, 2026-11-16): a PNG of
 // `target` as shown, without its `toolbar`. The desktop asks where to save it, starting in the one folder every Save
 // image remembers, at first the project's reports folder (the owner, 2026-11-10); the browser downloads it.
 Row {
