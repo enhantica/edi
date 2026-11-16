@@ -25,7 +25,7 @@ from tests.fixtures.cwl_family.historical import current_tokens, original_tokens
 from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
 from tests.fixtures.metadata_transition.source_bytes import previous_content
-from tests.fixtures.project_categories.historical_bytes import prior_digest
+from tests.fixtures.project_categories.historical_bytes import native_edi_bytes, prior_digest
 from tests.fixtures.report_units.iucr_reference import without_default_rule
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -134,6 +134,8 @@ def legacy_input_hashes(directory, case, *, excluded=False):
 
 
 def without_saved_calculator(name, contents, *, excluded=False):
+    if name.endswith('.edi'):
+        contents = native_edi_bytes(contents)
     if excluded:
         contents = historical_excluded_bytes(name, contents, saved_precision=True)
     # Exact canonical block from 's independent CIF contract and retained

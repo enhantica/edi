@@ -87,7 +87,13 @@ initial calculation to have completed; after, the same currentness predicate is 
 for at most ten seconds. Its diagnostic uses the public wording. Every subsequent equal-write
 assertion and every other GUI byte stays unchanged. The verifier permits exactly that replacement,
 and rejects re-pinned changes to its predicate, timeout or diagnostic.
-Every other archived witness stays byte-identical.
+ADR-0052 also requires Save to renew held results from the written model, even before a later lazy read.
+The currentness witness has exactly four declared transforms: import the independent saved-output
+verifier, spell its existing zero background as two zero anchors, and replace the two superseded
+missing-column assertions with present-column assertions plus saved-output verification. The archived
+original remains unchanged. Fixed operations in the verifier reject receipt re-pinning of predicates,
+messages, anchors or omitted verification; every unrelated currentness byte stays unchanged.
+Every archived witness outside these geometry, GUI and Save projections stays byte-identical.
 
 Run `python tests/fixtures/c34_t28_baseline/api_witness_adaptation.py` to verify the
 fixed receipt against the archived original and the live source. The verifier never

@@ -4,10 +4,30 @@ import argparse
 import hashlib
 import json
 import subprocess
+import sys
 from pathlib import Path
+
+if sys.argv[1:] not in ([], ['--active-domain'], ['--retire-abscor2']):
+    raise SystemExit('usage: freeze_stamp_codec.py [--active-domain | --retire-abscor2]')
 
 BASE = 'e782d2d84a984c8d9df86e6e6c4df361baf89f2c'
 ROOT = Path(__file__).resolve().parents[3]
+if '--active-domain' in sys.argv[1:]:
+    frozen = json.loads(Path(__file__).with_name('stamp_codec_retirement.json').read_text())[
+        'before'
+    ].encode()
+    digest = '8b300f35b31f9f5b9bf54a5af9e4e470255f8983817ef4f463b91d46707d7800'
+    if hashlib.sha256(frozen).hexdigest() != digest:
+        raise RuntimeError('The independent frozen codec bytes changed')
+    retired = b'    put_optional_parameter(out, experiment.absorption.abscor2, scope);\n'
+    if frozen.count(retired) != 1:
+        raise RuntimeError('The frozen reference must contain exactly one retired slot')
+    header = b'// Active-domain projection of the immutable frozen codec; see README.md.\n'
+    Path(__file__).with_name('active_stamp_codec.inc').write_bytes(
+        header + frozen.replace(retired, b'')
+    )
+    raise SystemExit(0)
+
 FROZEN_CODEC_SHA256 = '8b300f35b31f9f5b9bf54a5af9e4e470255f8983817ef4f463b91d46707d7800'
 
 
@@ -19,11 +39,12 @@ def write_projection(original, reference):
     if original.count(retired) != 1:
         message = 'The ADR-0123 projection requires exactly the original retired slot'
         raise ValueError(message)
-    projected = original.replace(
-        retired,
-        '    // ADR-0123: the removed coefficient has no slot in the current model stamp.\n',
+    projected = (
+        '// Active-domain projection of the immutable frozen codec; see README.md.\n'
+        + original.replace(retired, '')
     )
-    Path(__file__).with_name('prechange_stamp_codec.inc').write_text(projected)
+    Path(__file__).with_name('prechange_stamp_codec.inc').write_bytes(original.encode())
+    Path(__file__).with_name('active_stamp_codec.inc').write_bytes(projected.encode())
     Path(__file__).with_name('stamp_codec_retirement.json').write_text(
         json.dumps(
             {
@@ -103,6 +124,7 @@ text = text.replace(
 )
 text = text.replace('namespace edi {\nnamespace {', 'namespace edi {\nnamespace {\n' + slots)
 text = text.replace('detail::kPeakSlots', 'kPrechangePeakSlots')
+
 binding = """
 // Independent prior-dev cell-name/source binding used by the alias witnesses.
 // This is a deliberately finite reference, not today's production name walker.

@@ -28,6 +28,29 @@ Here `../crysta` is a crysta checkout next to edi. When a change spans both, che
 This is for local development only. CI and releases always link the pinned SDK, and the command refuses
 to run in CI.
 
+## The command line against a local crysta
+
+The command line has the same four tasks as the app, in the default environment:
+
+| task | does |
+| --- | --- |
+| `pixi run cli-build` | builds the command line into `build/cli` against the pinned SDK, as `app-build` |
+| `pixi run cli <arguments>` | builds, then runs it, as `app` |
+| `pixi run cli-run <arguments>` | runs the built command line without building, as `app-run`; it asks you to build first when there is none |
+| `pixi run cli-with-crysta ../crysta <arguments>` | builds crysta from the checkout, builds the command line against it into `build/cli`, then runs it, as `app-with-crysta` |
+
+```bash
+cd edi
+pixi run cli-with-crysta ../crysta fit docs/user/cli/pd-neut-cwl_lbco-hrpt/project
+pixi run cli-run fit docs/user/cli/pd-neut-cwl_lbco-hrpt/project
+```
+
+The second command reruns the same build without building again. crysta is built exactly as for the app (the
+same step and install under `<crysta>/build/edi-local`), and the next plain `pixi run cli` goes back to the
+pinned SDK. `build/cli` is the command line's own tree, so a local crysta never reaches the build the Python
+package and the tests use. As for the app, `cli-with-crysta` is for local development only and refuses to
+run in CI.
+
 ## The tutorial notebooks against a local crysta
 
 The same route runs the Python tutorials, for example to see them with a crysta change before it is published:

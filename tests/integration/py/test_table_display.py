@@ -65,13 +65,13 @@ def run_functions(source, names, calls, *, fit=None, consumer=None, bridge=None)
 def test_scientific_thresholds_and_signed_three_digit_values():
     cases = [
         (999.9, '999.9'),
-        (1000, '1.00e3'),
+        (1000, '1.00\u00d710³'),
         (0.001, '0.001'),
-        (0.000999, '9.99e-4'),
+        (0.000999, '9.99\u00d710⁻⁴'),
         (0, '0'),
-        (-1000, '-1.00e3'),
-        (-0.00001, '-1.00e-5'),
-        (22900000, '2.29e7'),
+        (-1000, '-1.00\u00d710³'),
+        (-0.00001, '-1.00\u00d710⁻⁵'),
+        (22900000, '2.29\u00d710⁷'),
     ]
     actual = run_functions(
         ROOT / 'app/qml/Globals/NumberText.qml',
@@ -90,7 +90,7 @@ def test_display_precision_is_independent_of_cell_clip_width():
         ['parameter', 'exponent'],
         [{'name': 'parameter', 'args': [22900000, 0, width]} for width in (3, 8, 64)],
     )
-    assert actual == ['2.29e7'] * 3, (
+    assert actual == ['2.29\u00d710⁷'] * 3, (
         'Number cells clip the end without changing the specified scientific precision'
     )
 

@@ -50,3 +50,15 @@ colours before it became a gradient, although nobody can tell eight colours apar
 - **A dashed background line when a gradient is shown.** Not needed once the Colour-blind safe dark experiment 2 was
   moved away from grey.
 - **Keep the colour maps for Stacked.** Rejected by the owner: one selector for Pattern and Stacked.
+
+
+## Verification after the palette transition
+
+The native presentation/report boundary uses both active palettes and preserves
+its light/dark, per-structure identity and overflow checks. Its expected colours
+come from the exact approved palette document in published release b16f9867,
+with the source hash recorded beside the generated fixture and independent Oklab
+mixing retained. Earlier five-palette owner captures remain historical inputs;
+they are not rewritten to make the new product reproduce retired colour schemes.
+Role-style expectations use the same approved Main colours and retain all width
+and marker requirements.

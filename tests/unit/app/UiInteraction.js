@@ -150,7 +150,7 @@ function preparingWorkflowTabs(window) {
     return preparing;
 }
 
-function click(testCase, probe, window, name, localLayout = false) {
+function click(testCase, probe, window, name, localLayout = false, advanceClock = null) {
     if (preparingWorkflowTabs(window).length > 0)
         testCase.tryVerify(() => preparingWorkflowTabs(window).length === 0, 15000,
                            "ADR-0052: declared workflow-page preparation completes before layout/input settling");
@@ -165,7 +165,11 @@ function click(testCase, probe, window, name, localLayout = false) {
             return true;
         }, 5000, "The enabled, exposed input and its containing layouts settle: " + name);
     } else {
-        testCase.tryVerify(() => !moving(window.contentItem), 2000,
+        testCase.tryVerify(() => {
+            if (advanceClock)
+                advanceClock();
+            return !moving(window.contentItem);
+        }, 2000,
                            "I10/I19: viewports finish moving before locating the next real input");
         testCase.verify(testCase.waitForPolish(window, 2000),
                         "I10/I19: layout updates finish before locating real input");
@@ -186,13 +190,19 @@ function click(testCase, probe, window, name, localLayout = false) {
             inputDelay = Math.max(inputDelay, parent.pressDelay + 1);
     const point = clickPoint(item);
     testCase.mouseClick(item, point.x, point.y, undefined, undefined, inputDelay);
+    if (advanceClock)
+        advanceClock();
     window.update();
     testCase.verify(testCase.waitForRendering(window.contentItem),
                     "I10/I19: real input is followed by a rendered frame");
     if (name.includes(".tab."))
         testCase.tryCompare(item, "checked", true, 2000,
                             "I10/I19: real input selects the requested tab: " + name);
-    testCase.tryVerify(() => !moving(window.contentItem), 2000,
+    testCase.tryVerify(() => {
+        if (advanceClock)
+            advanceClock();
+        return !moving(window.contentItem);
+    }, 2000,
                        "I10/I19: the selected viewport finishes moving before the next input");
 }
 

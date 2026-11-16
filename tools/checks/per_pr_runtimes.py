@@ -1135,15 +1135,15 @@ def resolve_rows(  # noqa: PLR0913, PLR0917 — the carry inputs are distinct ev
         if nodeid in failing:
             # the cost of erroring is not the cost of running
             holes[nodeid] = 'failed-in-this-run'
-        elif nodeid in measured:
-            runtimes[nodeid] = measured[nodeid]
-        elif completed is not None and nodeid not in completed:
+        elif nodeid not in completed:
             # ⛔ REVIEW-21 F1: absent AND not proved complete. The run stopped before reaching
-            # this node, so there is no measurement to record and no failure to attribute. The
+            # this node or stopped within a reported phase; a phase duration is not completion. The
             # previous code fell through to the sub-floor branch below and wrote 0.000, which
             # turned every unreached node into the fastest possible measured test — exactly what
             # the shell's own diagnostic promises does NOT happen.
             holes[nodeid] = 'not-completed-in-this-run'
+        elif nodeid in measured:
+            runtimes[nodeid] = measured[nodeid]
         else:
             # ⛔ ABSENT IS NOT ONE THING, and my first version of this treated it as one.
             # pytest hides every duration below its ~0.005 s reporting floor even under
@@ -1291,14 +1291,15 @@ def _write_banked(
 
 def _update(log_path: Path, fixture_costs: Path | None, remeasure: Iterable[str]) -> int:
     collected = collect_nodeids()
+    collected_set = set(collected)
     existing = MANIFEST.read_text(encoding='utf-8') if MANIFEST.exists() else ''
-    remeasure = sorted(set(remeasure))
-    unknown = [node for node in remeasure if node not in collected]
+    remeasure = set(remeasure)
+    unknown = sorted(node for node in remeasure if node not in collected_set)
     if unknown:
         msg = '--remeasure names nodes that are not collected:\n    ' + '\n    '.join(unknown)
         raise ManifestError(msg)
     banked_python = {n for n in _measured_in(existing) | _unmeasured_in(existing) if '.py::' in n}
-    if existing and banked_python == set(collected) and not remeasure:
+    if existing and banked_python == collected_set and not remeasure:
         print(
             f'collection unchanged ({len(collected)} tests): banked measurement kept, no '
             f'evidence read (owner cadence ruling 2026-08-28)'
@@ -1307,20 +1308,22 @@ def _update(log_path: Path, fixture_costs: Path | None, remeasure: Iterable[str]
 
     # Foreign (non-python) identities are carried whole — pytest cannot collect them.
     def _keep(node: str) -> bool:
-        return (node in collected or '.py::' not in node) and node not in remeasure
+        return (node in collected_set or '.py::' not in node) and node not in remeasure
 
     kept = {n: v for n, v in _measured_values_in(existing).items() if _keep(n)}
     holes = {n: r for n, r in _unmeasured_reasons(existing).items() if _keep(n)}
-    removed = sum(1 for node in banked_python if node not in collected)
     targets = sorted(node for node in collected if node not in kept and node not in holes)
     module_costs = _banked_module_costs(existing, collected)
     if not targets:
-        source = f'banked rows (nothing added; {removed} stale row(s) dropped)'
+        source = (
+            f'banked rows (nothing added; {len(banked_python - collected_set)} '
+            'stale row(s) dropped)'
+        )
         return _write_banked(kept, holes, module_costs, source, collected)
     rows, new_holes, new_costs = _focused_rows(log_path, fixture_costs, targets)
     source = (
         f'measured test run ({len(targets)} node(s) measured once, {len(kept)} banked, '
-        f'{removed} stale row(s) dropped)'
+        f'{len(banked_python - collected_set)} stale row(s) dropped)'
     )
     kept.update(rows)
     holes.update(new_holes)

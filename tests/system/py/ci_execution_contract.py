@@ -17,6 +17,8 @@ import tomllib
 
 import yaml
 
+from tests.fixtures.native_process import environment_bash
+
 
 def actions_number(item):
     if item is None:
@@ -612,7 +614,7 @@ pytest() { return 0; }
         env['GITHUB_WORKSPACE'] = scratch
         result = subprocess.run(
             [
-                '/bin/bash',
+                environment_bash(),
                 *(
                     ['--noprofile', '--norc', '-e', '-o', 'pipefail']
                     if shell == 'bash'

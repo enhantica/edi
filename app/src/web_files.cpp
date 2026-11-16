@@ -55,6 +55,7 @@ EM_JS(void, edi_web_pick_folder, (int request, const char* root_utf8), {
         const files = Array.from(input.files);
         input.remove();
         let copied = 0;
+        let failed = false;
         for (const file of files) {
             const path = root + "/" + (file.webkitRelativePath || file.name);
             const dir = path.substring(0, path.lastIndexOf("/"));
@@ -63,10 +64,11 @@ EM_JS(void, edi_web_pick_folder, (int request, const char* root_utf8), {
                 FS.writeFile(path, new Uint8Array(await file.arrayBuffer()));
                 copied += 1;
             } catch (e) {
+                failed = true;
                 console.error("edi: cannot copy " + path, e);
             }
         }
-        Module._edi_web_folder_copied(request, copied);
+        Module._edi_web_folder_copied(request, failed ? -2 : copied);
     });
     document.body.appendChild(input);
     input.click();
@@ -195,13 +197,17 @@ QUrl WebFiles::saveLocation(const QString& name) {
     return QUrl::fromLocalFile(QDir(freshDirectory(QStringLiteral("save"))).filePath(folder));
 }
 
+int WebFiles::openProject() { return openFolder(false); }
+
+int WebFiles::openDatasetFolder() { return openFolder(true); }
+
 #if defined(Q_OS_WASM)
 
-int WebFiles::openProject() {
+int WebFiles::openFolder(bool datasets) {
     const int request = begin();
     if (request == 0) return 0; // Receiver retirement/reentry admitted no request.
     const QString root = freshDirectory(QStringLiteral("open"));
-    m_folders.insert(request, root);
+    m_folders.insert(request, FolderRequest{root, datasets});
     folder_owner() = this;
     edi_web_pick_folder(request, root.toUtf8().constData());
     return request;
@@ -226,7 +232,9 @@ void WebFiles::folderCopied(int request, int count) {
 void WebFiles::folderCancelled(int request) { folderCopied(request, -1); }
 
 void WebFiles::answerFolder(int request, int count) {
-    const QString root = m_folders.take(request);
+    if (!m_folders.contains(request)) return;
+    const FolderRequest pending = m_folders.take(request);
+    const QString root = pending.root;
     if (!finish(request)) {
         // A superseded request's copy: nobody waits for it.
         if (!root.isEmpty()) {
@@ -236,7 +244,16 @@ void WebFiles::answerFolder(int request, int count) {
     }
     if (count < 0) {
         QDir(root).removeRecursively();
-        emit cancelled(request);
+        if (count == -1) emit cancelled(request);
+        else emit failed(request, QStringLiteral("Some files in the chosen folder could not be read"));
+        return;
+    }
+    if (pending.datasets && count > 0) {
+        const QDir upload(root);
+        const QStringList folders = upload.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        const QString chosen = folders.size() == 1 && upload.entryList(QDir::Files).isEmpty()
+                                   ? upload.filePath(folders.constFirst()) : root;
+        emit folderOpened(request, QUrl::fromLocalFile(chosen));
         return;
     }
     QString error;
@@ -261,8 +278,10 @@ int WebFiles::openFiles(const QString& accept, bool multiple) {
     auto batch = std::make_shared<Batch>();
     batch->directory = freshDirectory(QStringLiteral("files"));
     const QPointer<WebFiles> self(this);
+    QString qtFilter = accept;
+    qtFilter.replace(QLatin1Char(','), QLatin1Char(' '));
     QWasmLocalFileAccess::openFiles(
-        accept.toStdString(),
+        qtFilter.toStdString(),
         multiple ? QWasmLocalFileAccess::FileSelectMode::MultipleFiles : QWasmLocalFileAccess::FileSelectMode::SingleFile,
         [self, request, batch](int count) {
             batch->expected = count;
@@ -324,7 +343,7 @@ QByteArray WebFiles::siteFile(const QString& path) {
 
 #else
 
-int WebFiles::openProject() {
+int WebFiles::openFolder(bool /*datasets*/) {
     const int request = begin();
     if (request == 0) return 0; // Receiver retirement/reentry admitted no request.
     finish(request);

@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -19,7 +21,7 @@ def test_real_save_chooser_receives_project_name_and_current_folder(source, outp
     assert binary.is_file(), 'Chooser-default gates require the actual app test host'
     run = subprocess.run(
         [
-            'bash',
+            environment_bash(),
             str(ROOT / 'tests/fixtures/scan_views/run.sh'),
             str(binary),
             '-input',

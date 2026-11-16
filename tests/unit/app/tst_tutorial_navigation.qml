@@ -7,6 +7,7 @@ import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
 import OnboardingAcceptance 1.0
+import "NativeTurn.js" as Turn
 import "UiInteraction.js" as Ui
 import "RenderedTable.js" as Render
 import "TutorialGeometry.js" as Geometry
@@ -18,6 +19,10 @@ TestCase {
     name: "TutorialNavigation"
     when: windowShown
     property var app
+    property string gateTurnSelector: ""
+    property int geometryIndex: -1
+    property string placementTutorial: ""
+    property bool placementHomeEntered: false
     property var panel
     property var chooser
     property var popupButton
@@ -44,6 +49,8 @@ TestCase {
         repeat: true
         onTriggered: ++test.clockTicks
     }
+    SignalSpy { id: recipeBackgroundReset; signalName: "modelReset" }
+    SignalSpy { id: recipeBackgroundInserted; signalName: "rowsInserted" }
     SignalSpy {
         id: clicked
         signalName: "clicked"
@@ -53,20 +60,24 @@ TestCase {
         Main {}
     }
     function objects(root) {
-        const owned = Probe.objectsWithProperty(root, "objectName");
-        // List delegates belong to the visual tree, not necessarily the popup's
-        // QObject ownership tree after the Examples-row reuse.
-        for (const item of Render.descendants(root.contentItem || root))
-            if (!owned.includes(item))
+        const owned = Array.from(Probe.objectsWithProperty(root, "objectName"));
+        const seen = new Set(owned);
+        // Preserve both original ownership trees, deduplicating identical native
+        // objects once. A repeated full-array search starves popup input polling.
+        for (const item of Render.descendants(root.contentItem || root)) {
+            if (!seen.has(item)) {
+                seen.add(item);
                 owned.push(item);
+            }
+        }
         return owned;
     }
     function one(root, name) {
-        const found = objects(root).filter(item => item.objectName === name);
+        const found = Array.from(Probe.objectsNamed(root, name));
         compare(found.length, 1, "The actual tutorial exposes exactly one control named " + name);
         return found[0];
     }
-    function init() {
+    function initTestCase() {
         Session.closeProject();
         tourFitStarted = false;
         requiredFitStarts = 0;
@@ -75,12 +86,47 @@ TestCase {
         verify(app !== null, "Tutorial navigation uses the real application window");
         app.width = 1200;
         app.height = 800;
+        app.raise();
+        app.requestActivate();
+        tryVerify(() => app.active, 2000, "The original tutorial window is active before user input");
         AppState.open(AppState.Page.Home);
         verify(waitForRendering(app.contentItem), "The Home entry point is rendered before tutorial input");
+        const homes = Probe.objectsWithProperty(app, "introRunning");
+        compare(homes.length, 1, "Startup readiness observes the original Home animation owner");
+        tryCompare(homes[0], "introRunning", false, 15000, "The startup intro visibly finishes before any tutorial input; it is neither skipped nor disabled");
         panel = one(app, "tutorialPanel");
         chooser = one(app, "tutorials");
+        const selections = Qt.application.arguments.filter(value => value.startsWith("TutorialNavigation::test_"));
+        if (selections.length && selections.every(value => /TutorialNavigation::test_(callout_is_next_to_its_named_control|pointer_faces_and_reaches_the_named_control):/.test(value)))
+            reach(0);
+        if (selections.length && selections.every(value => /::test_field_(has_an_explicit_group_and_tab_predecessor|pointer_aims_at_the_input_center):/.test(value))) {
+            const first = /:([^:]+)-(\d+)$/.exec(selections[0]);
+            verify(first !== null, "Placement fixture setup retains the exact selected lesson and step identity");
+            preparePlacementTutorial(first[1]);
+        }
     }
-    function cleanup() {
+    function placementRow() {
+        return gateTurnSelector.startsWith("TutorialNavigation::test_field_has_an_explicit_group_and_tab_predecessor:") || gateTurnSelector.startsWith("TutorialNavigation::test_field_pointer_aims_at_the_input_center:");
+    }
+    function geometryRow() {
+        return gateTurnSelector.startsWith("TutorialNavigation::test_callout_is_next_to_its_named_control:") || gateTurnSelector.startsWith("TutorialNavigation::test_pointer_faces_and_reaches_the_named_control:");
+    }
+    function init() {
+        gateTurnSelector = Turn.begin(test, Probe);
+        if (!geometryRow() && !placementRow() && geometryIndex >= 0)
+            resetContext();
+        tourFitStarted = false;
+        requiredFitStarts = 0;
+        const viewport = /@(\d+)x(\d+)$/.exec(gateTurnSelector);
+        app.width = viewport ? Number(viewport[1]) : 1200;
+        app.height = viewport ? Number(viewport[2]) : 800;
+        if ((!geometryRow() || geometryIndex < 0) && !placementRow())
+            AppState.open(AppState.Page.Home);
+        app.raise();
+        app.requestActivate();
+        tryVerify(() => app.active, 2000, "Each row receives the same original active tutorial window");
+    }
+    function resetContext() {
         sentinel.stop();
         lessonWalking = false;
         if (tourLogOpen)
@@ -90,7 +136,30 @@ TestCase {
         clicked.target = null;
         if (panel && panel.visible)
             panel.stop();
+        if (app) {
+            for (const dialog of Probe.visibleDialogs(app))
+                if (dialog.contentItem)
+                    SettingsProof.key(dialog.contentItem, Qt.Key_Escape);
+            OnboardingProbe.incubate(app);
+        }
         Session.closeProject();
+        geometryIndex = -1;
+        placementTutorial = "";
+    }
+    function cleanup() {
+        if (!geometryRow() && !placementRow())
+            resetContext();
+        else if (placementRow()) {
+            for (const dialog of Probe.visibleDialogs(app))
+                if (dialog.contentItem)
+                    SettingsProof.key(dialog.contentItem, Qt.Key_Escape);
+            OnboardingProbe.advanceClock(1000);
+            OnboardingProbe.incubate(app);
+        }
+        Turn.end(gateTurnSelector);
+    }
+    function cleanupTestCase() {
+        resetContext();
         if (app)
             app.destroy();
         app = null;
@@ -157,6 +226,7 @@ TestCase {
         compare(links.length, 1, "The tour starts through the Home Tutorials link");
         // The injected clock completes popup transitions without waiting for wall time.
         OnboardingProbe.startClock();
+        settleTour();
         press(links[0], "Home Tutorials");
         OnboardingProbe.advanceClock(1000);
         tryCompare(chooser, "opened", true, 2000, "Home opens the real Tutorials chooser");
@@ -187,18 +257,28 @@ TestCase {
         return tour.steps;
     }
     function reach(index) {
-        verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))), "A populated real project exposes every workflow control for callout placement");
-        AppState.open(AppState.Page.Home);
-        start("interface");
+        const reuse = geometryRow() && geometryIndex >= 0 && index >= geometryIndex;
+        if (!reuse) {
+            if (panel.visible)
+                panel.stop();
+            verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"))), "A populated real project exposes every workflow control for callout placement");
+            AppState.open(AppState.Page.Home);
+            settleTour();
+            start("interface");
+            geometryIndex = 0;
+        }
         const steps = tourSteps();
         verify(index < steps.length, "The requested tour step exists in the shipped script");
-        for (let n = 1; n <= index; ++n)
+        progress(geometryIndex + 1, steps.length);
+        for (let n = geometryIndex + 1; n <= index; ++n)
             next(n + 1, steps.length);
+        geometryIndex = index;
         finishPages();
         verify(waitForPolish(app), "The callout and target finish their layout before scene measurement");
         return steps[index];
     }
     function finishPages() {
+        OnboardingProbe.advanceClock(1000);
         tryVerify(() => {
             // Spend each readiness poll incubating real pages, rather than adding
             // a timer gap after every small incubation slice.
@@ -208,7 +288,7 @@ TestCase {
         }, 5000, "The actual asynchronous workflow pages finish incubating before tutorial state is checked");
     }
     function target(name) {
-        const matches = Render.descendants(Ui.windowRoot(app)).filter(item => item.objectName === name && Ui.rendered(item));
+        const matches = Array.from(Probe.visualObjectsNamed(Ui.windowRoot(app), name, false)).filter(item => Ui.rendered(item));
         compare(matches.length, 1, "A visible named target is measured independently of the tour locator: " + name);
         return matches[0];
     }
@@ -219,24 +299,27 @@ TestCase {
                 }));
     }
     function test_callout_is_next_to_its_named_control_data() {
-        return targetRows();
+        const rows = [];
+        for (const size of [[1200, 800], [1440, 1000]])
+            for (const target of targetRows())
+                rows.push({tag: target.tag + "@" + size[0] + "x" + size[1], index: target.index,
+                    width: size[0], height: size[1]});
+        return rows;
     }
     function test_callout_is_next_to_its_named_control(data) {
         const step = reach(data.index);
-        for (const size of [[1200, 800], [1440, 1000]]) {
-            app.width = size[0];
-            app.height = size[1];
-            verify(waitForPolish(app), "Callout placement responds to the actual resized window");
-            if (mainAreaStep(step)) {
-                pageAreaCallout(step);
-                continue;
-            }
-            const item = target(step.target), body = panel.background;
-            const bodyBox = test.bodyBox(), targetBox = Geometry.rect(item, app.contentItem);
-            const gap = Geometry.distance(bodyBox, targetBox);
-            verify(Geometry.overlap(bodyBox, targetBox) <= 0.05 * Math.min(bodyBox.width * bodyBox.height, targetBox.width * targetBox.height), "An adjacent callout does not obscure the control it explains");
-            verify(gap <= 2 * one(panel, "tutorial.text").font.pixelSize, "A callout is within two text heights of its named control, not fixed in a window corner: " + step.target + " gap=" + gap);
+        compare(app.width, data.width, "Each geometry row observes its declared actual window width");
+        compare(app.height, data.height, "Each geometry row observes its declared actual window height");
+        verify(waitForPolish(app), "Callout placement responds to the actual resized window");
+        if (mainAreaStep(step)) {
+            pageAreaCallout(step);
+            return;
         }
+        const item = target(step.target), body = panel.background;
+        const bodyBox = test.bodyBox(), targetBox = Geometry.rect(item, app.contentItem);
+        const gap = Geometry.distance(bodyBox, targetBox);
+        verify(Geometry.overlap(bodyBox, targetBox) <= 0.05 * Math.min(bodyBox.width * bodyBox.height, targetBox.width * targetBox.height), "An adjacent callout does not obscure the control it explains");
+        verify(gap <= 2 * one(panel, "tutorial.text").font.pixelSize, "A callout is within two text heights of its named control, not fixed in a window corner: " + step.target + " gap=" + gap);
     }
     function test_pointer_faces_and_reaches_the_named_control_data() {
         return targetRows();
@@ -265,21 +348,39 @@ TestCase {
         };
     }
     function paintedPointer(expectAbsent = false) {
-        const surface = outline().shape, body = bodyBox();
-        verify(waitForRendering(surface), "The single callout outline is rendered before silhouette measurement");
-        const painted = grabImage(surface), opacity = surface.opacity;
+        tryVerify(() => {
+            OnboardingProbe.advanceClock(100);
+            OnboardingProbe.incubate(app);
+            return panel.opened && !panel.settling && panel.shownStep === panel.step && panel.opacity === 1;
+        }, 2000, "The original callout finishes fading and settling before its actual outline is measured");
+        const surface = outline().shape, body = bodyBox(), scene = app.contentItem;
+        // The path's pointer extends beyond the Shape item's body rectangle.
+        // Capture scene pixels, then census the actual Qt path bounds including its stroke.
+        const pathBounds = surface.boundingRect;
+        const ink = surface.mapToItem(scene, pathBounds.x - 2, pathBounds.y - 2, pathBounds.width + 4, pathBounds.height + 4);
+        app.update();
+        verify(waitForRendering(scene), "The single callout outline is rendered before silhouette measurement");
+        const painted = grabImage(scene), opacity = surface.opacity;
         surface.opacity = 0;
-        verify(waitForRendering(app.contentItem), "The pointer observer captures the actual underlying scene");
-        const baseline = grabImage(surface);
+        app.update();
+        verify(waitForRendering(scene), "The pointer observer captures the actual underlying scene");
+        const baseline = grabImage(scene);
         surface.opacity = opacity;
-        const bounds = Geometry.rect(surface, app.contentItem), sx = painted.width / surface.width, sy = painted.height / surface.height;
+        const bounds = Geometry.rect(scene, scene), sx = painted.width / scene.width, sy = painted.height / scene.height;
+        const margin = expectAbsent ? 2 : 0;
+        const bodyLeft = expectAbsent ? Math.ceil((body.x - margin) * sx) : Math.floor(body.x * sx);
+        const bodyTop = expectAbsent ? Math.ceil((body.y - margin) * sy) : Math.floor(body.y * sy);
+        const bodyRight = Math.ceil((body.x + body.width + margin) * sx);
+        const bodyBottom = Math.ceil((body.y + body.height + margin) * sy);
         let left = painted.width, right = -1, top = painted.height, bottom = -1;
-        for (let y = 0; y < painted.height; ++y) {
-            for (let x = 0; x < painted.width; ++x) {
-                const px = bounds.x + x / sx, py = bounds.y + y / sy;
-                const margin = expectAbsent ? 2 : 0;
-                if (px >= body.x - margin && px < body.x + body.width + margin && py >= body.y - margin && py < body.y + body.height + margin)
+        for (let y = Math.max(0, Math.floor(ink.y * sy)); y < Math.min(painted.height, Math.ceil((ink.y + ink.height) * sy)); ++y) {
+            for (let x = Math.max(0, Math.floor(ink.x * sx)); x < Math.min(painted.width, Math.ceil((ink.x + ink.width) * sx)); ++x) {
+                // Skip the exact body texel interval once per row, instead of
+                // allocating/intersecting a rectangle for every interior pixel.
+                if (y >= bodyTop && y < bodyBottom && x >= bodyLeft && x < bodyRight) {
+                    x = bodyRight - 1;
                     continue;
+                }
                 if (painted.pixel(x, y) === baseline.pixel(x, y))
                     continue;
                 left = Math.min(left, x);
@@ -339,7 +440,7 @@ TestCase {
     function test_callout_is_one_opaque_curve_outline() {
         reach(1);
         paintedPointer();
-        verify(!objects(app).some(item => item.objectName === "tutorial.pointer" && OnboardingProbe.inheritsType(item, "QQuickShape") && item !== outline().shape), "No separately painted triangle remains under the single outline");
+        verify(!Array.from(Probe.objectsNamed(app, "tutorial.pointer")).some(item => OnboardingProbe.inheritsType(item, "QQuickShape") && item !== outline().shape), "No separately painted triangle remains under the single outline");
     }
     function plainCalloutIcon(button, state) {
         // The icon belongs to contentItem. Only its background subtree is chrome.
@@ -433,7 +534,7 @@ TestCase {
         const rect = Geometry.rect(panel.background, app.contentItem);
         const em = one(panel, "tutorial.text").font.pixelSize;
         verify(rect.x <= 2 * em && Math.abs(app.contentItem.height - rect.y - rect.height) <= 5 * em, "An unavailable target uses the bottom-left panel fallback instead of a stale target position");
-        verify(!objects(app).some(object => object.objectName === "tutorial.pointer" && Ui.rendered(object)), "An unavailable target never retains a misleading pointer");
+        verify(!Array.from(Probe.objectsNamed(app, "tutorial.pointer")).some(object => Ui.rendered(object)), "An unavailable target never retains a misleading pointer");
         item.visible = visible;
     }
     function test_elapsed_time_never_advances_the_tour_data() {
@@ -659,7 +760,7 @@ TestCase {
         if (Session.project === null) {
             Ui.click(test, Probe, app, "home.start");
             tryCompare(app.appBarCentralTabs, "currentIndex", AppState.Page.Project, 2000, "The geometry setup follows the learner's Home Start action");
-            createLessonProject("placement_" + id);
+            createLessonProject("placement_" + Qt.md5(id).slice(0, 12));
         }
         if (Probe.rows(Session.project.structures).length === 0)
             verify(Session.project.loadStructure(Probe.repoUrl("tests/fixtures/onboarding/simulation-structure.edi")), "Placement setup supplies the independently authored LBCO structure");
@@ -671,11 +772,48 @@ TestCase {
                 Session.project.currentExperiment.setRange(10, 80, 0.25);
         }
     }
+    function preparePlacementTutorial(id) {
+        resetContext();
+        OnboardingProbe.startClock();
+        tryVerify(() => {
+            OnboardingProbe.advanceClock(100);
+            OnboardingProbe.incubate(app);
+            return panel.tutorial === null;
+        }, 2000, "The previous original popup fully closes before the next isolated lesson context begins");
+        const entry = scripts().find(tutorial => tutorial.id === id);
+        const first = !placementHomeEntered;
+        if (first) {
+            AppState.open(AppState.Page.Home);
+            start(id);
+            placementHomeEntered = true;
+        }
+        const scientific = Qt.application.arguments.some(value => {
+            const selected = /:([^:]+)-(\d+)$/.exec(value);
+            return selected && selected[1] === id && entry.steps[Number(selected[2]) - 1].page === "analysis";
+        });
+        if (scientific && entry.steps.some(step => step.target.includes("@")))
+            verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/" + id + "/project"))), "Semantic field placement uses the independently declared lesson project and its actual parameter identities");
+        else
+            prepareLessonProject(id);
+        if (!first) {
+            // Isolated geometry has its declared project already. Begin the
+            // authored steps without creating and immediately replacing another
+            // temporary project; full learner/ownership replays cover that path.
+            verify(OnboardingProbe.bundledTutorialManifest() === OnboardingProbe.sourceText("app/tutorials/manifest.json"), "Isolated placement contexts use the complete current compiled tutorial source");
+            panel.begin(entry, false);
+        }
+        // Opening the declared project closes transient popups; restore this
+        // original tutorial popup before configuring its isolated field context.
+        panel.open();
+        OnboardingProbe.advanceClock(1000);
+        tryCompare(panel, "opened", true, 2000, "The original tutorial callout reopens after loading the independent placement project");
+        placementTutorial = id;
+    }
     function isolateLessonStep(data) {
         // Placement and predecessor checks isolate a script step in the real host.
         // Sequential user navigation has its own gate; this does not pretend to replay it.
-        start(data.tutorial);
-        prepareLessonProject(data.tutorial);
+        if (!placementRow() || placementTutorial !== data.tutorial || Session.project === null)
+            preparePlacementTutorial(data.tutorial);
         finishPages();
         panel.step = data.index;
         panel.show();
@@ -685,9 +823,31 @@ TestCase {
         return scripts().find(entry => entry.id === data.tutorial).steps;
     }
     function discoverStepControl(step) {
+        if (step.target.startsWith("parameters.freeHeader.")) {
+            const header = Ui.control(Probe, app, "parameters.freeHeader");
+            verify(header !== null && header.menu !== null, "The menu-action census uses the original Parameters header and its owned menu");
+            const items = Render.descendants(header.menu.contentItem).filter(item => item.objectName === step.target);
+            compare(items.length, 1, "The actual owned menu contains exactly the authored action; it is not an input field or a collapsible group");
+            return {item: items[0], tab: ""};
+        }
+        if (step.target === "fit.results.ok") {
+            // This is a dialog-button census. The separate complete replay runs
+            // the real fit before opening it; placement has no fit-value claim.
+            const dialogs = Array.from(Probe.objectsNamed(app, "fit.results"));
+            compare(dialogs.length, 1, "The results-button census uses the actual app dialog rather than a stand-in");
+            dialogs[0].open();
+            OnboardingProbe.advanceClock(1000);
+            tryVerify(() => requiredTargetItems(step.target).length === 1, 2000, "The actual results dialog instantiates its named OK action before the census");
+            return {item: requiredTargetItems(step.target)[0], tab: ""};
+        }
         if (step.target.includes("@")) {
-            const cells = requiredTargetItems(step.target);
-            compare(cells.length, 1, "The field census resolves the declared semantic cell path in the current scene");
+            let cells = [];
+            tryVerify(() => {
+                OnboardingProbe.advanceClock(100);
+                OnboardingProbe.incubate(app);
+                cells = requiredTargetItems(step.target);
+                return cells.length === 1;
+            }, 2000, "The field census resolves exactly one declared semantic cell after the actual table reveal and delegate incubation");
             return {item: cells[0], tab: ""};
         }
         tryVerify(() => !Ui.moving(app.contentItem), 2000, "The script page finishes entering the viewport before target discovery");
@@ -701,12 +861,13 @@ TestCase {
                 tab: ""
             };
         }
-        for (const suffix of ["basic", "extras", "text", "settings"]) {
+        const suffixes = step.tab ? [step.tab] : ["basic", "extras", "text", "settings"];
+        for (const suffix of suffixes) {
             const tab = one(page, "sideBar.tab." + suffix);
             if (!tab.enabled)
                 continue;
             // Census setup only. Placement assertions never use this to claim reveal.
-            Ui.click(test, Probe, app, tab.objectName);
+            Ui.click(test, Probe, app, tab.objectName, false, () => { OnboardingProbe.advanceClock(1000); OnboardingProbe.incubate(app); });
             verify(waitForPolish(app), "The target census instantiates the selected tab's real controls");
             const found = Ui.find(page, step.target, true);
             if (found) {
@@ -756,7 +917,7 @@ TestCase {
         verify(group.collapsed, "The explicit open-group step leaves the opening action to the learner");
         verify(Ui.rendered(group.titleArea), "The opening step exposes the actual group header");
         verify(Geometry.distance(Geometry.rect(panel.background, app.contentItem), Geometry.rect(group.titleArea, app.contentItem)) <= 2 * one(panel, "tutorial.text").font.pixelSize, "The explicit opening callout points beside the group's header");
-        Ui.click(test, Probe, app, group.objectName);
+        Ui.click(test, Probe, app, group.objectName, false, () => { OnboardingProbe.advanceClock(1000); OnboardingProbe.incubate(app); });
         tryCompare(group, "collapsed", false, 2000, "The learner's actual header click completes the open-group state");
         tryVerify(() => panel.step > headerIndex, 2000, "An explicit group-opening action advances once the learner opens the group");
     }
@@ -771,7 +932,9 @@ TestCase {
         if (/^(appBar|workflow|mainArea|statusBar)\./.test(step.target))
             return; // A page or global description is not an input-field target.
         const steps = isolateLessonStep(data), found = discoverStepControl(steps[data.index]);
-        const inputs = Render.descendants(found.item).filter(item => item.background && (typeof item.selectAll === "function" || item.popup !== undefined));
+        const inputs = Render.descendants(found.item).filter(item =>
+            (item instanceof TextInput || item instanceof TextEdit || item instanceof ComboBox)
+            && item.background && Ui.rendered(item) && Ui.rendered(item.background));
         if (!inputs.length)
             return; // The rule applies to fields and combo boxes, not page descriptions.
         const input = inputs[0], surface = input.background;
@@ -781,8 +944,14 @@ TestCase {
         settleTour();
         verify(waitForPolish(app), "The pointer and the actual input finish layout before geometry is measured");
         verify(Ui.rendered(surface), "The target input surface is actually visible");
+        tryVerify(() => {
+            OnboardingProbe.advanceClock(100);
+            OnboardingProbe.incubate(app);
+            return panel.opened && !panel.settling && panel.shownStep === data.index && panel.opacity === 1 && Ui.rendered(panel.background);
+        }, 2000, "The actual selected callout completes its fade and positional settling before pixel measurement");
+        compare(panel.step, data.index, "A placement census leaves the explicitly selected authored step unchanged");
         const pointer = paintedPointer(), field = Geometry.rect(input, app.contentItem);
-        verify(Math.abs(pointer.tip.y - Geometry.center(field).y) <= 1, "The single outline's tip aligns with the input's vertical centre, excluding its title");
+        verify(Math.abs(pointer.tip.y - Geometry.center(field).y) <= 1, "The single outline's tip aligns with the input's vertical centre, excluding its title: " + JSON.stringify({target: step.target, input: String(input), field: field, tip: pointer.tip}));
         verify(Geometry.pointDistance(pointer.tip, field) <= 2 * one(panel, "tutorial.text").font.pixelSize, "The centred pointer reaches the actual input rather than a different row");
     }
 
@@ -1026,7 +1195,7 @@ TestCase {
         }).map(entry => entry.id).sort();
     }
     function liveTarget(name) {
-        const candidates = objects(app).filter(item => item.objectName === name && Ui.rendered(Ui.target(item)));
+        const candidates = Array.from(Probe.objectsNamed(app, name)).filter(item => Ui.rendered(Ui.target(item)));
         compare(candidates.length, 1, "The written step resolves one currently visible control, including dialog fields");
         return candidates[0];
     }
@@ -1357,14 +1526,20 @@ TestCase {
         compare(Array.from(seen).sort().join(","), "down,left,right,up", "The real layout witness exercises every pointer direction");
     }
     function createLessonProject(name) {
+        finishPages();
         compare(Session.project, null, "A scientific lesson waits for user creation instead of silently creating a project");
         Ui.click(test, Probe, app, "project.create");
+        settleTour();
         const dialog = SettingsProof.creationDialog(app);
         verify(dialog !== null, "The learner opens the real Create project dialog");
         tryCompare(dialog, "opened", true, 2000, "The project name is entered after the real dialog opens");
         dialog.projectParentDirectory = String(SettingsProof.emptyDirectory());
         const field = findChild(dialog, "createProject.name");
-        verify(field !== null && SettingsProof.type(field, name), "The learner types the tutorial project's name into the real form");
+        verify(field !== null, "The real creation form owns its original Name editor");
+        verify(field.enabled && Ui.exposed(field), "The original dialog Name editor is exposed before pointer input");
+        mouseClick(field, field.width / 2, field.height / 2, Qt.LeftButton, Qt.NoModifier);
+        tryVerify(() => field.activeFocus, 2000, "Real user input focuses Name before the tutorial actor types");
+        verify(SettingsProof.type(field, name), "The learner types the tutorial project's name into the real form");
         press(dialog.standardButton(Dialog.Ok), "Create the learner-named project");
         tryVerify(() => Session.project !== null && Session.project.name === name, 3000, "The actual Create action opens the project the learner named");
     }
@@ -1394,7 +1569,7 @@ TestCase {
         verify(create === 1 && steps[0].target === "home.start" && steps[0].page === "home" && structure > create, "Home Start precedes Project Create, before any Structure step");
         Ui.click(test, Probe, app, "home.start");
         tryCompare(panel, "step", create, 2000, "The Start action advances the lesson to project creation");
-        createLessonProject("learner_named_" + data.lesson);
+        createLessonProject("learner_" + Qt.md5(data.lesson).slice(0, 12));
         verify(!OnboardingProbe.isRemembered(Session.project), "User creation makes a separate tutorial project");
         if (data.ending === "last") {
             // Completion ownership is orthogonal to scientific fitting; the
@@ -1472,7 +1647,7 @@ TestCase {
         const steps = scripts().find(entry => entry.id === data.lesson).steps;
         if (data.lesson !== "interface") {
             Ui.click(test, Probe, app, "home.start");
-            createLessonProject("strip_" + data.lesson);
+            createLessonProject("strip_" + Qt.md5(data.lesson).slice(0, 12));
         }
         const explain = steps.findIndex(step => !step.check);
         verify(explain >= 0 && explain + 1 < steps.length, "Every tutorial supplies an explanation for the strip's actual Next/Back witness");
@@ -2314,7 +2489,20 @@ TestCase {
         return canonical === suffix || canonical.endsWith("." + suffix);
     }
     function requiredTargetItems(spec) {
-        const scene = Render.descendants(Ui.windowRoot(app));
+        // Inspect visual controls, including the original open Popup roots, rather
+        // than materializing every QObject in the application/model ownership tree.
+        const parameterCell = /^(parameters\.(name|value|su|free))@/.test(spec);
+        const name = parameterCell ? "parameters.row." : spec.startsWith("correlations.cell@") ? "correlations" : spec.split("@")[0];
+        const scene = Array.from(Probe.visualObjectsNamed(Ui.windowRoot(app), name, parameterCell));
+        const seen = new Set(scene);
+        for (const popup of Array.from(Probe.visiblePopups(app))) {
+            for (const item of Array.from(Probe.visualObjectsNamed(popup.contentItem, name, parameterCell))) {
+                if (!seen.has(item)) {
+                    seen.add(item);
+                    scene.push(item);
+                }
+            }
+        }
         if (!spec.includes("@"))
             return scene.filter(item => item.objectName === spec && Ui.rendered(item));
         const parts = spec.split("@");
@@ -2349,7 +2537,7 @@ TestCase {
             return false;
         if (check.startsWith("example:"))
             return !Session.openingExample && project.name === check.slice("example:".length);
-        const match = /^download:(structure|experiment|data):([^=]+)=(.+)$/.exec(check);
+        const match = /^(?:download|web-row):(structure|experiment|data):([^=]+)=(.+)$/.exec(check);
         if (match === null)
             return false;
         if (match[1] !== "data") {
@@ -2360,10 +2548,101 @@ TestCase {
         return experiment !== null && [experiment.pattern, experiment.singleCrystalReflections].some(model => Probe.rows(model).some(row => Number.isFinite(row.intensityMeas)));
     }
 
+    function test_required_clock_remains_monotonic_within_the_original_window() {
+        OnboardingProbe.startClock();
+        const before = OnboardingProbe.clockElapsed();
+        OnboardingProbe.advanceClock(137);
+        compare(OnboardingProbe.clockElapsed(), before + 137, "The actual injected driver advances by the requested nonzero interval");
+        OnboardingProbe.startClock();
+        compare(OnboardingProbe.clockElapsed(), before + 137, "Starting the same window's clock again cannot move original animations backwards");
+        OnboardingProbe.advanceClock(19);
+        compare(OnboardingProbe.clockElapsed(), before + 156, "Repeated readiness setup preserves one monotonic animation timeline");
+        console.info('TUTORIAL_CLOCK_CONTROL ' + JSON.stringify({delta: 156, monotonic: true}));
+    }
+
+    function test_required_menu_observer_tracks_actual_popup_visibility() {
+        prepareLessonProject("pd-neut-cwl_lbco-hrpt");
+        AppState.open(AppState.Page.Analysis);
+        finishPages();
+        Ui.expandGroup(test, Probe, app, "group.parameters");
+        compare(requiredTargetItems("parameters.freeHeader.fixed").length, 0, "A closed owned menu never impersonates a rendered tutorial action");
+        const header = Ui.control(Probe, app, "parameters.freeHeader");
+        const menu = header.menu;
+        const areas = Array.from(Probe.objectsWithProperty(header, "cursorShape")).filter(item => OnboardingProbe.inheritsType(item, "QQuickMouseArea") && item.parent === header.parent.parent && item.enabled && Ui.rendered(item));
+        compare(areas.length, 1, "The declared header owns one original enabled input receiver despite visual reparenting");
+        const receiver = areas[0];
+        let observed = false;
+        let facts = {};
+        const painter = Qt.createQmlObject('import QtQuick; Timer { interval: 16; repeat: true }', app);
+        const guard = Qt.createQmlObject('import QtQuick; Timer { interval: 2000; repeat: false }', app);
+        function inspect() {
+            OnboardingProbe.advanceClock(16);
+            if (!menu.opened)
+                return;
+            const named = Render.descendants(menu.contentItem).filter(item => item.objectName === "parameters.freeHeader.fixed");
+            const items = named.filter(item => Ui.rendered(item));
+            facts = {opened: menu.opened, visible: menu.visible, named: named.length, painted: items.length,
+                bounds: named.map(item => ({visible:item.visible, width:item.width, height:item.height}))};
+            if (items.length !== 1)
+                return;
+            facts.scoped = requiredTargetItems("parameters.freeHeader.fixed").length;
+            observed = facts.scoped === 1;
+            painter.stop();
+            SettingsProof.key(menu.contentItem, Qt.Key_Escape);
+        }
+        painter.triggered.connect(inspect);
+        guard.triggered.connect(() => SettingsProof.key(menu.contentItem, Qt.Key_Escape));
+        painter.start();
+        guard.start();
+        try {
+            verify(header.interactionEnabled && Ui.exposed(receiver), "The original Free header input owner is enabled and exposed");
+            verify(waitForPolish(receiver), "The original Free header has finished layout before input");
+            clicked.target = receiver;
+            clicked.clear();
+            const point = Ui.clickPoint(receiver);
+            mouseClick(receiver, point.x, point.y, Qt.LeftButton, Qt.NoModifier);
+            compare(clicked.count, 1, "One genuine click reaches the original reparented header input receiver");
+            tryVerify(() => {
+                inspect();
+                return observed;
+            }, 2000, "The actual open Free header menu exposes its original Fixed action: " + JSON.stringify(facts));
+            tryVerify(() => requiredTargetItems("parameters.freeHeader.fixed").length === 0, 2000, "The observer retires the original menu action after genuine Escape input");
+            console.info('TUTORIAL_MENU_OBSERVER_CONTROL ' + JSON.stringify({closed: 0, opened: facts.scoped, closed_after: requiredTargetItems("parameters.freeHeader.fixed").length}));
+        } finally {
+            painter.stop();
+            painter.destroy();
+            guard.stop();
+            guard.destroy();
+        }
+    }
+
+    function test_required_data_menu_observer_tracks_the_unmeasured_experiment() {
+        prepareLessonProject("pd-neut-cwl_lbco_simulation");
+        verify(!Session.project.fit.measured, "The From file witness starts before any measured observations exist");
+        AppState.open(AppState.Page.Experiment);
+        finishPages();
+        Ui.expandGroup(test, Probe, app, "group.experiments");
+        compare(requiredTargetItems("experiments.load.dataFile").length, 0, "The closed experiment Load menu contributes no visible From file action");
+        press(Ui.control(Probe, app, "experiments.load"), "The ordinary experiment Load menu");
+        tryVerify(() => requiredTargetItems("experiments.load.dataFile").length === 1, 2000, "The actual open menu offers From file before measured data exists");
+        const action = requiredTargetItems("experiments.load.dataFile")[0];
+        const menus = Array.from(Probe.visiblePopups(app)).filter(menu => Render.descendants(menu.contentItem).includes(action));
+        compare(menus.length, 1, "The offered From file action belongs to one actual original popup");
+        SettingsProof.key(menus[0].contentItem, Qt.Key_Escape);
+        settleTour();
+        tryVerify(() => requiredTargetItems("experiments.load.dataFile").length === 0, 2000, "Genuine Escape retires the actual From file menu action");
+        console.info('TUTORIAL_DATA_MENU_CONTROL ' + JSON.stringify({closed: 0, opened: 1, closed_after: 0}));
+    }
+    function requiredFitStep(step) {
+        return ["fitted", "fit-done"].includes(step.check);
+    }
     function requiredFitWaitMs(datasets) {
         return Math.max(60000, datasets * 5000);
     }
     function test_required_fit_guard_tracks_dataset_work() {
+        verify(requiredFitStep({check: "fitted"}), "The native walker retains its original explicit fit-completion grammar");
+        verify(requiredFitStep({check: "fit-done"}), "The native walker observes the current explicit fit-completion grammar");
+        verify(!requiredFitStep({check: "results-closed"}), "Acknowledging fit results cannot impersonate a newly executed fit");
         compare(requiredFitWaitMs(1), 60000, "One dataset retains the existing bounded fit-completion floor");
         compare(requiredFitWaitMs(12), 60000, "Twelve datasets meet the existing completion floor");
         compare(requiredFitWaitMs(13), 65000, "Further datasets each add the unchanged system-tier five-second work allowance");
@@ -2371,22 +2650,25 @@ TestCase {
     }
     function walkRequiredTutorial(data, last) {
         const steps = panel.steps;
-        let recipeStage = 0, recipeFileSeen = false;
+        let recipeStage = 0, recipeFileSeen = false, recipeAppliedEstimates = 0;
         const recipeTargets = [];
         function observeRecipeMenu() {
-            if (data.recipe && Session.project && Session.project.currentExperiment && Session.project.currentExperiment.pattern.count > 0)
-                recipeFileSeen = recipeFileSeen || Render.descendants(Ui.windowRoot(app)).some(item => item.objectName === "experiments.load.dataFile" && Ui.rendered(item));
+            if (data.recipe && Session.project && Session.project.currentExperiment)
+                recipeFileSeen = recipeFileSeen || requiredTargetItems("experiments.load.dataFile").length === 1;
         }
         verify(steps.length > 1, "Every required tutorial has a nonempty written journey");
         const authored = scripts().find(entry => entry.id === data.tutorial);
         verify(authored !== undefined && authored.steps.length === steps.length, "The running bundled tutorial has every currently authored step");
+        const bundled = OnboardingProbe.bundledTutorialManifest();
+        verify(bundled.length > 0, "The actual test host exposes its compiled tutorial resource without a substitute");
+        compare(bundled, OnboardingProbe.sourceText("app/tutorials/manifest.json"), "Native recipe observations require the complete current authored manifest bytes in the compiled host");
         for (let index = 0; index <= last && index < steps.length; ++index) {
             progress(index + 1, steps.length);
             finishPages();
             const step = steps[index];
             const fitStartsBefore = requiredFitStarts;
-            const scanFit = step.check === "fitted" && Session.project && Session.project.scan && Session.project.fit.scanMode;
-            const fitDatasets = step.check === "fitted" && Session.project ? (Session.project.scan && !scanFit ? 1 : Session.project.experiments.count) : 0;
+            const scanFit = requiredFitStep(step) && Session.project && Session.project.scan && Session.project.fit.scanMode;
+            const fitDatasets = requiredFitStep(step) && Session.project ? (Session.project.scan && !scanFit ? 1 : Session.project.experiments.count) : 0;
             verify(typeof step.target === "string" && step.target.length > 0, "Every tutorial step names its current GUI target");
             tryVerify(() => {
                 OnboardingProbe.advanceClock(16);
@@ -2397,8 +2679,8 @@ TestCase {
             if (data.recipe) {
                 observeRecipeMenu();
                 recipeTargets.push(step.target);
-                if (step.check === "fitted")
-                    recordRecipeBoundary(data.tutorial, ++recipeStage, recipeTargets, recipeFileSeen);
+                if (requiredFitStep(step))
+                    recordRecipeBoundary(data.tutorial, ++recipeStage, recipeTargets, recipeFileSeen, recipeAppliedEstimates);
             }
             if (index + 1 === steps.length)
                 break;
@@ -2407,9 +2689,15 @@ TestCase {
                 verify(dialog !== null && dialog.visible, "The tutorial creates its project in the isolated test folder");
                 dialog.projectParentDirectory = String(SettingsProof.emptyDirectory());
             }
+            if (data.recipe && step.target === "background.estimate") {
+                recipeBackgroundReset.target = Session.project.currentExperiment.background;
+                recipeBackgroundInserted.target = Session.project.currentExperiment.background;
+                recipeBackgroundReset.clear();
+                recipeBackgroundInserted.clear();
+            }
             if (panel.step === index)
-                press(one(panel, "tutorial.next"), "Replay the written step " + (index + 1), step.check === "fitted");
-            if (step.check === "fitted") {
+                press(one(panel, "tutorial.next"), "Replay the written step " + (index + 1), requiredFitStep(step));
+            if (requiredFitStep(step)) {
                 verify(Number.isInteger(fitDatasets) && fitDatasets > 0, "A fit-completion guard has a positive actual dataset count");
                 const fitWaitMs = requiredFitWaitMs(fitDatasets);
                 console.info("TUTORIAL_FIT_WAIT " + JSON.stringify({id: data.tutorial, step: index + 1, datasets: fitDatasets, milliseconds: fitWaitMs}));
@@ -2432,11 +2720,17 @@ TestCase {
                 return panel.step > index;
             }, 60000, "The panel advances after the declared action completes, including asynchronous loads");
             compare(panel.step, index + 1, "The panel reaches the next written step without skipping its target");
-            if (/^(example|download):/.test(step.check || "")) {
+            if (data.recipe && step.target === "background.estimate") {
+                verify(recipeBackgroundReset.count + recipeBackgroundInserted.count > 0, "Each taught Estimate replaces actual background rows before the lesson advances");
+                ++recipeAppliedEstimates;
+                recipeBackgroundReset.target = null;
+                recipeBackgroundInserted.target = null;
+            }
+            if (/^(example|download|web-row):/.test(step.check || "")) {
                 verify(requiredAsyncState(step.check), "The async step leaves its declared project, block or measured data in the actual model");
                 console.info("TUTORIAL_ASYNC_COMPLETE " + JSON.stringify({id: data.tutorial, check: step.check, from: index, to: panel.step, state: true}));
             }
-            if (step.check === "fitted") {
+            if (requiredFitStep(step)) {
                 verify(requiredFitStarts > fitStartsBefore && Session.project.fit.outcome === "success", "The fit stage completes a fresh successful fit rather than reusing an earlier result");
                 console.info("TUTORIAL_FIT_COMPLETE " + JSON.stringify({id: data.tutorial, check: step.check, from: index, to: panel.step, state: true}));
             }
@@ -2449,7 +2743,7 @@ TestCase {
     function recipeText(text) {
         return text.split(/\n(?=loop_\s*\n)/).filter(part => !/^loop_\s*\n_(data|refln)\./.test(part)).join("\n");
     }
-    function recordRecipeBoundary(id, stage, targets, fileSeen) {
+    function recordRecipeBoundary(id, stage, targets, fileSeen, appliedEstimates) {
         const project = Session.project;
         const rows = Probe.rows(project.parameters), values = {};
         function recipePath(row) {
@@ -2470,10 +2764,13 @@ TestCase {
             experiments.push({text: recipeText(model.text.text), n_points: model.backgroundEstimatePoints,
                 use_model: model.backgroundEstimateUseModel, estimate_points: model.estimatePoints, estimate_note: model.estimateNote});
         }
+        const structures = [];
+        for (const row of Probe.rows(project.structures))
+            structures.push({text: recipeText(row.structure.text.text)});
         console.info("TUTORIAL_RECIPE_BOUNDARY " + JSON.stringify({id: id, stage: stage,
             free: rows.filter(row => row.free).map(row => recipePath(row)), values: values,
-            analysis: project.analysis.text.text, experiments: experiments,
-            targets: targets, fileAlternativeSeen: fileSeen}));
+            analysis: project.analysis.text.text, structures: structures, experiments: experiments,
+            targets: targets, fileAlternativeSeen: fileSeen, applied_estimates: appliedEstimates}));
         if (id !== "observer-control") {
             const recipes = JSON.parse(OnboardingProbe.sourceText("tests/fixtures/tutorial_recipe/recipes.json"));
             const expected = recipes[id].boundaries[stage - 1];
@@ -2487,7 +2784,11 @@ TestCase {
                 compare(project.currentExperiment.excludedRegions.count, Object.keys(expected.regions).length, "Every declared excluded region exists before fitting");
             if (Object.keys(expected.estimate).length) {
                 compare(project.currentExperiment.backgroundEstimatePoints, expected.estimate.n_points, "Background estimation keeps the declared point setting before fitting");
-                verify(project.currentExperiment.estimatePoints > 0, "The requested background estimate is actually applied before fitting");
+                const points = Probe.rows(project.currentExperiment.background);
+                compare(points.length, expected.estimate.n_points, "The applied estimate replaces the model with the requested number of points");
+                compare(JSON.stringify(points.map(row => row.id)), JSON.stringify(points.map((_row, index) => String(index + 1))), "Estimated background points carry the ordinal identities required by ADR-0040");
+                verify(points.every((row, index) => Number.isFinite(row.position) && Number.isFinite(row.intensity.value) && (!index || points[index - 1].position < row.position)), "The applied estimated model has finite intensities and strictly increasing coordinates");
+                compare(appliedEstimates, expected.estimate_calls, "Every taught estimate has a witnessed actual model replacement before fitting");
                 compare(targets.filter(target => target === "background.estimate").length, expected.estimate_calls, "Every initial or residual background estimate has its own taught action");
             }
             if (expected.file_required)
@@ -2496,7 +2797,7 @@ TestCase {
     }
     function test_required_recipe_observer_positive_control() {
         prepareLessonProject("pd-neut-cwl_lbco_simulation");
-        recordRecipeBoundary("observer-control", 0, [], false);
+        recordRecipeBoundary("observer-control", 0, [], false, 0);
     }
     function test_required_recipe_boundary_state_data() {
         return Object.keys(JSON.parse(OnboardingProbe.sourceText("tests/fixtures/tutorial_recipe/recipes.json"))).map(id => ({tag: id, tutorial: id, recipe: true}));
@@ -2532,7 +2833,7 @@ TestCase {
     function test_required_async_next_waits_for_the_real_state(data) {
         start(data.tutorial);
         const prefix = data.operation === "example" ? "example:" : "download:" + data.operation + ":";
-        const index = panel.steps.findIndex(step => data.operation === "fit" ? step.check === "fitted" : (step.check || "").startsWith(prefix));
+        const index = panel.steps.findIndex(step => data.operation === "fit" ? requiredFitStep(step) : (step.check || "").startsWith(prefix));
         verify(index >= 0 && index + 1 < panel.steps.length, "The declared case teaches its asynchronous action before the final step");
         walkRequiredTutorial(data, index);
         compare(panel.step, index + 1, "The async prefix reaches the following instruction through actual Next");

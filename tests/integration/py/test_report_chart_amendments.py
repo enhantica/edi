@@ -143,17 +143,14 @@ def test_palette_rows_are_data_with_default_first_colour_and_valid_hex(dark):
         assert len({row[theme] for row in selected}) == 11, (
             'The shared categorical pool keeps eleven distinct entries in each theme'
         )
-        for role, expected in role_colours(theme).items():
+        for role, expected in role_colours(theme, palette).items():
             role_rows = [row for row in rows if row['role'] == role]
             assert len(role_rows) == 1 and role_rows[0][theme] == expected, (
                 'Each common report role retains exactly one independently recorded colour'
             )
     assert [palette['name'] for palette in PALETTES] == [
-        'Earth',
-        'Classic',
-        'Soft',
-        'Natural',
+        'Main',
         'Colour-blind safe',
-    ] and [palette['default'] for palette in PALETTES] == [True, False, False, False, False], (
-        'The recorded report palette names and order put Earth alone first as the default'
+    ] and [palette['default'] for palette in PALETTES] == [True, False], (
+        'The current approved report palettes put Main alone first as the default'
     )

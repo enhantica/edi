@@ -54,6 +54,59 @@
         "docs/user/cli/pd-neut-cwl_lbco_simulation/project/structures/lbco.edi"
       ]
     },
+    "sc-neut-cwl_tb2ti2o7-heidi_simulation": {
+      "samples": [
+        "Tb₂Ti₂O₇ [Fd-3m]"
+      ],
+      "origin": "HEiDi @ MLZ (FRM II)",
+      "detail": "Single crystal · Calculated reflections without measured data",
+      "values": {
+        "sampleForm": [
+          "single crystal"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "simulation"
+        ],
+        "fittingMode": [
+          "single"
+        ],
+        "facilities": [
+          "MLZ (FRM II)"
+        ],
+        "instruments": [
+          "HEiDi"
+        ],
+        "dimensionality": [
+          "1d"
+        ],
+        "polarisation": [
+          "unpolarised"
+        ],
+        "structure": [
+          "crystal"
+        ]
+      },
+      "searchAliases": [
+        "sc-neut-cwl_tb2ti2o7-heidi_simulation",
+        "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
+        "Single crystal · Calculated reflections without measured data"
+      ],
+      "sources": [
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project/experiments/heidi.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project/structures/tb2ti2o7.edi"
+      ]
+    },
     "pd-neut-cwl_lbco-hrpt": {
       "samples": [
         "La₀.₅Ba₀.₅CoO₃ [Pm-3m]"
@@ -1192,6 +1245,64 @@
         "docs/user/cli/sc-neut-tof_taurine-senju/project/experiments/senju_5.edi",
         "docs/user/cli/sc-neut-tof_taurine-senju/project/experiments/senju_6.edi",
         "docs/user/cli/sc-neut-tof_taurine-senju/project/structures/taurine.edi"
+      ]
+    },
+    "sc-neut-cwl_cosio-heidi": {
+      "samples": [
+        "Co₂SiO₄ [Pnma] at 300 K, 55 K and 2.5 K"
+      ],
+      "origin": "HEiDi @ MLZ (FRM II)",
+      "detail": "Single crystal · Three temperatures fitted independently, moments at 2.5 K",
+      "values": {
+        "sampleForm": [
+          "single crystal"
+        ],
+        "beamMode": [
+          "constant wavelength"
+        ],
+        "probe": [
+          "neutron"
+        ],
+        "scatteringType": [
+          "bragg"
+        ],
+        "purpose": [
+          "refinement"
+        ],
+        "fittingMode": [
+          "independent"
+        ],
+        "facilities": [
+          "MLZ (FRM II)"
+        ],
+        "instruments": [
+          "HEiDi"
+        ],
+        "dimensionality": [
+          "1d"
+        ],
+        "polarisation": [
+          "unpolarised"
+        ],
+        "structure": [
+          "crystal",
+          "magnetic"
+        ]
+      },
+      "searchAliases": [
+        "sc-neut-cwl_cosio-heidi",
+        "Co₂SiO₄ [Pnma] at 300 K, 55 K and 2.5 K · HEiDi @ MLZ (FRM II)",
+        "Single crystal · Three temperatures fitted independently, moments at 2.5 K"
+      ],
+      "sources": [
+        "docs/user/cli/sc-neut-cwl_cosio-heidi/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_cosio-heidi/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_cosio-heidi/project/experiments/heidi_2k5.edi",
+        "docs/user/cli/sc-neut-cwl_cosio-heidi/project/experiments/heidi_300k.edi",
+        "docs/user/cli/sc-neut-cwl_cosio-heidi/project/experiments/heidi_55k.edi",
+        "docs/user/cli/sc-neut-cwl_cosio-heidi/project/structures/cosio_2k5.edi",
+        "docs/user/cli/sc-neut-cwl_cosio-heidi/project/structures/cosio_300k.edi",
+        "docs/user/cli/sc-neut-cwl_cosio-heidi/project/structures/cosio_55k.edi"
       ]
     }
   }

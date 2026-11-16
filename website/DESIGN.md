@@ -81,8 +81,9 @@ examples remain checked against edi; the common model explains the concepts with
 ## Focused landing-page decision — 2026-10-29
 
 The owner requested a clean, light, modern homepage inspired by Zensical's single-hero homepage,
-with introductory text, Try the web app and Get started buttons, and one real application screenshot
-on the right. Replace the previous selected homepage's stacked screenshot, cards, task table,
+with introductory text, Try the web app and Download for desktop buttons, and one real application
+screenshot on the right. A small grey line below the buttons names the latest release and its date,
+the version linking to What's new; it is the only place the site shows the latest version. Replace the previous selected homepage's stacked screenshot, cards, task table,
 workflow list, technical explanation and source footer. Their information already has homes in
 Get started, User guide, the interface sections and About. Source attribution remains in
 CONTENT-SOURCES.md. The archived workflow-first alternative is retained as historical prior art.

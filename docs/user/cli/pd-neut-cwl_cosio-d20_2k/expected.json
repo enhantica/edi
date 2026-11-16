@@ -1,6 +1,12 @@
 {
   "schema": 1,
   "source": {
+    "pins": {
+      "commit": "4a8d67b75154d468977f81712d1fff6e99a8496a",
+      "reason": "Existing published pin source: Tutorials in fewer clear steps, consistent numbers and GUI fixes (#55). See PROVENANCE.md for the original conditions; no fit rerun.",
+      "kind": "committed-document",
+      "record_sha256": "97d0683df8dcc90abba1fc204f2238f2a03597bd87bb91684347aa1bb63a2c30"
+    },
     "engine": "FullProf 8.40 (references, of the <j0> variant); edi (regression pins)",
     "artifact": "../../../../knowledge/fitting/fullprof/pd-neut-cwl_cosio-d20_2k/cosio.sum",
     "provenance": "PROVENANCE.md"

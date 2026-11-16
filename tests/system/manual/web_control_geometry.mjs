@@ -29,7 +29,7 @@ export async function controlPointer(evaluate, objectName, containerName) {
     assert(['x','y','width','height'].every(key => typeof item[key] === 'number' && Number.isFinite(item[key])) &&
       item.width > 0 && item.height > 0 && item.x >= 0 && item.y >= 0 &&
       item.x + item.width <= 1280 && item.y + item.height <= 768,
-      'Native control geometry must be finite, positive and wholly inside the actual fixed browser viewport');
+      'Native control geometry must be finite, positive and wholly inside the actual fixed browser viewport: '+JSON.stringify(item));
     return item;
   };
   const item = await read(objectName);

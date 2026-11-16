@@ -1,12 +1,12 @@
 """Real Home entry, rendered callouts and user-driven written tutorial navigation."""
 
 import json
-import os
 import re
-import subprocess
 from pathlib import Path
 
 import pytest
+
+from tests.integration.app.native_actor import NativeActor
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = json.loads((ROOT / 'app/tutorials/manifest.json').read_text())['tutorials']
@@ -140,9 +140,13 @@ CASES = [
     ],
     *[f'callout_uses_readable_opaque_accent_blue:{theme}' for theme in ('light', 'dark')],
     *[
+        f'callout_is_next_to_its_named_control:{index + 1}-{step["target"]}@{width}x{height}'
+        for width, height in ((1200, 800), (1440, 1000))
+        for index, step in enumerate(STEPS)
+    ],
+    *[
         f'{case}:{index + 1}-{step["target"]}'
         for case in (
-            'callout_is_next_to_its_named_control',
             'pointer_faces_and_reaches_the_named_control',
             'elapsed_time_never_advances_the_tour',
             'tour_omits_expected_state_lines',
@@ -167,36 +171,68 @@ CASES = [
 ]
 
 
+# Qt executes functions in name order and data rows in their declaration order.
+CASES.sort(key=lambda value: value.partition(':')[0])
+ALL_CASES = CASES
+SHARED_FIELD_LESSONS = ('pd-neut-tof_ncaf-wish', 'pd-neut-tof_ferrite-austenite-beer')
+
+
+def analysis_field_case(case, lesson):
+    kind, _, context = case.partition(':')
+    if kind not in {
+        'field_has_an_explicit_group_and_tab_predecessor',
+        'field_pointer_aims_at_the_input_center',
+    }:
+        return False
+    tutorial, _, index = context.rpartition('-')
+    return (
+        tutorial == lesson
+        and next(entry for entry in LESSONS if entry['id'] == lesson)['steps'][int(index) - 1][
+            'page'
+        ]
+        == 'analysis'
+    )
+
+
+CASES = [
+    case
+    for case in ALL_CASES
+    if not any(analysis_field_case(case, lesson) for lesson in SHARED_FIELD_LESSONS)
+]
+
+
+def actor_for_cases(request, tmp_path_factory, cases):
+    selected = [
+        'TutorialNavigation::test_' + item.callspec.params['case']
+        for item in request.session.items
+        if getattr(item, 'module', None) is request.module
+        and item.originalname == 'test_written_tutorial_navigation'
+    ]
+    order = {'TutorialNavigation::test_' + case: index for index, case in enumerate(cases)}
+    assert selected == sorted(selected, key=order.__getitem__), (
+        'Tutorial rows follow Qt function and declared data order; explicit node lists must '
+        'preserve that order so each pytest row drives its own native input'
+    )
+    actor = NativeActor(
+        tmp_path_factory.mktemp('tutorial-navigation'),
+        'tst_tutorial_navigation.qml',
+        selected,
+        timeout=45,
+    )
+    try:
+        yield actor
+    finally:
+        actor.close()
+
+
+@pytest.fixture(scope='module')
+def navigation_actor(request, tmp_path_factory):
+    yield from actor_for_cases(request, tmp_path_factory, CASES)
+
+
 @pytest.mark.parametrize('case', CASES)
-def test_written_tutorial_navigation(case):
-    runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
-    assert runner.is_file(), 'Tutorial navigation requires the actual production Qt host'
-    result = subprocess.run(
-        [
-            str(runner),
-            '-input',
-            str(ROOT / 'tests/unit/app/tst_tutorial_navigation.qml'),
-            '-o',
-            '-,txt',
-            f'TutorialNavigation::test_{case}',
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=180 if case.startswith(('next_alone_', 'live_lesson_')) else 45,
-        env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
-    )
-    output = result.stdout + result.stderr
-    assert result.returncode == 0, (
-        'The real written tutorial must satisfy its navigation requirement: ' + output
-    )
-    function, _, tag = case.partition(':')
-    assert f'::TutorialNavigation::test_{function}({tag})' in output and '0 failed' in output, (
-        'The selected real-host tutorial gate must execute to completion: ' + output
-    )
-    assert not any(line.startswith('SKIP') for line in output.splitlines()), (
-        'Tutorial navigation cannot be replaced with a skipped host case'
-    )
+def test_written_tutorial_navigation(case, navigation_actor):
+    navigation_actor.run('TutorialNavigation::test_' + case)
 
 
 @pytest.mark.parametrize('tutorial', ['pd-neut-cwl_lbco_simulation', 'pd-neut-cwl_lbco-hrpt'])

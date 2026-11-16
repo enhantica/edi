@@ -3,7 +3,7 @@ category_glyph: "\uf124"
 template: gui.html
 ---
 
-# <span class="ed-reference-icon" aria-hidden="true">&#61732;</span> Moments in the cell
+# <span class="ed-reference-icon" data-reference-category="expanded-atom-site-moment" aria-hidden="true">&#61732;</span> Moments in the cell
 
 <!-- group-tags -->
 <p class="ed-group-tags"><a class="ed-tag ed-tag--technique" data-ed-tag="sampleForm" data-ed-token="powder" href="../../user-guide/glossary/#powder-diffraction" title="Powder diffraction">pd</a> <a class="ed-tag ed-tag--neutral" data-ed-tag="beamMode" data-ed-token="constant wavelength" href="../../user-guide/glossary/#constant-wavelength" title="Constant wavelength">cwl</a> <a class="ed-tag ed-tag--technique" data-ed-tag="beamMode" data-ed-token="time-of-flight" href="../../user-guide/glossary/#time-of-flight" title="Time of flight">tof</a> <a class="ed-tag ed-tag--technique" data-ed-tag="probe" data-ed-token="neutron" href="../../user-guide/glossary/#neutron-diffraction" title="Neutron diffraction">neut</a></p>

@@ -41,8 +41,8 @@ try {
     .match(/set\(EDI_GUI_COMPONENTS_SHA\s+([a-f0-9]{40})\)/);
   assert(pin, 'The checked-out app declares its full shared-components pin');
   assert.equal(build.guiComponentsCommit, pin[1], "The fixture uses this head's exact shared-components pin");
-  assert.deepEqual(build.kits?.slice().sort(), ['multithread', 'singlethread'],
-    'The host identity covers both actual Qt kits');
+  assert.deepEqual(build.kits?.slice().sort(), ['multithread'],
+    'The host identity covers the sole actual Qt multithread kit');
   assert(build.qt && build.emscripten && build.sources && Object.keys(build.sources).length > 0,
     'The host identity records toolchain versions and fixture source hashes');
   for (const [name, hash] of Object.entries(build.sources)) {
@@ -53,7 +53,7 @@ try {
       'The delivered fixture source bytes match the checked-out test source');
   }
 
-  for (const mode of ['singlethread', 'multithread']) {
+  for (const mode of ['multithread']) {
     await page.goto(`${origin}/?build=${mode}&acceptance=clipping`);
     await page.waitForFunction(() => typeof window.ediControlGeometry === 'function', null,
       {timeout: 120000});

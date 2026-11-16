@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
+
 ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -114,9 +116,12 @@ def _tsan_source_fixture(tmp_path):
         '#!/usr/bin/env bash\n'
         'set -eu\n'
         'printf \'{"entry":"source-acquisition"}\\n\' >> "$TSAN_SELECTION_TRACE"\n'
-        '# The real pre-created pinned Git tree is retained unchanged.\n'
+        '# The real pre-created pinned Git tree is retained unchanged.\n',
+        newline='\n',
     )
-    (mockbin / 'python').write_text('#!/bin/sh\nexec ' + shlex.quote(sys.executable) + ' "$@"\n')
+    (mockbin / 'python').write_text(
+        '#!/bin/sh\nexec ' + shlex.quote(sys.executable) + ' "$@"\n', newline='\n'
+    )
     (mockbin / 'python').chmod(0o755)
     (mockbin / 'cmake').write_text(
         '#!'
@@ -127,7 +132,8 @@ def _tsan_source_fixture(tmp_path):
             'E"],"a") as f: print(json.dumps({"entry":"cmake","argv":sys.'
             'argv[1:]}),file=f)\nprint("SOURCE_SELECTION_CONFIGURE_STOP: n'
             'o configure/build/TSAN executed")\nsys.exit(86)\n'
-        )
+        ),
+        newline='\n',
     )
     (mockbin / 'cmake').chmod(0o755)
     git = shutil.which('git')
@@ -211,7 +217,7 @@ def test_tsan_worker_selects_exact_original_source_before_instrumented_configure
         # The mock external SDK entry now describes the original pinned SDK.
         (sdk / 'share/crysta-sdk/manifest.json').write_text(json.dumps({'source_sha': pinned_sha}))
     result = subprocess.run(
-        ['bash', 'tools/ci/tsan-worker.sh'],
+        [environment_bash(), 'tools/ci/tsan-worker.sh'],
         cwd=root,
         env=env,
         text=True,
@@ -273,7 +279,7 @@ def test_tsan_worker_refuses_unqualified_candidate_before_tsan_cache_mutation(tm
         with (candidate / 'CMakeLists.txt').open('a') as output:
             output.write('# tracked source changed after SDK build\n')
     result = subprocess.run(
-        ['bash', 'tools/ci/tsan-worker.sh'],
+        [environment_bash(), 'tools/ci/tsan-worker.sh'],
         cwd=root,
         env=env,
         text=True,

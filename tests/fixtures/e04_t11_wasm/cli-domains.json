@@ -1,0 +1,38 @@
+{
+  "schema": "standalone-wasm-cli-domains/1",
+  "inputs": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project",
+  "historical": "Explicit legacy Shift/s.u. capture; retained verbatim for its authenticated original input",
+  "current": "Existing first-owned web_parallel native backend-parity anchor for this start-4 input after the authorized scalar stop-rule transition; no new numerical pin",
+  "files": {
+    "historical_oracle": {
+      "path": "tests/fixtures/e04_t11_wasm/native.json",
+      "sha256": "1f4acdaa6890dc3c44443a1c4593910bb4bbb448b24fedadcd1043419da53189"
+    },
+    "historical_report": {
+      "path": "tests/fixtures/e04_t11_wasm/native-report.txt",
+      "sha256": "1a973c1375c34b287d2c720bcdc430c905d38fb9079456b95f7dce2d7a38cbf3"
+    },
+    "current_oracle": {
+      "path": "tests/fixtures/web_parallel/lbco-native.json",
+      "sha256": "20cbdb5ff2cdf4b569e7804fe973fc82b83c79abbf1fbe514dccd82817c421f0"
+    },
+    "current_report": {
+      "path": "tests/fixtures/web_parallel/lbco-native-report.txt",
+      "sha256": "37f4e325691f35ff3f70a2a52e9c473a9e8cb399cddce6179146ad44bcce64d0"
+    },
+    "transition_manifest": {
+      "path": "tests/fixtures/metadata_transition/task-inputs.json",
+      "sha256": "bb38d173c0a618a6e5a93f937c3a9cb427e5cf42b13cf5caf46c9f7a55d02c31"
+    },
+    "transition_archive": {
+      "path": "tests/fixtures/metadata_transition/task-inputs.zip",
+      "sha256": "59a21fdcd1e1094881fa03bc16d82a4bb9fa8da4e9eb8a34a1d269e7a59c64b6"
+    }
+  },
+  "conditions": {
+    "descent": "ladder",
+    "stop_rules": "chi_square_change",
+    "max_iterations": 1000
+  },
+  "condition_source": "The frozen current native report declares ladder. The existing archived task-input pair authenticates the exact scalar-rule/no-rule analysis files; public a452ce52 removed the live scalar rule. Current missing-rule semantics select chi-square stopping. The vehicle spells both conditions before solving."
+}

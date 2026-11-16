@@ -225,14 +225,14 @@ def test_tof_capability_load_preserves_live_pairs_and_ignores_retired_member(
     source = staged(root / relative, tmp_path / 'input', 'iucr_19')
     experiment_file = next((source / 'experiments').glob('*.edi'))
     category = 'absorption' if field == 'abscor2' else 'instrument'
-    tag = '_' + category + '.' + field
+    active_field = 'abscor1' if field == 'abscor2' else field
+    tag = '_' + category + '.' + active_field
     text = experiment_file.read_text()
     text = re.sub(r'(?m)^' + re.escape(tag) + r'[^\n]*\n?', '', text)
     if field == 'abscor2':
         text = re.sub(r'(?m)^_absorption.type[^\n]*', '_absorption.type cylinder', text)
-        if '_absorption.abscor1' not in text:
-            text += '\n_absorption.abscor1 0\n'
-    experiment_file.write_text(text + '\n' + tag + ' 0.037(2)\n')
+    retired = '\n_absorption.abscor2 0.019(3)\n' if field == 'abscor2' else ''
+    experiment_file.write_text(text + '\n' + tag + ' 0.037(2)\n' + retired)
     capfd.readouterr()
     project, notes = load(api, source)
     if field == 'abscor2':
@@ -249,8 +249,19 @@ def test_tof_capability_load_preserves_live_pairs_and_ignores_retired_member(
         assert all('_absorption.abscor2' not in file.read_text() for file in experiments), (
             'Saving cannot recreate a retired parameter or its free flag'
         )
+        parameter = getattr(getattr(project.experiments[0], category), active_field)
+        assert parameter.free, 'The active TOF coefficient retains its supported free mark'
+        assert parameter.value == pytest.approx(0.037), (
+            'Ignoring the retired input preserves the active coefficient value'
+        )
+        assert parameter.uncertainty == pytest.approx(0.002), (
+            'Ignoring the retired input preserves the active coefficient uncertainty'
+        )
+        assert not any(
+            'unfittable_free_ignored' in note and active_field in note for note in notes
+        ), 'The active absorption derivative remains admitted beside the retired input'
         return
-    parameter = getattr(getattr(project.experiments[0], category), field)
+    parameter = getattr(getattr(project.experiments[0], category), active_field)
     assert not parameter.free, 'Unsupported TOF derivatives load as fixed parameters'
     assert parameter.value == pytest.approx(0.037), (
         'A capability block preserves the parameter value'
@@ -258,14 +269,19 @@ def test_tof_capability_load_preserves_live_pairs_and_ignores_retired_member(
     assert parameter.uncertainty == pytest.approx(0.002), (
         'A capability block preserves the input s.u.'
     )
-    selected = [note for note in notes if 'unfittable_free_ignored' in note and field in note]
-    assert len(selected) == 1, 'Each ignored TOF free mark emits one named loader note'
-    assert all(
-        token in selected[0] for token in (CAPABILITY, 'crysta has no derivative for it')
-    ), 'Unsupported TOF derivatives use the shared capability reason and detail'
-    if API == 'edi':
-        with pytest.raises(ValueError, match=re.escape(CAPABILITY)):
-            parameter.free = True
+    selected = [
+        note for note in notes if 'unfittable_free_ignored' in note and active_field in note
+    ]
+    if field == 'abscor2':
+        assert not selected, 'The active absorption derivative must remain admitted'
+    else:
+        assert len(selected) == 1, 'Each ignored TOF free mark emits one named loader note'
+        assert all(
+            token in selected[0] for token in (CAPABILITY, 'crysta has no derivative for it')
+        ), 'Unsupported TOF derivatives use the shared capability reason and detail'
+        if API == 'edi':
+            with pytest.raises(ValueError, match=re.escape(CAPABILITY)):
+                parameter.free = True
     parameter.free = False
     assert not parameter.free, 'Clearing an unsupported derivative flag is always allowed'
 

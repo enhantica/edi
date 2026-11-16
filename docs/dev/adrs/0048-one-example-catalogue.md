@@ -88,3 +88,12 @@ matched neither. A user could not tell which example showed a technique, and a f
 | Tutorials that build the model in code, as diffraction-lib's do | Rejected for now: the Python API cannot create background points or excluded regions yet, and the sameness of two models could only be shown by running both. |
 | A second file listing the catalogue | Rejected: two lists drift; one row flag keeps one list. |
 | Removing the old projects | Rejected: they are regression cases with their own pinned results and keep catching changes. |
+
+The tutorial table renderer also accepts an explicit case subset. Assistant rows
+inherit the LBCO case tags only when that case belongs to the supplied selection;
+rendering a different subset must not require an unrelated LBCO row. Full catalogue
+rendering retains both assistant rows when their declared pages exist.
+
+A declared interface subset also prefixes its generated table title with the
+interface names and “only”. Missing interfaces retain their dash cells and have
+no link; the shared case title remains unchanged in the case record itself.

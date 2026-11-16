@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "session.hpp"
+#include "label_case.hpp"
 #include "assistant_result.hpp"
 #include "../../core/src/canonical_encoding.hpp"
 #include <limits>
@@ -2444,7 +2445,7 @@ QString from_bridge(Call&& call, const QString& fallback = QString()) {
 }  // namespace
 
 QString Session::label(const QString& uid, const QString& variant) const {
-    return from_bridge([&] { return edi::label(uid.toStdString(), variant.toStdString()); });
+    return label_case(from_bridge([&] { return edi::label(uid.toStdString(), variant.toStdString()); }));
 }
 
 QString Session::units(const QString& uid, const QString& variant) const {

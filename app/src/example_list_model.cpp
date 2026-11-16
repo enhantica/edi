@@ -271,7 +271,7 @@ void ExampleListModel::clearFacets() {
     facet_filters_.clear();
     refresh();
 }
-QVariantList ExampleListModel::facetOptions(const QString& key) const {
+QList<edi_app::FacetOption> ExampleListModel::facetOptions(const QString& key) const {
     const auto words = normalize(search_text_).split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
     QHash<QString, int> counts;
     int total = 0;
@@ -286,12 +286,10 @@ QVariantList ExampleListModel::facetOptions(const QString& key) const {
         return label(a).localeAwareCompare(label(b)) < 0;
     });
     const qsizetype index = keys.indexOf(key);
-    QVariantList out{QVariantMap{{QStringLiteral("value"), QString()},
-                                 {QStringLiteral("title"), (index < 0 ? QString() : tr(qPrintable(allTitles[index]))) +
-                                                               QStringLiteral(" (%1)").arg(total)}}};
+    QList<FacetOption> out{{QString(), (index < 0 ? QString() : tr(qPrintable(allTitles[index]))) +
+                                       QStringLiteral(" (%1)").arg(total)}};
     for (const auto& value : choices)
-        out.append(QVariantMap{{QStringLiteral("value"), value},
-                               {QStringLiteral("title"), label(value) + QStringLiteral(" (%1)").arg(counts.value(value))}});
+        out.append({value, label(value) + QStringLiteral(" (%1)").arg(counts.value(value))});
     return out;
 }
 }  // namespace edi_app

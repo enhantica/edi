@@ -19,6 +19,7 @@ import edi
 import gemmi
 import numpy as np
 
+from tests.fixtures.e04_t11_wasm import iteration_domains, solver_vehicles
 from tests.fixtures.e04_t11_wasm.generate_catalogue import CASES
 from tests.fixtures.e04_t11_wasm.reopen import archive_files
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
@@ -87,6 +88,7 @@ def inputs(root, case):
             digest.update(pre_catalogue_bytes(path))
     if digest.hexdigest() != fixture['project_sha256']:
         raise ValueError('written reference requires the exact authenticated catalogue input')
+    fixture['_iteration_domain'] = iteration_domains.historical(root, case, fixture, raw)
     names = blocks(source, fixture['scientific'])
     identity.conditioning_semantics(fixture['scientific'], condition, names)
     if raw['labels'] != condition['labels'] or raw['n_data'] != condition['n_data']:
@@ -213,8 +215,8 @@ def label_owns(label, path, names, source):
     return path == stem + category + '.' + label
 
 
-def qualify_raw(fixture, old, raw, report, candidates, names, source):
-    """Assert every anchor; no recorded acceptance booleans or complete=True shortcut."""
+def raw_population(old, raw, candidates, names, source):
+    """Resolve every original column to one finite public fitted value and SU."""
     values, uncertainty = raw['values'], raw['uncertainty']
     if (
         not isinstance(values, dict)
@@ -233,7 +235,67 @@ def qualify_raw(fixture, old, raw, report, candidates, names, source):
         selected[column] = path
     if len(set(selected.values())) != len(selected) or set(selected.values()) != values.keys():
         raise ValueError('raw fitted population has missing, duplicate or unowned paths')
+    for population in (values, uncertainty):
+        if any(
+            type(value) not in {int, float} or not math.isfinite(value)
+            for value in population.values()
+        ):
+            raise ValueError('raw fitted operands must be finite numbers')
+    if any(value < 0 for value in uncertainty.values()):
+        raise ValueError('raw fitted uncertainties must be nonnegative')
+    return selected
+
+
+def qualify_raw(fixture, old, raw, report, candidates, names, source):
+    """Assert every anchor; no recorded acceptance booleans or complete=True shortcut."""
+    selected = raw_population(old, raw, candidates, names, source)
+    if '_iteration_domain' in fixture:
+        iteration_domains.current(fixture, raw, report)
     qualify_raw_numbers(fixture, old, raw, selected)
+    qualify_terminal(old, raw, report)
+    return selected
+
+
+def validate_loaded(loaded, source, old, names, conditions):
+    """Prove the complete pre-fit snapshot against the original source declarations."""
+    analysis = document(source / 'analysis/analysis.edi', 'analysis/analysis.edi')
+    expected = {
+        'fitting_mode': 'single'
+        if sum(name.startswith('experiments/') for name in names) == 1
+        else 'joint',
+        'su_rule': 'iucr_99',
+        'free_count': len(old['labels']),
+        'max_iterations': int(analysis.find_value('_minimizer.max_iterations') or '0'),
+        'chi_square_tolerance': float(
+            analysis.find_value('_minimizer.chi_square_tolerance') or '0'
+        ),
+        **conditions,
+    }
+    if json.dumps(loaded, sort_keys=True, allow_nan=False) != json.dumps(expected, sort_keys=True):
+        raise ValueError('Loaded solver vehicle changed an original input or declared condition')
+
+
+def qualify_historical(  # noqa: PLR0913 - independent raw/reference operands and pre-fit snapshot
+    fixture, old, raw, report, candidates, names, source, *, loaded
+):
+    """Execute the original whole-vector regression under its original conditions."""
+    validate_loaded(loaded, source, old, names, solver_vehicles.HISTORICAL)
+    solver_vehicles.historical(fixture, raw, report)
+    solver_vehicles.qualify_historical_report(fixture, old, report)
+    historical_fixture = dict(fixture)
+    historical_fixture.pop('_iteration_domain', None)
+    return qualify_raw(historical_fixture, old, raw, report, candidates, names, source)
+
+
+def qualify_current(  # noqa: PLR0913 - independent raw/reference operands and pre-fit snapshot
+    fixture, old, raw, report, candidates, names, source, *, loaded
+):
+    """Check the untouched default fit after the independent historical vehicle."""
+    validate_loaded(loaded, source, old, names, fixture['_iteration_domain']['conditions'])
+    selected = raw_population(old, raw, candidates, names, source)
+    solver_vehicles.current_references(fixture, source)
+    expected = json.loads((source.parent / 'expected.json').read_text())
+    solver_vehicles.current(fixture, old, raw, report, selected, expected)
     qualify_terminal(old, raw, report)
     return selected
 
@@ -263,6 +325,10 @@ def qualify_raw_numbers(fixture, old, raw, selected):
         ):
             raise ValueError('raw value or SU differs from the independent original anchor')
     for name, expected in fixture['native_start_and_finish'].items():
+        if name == 'iterations' and '_iteration_domain' in fixture:
+            # The authenticated historical count is checked by historical(); current()
+            # checks actual callbacks/history/count in the declared continuation domain.
+            continue
         actual = raw[name]
         if (
             type(actual) not in {int, float}
@@ -397,6 +463,7 @@ def admit(root, case, reference):
         'case': case,
         'project': fixture['project'],
         'source_files': files(source),
+        'current_files': solver_vehicles.current_references(fixture, source),
         'fixture_files': {
             name: sha(
                 root / 'tests/fixtures/e04_t11_wasm/catalogue_scientific' / (case + '-' + name)
@@ -404,7 +471,7 @@ def admit(root, case, reference):
             for name in ('native.json', 'conditioning.json', 'conditioning-raw.json')
         },
     }
-    if producer.get('schema') != 'ordinary-native-written/1' or any(
+    if producer.get('schema') != 'ordinary-native-written/3' or any(
         producer.get(k) != v for k, v in expected.items()
     ):
         raise ValueError('written reference producer does not own this authenticated input')
@@ -413,7 +480,13 @@ def admit(root, case, reference):
     ):
         raise ValueError('written reference capture custody changed')
     validate_capture_flags(result.get('capture_flags'))
-    if producer.get('recorder_sha256') != sha(__file__):
+    if (
+        producer.get('recorder_sha256') != sha(__file__)
+        or producer.get('iteration_checker_sha256') != sha(iteration_domains.__file__)
+        or producer.get('solver_checker_sha256') != sha(solver_vehicles.__file__)
+        or producer.get('iteration_domains_sha256')
+        != sha(iteration_domains.HERE / 'iteration-domains.json')
+    ):
         raise ValueError('written reference recorder differs from the reviewed source')
     for field in ('module_sha256', 'module_path', 'build_commit', 'python', 'recorder_path'):
         if not isinstance(producer.get(field), str) or not producer[field]:
@@ -422,6 +495,9 @@ def admit(root, case, reference):
         if (
             name
             not in {
+                'historical/loaded.json',
+                'historical/raw.json',
+                'historical/machine.txt',
                 'loaded.json',
                 'raw.json',
                 'machine.txt',
@@ -433,6 +509,9 @@ def admit(root, case, reference):
         ):
             raise ValueError('written reference retained capture changed')
     if set(result['captures']) != {
+        'historical/loaded.json',
+        'historical/raw.json',
+        'historical/machine.txt',
         'loaded.json',
         'raw.json',
         'machine.txt',
@@ -451,10 +530,24 @@ def admit(root, case, reference):
         'chi_square_tolerance': float(
             analysis.find_value('_minimizer.chi_square_tolerance') or '0'
         ),
+        **fixture['_iteration_domain']['conditions'],
     }:
         raise ValueError('written reference loaded state differs from the source declarations')
+    historical_loaded = json.loads((reference / 'historical/loaded.json').read_text())
+    if historical_loaded != {**loaded, **solver_vehicles.HISTORICAL}:
+        raise ValueError('Historical loaded state changed the original non-solver declarations')
+    qualify_historical(
+        fixture,
+        old,
+        json.loads((reference / 'historical/raw.json').read_text()),
+        (reference / 'historical/machine.txt').read_text(),
+        raw_candidates(fixture, old, names, banks, source),
+        names,
+        source,
+        loaded=historical_loaded,
+    )
     raw = json.loads((reference / 'raw.json').read_text())
-    qualify_raw(
+    qualify_current(
         fixture,
         old,
         raw,
@@ -462,7 +555,9 @@ def admit(root, case, reference):
         raw_candidates(fixture, old, names, banks, source),
         names,
         source,
+        loaded=loaded,
     )
+    iteration_domains.saved(reference / 'project', raw, (reference / 'machine.txt').read_text())
     validate_arrays(reference, banks, fixture)
     return fixture
 
@@ -523,7 +618,7 @@ def capture_arrays(owner, output, banks, name):
     return data
 
 
-def capture_loaded(project, source, case, old, output):
+def capture_loaded(project, source, case, old, output, conditions):
     if (
         project.analysis.fitting_mode != ('single' if case == 'lbco' else 'joint')
         or project.su_rule != 'iucr_99'
@@ -538,6 +633,8 @@ def capture_loaded(project, source, case, old, output):
         'free_count': len(project.free_parameters),
         'max_iterations': project._minimizer_max_iterations,
         'chi_square_tolerance': project._minimizer_chi_square_tolerance,
+        'descent': project.analysis.descent,
+        'stop_rules': project.analysis.stop_rules,
     }
     if (
         loaded['free_count'] != len(old['labels'])
@@ -545,7 +642,64 @@ def capture_loaded(project, source, case, old, output):
         or loaded['chi_square_tolerance'] != expected_tolerance
     ):
         raise ValueError('reference changed the original free set or minimizer declarations')
+    if {key: loaded[key] for key in ('descent', 'stop_rules')} != conditions:
+        raise ValueError('reference changed the declared current descent or stop rules')
     (output / 'loaded.json').write_text(json.dumps(loaded, indent=2, allow_nan=False) + '\n')
+    return loaded
+
+
+def fit_with_trace(project, loaded):
+    starts, callbacks = [], []
+    result = project.analysis.fit(
+        on_start=lambda preamble: starts.append(preamble.pre_fit.reduced_chi_square),
+        on_iteration=lambda record: callbacks.append({
+            'iteration': record.iteration,
+            'rwp': record.rwp,
+            'reduced_chi_square': record.reduced_chi_square,
+        }),
+    )
+    if len(starts) != 1:
+        raise ValueError('native reference needs exactly one actual fit preamble')
+    raw = {
+        'initial_reduced_chi_square': starts[0],
+        'final_reduced_chi_square': result.reduced_chi_square,
+        'rwp': result.rwp,
+        'iterations': result.iterations,
+        'iteration_domain': {
+            'conditions': {
+                key: loaded[key] for key in ('descent', 'stop_rules', 'max_iterations')
+            },
+            'callbacks': callbacks,
+        },
+        'converged': result.converged,
+        'status': str(result.status),
+        'values': dict(result.values),
+        'uncertainty': dict(result.uncertainty),
+    }
+    return raw, result
+
+
+def capture_historical(case, fixture, old, source, names, banks, output):
+    """Retain the independently anchored regression before touching the default run."""
+    output.mkdir()
+    project = edi.Project.load(source)
+    project.analysis.descent = solver_vehicles.HISTORICAL['descent']
+    project.analysis.stop_rules = solver_vehicles.HISTORICAL['stop_rules']
+    loaded = capture_loaded(project, source, case, old, output, solver_vehicles.HISTORICAL)
+    raw, result = fit_with_trace(project, loaded)
+    report = edi.machine_report(project, result, edi.VerbosityEnum.FULL)
+    (output / 'raw.json').write_text(json.dumps(raw, indent=2, allow_nan=False) + '\n')
+    (output / 'machine.txt').write_text(report)
+    qualify_historical(
+        fixture,
+        old,
+        raw,
+        report,
+        raw_candidates(fixture, old, names, banks, source),
+        names,
+        source,
+        loaded=loaded,
+    )
 
 
 def capture(root, case, output, module_sha256, build_commit):
@@ -561,7 +715,7 @@ def capture(root, case, output, module_sha256, build_commit):
         raise ValueError('reference output must be absolute and outside the authenticated input')
     output.mkdir(mode=0o700)  # Exclusive, never reuse a previous failed/reference capture.
     producer = {
-        'schema': 'ordinary-native-written/1',
+        'schema': 'ordinary-native-written/3',
         'case': case,
         'project': fixture['project'],
         'source_files': files(source),
@@ -571,6 +725,10 @@ def capture(root, case, output, module_sha256, build_commit):
         'python': str(Path(sys.executable).resolve()),
         'recorder_path': str(Path(__file__).resolve()),
         'recorder_sha256': sha(__file__),
+        'iteration_checker_sha256': sha(iteration_domains.__file__),
+        'solver_checker_sha256': sha(solver_vehicles.__file__),
+        'iteration_domains_sha256': sha(iteration_domains.HERE / 'iteration-domains.json'),
+        'current_files': solver_vehicles.current_references(fixture, source),
         'fixture_files': {
             name: sha(
                 root / 'tests/fixtures/e04_t11_wasm/catalogue_scientific' / (case + '-' + name)
@@ -581,28 +739,16 @@ def capture(root, case, output, module_sha256, build_commit):
     # Persist and serialize BEFORE load/fit/Save: enum-bearing late metadata cannot
     # discard actual producer custody as it did in root497.
     (output / 'producer.json').write_text(json.dumps(producer, indent=2) + '\n')
+    capture_historical(case, fixture, old, source, names, banks, output / 'historical')
     project = edi.Project.load(source)
-    capture_loaded(project, source, case, old, output)
-    starts = []
-    result = project.analysis.fit(
-        on_start=lambda preamble: starts.append(preamble.pre_fit.reduced_chi_square)
+    loaded = capture_loaded(
+        project, source, case, old, output, fixture['_iteration_domain']['conditions']
     )
-    if len(starts) != 1:
-        raise ValueError('native reference needs exactly one actual fit preamble')
-    raw = {
-        'initial_reduced_chi_square': starts[0],
-        'final_reduced_chi_square': result.reduced_chi_square,
-        'rwp': result.rwp,
-        'iterations': result.iterations,
-        'converged': result.converged,
-        'status': str(result.status),
-        'values': dict(result.values),
-        'uncertainty': dict(result.uncertainty),
-    }
+    raw, result = fit_with_trace(project, loaded)
     (output / 'raw.json').write_text(json.dumps(raw, indent=2, allow_nan=False) + '\n')
     report = edi.machine_report(project, result, edi.VerbosityEnum.FULL)
     (output / 'machine.txt').write_text(report)
-    qualify_raw(
+    qualify_current(
         fixture,
         old,
         raw,
@@ -610,14 +756,17 @@ def capture(root, case, output, module_sha256, build_commit):
         raw_candidates(fixture, old, names, banks, source),
         names,
         source,
+        loaded=loaded,
     )
 
     capture_arrays(project, output, banks, 'raw-arrays.npz')
     destination = output / 'project'
     project.save_as(destination)
+    iteration_domains.saved(destination, raw, report)
     capture_arrays(project, output, banks, 'written-arrays.npz')
     opened = edi.Project.load(destination)
     capture_arrays(opened, output, banks, 'reopened-arrays.npz')
+    iteration_domains.saved(destination, raw, report)
     validate_arrays(output, banks, fixture)
     if files(source) != producer['source_files']:
         raise ValueError('reference operations changed the original catalogue input')
@@ -627,6 +776,9 @@ def capture(root, case, output, module_sha256, build_commit):
         'captures': {
             name: sha(output / name)
             for name in (
+                'historical/loaded.json',
+                'historical/raw.json',
+                'historical/machine.txt',
                 'loaded.json',
                 'raw.json',
                 'machine.txt',

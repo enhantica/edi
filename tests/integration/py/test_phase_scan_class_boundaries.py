@@ -6,6 +6,7 @@ import edi as engine
 import pytest
 
 from tests.fixtures import phase_scan
+from tests.fixtures.report_units.iucr_reference import rounded_pair
 
 
 def rows(path):
@@ -29,6 +30,10 @@ def test_recorded_columns_equal_every_declared_free_category(tmp_path, mode, bac
         'fit_result.reduced_chi_square',
         'fit_result.success',
         'fit_result.iterations',
+        'fit_result.descent',
+        'fit_result.max_iterations',
+        'fit_result.chi_square_tolerance',
+        'fit_result.termination',
     }
     assert actual == expected | {key + '.uncertainty' for key in expected}, (
         'Every declared active free category, including both texture fields per phase, '
@@ -74,14 +79,26 @@ def test_refused_terminal_returns_same_state_as_completed_resume(tmp_path, mode)
         'The terminal-state invariant must reach a refused terminal after success'
     )
     assert fresh.values, 'The refused terminal must return its recoverable fitted parameter state'
-    values = [parameter.value for parameter in project.free_parameters]
+    raw = dict(fresh.values)
+    # Independent fitting restores the original template after each file. Only
+    # sequential fitting carries the last completed file forward through CSV.
+    expected = (
+        raw
+        if mode == 'independent'
+        else {
+            key: rounded_pair(value, fresh.uncertainty.get(key), 'iucr_99')[0]
+            for key, value in raw.items()
+        }
+    )
     resumed = fit(project)
-    assert fresh.values == resumed.values, (
-        'Fresh refusal and completed no-op resume must expose identical terminal parameters'
+    assert resumed.values == expected, (
+        'A no-op resume recovers the exact two-significant-digit s.u. CSV projection '
+        'of the terminal state; the live fit retains its unrounded values'
     )
-    assert [parameter.value for parameter in project.free_parameters] == values, (
-        'Edi and engine models must retain the same parameter state across a no-op resume'
-    )
+    assert fresh.values == raw, 'Resume must not mutate the earlier returned raw fit result'
+    assert sorted(parameter.value for parameter in project.free_parameters) == sorted(
+        expected.values()
+    ), 'Edi and engine models must adopt the same recoverable terminal CSV state'
 
 
 @pytest.mark.parametrize('root_data', [False, True])

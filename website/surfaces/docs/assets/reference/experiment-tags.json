@@ -157,7 +157,7 @@
     },
     "structure": {
       "crystal": {
-        "label": "Crystal",
+        "label": "Crystal structure",
         "meaning": "Crystal structure",
         "tone": "structure",
         "anchor": "crystal-structure",
@@ -165,7 +165,7 @@
         "glyph": ""
       },
       "magnetic": {
-        "label": "Magnetic",
+        "label": "Magnetic structure",
         "meaning": "Magnetic structure",
         "tone": "magnetic",
         "anchor": "magnetic-structure",

@@ -10,6 +10,8 @@ import tempfile
 from functools import lru_cache
 from pathlib import Path
 
+from tests.fixtures.native_process import environment_bash
+
 OBSERVED = {'tools/ci/core-build.sh', 'tools/ci/crysta-src.sh'}
 SHA = '1' * 40
 FROZEN = json.loads(
@@ -65,7 +67,8 @@ def _prepare_scripts(root, path, source):
                 + name
                 + '\nexec /bin/bash tools/ci/observed-'
                 + name
-                + '\n'
+                + '\n',
+                newline='\n',
             )
             (scripts / ('observed-' + name)).write_text(FROZEN['tools/ci/' + name])
     (scripts / 'producer-lock.sh').write_text(FROZEN['tools/ci/producer-lock.sh'])
@@ -157,7 +160,12 @@ def _observe(path, source, scenario, failure=''):
             env['PYTEST_XDIST_WORKER'] = 'gw0'
         _plant_lock(root, scenario, env)
         result = subprocess.run(
-            ['/bin/bash', path], cwd=root, env=env, capture_output=True, timeout=2, check=False
+            [environment_bash(), path],
+            cwd=root,
+            env=env,
+            capture_output=True,
+            timeout=2,
+            check=False,
         )
         calls = root / 'calls'
         trace = (

@@ -2,62 +2,82 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit two phases, YAlO₃ and corundum Al₂O₃, in one constant-wavelength neutron pattern from SPODI
+at FRM II, measured at 3 K, with a shared Bérar-Baldinozzi profile and cylinder absorption.
+
+It builds the catalogue case `pd-neut-cwl_yalo3-al2o3-spodi` step by step: the same project the
+command line fits and the app's Examples open.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-cwl_yalo3-al2o3-spodi/structures pd-neut-cwl_yalo3-al2o3-spodi/experiments pd-neut-cwl_yalo3-al2o3-spodi/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-cwl_yalo3-al2o3-spodi
+_metadata.title "YAlO₃ [Pbnm] / Al₂O₃ [R-3c] · SPODI @ FRM II"
+_metadata.description "2 phases at 3 K · Shared Bérar-Baldinozzi profile · Cylinder absorption"
+_metadata.authors .
+```
+
+## Define the structures
+
+Download the structures from EasyDiffraction's collection into `structures`. Each CIF gives its space group, cell and atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-cwl_yalo3-al2o3-spodi
+    edi download-data pd-neut-cwl_yalo3-al2o3-spodi-Al2O3
+    mv data/pd-neut-cwl_yalo3-al2o3-spodi-Al2O3.edi pd-neut-cwl_yalo3-al2o3-spodi/structures/Al2O3.edi
+    edi download-data pd-neut-cwl_yalo3-al2o3-spodi-YAlO3
+    mv data/pd-neut-cwl_yalo3-al2o3-spodi-YAlO3.edi pd-neut-cwl_yalo3-al2o3-spodi/structures/YAlO3.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-cwl_yalo3-al2o3-spodi
+    python -m edi download-data pd-neut-cwl_yalo3-al2o3-spodi-Al2O3
+    mv data/pd-neut-cwl_yalo3-al2o3-spodi-Al2O3.edi pd-neut-cwl_yalo3-al2o3-spodi/structures/Al2O3.edi
+    python -m edi download-data pd-neut-cwl_yalo3-al2o3-spodi-YAlO3
+    mv data/pd-neut-cwl_yalo3-al2o3-spodi-YAlO3.edi pd-neut-cwl_yalo3-al2o3-spodi/structures/YAlO3.edi
     ```
 
-## Start with nothing free
+## Define the experiment
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiment into `experiments`: the file declares the instrument, the peak profile, the background, the structures it links and the measured data.
 
-In `experiments/spodi.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_instrument.calib_twotheta_offset 0
-_peak.broad_gauss_u 0.04
-_peak.broad_gauss_v -0.05
-_peak.broad_gauss_w 0.1
-_peak.mixing_eta_0 0.1
-_peak.asym_beba_a0 0
-_peak.asym_beba_b0 0
-_peak.asym_beba_a1 0
-_peak.asym_beba_b1 0
-1 4.05 2100
-2 4.777 2100
-```
+    ```console
+    edi download-data pd-neut-cwl_yalo3-al2o3-spodi-spodi
+    mv data/pd-neut-cwl_yalo3-al2o3-spodi-spodi.edi pd-neut-cwl_yalo3-al2o3-spodi/experiments/spodi.edi
+    ```
 
-The same for every other row (25 more).
+=== "Python package"
 
-In `structures/Al2O3.edi`, remove the `()` from every value; they now read:
+    ```console
+    python -m edi download-data pd-neut-cwl_yalo3-al2o3-spodi-spodi
+    mv data/pd-neut-cwl_yalo3-al2o3-spodi-spodi.edi pd-neut-cwl_yalo3-al2o3-spodi/experiments/spodi.edi
+    ```
+
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-_cell.length_a 4.76
-_cell.length_c 12.97
-Al1 Al 0 0 0.33 c 12 1 0.5 Biso
-O1 O 0.35 0 0.25 e 18 1 0.5 Biso
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+_minimizer.stop_rules "chi_square_change"
+
+_fitting_mode.type single
+
+_edi.schema_version 3
 ```
-
-In `structures/YAlO3.edi`, remove the `()` from every value; they now read:
-
-```edi
-_cell.length_a 5.17
-_cell.length_b 5.33
-_cell.length_c 7.36
-Y Y 0.01 0.55 0.25 c 4 1 0.5 Biso
-Al Al 0 0 0 a 4 1 0.5 Biso
-```
-
-The same for every other row (2 more).
 
 ## Cells, scales and 2θ zero
 
@@ -67,8 +87,8 @@ In `experiments/spodi.edi`, add `()` after the values the stage frees:
 
 ```edi
 _instrument.calib_twotheta_offset 0()
-YAlO3 30() 0.9922535236803708()
-Al2O3 0.2() 0.007746476319629156()
+YAlO3 30()
+Al2O3 0.2()
 ```
 
 In `structures/Al2O3.edi`, add `()` after the values the stage frees:
@@ -102,12 +122,12 @@ _cell.length_c 7.36()
 edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 8 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        18.59       201.52
-      1      0.180     13.38       104.43   48.2% ↓
-      2      0.200     13.38       104.42   
-      3      0.218     13.38       104.42   
-      4      0.235     13.38       104.42   
-      5      0.267     13.38       104.42   
-  done · converged · 5 iters · reduced χ² 104.42 · Rwp 13.38 % · 0.29 s
+      1      0.174     13.38       104.43   48.2% ↓
+      2      0.191     13.38       104.42   
+      3      0.211     13.38       104.42   
+      4      0.226     13.38       104.42   
+      5      0.255     13.38       104.42   
+  done · converged · 5 iters · reduced χ² 104.42 · Rwp 13.38 % · 0.28 s
 
   refined parameters (8 free):
   name            parameter                                               start        value      s.u.   change
@@ -137,6 +157,14 @@ In `experiments/spodi.edi`, add `()` after the values the stage frees:
 
 The same for every other row (23 more).
 
+In `structures/Al2O3.edi`, remove the `()` from:
+
+```edi
+_cell.length_b 4.7561
+_atom_sites_cartn_transform.mat_11 4.7561
+_atom_sites_cartn_transform.mat_22 4.1189
+```
+
 === "Standalone executable"
 
     ```console
@@ -153,34 +181,34 @@ The same for every other row (23 more).
 edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 33 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        13.38       105.32
-      1      0.323     11.96        84.07   20.2% ↓
-      2      0.348     11.96        84.06   
-      3      0.374     11.96        84.06   
-      4      0.398     11.96        84.06   
-      5      0.420     11.96        84.06   
-      6      0.442     11.96        84.06   
-      7      0.546     11.96        84.06   
-  done · converged · 7 iters · reduced χ² 84.06 · Rwp 11.96 % · 0.57 s
+      1      0.375     11.96        84.07   20.2% ↓
+      2      0.402     11.96        84.06   
+      3      0.423     11.96        84.06   
+      4      0.450     11.96        84.06   
+      5      0.485     11.96        84.06   
+      6      0.526     11.96        84.06   
+      7      0.643     11.96        84.06   
+  done · converged · 7 iters · reduced χ² 84.06 · Rwp 11.96 % · 0.66 s
 
   refined parameters (33 free):
   name            parameter                                               start        value      s.u.   change
   intensity       experiment.background[10].intensity                    2.10e3      2.135e3   0.058e3   1.7% ↑
   intensity       experiment.background[11].intensity                    2.10e3      2.103e3   0.049e3   0.1% ↑
   intensity       experiment.background[12].intensity                    2.10e3      1.956e3   0.047e3   6.9% ↓
-  intensity       experiment.background[13].intensity                    2.10e3      2.274e3   0.050e3   8.3% ↑
+  intensity       experiment.background[13].intensity                    2.10e3       2.27e3    0.05e3   8.3% ↑
   intensity       experiment.background[14].intensity                    2.10e3      2.086e3   0.054e3   0.7% ↓
   intensity       experiment.background[15].intensity                    2.10e3      2.452e3   0.062e3   16.8% ↑
   intensity       experiment.background[16].intensity                    2.10e3      2.038e3   0.077e3   2.9% ↓
   intensity       experiment.background[17].intensity                    2.10e3      2.090e3   0.074e3   0.5% ↓
   intensity       experiment.background[18].intensity                    2.10e3      2.170e3   0.063e3   3.4% ↑
-  intensity       experiment.background[19].intensity                    2.10e3      2.161e3   0.060e3   2.9% ↑
-  intensity       experiment.background[1].intensity                     2.10e3      1.330e3   0.160e3   36.6% ↓
-  intensity       experiment.background[20].intensity                    2.10e3      3.058e3   0.070e3   45.6% ↑
+  intensity       experiment.background[19].intensity                    2.10e3       2.16e3    0.06e3   2.9% ↑
+  intensity       experiment.background[1].intensity                     2.10e3       1.33e3    0.16e3   36.6% ↓
+  intensity       experiment.background[20].intensity                    2.10e3       3.05e3    0.07e3   45.6% ↑
   intensity       experiment.background[21].intensity                    2.10e3      2.431e3   0.062e3   15.7% ↑
-  intensity       experiment.background[22].intensity                    2.10e3      2.772e3   0.070e3   32.0% ↑
+  intensity       experiment.background[22].intensity                    2.10e3       2.77e3    0.07e3   32.0% ↑
   intensity       experiment.background[23].intensity                    2.10e3      2.621e3   0.084e3   24.8% ↑
-  intensity       experiment.background[24].intensity                    2.10e3      2.980e3   0.110e3   42.0% ↑
-  intensity       experiment.background[25].intensity                    2.10e3      2.810e3   0.130e3   33.7% ↑
+  intensity       experiment.background[24].intensity                    2.10e3       2.98e3    0.11e3   42.0% ↑
+  intensity       experiment.background[25].intensity                    2.10e3       2.81e3    0.13e3   33.7% ↑
   intensity       experiment.background[2].intensity                     2.10e3      1.823e3   0.098e3   13.2% ↓
   intensity       experiment.background[3].intensity                     2.10e3      2.431e3   0.064e3   15.8% ↑
   intensity       experiment.background[4].intensity                     2.10e3      2.108e3   0.053e3   0.4% ↑
@@ -217,6 +245,13 @@ _peak.broad_gauss_w 0.1()
 _peak.mixing_eta_0 0.1()
 ```
 
+In `structures/Al2O3.edi`, remove the `()` from:
+
+```edi
+_cell.length_b 4.7555
+_atom_sites_cartn_transform.mat_11 4.7555
+```
+
 === "Standalone executable"
 
     ```console
@@ -233,45 +268,45 @@ _peak.mixing_eta_0 0.1()
 edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 37 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        11.96        84.18
-      1      0.278     11.46        77.33   8.1% ↓
-      2      0.297     11.46        77.33   
-      3      0.320     11.46        77.33   
-      4      0.338     11.46        77.33   
-      5      0.361     11.46        77.33   
-      6      0.380     11.46        77.33   
-      7      0.403     11.46        77.33   
-      8      0.421     11.46        77.33   
-      9      0.446     11.46        77.33   
-     10      0.463     11.46        77.33   
-     11      0.486     11.46        77.32   
-     12      0.504     11.46        77.32   
-     13      0.525     11.46        77.32   
-     14      0.543     11.46        77.32   
-     15      0.565     11.46        77.32   
-     16      0.582     11.46        77.32   
-     17      0.606     11.46        77.32   
-     18      0.707     11.46        77.32   
-  done · converged · 18 iters · reduced χ² 77.32 · Rwp 11.46 % · 0.73 s
+      1      0.424     11.46        77.33   8.1% ↓
+      2      0.442     11.46        77.33   
+      3      0.470     11.46        77.33   
+      4      0.491     11.46        77.33   
+      5      0.557     11.46        77.33   
+      6      0.581     11.46        77.33   
+      7      0.605     11.46        77.33   
+      8      0.630     11.46        77.33   
+      9      0.659     11.46        77.33   
+     10      0.681     11.46        77.33   
+     11      0.714     11.46        77.32   
+     12      0.736     11.46        77.32   
+     13      0.787     11.46        77.32   
+     14      0.808     11.46        77.32   
+     15      0.832     11.46        77.32   
+     16      0.854     11.46        77.32   
+     17      0.878     11.46        77.32   
+     18      1.029     11.46        77.32   
+  done · converged · 18 iters · reduced χ² 77.32 · Rwp 11.46 % · 1.06 s
 
   refined parameters (37 free):
   name            parameter                                               start        value      s.u.   change
   intensity       experiment.background[10].intensity                    2.13e3      2.061e3   0.058e3   3.5% ↓
   intensity       experiment.background[11].intensity                    2.10e3      2.044e3   0.047e3   2.8% ↓
   intensity       experiment.background[12].intensity                    1.96e3      1.859e3   0.049e3   5.0% ↓
-  intensity       experiment.background[13].intensity                    2.27e3      2.210e3   0.050e3   2.8% ↓
+  intensity       experiment.background[13].intensity                    2.27e3       2.21e3    0.05e3   2.8% ↓
   intensity       experiment.background[14].intensity                    2.09e3      1.990e3   0.055e3   4.6% ↓
   intensity       experiment.background[15].intensity                    2.45e3      2.403e3   0.061e3   2.0% ↓
   intensity       experiment.background[16].intensity                    2.04e3      1.992e3   0.076e3   2.3% ↓
   intensity       experiment.background[17].intensity                    2.09e3      2.076e3   0.071e3   0.7% ↓
   intensity       experiment.background[18].intensity                    2.17e3      2.154e3   0.061e3   0.7% ↓
   intensity       experiment.background[19].intensity                    2.16e3      2.144e3   0.059e3   0.8% ↓
-  intensity       experiment.background[1].intensity                     1.33e3      1.330e3   0.150e3   0.1% ↑
+  intensity       experiment.background[1].intensity                     1.33e3       1.33e3    0.15e3   0.1% ↑
   intensity       experiment.background[20].intensity                    3.06e3      3.039e3   0.072e3   0.6% ↓
   intensity       experiment.background[21].intensity                    2.43e3      2.422e3   0.061e3   0.4% ↓
   intensity       experiment.background[22].intensity                    2.77e3      2.818e3   0.069e3   1.7% ↑
   intensity       experiment.background[23].intensity                    2.62e3      2.641e3   0.081e3   0.8% ↑
-  intensity       experiment.background[24].intensity                    2.98e3      3.040e3   0.100e3   2.0% ↑
-  intensity       experiment.background[25].intensity                    2.81e3      2.850e3   0.130e3   1.5% ↑
+  intensity       experiment.background[24].intensity                    2.98e3       3.04e3    0.10e3   2.0% ↑
+  intensity       experiment.background[25].intensity                    2.81e3       2.85e3    0.13e3   1.5% ↑
   intensity       experiment.background[2].intensity                     1.82e3      1.823e3   0.094e3   
   intensity       experiment.background[3].intensity                     2.43e3      2.432e3   0.061e3   
   intensity       experiment.background[4].intensity                     2.11e3      2.108e3   0.051e3   
@@ -328,10 +363,10 @@ _peak.asym_beba_b1 0()
 edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 41 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        11.46        77.43
-      1      0.240     11.28        74.99   3.2% ↓
-      2      0.258     11.28        74.99   
-      3      0.363     11.28        74.99   
-  done · converged · 3 iters · reduced χ² 74.99 · Rwp 11.28 % · 0.38 s
+      1      0.311     11.28        74.99   3.2% ↓
+      2      0.359     11.28        74.99   
+      3      0.481     11.28        74.99   
+  done · converged · 3 iters · reduced χ² 74.99 · Rwp 11.28 % · 0.51 s
 
   refined parameters (41 free):
   name            parameter                                               start        value      s.u.   change
@@ -340,22 +375,22 @@ edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 4
   intensity       experiment.background[12].intensity                    1.86e3      1.866e3   0.048e3   0.4% ↑
   intensity       experiment.background[13].intensity                    2.21e3      2.213e3   0.049e3   0.2% ↑
   intensity       experiment.background[14].intensity                    1.99e3      1.997e3   0.054e3   0.4% ↑
-  intensity       experiment.background[15].intensity                    2.40e3      2.402e3   0.060e3   
+  intensity       experiment.background[15].intensity                    2.40e3       2.40e3    0.06e3   
   intensity       experiment.background[16].intensity                    1.99e3      1.997e3   0.075e3   0.2% ↑
-  intensity       experiment.background[17].intensity                    2.08e3      2.071e3   0.070e3   0.2% ↓
-  intensity       experiment.background[18].intensity                    2.15e3      2.159e3   0.060e3   0.2% ↑
+  intensity       experiment.background[17].intensity                    2.08e3       2.07e3    0.07e3   0.2% ↓
+  intensity       experiment.background[18].intensity                    2.15e3       2.15e3    0.06e3   0.2% ↑
   intensity       experiment.background[19].intensity                    2.14e3      2.142e3   0.058e3   0.1% ↓
-  intensity       experiment.background[1].intensity                     1.33e3      1.330e3   0.150e3   0.1% ↑
+  intensity       experiment.background[1].intensity                     1.33e3       1.33e3    0.15e3   0.1% ↑
   intensity       experiment.background[20].intensity                    3.04e3      3.032e3   0.071e3   0.2% ↓
-  intensity       experiment.background[21].intensity                    2.42e3      2.413e3   0.060e3   0.4% ↓
+  intensity       experiment.background[21].intensity                    2.42e3       2.41e3    0.06e3   0.4% ↓
   intensity       experiment.background[22].intensity                    2.82e3      2.809e3   0.068e3   0.3% ↓
-  intensity       experiment.background[23].intensity                    2.64e3      2.643e3   0.080e3   0.1% ↑
+  intensity       experiment.background[23].intensity                    2.64e3       2.64e3    0.08e3   0.1% ↑
   intensity       experiment.background[24].intensity                    3.04e3      3.032e3   0.099e3   0.3% ↓
-  intensity       experiment.background[25].intensity                    2.85e3      2.840e3   0.130e3   0.5% ↓
+  intensity       experiment.background[25].intensity                    2.85e3       2.84e3    0.13e3   0.5% ↓
   intensity       experiment.background[2].intensity                     1.82e3      1.823e3   0.093e3   
   intensity       experiment.background[3].intensity                     2.43e3      2.432e3   0.061e3   
-  intensity       experiment.background[4].intensity                     2.11e3      2.108e3   0.050e3   
-  intensity       experiment.background[5].intensity                     2.03e3      2.032e3   0.050e3   
+  intensity       experiment.background[4].intensity                     2.11e3       2.10e3    0.05e3   
+  intensity       experiment.background[5].intensity                     2.03e3       2.03e3    0.05e3   
   intensity       experiment.background[6].intensity                     2.10e3      2.097e3   0.045e3   
   intensity       experiment.background[7].intensity                     2.09e3      2.086e3   0.048e3   0.1% ↓
   intensity       experiment.background[8].intensity                     2.01e3      2.021e3   0.053e3   0.4% ↑
@@ -399,9 +434,8 @@ In `structures/YAlO3.edi`, add `()` after the values the stage frees:
 ```edi
 Y Y 0.01() 0.55() 0.25 c 4 1 0.5 Biso
 O1 O -0.08() -0.02() 0.25 c 4 1 0.5 Biso
+O2 O 0.2() 0.29() 0.04() d 8 1 0.5 Biso
 ```
-
-The same for every other row (1 more).
 
 === "Standalone executable"
 
@@ -419,19 +453,19 @@ The same for every other row (1 more).
 edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 50 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        11.28        75.22
-      1      0.353      6.46        24.69   67.2% ↓
-      2      0.377      6.46        24.69   
-      3      0.403      6.46        24.69   
-      4      0.437      6.46        24.69   
-      5      0.474      6.46        24.69   
-      6      0.498      6.46        24.69   
-      7      0.519      6.46        24.69   
-      8      0.543      6.46        24.69   
-      9      0.565      6.46        24.69   
-     10      0.588      6.46        24.69   
-     11      0.625      6.46        24.69   
-     12      0.750      6.46        24.69   
-  done · converged · 12 iters · reduced χ² 24.69 · Rwp 6.46 % · 0.78 s
+      1      0.432      6.46        24.69   67.2% ↓
+      2      0.455      6.46        24.69   
+      3      0.479      6.46        24.69   
+      4      0.502      6.46        24.69   
+      5      0.540      6.46        24.69   
+      6      0.585      6.46        24.69   
+      7      0.612      6.46        24.69   
+      8      0.641      6.46        24.69   
+      9      0.697      6.46        24.69   
+     10      0.722      6.46        24.69   
+     11      0.773      6.46        24.69   
+     12      0.986      6.46        24.69   
+  done · converged · 12 iters · reduced χ² 24.69 · Rwp 6.46 % · 1.01 s
 
   refined parameters (50 free):
   name            parameter                                               start        value      s.u.   change
@@ -442,13 +476,13 @@ edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 5
   intensity       experiment.background[14].intensity                    2.00e3      2.257e3   0.032e3   13.0% ↑
   intensity       experiment.background[15].intensity                    2.40e3      2.323e3   0.035e3   3.3% ↓
   intensity       experiment.background[16].intensity                    2.00e3      2.233e3   0.043e3   11.8% ↑
-  intensity       experiment.background[17].intensity                    2.07e3      2.041e3   0.040e3   1.5% ↓
+  intensity       experiment.background[17].intensity                    2.07e3       2.04e3    0.04e3   1.5% ↓
   intensity       experiment.background[18].intensity                    2.16e3      2.062e3   0.036e3   4.5% ↓
   intensity       experiment.background[19].intensity                    2.14e3      2.191e3   0.034e3   2.3% ↑
   intensity       experiment.background[1].intensity                     1.33e3      1.332e3   0.084e3   0.1% ↑
   intensity       experiment.background[20].intensity                    3.03e3      2.905e3   0.042e3   4.2% ↓
   intensity       experiment.background[21].intensity                    2.41e3      2.517e3   0.035e3   4.3% ↑
-  intensity       experiment.background[22].intensity                    2.81e3      3.029e3   0.040e3   7.8% ↑
+  intensity       experiment.background[22].intensity                    2.81e3       3.02e3    0.04e3   7.8% ↑
   intensity       experiment.background[23].intensity                    2.64e3      2.827e3   0.047e3   7.0% ↑
   intensity       experiment.background[24].intensity                    3.03e3      3.271e3   0.057e3   7.9% ↑
   intensity       experiment.background[25].intensity                    2.84e3      3.243e3   0.072e3   14.2% ↑
@@ -508,9 +542,9 @@ In `structures/YAlO3.edi`, add `()` after the values the stage frees:
 ```edi
 Y Y 0.01211() 0.55405() 0.25 c 4 1 0.5() Biso
 Al Al 0 0 0 a 4 1 0.5() Biso
+O1 O -0.08396() -0.02189() 0.25 c 4 1 0.5() Biso
+O2 O 0.20451() 0.29518() 0.04448() d 8 1 0.5() Biso
 ```
-
-The same for every other row (2 more).
 
 === "Standalone executable"
 
@@ -528,19 +562,19 @@ The same for every other row (2 more).
 edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 56 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                         6.46        24.74
-      1      0.310      4.06         9.77   60.5% ↓
-      2      0.334      4.06         9.77   
-      3      0.374      4.06         9.77   
-      4      0.409      4.06         9.76   
-      5      0.457      4.06         9.76   0.1% ↓
-      6      0.499      4.05         9.74   0.1% ↓
-      7      0.521      4.05         9.73   0.1% ↓
-      8      0.544      4.05         9.73   
-      9      0.566      4.05         9.73   
-     10      0.594      4.05         9.73   
-     11      0.617      4.05         9.73   
-     12      0.758      4.05         9.73   
-  done · converged · 12 iters · reduced χ² 9.73 · Rwp 4.05 % · 0.78 s
+      1      0.279      4.06         9.77   60.5% ↓
+      2      0.304      4.06         9.77   
+      3      0.322      4.06         9.77   
+      4      0.341      4.06         9.76   
+      5      0.359      4.06         9.76   0.1% ↓
+      6      0.385      4.05         9.74   0.1% ↓
+      7      0.404      4.05         9.73   0.1% ↓
+      8      0.438      4.05         9.73   
+      9      0.458      4.05         9.73   
+     10      0.477      4.05         9.73   
+     11      0.496      4.05         9.73   
+     12      0.633      4.05         9.73   
+  done · converged · 12 iters · reduced χ² 9.73 · Rwp 4.05 % · 0.66 s
 
   refined parameters (56 free):
   name            parameter                                               start        value      s.u.   change
@@ -548,7 +582,7 @@ edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 5
   intensity       experiment.background[11].intensity                    1.99e3      2.053e3   0.017e3   3.0% ↑
   intensity       experiment.background[12].intensity                    1.96e3      1.983e3   0.018e3   1.0% ↑
   intensity       experiment.background[13].intensity                    2.14e3      2.150e3   0.018e3   0.5% ↑
-  intensity       experiment.background[14].intensity                    2.26e3      2.165e3   0.020e3   4.1% ↓
+  intensity       experiment.background[14].intensity                    2.26e3       2.16e3    0.02e3   4.1% ↓
   intensity       experiment.background[15].intensity                    2.32e3      2.150e3   0.023e3   7.4% ↓
   intensity       experiment.background[16].intensity                    2.23e3      2.076e3   0.028e3   7.0% ↓
   intensity       experiment.background[17].intensity                    2.04e3      1.960e3   0.026e3   4.0% ↓
@@ -567,7 +601,7 @@ edi fit: project pd-neut-cwl_yalo3-al2o3-spodi, 2959 pts fitted / 2959 loaded, 5
   intensity       experiment.background[5].intensity                     2.03e3      2.030e3   0.018e3   0.2% ↑
   intensity       experiment.background[6].intensity                     2.07e3      2.062e3   0.017e3   0.2% ↓
   intensity       experiment.background[7].intensity                     2.09e3      2.106e3   0.018e3   0.9% ↑
-  intensity       experiment.background[8].intensity                     2.02e3      2.168e3   0.020e3   7.5% ↑
+  intensity       experiment.background[8].intensity                     2.02e3       2.16e3    0.02e3   7.5% ↑
   intensity       experiment.background[9].intensity                     1.82e3      2.000e3   0.023e3   9.7% ↑
   2θ offset, deg  experiment.instrument.calib_twotheta_offset            0.0107       0.0044    0.0017   58.6% ↓
   scale           experiment.linked_structures[Al2O3].scale                0.21        0.186     0.012   11.3% ↓

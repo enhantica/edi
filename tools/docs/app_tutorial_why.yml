@@ -47,10 +47,16 @@ pd-neut-cwl_y2o3-spodi:
 pd-neut-tof_si-sepd:
   background-estimate: An estimate of 14 points under the peaks gives the fit a good starting background.
 pd-neut-cwl_cosio-d20_scan-213f:
+  constraint:biso_Co2: The two Co sites scatter alike, so the pattern cannot tell their displacements apart.
   fitting-mode:single: The template pattern is fitted alone first, so the scan starts from a good model.
   fitting-mode:sequential: Back to the scan, each pattern fitted in turn from the one before it.
   descent: With the default, Fast descent and ladder, the scan can stop in a shallower minimum of the peak widths.
 pd-xray-cwl_latp-bm01_scan:
+  constraint:z_Al1: Al replaces some Ti on one site, so the two share its height.
+  constraint:b_Al1: Al and Ti share one site, so they share its displacement.
+  constraint:b2_P1: The AlPO₄ phase is small, so all its atoms share one displacement.
+  constraint:b2_O1: The AlPO₄ phase is small, so all its atoms share one displacement.
+  constraint:b2_O2: The AlPO₄ phase is small, so all its atoms share one displacement.
   fitting-mode:single: The template pattern is fitted alone first, so the scan starts from a good model.
   fitting-mode:sequential: Back to the scan, each pattern fitted in turn from the one before it.
 sc-neut-cwl_cosio-heidi:

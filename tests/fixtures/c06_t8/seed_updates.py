@@ -7,14 +7,16 @@ import zipfile
 from pathlib import Path
 
 from tests.fixtures.c06_t8.variant_name_projection import restore_variant_name
+from tests.fixtures.path_keys import repository_key
 
 HERE = Path(__file__).parent
 ROOT = HERE.parents[2]
 
 
 def previous_bytes(name, data):
+    name = repository_key(name)
     data = restore_variant_name(name, data)
-    row = json.loads((HERE / 'seed-updates.json').read_text())['files'].get(str(name))
+    row = json.loads((HERE / 'seed-updates.json').read_text())['files'].get(name)
     if row is None:
         return data
     assert hashlib.sha256(data).hexdigest() == row['current_sha256'], (
@@ -24,7 +26,7 @@ def previous_bytes(name, data):
         history = json.loads(
             (ROOT / 'tests/fixtures/example_catalogue/retention-adaptations.json').read_text()
         )['files']
-        old = history[str(name)]['after'].encode()
+        old = history[name]['after'].encode()
     elif row['kind'] == 'default-stop-rule-set':
         assert row['effective_rules'] == ['chi_square_change', 'shift_su'], (
             'The default rule set retains the exact effective meaning of the legacy Shift/s.u. '

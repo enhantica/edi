@@ -4735,6 +4735,9 @@ struct LeastSquaresFitResult final : FitResultBase {
 // diverge by construction).
 std::vector<std::string> descent_ids();
 std::string default_descent();
+// Whether a fit under this descent ran the two trials: Auto on a single or joint fit, or the
+// two-trial descent named outright.
+bool runs_two_trials(const std::string& descent);
 // The current id for a descent id: the default's former id maps to its current one, any other
 // id comes back unchanged.
 std::string current_descent_id(const std::string& id);

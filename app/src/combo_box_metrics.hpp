@@ -16,7 +16,6 @@ class ComboBoxMetrics : public QObject {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(QObject* comboBox READ comboBox WRITE setComboBox NOTIFY comboBoxChanged)
-    Q_PROPERTY(QVariant model MEMBER model_ NOTIFY modelChanged)
     Q_PROPERTY(int count MEMBER count_ NOTIFY countChanged)
     Q_PROPERTY(QString textRole MEMBER text_role_ NOTIFY textRoleChanged)
     Q_PROPERTY(QString displayText MEMBER display_text_ NOTIFY displayTextChanged)
@@ -33,7 +32,6 @@ class ComboBoxMetrics : public QObject {
 
    signals:
     void comboBoxChanged();
-    void modelChanged();
     void countChanged();
     void textRoleChanged();
     void displayTextChanged();
@@ -43,13 +41,13 @@ class ComboBoxMetrics : public QObject {
 
    private:
     int sampledCount() const;
-    void observeModel();
+    Q_SLOT void observeModel();
     void invalidate();
     void schedule();
     void refresh();
 
     QPointer<QObject> control_;
-    QVariant model_;
+    QMetaObject::Connection control_model_connection_;
     QPointer<QAbstractItemModel> model_object_;
     int count_ = 0;
     QString text_role_, display_text_;

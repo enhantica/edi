@@ -6,6 +6,15 @@ template: gui.html
 
 The same calculation as the Python and Command line tutorials, in the app: open the example from EasyDiffraction's collection with **Project → Examples** and look at the pattern edi calculates from its model.
 
+Calculate the single-crystal neutron reflections of the pyrochlore Tb₂Ti₂O₇ on HEiDi at MLZ
+without any measured data. The structure, the wavelength and the extinction are in the project,
+and edi calculates every reflection up to the project's sin θ/λ limit.
+
+The project is the catalogue case `sc-neut-cwl_tb2ti2o7-heidi_simulation`: the files the command
+line calculates with
+`python -m edi calc docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/project` and the app
+opens from its Examples.
+
 ## Open the example
 
 Press **Start** on Home, search **Examples** on **Project** for **sc-neut-cwl_tb2ti2o7-heidi_simulation** and open it.

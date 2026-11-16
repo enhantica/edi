@@ -6,6 +6,14 @@ template: gui.html
 
 The same calculation as the Python and Command line tutorials, in the app: open the example from EasyDiffraction's collection with **Project → Examples** and look at the pattern edi calculates from its model.
 
+Calculate a constant-wavelength neutron pattern of the cubic perovskite La₀.₅Ba₀.₅CoO₃ without
+any measured data. The structure, the HRPT instrument, the peak profile and the background are in
+the project, and edi calculates the pattern over the project's 2θ range.
+
+The project is the catalogue case `pd-neut-cwl_lbco_simulation`: the files the command line fits
+with `python -m edi fit docs/user/cli/pd-neut-cwl_lbco_simulation/project` and the app opens from
+its Examples.
+
 ## Open the example
 
 Press **Start** on Home, search **Examples** on **Project** for **pd-neut-cwl_lbco_simulation** and open it.

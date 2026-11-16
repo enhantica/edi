@@ -64,3 +64,7 @@ Unlike `fit`, `calc` defaults to machine output. Ask for a readable summary with
 ## Prepare a document
 
 After keeping the calculated project, use [the report command](reports.md) to save an HTML report. Calculating a project and rendering its report are separate actions.
+
+
+`python -m edi calc PROJECT --threads 4` selects threads per calculation for this invocation.
+Use `--threads auto` (the default) for the engine's normal policy; the choice is not saved in the project.

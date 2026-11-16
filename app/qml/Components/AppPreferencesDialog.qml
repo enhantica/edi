@@ -85,6 +85,7 @@ AppDialog {
         readonly property real iconSize: EaStyle.Sizes.fontPixelSize * 0.8
 
         width: dialog.columnWidth
+        height: dialog.rowHeight
         // The text stops short of the minus and plus, so a press on them reaches the spin box, which steps the
         // value and repeats while held, instead of the text field selecting its text.
         rightPadding: EaStyle.Sizes.fontPixelSize * 3.5
@@ -151,14 +152,21 @@ AppDialog {
     component TabRow: Row {
         spacing: dialog.columnSpacing
     }
-    // A label with its control (and a strip, if any) under it, as one row of a column.
+    // A label with its control (and a strip, if any) under it, as one row of a column. Every field has the same gap
+    // between its label and its control, so rows side by side line up; a strip keeps its own gap below the control.
     component Field: Column {
         property alias label: fieldLabel.text
+        default property alias content: body.data
 
         width: dialog.columnWidth
 
         FieldLabel {
             id: fieldLabel
+        }
+        Column {
+            id: body
+            width: parent.width
+            spacing: dialog.stripSpacing
         }
     }
 
@@ -277,50 +285,60 @@ AppDialog {
         // A tab shows at once, without the swipe's slide.
         Component.onCompleted: (pages.contentItem as ListView).highlightMoveDuration = 0
 
-        // Appearance: the theme, then the structure view's arrows, then the charts' behaviour and colours. Rows with
-        // colour strips pair up.
+        // Appearance: General and the structure view's arrows side by side, then the charts' behaviour and colours.
+        // Rows with colour strips pair up.
         TabColumn {
             width: dialog.contentRowWidth
 
-            GroupTitle {
-                icon: "adjust"
-                text: qsTr("General")
-            }
             TabRow {
-                Field {
-                    label: qsTr("Theme")
-                    FieldBox {
-                        id: themeBox
+                TabColumn {
+                    GroupTitle {
+                        icon: "adjust"
+                        text: qsTr("General")
+                    }
+                    Field {
+                        label: qsTr("Theme")
+                        FieldBox {
+                            id: themeBox
 
-                        objectName: "preferences.theme"
-                        model: [qsTr("Light"), qsTr("Dark"), qsTr("System")]
-                        currentIndex: EaStyle.Colors.theme === EaStyle.Colors.DarkTheme ? 1 : EaStyle.Colors.theme === EaStyle.Colors.SystemTheme ? 2 : 0
-                        onActivated: index => ApplicationInfo.preferenceActivated(index, 0)
+                            objectName: "preferences.theme"
+                            model: [qsTr("Light"), qsTr("Dark"), qsTr("System")]
+                            currentIndex: EaStyle.Colors.theme === EaStyle.Colors.DarkTheme ? 1 : EaStyle.Colors.theme === EaStyle.Colors.SystemTheme ? 2 : 0
+                            onActivated: index => ApplicationInfo.preferenceActivated(index, 0)
+                        }
+                    }
+                    Field {
+                        label: qsTr("Intro animation")
+                        FieldBox {
+                            objectName: "preferences.introAnimation"
+                            model: [qsTr("On"), qsTr("Off")]
+                            currentIndex: Preferences.introAnimation ? 0 : 1
+                            onActivated: index => Preferences.introAnimation = index === 0
+                            ToolTip.text: qsTr("The animation that shows the logo when the app starts")
+                        }
                     }
                 }
-            }
-            GroupTitle {
-                first: false
-                icon: "cubes"
-                text: qsTr("Structure view")
-            }
-            TabRow {
-                Field {
-                    label: qsTr("Magnetic moment arrows")
-                    spacing: dialog.stripSpacing
-                    FieldBox {
-                        readonly property var schemes: ["atom", "greyed", "single"]
-
-                        objectName: "preferences.momentColours"
-                        model: [qsTr("Atom colour"), qsTr("Greyed atom colour"), qsTr("Single grey")]
-                        currentIndex: Math.max(0, schemes.indexOf(Preferences.momentColours))
-                        onActivated: index => Preferences.momentColours = schemes[index]
-                        ToolTip.text: qsTr("How the structure view colours the magnetic moment arrows")
+                TabColumn {
+                    GroupTitle {
+                        icon: "cubes"
+                        text: qsTr("Structure view")
                     }
-                    PaletteStrip {
-                        objectName: "preferences.momentColourStrip"
-                        width: dialog.columnWidth
-                        colours: ApplicationInfo.momentColourSamples(Preferences.momentColours, EaStyle.Colors.isDarkPalette)
+                    Field {
+                        label: qsTr("Magnetic moment arrows")
+                        FieldBox {
+                            readonly property var schemes: ["atom", "greyed", "single"]
+
+                            objectName: "preferences.momentColours"
+                            model: [qsTr("Atom colour"), qsTr("Greyed atom colour"), qsTr("Single grey")]
+                            currentIndex: Math.max(0, schemes.indexOf(Preferences.momentColours))
+                            onActivated: index => Preferences.momentColours = schemes[index]
+                            ToolTip.text: qsTr("How the structure view colours the magnetic moment arrows")
+                        }
+                        PaletteStrip {
+                            objectName: "preferences.momentColourStrip"
+                            width: dialog.columnWidth
+                            colours: ApplicationInfo.momentColourSamples(Preferences.momentColours, EaStyle.Colors.isDarkPalette)
+                        }
                     }
                 }
             }
@@ -346,7 +364,6 @@ AppDialog {
                 // The figure palette of experiments and structures, the Pattern and Stacked views alike (ADR-0084).
                 Field {
                     label: qsTr("Palette")
-                    spacing: dialog.stripSpacing
                     FieldBox {
                         readonly property var schemes: ApplicationInfo.colourSchemes
 
@@ -365,7 +382,6 @@ AppDialog {
                 // The Map view's colour map, also chosen on the Map's toolbar.
                 Field {
                     label: qsTr("Map colours")
-                    spacing: dialog.stripSpacing
                     FieldBox {
                         id: mapBox
 
@@ -608,7 +624,7 @@ AppDialog {
                                     delegate: TagChip {
                                         required property var modelData
                                         label: modelData.label
-                                        icon: modelData.icon
+                                        icon: modelData.glyph
                                         ink: EaStyle.Colors.isDarkPalette ? modelData.dark : modelData.light
                                     }
                                 }

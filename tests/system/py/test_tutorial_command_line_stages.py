@@ -1,117 +1,21 @@
 """Owner 4cf15ae54: execute visible Command line stages against Python and regression pins."""
 
-import json
 import os
 import re
 import shutil
 import subprocess
-import sys
-from itertools import accumulate
 
 import pytest
 
-from tests.fixtures.tutorial_cases.command_line import actions, edit_project, visible_flag_edits
-from tests.fixtures.tutorial_cases.contract import ROOT, interfaces_for
-from tests.fixtures.tutorial_cases.pins import compare_regression_pin, machine_values, pinned_start
-from tests.fixtures.tutorial_cases.stages import group, observe
+from tests.fixtures.tutorial_cases.command_line import (
+    actions,
+    compare_staged_regression_pin,
+    delete_loop,
+    edit_project,
+    visible_flag_edits,
+)
+from tests.fixtures.tutorial_cases.contract import ROOT
 from tests.integration.py.test_tutorial_empty_project import api
-from tests.integration.py.test_tutorial_fit_stages import FITTING, source
-
-
-@pytest.mark.parametrize('case', [case for case in FITTING if 'cli' in interfaces_for(case)])
-def test_visible_command_line_edits_and_fits_match_python_stages_and_final_pin(case, tmp_path):  # noqa: PLR0914 - observable whole workflow, no hidden fit helper
-    page = ROOT / 'website/surfaces/docs/cli/tutorials/cases' / (case + '.md')
-    assert page.is_file(), (
-        'Gate 5: the executable Command line lesson is a local user page: ' + case
-    )
-    text = page.read_text()
-    steps = actions(text)
-    fits = [step for step in steps if step[0] == 'fit']
-    assert len(fits) >= 2 and any(
-        step[0] == 'download' for step in steps[: steps.index(fits[0])]
-    ), 'Gate 5: the visible lesson gets its case and runs successive actual edi fit stages'
-    assert any(step[0] in {'edit', 'free-rows'} and '()' in step[2] for step in steps), (
-        'Gate 5: the Command line lesson teaches selecting free parameters with empty brackets'
-    )
-    if case == 'pd-neut-cwl_lbco-hrpt':
-        explanation = re.sub(r'\s+', ' ', text.casefold())
-        assert 'starting project' in explanation and re.search(
-            r'\bbuilding (?:a |the )?project by hand (?:on|from) the command line is planned\b',
-            explanation,
-        ), (
-            'Gate 5: LBCO explains that it loads a starting project and that building the '
-            'project by hand on the command line is planned'
-        )
-    quantities = pinned_start(case)
-    first_arguments = fits[0][1]
-    assert first_arguments and not first_arguments[0].startswith('-'), (
-        'Gate 5: each visible fit names its project'
-    )
-    project = tmp_path / first_arguments[0]
-    assert project.resolve().is_relative_to(tmp_path), (
-        'Gate 5: tutorial commands stay in their fresh work folder'
-    )
-    shutil.copytree(ROOT / 'docs/user/cli' / case / 'project', project)
-    expected = (
-        observe(source(case, 'script'))['cycles'] if 'python' in interfaces_for(case) else None
-    )
-    totals = list(accumulate(cycle['constraints'] for cycle in expected)) if expected else None
-    actual = []
-    final = None
-    for operation, argument, body in steps:
-        if operation == 'edit':
-            edit_project(project, argument, body)
-        elif operation in {'clear-free', 'free-rows'}:
-            visible_flag_edits(project, argument, body if operation == 'free-rows' else None)
-        elif operation in {'fit', 'calc'}:
-            if operation == 'fit':
-                loaded = api().Project.load(project)
-                parameters = json.loads(
-                    loaded.report.model(excluded=['data', 'reflections']).to_json()
-                )['parameters']
-                active = sorted({group(row['unique_name']) for row in parameters if row['free']})
-                actual.append({'active': active, 'constraints': len(loaded.analysis.constraints)})
-            # Report selection only changes presentation. Preserve every scientific option
-            # and execute exactly one real fit per displayed stage, retaining full precision.
-            arguments = list(argument)
-            assert (tmp_path / arguments[0]).resolve() == project.resolve(), (
-                'Gate 5: every stage fits the same progressively edited project'
-            )
-            arguments[0] = str(project.resolve())
-            for option in ['--report', '--verbosity']:
-                if option in arguments:
-                    at = arguments.index(option)
-                    del arguments[at : at + 2]
-            run = subprocess.run(
-                [
-                    sys.executable,
-                    '-m',
-                    'edi',
-                    operation,
-                    *arguments,
-                    '--report',
-                    'machine',
-                    '--verbosity',
-                    'full',
-                ],
-                cwd=tmp_path,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=3600,
-                env={**os.environ, 'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1'},
-            )
-            assert run.returncode == 0, (
-                'Gate 5: every visible stage executes successfully: ' + run.stderr
-            )
-            if operation == 'fit':
-                final = run.stdout
-    if expected is not None:
-        assert actual == [
-            {'active': cycle['active'], 'constraints': total}
-            for cycle, total in zip(expected, totals, strict=True)
-        ], 'Gate 5: declared Command line and Python lessons share their exact stage sequence'
-    compare_regression_pin(machine_values(final), quantities)
 
 
 @pytest.mark.parametrize(
@@ -231,4 +135,165 @@ def test_visible_relation_edits_can_add_and_update_alias_and_constraint_loops(tm
     edit_project(tmp_path, 'analysis.edi', 'Ba "Ba = 2*La"\n')
     assert 'Ba "Ba = 2*La"' in path.read_text() and 'Ba "Ba = La"' not in path.read_text(), (
         'Gate 5: updating a displayed constraint retains its identity without duplicating its row'
+    )
+
+
+def test_staged_pin_keeps_outcomes_strict_and_checks_its_own_work_trace():
+    quantities = {
+        'iterations': {'value': 5, 'tol_abs': 0, 'tol_rel': None},
+        'reduced_chi_square': {'value': 1.25, 'tol_abs': 0, 'tol_rel': None},
+        'n_free': {'value': 3, 'tol_abs': 0, 'tol_rel': None},
+    }
+    actual = {
+        'status': 'done',
+        'converged': 'true',
+        'iterations': '1',
+        'iter.1.rwp': '0.125',
+        'reduced_chi_square': '1.25',
+        'n_free': '3',
+    }
+    compare_staged_regression_pin(actual, quantities)
+    for damage in [
+        {'reduced_chi_square': '1.26'},
+        {'n_free': '4'},
+        {'converged': 'false'},
+        {'iterations': '2'},
+        {'iter.2.rwp': '0.12'},
+    ]:
+        with pytest.raises(AssertionError, match=r'Gate [25]:'):
+            compare_staged_regression_pin({**actual, **damage}, quantities)
+
+
+def test_visible_loop_deletion_is_read_from_the_actual_taurine_instruction():
+    page = ROOT / 'website/surfaces/docs/cli/tutorials/cases/sc-neut-tof_taurine-senju.md'
+    operations = actions(page.read_text())
+    deletions = [step for step in operations if step[0] == 'delete-loop']
+    assert len(deletions) == 1 and deletions[0][1] == 'structures/taurine.edi', (
+        'Gate 5: the published deletion names exactly its real anisotropic loop and file'
+    )
+    assert deletions[0][2].splitlines() == [
+        '_atom_site_aniso.id',
+        '_atom_site_aniso.adp_11',
+        '_atom_site_aniso.adp_22',
+        '_atom_site_aniso.adp_33',
+        '_atom_site_aniso.adp_12',
+        '_atom_site_aniso.adp_13',
+        '_atom_site_aniso.adp_23',
+    ], 'Gate 5: the written deletion retains the complete actual tensor column declaration'
+
+
+@pytest.mark.parametrize('newline', ['\n', '\r\n'])
+def test_visible_loop_deletion_preserves_every_other_original_byte(tmp_path, newline):
+    before = 'data_sample\n_cell.length_a 3.14159\n# retained prefix β\n'
+    loop = 'loop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_11\nS1 0.125\nO1 0.25\n'
+    after = '\n# retained suffix β\nloop_\n_atom_site.id\n_atom_site.fract_z\nS1 0.375\n'
+    path = tmp_path / 'sample.edi'
+    path.write_bytes((before + loop + after).replace('\n', newline).encode())
+    delete_loop(tmp_path, 'sample.edi', '_atom_site_aniso.id\n_atom_site_aniso.adp_11\n')
+    assert path.read_bytes() == (before + after).replace('\n', newline).encode(), (
+        'Gate 5: deletion removes only its named loop; all other bytes and line endings survive'
+    )
+
+
+@pytest.mark.parametrize(
+    'damage', ['partial', 'missing', 'duplicate', 'row', 'outside', 'symlink']
+)
+def test_visible_loop_deletion_refuses_ambiguous_or_escaping_targets(tmp_path, damage):
+    project = tmp_path / 'project'
+    project.mkdir()
+    text = 'data_sample\nloop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_11\nS1 0.125\n'
+    path = project / 'sample.edi'
+    path.write_text(text)
+    filename = 'sample.edi'
+    tags = '_atom_site_aniso.id\n_atom_site_aniso.adp_11\n'
+    if damage == 'partial':
+        tags = '_atom_site_aniso.id\n'
+    elif damage == 'missing':
+        tags = '_background.id\n_background.intensity\n'
+    elif damage == 'duplicate':
+        path.write_text(text + text.removeprefix('data_sample\n'))
+    elif damage == 'row':
+        tags += 'S1 0.125\n'
+    elif damage == 'outside':
+        filename = '../sample.edi'
+    elif damage == 'symlink':
+        path.unlink()
+        external = tmp_path / 'outside'
+        external.mkdir()
+        (external / 'sample.edi').write_text(text)
+        alias = project / 'external'
+        if os.name == 'nt':
+            subprocess.run(
+                ['cmd.exe', '/d', '/c', 'mklink', '/J', str(alias), str(external)],
+                check=True,
+                capture_output=True,
+            )
+        else:
+            alias.symlink_to(external, target_is_directory=True)
+        filename = 'external/sample.edi'
+        path = alias / 'sample.edi'
+    before = path.read_bytes()
+    with pytest.raises(AssertionError, match='Gate 5:'):
+        delete_loop(project, filename, tags)
+    assert path.read_bytes() == before, (
+        'Gate 5: an inadmissible loop deletion leaves the original target unchanged'
+    )
+
+
+def test_literal_new_loop_keeps_the_declared_schema_and_rows(tmp_path):
+    path = tmp_path / 'sample.edi'
+    path.write_text('data_sample\n_cell.length_a 3.14159\n')
+    edit_project(
+        tmp_path,
+        'sample.edi',
+        'loop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_11\nS1 0.125()\nO1 0.25()\n',
+    )
+    assert (
+        path.read_text().endswith(
+            'loop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_11\nS1 0.125()\nO1 0.25()\n'
+        )
+        and '_cell.length_a 3.14159\n' in path.read_text()
+    ), 'Gate 5: an explicit complete loop can be created without inventing columns or values'
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'row-width',
+        'duplicate-key',
+        'mixed',
+        'no-key',
+        'duplicate-tag',
+        'existing-category',
+        'empty',
+        'placeholder',
+    ],
+)
+def test_literal_loop_creation_refuses_incomplete_or_ambiguous_declarations(tmp_path, damage):
+    path = tmp_path / 'sample.edi'
+    path.write_text('data_sample\n_cell.length_a 3.14159\n')
+    excerpt = 'loop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_11\nS1 0.125()\n'
+    if damage == 'row-width':
+        excerpt = excerpt.replace('S1 0.125()', 'S1')
+    elif damage == 'duplicate-key':
+        excerpt += 'S1 0.25()\n'
+    elif damage == 'mixed':
+        excerpt = excerpt.replace('_atom_site_aniso.adp_11', '_background.intensity')
+    elif damage == 'no-key':
+        excerpt = excerpt.replace('_atom_site_aniso.id\n', '').replace('S1 ', '')
+    elif damage == 'duplicate-tag':
+        excerpt = excerpt.replace('_atom_site_aniso.adp_11', '_atom_site_aniso.id')
+    elif damage == 'existing-category':
+        path.write_text(
+            path.read_text() + 'loop_\n_atom_site_aniso.id\n_atom_site_aniso.adp_22\nS1 0.25\n'
+        )
+    elif damage == 'empty':
+        excerpt = excerpt.replace('S1 0.125()\n', '')
+    else:
+        excerpt = excerpt.replace('0.125()', '...')
+    before = path.read_bytes()
+    with pytest.raises(AssertionError, match='Gate 5:'):
+        edit_project(tmp_path, 'sample.edi', excerpt)
+    assert path.read_bytes() == before, (
+        'Gate 5: an inadmissible new loop leaves its file unchanged'
     )

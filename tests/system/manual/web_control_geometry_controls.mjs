@@ -73,3 +73,54 @@ await assert.rejects(waitControlGeometry(async()=>{throw Error('2 visible items 
 await assert.rejects(waitControlGeometry(async()=>{throw Error('native hook unavailable');},async()=>{},dialogName),
   /native hook unavailable/,'Native hook failures must propagate rather than invent dialog readiness');
 console.log('dialog readiness and passive-result protocol controls green; no real dialog run claimed');
+
+const {waitForSaveSettled,projectFailureRecorder,projectDialogExpression}=await import('./web_project_save.mjs');
+const saveButton={...actual,objectName:'appBar.button.save'};
+const saveState=(shown=[],button=saveButton)=>({controls:Object.fromEntries([
+  'project.saveChoice','saveAs.zip','saveAs.accept','webNotice.text','appBar.button.save',
+  'unsavedChanges.title','unsavedChanges.discard','webStorageWarning.text','save.error',
+].map(name=>[name,name==='appBar.button.save'?{present:true,item:button}:
+  shown.includes(name)?{present:true,item:{...actual,objectName:name}}:{present:false}]))});
+let observedSaveFrames=0;
+const saveStates=[saveState(['saveAs.accept']),saveState(['webNotice.text']),
+  saveState([],{...saveButton,enabled:false}),saveState()];
+await waitForSaveSettled(async()=>saveStates.shift(),async()=>observedSaveFrames++,saveButton);
+assert.equal(observedSaveFrames,3,
+  'A completed download must still wait for the closing dialog, notice and native Save readiness');
+for(const name of ['project.saveChoice','saveAs.zip','saveAs.accept','webNotice.text',
+  'unsavedChanges.title','unsavedChanges.discard','webStorageWarning.text','save.error'])
+  await assert.rejects(waitForSaveSettled(async()=>saveState([name]),async()=>{},saveButton,{timeoutMs:0}),
+    /previous save must visibly finish/,'Any visible save or guard popup blocks the next guarded action');
+await waitForSaveSettled(async()=>saveState([],{...saveButton,enabled:false}),async()=>{},
+  {...saveButton,enabled:false});
+for(const state of [saveState([],{...saveButton,enabled:false}),saveState([],{...saveButton,visible:false}),
+  saveState([],{...saveButton,objectName:'another.save'}),{controls:{}}])
+  await assert.rejects(waitForSaveSettled(async()=>state,async()=>{},saveButton,{timeoutMs:0}),
+    /previous save|native observation|native controls/,'Stale, hidden and retargeted Save states cannot release a guarded action');
+await assert.rejects(waitForSaveSettled(async()=>{throw Error('ambiguous native geometry');},async()=>{},saveButton),
+  /ambiguous native geometry/,'Native observation errors must propagate without invented save completion');
+
+for(const failed of ['Page.captureScreenshot','Accessibility.getFullAXTree',null]) {
+  const artifacts=new Map(),requests=[];
+  const record=projectFailureRecorder({output:'unused',mode:'control',write:async(path,data)=>artifacts.set(path,data),
+    send:async(method,params)=>{
+      requests.push(method);
+      if(method===failed)throw Error('diagnostic route failed');
+      if(method==='Page.captureScreenshot')return {data:Buffer.from('actual image bytes').toString('base64')};
+      if(method==='Accessibility.getFullAXTree')return {nodes:[]};
+      return {result:{value:params.expression===projectDialogExpression?saveState(['unsavedChanges.discard']):[]}};
+    }});
+  const first=record(Error('event deadline: Page.fileChooserOpened'));
+  await Promise.all([first,record(Error('later timeout'))]);
+  const state=JSON.parse(artifacts.get('unused/control-failure-dialogs.json'));
+  assert.equal(state.trigger,'event deadline: Page.fileChooserOpened',
+    'The first deadline retains the dialog state before a later wait can mask its cause');
+  assert(state.dialogs.controls['unsavedChanges.discard'].present,
+    'Deadline artifacts retain the actual guard observation rather than infer guard absence');
+  assert.equal(requests.length,4,'Concurrent deadline reports share one independent capture per evidence channel');
+  if(failed)assert.equal(state[(failed==='Page.captureScreenshot'?'screenshot':'accessibility')+'Error'],'diagnostic route failed',
+    'An unavailable diagnostic channel is recorded without losing the remaining failure artifacts');
+  if(failed!=='Page.captureScreenshot')assert(artifacts.has('unused/control-failure.png'),
+    'A failed accessibility request cannot prevent the available deadline screenshot artifact');
+}
+console.log('save settling and deadline screenshot/dialog evidence controls green; actual browser replay still required');

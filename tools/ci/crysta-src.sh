@@ -14,7 +14,7 @@ SRC="$ROOT/build/crysta-src"
 ARCHIVE="${CRYSTA_SDK_ARCHIVES:-$ROOT/build/crysta-sdk-archives}/crysta-src-$SHA.tar.gz"
 rm -rf "$SRC" && mkdir -p "$SRC"
 if [ -f "$ARCHIVE" ]; then
-  tar -xzf "$ARCHIVE" -C "$SRC"
+  python3 "$ROOT/tools/ci/crysta_source_archive.py" extract "$ARCHIVE" "$SRC"
 elif [ -n "${CRYSTA_SRC:-}" ] && git -C "$CRYSTA_SRC" cat-file -e "${SHA}^{commit}" 2>/dev/null; then
   git -C "$CRYSTA_SRC" archive "$SHA" | tar -x -C "$SRC"
   python3 "$ROOT/tools/ci/crysta_source_receipt.py" "$CRYSTA_SRC" "$SHA" "$SRC/runner-source-objects.json"

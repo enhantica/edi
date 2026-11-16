@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING, Any
 import edi
 import edi.__main__ as cli
 
+from tests.fixtures.cli_performance.table_assertions import cells, table_rows, terminal_lines
+
 if TYPE_CHECKING:
     import pytest
 
@@ -49,26 +51,7 @@ class _Clock:
 
 
 def _terminal_visible_lines(stream: str) -> list[str]:
-    """Replay CR/LF column semantics and return each completed visible row."""
-    row: list[str] = []
-    cursor = 0
-    completed: list[str] = []
-    for character in stream:
-        if character == '\r':
-            cursor = 0
-        elif character == '\n':
-            completed.append(''.join(row).rstrip())
-            row = []
-            cursor = 0
-        else:
-            if cursor == len(row):
-                row.append(character)
-            else:
-                row[cursor] = character
-            cursor += 1
-    if row:
-        completed.append(''.join(row).rstrip())
-    return completed
+    return terminal_lines(stream)
 
 
 def _scan_events() -> tuple[SimpleNamespace, list[SimpleNamespace]]:
@@ -119,6 +102,7 @@ class _FakeAnalysis:
 
 class _FakeProject:
     _scan_declared = True
+    fitting_mode = 'sequential'
 
     def __init__(self) -> None:
         self.analysis = _FakeAnalysis()
@@ -200,11 +184,12 @@ def _read_result_rows(project_dir: Path) -> list[dict[str, str]]:
 
 def _assert_failure_count_without_file_list(lines, rows):
     failures = sum(row['fit_result.success'].lower() != 'true' for row in rows)
-    assert f'{failures} failed' in lines[-1], (
-        ' summary must retain the complete failure count, including resumed rows'
+    final = cells(table_rows('\n'.join(lines))[-1])
+    assert (final['ok'], final['failed']) == (str(len(rows) - failures), str(failures)), (
+        'The final table row retains complete successful and failed counts, including resumed rows'
     )
-    assert not any(line.startswith('failed ·') for line in lines), (
-        ' scan summary must omit the per-file failed list'
+    assert not any(line.startswith(('failed ·', 'scan ·')) for line in lines), (
+        'The final table replaces the separate summary and failed-file list'
     )
 
 
@@ -297,34 +282,36 @@ def test_unknown_total_never_fabricates_percentage_or_eta() -> None:
     )
 
 
-def test_non_tty_emits_one_line_per_file_without_carriage_returns(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    output, _ = _run_fake_human(
-        monkeypatch,
-        verbosity=edi.VerbosityEnum.COMPACT,
-        tty=False,
+def test_non_tty_emits_one_line_per_file_without_carriage_returns(monkeypatch) -> None:
+    output, _ = _run_fake_human(monkeypatch, verbosity=edi.VerbosityEnum.COMPACT, tty=False)
+    assert '\r' not in output, 'Piped progress has no carriage returns'
+    progress = table_rows(output)
+    assert len(progress) == 3, 'Piped progress retains one complete row per completed file'
+    first, second, final = [cells(row) for row in progress]
+    assert (first['count'], first['percent']) == ('1/3', '33.3%'), (
+        'The progress group retains the actual total and first completion fraction'
     )
-    assert '\r' not in output, (
-        ' non-TTY output must contain no carriage returns that pollute captured logs'
+    assert (first['elapsed'], first['left']) == ('1m01s', '2m02s'), (
+        'The injected clock still determines elapsed and current-run ETA exactly'
     )
-    lines = output.splitlines()
-    progress = [line for line in lines if line.startswith('[')]
-    assert len(progress) == 3, (
-        ' non-TTY output must emit exactly one progress line per completed file'
+    assert (second['ok'], second['failed']) == ('1', '1'), (
+        'The failure column updates as soon as its file completes'
     )
-    assert '1/3' in progress[0] and '33%' in progress[0], (
-        ' first line must use the scan preamble N and first completion count'
+    assert final == {
+        'bar': '██████████',
+        'percent': '100.0%',
+        'count': '3/3',
+        'ok': '2',
+        'failed': '1',
+        'elapsed': '5m00s',
+        'left': '',
+        'chi2': '4.81',
+        'range': '3.91-8.44',
+        'file': 'cosio_301K',
+    }, 'The final row replaces the old summary while retaining every independent final fact'
+    assert not any(line.startswith('scan ·') for line in output.splitlines()), (
+        'No duplicate summary follows the complete final row'
     )
-    assert 'elapsed 1m01s' in progress[0] and 'eta 2m02s' in progress[0], (
-        ' elapsed and ETA must come exactly from the injected clock values'
-    )
-    assert '1 ok' in progress[1] and '1 fail' in progress[1], (
-        ' live progress must expose failures as soon as a file fails'
-    )
-    assert lines[-1:] == [
-        'scan · 3 files · 2 converged · 1 failed · reduced χ² 3.91-8.44 · 5m00s',
-    ], ' final progress must freeze before the truthful failure-count summary'
 
 
 def test_partial_resume_uses_current_run_eta_and_counts_prior_failures(
@@ -349,13 +336,16 @@ def test_partial_resume_uses_current_run_eta_and_counts_prior_failures(
 
     rows = _read_result_rows(project_dir)
     lines = output.getvalue().splitlines()
-    progress = [line for line in lines if line.startswith('[')]
+    progress = table_rows('\n'.join(lines))
     assert len(progress) == 2 and '2/3' in progress[0], (
         ' partial resume must emit only the two newly completed files while retaining N'
     )
-    assert 'elapsed 1m00s' in progress[0] and 'eta 1m00s' in progress[0], (
+    assert (cells(progress[0])['elapsed'], cells(progress[0])['left']) == ('1m00s', '1m00s'), (
         ' resume ETA must divide this run elapsed by this run completions, not by the '
         'historical-plus-current completed count'
+    )
+    assert 'Elapsed' in output.getvalue() and 'Elapsed (this run)' not in output.getvalue(), (
+        'The Elapsed heading remains unchanged while its clock still measures only this invocation'
     )
     _assert_failure_count_without_file_list(lines, rows)
 
@@ -381,35 +371,46 @@ def test_completed_noop_resume_reports_all_committed_facts_without_fake_time(
     ), ' completed no-op resume must complete without a new fit'
 
     lines = output.getvalue().splitlines()
-    assert not any(line.startswith('[') for line in lines), (
-        ' completed no-op resume must not fabricate a per-file completion line'
+    progress = table_rows('\n'.join(lines))
+    assert len(progress) == 1, (
+        'A completed resume emits one final summary row without inventing a new completion event'
     )
     _assert_failure_count_without_file_list(lines, seeded)
-    assert 'scan · 3 files · 2 converged · 1 failed' in lines[-1] and 'χ²' in lines[-1], (
-        ' completed no-op summary must aggregate counts and chi-square over committed rows'
+    final = cells(progress[0])
+    assert final['count'] == '3/3' and final['percent'] == '100.0%' and not final['left'], (
+        'A no-op resume retains its complete count and has no remaining-time estimate'
     )
-    assert '0s' not in lines[-1], (
-        ' completed no-op summary must not present zero elapsed as a measured fit time'
+    assert final['elapsed'] == '0s', (
+        'A no-op resume shows this invocation clock, rather than inventing historical elapsed time'
+    )
+    values = [float(row['fit_result.reduced_chi_square']) for row in seeded]
+    assert final['range'] == f'{min(values):.2f}-{max(values):.2f}', (
+        'A no-op resume retains the full independently saved historical metric range'
+    )
+    assert final['file'] == Path(seeded[-1]['file_path']).stem, (
+        'A no-op resume names the actual last completed historical file'
+    )
+    assert final['chi2'] == f'{float(seeded[-1]["fit_result.reduced_chi_square"]):.2f}', (
+        'A no-op resume retains the actual last historical metric rather than a blank cell'
     )
 
 
-def test_tty_updates_in_place_then_freezes_before_summary(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    output, _ = _run_fake_human(
-        monkeypatch,
-        verbosity=edi.VerbosityEnum.COMPACT,
-        tty=True,
+def test_tty_updates_in_place_then_freezes_before_summary(monkeypatch) -> None:
+    output, _ = _run_fake_human(monkeypatch, verbosity=edi.VerbosityEnum.COMPACT, tty=True)
+    assert output.count('\r') >= 2, 'TTY updates retain the actual in-place terminal protocol'
+    visible = _terminal_visible_lines(output)
+    assert len(visible) == 4 and visible[:2] == ['Sequential fit: scan-demo', ''], (
+        'The final screen keeps project title, blank line, aligned headings and one summary row'
     )
-    assert output.count('\r') >= 2, ' TTY progress must update earlier file completions in place'
-    visible_lines = _terminal_visible_lines(output)
-    assert visible_lines == [
-        '[██████████████] · 3/3 · 100% · elapsed 5m00s · 2 ok · 1 fail',
-        'scan · 3 files · 2 converged · 1 failed · reduced χ² 3.91-8.44 · 5m00s',
-    ], (
-        ' TTY output must overwrite the longer penultimate progress row completely, '
-        'freeze the exact 100% row, and then show the truthful failure-count summary'
+    assert [part.split() for part in visible[2].split(' │ ')][:3] == [
+        ['Progress'],
+        ['OK', 'Failed'],
+        ['Elapsed', 'Left'],
+    ], 'The redrawn heading retains the owner-ordered mandatory groups'
+    assert '3/3' in visible[3] and '100.0%' in visible[3], (
+        'The final terminal row freezes the exact total and full progress bar'
     )
+    assert 'scan ·' not in output, 'No separate summary is printed after the final terminal row'
 
 
 def test_scan_iteration_stream_is_suppressed_by_default_and_present_at_full(
@@ -478,8 +479,16 @@ def test_cli_delegates_every_scan_line_to_core_renderers() -> None:
             reachable.add(called)
             pending.append(called)
     run_human = '\n'.join(functions[name] for name in reachable)
-    assert 'edi.scan_progress_line' in run_human and 'edi.scan_summary' in run_human, (
-        ' CLI must delegate scan progress and summary formatting to the core'
+    called = {
+        call.func.attr
+        for call in ast.walk(ast.parse(run_human))
+        if isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
+    }
+    assert {
+        '_scan_progress_heading',
+        '_scan_progress_row',
+    } <= called, (
+        'Both actual progress headings and complete row updates delegate to the shared core'
     )
     forbidden = ('████', 'elapsed ', ' eta ', 'failed ·')
     assert not any(token in run_human for token in forbidden), (

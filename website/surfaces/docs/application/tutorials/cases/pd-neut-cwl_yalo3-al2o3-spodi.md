@@ -6,6 +6,12 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. Its structure and experiment come from EasyDiffraction's collection with **Load ▾ From web…**, and each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+Fit two phases, YAlO₃ and corundum Al₂O₃, in one constant-wavelength neutron pattern from SPODI
+at FRM II, measured at 3 K, with a shared Bérar-Baldinozzi profile and cylinder absorption.
+
+It builds the catalogue case `pd-neut-cwl_yalo3-al2o3-spodi` step by step: the same project the
+command line fits and the app's Examples open.
+
 ## Create a project
 
 Press **Start** on Home, then **Create a new project**, and give it a name.
@@ -92,7 +98,7 @@ On **Analysis → Extra**, set the **Minimizer** as the case's project does: the
 
 Both phases' cells and scales, and the zero shift, put the peaks of both phases in place.
 
-Filter the **Linked structures** parameters of **spodi**, choosing each in the datablock filter using the category filter and the **Cell** parameters of ****, choosing each in the datablock filter using the category filter, click the **Free** column header and choose **Free · all**; then tick **Free** for the **Instrument** rows the stage names of **spodi**, choosing each in the datablock filter, then press **Fit** in the status bar.
+Filter the **Cell** parameters using the category filter and the **Linked structures** parameters of **spodi**, choosing each in the datablock filter using the category filter, click the **Free** column header and choose **Free · all**; then tick **Free** for the **Instrument** rows the stage names of **spodi**, choosing each in the datablock filter, then press **Fit** in the status bar.
 
 <figure class="gui-figure" data-gui-figure>
 <a class="gui-image-link" href="../../../assets/gui/cases/pd-neut-cwl_yalo3-al2o3-spodi/stage-1-fit.webp?v=ba33835d3805" data-gui-dark="44ee5e137d7d" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Fit: Cells, scales and 2θ zero"><svg class="gui-capture" data-gui-view="overview" viewBox="0 0 1480 800" width="1480" height="800" role="img" aria-label="Fit: Cells, scales and 2θ zero"><title>Fit: Cells, scales and 2θ zero</title><defs><clipPath id="gui-clip-stage-1-fit-overview"><rect width="1480" height="800" rx="17.76" /></clipPath></defs><image href="../../../assets/gui/cases/pd-neut-cwl_yalo3-al2o3-spodi/stage-1-fit.webp?v=ba33835d3805" data-gui-dark="44ee5e137d7d" width="1480" height="800" clip-path="url(#gui-clip-stage-1-fit-overview)" /><rect class="gui-image-frame" width="1480" height="800" rx="17.76" /><path class="is-active" data-gui-region="stage-1-fit-overview-1" data-gui-area="main" data-gui-parts="[[0,77,770,681]]" d="M1.000 82.000 Q1.000 78.000 5.000 78.000 L765.000 78.000 Q769.000 78.000 769.000 82.000 L769.000 753.000 Q769.000 757.000 765.000 757.000 L5.000 757.000 Q1.000 757.000 1.000 753.000 Z" /><path class="" data-gui-region="stage-1-fit-overview-2" data-gui-area="sidebar" data-gui-parts="[[770,119,710,609.5]]" d="M771.000 124.000 Q771.000 120.000 775.000 120.000 L1475.000 120.000 Q1479.000 120.000 1479.000 124.000 L1479.000 723.500 Q1479.000 727.500 1475.000 727.500 L775.000 727.500 Q771.000 727.500 771.000 723.500 Z" /><path data-gui-navigation data-gui-area="navigation" data-gui-parts="[[812.359375,0,67.84375,77]]" d="M813.359 5.000 Q813.359 1.000 817.359 1.000 L875.203 1.000 Q879.203 1.000 879.203 5.000 L879.203 72.000 Q879.203 76.000 875.203 76.000 L817.359 76.000 Q813.359 76.000 813.359 72.000 Z" /></svg></a>
@@ -134,7 +140,7 @@ Choose **spodi** in the datablock filter, then filter the **Peak asymmetry** par
 
 The coordinates the symmetry leaves free in both phases.
 
-Filter the **Atomic coordinates** parameters of ****, choosing each in the datablock filter using the category filter, click the **Free** column header and choose **Free · all**, then press **Fit** in the status bar.
+Filter the **Atomic coordinates** parameters using the category filter, click the **Free** column header and choose **Free · all**, then press **Fit** in the status bar.
 
 <figure class="gui-figure" data-gui-figure>
 <a class="gui-image-link" href="../../../assets/gui/cases/pd-neut-cwl_yalo3-al2o3-spodi/stage-5-fit.webp?v=17e780830a17" data-gui-dark="d30c310b165a" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Fit: Atom positions"><svg class="gui-capture" data-gui-view="overview" viewBox="0 0 1480 800" width="1480" height="800" role="img" aria-label="Fit: Atom positions"><title>Fit: Atom positions</title><defs><clipPath id="gui-clip-stage-5-fit-overview"><rect width="1480" height="800" rx="17.76" /></clipPath></defs><image href="../../../assets/gui/cases/pd-neut-cwl_yalo3-al2o3-spodi/stage-5-fit.webp?v=17e780830a17" data-gui-dark="d30c310b165a" width="1480" height="800" clip-path="url(#gui-clip-stage-5-fit-overview)" /><rect class="gui-image-frame" width="1480" height="800" rx="17.76" /><path class="is-active" data-gui-region="stage-5-fit-overview-1" data-gui-area="main" data-gui-parts="[[0,77,770,681]]" d="M1.000 82.000 Q1.000 78.000 5.000 78.000 L765.000 78.000 Q769.000 78.000 769.000 82.000 L769.000 753.000 Q769.000 757.000 765.000 757.000 L5.000 757.000 Q1.000 757.000 1.000 753.000 Z" /><path class="" data-gui-region="stage-5-fit-overview-2" data-gui-area="sidebar" data-gui-parts="[[770,119,710,609.5]]" d="M771.000 124.000 Q771.000 120.000 775.000 120.000 L1475.000 120.000 Q1479.000 120.000 1479.000 124.000 L1479.000 723.500 Q1479.000 727.500 1475.000 727.500 L775.000 727.500 Q771.000 727.500 771.000 723.500 Z" /><path data-gui-navigation data-gui-area="navigation" data-gui-parts="[[812.359375,0,67.84375,77]]" d="M813.359 5.000 Q813.359 1.000 817.359 1.000 L875.203 1.000 Q879.203 1.000 879.203 5.000 L879.203 72.000 Q879.203 76.000 875.203 76.000 L817.359 76.000 Q813.359 76.000 813.359 72.000 Z" /></svg></a>

@@ -2,71 +2,151 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Fit the amino-sulfonic acid taurine to six time-of-flight neutron single-crystal datasets from
+SENJU at J-PARC together, each reflection measured at its own wavelength.
+
+It builds the catalogue case `sc-neut-tof_taurine-senju` step by step: the same project the
+command line fits and the app's Examples open. Banks 2 to 6 share bank 1's three extinction
+terms.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p sc-neut-tof_taurine-senju/structures sc-neut-tof_taurine-senju/experiments sc-neut-tof_taurine-senju/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name             sc-neut-tof_taurine-senju
+_metadata.title "Taurine [P2₁/c] · SENJU @ J-PARC"
+_metadata.description "Single crystal · Time of flight · Six datasets · Anisotropic displacements"
+_metadata.authors .
+_metadata.created          "22 Oct 2026 18:00:00"
+_metadata.last_modified    "22 Oct 2026 18:00:00"
+_metadata.timestamp        ?
+```
+
+## Define the structure
+
+Download the structure from EasyDiffraction's collection into `structures`. Its CIF gives the space group, the cell and the atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data sc-neut-tof_taurine-senju
+    edi download-data sc-neut-tof_taurine-senju-taurine
+    mv data/sc-neut-tof_taurine-senju-taurine.edi sc-neut-tof_taurine-senju/structures/taurine.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data sc-neut-tof_taurine-senju
+    python -m edi download-data sc-neut-tof_taurine-senju-taurine
+    mv data/sc-neut-tof_taurine-senju-taurine.edi sc-neut-tof_taurine-senju/structures/taurine.edi
     ```
 
-## Start with nothing free
+## Define the experiments
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiments into `experiments`: each file declares its instrument, peak profile, background, the structures it links and its measured data.
 
-In `experiments/senju_1.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_extinction.coefficient_11 0
-_extinction.coefficient_22 0
-_extinction.coefficient_33 0
-taurine 2.762
-```
+    ```console
+    edi download-data sc-neut-tof_taurine-senju-senju_1
+    mv data/sc-neut-tof_taurine-senju-senju_1.edi sc-neut-tof_taurine-senju/experiments/senju_1.edi
+    edi download-data sc-neut-tof_taurine-senju-senju_2
+    mv data/sc-neut-tof_taurine-senju-senju_2.edi sc-neut-tof_taurine-senju/experiments/senju_2.edi
+    edi download-data sc-neut-tof_taurine-senju-senju_3
+    mv data/sc-neut-tof_taurine-senju-senju_3.edi sc-neut-tof_taurine-senju/experiments/senju_3.edi
+    edi download-data sc-neut-tof_taurine-senju-senju_4
+    mv data/sc-neut-tof_taurine-senju-senju_4.edi sc-neut-tof_taurine-senju/experiments/senju_4.edi
+    edi download-data sc-neut-tof_taurine-senju-senju_5
+    mv data/sc-neut-tof_taurine-senju-senju_5.edi sc-neut-tof_taurine-senju/experiments/senju_5.edi
+    edi download-data sc-neut-tof_taurine-senju-senju_6
+    mv data/sc-neut-tof_taurine-senju-senju_6.edi sc-neut-tof_taurine-senju/experiments/senju_6.edi
+    ```
 
-In `experiments/senju_2.edi`, remove the `()` from every value; they now read:
+=== "Python package"
 
-```edi
-taurine 3.829
-```
+    ```console
+    python -m edi download-data sc-neut-tof_taurine-senju-senju_1
+    mv data/sc-neut-tof_taurine-senju-senju_1.edi sc-neut-tof_taurine-senju/experiments/senju_1.edi
+    python -m edi download-data sc-neut-tof_taurine-senju-senju_2
+    mv data/sc-neut-tof_taurine-senju-senju_2.edi sc-neut-tof_taurine-senju/experiments/senju_2.edi
+    python -m edi download-data sc-neut-tof_taurine-senju-senju_3
+    mv data/sc-neut-tof_taurine-senju-senju_3.edi sc-neut-tof_taurine-senju/experiments/senju_3.edi
+    python -m edi download-data sc-neut-tof_taurine-senju-senju_4
+    mv data/sc-neut-tof_taurine-senju-senju_4.edi sc-neut-tof_taurine-senju/experiments/senju_4.edi
+    python -m edi download-data sc-neut-tof_taurine-senju-senju_5
+    mv data/sc-neut-tof_taurine-senju-senju_5.edi sc-neut-tof_taurine-senju/experiments/senju_5.edi
+    python -m edi download-data sc-neut-tof_taurine-senju-senju_6
+    mv data/sc-neut-tof_taurine-senju-senju_6.edi sc-neut-tof_taurine-senju/experiments/senju_6.edi
+    ```
 
-In `experiments/senju_3.edi`, remove the `()` from every value; they now read:
-
-```edi
-taurine 3.211
-```
-
-In `experiments/senju_4.edi`, remove the `()` from every value; they now read:
-
-```edi
-taurine 2.809
-```
-
-In `experiments/senju_5.edi`, remove the `()` from every value; they now read:
-
-```edi
-taurine 2.739
-```
-
-In `experiments/senju_6.edi`, remove the `()` from every value; they now read:
-
-```edi
-taurine 2.936
-```
-
-In `structures/taurine.edi`, remove the `()` from every value; they now read:
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-S1 S 0.208 0.34676 0.35118 e 4 1 0 beta
-O1 O 0.33902 0.23701 0.35341 e 4 1 0 beta
-```
+_fitting_mode.type joint
 
-The same for every other row (26 more).
+_refine_ls.threshold_sigma 3
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+x11_1 senju_1.extinction.coefficient_11
+x22_1 senju_1.extinction.coefficient_22
+x33_1 senju_1.extinction.coefficient_33
+x11_2 senju_2.extinction.coefficient_11
+x22_2 senju_2.extinction.coefficient_22
+x33_2 senju_2.extinction.coefficient_33
+x11_3 senju_3.extinction.coefficient_11
+x22_3 senju_3.extinction.coefficient_22
+x33_3 senju_3.extinction.coefficient_33
+x11_4 senju_4.extinction.coefficient_11
+x22_4 senju_4.extinction.coefficient_22
+x33_4 senju_4.extinction.coefficient_33
+x11_5 senju_5.extinction.coefficient_11
+x22_5 senju_5.extinction.coefficient_22
+x33_5 senju_5.extinction.coefficient_33
+x11_6 senju_6.extinction.coefficient_11
+x22_6 senju_6.extinction.coefficient_22
+x33_6 senju_6.extinction.coefficient_33
+
+loop_
+_constraint.id
+_constraint.expression
+x11_2 "x11_2 = x11_1"
+x22_2 "x22_2 = x22_1"
+x33_2 "x33_2 = x33_1"
+x11_3 "x11_3 = x11_1"
+x22_3 "x22_3 = x22_1"
+x33_3 "x33_3 = x33_1"
+x11_4 "x11_4 = x11_1"
+x22_4 "x22_4 = x22_1"
+x33_4 "x33_4 = x33_1"
+x11_5 "x11_5 = x11_1"
+x22_5 "x22_5 = x22_1"
+x33_5 "x33_5 = x33_1"
+x11_6 "x11_6 = x11_1"
+x22_6 "x22_6 = x22_1"
+x33_6 "x33_6 = x33_1"
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+senju_1 1
+senju_2 1
+senju_3 1
+senju_4 1
+senju_5 1
+senju_6 1
+
+_edi.schema_version 3
+```
 
 ## Scales, every site isotropic
 
@@ -108,6 +188,37 @@ In `experiments/senju_6.edi`, add `()` after the values the stage frees:
 taurine 2.936()
 ```
 
+In `structures/taurine.edi`, set the values the stage starts again from:
+
+```edi
+S1 S 0.208 0.34676 0.35118 e 1 Biso 0
+O1 O 0.33902 0.23701 0.35341 e 1 Biso 0
+O2 O -0.06427 0.33875 0.29137 e 1 Biso 0
+O3 O 0.23286 0.40985 0.51108 e 1 Biso 0
+N1 N 0.2644 0.62996 0.33658 e 1 Biso 0
+H1 H 0.17 0.5995 0.43173 e 1 Biso 0
+H2 H 0.19405 0.70895 0.30623 e 1 Biso 0
+H3 H 0.45233 0.63476 0.36061 e 1 Biso 0
+C1 C 0.33574 0.43812 0.19983 e 1 Biso 0
+H11 H 0.53973 0.4432 0.23493 e 1 Biso 0
+H12 H 0.32105 0.39069 0.08168 e 1 Biso 0
+C2 C 0.20803 0.55562 0.18084 e 1 Biso 0
+H21 H 0.28448 0.59948 0.07592 e 1 Biso 0
+H22 H 0.00169 0.54787 0.16446 e 1 Biso 0
+```
+
+In `structures/taurine.edi`, delete the loop with these tags, and its rows: the stage no longer uses it:
+
+```edi
+_atom_site_aniso.id
+_atom_site_aniso.adp_11
+_atom_site_aniso.adp_22
+_atom_site_aniso.adp_33
+_atom_site_aniso.adp_12
+_atom_site_aniso.adp_13
+_atom_site_aniso.adp_23
+```
+
 === "Standalone executable"
 
     ```console
@@ -124,8 +235,8 @@ taurine 2.936()
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 6 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                        179.47      5665.97
-      1      0.231      51.73       470.73   91.7% ↓
-  done · converged · 1 iters · reduced χ² 470.73 · wR(F²) 51.73 % · 0.26 s
+      1      0.252      51.73       470.73   91.7% ↓
+  done · converged · 1 iters · reduced χ² 470.73 · wR(F²) 51.73 % · 0.29 s
 
   per-bank wR(F²) (%):   senju_1 60.04   senju_2 70.32   senju_3 39.79   senju_4 53.79   senju_5 41.41   senju_6 51.44
 
@@ -173,10 +284,10 @@ The same for every other row (12 more).
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 20 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         51.73       477.84
-      1      0.222      26.94       129.57   72.9% ↓
-      2      0.248      26.94       129.56   
-      3      0.281      26.94       129.56   
-  done · converged · 3 iters · reduced χ² 129.56 · wR(F²) 26.94 % · 0.31 s
+      1      0.282      26.94       129.57   72.9% ↓
+      2      0.312      26.94       129.56   
+      3      0.352      26.94       129.56   
+  done · converged · 3 iters · reduced χ² 129.56 · wR(F²) 26.94 % · 0.40 s
 
   per-bank wR(F²) (%):   senju_1 30.06   senju_2 28.38   senju_3 23.25   senju_4 24.93   senju_5 30.58   senju_6 26.29
 
@@ -237,10 +348,10 @@ _extinction.coefficient_33 0()
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 23 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         26.94       129.98
-      1      0.220      20.26        73.55   43.4% ↓
-      2      0.246      20.26        73.55   
-      3      0.279      20.26        73.55   
-  done · converged · 3 iters · reduced χ² 73.55 · wR(F²) 20.26 % · 0.31 s
+      1      0.262      20.26        73.55   43.4% ↓
+      2      0.291      20.26        73.55   
+      3      0.327      20.26        73.55   
+  done · converged · 3 iters · reduced χ² 73.55 · wR(F²) 20.26 % · 0.36 s
 
   per-bank wR(F²) (%):   senju_1 25.78   senju_2 22.57   senju_3 15.51   senju_4 17.82   senju_5 19.59   senju_6 22.41
 
@@ -305,9 +416,9 @@ The same for every other row (12 more).
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 65 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         20.26        77.05
-      1      0.261      17.04        54.49   29.3% ↓
-      2      0.299      17.04        54.49   
-  done · converged · 2 iters · reduced χ² 54.49 · wR(F²) 17.04 % · 0.34 s
+      1      0.304      17.04        54.49   29.3% ↓
+      2      0.347      17.04        54.49   
+  done · converged · 2 iters · reduced χ² 54.49 · wR(F²) 17.04 % · 0.39 s
 
   per-bank wR(F²) (%):   senju_1 22.17   senju_2 18.60   senju_3 13.00   senju_4 14.02   senju_5 17.01   senju_6 18.75
 
@@ -389,6 +500,39 @@ edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, sen
 
 Back to anisotropic displacements (edi converts the values), with every tensor component free.
 
+In `structures/taurine.edi`, set the values the stage starts again from:
+
+```edi
+S1 S 0.2028() 0.34798() 0.3512() e 4 1 1.3599 beta
+O1 O 0.3383() 0.24191() 0.35398() e 4 1 2.67932 beta
+O2 O -0.0634() 0.33843() 0.29050() e 4 1 2.81027 beta
+O3 O 0.2339() 0.41042() 0.51081() e 4 1 2.13904 beta
+N1 N 0.26359() 0.63009() 0.33238() e 4 1 1.85477 beta
+H1 H 0.1795() 0.5999() 0.4320() e 4 1 3.96113 beta
+H2 H 0.1915() 0.7075() 0.3077() e 4 1 3.66063 beta
+H3 H 0.4537() 0.6340() 0.3629() e 4 1 4.02867 beta
+C1 C 0.34023() 0.43773() 0.20025() e 4 1 1.62569 beta
+H11 H 0.5403() 0.4442() 0.2356() e 4 1 3.3312 beta
+H12 H 0.3255() 0.39209() 0.0805() e 4 1 3.3312 beta
+C2 C 0.2079() 0.55619() 0.17999() e 4 1 2.03756 beta
+H21 H 0.2834() 0.6003() 0.0771() e 4 1 3.68864 beta
+H22 H 0.0032() 0.5471() 0.1639() e 4 1 4.22165 beta
+S1 0.0123() 0.00250() 0.00556() 0() 0.000578() 0()
+O1 0.0242() 0.00493() 0.01096() 0() 0.001139() 0()
+O2 0.0254() 0.00517() 0.01149() 0() 0.001195() 0()
+O3 0.0193() 0.00394() 0.00875() 0() 0.000910() 0()
+N1 0.01676() 0.00341() 0.00759() 0() 0.000789() 0()
+H1 0.0358() 0.00729() 0.01619() 0() 0.001684() 0()
+H2 0.0331() 0.00673() 0.01497() 0() 0.001556() 0()
+H3 0.0364() 0.00741() 0.01648() 0() 0.00171() 0()
+C1 0.01469() 0.00299() 0.00665() 0() 0.000691() 0()
+H11 0.0301() 0.00613() 0.01362() 0() 0.001416() 0()
+H12 0.0301() 0.00613() 0.01362() 0() 0.001416() 0()
+C2 0.01841() 0.00375() 0.00833() 0() 0.000866() 0()
+H21 0.0333() 0.00679() 0.01509() 0() 0.001569() 0()
+H22 0.0381() 0.00776() 0.0173() 0() 0.00179() 0()
+```
+
 === "Standalone executable"
 
     ```console
@@ -405,9 +549,9 @@ Back to anisotropic displacements (edi converts the values), with every tensor c
 edi fit: joint project sc-neut-tof_taurine-senju, 6 banks (senju_1, senju_2, senju_3, senju_4, senju_5, senju_6), 947 pts fitted / 1540 loaded, 135 free
    iter   time (s) wR(F²) (%)  reduced χ²   change
                         17.04        59.18
-      1      0.388      12.19        30.27   48.8% ↓
-      2      0.446      12.19        30.27   
-  done · converged · 2 iters · reduced χ² 30.27 · wR(F²) 12.19 % · 0.53 s
+      1      0.497      12.19        30.27   48.8% ↓
+      2      0.558      12.19        30.27   
+  done · converged · 2 iters · reduced χ² 30.27 · wR(F²) 12.19 % · 0.65 s
 
   per-bank wR(F²) (%):   senju_1 18.18   senju_2 11.06   senju_3 9.02   senju_4 8.63   senju_5 12.28   senju_6 13.05
 

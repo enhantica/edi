@@ -33,3 +33,6 @@ target_link_libraries(_edi PRIVATE edi::core)
 # configuration (EDI_EXTENSION_DIR, else the core-build.sh selection) and refuses a stray
 # source-tree artifact.
 set_target_properties(_edi PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/python/edi")
+
+# Private human progress projection shared by the command-line hosts.
+target_include_directories(_edi PRIVATE ${PROJECT_SOURCE_DIR}/core/src)

@@ -43,7 +43,7 @@ def staged(tmp_path, spelling):
     source = re.sub(r'(?m)^_minimizer\.type[^\n]*\n?', '', analysis.read_text())
     if spelling is not None:
         source += f'\n_minimizer.type {spelling}\n'
-    analysis.write_text(source, encoding='utf-8')
+    analysis.write_text(source, encoding='utf-8', newline='\n')
     return target
 
 
@@ -73,6 +73,9 @@ def saved_value(path):
 @pytest.mark.parametrize(('spelling', 'expected'), VALUES)
 def test_loader_legal_type_survives_repeated_save(tmp_path, capfd, spelling, expected):
     source = staged(tmp_path, spelling)
+    if expected is not None and '\n' in expected:
+        analysis = source / 'analysis/analysis.edi'
+        analysis.write_bytes(analysis.read_bytes().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n'))
     for index in range(2):
         capfd.readouterr()
         project = engine.Project.load(source)

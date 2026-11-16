@@ -37,6 +37,8 @@ class WebFiles : public QObject {
     // Asks the browser for a project folder and copies it into memory; answers with projectOpened (the project
     // directory in it).
     Q_INVOKABLE int openProject();
+    /// Upload a dataset folder; answers with folderOpened for the chosen folder in memory.
+    Q_INVOKABLE int openDatasetFolder();
     // The browser has copied `count` files of request `request`'s folder, or the choice was cancelled (called from
     // the page's script).
     static void folderCopied(int request, int count);
@@ -71,6 +73,7 @@ class WebFiles : public QObject {
 
    signals:
     void projectOpened(int request, const QUrl& directory);
+    void folderOpened(int request, const QUrl& directory);
     void filesOpened(int request, const QList<QUrl>& files);
     // `request` is 0 for a failure outside a request (a download).
     void failed(int request, const QString& message);
@@ -84,11 +87,16 @@ class WebFiles : public QObject {
     int begin();
     // Ends `request` if it is the active one; false when it is not (superseded or already answered).
     bool finish(int request);
+    int openFolder(bool datasets);
     void answerFolder(int request, int count);
 
     int m_active = 0;
     int m_last = 0;
-    QHash<int, QString> m_folders;  // each folder request's directory in memory, until it is answered
+    struct FolderRequest {
+        QString root;
+        bool datasets = false;
+    };
+    QHash<int, FolderRequest> m_folders;
 };
 
 }  // namespace edi_app

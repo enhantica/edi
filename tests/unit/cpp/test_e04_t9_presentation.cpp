@@ -371,7 +371,8 @@ TEST_CASE("E04-T9 I17 identity modes and I23 authoritative style colors") {
     // the positive/thinner invariant separately proves the owner requirement.
     CHECK_MESSAGE(p.y_residual.title == "Residual",
                   " owner chart item 4 names the residual presentation axis Residual");
-    // Owner colours: data/palettes/PROVENANCE.md; ADR-0084 reserves structure colours.
+    // Owner colours: published data/palettes/PROVENANCE.md, ADR-0084. The default
+    // table has three experiments; the first spare structure retains role position 2.
     const auto& styles = edi::pattern_style_table();
     for (const auto& [kind, light, dark, width] : std::vector<std::tuple<edi::SeriesKind,std::string,std::string,double>>{
         {edi::SeriesKind::Measured,"#618EC8","#6E92CB",2},

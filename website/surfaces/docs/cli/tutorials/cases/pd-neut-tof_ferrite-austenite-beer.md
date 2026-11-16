@@ -2,56 +2,108 @@
 
 The same staged fit as the Python tutorial, on the command line. The command line fits whatever the project marks free with `()` after a value, so each stage marks its parameters in the project's files with a text editor and runs `edi fit`, which writes the fitted values back into the project for the next stage.
 
-## Get the project
+Calibrate the BEER instrument at ESS with two McStas-simulated banks of a ferrite and austenite
+duplex steel, fitted together: each bank has its own zero and resolution.
+
+It builds the catalogue case `pd-neut-tof_ferrite-austenite-beer` step by step: the same project
+the command line fits and the app's Examples open. Austenite's displacement follows ferrite's,
+and each phase's scale in bank n2 follows bank s2.
+
+## Define the project
+
+Make a folder for the project, with a folder each for its structures, experiments and analysis.
+
+```console
+mkdir -p pd-neut-tof_ferrite-austenite-beer/structures pd-neut-tof_ferrite-austenite-beer/experiments pd-neut-tof_ferrite-austenite-beer/analysis
+```
+
+Write `project.edi` in it with a text editor such as VS Code:
+
+```edi
+_edi.schema_version 3
+
+_metadata.name pd-neut-tof_ferrite-austenite-beer
+_metadata.title "Ferrite [Im-3m] / Austenite [Fm-3m] · BEER @ ESS"
+_metadata.description "Instrument calibration · 2 McStas-simulated banks fitted jointly · Per-bank zero and resolution"
+_metadata.authors .
+```
+
+## Define the structures
+
+Download the structures from EasyDiffraction's collection into `structures`. Each CIF gives its space group, cell and atom sites.
 
 === "Standalone executable"
 
     ```console
-    edi download-data pd-neut-tof_ferrite-austenite-beer
+    edi download-data pd-neut-tof_ferrite-austenite-beer-austenite
+    mv data/pd-neut-tof_ferrite-austenite-beer-austenite.edi pd-neut-tof_ferrite-austenite-beer/structures/austenite.edi
+    edi download-data pd-neut-tof_ferrite-austenite-beer-ferrite
+    mv data/pd-neut-tof_ferrite-austenite-beer-ferrite.edi pd-neut-tof_ferrite-austenite-beer/structures/ferrite.edi
     ```
 
 === "Python package"
 
     ```console
-    python -m edi download-data pd-neut-tof_ferrite-austenite-beer
+    python -m edi download-data pd-neut-tof_ferrite-austenite-beer-austenite
+    mv data/pd-neut-tof_ferrite-austenite-beer-austenite.edi pd-neut-tof_ferrite-austenite-beer/structures/austenite.edi
+    python -m edi download-data pd-neut-tof_ferrite-austenite-beer-ferrite
+    mv data/pd-neut-tof_ferrite-austenite-beer-ferrite.edi pd-neut-tof_ferrite-austenite-beer/structures/ferrite.edi
     ```
 
-## Start with nothing free
+## Define the experiments
 
-The project marks what its finished fit frees. Remove every `()`, so the stages below free one group at a time.
+Download the experiments into `experiments`: each file declares its instrument, peak profile, background, the structures it links and its measured data.
 
-In `experiments/expt_n2.edi`, remove the `()` from every value; they now read:
+=== "Standalone executable"
 
-```edi
-_instrument.calib_d_to_tof_offset 0
-_peak.broad_gauss_sigma_0 900
-_peak.broad_gauss_sigma_1 1000
-_peak.broad_gauss_sigma_2 300
-_peak.broad_lorentz_gamma_0 5
-1 40111.8789 0.19
-2 41193.5664 0.19
-```
+    ```console
+    edi download-data pd-neut-tof_ferrite-austenite-beer-expt_n2
+    mv data/pd-neut-tof_ferrite-austenite-beer-expt_n2.edi pd-neut-tof_ferrite-austenite-beer/experiments/expt_n2.edi
+    edi download-data pd-neut-tof_ferrite-austenite-beer-expt_s2
+    mv data/pd-neut-tof_ferrite-austenite-beer-expt_s2.edi pd-neut-tof_ferrite-austenite-beer/experiments/expt_s2.edi
+    ```
 
-The same for every other row (28 more).
+=== "Python package"
 
-In `experiments/expt_s2.edi`, remove the `()` from every value; they now read:
+    ```console
+    python -m edi download-data pd-neut-tof_ferrite-austenite-beer-expt_n2
+    mv data/pd-neut-tof_ferrite-austenite-beer-expt_n2.edi pd-neut-tof_ferrite-austenite-beer/experiments/expt_n2.edi
+    python -m edi download-data pd-neut-tof_ferrite-austenite-beer-expt_s2
+    mv data/pd-neut-tof_ferrite-austenite-beer-expt_s2.edi pd-neut-tof_ferrite-austenite-beer/experiments/expt_s2.edi
+    ```
 
-```edi
-_instrument.calib_d_to_tof_offset 0
-_peak.broad_gauss_sigma_0 900
-_peak.broad_gauss_sigma_1 1000
-_peak.broad_gauss_sigma_2 300
-_peak.broad_lorentz_gamma_0 5
-1 40111.8789 0.18
-2 41193.5664 0.18
-```
-
-The same for every other row (30 more).
-
-In `structures/ferrite.edi`, remove the `()` from every value; they now read:
+Then write how the project is fitted in `analysis/analysis.edi`:
 
 ```edi
-Fe Fe 0 0 0 a 2 1 0.5 Biso
+_minimizer.type crysta
+_minimizer.max_iterations 1000
+
+_fitting_mode.type joint
+
+loop_
+_alias.id
+_alias.parameter_unique_name
+biso_ferrite ferrite.atom_site.Fe.adp_iso
+biso_austenite austenite.atom_site.Fe.adp_iso
+s2_ferrite_scale expt_s2.linked_structure.ferrite.scale
+s2_austenite_scale expt_s2.linked_structure.austenite.scale
+n2_ferrite_scale expt_n2.linked_structure.ferrite.scale
+n2_austenite_scale expt_n2.linked_structure.austenite.scale
+
+loop_
+_constraint.id
+_constraint.expression
+1 "biso_austenite = biso_ferrite"
+2 "n2_ferrite_scale = s2_ferrite_scale"
+3 "n2_austenite_scale = s2_austenite_scale"
+
+loop_
+_joint_fit.experiment_id
+_joint_fit.weight
+expt_n2 0.5
+expt_s2 0.5
+
+_edi.schema_version 3
 ```
 
 ## Scales and time-of-flight calibration
@@ -68,8 +120,8 @@ In `experiments/expt_s2.edi`, add `()` after the values the stage frees:
 
 ```edi
 _instrument.calib_d_to_tof_offset 0()
-ferrite 400() 0.49780285149965137()
-austenite 100() 0.5021971485003485()
+ferrite 400()
+austenite 100()
 ```
 
 === "Standalone executable"
@@ -88,9 +140,9 @@ austenite 100() 0.5021971485003485()
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 4 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        41.44       229.84
-      1      0.145     23.83        76.04   66.9% ↓
-      2      0.164     23.83        76.04   
-  done · converged · 2 iters · reduced χ² 76.04 · Rwp 23.83 % · 0.18 s
+      1      0.218     23.83        76.04   66.9% ↓
+      2      0.243     23.83        76.04   
+  done · converged · 2 iters · reduced χ² 76.04 · Rwp 23.83 % · 0.26 s
 
   per-bank Rwp (%):   expt_n2 24.49   expt_s2 23.16
 
@@ -116,18 +168,70 @@ In `experiments/expt_n2.edi`, add `()` after the values the stage frees:
 ```edi
 1 40111.8789 0.19()
 2 41193.5664 0.19()
+3 42041.375 0.19()
+4 42713.7734 0.19()
+5 44409.3945 0.19()
+6 45198.7344 0.19()
+7 46251.1875 0.19()
+8 49350.0742 0.19()
+9 51289.6836 0.19()
+10 55245.1992 0.19()
+11 55679.707 0.19()
+12 56383.9102 0.19()
+13 58956.1797 0.19()
+14 61536.457 0.19()
+15 63768.0469 0.19()
+16 65581.2109 0.19()
+17 70183.8516 0.19()
+18 71787.8203 0.19()
+19 78343.1094 0.19()
+20 80016.8047 0.19()
+21 98141.8516 0.19()
+22 99262.2344 0.19()
+23 100985.8516 0.19()
+24 101933.8516 0.19()
+25 108656.0312 0.19()
+26 110896.75 0.19()
+27 113137.4844 0.19()
+28 114430.2031 0.19()
+29 116929.4844 0.19()
+30 119428.7422 0.19()
 ```
-
-The same for every other row (28 more).
 
 In `experiments/expt_s2.edi`, add `()` after the values the stage frees:
 
 ```edi
 1 40111.8789 0.18()
 2 41193.5664 0.18()
+3 42041.375 0.18()
+4 42713.7734 0.18()
+5 44409.3945 0.18()
+6 45198.7344 0.18()
+7 46251.1875 0.18()
+8 49350.0742 0.18()
+9 51289.6836 0.18()
+10 55245.1992 0.18()
+11 55679.707 0.18()
+12 56383.9102 0.18()
+13 58956.1797 0.18()
+14 61536.457 0.18()
+15 63768.0469 0.18()
+16 65581.2109 0.18()
+17 70183.8516 0.18()
+18 71787.8203 0.18()
+19 78343.1094 0.18()
+20 80016.8047 0.18()
+21 98141.8516 0.18()
+22 99262.2344 0.18()
+23 100985.8516 0.18()
+24 101933.8516 0.18()
+25 108656.0312 0.18()
+26 110896.75 0.18()
+27 113137.4844 0.18()
+28 114430.2031 0.18()
+29 116929.4844 0.18()
+30 119428.7422 0.18()
 ```
-
-The same for every other row (28 more).
 
 === "Standalone executable"
 
@@ -145,8 +249,8 @@ The same for every other row (28 more).
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 64 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        23.83        76.86
-      1      0.705     18.05        44.10   42.6% ↓
-  done · converged · 1 iters · reduced χ² 44.10 · Rwp 18.05 % · 0.75 s
+      1      1.041     18.05        44.10   42.6% ↓
+  done · converged · 1 iters · reduced χ² 44.10 · Rwp 18.05 % · 1.09 s
 
   per-bank Rwp (%):   expt_n2 17.91   expt_s2 18.20
 
@@ -269,8 +373,8 @@ _peak.broad_lorentz_gamma_0 5()
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 72 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        18.05        44.16
-      1      0.773     16.38        36.36   17.7% ↓
-  done · converged · 1 iters · reduced χ² 36.36 · Rwp 16.38 % · 0.82 s
+      1      1.051     16.38        36.36   17.7% ↓
+  done · converged · 1 iters · reduced χ² 36.36 · Rwp 16.38 % · 1.09 s
 
   per-bank Rwp (%):   expt_n2 16.15   expt_s2 16.61
 
@@ -308,7 +412,7 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_n2].background[9].intensity                    0.195        0.191     0.026   1.8% ↓
   TOF offset, µs  experiments[expt_n2].instrument.calib_d_to_tof_offset           -1.95        -2.17      0.26   11.1% ↓
   σ₀², µs²        experiments[expt_n2].peak.broad_gauss_sigma_0                     900          281        95   68.8% ↓
-  σ₁², µs²/Å²     experiments[expt_n2].peak.broad_gauss_sigma_1                  1.00e3      1.860e3   0.110e3 ! 86.0% ↑
+  σ₁², µs²/Å²     experiments[expt_n2].peak.broad_gauss_sigma_1                  1.00e3       1.86e3    0.11e3 ! 86.0% ↑
   σ₂², µs²/Å⁴     experiments[expt_n2].peak.broad_gauss_sigma_2                     300          203        24 ! 32.4% ↓
   γ₀, µs          experiments[expt_n2].peak.broad_lorentz_gamma_0                     5         5.86      0.44   17.3% ↑
   intensity       experiments[expt_s2].background[10].intensity                   0.204        0.206     0.026   1.0% ↑
@@ -345,7 +449,7 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   scale           experiments[expt_s2].linked_structures[austenite].scale         74.03        74.57      0.24   0.7% ↑
   scale           experiments[expt_s2].linked_structures[ferrite].scale           300.2        303.1       1.2   1.0% ↑
   σ₀², µs²        experiments[expt_s2].peak.broad_gauss_sigma_0                     900          276        94   69.3% ↓
-  σ₁², µs²/Å²     experiments[expt_s2].peak.broad_gauss_sigma_1                  1.00e3      1.880e3   0.110e3 ! 87.9% ↑
+  σ₁², µs²/Å²     experiments[expt_s2].peak.broad_gauss_sigma_1                  1.00e3       1.88e3    0.11e3 ! 87.9% ↑
   σ₂², µs²/Å⁴     experiments[expt_s2].peak.broad_gauss_sigma_2                     300          192        23 ! 36.1% ↓
   γ₀, µs          experiments[expt_s2].peak.broad_lorentz_gamma_0                     5         5.91      0.44   18.1% ↑
 
@@ -393,9 +497,9 @@ Fe Fe 0 0 0 a 2 1 0.5() Biso
 edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, expt_s2), 5642 pts fitted / 5998 loaded, 73 free
    iter   time (s)   Rwp (%)  reduced χ²   change
                        16.38        36.36
-      1      0.558      7.13         6.89   81.0% ↓
-      2      0.866      7.13         6.89   
-  done · converged · 2 iters · reduced χ² 6.89 · Rwp 7.13 % · 0.91 s
+      1      0.712      7.13         6.89   81.0% ↓
+      2      1.035      7.13         6.89   
+  done · converged · 2 iters · reduced χ² 6.89 · Rwp 7.13 % · 1.08 s
 
   per-bank Rwp (%):   expt_n2 7.06   expt_s2 7.20
 
@@ -433,7 +537,7 @@ edi fit: joint project pd-neut-tof_ferrite-austenite-beer, 2 banks (expt_n2, exp
   intensity       experiments[expt_n2].background[9].intensity                    0.191        0.205     0.011   7.3% ↑
   TOF offset, µs  experiments[expt_n2].instrument.calib_d_to_tof_offset           -2.17        -2.11      0.13   2.9% ↑
   σ₀², µs²        experiments[expt_n2].peak.broad_gauss_sigma_0                     281          914        60   225.4% ↑
-  σ₁², µs²/Å²     experiments[expt_n2].peak.broad_gauss_sigma_1                  1.86e3      1.247e3   0.060e3 ! 33.0% ↓
+  σ₁², µs²/Å²     experiments[expt_n2].peak.broad_gauss_sigma_1                  1.86e3       1.24e3    0.06e3 ! 33.0% ↓
   σ₂², µs²/Å⁴     experiments[expt_n2].peak.broad_gauss_sigma_2                     203          325        12 ! 60.3% ↑
   γ₀, µs          experiments[expt_n2].peak.broad_lorentz_gamma_0                  5.86         4.98      0.21   15.1% ↓
   intensity       experiments[expt_s2].background[10].intensity                   0.206        0.198     0.012   3.6% ↓

@@ -1,12 +1,16 @@
 """Escape controls for the conductor's core/app artifact availability contract."""
 
+import os
+import shutil
+import sys
+
 import pytest
 
 from tests.fixtures.native_ui_script import runner
 
 
 def check_job_requirements(tmp_path, monkeypatch):
-    missing = tmp_path / 'edi_app_tests'
+    missing = tmp_path / ('edi_app_tests.exe' if os.name == 'nt' else 'edi_app_tests')
     prefix = tmp_path / 'pixi-prefix'
     with monkeypatch.context() as patch:
         patch.delenv('EDI_APP_TEST_RUNNER', raising=False)
@@ -36,6 +40,9 @@ def check_job_requirements(tmp_path, monkeypatch):
         missing.unlink()
         # A core job that actually received an executable artifact may use it;
         # this check does not invoke or substitute the executable's behavior.
-        missing.write_text('#!/bin/sh\nexit 99\n')
-        missing.chmod(0o755)
+        if os.name == 'nt':
+            shutil.copyfile(sys.executable, missing)
+        else:
+            missing.write_text('#!/bin/sh\nexit 99\n', newline='\n')
+            missing.chmod(0o755)
         runner.require_runner(missing)

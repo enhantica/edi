@@ -59,3 +59,9 @@ edi consumes crysta strictly through its **public API**:
 ## Published sources
 
 - nonlinear least-squares minimization across the engine boundary — Donald W. Marquardt, *An Algorithm for Least-Squares Estimation of Nonlinear Parameters*, doi:10.1137/0111030 (physics:docs/dev/08-refinement-minimization.md).
+
+The file reader obtains engine-owned resolution-limit spelling/parsing and retired-descent
+recognition through the existing private identity bridge in adapter.cpp, beside threshold
+parsing and kept magnetic declarations. io.cpp remains free of direct SDK headers/symbols;
+magnetic value types already arrive through the product model. These forwarding functions
+retain the engine's exact validation and messages, with one delegated writer and no new parser.

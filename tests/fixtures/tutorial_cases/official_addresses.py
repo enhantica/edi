@@ -80,14 +80,15 @@ def assert_setup(text, *, install_routes=False):
     )
     if not install_routes:
         return
-    assert re.search(r'pixi\s+add\s+--pypi\s+easydiffraction\b', plain), (
+    package = r"[\"']?easydiffraction(?:==[0-9]{4}\.[0-9]{2}\.[0-9]{2})?[\"']?(?=\s|$)"
+    assert re.search(r'pixi\s+add\s+--pypi\s+' + package, plain), (
         'Gate 6: the Pixi route installs the distribution with pixi add --pypi'
     )
     assert INDEX in plain and re.search(r'(?:extra-index-urls|index-url)\s*[=:]', plain), (
         'Gate 6: the Pixi route configures the official package index'
     )
     assert re.search(
-        r'pip\s+install\s+easydiffraction\s+--extra-index-url\s+' + re.escape(INDEX), plain
+        r'pip\s+install\s+' + package + r'\s+--extra-index-url\s+' + re.escape(INDEX), plain
     ), 'Gate 6: the pip route is a directly usable package install with the official extra index'
     heading = re.compile(r'^(?:from source|development|building from source)\b', re.IGNORECASE)
     markdown = re.sub(r'[*`_]', '', text)

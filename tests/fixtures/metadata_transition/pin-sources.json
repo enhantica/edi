@@ -1,0 +1,246 @@
+{
+  "baseline": "398a48e2b53a074e745956cee6e5399f963788f5",
+  "claim": "Committed document provenance only; no new fit, binary identity or independent scientific correctness claim",
+  "files": {
+    "docs/user/cli/pd-neut-cwl_lbco_simulation/expected.json": {
+      "before_sha256": "a31d8a12d81ee2fbdea2e5279155b1ee24904292401f9c598f283cbfe0128479",
+      "after_sha256": "6a853ab05860f70701169eb05f41466f57faee7407997dd8a48529b8ed373d24",
+      "metadata": {
+        "commit": "19a125cdd54f45d018c8f8610cbe75c4bbac0010",
+        "reason": "Existing published pin source: EasyDiffraction 2026.11.0. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "a31d8a12d81ee2fbdea2e5279155b1ee24904292401f9c598f283cbfe0128479"
+      }
+    },
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_simulation/expected.json": {
+      "before_sha256": "9c79fa3b1ec414315c66c4966aeb9bbefd2bf1b06456c9b503c1483b26566bdf",
+      "after_sha256": "858d09a51bb384a17a9e880a6f5c2418e95dc38d32141b6d2eb82534589d3452",
+      "metadata": {
+        "commit": "19a125cdd54f45d018c8f8610cbe75c4bbac0010",
+        "reason": "Existing published pin source: EasyDiffraction 2026.11.0. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "9c79fa3b1ec414315c66c4966aeb9bbefd2bf1b06456c9b503c1483b26566bdf"
+      }
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt/expected.json": {
+      "before_sha256": "b89875d83f247a48f60fa5cbe0056ef2917a7a366375d01402fa570862b022b5",
+      "after_sha256": "4629ff48b22110e8f0c930e2253be0b3e3f704141ddcbe3c5c133d26d2b9d0d9",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "b89875d83f247a48f60fa5cbe0056ef2917a7a366375d01402fa570862b022b5"
+      }
+    },
+    "docs/user/cli/pd-neut-cwl_hs-hrpt/expected.json": {
+      "before_sha256": "4af17d00f9c60ab7f311831932100025ec4c1eb95e3edbde5ee66f7910d5e68b",
+      "after_sha256": "16a848984d335ebccbe8b6defff6ed354d1c27817fff18a851909b297ee5e925",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "4af17d00f9c60ab7f311831932100025ec4c1eb95e3edbde5ee66f7910d5e68b"
+      }
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20/expected.json": {
+      "before_sha256": "44a69a336c8a1710f4968146e4faad48733d820931536ca5c236796f692ca041",
+      "after_sha256": "12e45149be7ad5e2557cd524ce61774dcdae3ec1d7cf05e09871474c9afff37b",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "44a69a336c8a1710f4968146e4faad48733d820931536ca5c236796f692ca041"
+      }
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_2k/expected.json": {
+      "before_sha256": "97d0683df8dcc90abba1fc204f2238f2a03597bd87bb91684347aa1bb63a2c30",
+      "after_sha256": "6fa95174b02f96f1efda1a19bd45c55d8b781a9a006efd5086fd5fc8ceb64fa4",
+      "metadata": {
+        "commit": "4a8d67b75154d468977f81712d1fff6e99a8496a",
+        "reason": "Existing published pin source: Tutorials in fewer clear steps, consistent numbers and GUI fixes (#55). See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "97d0683df8dcc90abba1fc204f2238f2a03597bd87bb91684347aa1bb63a2c30"
+      }
+    },
+    "docs/user/cli/pd-neut-cwl_lmo-echidna/expected.json": {
+      "before_sha256": "247fb05cc20dac20c1da7e96d03fcc41f07e54968cc5f801f1de25a1e958d3ea",
+      "after_sha256": "a5e0a60d8bf01aa654d575b8347e07cf8e90925b51b123f8167ad40971a5a120",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "247fb05cc20dac20c1da7e96d03fcc41f07e54968cc5f801f1de25a1e958d3ea"
+      }
+    },
+    "docs/user/cli/pd-neut-cwl_y2o3-spodi/expected.json": {
+      "before_sha256": "1ba945a1c100f4996ef208d53de1e8e0c60c8de51c15c64f2e3939c9fb451435",
+      "after_sha256": "4a59f46f6e26c93bc4809271de68b2fe9b7b26d41d43f1a63017af686ee88a49",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "1ba945a1c100f4996ef208d53de1e8e0c60c8de51c15c64f2e3939c9fb451435"
+      }
+    },
+    "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/expected.json": {
+      "before_sha256": "1e7d37b0cde11ad37851f297381f8bc51e5f0ab80b919a9e9cf0fe388cae437e",
+      "after_sha256": "6c7ed9153239ca571c04fac7099170fe32bf457c5e1f7ca7e4fcf202c6ec9ae0",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "1e7d37b0cde11ad37851f297381f8bc51e5f0ab80b919a9e9cf0fe388cae437e"
+      }
+    },
+    "docs/user/cli/pd-neut-tof_si-sepd/expected.json": {
+      "before_sha256": "4fecc72dcde6a83cff82f9bfab771b6abe52cbedb551c3c8f7056d87bc73cd08",
+      "after_sha256": "5430e85960acc5e72b80d042a53bf031779d06f50b0a94865a69a5a3cb1d0f28",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "4fecc72dcde6a83cff82f9bfab771b6abe52cbedb551c3c8f7056d87bc73cd08"
+      }
+    },
+    "docs/user/cli/pd-neut-tof_cecoal-polaris/expected.json": {
+      "before_sha256": "a88ed3d023e692d7276058c160c6ac9d88568a583b5bf2475a809034bdd28ecd",
+      "after_sha256": "d904528651cf6e165ab1a6df3b9032b273d8226307714e9d6fc3d705dcdf5fc6",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "a88ed3d023e692d7276058c160c6ac9d88568a583b5bf2475a809034bdd28ecd"
+      }
+    },
+    "docs/user/cli/pd-neut-tof_ceo2-pearl/expected.json": {
+      "before_sha256": "248d8a5cae1b424c6483631e9b815998461a82b3c6855bb91a22fb0860322c1c",
+      "after_sha256": "f83160d1da2e2ff565a3ace4b7474ad806816fe9a2b0505353dbefa16106faa6",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "248d8a5cae1b424c6483631e9b815998461a82b3c6855bb91a22fb0860322c1c"
+      }
+    },
+    "docs/user/cli/pd-neut-tof_lbco-si-mcstas/expected.json": {
+      "before_sha256": "d9fa94ce98166548d1fe7c809c57574a5496eb1ef2b3389db93ff7fbd4576a41",
+      "after_sha256": "6f2fe42b6755b89ab540bf94601998ea1acadebf21331f9afdca1066167dfb39",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "d9fa94ce98166548d1fe7c809c57574a5496eb1ef2b3389db93ff7fbd4576a41"
+      }
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish/expected.json": {
+      "before_sha256": "087d6d65e541fd4fdb27626bc49f5e58a239df68a9d4055d1413b2be8452fd59",
+      "after_sha256": "e2b276296bf0a0e57c66940851dab5a95b6ad04d5167e82ca3e9e3f3d2e3741a",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "087d6d65e541fd4fdb27626bc49f5e58a239df68a9d4055d1413b2be8452fd59"
+      }
+    },
+    "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/expected.json": {
+      "before_sha256": "1f54d7fa911d3bc58e75ba953140b8197b202c7b04d730a8b14b6f237a2d7178",
+      "after_sha256": "ce04d4a3005a6109656f58ccfdb9f68fb92fe47f8de1a0ffc39a320256465d85",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "1f54d7fa911d3bc58e75ba953140b8197b202c7b04d730a8b14b6f237a2d7178"
+      }
+    },
+    "docs/user/cli/pd-xray-cwl_pbso4-lab/expected.json": {
+      "before_sha256": "720b113f58340ccbc09685578c5be3edbc9724fd4df02670977b6bd89cb1495d",
+      "after_sha256": "81b2095d856afcef4813627bd8b0cfcfe23b35477d218e515709fd0f149923eb",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "720b113f58340ccbc09685578c5be3edbc9724fd4df02670977b6bd89cb1495d"
+      }
+    },
+    "docs/user/cli/pd-xray-cwl_lam7o3-p021/expected.json": {
+      "before_sha256": "1cfc33da24ec64326c2e5a20c9461f4331d005dab2b19fd22e53a69835f227ad",
+      "after_sha256": "6d5479fba55591b9557b5c3da40bca5474dda6c015d50180994856053196ac3b",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "1cfc33da24ec64326c2e5a20c9461f4331d005dab2b19fd22e53a69835f227ad"
+      }
+    },
+    "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/expected.json": {
+      "before_sha256": "42f721c268a8e493f006edf4fd983b052562f8c079f4b559e43d0aeae3bf0211",
+      "after_sha256": "de032f99bfa0e841e9c7aeb907aa890f992a40f7fa38d085c2ba621296a3a129",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "42f721c268a8e493f006edf4fd983b052562f8c079f4b559e43d0aeae3bf0211"
+      }
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/expected.json": {
+      "before_sha256": "f748b794f29c94f73c7bbe28672f3969b835b5065b7946212efd54ff2d7426bc",
+      "after_sha256": "e8f28cc30477a1d186e3d2c76204d663131628f3b3e0638efc6af455798811e8",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "f748b794f29c94f73c7bbe28672f3969b835b5065b7946212efd54ff2d7426bc"
+      }
+    },
+    "docs/user/cli/pd-xray-cwl_latp-bm01_scan/expected.json": {
+      "before_sha256": "f6c827944c7fba86fb6a42750e61709f8a299771d7eeb55b871779776cf186f6",
+      "after_sha256": "106f6a8e4ad10f9a68df742301712e98f4ab8e1ff80db0b1512051a50b1b4c08",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "f6c827944c7fba86fb6a42750e61709f8a299771d7eeb55b871779776cf186f6"
+      }
+    },
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/expected.json": {
+      "before_sha256": "c1d9dedac66e7522e31357981b44ab2b3d7818fbec758c10061082d650ac9815",
+      "after_sha256": "d50078a38529661933223ffb9712e7c43ef35e6b98d639431357f2d01f85bd5b",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "c1d9dedac66e7522e31357981b44ab2b3d7818fbec758c10061082d650ac9815"
+      }
+    },
+    "docs/user/cli/sc-neut-cwl_pr2nio4-5c2/expected.json": {
+      "before_sha256": "b72e52baaad08a173e01b2bfa9ca46f8fe0baa5d779caea2b040a623eed46a71",
+      "after_sha256": "804b2ab066b3e66989b2b0003cad945542a1f6e0012f4ac783b436f81c9e2550",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "b72e52baaad08a173e01b2bfa9ca46f8fe0baa5d779caea2b040a623eed46a71"
+      }
+    },
+    "docs/user/cli/sc-neut-tof_taurine-senju/expected.json": {
+      "before_sha256": "6a918822b92946ca02e4287193888e5c2dba04818f7f49504df133934661d8d8",
+      "after_sha256": "0600f7dcd1fd9d5ece9cd57af06053b6abf69d732493ec6618efcc1c6a6ee29d",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "6a918822b92946ca02e4287193888e5c2dba04818f7f49504df133934661d8d8"
+      }
+    },
+    "docs/user/cli/sc-neut-cwl_cosio-heidi/expected.json": {
+      "before_sha256": "bdfe0625d135fafb1cbe81b3d3eae61f555542d1ce42f5fcb9267a926b173414",
+      "after_sha256": "3ffd12c771c0f51d72f076eb7e0aad7aacbfd60bc0b7763ddbfe8d403a6976c1",
+      "metadata": {
+        "commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+        "reason": "Existing published pin source: Survey, GUI and docs updates for the next release. See PROVENANCE.md for the original conditions; no fit rerun.",
+        "kind": "committed-document",
+        "record_sha256": "bdfe0625d135fafb1cbe81b3d3eae61f555542d1ce42f5fcb9267a926b173414"
+      }
+    }
+  }
+}

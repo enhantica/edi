@@ -42,7 +42,7 @@
   "python/examples/": "python/tutorials/",
   "cli/examples/": "cli/tutorials/",
   "python/tutorials/example-fit/": "python/tutorials/cases/pd-neut-cwl_lbco-hrpt/",
-  "cli/tutorials/example-fit/": "cli/tutorials/",
+  "cli/tutorials/example-fit/": "cli/tutorials/cases/pd-neut-cwl_lbco-hrpt/",
   "application/first-fit/": "application/tutorials/cases/pd-neut-cwl_y2o3-spodi/",
   "application/scans/": "application/tutorials/cases/pd-neut-cwl_cosio-d20_scan-213f/",
   "application/assistant/": "user-guide/ai-assistant/",

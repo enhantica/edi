@@ -1,0 +1,178 @@
+{
+  "claim": "Complete committed regression-retake source bytes; no new fit or correctness claim",
+  "source_commit": "ec587609746b50823c048463f353b1767cbfa5f9",
+  "files": {
+    "docs/user/cli/pd-neut-cwl_cosio-d20/expected.json": {
+      "before_sha256": "b8209243cb9e49b3e16de591266f68b411e41524d5bf199cf20fd4798fe85876",
+      "after_sha256": "44a69a336c8a1710f4968146e4faad48733d820931536ca5c236796f692ca041"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/expected.json": {
+      "before_sha256": "ff3eab7b69f740ebb6cef1e40c66a97998f9d0d58fe77cc163b5426a400c8b78",
+      "after_sha256": "49d473a5d7d7f9839e6fa5d097d81cb6f144da78309ffe22a92b79b1523fd30b"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-213f/expected.json": {
+      "before_sha256": "b3fd36cb7828ee9e25a8ddd0fcbacb6b715100fe758ef5def9a20d043c034d68",
+      "after_sha256": "f748b794f29c94f73c7bbe28672f3969b835b5065b7946212efd54ff2d7426bc"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/expected.json": {
+      "before_sha256": "e1cbf3a71134f624cc751d8303a2508d98e0e20d5f414a011b02a7f951afeaec",
+      "after_sha256": "5bea5a161dd170be53c5c7d4ae7d5b63425a7881213faecf6e49419079ca9a68"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_scan/expected.json": {
+      "before_sha256": "6180ffc089c6059d71999c1395ae2f0df02419547675a6c7f3fbb40e5f8f39bb",
+      "after_sha256": "de6a1af3d7897d2de1e7e6246feec753be7f825a0ff29548978a10e8f1c7cbd3"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/expected.json": {
+      "before_sha256": "71fc0f3d81c60a97eac90d29de669af0f352998097f4e9655f6904161c0c5e3e",
+      "after_sha256": "4f9a9586ac70c93392dd6bdb47b8e49e29a5b79202bc12a8b10016b9dab84835"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/expected.json": {
+      "before_sha256": "f0a80ef50913cdf1d3ac203649f8dc324aa620fe48bcbf645a3a3e5882ede72a",
+      "after_sha256": "85d5c0aeebc606e4c9eba69d50c37563e96cc2c2d20b7b5523f61fffe92b25aa"
+    },
+    "docs/user/cli/pd-neut-cwl_hs-hrpt/expected.json": {
+      "before_sha256": "9d137330c6ca773fa24ca57cd1d0c6904613c99df448a9d1ea217e54f069f235",
+      "after_sha256": "4af17d00f9c60ab7f311831932100025ec4c1eb95e3edbde5ee66f7910d5e68b"
+    },
+    "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/expected.json": {
+      "before_sha256": "442c3a21500581ce95c913dfd73a79d3190ce286bd7dc72f44f3073ab94a6e2a",
+      "after_sha256": "570a54fe613e15b20f47304428eb0de634aead7e66b0b220910fcd8ac740d724"
+    },
+    "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/expected.json": {
+      "before_sha256": "f0416f155177ac9fd13b5ce47e0ae47f6cdcaaeed08fe3c1bcf0fd1dc0345722",
+      "after_sha256": "02708a912eacaaa550866894b6c0284fee0bb6db99b103deb4fe975be5d8d508"
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt/expected.json": {
+      "before_sha256": "1e4551a7438c5c8b0696aac68a757a62812b8be198e820e97af8abf13d8746a5",
+      "after_sha256": "b89875d83f247a48f60fa5cbe0056ef2917a7a366375d01402fa570862b022b5"
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/expected.json": {
+      "before_sha256": "3f4854ddb59db3bd760aecf042947655b87be12379e7d4d0e24a549143def199",
+      "after_sha256": "fb6b43996e590403b9d4a71376e94bae5e5c1ea988fec30ee1117e6844294a61"
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/expected.json": {
+      "before_sha256": "dca3ec4168d6acadd28fafaf95f1e8a3e34772b3d8621ae3e6e075c4700f039b",
+      "after_sha256": "f83a2d487d2ed68f570b52d0e25797f4a9ee89f30dc5b0eb98087d1d95027b1f"
+    },
+    "docs/user/cli/pd-neut-cwl_lmo-echidna/expected.json": {
+      "before_sha256": "c7b58bbd4ebc3cb6ae322774e05e0a717e3b85e36cef3ed51a64dbeeb0a11d8f",
+      "after_sha256": "247fb05cc20dac20c1da7e96d03fcc41f07e54968cc5f801f1de25a1e958d3ea"
+    },
+    "docs/user/cli/pd-neut-cwl_y2o3-spodi/expected.json": {
+      "before_sha256": "5f42ef9ac87dd0cffec31b6f015e77efce6b291d653281d3f1c1d5a2c231f24d",
+      "after_sha256": "1ba945a1c100f4996ef208d53de1e8e0c60c8de51c15c64f2e3939c9fb451435"
+    },
+    "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/expected.json": {
+      "before_sha256": "07f84c6cd9966c8fae40fd6e9b519f4444db2aefbc56e73d8527870da42d81d4",
+      "after_sha256": "b781d0303475083945e5ac49f1c77e5208f24b229872b9b62b0835def8c10ee2"
+    },
+    "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/expected.json": {
+      "before_sha256": "e24b1bf71df981f0c6faf2164cb8cc7271aa49166a361577311db856bbc1efdc",
+      "after_sha256": "1e7d37b0cde11ad37851f297381f8bc51e5f0ab80b919a9e9cf0fe388cae437e"
+    },
+    "docs/user/cli/pd-neut-cwl_yap-spodi_3k/expected.json": {
+      "before_sha256": "40b56bfb44e72fcf8ed77b18d767612c944a20417c9a79347a5cef91b3f3fa93",
+      "after_sha256": "75c3feddbae99aaedf5b7f7e90ea2456050cd6cca36cb17adbf178bf9a336201"
+    },
+    "docs/user/cli/pd-neut-tof_cecoal-polaris/expected.json": {
+      "before_sha256": "2464d4aaa77a1facc6e2e2746d44e8018ae67db1c37f508d2f2568a33dc2164f",
+      "after_sha256": "a88ed3d023e692d7276058c160c6ac9d88568a583b5bf2475a809034bdd28ecd"
+    },
+    "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/expected.json": {
+      "before_sha256": "c03b6b169d1e34e2b9af88d6844fa78df936516abc3a41844ad3c71d7fa2fc7c",
+      "after_sha256": "fa25d79fe1079e7808fd16a8295e61b523783789747600684e839bb6a9a302dd"
+    },
+    "docs/user/cli/pd-neut-tof_ceo2-pearl/expected.json": {
+      "before_sha256": "659a708f89df56f11777ffa76cb7c9c8ca04e143dfbfe53643cf16b3fc31f5e9",
+      "after_sha256": "248d8a5cae1b424c6483631e9b815998461a82b3c6855bb91a22fb0860322c1c"
+    },
+    "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/expected.json": {
+      "before_sha256": "a83094723539f68033ed7b05f492e63b39b50826567a86838290c83f7c2e9c01",
+      "after_sha256": "7e96afd30d559ca4a773ead0ef9cb596781da1569d1718d790bf7641b1493d23"
+    },
+    "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/expected.json": {
+      "before_sha256": "1890920f60e6b7c369f759c364aaef6d074c3ee92774c4092a48817a6c632b31",
+      "after_sha256": "7a5d6e57d0890c6cca27fd8aa6a59a1899d5f86347cdc2b0da316b0a8a6c7fbb"
+    },
+    "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/expected.json": {
+      "before_sha256": "a72becc0ad568c04409d2e4bd0ae7ecac6b1f386fcb98c9a59f3c82c960bfd8e",
+      "after_sha256": "1f54d7fa911d3bc58e75ba953140b8197b202c7b04d730a8b14b6f237a2d7178"
+    },
+    "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/expected.json": {
+      "before_sha256": "22edab08ebc461364a35b1fe1e203e42637b559234c0037a10e592fc9ce95950",
+      "after_sha256": "23d287a8a334e26dab4081a5f57cc35f5f8bf8d307eb3335c8ce6a363f3d063e"
+    },
+    "docs/user/cli/pd-neut-tof_lbco-si-mcstas/expected.json": {
+      "before_sha256": "558b18fbd01640c4a4b0bc19e6636d1918e6e66acacb234de22beaa78a47592d",
+      "after_sha256": "d9fa94ce98166548d1fe7c809c57574a5496eb1ef2b3389db93ff7fbd4576a41"
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/expected.json": {
+      "before_sha256": "75388692a9955f8ad8dfdbf32f0884153368624fdf305c9dbc682eb26515de9e",
+      "after_sha256": "d5f27b4065cd18d4d548a8892762c2da7d88df7afbbb446a2da4c223a446f264"
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/expected.json": {
+      "before_sha256": "24c2089601da4ede482fa8f9bf6b8cee86abd4666e10693c6eea24bf3421605f",
+      "after_sha256": "4bf8faee81a03e325fa9c460be5e35fb5e6fde8d104fe69db85931a7ff9fb1bc"
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/expected.json": {
+      "before_sha256": "5dc4f86c1d5de058e87a4df9783531b050dddcd289e1b2020df5a59229b1b8df",
+      "after_sha256": "742a95ed984169c0ff7441049c0c56d54273395e3e46de592cd13363f4591e8e"
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/expected.json": {
+      "before_sha256": "541c57f6fb202bc67977f1642dd405bc084a277feb495e029b16b9954df1ec08",
+      "after_sha256": "2bfdd680bf305f8811ff5cbed38f1dbc60eed52c00d6e42073d3fe7d40d847e5"
+    },
+    "docs/user/cli/pd-neut-tof_ncaf-wish/expected.json": {
+      "before_sha256": "0090dabc160bbcd7963565c084d67fbd977cbf97a737547e5334cc8efed75e43",
+      "after_sha256": "087d6d65e541fd4fdb27626bc49f5e58a239df68a9d4055d1413b2be8452fd59"
+    },
+    "docs/user/cli/pd-neut-tof_si-sepd/expected.json": {
+      "before_sha256": "1de4a1e47b181c8ffc4476617e8ca35010fbcfdc84bc30cdf5f7bc5aff4831b5",
+      "after_sha256": "4fecc72dcde6a83cff82f9bfab771b6abe52cbedb551c3c8f7056d87bc73cd08"
+    },
+    "docs/user/cli/pd-neut-tof_si-sepd_start-5/expected.json": {
+      "before_sha256": "010d7144039d48340c54bbc6610dcaca44ea95eec229204aaf60e5f454c89ea3",
+      "after_sha256": "ce8a290da8ac854830dde54c0a03f8ddece533d6e871f040cb865c360cdb3e99"
+    },
+    "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/expected.json": {
+      "before_sha256": "1f088d4d83d5c4f921000806abcc82207463d3efc8ece82f83b6de261ea6ccbd",
+      "after_sha256": "42f721c268a8e493f006edf4fd983b052562f8c079f4b559e43d0aeae3bf0211"
+    },
+    "docs/user/cli/pd-xray-cwl_lam7o3-p021/expected.json": {
+      "before_sha256": "546f98ed62f209b50e431c844d38b40edd3b25af9fefc4e75ea0f28266ec6e9c",
+      "after_sha256": "1cfc33da24ec64326c2e5a20c9461f4331d005dab2b19fd22e53a69835f227ad"
+    },
+    "docs/user/cli/pd-xray-cwl_latp-bm01_scan/expected.json": {
+      "before_sha256": "e40fc26cd6de7628793984203c06da20a40e6e483d07130f06a46f74dd0da0a4",
+      "after_sha256": "f6c827944c7fba86fb6a42750e61709f8a299771d7eeb55b871779776cf186f6"
+    },
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/expected.json": {
+      "before_sha256": "02749fb432ef396b78c3e4e1b76ae90949f9f55b2f52da5fc97303902c864d64",
+      "after_sha256": "520268873c457caf36ddc7046e33856ce83d954fcce505ee5ba0368d1e5f68ab"
+    },
+    "docs/user/cli/pd-xray-cwl_pbso4-lab/expected.json": {
+      "before_sha256": "111f2c6b249938d46cdb684a910b467adfc730912023b27f6a1e648bf8649a37",
+      "after_sha256": "720b113f58340ccbc09685578c5be3edbc9724fd4df02670977b6bd89cb1495d"
+    },
+    "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/expected.json": {
+      "before_sha256": "0aff7f9527a6b2755f35457297dbf813997503f00778c9320e049d1ba86c007a",
+      "after_sha256": "35d8e9525ab5cc8dc6fda81dfe0130a87c269e357f4647b2dcbef9bf4c533695"
+    },
+    "docs/user/cli/sc-neut-cwl_cosio-heidi/expected.json": {
+      "before_sha256": "6f3ad87c8a49eb956ece1ff747ca6a1e6fc19e539e486ef9ce59c2febff82132",
+      "after_sha256": "bdfe0625d135fafb1cbe81b3d3eae61f555542d1ce42f5fcb9267a926b173414"
+    },
+    "docs/user/cli/sc-neut-cwl_pr2nio4-5c2/expected.json": {
+      "before_sha256": "eaf0fc9565b2b380cbbe28a2daa7d46ffd387047c89927992a129168cccbd51a",
+      "after_sha256": "b72e52baaad08a173e01b2bfa9ca46f8fe0baa5d779caea2b040a623eed46a71"
+    },
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/expected.json": {
+      "before_sha256": "c0c47cd79a783b274220c4ed9553ca5a94a35a2be05dbe357c36aface0e4e061",
+      "after_sha256": "c1d9dedac66e7522e31357981b44ab2b3d7818fbec758c10061082d650ac9815"
+    },
+    "docs/user/cli/sc-neut-tof_taurine-senju/expected.json": {
+      "before_sha256": "1d8775f6657850834c1933322b505137d60f4dc45c3b8ad20a4ccb6822637802",
+      "after_sha256": "6a918822b92946ca02e4287193888e5c2dba04818f7f49504df133934661d8d8"
+    }
+  }
+}

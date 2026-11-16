@@ -218,16 +218,24 @@ def test_test_and_tool_identity_is_independent_of_checkout_name():
     )
 
 
-def test_tree_has_no_personal_paths_or_private_citations():
-    findings = [
+def private_findings(entries):
+    synthetic = 'tests/fixtures/onboarding/privacy_representations.json'
+    expected = '73855c7ef29eb9a2c6c7ecd9733cfb494b4ad9930a0033a53e0bac8f256a0491'
+    return [
         name
-        for name, text in publication_texts()
-        if any(prefix in text for prefix in ('crysta', '/home/', '/Users/', '~/r' + 'uns/'))
+        for name, text in entries
+        if not (name == synthetic and hashlib.sha256(text.encode()).hexdigest() == expected)
+        and any(prefix in text for prefix in ('crysta', '/home/', '/Users/', '~/r' + 'uns/'))
         and PRIVATE.search(text)
     ]
+
+
+def test_tree_has_no_personal_paths_or_private_citations():
+    findings = private_findings(publication_texts())
     assert not findings, (
-        'the prepared public tree must contain no personal paths, run pointers or private '
-        'source/architecture citations; affected files: ' + ', '.join(findings[:20])
+        'The public tree has no personal or private references; only exact synthetic privacy '
+        'test inputs retain their independently authored redaction witnesses: '
+        + ', '.join(findings[:20])
     )
 
 
@@ -344,15 +352,17 @@ def test_about_exposes_bundled_notices_and_named_copyright():
     assert 'THIRD-PARTY-NOTICES' in cmake and 'qt_add_resources' in cmake, (
         'the app resource bundle must include the actual dependency notice file'
     )
-    assert all(
-        name in about
-        for name in (
-            'about.licences',
-            'ApplicationInfo.appLicenceIds',
-            'ApplicationInfo.appLicenceUrls',
-            'about.thirdParty',
+    assert (
+        all(
+            name in about
+            for name in (
+                'about.licences',
+                'ApplicationInfo.appLicenceIds',
+                'about.thirdParty',
+            )
         )
-    ), 'The identifier links expose both complete own licences and bundled component terms'
+        and 'appLicenceUrls' in info
+    ), 'The links expose complete own licences and component terms'
     assert all(token in info for token in ('BSD-3-Clause', 'GPL-3.0-only')) and re.search(
         r'QStringList appLicenceUrls\(\) const\s*\{\s*return \{licenseUrl\(\), copyingUrl\(\)\};',
         info,
@@ -372,9 +382,25 @@ def test_about_exposes_bundled_notices_and_named_copyright():
         'The licence resource reader must admit the application distribution notice'
     )
     assert all(name in about for name in ('about.licencePopup', 'about.thirdPartyPopup')) and (
-        'ApplicationInfo.licenceText(ApplicationInfo.appLicenceUrls[licenceEntry.index])' in about
+        'onClicked: ApplicationInfo.aboutOpenLicence()' in about
         and 'onClicked: thirdPartyPopup.open()' in about
     ), 'The identifier and third-party links open their actual local licence and component popups'
+    opening = 'void ApplicationInfo::aboutOpenLicence() const {'
+    assert info.count(opening) == 1, (
+        'The About license delegate has one authoritative native owner'
+    )
+    delegate = info.split(opening, 1)[1].split('\n}', 1)[0]
+    assert all(
+        token in delegate
+        for token in (
+            'assistantContextField(f, "licenceEntry", "modelData")',
+            'assistantContextField(f, "ApplicationInfo", "appLicenceUrls")',
+            'assistantContextField(f, "licenceEntry", "index")',
+            'panelUsageDeferredMemberCall(f, info, "licenceText"',
+            'assistantMemberWrite(f, next, "licence", licence)',
+            'projectInvoke(f, "licencePopup", "open")',
+        )
+    ), 'The native delegate resolves the clicked license index and opens its actual bundled text'
     notice = (ROOT / 'app/DISTRIBUTION-LICENSE.md').read_text()
     assert 'GPL-3.0' in notice and 'BSD 3-Clause' in notice, (
         'both the built application GPL status and source BSD status must be reachable from About'
@@ -498,7 +524,15 @@ def public_token_findings(documents):
     for filename, doc in documents:
         for name, job in doc.get('jobs', {}).items():
             if 'uses' in job:
-                findings.append(filename + ':' + name + ':unreviewed reusable workflow')
+                targets = dict(documents)
+                target = targets.get('crysta-sdk.yml', {})
+                called = target.get('on', {})
+                if not (
+                    job['uses'] == './.github/workflows/crysta-sdk.yml'
+                    and isinstance(called, dict)
+                    and 'workflow_call' in called
+                ):
+                    findings.append(filename + ':' + name + ':unreviewed reusable workflow')
                 continue
             runners = runner_values(job)
             hosted = all(
@@ -533,11 +567,11 @@ def test_private_token_guards_still_refuse_forks_after_public_switch(defect):
         'the hosted workflow must refuse fork credentials before every guard escape'
     )
     damaged = copy.deepcopy(documents)
-    ci = next(doc for name, doc in damaged if name == 'ci.yml')
-    job = ci['jobs']['app']
+    sdk = next(doc for name, doc in damaged if name == 'crysta-sdk.yml')
+    job = sdk['jobs']['build']
     if defect == 'pages':
         pages = next(doc for name, doc in damaged if name == 'pages.yml')
-        pages['jobs']['build']['if'] = 'true'
+        pages['jobs']['publish-docs']['if'] = 'true'
     elif defect == 'environment':
         job.pop('environment')
     else:
@@ -587,13 +621,14 @@ def test_private_token_guard_is_required_in_every_job_even_off_pr(event):
 
 def test_public_artifacts_exclude_engine_object_code_and_runner_names():
     assert not public_artifact_findings(workflows()), (
-        'public uploads must expose reviewed text/image outputs or the prescribed webapp, '
-        'with no private native engine objects or runner names'
+        'Public uploads expose reviewed evidence, exact qualified delivery products or same-run '
+        'native transport, without runner identities or arbitrary binary directories'
     )
 
 
 def public_artifact_findings(documents):
     from tests.fixtures.e09_t75_workflow import active  # noqa: PLC0415
+    from tests.fixtures.public_artifact_contract import reviewed_delivery  # noqa: PLC0415
 
     findings = []
     for filename, doc in documents:
@@ -603,7 +638,8 @@ def public_artifact_findings(documents):
                     continue
                 options = step.get('with', {})
                 artifact, paths = options.get('name', ''), options.get('path', '')
-                if 'runner.name' in artifact or 'edi-native' in artifact:
+                reviewed = reviewed_delivery(filename, name, job, step)
+                if 'runner.name' in artifact or ('edi-native' in artifact and not reviewed):
                     findings.append(filename + ':' + name + ':private artifact identity')
                 required_programs = (
                     '\n'.join(
@@ -636,6 +672,7 @@ def public_artifact_findings(documents):
                         in {'.json', '.log', '.txt', '.csv', '.tsv', '.png', '.svg'}
                         or path in {'build/app/ui-actual', 'build/app/ui-diff'}
                         or webapp
+                        or reviewed
                     ):
                         findings.append(filename + ':' + name + ':opaque/binary artifact ' + path)
     return findings
@@ -685,52 +722,100 @@ def test_webapp_artifact_allowance_refuses_native_object_escapes(defect):
     )
 
 
+def pages_operation(steps, token):
+    matches = [
+        (index, step)
+        for index, step in enumerate(steps)
+        if any(
+            token in line
+            for line in step.get('run', '').splitlines()
+            if not line.lstrip().startswith('#')
+        )
+        or token in step.get('uses', '')
+    ]
+    assert len(matches) == 1, 'Pages requires one actual source publication operation: ' + token
+    index, step = matches[0]
+    assert active(step, 'push') and not step.get('continue-on-error'), (
+        'Each Pages publication operation executes and propagates its actual failure'
+    )
+    return index, step
+
+
+def pages_component_boundary(doc, component, producer, artifact, incoming):
+    build = doc['jobs'][producer]
+    steps = build['steps']
+    operations = (
+        ('pages-check', 'notebooks-run', 'site-build --require-outputs')
+        if component == 'docs'
+        else ('wasm-toolchain', 'wasm-build')
+    )
+    positions = [pages_operation(steps, operation)[0] for operation in operations]
+    upload_index, upload = pages_operation(steps, 'actions/upload-artifact@')
+    assert positions == sorted(positions) and positions[-1] < upload_index, (
+        'Actual docs or wasm inputs are checked and built before their artifact is uploaded'
+    )
+    assert upload['with']['name'] == artifact, (
+        'Each Pages component uploads its exact addressed artifact'
+    )
+    assert upload['with']['path'] == ('site' if component == 'docs' else 'build/wasm/site'), (
+        'The component upload contains the real source-built publication output'
+    )
+    publish = doc['jobs']['publish-' + component]
+    assert publish['needs'] in (producer, [producer]), (
+        'Each publication waits for its own completed build'
+    )
+    assert (
+        publish['concurrency']['group'] == 'pages-publication'
+        and str(publish['concurrency']['cancel-in-progress']).lower() == 'false'
+    ), 'Independent component publication serializes without cancelling a counterpart update'
+    steps = publish['steps']
+    download_index, download = pages_operation(steps, 'actions/download-artifact@')
+    assert download['with']['name'] == artifact and download['with']['path'] == incoming, (
+        'The publisher downloads the exact artifact produced by its own component builder'
+    )
+    assert download['with'].get(
+        'run-id', '${{ github.run_id }}'
+    ) == '${{ github.run_id }}' and not download['with'].get('pattern'), (
+        'Component publication cannot substitute a foreign run or merged artifact selection'
+    )
+    placement_index, placement = pages_operation(steps, 'tools/ci/pages_update.py')
+    assert (
+        '--component ' + component in placement['run']
+        and '--incoming ' + incoming in placement['run']
+        and '--site site' in placement['run']
+    ), 'The site overlay owner receives the correct component and preserves its counterpart'
+    upload_index, upload = pages_operation(steps, 'actions/upload-pages-artifact@')
+    deploy_index, deploy = pages_operation(steps, 'actions/deploy-pages@')
+    assert download_index < placement_index < upload_index < deploy_index, (
+        'Each publisher downloads, overlays, uploads and deploys its actual component in order'
+    )
+    assert (
+        upload['with']['path'] == 'site'
+        and upload['with']['name'] == 'pages-site-' + component + '-${{ github.run_attempt }}'
+    ), 'The Pages artifact binds the composed site, selected component and current attempt'
+    assert deploy['with']['artifact_name'] == upload['with']['name'], (
+        'Deployment consumes exactly the composed Pages artifact from this attempt'
+    )
+
+
 def test_pages_builds_docs_and_publishes_the_linked_webapp():
-    pages = [doc for _, doc in workflows() if 'actions/deploy-pages' in json.dumps(doc)]
-    assert pages, 'the public site needs a GitHub Pages deployment workflow'
-    serialized = json.dumps(pages)
-    assert 'mkdocs' in serialized or 'docs-build' in serialized, (
-        'Pages must build the docs from this source tree'
-    )
-    assert 'actions/upload-pages-artifact' in serialized and 'webapp' in serialized, (
-        'the published Pages artifact must include the real webapp directory'
-    )
+    documents = dict(workflows())
+    assert 'pages.yml' in documents, 'The public site has its declared Pages publication workflow'
+    doc = documents['pages.yml']
+    pages_component_boundary(doc, 'docs', 'docs', 'pages-docs', 'documentation')
+    pages_component_boundary(doc, 'wasm', 'wasm', 'pages-webapp', 'webapp')
     config = yaml.load((ROOT / 'mkdocs.yml').read_text(), Loader=yaml.BaseLoader)
-    assert 'webapp' in json.dumps(config.get('nav', [])), (
-        'the public docs navigation must link the visible web app'
+    address = 'https://app.easydiffraction.org/'
+    assert address in json.dumps(config.get('nav', [])), (
+        'Docs navigation links the publicly released web app'
     )
     assert all(
-        '/webapp/' in (ROOT / path).read_text() for path in ('docs/index.md', 'docs/user/index.md')
-    ), 'the landing and user documentation must link the public web app'
-    assert 'wasm-build' in serialized and 'docs-webapp.sh build/wasm/site site' in serialized, (
-        'Pages must build the real wasm app and place its output in the uploaded docs site'
+        address in (ROOT / path).read_text() for path in ('docs/index.md', 'docs/user/index.md')
+    ), 'Both landing pages link the actual published application domain'
+    assert 'noindex' not in json.dumps(doc) and 'Disallow: /webapp/' not in json.dumps(doc), (
+        'Published documentation and the web app remain visible to indexing'
     )
-    for doc in pages:
-        steps = doc['jobs']['build']['steps']
-        operations = ('wasm-toolchain', 'wasm-build', 'docs-webapp.sh', 'upload-pages-artifact')
-        positions = []
-        for operation in operations:
-            matches = [
-                i
-                for i, step in enumerate(steps)
-                if operation in str(step.get('run', '')) + str(step.get('uses', ''))
-            ]
-            assert len(matches) == 1, 'Pages requires one real publication operation: ' + operation
-            index = matches[0]
-            assert active(steps[index], 'push') and not steps[index].get('continue-on-error'), (
-                'each Pages publication operation must execute and propagate its failure'
-            )
-            positions.append(index)
-        assert positions == sorted(positions), (
-            'Pages installs, builds and places the real app before uploading its site'
-        )
-        assert doc['jobs']['deploy'].get('needs') in ('build', ['build']), (
-            'Pages deploy waits for the completed combined documentation and webapp artifact'
-        )
-    assert 'noindex' not in serialized and 'Disallow: /webapp/' not in serialized, (
-        'the published site must not hide the web app from indexing'
-    )
-    assert 'site_url' in config, 'the public docs must declare their published canonical URL'
+    assert 'site_url' in config, 'The public documentation declares its canonical published URL'
 
 
 @pytest.mark.parametrize('defect', ['missing-build', 'disabled-placement', 'upload-first'])
@@ -740,16 +825,22 @@ def test_pages_publication_rejects_missing_or_bypassed_real_app(defect, monkeypa
     test_pages_builds_docs_and_publishes_the_linked_webapp()
     damaged = copy.deepcopy(workflows())
     pages = next(doc for name, doc in damaged if name == 'pages.yml')
-    steps = pages['jobs']['build']['steps']
     if defect == 'missing-build':
+        steps = pages['jobs']['wasm']['steps']
         steps[:] = [step for step in steps if 'wasm-build' not in step.get('run', '')]
-    elif defect == 'disabled-placement':
-        next(step for step in steps if 'docs-webapp.sh' in step.get('run', ''))['if'] = 'false'
     else:
-        index = next(
-            i for i, step in enumerate(steps) if 'upload-pages-artifact' in step.get('uses', '')
-        )
-        steps.insert(0, steps.pop(index))
+        steps = pages['jobs']['publish-wasm']['steps']
+        if defect == 'disabled-placement':
+            next(step for step in steps if 'tools/ci/pages_update.py' in step.get('run', ''))[
+                'if'
+            ] = 'false'
+        else:
+            index = next(
+                i
+                for i, step in enumerate(steps)
+                if 'upload-pages-artifact' in step.get('uses', '')
+            )
+            steps.insert(0, steps.pop(index))
     monkeypatch.setattr(sys.modules[__name__], 'workflows', lambda: damaged)
     with pytest.raises(AssertionError):
         test_pages_builds_docs_and_publishes_the_linked_webapp()
@@ -1324,4 +1415,93 @@ def test_vendor_allowance_does_not_cover_other_paths_or_versions(name):
     text = (ROOT / 'data/report/vendor/plotly-cartesian-3.7.0.min.js').read_text()
     assert process_findings([(name, text)]), (
         'The same process-shaped vendor token remains visible outside its exact declared path'
+    )
+
+
+@pytest.mark.parametrize(
+    'damage',
+    [
+        'name',
+        'path',
+        'producer',
+        'upload-first',
+        'missing-proof',
+        'disabled-proof',
+        'optional-proof',
+        'comment-only',
+    ],
+)
+def test_reviewed_delivery_artifacts_reject_identity_and_qualification_escapes(damage):
+    import copy  # noqa: PLC0415 - keep the policy control self-contained
+
+    from tests.fixtures.public_artifact_contract import ROUTES, reviewed_delivery  # noqa: PLC0415
+
+    documents = dict(workflows())
+    for (filename, producer, artifact), (_paths, proofs) in ROUTES.items():
+        job = documents[filename]['jobs'][producer]
+        upload = next(
+            step for step in job['steps'] if step.get('with', {}).get('name') == artifact
+        )
+        assert reviewed_delivery(filename, producer, job, upload), (
+            'Each published or shared artifact first proves its exact producer and prerequisites: '
+            + filename
+            + '/'
+            + artifact
+        )
+        changed = copy.deepcopy(job)
+        target = next(
+            step for step in changed['steps'] if step.get('with', {}).get('name') == artifact
+        )
+        selected_producer = producer
+        if damage in {'name', 'path'}:
+            target['with'][damage] = 'unreviewed-binary-output'
+        elif damage == 'producer':
+            selected_producer = 'unreviewed-producer'
+        elif damage == 'upload-first':
+            changed['steps'].remove(target)
+            changed['steps'].insert(0, target)
+        else:
+            proof_steps = [step for step in changed['steps'] if proofs[0] in step.get('run', '')]
+            assert proof_steps, (
+                'The source escape challenge must reach its real qualification producer'
+            )
+            for proof in proof_steps:
+                if damage == 'missing-proof':
+                    changed['steps'].remove(proof)
+                elif damage == 'disabled-proof':
+                    proof['if'] = False
+                elif damage == 'optional-proof':
+                    proof['continue-on-error'] = True
+                else:
+                    proof['run'] = '\n'.join('# ' + line for line in proof['run'].splitlines())
+        assert not reviewed_delivery(filename, selected_producer, changed, target), (
+            'Each artifact route refuses changed identity, producer, order or qualification: '
+            + filename
+            + '/'
+            + artifact
+            + '/'
+            + damage
+        )
+
+
+@pytest.mark.parametrize(
+    'damage', ['changed-home', 'private-citation', 'changed-case', 'other-path', 'archive-copy']
+)
+def test_synthetic_privacy_input_allowance_binds_exact_declared_reference_bytes(damage):
+    name = 'tests/fixtures/onboarding/privacy_representations.json'
+    original = (ROOT / name).read_text(encoding='utf-8')
+    assert not private_findings([(name, original)]), (
+        'The independently authored synthetic privacy cases first admit unchanged'
+    )
+    candidate, path = original, name
+    if damage == 'changed-home':
+        candidate = original.replace('Mary Jane', 'actual-account')
+    elif damage == 'private-citation':
+        candidate += '\ncrysta' + chr(32) + 'ADR-0999\n'
+    elif damage == 'changed-case':
+        candidate += '\n'
+    else:
+        path = ('copy/' if damage == 'other-path' else 'archive.zip!') + name
+    assert private_findings([(path, candidate)]), (
+        'Synthetic data cannot hide changed private inputs, citations or copied members'
     )
