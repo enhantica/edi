@@ -168,7 +168,7 @@ void BackgroundTermListModel::remove(int row) {
 
 ExcludedRegionListModel::ExcludedRegionListModel(edi::ExperimentBase& experiment, ProjectEditor& editor,
                                                  QObject* parent)
-    : RowTableModel({"id", "start", "end"}, parent), experiment_(experiment), editor_(editor) {
+    : RowTableModel({"id", "start", "end", "axis"}, parent), experiment_(experiment), editor_(editor) {
     sync();
 }
 
@@ -240,7 +240,7 @@ bool same(const T& a, const T& b) {
 // The reflection table's columns, in the order the delegates read them.
 const QStringList kSingleCrystalReflectionRoles{"h",        "k",        "l",          "dSpacing", "sinThetaOverLambda",
                                                 "intensityMeas", "intensityMeasSu", "intensityCalc", "residual",
-                                                "wavelength", "fitUse"};
+                                                "wavelength", "fitUse", "status"};
 }  // namespace
 
 SingleCrystalReflectionModel::SingleCrystalReflectionModel(const edi::ExperimentBase& experiment,
@@ -286,6 +286,20 @@ void SingleCrystalReflectionModel::publish() {
 
 void SingleCrystalReflectionModel::sync() {
     frame_.reset();
+    status_.clear();
+    std::size_t index = project_.experiments.size();
+    for (std::size_t i = 0; i < project_.experiments.size(); ++i) {
+        if (project_.experiments[i].get() == &experiment_) {
+            index = i;
+        }
+    }
+    try {
+        if (const auto admission = edi::reflection_admission(project_, index)) {
+            status_ = admission->status;
+        }
+    } catch (const std::exception&) {
+        status_.clear();  // a project crysta cannot take yet: the cutoff alone decides, as before
+    }
     refresh();
 }
 
@@ -325,7 +339,10 @@ void SingleCrystalReflectionModel::refresh(bool table) {
             const double meas = reflections->intensity_meas[i];
             const double sigma = reflections->intensity_meas_su[i];
             const double value = current ? calc[i] : qQNaN();
-            const bool fitted = !cutoff.has_value() || meas > *cutoff * sigma;
+            // crysta's admission (exclusions, absences, merging and the cutoff on the merged F²) when it could be
+            // taken; else the cutoff on the row's own F².
+            const char status = i < status_.size() ? status_[i] : (!cutoff.has_value() || meas > *cutoff * sigma ? 'o' : '<');
+            const bool fitted = status == 'o';
             used.append(fitted);
             // The table's rows (and their columns that only the table shows) are built only when the table is: a held
             // slider's step draws the chart alone (edi ADR-0070).
@@ -339,7 +356,7 @@ void SingleCrystalReflectionModel::refresh(bool table) {
                               column(reflections->d_spacing), column(reflections->sin_theta_over_lambda), meas, sigma,
                               value, residual,
                               i < reflections->wavelength.size() ? reflections->wavelength[i] : qQNaN(),
-                              fitted ? 1.0 : 0.0}});
+                              fitted ? 1.0 : 0.0, QString(QChar::fromLatin1(status))}});
             }
             calculated.append(value);
             measured.append(meas);
@@ -372,7 +389,7 @@ void SingleCrystalReflectionModel::refresh(bool table) {
                 rows.append({reinterpret_cast<const void*>(i + 1),
                              {reflections->generated_index_h[i], reflections->generated_index_k[i],
                               reflections->generated_index_l[i], spacings ? reflections->d_spacing[i] : qQNaN(),
-                              position, qQNaN(), qQNaN(), value, qQNaN(), qQNaN(), 1.0}});
+                              position, qQNaN(), qQNaN(), value, qQNaN(), qQNaN(), 1.0, QStringLiteral("o")}});
             }
             calculated.append(value);
             measured.append(qQNaN());
@@ -503,7 +520,8 @@ QString SingleCrystalReflectionModel::hoverText(int row, bool squared) const {
 void ExcludedRegionListModel::sync() {
     QList<Row> rows;
     for (const auto& region : experiment_.excluded_regions) {
-        rows.append({region.get(), {QString::fromStdString(region->id.value()), region->first.get(), region->second.get()}});
+        rows.append({region.get(), {QString::fromStdString(region->id.value()), region->first.get(), region->second.get(),
+                                    QString::fromStdString(region->axis.value())}});
     }
     setTableRows(rows);
 }
@@ -530,8 +548,17 @@ bool ExcludedRegionListModel::setEnd(int row, double end) {
 void ExcludedRegionListModel::append() {
     edi::ExperimentBase& experiment = experiment_;
     const double at = experiment.excluded_regions.empty() ? 0.0 : experiment.excluded_regions.back()->second.get();
-    editor_.apply_creation_control(edi::Edit::append_excluded_region(experiment, at, at), false,
-        {ProjectEditor::CreationAction::Kind::ExclusionAppend, &experiment});
+    // A single crystal's region is in d (or sin(theta)/lambda, chosen in its row); a powder's on its pattern's axis.
+    editor_.apply_creation_control(experiment.reflections ? edi::Edit::append_excluded_region(experiment, at, at, "d_spacing")
+                                                          : edi::Edit::append_excluded_region(experiment, at, at),
+                                   false, {ProjectEditor::CreationAction::Kind::ExclusionAppend, &experiment});
+}
+
+bool ExcludedRegionListModel::setAxis(int row, const QString& axis) {
+    edi::ExperimentBase& experiment = experiment_;
+    if (row < 0 || row >= count()) return false;
+    return editor_.apply(edi::Edit::excluded_region_axis(experiment, static_cast<std::size_t>(row), axis.toStdString()), true)
+        .isEmpty();
 }
 
 void ExcludedRegionListModel::remove(int row) {

@@ -1108,6 +1108,71 @@ class Edit {
             (end ? region.second : region.first) = value;
         });
     }
+    // A single crystal's region is on its d or sin(theta)/lambda axis, named on every row.
+    static Edit append_excluded_region(ExperimentBase& experiment, double start, double end, std::string axis) {
+        ExcludedRegion region(start, end);
+        region.axis = check_excluded_region_axis(experiment, axis);
+        return appending(experiment.excluded_regions, std::move(region));
+    }
+    static Edit excluded_region_axis(ExperimentBase& experiment, std::size_t row, std::string axis) {
+        return Edit([&experiment, row, axis = std::move(axis)] {
+            require_region(experiment, row);
+            const std::string checked = check_excluded_region_axis(experiment, axis);
+            experiment.excluded_regions[row]->axis = checked;
+        });
+    }
+    // A single crystal's reflection left out by its indices, or put back: the row with these indices is erased
+    // when there is one, else appended (the reflection table's toggle).
+    static Edit toggle_excluded_reflection(ExperimentBase& experiment, int h, int k, int l) {
+        return Edit([&experiment, h, k, l] {
+            if (!experiment.reflections) {
+                throw std::invalid_argument("only a single crystal leaves out reflections by their indices");
+            }
+            for (std::size_t row = 0; row < experiment.excluded_reflections.size(); ++row) {
+                const auto& held = *experiment.excluded_reflections[row];
+                if (held.index_h.get() == h && held.index_k.get() == k && held.index_l.get() == l) {
+                    experiment.excluded_reflections.erase_at(row);
+                    return;
+                }
+            }
+            experiment.excluded_reflections.push_back(std::make_shared<ExcludedReflection>(h, k, l));
+        });
+    }
+    static Edit erase_excluded_reflection(ExperimentBase& experiment, std::size_t row) {
+        return Edit([&experiment, row] {
+            if (row >= experiment.excluded_reflections.size()) {
+                throw std::out_of_range("the experiment has no excluded reflection " + std::to_string(row));
+            }
+            experiment.excluded_reflections.erase_at(row);
+        });
+    }
+    // A single crystal's merge mode and absences setting; empty clears.
+    static Edit reflns_merge(ExperimentBase& experiment, std::optional<std::string> mode) {
+        return Edit([&experiment, mode = std::move(mode)] { set_reflns_merge(experiment, mode); });
+    }
+    static Edit reflns_absences(ExperimentBase& experiment, std::optional<std::string> absences) {
+        return Edit([&experiment, absences = std::move(absences)] { set_reflns_absences(experiment, absences); });
+    }
+    // An edit followed by the experiment's common scale factor: its enabled phase scales multiplied by the factor
+    // that brings its calculation to its data's level, so the two are one step to undo. `experiment` names the
+    // target unless the edit reports the experiment it produced (Load data replaces it).
+    // `scaled`, when given, is set to whether a factor was applied.
+    static Edit rescaled(Project& project, const ExperimentBase& experiment, Edit change,
+                         std::shared_ptr<bool> scaled = nullptr) {
+        return Edit(ResultOperation{}, [&project, &experiment, change = std::move(change), scaled] {
+            AppliedResult applied = change.apply_result();
+            const ExperimentBase* target = applied.experiment != nullptr ? applied.experiment : &experiment;
+            bool done = false;
+            for (std::size_t index = 0; index < project.experiments.size(); ++index) {
+                if (project.experiments[index].get() == target) {
+                    done = apply_common_scale(project, index);
+                    break;
+                }
+            }
+            if (scaled) *scaled = done;
+            return applied;
+        });
+    }
     // A space-group setting chosen whole (assign_space_group_setting): name, code and IT number never contradict
     // one another (the owner, 2026-10-06). Assignments, which cannot fail.
     static Edit space_group_setting(SpaceGroup& group, SpaceGroupSettingName setting, bool declare_number) {

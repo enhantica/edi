@@ -914,6 +914,17 @@ std::shared_ptr<ProjectViewModel::WidgetCreationInput> ProjectViewModel::prepare
 void ProjectViewModel::finishWidgetCreation(const std::shared_ptr<WidgetCreationInput>& input) noexcept {
     if (widget_creation_input_ == input) widget_creation_input_.reset();
 }
+// An experiment with measured data whose phase scales the common factor left as they were: one line in Messages.
+// Without measured data there is nothing to bring the calculation to, so nothing is said.
+void ProjectViewModel::noteUnscaled(const edi::ExperimentBase& experiment, bool scaled) {
+    const bool measured = experiment.reflections ? !experiment.reflections->index_h.get().empty()
+                                                 : experiment.data.has_value() && !experiment.calculation_only;
+    if (scaled || !measured) return;
+    emit information(tr("Phase scales of %1 were left as they were: the calculation could not be brought to the "
+                        "data's level (nothing calculated, or no factor above zero)")
+                         .arg(QString::fromStdString(experiment.name)));
+}
+
 QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool structural, const CreationAction& actual) {
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
@@ -1007,7 +1018,12 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
             edi::capture_experiment_controls(*project_,*experiment,actual.kind==Kind::PeakProfile);
         undo_history_.reserve(undo_history_.size()+1);undo_history_.emplace_back(std::move(before));
         EditOutcome result;
-        try {result=applyEdit(change,structural);}catch(...){if(self)undo_history_.pop_back();throw;}
+        // A phase added, removed, switched on or off or replaced brings the calculation to the data's level again
+        // (the common scale factor); the links' undo above restores every scale with the membership.
+        const auto scaled=std::make_shared<bool>(false);
+        try {result=applyEdit(phase_control?edi::Edit::rescaled(*project_,*experiment,change,scaled):change,structural);}
+        catch(...){if(self)undo_history_.pop_back();throw;}
+        if(self && phase_control && result.applied)noteUnscaled(*experiment,*scaled);
         if(input)input->outcome=result;
         if(!self)return result.applied?QString{}:result.message;
         if(!result.applied)undo_history_.pop_back();
@@ -2859,7 +2875,14 @@ QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacem
     const edi::ExperimentBase* before = project.experiments[static_cast<std::size_t>(index)].get();
     QString error;
     try {
-        const EditOutcome result = applyEdit(edi::Edit::load_data(project, *before, std::move(replacement)), true, restoring);
+        // Loaded data brings the calculation to its level (the common scale factor), in the same undo step; an undo
+        // restores the experiment as it was.
+        edi::Edit load = edi::Edit::load_data(project, *before, std::move(replacement));
+        const auto scaled = std::make_shared<bool>(false);
+        const EditOutcome result = applyEdit(
+            restoring ? std::move(load) : edi::Edit::rescaled(project, *before, std::move(load), scaled), true, restoring);
+        if (self && !restoring && result.applied && static_cast<std::size_t>(index) < project.experiments.size())
+            noteUnscaled(*project.experiments[static_cast<std::size_t>(index)], *scaled);
         if (input && input->consumed) input->outcome = result;
         error = result.applied ? QString{} : result.message;
         if (!self || retired_) return error;

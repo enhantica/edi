@@ -3267,11 +3267,13 @@ struct KeyTraits<LineSegment> {
     static const char* category() { return "background point"; }
 };
 
-/// An exclusion interval with a collection-owned stored identifier (ADR-0029).
+/// An exclusion interval with a collection-owned stored identifier (ADR-0029). A powder's interval is on its
+/// pattern's axis (`axis` empty); a single crystal's names its axis, `d_spacing` or `sin_theta_over_lambda`.
 struct ExcludedRegion : std::enable_shared_from_this<ExcludedRegion> {
     ItemKey id;
     detail::Written<double> first{0.0};
     detail::Written<double> second{0.0};
+    detail::WrittenText axis;
     detail::RowLink row;
     detail::Epoch epoch;
     ExcludedRegion(double start = 0.0, double end = 0.0) : first(start), second(end) {}
@@ -3292,6 +3294,35 @@ struct RowTraits<ExcludedRegion> {
     static void link(ExcludedRegion& region, const std::shared_ptr<detail::Membership>& record) noexcept { region.row.link(record); }
     static void unlink(ExcludedRegion& region) noexcept { region.row.unlink(); }
     static const detail::RowLink* primary(const ExcludedRegion& region) noexcept { return &region.row; }
+};
+
+/// A single crystal's reflection left out of the fit by its indices (`_excluded_reflection`). The indices are
+/// reduced under the experiment's merge mode, so a merged mode leaves out the reflection's equivalents too.
+struct ExcludedReflection : std::enable_shared_from_this<ExcludedReflection> {
+    ItemKey id;
+    detail::Written<int> index_h{0};
+    detail::Written<int> index_k{0};
+    detail::Written<int> index_l{0};
+    detail::RowLink row;
+    detail::Epoch epoch;
+    ExcludedReflection(int h = 0, int k = 0, int l = 0) : index_h(h), index_k(k), index_l(l) {}
+};
+template <>
+struct KeyTraits<ExcludedReflection> {
+    static constexpr bool ordinal_defaults = true;
+    static ItemKey& key(ExcludedReflection& row) { return row.id; }
+    static const ItemKey& key(const ExcludedReflection& row) { return row.id; }
+    static std::string canonical(const std::string& id) {
+        if (id.empty()) throw std::invalid_argument("excluded-reflection id must not be empty");
+        return id;
+    }
+    static const char* category() { return "excluded reflection"; }
+};
+template <>
+struct RowTraits<ExcludedReflection> {
+    static void link(ExcludedReflection& row, const std::shared_ptr<detail::Membership>& record) noexcept { row.row.link(record); }
+    static void unlink(ExcludedReflection& row) noexcept { row.row.unlink(); }
+    static const detail::RowLink* primary(const ExcludedReflection& row) noexcept { return &row.row; }
 };
 
 // A background point is a row of its experiment's `background`.
@@ -3324,9 +3355,17 @@ namespace crysta {
 template <>
 struct RowSchema<edi::ExcludedRegion> {
     static constexpr const char* name = "_excluded_region";
-    static constexpr auto fields = std::tuple{&edi::ExcludedRegion::id, &edi::ExcludedRegion::first, &edi::ExcludedRegion::second};
-    static constexpr std::array items{"id", "start", "end"};
+    static constexpr auto fields = std::tuple{&edi::ExcludedRegion::id, &edi::ExcludedRegion::first, &edi::ExcludedRegion::second,
+                                              &edi::ExcludedRegion::axis};
+    static constexpr std::array items{"id", "start", "end", "axis"};
     static constexpr std::array legacy{"_easydiffraction_excluded_region"};
+};
+template <>
+struct RowSchema<edi::ExcludedReflection> {
+    static constexpr const char* name = "_excluded_reflection";
+    static constexpr auto fields = std::tuple{&edi::ExcludedReflection::id, &edi::ExcludedReflection::index_h,
+                                              &edi::ExcludedReflection::index_k, &edi::ExcludedReflection::index_l};
+    static constexpr std::array items{"id", "index_h", "index_k", "index_l"};
 };
 }
 
@@ -4271,6 +4310,12 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     // reported R factors and counts are taken over, never which a fit uses.
     std::optional<double> reflns_threshold_sigma;
     std::optional<std::string> reflns_threshold_basis;
+    // How a single crystal's equivalent reflections are merged (`_reflns.merge`: none, point_group or laue_class)
+    // and whether its systematic absences are left out of the fit (`_reflns.absences`: exclude or include), each
+    // absent until declared (absent: none, include), and its reflections left out by their indices.
+    std::optional<std::string> reflns_merge;
+    std::optional<std::string> reflns_absences;
+    ItemVec<ExcludedReflection> excluded_reflections;
     // A data-free constant-wavelength single crystal's resolution limit (`_data_range.sin_theta_over_lambda_max`,
     // inverse angstroms): it then calculates the reflections its space group allows up to it.
     std::optional<double> sin_theta_over_lambda_max;
@@ -4766,6 +4811,11 @@ std::vector<std::string> extinction_type_tokens();
 std::vector<std::string> mosaic_distribution_tokens();
 // The observed threshold's bases (`intensity`, `amplitude`).
 std::vector<std::string> reflns_threshold_basis_tokens();
+// A single crystal's merge modes (`none`, `point_group`, `laue_class`), absences settings (`exclude`, `include`)
+// and excluded-region axes (`d_spacing`, `sin_theta_over_lambda`), crysta's spellings.
+std::vector<std::string> reflns_merge_tokens();
+std::vector<std::string> reflns_absences_tokens();
+std::vector<std::string> excluded_region_axis_tokens();
 std::string absorption_file_token(BeamModeEnum mode, const std::string& token);
 std::string absorption_registry_token(BeamModeEnum mode, const std::string& file_token);
 // The highest term order a background type admits, from crysta's table: 5 for `polynomial`, 23 for `chebyshev`,
@@ -5780,8 +5830,9 @@ struct ReflnsCategory {
     using Owner = ExperimentBase;
     static constexpr const char* name = "_reflns";
     static constexpr auto columns =
-        std::tuple{&ExperimentBase::reflns_threshold_sigma, &ExperimentBase::reflns_threshold_basis};
-    static constexpr std::array items{"threshold_sigma", "threshold_basis"};
+        std::tuple{&ExperimentBase::reflns_threshold_sigma, &ExperimentBase::reflns_threshold_basis,
+                   &ExperimentBase::reflns_merge, &ExperimentBase::reflns_absences};
+    static constexpr std::array items{"threshold_sigma", "threshold_basis", "merge", "absences"};
 };
 static_assert(detail::one_entry_per_column(ReflnsCategory::columns, ReflnsCategory::items));
 

@@ -148,6 +148,9 @@ ExperimentViewModel::ExperimentViewModel(const SavedFile& saved, edi::Project& p
       extinction_type_options_(new OptionListModel(this)),
       mosaic_distribution_options_(new OptionListModel(this)),
       reflns_threshold_basis_options_(new OptionListModel(this)),
+      reflns_merge_options_(new OptionListModel(this)),
+      reflns_absences_options_(new OptionListModel(this)),
+      excluded_region_axis_options_(new OptionListModel(this)),
       background_type_options_(new OptionListModel(this)),
       background_estimate_methods_(new OptionListModel(this)),
       background_estimate_modes_(new OptionListModel(this)),
@@ -189,6 +192,9 @@ ExperimentViewModel::ExperimentViewModel(const SavedFile& saved, edi::Project& p
     extinction_type_options_->setOptions(edi::extinction_type_tokens(), "none", edi::extinction_type_choice_labels());
     mosaic_distribution_options_->setOptions(edi::mosaic_distribution_tokens(), "gaussian",
                                              edi::mosaic_distribution_labels());
+    reflns_merge_options_->setItemOptions("reflns.merge", edi::reflns_merge_tokens(), "none");
+    reflns_absences_options_->setItemOptions("reflns.absences", edi::reflns_absences_tokens(), "include");
+    excluded_region_axis_options_->setItemOptions("excluded_region.axis", edi::excluded_region_axis_tokens(), "d_spacing");
     reflns_threshold_basis_options_->setOptions(edi::reflns_threshold_basis_tokens(), "intensity",
                                                 edi::reflns_threshold_basis_labels());
     background_type_options_->setItemOptions("background.type", edi::supported_background_types());
@@ -564,6 +570,73 @@ void ExperimentViewModel::setReflnsThresholdBasis(const QString& token) {
     setLastError(editor_.apply_unread(edi::Edit::reflns_threshold_basis(experiment, value)));
 }
 
+void ExperimentViewModel::setReflnsMerge(const QString& token) {
+    const std::optional<std::string> value =
+        token.isEmpty() ? std::nullopt : std::optional<std::string>(token.toStdString());
+    if (value == experiment_.reflns_merge) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply_unread(edi::Edit::reflns_merge(experiment, value)));
+}
+
+void ExperimentViewModel::setReflnsAbsences(const QString& token) {
+    const std::optional<std::string> value =
+        token.isEmpty() ? std::nullopt : std::optional<std::string>(token.toStdString());
+    if (value == experiment_.reflns_absences) {
+        return;
+    }
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply_unread(edi::Edit::reflns_absences(experiment, value)));
+}
+
+void ExperimentViewModel::toggleExcludedReflection(int h, int k, int l) {
+    edi::ExperimentBase& experiment = experiment_;
+    setLastError(editor_.apply_unread(edi::Edit::toggle_excluded_reflection(experiment, h, k, l)));
+}
+
+// The admission is crysta's, computed again on each change: it reads the exclusions, the merge mode, the
+// absences, the structure's space group and the fit's cutoff, any of which an edit may have changed.
+void ExperimentViewModel::syncAdmission() {
+    QVariantMap admission;
+    QStringList statuses;
+    std::size_t index = project_.experiments.size();
+    for (std::size_t i = 0; i < project_.experiments.size(); ++i) {
+        if (project_.experiments[i].get() == &experiment_) {
+            index = i;
+        }
+    }
+    std::optional<edi::ReflectionAdmission> reduced;
+    try {
+        reduced = edi::reflection_admission(project_, index);
+    } catch (const std::exception&) {
+        reduced.reset();  // a project crysta cannot take yet (no structure, no cell) shows no admission
+    }
+    if (reduced) {
+        const auto count = [](std::size_t value) { return static_cast<qulonglong>(value); };
+        admission.insert("measured", count(reduced->measured));
+        admission.insert("unique", count(reduced->unique));
+        admission.insert("used", count(reduced->used));
+        admission.insert("excluded", count(reduced->excluded));
+        admission.insert("absent", count(reduced->absent));
+        admission.insert("rInt", reduced->r_int.value_or(qQNaN()));
+        admission.insert("rSigma", reduced->r_sigma.value_or(qQNaN()));
+        admission.insert("absentMeanIOverSigma", reduced->absent_mean_i_over_sigma);
+        statuses.reserve(static_cast<qsizetype>(reduced->status.size()));
+        for (const char code : reduced->status) {
+            statuses.append(QString(QChar::fromLatin1(code)));
+        }
+    }
+    if (admission != reflection_admission_) {
+        reflection_admission_ = admission;
+        emit reflectionAdmissionChanged();
+    }
+    if (statuses != reflection_statuses_) {
+        reflection_statuses_ = statuses;
+        emit reflectionStatusesChanged();
+    }
+}
+
 void ExperimentViewModel::setCutoffFwhm(double cutoff) {
     edi::ExperimentBase& experiment = experiment_;
     const QPointer<ExperimentViewModel> self(this);
@@ -668,6 +741,13 @@ void ExperimentViewModel::sync() {
            &ExperimentViewModel::reflnsThresholdBasisChanged);
     update(reflns_threshold_expression_, QString::fromStdString(edi::reflns_threshold_expression(experiment_)),
            &ExperimentViewModel::reflnsThresholdExpressionChanged);
+    update(reflns_merge_, QString::fromStdString(experiment_.reflns_merge.value_or("")),
+           &ExperimentViewModel::reflnsMergeChanged);
+    update(reflns_absences_, QString::fromStdString(experiment_.reflns_absences.value_or("")),
+           &ExperimentViewModel::reflnsAbsencesChanged);
+    if (experiment_.reflections) {
+        syncAdmission();
+    }
     update(background_type_, QString::fromStdString(experiment_.background_type),
            &ExperimentViewModel::backgroundTypeChanged);
     // NaN never equals itself: a constant the type lacks is compared as absent.

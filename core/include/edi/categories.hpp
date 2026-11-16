@@ -219,8 +219,7 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment, b
     std::vector<Category> categories;
     categories.push_back({"experiment_type"});
     if (experiment.reflections.has_value()) {
-        // A single crystal: no profile, background, excluded regions or absorption; its extinction
-        // instead.
+        // A single crystal: no profile, background or absorption; its extinction instead.
         // Its wavelength at constant wavelength. At time of flight, which reads none, the category holds no
         // parameter: the app's Instrument group shows the reflections' wavelength band.
         categories.push_back(experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH
@@ -243,6 +242,8 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment, b
             linked.fields.push_back({"scale", &link->scale, true});
         }
         categories.push_back(linked);
+        // Its regions are on d or sin(theta)/lambda; they and the reflections left out by their indices are rows.
+        categories.push_back({"excluded_region", true, experiment.excluded_regions.size()});
         categories.push_back({"scattering_source"});
         // Without measured reflections, the ones the calculation generated.
         const std::size_t measured = experiment.reflections->size();

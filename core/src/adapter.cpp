@@ -60,6 +60,8 @@
 #include "crysta/legacy_metadata.hpp"
 #include "crysta/model.hpp"
 #include "crysta/parameter.hpp"
+#include "crysta/reflection_admission.hpp"
+#include "crysta/scale_estimate.hpp"
 #include "crysta/partype.hpp"
 #include "crysta/pattern.hpp"
 #include "crysta/peak.hpp"
@@ -3319,6 +3321,18 @@ double read_threshold_sigma(const std::string& value, const char* tag) {
     return crysta::read_threshold_sigma(value, tag);
 }
 std::string read_threshold_basis(const std::string& value) { return crysta::read_threshold_basis(value); }
+std::string read_reflns_merge(const std::string& value, bool time_of_flight) {
+    if (crysta::read_merge_mode(value) != crysta::MergeMode::None && time_of_flight) {
+        throw std::invalid_argument("a time-of-flight single crystal merges no reflections: _reflns.merge '" + value +
+                                    "' must be none");
+    }
+    return value;
+}
+std::string read_reflns_absences(const std::string& value) {
+    crysta::read_absences_excluded(value);
+    return value;
+}
+std::string read_region_axis(const std::string& value) { return crysta::read_region_axis(value); }
 const char* single_crystal_resolution_key() { return crysta::kSinThetaOverLambdaMaxKey; }
 double read_single_crystal_resolution(const std::string& value) {
     return crysta::read_sin_theta_over_lambda_max(value);
@@ -3862,6 +3876,26 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
                                      e.extinction.mosaic_distribution.value_or("gaussian"));
     built.reflns_threshold_sigma = e.reflns_threshold_sigma;
     built.reflns_threshold_basis = e.reflns_threshold_basis;
+    // Which reflections a fit uses: the exclusions by range and by indices, the merge mode and the absences.
+    built.reflns_merge = e.reflns_merge;
+    built.reflns_absences = e.reflns_absences;
+    {
+        std::vector<crysta::ExcludedRegion> regions;
+        regions.reserve(e.excluded_regions.size());
+        for (const auto& region : e.excluded_regions) {
+            regions.emplace_back(region->first.get(), region->second.get());
+            regions.back().id = region->id.value();
+            regions.back().axis = region->axis.value();
+        }
+        built.excluded_regions = regions;
+        std::vector<crysta::ExcludedReflection> omitted;
+        omitted.reserve(e.excluded_reflections.size());
+        for (const auto& row : e.excluded_reflections) {
+            omitted.emplace_back(row->index_h.get(), row->index_k.get(), row->index_l.get());
+            omitted.back().id = row->id.value();
+        }
+        built.excluded_reflections = omitted;
+    }
     // A linked reflection file crosses as a powder's linked file does, so a save writes the link, not the rows.
     built.data_file = e.data_file;
     built.data_path = e.data_path;
@@ -4857,6 +4891,105 @@ std::vector<std::string> mosaic_distribution_tokens() {
 }
 
 std::vector<std::string> reflns_threshold_basis_tokens() { return {"intensity", "amplitude"}; }
+
+std::vector<std::string> reflns_merge_tokens() { return crysta::merge_mode_names(); }
+std::vector<std::string> reflns_absences_tokens() { return {"exclude", "include"}; }
+std::vector<std::string> excluded_region_axis_tokens() { return {"d_spacing", "sin_theta_over_lambda"}; }
+
+void set_reflns_merge(ExperimentBase& experiment, std::optional<std::string> mode) {
+    if (!mode) {
+        experiment.reflns_merge.reset();
+        return;
+    }
+    if (!experiment.reflections) {
+        throw std::invalid_argument("_reflns.merge applies to a single crystal only");
+    }
+    const crysta::MergeMode merged = crysta::read_merge_mode(*mode);
+    // Equivalents measured at their own wavelengths are different observations (their extinction differs).
+    if (merged != crysta::MergeMode::None && experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH) {
+        throw std::invalid_argument("a time-of-flight single crystal merges no reflections: _reflns.merge must be none");
+    }
+    experiment.reflns_merge = crysta::merge_mode_name(merged);
+}
+
+void set_reflns_absences(ExperimentBase& experiment, std::optional<std::string> absences) {
+    if (!absences) {
+        experiment.reflns_absences.reset();
+        return;
+    }
+    if (!experiment.reflections) {
+        throw std::invalid_argument("_reflns.absences applies to a single crystal only");
+    }
+    crysta::read_absences_excluded(*absences);
+    experiment.reflns_absences = *absences;
+}
+
+std::string check_excluded_region_axis(const ExperimentBase& experiment, const std::string& axis) {
+    if (!experiment.reflections) {
+        if (!axis.empty()) {
+            throw std::invalid_argument("a powder's excluded region is on its pattern's axis: it takes no axis");
+        }
+        return axis;
+    }
+    return crysta::read_region_axis(axis);
+}
+
+std::optional<ReflectionAdmission> reflection_admission(const Project& project, std::size_t experiment) {
+    if (experiment >= project.experiments.size() || !project.experiments[experiment]->reflections ||
+        project.experiments[experiment]->reflections->index_h.get().empty()) {
+        return std::nullopt;
+    }
+    const BuiltExperiments banks = calculation_banks(project.experiments);
+    crysta::Project engine(to_crysta_structures(project), experiment_list(banks));
+    engine.refine_ls_threshold_sigma = project.refine_ls_threshold_sigma;
+    const crysta::SingleCrystalReduction reduced = crysta::reduce_reflections(engine, experiment);
+    ReflectionAdmission out;
+    out.status.reserve(reduced.status.size());
+    for (const crysta::ReflectionStatus status : reduced.status) {
+        out.status.push_back(crysta::include_status_code(status));
+        out.excluded_by_indices.push_back(status == crysta::ReflectionStatus::ExcludedHkl);
+    }
+    out.measured = reduced.measured;
+    out.unique = reduced.unique;
+    out.used = reduced.used;
+    out.excluded = reduced.excluded;
+    out.absent = reduced.absent;
+    out.r_int = reduced.r_int;
+    out.r_sigma = reduced.r_sigma;
+    out.absent_mean_i_over_sigma = reduced.absent_mean_i_over_sigma;
+    return out;
+}
+
+std::optional<double> common_scale_factor(const Project& project, std::size_t experiment) {
+    if (experiment >= project.experiments.size()) {
+        return std::nullopt;
+    }
+    const BuiltExperiments banks = calculation_banks(project.experiments);
+    crysta::Project engine(to_crysta_structures(project), experiment_list(banks));
+    fill_crysta_relations(project, engine);
+    engine.refine_ls_threshold_sigma = project.refine_ls_threshold_sigma;
+    try {
+        return crysta::common_scale_factor(engine, experiment);
+    } catch (const std::exception&) {
+        // A project that cannot be calculated yet (no structure, an incomplete instrument) has no factor.
+        return std::nullopt;
+    }
+}
+
+bool apply_common_scale(Project& project, std::size_t experiment) {
+    const std::optional<double> factor = common_scale_factor(project, experiment);
+    if (!factor) {
+        return false;
+    }
+    bool changed = false;
+    for (const auto& link : project.experiments[experiment]->linked_structures) {
+        if (link->enabled.get()) {
+            link->scale.value = link->scale.value.get() * *factor;
+            changed = true;
+        }
+    }
+    return changed;
+}
 
 void set_reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma) {
     experiment.reflns_threshold_sigma =

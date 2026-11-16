@@ -2008,6 +2008,68 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
     } catch (const std::invalid_argument& error) {
         fail_domain(where, "reflns-threshold", error.what());
     }
+    // Which reflections a fit uses: the merge mode, the absences and the exclusions (crysta's admission), each
+    // absent until declared. A time-of-flight single crystal merges nothing.
+    try {
+        if (const std::string* merge = block.find("_reflns.merge")) {
+            experiment.reflns_merge = detail::read_reflns_merge(
+                *merge, experiment.effective_beam_mode() != BeamModeEnum::CONSTANT_WAVELENGTH);
+        }
+        if (const std::string* absences = block.find("_reflns.absences")) {
+            experiment.reflns_absences = detail::read_reflns_absences(*absences);
+        }
+    } catch (const std::invalid_argument& error) {
+        fail_domain(where, "reflns-admission", error.what());
+    }
+    if (const Loop* excluded = block.loop_with("_excluded_region.start"); excluded != nullptr) {
+        if (excluded->column("_excluded_region.axis") < 0) {
+            fail_schema(where, "missing-loop-column",
+                        "a single crystal's _excluded_region names its axis (_excluded_region.axis d_spacing or "
+                        "sin_theta_over_lambda) on every row");
+        }
+        std::vector<std::shared_ptr<ExcludedRegion>> regions;
+        for (const auto& row : excluded->rows) {
+            ExcludedRegion region(to_double(loop_cell(*excluded, row, "_excluded_region.start", where), where),
+                                  to_double(loop_cell(*excluded, row, "_excluded_region.end", where), where));
+            try {
+                region.axis = detail::read_region_axis(loop_cell(*excluded, row, "_excluded_region.axis", where));
+            } catch (const std::invalid_argument& error) {
+                fail_domain(where, "excluded-region-axis", error.what());
+            }
+            if (excluded->column("_excluded_region.id") >= 0)
+                region.id = loop_cell(*excluded, row, "_excluded_region.id", where);
+            regions.push_back(std::make_shared<ExcludedRegion>(region));
+        }
+        try {
+            experiment.excluded_regions.assign(std::move(regions));
+        } catch (const std::invalid_argument& error) {
+            fail_domain(where, "duplicate-id", error.what());
+        }
+    }
+    if (const Loop* omitted = block.loop_with("_excluded_reflection.index_h"); omitted != nullptr) {
+        const auto miller = [&](const std::vector<std::string>& row, const char* tag) {
+            const std::string& text = loop_cell(*omitted, row, tag, where);
+            const double value = to_double(text, where);
+            if (value != std::floor(value) || std::abs(value) > 1.0e6) {
+                fail_schema(where, "invalid-miller-index", std::string(tag) + " '" + text + "' is not a Miller index");
+            }
+            return static_cast<int>(value);
+        };
+        std::vector<std::shared_ptr<ExcludedReflection>> rows;
+        for (const auto& row : omitted->rows) {
+            auto item = std::make_shared<ExcludedReflection>(miller(row, "_excluded_reflection.index_h"),
+                                                             miller(row, "_excluded_reflection.index_k"),
+                                                             miller(row, "_excluded_reflection.index_l"));
+            if (omitted->column("_excluded_reflection.id") >= 0)
+                item->id = loop_cell(*omitted, row, "_excluded_reflection.id", where);
+            rows.push_back(std::move(item));
+        }
+        try {
+            experiment.excluded_reflections.assign(std::move(rows));
+        } catch (const std::invalid_argument& error) {
+            fail_domain(where, "duplicate-id", error.what());
+        }
+    }
     if (const std::string* distribution = block.find("_extinction.mosaic_distribution")) {
         const std::vector<std::string> distributions = mosaic_distribution_tokens();
         if (std::find(distributions.begin(), distributions.end(), *distribution) == distributions.end()) {
@@ -2585,7 +2647,16 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
         }
     }
 
+    // A powder's regions are on its pattern's axis, and it leaves out no reflection by its indices.
+    if (block_has_tag(block, "_excluded_reflection.index_h") || block_has_tag(block, "_excluded_reflection.id")) {
+        fail_schema(where, "single-crystal-category-on-powder",
+                    "_excluded_reflection on a powder: only a single crystal leaves out reflections by their indices");
+    }
     const Loop* excluded = block.loop_with("_excluded_region.start");
+    if (excluded != nullptr && excluded->column("_excluded_region.axis") >= 0) {
+        fail_schema(where, "single-crystal-item-on-powder",
+                    "_excluded_region.axis on a powder, whose excluded regions are on its pattern's axis");
+    }
     if (excluded != nullptr) {
         std::vector<std::shared_ptr<ExcludedRegion>> regions;
         for (const auto& row : excluded->rows) {

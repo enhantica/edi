@@ -7,6 +7,7 @@
 #include <QSet>
 #include <QtNumeric>
 #include <QString>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
 #include <cstdint>
 #include <optional>
@@ -85,6 +86,17 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(edi_app::OptionListModel* reflnsThresholdBasisOptions READ reflnsThresholdBasisOptions CONSTANT)
     Q_PROPERTY(QString reflnsThresholdExpression READ reflnsThresholdExpression NOTIFY
                    reflnsThresholdExpressionChanged)
+    // Which of a single crystal's reflections a fit uses: the merge mode and the absences setting (empty until set;
+    // none and include by default), the admission's counts and agreement (`measured`, `unique`, `used`, `excluded`,
+    // `absent`, `rInt` and `rSigma`, NaN when undefined, `absentMeanIOverSigma`), and per measured reflection its
+    // `_refln.include_status` code (o, x, -, <); empty without measured reflections.
+    Q_PROPERTY(QString reflnsMerge READ reflnsMerge WRITE setReflnsMerge NOTIFY reflnsMergeChanged)
+    Q_PROPERTY(edi_app::OptionListModel* reflnsMergeOptions READ reflnsMergeOptions CONSTANT)
+    Q_PROPERTY(QString reflnsAbsences READ reflnsAbsences WRITE setReflnsAbsences NOTIFY reflnsAbsencesChanged)
+    Q_PROPERTY(edi_app::OptionListModel* reflnsAbsencesOptions READ reflnsAbsencesOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* excludedRegionAxisOptions READ excludedRegionAxisOptions CONSTANT)
+    Q_PROPERTY(QVariantMap reflectionAdmission READ reflectionAdmission NOTIFY reflectionAdmissionChanged)
+    Q_PROPERTY(QStringList reflectionStatuses READ reflectionStatuses NOTIFY reflectionStatusesChanged)
     // The background model; another type replaces the background (edi::select_background_type).
     Q_PROPERTY(QString backgroundType READ backgroundType WRITE setBackgroundType NOTIFY backgroundTypeChanged)
     // The polynomial's origin and the Chebyshev domain's ends; NaN when the type has none.
@@ -221,6 +233,17 @@ class ExperimentViewModel : public QObject {
     void setReflnsThresholdBasis(const QString& token);
     OptionListModel* reflnsThresholdBasisOptions() const { return reflns_threshold_basis_options_; }
     QString reflnsThresholdExpression() const { return reflns_threshold_expression_; }
+    QString reflnsMerge() const { return reflns_merge_; }
+    void setReflnsMerge(const QString& token);
+    OptionListModel* reflnsMergeOptions() const { return reflns_merge_options_; }
+    QString reflnsAbsences() const { return reflns_absences_; }
+    void setReflnsAbsences(const QString& token);
+    OptionListModel* reflnsAbsencesOptions() const { return reflns_absences_options_; }
+    OptionListModel* excludedRegionAxisOptions() const { return excluded_region_axis_options_; }
+    QVariantMap reflectionAdmission() const { return reflection_admission_; }
+    QStringList reflectionStatuses() const { return reflection_statuses_; }
+    // A single crystal's reflection left out of the fit by its indices, or put back (one undo step).
+    Q_INVOKABLE void toggleExcludedReflection(int h, int k, int l);
     QString backgroundType() const { return background_type_; }
     void setBackgroundType(const QString& token);
     double backgroundOrigin() const { return background_origin_; }
@@ -370,6 +393,10 @@ class ExperimentViewModel : public QObject {
     void reflnsThresholdSigmaChanged();
     void reflnsThresholdBasisChanged();
     void reflnsThresholdExpressionChanged();
+    void reflnsMergeChanged();
+    void reflnsAbsencesChanged();
+    void reflectionAdmissionChanged();
+    void reflectionStatusesChanged();
     void backgroundTypeChanged();
     void backgroundEstimateModeChanged();
     void backgroundEstimateMethodChanged();
@@ -447,6 +474,13 @@ class ExperimentViewModel : public QObject {
     OptionListModel* reflns_threshold_basis_options_;
     double reflns_threshold_sigma_ = qQNaN();
     QString reflns_threshold_basis_, reflns_threshold_expression_;
+    OptionListModel* reflns_merge_options_;
+    OptionListModel* reflns_absences_options_;
+    OptionListModel* excluded_region_axis_options_;
+    QString reflns_merge_, reflns_absences_;
+    QVariantMap reflection_admission_;
+    QStringList reflection_statuses_;
+    void syncAdmission();
     OptionListModel* background_type_options_;
     OptionListModel* background_estimate_methods_;
     OptionListModel* background_estimate_modes_;

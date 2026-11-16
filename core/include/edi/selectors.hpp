@@ -152,6 +152,33 @@ std::vector<std::string> reflns_threshold_basis_labels();
 void set_reflns_threshold_sigma(ExperimentBase& experiment, std::optional<double> sigma);
 void set_reflns_threshold_basis(ExperimentBase& experiment, std::optional<std::string> basis);
 void set_refine_ls_threshold_sigma(Project& project, std::optional<double> sigma);
+// A single crystal's merge mode and absences setting, checked by crysta's rules (a time-of-flight single crystal
+// merges nothing); empty clears. An excluded region's axis: a single crystal's names `d_spacing` or
+// `sin_theta_over_lambda`, a powder's is empty. Each returns or stores crysta's spelling.
+void set_reflns_merge(ExperimentBase& experiment, std::optional<std::string> mode);
+void set_reflns_absences(ExperimentBase& experiment, std::optional<std::string> absences);
+std::string check_excluded_region_axis(const ExperimentBase& experiment, const std::string& axis);
+// Which measured reflections of a single crystal a fit uses and why: per row its `_refln.include_status` code
+// (`o` used, `x` excluded, `-` absent, `<` below the fit's cutoff), the counts, Rint and R-sigma (none when
+// undefined) and the absences' mean I/su. None for a powder or a single crystal without measured reflections.
+struct ReflectionAdmission {
+    std::vector<char> status;
+    std::vector<bool> excluded_by_indices;
+    std::size_t measured = 0;
+    std::size_t unique = 0;
+    std::size_t used = 0;
+    std::size_t excluded = 0;
+    std::size_t absent = 0;
+    std::optional<double> r_int;
+    std::optional<double> r_sigma;
+    double absent_mean_i_over_sigma = 0.0;
+};
+std::optional<ReflectionAdmission> reflection_admission(const Project& project, std::size_t experiment);
+// The factor that brings an experiment's calculation to its data's level, every phase scale multiplied by it and
+// the background held (crysta's common_scale_factor); none without one. apply_common_scale multiplies the
+// experiment's enabled phase scales by it and says whether it changed any.
+std::optional<double> common_scale_factor(const Project& project, std::size_t experiment);
+bool apply_common_scale(Project& project, std::size_t experiment);
 // A simulated single crystal's resolution limit: above 0 and finite, on a constant-wavelength
 // single crystal without measured reflections; empty clears. Its reach is checked when it is calculated.
 void set_sin_theta_over_lambda_max(ExperimentBase& experiment, std::optional<double> limit);

@@ -830,6 +830,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::shared_ptr<WidgetCreationInput> prepareWidgetCreation(const CreationAction&);
     void finishWidgetCreation(const std::shared_ptr<WidgetCreationInput>&) noexcept;
     QString apply_creation_control(const edi::Edit&, bool structural, const CreationAction&) override;
+    void noteUnscaled(const edi::ExperimentBase& experiment, bool scaled);
     struct WidgetFileInput {
         std::function<bool()> source_current;
         QUrl reader_path; // Internal immutable-byte stage for the original path-only SDK measurement reader.

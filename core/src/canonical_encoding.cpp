@@ -249,6 +249,10 @@ void put_experiment(Output& out, const ExperimentBase& experiment, Scope scope) 
         put_text(out, region->id.value());
         put_double(out, region->first);
         put_double(out, region->second);
+        // A single crystal's axis; a powder's is empty and leaves its encoding as it was.
+        if (!region->axis.value().empty()) {
+            put_text(out, region->axis.value());
+        }
     }
     // ADR-0040: in auto mode the estimate settings decide the points a calculation uses, so they are its
     // inputs; what the points came from (the two digests) is not.
@@ -283,6 +287,27 @@ void put_experiment(Output& out, const ExperimentBase& experiment, Scope scope) 
             put_double(out, *experiment.reflns_threshold_sigma);
         }
         put_text(out, experiment.reflns_threshold_basis.value_or(""));
+    }
+    // Which reflections a single crystal's fit uses: not a calculated value either, and written only when declared.
+    if (scope == Scope::Everything) {
+        if (experiment.reflns_merge.has_value()) {
+            out += 'M';
+            put_text(out, *experiment.reflns_merge);
+        }
+        if (experiment.reflns_absences.has_value()) {
+            out += 'A';
+            put_text(out, *experiment.reflns_absences);
+        }
+        if (!experiment.excluded_reflections.empty()) {
+            out += 'X';
+            put_u64(out, experiment.excluded_reflections.size());
+            for (const auto& row : experiment.excluded_reflections) {
+                put_text(out, row->id.value());
+                put_u64(out, static_cast<std::uint64_t>(static_cast<std::int64_t>(row->index_h.get())));
+                put_u64(out, static_cast<std::uint64_t>(static_cast<std::int64_t>(row->index_k.get())));
+                put_u64(out, static_cast<std::uint64_t>(static_cast<std::int64_t>(row->index_l.get())));
+            }
+        }
     }
     // `ExperimentBase::data` is DELIBERATELY NOT ENCODED: the encoding fingerprints the
     // model content, and embedded data alters nothing a forward calculation computes.

@@ -107,6 +107,11 @@ const char* single_crystal_resolution_key();
 double read_single_crystal_resolution(const std::string& value);
 bool is_retired_descent(const std::string& value);
 std::string read_threshold_basis(const std::string& value);
+// A single crystal's `_reflns.merge` (refused on time of flight unless none), `_reflns.absences` and
+// `_excluded_region.axis`, checked by crysta's rules; each returns the value as written.
+std::string read_reflns_merge(const std::string& value, bool time_of_flight);
+std::string read_reflns_absences(const std::string& value);
+std::string read_region_axis(const std::string& value);
 std::string read_pattern_x_axis(const std::string& value);
 // The Evolution chart's `_evolution_chart.error_bars` (`true`/`false`) and `_evolution_chart.range` (`values` or
 // `values_su`), checked.
