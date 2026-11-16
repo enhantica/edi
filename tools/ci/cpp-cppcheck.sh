@@ -13,11 +13,14 @@ for tree in build/app build/ci; do
         exit 1
     fi
 done
-# The files tools/ci/static-checks-deferred.txt lists are skipped, findings in them included.
+# The files tools/ci/static-checks-deferred.txt lists are skipped, findings in them included. A list of comments only
+# skips nothing; a list that cannot be read stops the check rather than checking with no list.
+list=tools/ci/static-checks-deferred.txt
+[ -r "$list" ] || { echo "cpp-cppcheck: cannot read $list" >&2; exit 1; }
 deferred=()
 while read -r path; do
-    deferred+=("--suppress=*:$path")
-done < <(grep -v '^#' tools/ci/static-checks-deferred.txt)
+    [ -n "$path" ] && deferred+=("--suppress=*:$path")
+done < <(grep -v '^#' "$list" || [ $? -eq 1 ])
 check() {
     cppcheck --project="$1/compile_commands.json" "${@:2}" --enable=warning,performance,portability \
         --error-exitcode=1 --inline-suppr --suppress=missingIncludeSystem --suppress=returnByReference --quiet \

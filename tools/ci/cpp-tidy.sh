@@ -7,8 +7,11 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 root="$(pwd)"
 own="^$root/(core|cli|lib|app|assistant)/"
-# The files tools/ci/static-checks-deferred.txt lists are skipped, as sources and as headers.
-deferred="$(grep -v '^#' tools/ci/static-checks-deferred.txt | sed 's/[.]/\\./g' | paste -sd '|' -)"
+# The files tools/ci/static-checks-deferred.txt lists are skipped, as sources and as headers. A list of comments only
+# skips nothing; a list that cannot be read stops the check rather than checking with no list.
+list=tools/ci/static-checks-deferred.txt
+[ -r "$list" ] || { echo "cpp-tidy: cannot read $list" >&2; exit 1; }
+deferred="$({ grep -v '^#' "$list" || [ $? -eq 1 ]; } | sed 's/[.]/\\./g' | paste -sd '|' -)"
 skip="^$root/(${deferred:-^})$"
 status=0
 for tree in build/app build/ci; do
