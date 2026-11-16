@@ -2,9 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-15
-- **Implementation:** 🟡 Partially implemented — the warning set, `EDI_WERROR`, both check scripts and their CI steps
-  are in place, and every finding outside the files of decision 7 is fixed; `EDI_WERROR` turns on in CI once those
-  files are swept
+- **Implementation:** ✅ Implemented — the warning set, `EDI_WERROR` in the core and app jobs on Linux and macOS, both
+  check scripts and their CI steps; every finding is fixed and the deferred list is empty. Windows (MSVC `/W4`) and the
+  WebAssembly build keep `EDI_WERROR` off until their own sweep
 - **Priority:** High
 - **Forward constraint (binding on new features):** new C++ in edi builds without a warning under `EDI_WERROR`, and passes
   clang-tidy and cppcheck; a finding is fixed, or the line names the check it silences and why.
@@ -30,8 +30,8 @@ formatting & static analysis (Python + C++)". The owner asked for the same check
    analyzer checks null dereferences on every path.
 2. **`EDI_WERROR=ON` makes each of those warnings an error.** It is off for a local build and on in CI: the build scripts
    (`core-build.sh`, `app-build.sh`, `wasm-build.sh`) pass the `EDI_WERROR` environment variable to CMake. CI sets it
-   only after the files of decision 7 are swept: two of them are the model's headers (`model.hpp`, `edit.hpp`), which
-   every translation unit includes, so no file-by-file exception can keep a build green before then.
+   in the core and app jobs on Linux and macOS. Windows builds with MSVC's `/W4`, a different set not swept yet, and
+   the WebAssembly build has its own Qt kits; both keep it off for now.
 3. **clang-tidy runs with the Clang Static Analyzer** over the same sources (`pixi run -e cpp-lint cpp-tidy`,
    `tools/ci/cpp-tidy.sh`), any finding an error. edi's `.clang-tidy` holds the groups of crysta's curated set that
    find faults: the analyzer, `bugprone`, `performance` and `cert`, with crysta's exceptions inside them. A
