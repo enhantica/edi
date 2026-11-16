@@ -41,10 +41,11 @@ double padded(double value, double pad) {
 
 EvolutionParameterListModel::EvolutionParameterListModel(QObject* parent) : RowTableModel({"name", "label"}, parent) {}
 
-void EvolutionParameterListModel::setNames(const QStringList& names) {
+void EvolutionParameterListModel::setNames(const QStringList& names, const QStringList& labels) {
     QList<Row> rows;
     for (int i = 0; i < names.size(); ++i) {
-        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {names[i], names[i]}});
+        const QString label = i < labels.size() && !labels[i].isEmpty() ? labels[i] : names[i];
+        rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {names[i], label}});
     }
     setTableRows(rows);
 }
@@ -157,6 +158,7 @@ void EvolutionViewModel::syncExperiments() {
         emit seriesChanged();
         emit perExperimentChanged();
         emit currentExperimentChanged();
+        emit xTitleChanged();  // a series that records nothing is placed by its runs
     }
 }
 
@@ -197,7 +199,10 @@ bool EvolutionViewModel::syncNames() {
     const bool changed = names != names_;
     if (changed) {
         names_ = names;
-        parameters_->setNames(names_);
+        QStringList labels;
+        for (const QString& name : names_) labels.append(labeller_ ? labeller_(name, per_experiment_) : QString());
+        labels_ = labels;
+        parameters_->setNames(names_, labels);
     }
     const int current = names_.isEmpty() ? -1 : std::max(0, static_cast<int>(names_.indexOf(shown)));
     if (current != current_ || changed) {
@@ -284,12 +289,18 @@ void EvolutionViewModel::setXMode(int mode) {
 }
 
 QStringList EvolutionViewModel::xModes() const {
-    return {extracted_title_.isEmpty() ? tr("value") : extracted_title_, tr("file index")};
+    // A series that records nothing is placed by its runs (the owner, 2026-11-16).
+    return {extracted_title_.isEmpty() ? (series() ? tr("Run") : tr("value")) : extracted_title_, tr("file index")};
 }
 
 QString EvolutionViewModel::xTitle() const { return xModes().value(x_mode_); }
 
 QString EvolutionViewModel::yTitle() const { return current_ >= 0 ? names_.value(current_) : QString(); }
+
+QString EvolutionViewModel::yLabel() const {
+    const QString label = current_ >= 0 ? labels_.value(current_) : QString();
+    return label.isEmpty() ? yTitle() : label;
+}
 
 void EvolutionViewModel::setLayer(MeasuredLayer* layer) {
     if (layer != layer_) {

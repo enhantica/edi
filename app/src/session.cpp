@@ -440,7 +440,16 @@ bool Session::openProjectAt(const QUrl& location, const QString& example) {
     // A project in a folder this user may not write (a read-only tree) runs in a temporary copy, as an example does,
     // so a fit never writes into it; Save As writes the project where the user chooses.
     const QFileInfo folder(source), analysis(source + QStringLiteral("/analysis"));
-    if (folder.isDir() && (!folder.isWritable() || (analysis.exists() && !analysis.isWritable()))) {
+    // A project in this build's own example folder opens as a copy, as a read-only one does: a run's results never
+    // land in a committed example (the owner, 2026-11-16).
+    bool sourceExample = false;
+#if defined(EDI_CLI_PROJECTS_DIR)
+    {
+        const QString examples = QDir::cleanPath(QStringLiteral(EDI_CLI_PROJECTS_DIR)) + u'/';
+        sourceExample = QDir::cleanPath(folder.absoluteFilePath()).startsWith(examples);
+    }
+#endif
+    if (folder.isDir() && (sourceExample || !folder.isWritable() || (analysis.exists() && !analysis.isWritable()))) {
         QString copyRoot;
         try { copyRoot=prepareCopyRoot("read-only"); }
         catch(const std::exception& error) { setLastError(QString::fromUtf8(error.what()));return false; }

@@ -183,6 +183,9 @@ class ScanViewModel : public QObject {
         // The project's background at each point (edi::has_background, the calculated background column): a scan's
         // template's, linear between its rows, NaN beyond them; a joint fit's experiment's own. Empty: none is set.
         std::vector<double> background;
+        // A series row's bank (one experiment's file of a point) and the scale its intensity was divided by.
+        int bank = -1;
+        double scale = 1.0;
         // Changes whenever the points or their place on the axis shown change: a view's cached reduction of the
         // pattern holds while it is the same.
         std::uint64_t generation = 0;
@@ -243,6 +246,8 @@ class ScanViewModel : public QObject {
         double value = std::numeric_limits<double>::quiet_NaN();
         QString value_text;  // the value as the file writes it
         QString error, value_problem;
+        int bank = -1;  // a series row of one bank, and its scale
+        double scale = 1.0;
     };
     void readNext();
     void deliver(std::size_t first, std::vector<Read>& done);
@@ -250,6 +255,12 @@ class ScanViewModel : public QObject {
     void placeAxis();
     // One dataset's x and excluded ranges on the axis shown.
     void placePattern(Pattern& pattern);
+    // A series' banks after a calculation: each bank's background and excluded regions on d, from its experiment as the
+    // project holds it (a scan's datasets share the template's the same way), and a row's taken from its bank.
+    void readSeriesBanks(const edi::Project* project);
+    void applySeriesBank(Pattern& pattern) const;
+    std::vector<std::vector<double>> bank_d_, bank_background_;
+    std::vector<std::vector<std::pair<double, double>>> bank_excluded_;
     // The axis shown's range over every dataset read.
     void placeRange();
     bool readConversion(const edi::Project* project);

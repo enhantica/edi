@@ -4577,6 +4577,14 @@ struct ScanFileRecord {
     std::string termination;
     // The file's own results, its correlations among them (the live event; none for a resumed row read back).
     std::shared_ptr<const ScanFileResult> result;
+    // Its profile factors (fractions) from the run's quality pass: every experiment together first (`experiment`
+    // empty), then each experiment's; empty for a resumed row read back.
+    struct Factors {
+        std::string experiment;
+        double rp = 0.0;
+        double rwp = 0.0;
+    };
+    std::vector<Factors> factors;
 };
 
 // Optional per-file completion subscriber. Passing none costs nothing: with no

@@ -38,10 +38,13 @@ Row {
     }
     readonly property var banks: project ? project.bankLabels : []
     // Each selector's box, beside its previous and next buttons; the two share what the Rows switch leaves.
-    readonly property real boxWidth: (width - rowsSwitch.width - 4 * buttonWidth - spacing * (rowsShown ? 7 : 6)) / 2
-    readonly property real buttonWidth: EaStyle.Sizes.comboBoxHeight
+    // Two groups filling the row, as the experiment selector fills it alone: the run's and the bank's, each its box
+    // and its two buttons, a toolbar group's gap apart (the owner, 2026-11-16); one bank leaves the run the whole row.
+    readonly property real groupGap: AppSizes.toolbarSpacing * 4
+    readonly property bool twoGroups: banks.length > 1
+    readonly property real groupWidth: Math.max(EaStyle.Sizes.fontPixelSize * 8, (width - (rowsShown ? rowsSwitch.width + groupGap : 0) - (twoGroups ? groupGap : 0)) / (twoGroups ? 2 : 1))
 
-    spacing: AppSizes.toolbarSpacing
+    spacing: groupGap
 
     // ← and → step the bank, as its buttons do, unless a text field has the keys (the owner, 2026-11-16).
     function stepBank(offset) {
@@ -66,12 +69,13 @@ Row {
         id: rowsSwitch
         objectName: "mainArea.series.rows"
         visible: row.rowsShown
-        width: visible ? implicitWidth : 0
         height: EaStyle.Sizes.comboBoxHeight
-        toolTip: qsTr("Rows: one bank across the series, or every bank at one point")
+        toolTip: qsTr("Rows: one bank across the series, or every bank at one run")
+        // "rows: by run" in the axes boxes' "<axis>: <value>" style, as wide as it reads (the owner, 2026-11-16).
+        fitShown: true
         readonly property var entries: [qsTr("by %1").arg(row.project ? row.project.seriesVariable.toLowerCase() : ""), qsTr("by bank")]
         model: entries
-        closedTexts: entries.map(entry => qsTr("Rows: %1").arg(entry))
+        closedTexts: entries.map(entry => qsTr("rows: %1").arg(entry))
         shownIndex: row.byBank ? 1 : 0
         onActivated: index => {
             if (row.views)
@@ -106,7 +110,7 @@ Row {
     BlockSelector {
         id: pointBox
         objectName: "mainArea.series.point"
-        width: row.boxWidth + 2 * (row.buttonWidth + row.spacing)
+        width: row.groupWidth
         enabled: !(row.rowsShown && !row.byBank)
         backgroundColor: EaStyle.Colors.chartBackground
         blocks: runModel
@@ -120,7 +124,7 @@ Row {
         id: bankBox
         objectName: "mainArea.series.bank"
         visible: row.banks.length > 1
-        width: row.boxWidth + 2 * (row.buttonWidth + row.spacing)
+        width: row.groupWidth
         enabled: !row.byBank
         backgroundColor: EaStyle.Colors.chartBackground
         blocks: bankModel

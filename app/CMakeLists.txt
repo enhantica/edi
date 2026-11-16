@@ -382,6 +382,13 @@ endif()
 file(GLOB _cli_entries LIST_DIRECTORIES true RELATIVE ${_cli} CONFIGURE_DEPENDS ${_cli}/*)
 foreach(entry IN LISTS _cli_entries)
     if(IS_DIRECTORY ${_cli}/${entry} AND NOT entry IN_LIST _registered_ids)
+        # What a branch switch leaves of another branch's example: only files a run wrote, no project.edi. Named, not
+        # fatal, so the build goes on.
+        if(NOT EXISTS ${_cli}/${entry}/project/project.edi)
+            message(WARNING "docs/user/cli/${entry}/ holds no project (another branch's example, or files a run "
+                            "left behind): remove the folder")
+            continue()
+        endif()
         message(FATAL_ERROR "docs/user/cli/${entry}/ is not listed in docs/user/cli/projects.yml")
     endif()
 endforeach()
@@ -563,7 +570,8 @@ add_dependencies(edi_app edi_app_build_marker)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest Qt6::QmlPrivate)
 # The demo and the test observers open test projects the app does not bundle from the source tree (ADR-0048).
-set_source_files_properties(src/demo_driver.cpp src/demo_documentation.cpp PROPERTIES
+# The session opens a project in that folder as a copy, so a run never writes into a committed example.
+set_source_files_properties(src/demo_driver.cpp src/demo_documentation.cpp src/session.cpp PROPERTIES
                             COMPILE_DEFINITIONS "EDI_CLI_PROJECTS_DIR=\"${PROJECT_SOURCE_DIR}/docs/user/cli\"")
 target_compile_definitions(edi_app_tests PRIVATE
     QUICK_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}/tests/unit/app")

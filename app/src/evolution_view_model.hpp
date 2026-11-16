@@ -3,6 +3,7 @@
 #define EDI_APP_EVOLUTION_VIEW_MODEL_HPP
 
 #include <QObject>
+#include <functional>
 #include <QPointer>
 #include <QString>
 #include <QStringList>
@@ -29,7 +30,9 @@ class EvolutionParameterListModel : public RowTableModel {
 
    public:
     explicit EvolutionParameterListModel(QObject* parent);
-    void setNames(const QStringList& names);
+    // Each parameter's results column (`name`) and what the selector shows for it (`label`): its name as the parameter
+    // table shows it, else the column (the owner, 2026-11-16).
+    void setNames(const QStringList& names, const QStringList& labels = {});
 };
 
 // The Evolution tab (edi ADR-0017 §19): one fitted parameter across a scan's datasets, read from
@@ -50,6 +53,8 @@ class EvolutionViewModel : public QObject {
     Q_PROPERTY(QStringList xModes READ xModes CONSTANT)
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
     Q_PROPERTY(QString yTitle READ yTitle NOTIFY yTitleChanged)
+    // The y title as the parameter table names it (yTitle is the results column, the tooltip's full name).
+    Q_PROPERTY(QString yLabel READ yLabel NOTIFY yTitleChanged)
     Q_PROPERTY(double xMin READ xMin NOTIFY xMinChanged)
     Q_PROPERTY(double xMax READ xMax NOTIFY xMaxChanged)
     Q_PROPERTY(double yMin READ yMin NOTIFY yMinChanged)
@@ -99,6 +104,7 @@ class EvolutionViewModel : public QObject {
     QStringList xModes() const;
     QString xTitle() const;
     QString yTitle() const;
+    QString yLabel() const;
     double xMin() const { return x_min_; }
     double xMax() const { return x_max_; }
     double yMin() const { return y_min_; }
@@ -115,6 +121,8 @@ class EvolutionViewModel : public QObject {
     Q_INVOKABLE int datasetAt(double x, double y, double x_tolerance, double y_tolerance) const;
     // The x of a dataset's drawn point, or NaN when it has none.
     Q_INVOKABLE double datasetX(int dataset) const;
+    // How a results column reads in the selector, given whether it is a bank's own (the project's parameter names).
+    void setLabeller(std::function<QString(const QString&, bool)> labeller) { labeller_ = std::move(labeller); }
     // The layer bank `bank` is drawn on when every bank is shown; null unregisters it.
     Q_INVOKABLE void setBankLayer(int bank, edi_app::MeasuredLayer* layer);
     // The project's Evolution chart settings changed: the range and the drawing follow them.
@@ -178,6 +186,8 @@ class EvolutionViewModel : public QObject {
     int bank_ = -1;  // the bank whose points a read visits now
     bool allBanks() const { return per_experiment_ && current_experiment_ < 0; }
     QStringList names_;
+    QStringList labels_;  // names_' labels, as the selector shows them
+    std::function<QString(const QString&, bool)> labeller_;
     QStringList experiments_;  // a series of joint fits' experiments, in project order; empty otherwise
     bool per_experiment_ = false;
     int current_experiment_ = 0;
