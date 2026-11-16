@@ -65,6 +65,6 @@ Item {
         visible: placement.series
         width: placement.width
         project: placement.series ? Session.project : null
-        viewKey: AppState.mainView ? AppState.mainView.currentKey : ""
+        viewKey: AppState.mainView?.currentKey ?? ""
     }
 }
