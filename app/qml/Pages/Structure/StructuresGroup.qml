@@ -119,9 +119,10 @@ SideBarGroup {
             }
         }
 
-        // Load ▾, Create and Duplicate side by side at equal widths (the owner, 2026-11-03): Create adds
-        // easydiffractionbeta's default phase as structure1, structure2, … (edi ADR-0017 §4). The Load menu takes a
-        // structure from a file or from the web (COD or EasyDiffraction's collection).
+        // Create, Load ▾ and Duplicate side by side at equal widths (the owner, 2026-11-03; Create first, as on the
+        // Experiment page, 2026-11-14): Create adds easydiffractionbeta's default phase as structure1, structure2, …
+        // (edi ADR-0017 §4). The Load menu takes a structure from a file or from the web (COD or EasyDiffraction's
+        // collection).
         Row {
             id: buttons
 
@@ -129,6 +130,15 @@ SideBarGroup {
 
             spacing: EaStyle.Sizes.fontPixelSize
 
+            EaElements.SideBarButton {
+                objectName: "structures.create"
+                width: buttons.buttonWidth
+                enabled: group.project !== null
+                fontIcon: "plus-circle"
+                text: qsTr("Create structure")
+                ToolTip.text: qsTr("Add a structure with one atom site, to edit into the one you need")
+                onClicked: group.project.createStructure()
+            }
             EaElements.SideBarButton {
                 id: loadButton
                 objectName: "structures.load"
@@ -180,15 +190,6 @@ SideBarGroup {
                         onTriggered: onlineLoad.openFor("structure", null)
                     }
                 }
-            }
-            EaElements.SideBarButton {
-                objectName: "structures.create"
-                width: buttons.buttonWidth
-                enabled: group.project !== null
-                fontIcon: "plus-circle"
-                text: qsTr("Create structure")
-                ToolTip.text: qsTr("Add a structure with one atom site, to edit into the one you need")
-                onClicked: group.project.createStructure()
             }
             EaElements.SideBarButton {
                 objectName: "structures.duplicate"

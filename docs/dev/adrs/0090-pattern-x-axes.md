@@ -4,7 +4,7 @@
 - **Date:** 2026-11-15
 - **Implementation:** 🟡 Partially implemented — the four axes in the pattern chart, the Stacked and Map views and the
   report, and a single crystal's reflections on Q and sinθ/λ; the project file saves the native axis and d only, so
-  Q and sinθ/λ last for the session; the Meas vs calc tab waits for the page tab sets
+  Q and sinθ/λ last for the session; the Meas vs calc tab on the Experiment and Analysis pages
 - **Priority:** Medium
 
 ## Context
@@ -37,8 +37,9 @@ compare patterns from different instruments and probes, and expect Q = 4π sinθ
    calculated ones are drawn as bars with their ticks.
 6. **Meas vs calc** (the owner, 2026-11-16): measured against calculated, with the y = x line, for a single crystal per
    reflection (F or F², its existing comparison chart) and for a powder per data point (`MeasCalcChart`,
-   `ExperimentViewModel::measCalcPoints`). It becomes its own main-view tab after Pattern with the page tab sets; until
-   then a single crystal's chart switches between the two views from its x box.
+   `ExperimentViewModel::measCalcPoints`). It is its own main-view tab, right after Pattern on the Experiment and
+   Analysis pages, with its own settings, and is disabled until the shown experiment has measured and calculated
+   values. The single-crystal Pattern tab's x box offers Q and sinθ/λ only.
 
 ## Consequences
 

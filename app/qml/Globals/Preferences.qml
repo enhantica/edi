@@ -260,7 +260,7 @@ QtObject {
     property string singleCrystalQuantity: "f_squared"
     // A single crystal's chart: "comparison" (calc against meas), or the reflections on "q" or "sin_theta_over_lambda"
     // as a pattern (the owner, 2026-11-16); and that pattern's y, "f_squared" or "f", kept apart from the comparison's.
-    property string singleCrystalXAxis: "comparison"
+    property string singleCrystalXAxis: "q"
     property string singleCrystalPatternQuantity: "f_squared"
     // Its Bars style as thin lines, one pixel wide at any zoom, instead of bars with a width on the axis.
     property bool singleCrystalThinBars: false

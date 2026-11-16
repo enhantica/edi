@@ -416,12 +416,13 @@ Item {
         }
         // A single crystal's views: calc against meas (SingleCrystalChart's own), or its reflections on Q or sinθ/λ.
         ToolbarComboBox {
-            readonly property var tokens: ["comparison", "q", "sin_theta_over_lambda"]
+            // The comparison of measured with calculated values is the Meas vs calc tab's (the owner, 2026-11-16).
+            readonly property var tokens: ["q", "sin_theta_over_lambda"]
 
             objectName: "chart.toolbar.singleCrystalXAxis"
             visible: chart.singleCrystal
             toolTip: qsTr("X axis")
-            model: [qsTr("Meas vs calc"), qsTr("x: Q"), qsTr("x: %1").arg(Session.label("refln.sin_theta_over_lambda"))]
+            model: [qsTr("x: Q"), qsTr("x: %1").arg(Session.label("refln.sin_theta_over_lambda"))]
             shownIndex: Math.max(0, tokens.indexOf(controller.xAxis))
             onActivated: index => Preferences.singleCrystalXAxis = tokens[index]
         }
@@ -458,6 +459,8 @@ Item {
             readonly property var entries: chart.singleCrystal ? [qsTr("Band"), qsTr("Line"), qsTr("Points"), qsTr("Line + points"), qsTr("Bars")] : [qsTr("Band"), qsTr("Line"), qsTr("Points"), qsTr("Line + points")]
 
             objectName: "chart.toolbar.measuredStyle"
+            // Its own group, apart from the axes (the owner, 2026-11-01).
+            toolbarGroup: "measured"
             visible: !chart.report
             toolTip: qsTr("How the measured data are drawn")
             model: entries
