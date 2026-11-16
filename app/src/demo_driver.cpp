@@ -861,6 +861,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"review-13-analysis-map", {"mainArea.tab.map"}});
         steps_.push_back({"review-14-analysis-correlations", {"mainArea.tab.correlations"}});
     }
+    // The source example opened twice, as Recent projects names it (a trailing separator): each opens a copy of its
+    // own (`--demo-only reopen-`).
+    if (only.startsWith(QLatin1String("reopen-"))) {
+        const QString source = QString::fromUtf8(EDI_CLI_PROJECTS_DIR) + "/pd-neut-tof_ncaf-wish-5bank_synthetic-100p/project/";
+        steps_.push_back({"reopen-1-first", {"resize:1480x800", "open-project:" + source, "appBar.tab.experiment", basic}});
+        steps_.push_back({"reopen-2-second", {"open-project:" + source, "appBar.tab.experiment", basic}});
+    }
     // A single fit's results dialog, from a fresh start (`--demo-only fitdialog-`).
     if (only.startsWith(QLatin1String("fitdialog-"))) {
         steps_.push_back({"fitdialog-1-single", QStringList{"resize:1480x800", "home.start", "expand:group.examples"} +
