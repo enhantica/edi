@@ -110,6 +110,8 @@ NOT_MODEL = {
     'WindowGeometry': 'a geometry computed for a view window',
     'IterationRecord': 'a fit report',
     'WeightFraction': "a linked structure's weight fraction, derived from the model on each read",
+    'DerivedQuantity': 'a derived value with its s.u., computed from the model on each read',
+    'SphericalMoment': "a moment's spherical form, derived from the model on each read",
     'FitPreamble': 'a fit report',
     'ScanFileRecord': 'a fit report',
     'ScanPreamble': 'a fit report',
