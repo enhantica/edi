@@ -687,6 +687,21 @@ Item {
             shownIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
             onActivated: index => ApplicationInfo.scanChoice(index, 1)
         }
+        // A series of joint fits' rows (edi ADR-0089 point 5): every experiment of a point merged on d, each divided by
+        // its fitted scale, or one experiment's pattern of each point.
+        ToolbarComboBox {
+            objectName: "scanView." + chart.mode + ".toolbar.experiments"
+            toolbarGroup: "axes"
+            visible: chart.scan !== null && chart.scan.series
+            toolTip: qsTr("Rows: every experiment merged, or one experiment")
+            readonly property var entries: chart.scan !== null ? [qsTr("All experiments merged")].concat(chart.scan.seriesExperiments) : []
+            model: entries
+            shownIndex: chart.scan !== null ? chart.scan.rowsExperiment + 1 : 0
+            onActivated: index => {
+                if (chart.scan !== null)
+                    chart.scan.rowsExperiment = index - 1;
+            }
+        }
         ToolbarComboBox {
             objectName: "scanView." + chart.mode + ".toolbar.yscale"
             toolbarGroup: "axes"

@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "edi/model.hpp"
+#include "edi/scan.hpp"
 #include "edi/scan_views.hpp"
 
 namespace edi_app {
@@ -87,6 +88,11 @@ class ScanViewModel : public QObject {
     // Why the rows are placed by file index although the scan has an extract rule: the first dataset without a number
     // to place it by. Empty otherwise.
     Q_PROPERTY(QString rowNote READ rowNote NOTIFY rowNoteChanged)
+    // A series of joint fits (edi ADR-0089 point 5): each row a point, drawn on d from the experiment `rowsExperiment`
+    // (a place in `seriesExperiments`) or, at -1, from every experiment together, each divided by its fitted scale.
+    Q_PROPERTY(bool series READ series NOTIFY seriesChanged)
+    Q_PROPERTY(QStringList seriesExperiments READ seriesExperiments NOTIFY seriesChanged)
+    Q_PROPERTY(int rowsExperiment READ rowsExperiment WRITE setRowsExperiment NOTIFY rowsExperimentChanged)
 
    public:
     explicit ScanViewModel(QObject* parent);
@@ -110,6 +116,10 @@ class ScanViewModel : public QObject {
     QString xTitle() const { return x_title_; }
     bool timeOfFlight() const { return mode_ != edi::BeamModeEnum::CONSTANT_WAVELENGTH; }
     bool joint() const { return joint_; }
+    bool series() const { return series_; }
+    QStringList seriesExperiments() const { return series_experiments_; }
+    int rowsExperiment() const { return rows_experiment_; }
+    void setRowsExperiment(int experiment);
     bool nativeShared() const { return native_shared_; }
     QStringList rowLabels() const { return row_labels_; }
     QString valueTitle() const { return has_values_ ? extracted_title_ : QString(); }
@@ -201,6 +211,8 @@ class ScanViewModel : public QObject {
     void errorChanged();
     void rowNoteChanged();
     void jointChanged();
+    void seriesChanged();
+    void rowsExperimentChanged();
     void nativeSharedChanged();
     void rowLabelsChanged();
     void backgroundAvailableChanged();
@@ -260,6 +272,11 @@ class ScanViewModel : public QObject {
     double axis_min_ = 0.0, axis_max_ = 1.0;
     bool d_spacing_ = false, d_shown_ = false, d_available_ = false, rows_by_index_ = false, joint_ = false;
     bool native_shared_ = true, included_only_ = false, rows_by_value_ = false;
+    bool series_ = false;
+    int rows_experiment_ = -1;
+    QStringList series_experiments_;
+    std::shared_ptr<const edi::ScanDatasets> datasets_;  // a series' points and their files
+    void restartReads();
     QStringList row_labels_;
     std::vector<double> template_x_, template_d_;  // the template's own axis and its current d column, where finite
     std::vector<double> template_bx_, template_bkg_;  // the template's axis and its calculated background, where finite
