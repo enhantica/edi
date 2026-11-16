@@ -310,7 +310,7 @@ Item {
         residualSeries: residualLine
         // How the measured pattern is drawn, one app setting for every pattern chart; a report's chart keeps its own.
         // A single crystal without measured reflections draws its calculated ones as bars (the owner, 2026-11-16).
-        measuredStyle: chart.singleCrystal && chart.experiment !== null && chart.experiment.singleCrystalReflections.simulated ? "bars" : Preferences.patternMeasuredStyle
+        measuredStyle: !chart.singleCrystal ? Preferences.patternMeasuredStyle : chart.experiment !== null && chart.experiment.singleCrystalReflections.simulated ? "bars" : Preferences.singleCrystalMeasuredStyle
     }
 
     // An x label is centred under its tick; a y label ends beside the plot area.
@@ -474,7 +474,12 @@ Item {
             closedTexts: ApplicationInfo.patternClosedTexts(true)
             fitShown: true
             shownIndex: Math.max(0, tokens.indexOf(controller.measuredStyle))
-            onActivated: index => ApplicationInfo.patternChoice(index, 2)
+            onActivated: index => {
+                if (chart.singleCrystal)
+                    Preferences.singleCrystalMeasuredStyle = tokens[index];
+                else
+                    ApplicationInfo.patternChoice(index, 2);
+            }
         }
         // Bars with a width on the axis, or thin lines that stay one pixel at any zoom (the owner, 2026-11-16).
         ChartToolButton {
