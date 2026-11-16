@@ -30,11 +30,11 @@ void install_stall_probe(QCoreApplication& app) {
         *longest = std::max(*longest, gap);
         if (gap > kStallMs) {
             ++*stalls;
-            qInfo("stall-probe: gap %lld ms", static_cast<long long>(gap));
+            qWarning("stall-probe: gap %lld ms", static_cast<long long>(gap));
         }
     });
     QObject::connect(&app, &QCoreApplication::aboutToQuit, &app, [clock, longest, stalls, ticks] {
-        qInfo("stall-probe: %lld gaps over %lld ms, longest %lld ms, %lld ticks", static_cast<long long>(*stalls),
+        qWarning("stall-probe: %lld gaps over %lld ms, longest %lld ms, %lld ticks", static_cast<long long>(*stalls),
               static_cast<long long>(kStallMs), static_cast<long long>(*longest), static_cast<long long>(*ticks));
         delete clock;
         delete longest;

@@ -6,9 +6,10 @@ class QCoreApplication;
 
 namespace edi_app {
 
-// A development probe of the GUI thread, off unless EDI_STALL_PROBE is set: a 10 ms timer on the GUI thread notes in
-// the run log every gap over 100 ms between its ticks ("stall-probe: gap N ms"), and on quit how many there were and
-// the longest. Measures how long the window could not answer, for the scale check of a long series.
+// A development probe of the GUI thread, off unless EDI_STALL_PROBE is set: a 10 ms timer on the GUI thread writes
+// a warning to the run log for every gap over 100 ms between its ticks ("stall-probe: gap N ms"), and on quit how
+// many there were and the longest. Warnings, so the level chosen in the preferences keeps them. Measures how long the
+// window could not answer, for the scale check of a long series.
 void install_stall_probe(QCoreApplication& app);
 
 }  // namespace edi_app
