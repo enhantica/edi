@@ -51,6 +51,9 @@ class StructureViewOptions : public QObject {
     Q_PROPERTY(QString polyhedraColour READ polyhedraColour WRITE setPolyhedraColour NOTIFY polyhedraColourChanged)
     Q_PROPERTY(double polyhedraOpacity READ polyhedraOpacity WRITE setPolyhedraOpacity NOTIFY polyhedraOpacityChanged)
     Q_PROPERTY(edi_app::OptionListModel* polyhedraColourOptions READ polyhedraColourOptions CONSTANT)
+    // "cell", the polyhedra inside the cell, or "complete", whole for every centre in the cell.
+    Q_PROPERTY(QString polyhedraExtent READ polyhedraExtent WRITE setPolyhedraExtent NOTIFY polyhedraExtentChanged)
+    Q_PROPERTY(edi_app::OptionListModel* polyhedraExtentOptions READ polyhedraExtentOptions CONSTANT)
     // The atom views diffraction-lib offers, for the Appearance group's selector.
     Q_PROPERTY(edi_app::OptionListModel* atomViewOptions READ atomViewOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* momentFormOptions READ momentFormOptions CONSTANT)
@@ -94,6 +97,9 @@ class StructureViewOptions : public QObject {
     double polyhedraOpacity() const { return polyhedra_opacity_; }
     OptionListModel* polyhedraColourOptions() const { return polyhedra_colour_options_; }
     void setPolyhedraOpacity(double opacity);  // clamped to [0, 1]
+    QString polyhedraExtent() const;
+    void setPolyhedraExtent(const QString& extent);  // "cell" or "complete"; anything else is ignored
+    OptionListModel* polyhedraExtentOptions() const { return polyhedra_extent_options_; }
 
     // The Atoms selector's tokens, the magnetic ones only for a magnetic structure.
     Q_INVOKABLE QStringList atomChoices(bool magnetic) const;
@@ -123,6 +129,7 @@ class StructureViewOptions : public QObject {
     void momentColoursChanged();
     void polyhedraChanged();
     void polyhedraColourChanged();
+    void polyhedraExtentChanged();
     void polyhedraOpacityChanged();  // the material's alone: nothing is presented again
     // An option a structure saves changed: what the project keeps.
     void changed();
@@ -142,6 +149,7 @@ class StructureViewOptions : public QObject {
     OptionListModel* moment_form_options_;
     OptionListModel* moment_view_options_;
     OptionListModel* polyhedra_colour_options_;
+    OptionListModel* polyhedra_extent_options_;
     QString moment_form_ = QStringLiteral("crystal_axes");
     double polyhedra_opacity_ = 0.5;
 };

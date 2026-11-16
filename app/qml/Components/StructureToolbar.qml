@@ -66,7 +66,7 @@ Item {
     ChartToolButton {
         objectName: "structure.toolbar.polyhedra"
         visible: toolbar.controller !== null && toolbar.controller.hasSites && toolbar.controller.hasBonds
-        fontIcon: "cube"
+        fontIcon: "dice-d20"
         toolTip: qsTr("Polyhedra")
         checked: toolbar.options !== null && toolbar.options.polyhedra
         onClicked: toolbar.options.polyhedra = !toolbar.options.polyhedra

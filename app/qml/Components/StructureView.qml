@@ -94,9 +94,10 @@ Rectangle {
         // owner, 2026-10-02): the cell edges grey, the axes red, green and blue, the labels in the foreground
         // colour over a halo of the background. Lighting and atom colours are diffraction-lib's.
         edgeColor: view.colors.grey
-        axisColorA: view.colors.red
-        axisColorB: view.colors.green
-        axisColorC: view.colors.blue
+        // a, b and c in red, green and blue, as crystallography draws them (the owner, 2026-11-16), lighter on dark.
+        axisColorA: view.colors.isDarkPalette ? "#ef5350" : "#d32f2f"
+        axisColorB: view.colors.isDarkPalette ? "#66bb6a" : "#2e7d32"
+        axisColorC: view.colors.isDarkPalette ? "#42a5f5" : "#1565c0"
         labelColor: view.colors.themeForeground
         haloColor: view.colors.chartBackground
         viewportWidth: view.width
@@ -169,10 +170,11 @@ Rectangle {
             colors: view.colors
             minimumHeight: AppSizes.toolbarControlSize
             rowHeight: AppSizes.structureLegendRowHeight
-            anchors.left: parent.left
+            // Bottom right: the bottom-left corner holds Save image (the owner, 2026-11-16).
+            anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.margins: view.margin
-            anchors.leftMargin: view.sideMargin
+            anchors.rightMargin: view.sideMargin
             entries: controller.legend
             labelInColor: false
             visible: controller.legend.count > 0
