@@ -712,29 +712,32 @@ def required_environment(*names: str) -> list[str]:
     return values
 
 
-def notarise_macos(installer: Path) -> None:
-    """Sign the installer with the hardened runtime, notarise and staple it (ADR-0091)."""
-    identity, apple_id, password, team = required_environment(
-        'EDI_CODESIGN_MAC_IDENTITY',
-        'EDI_NOTARY_APPLE_ID',
-        'EDI_NOTARY_PASSWORD',
-        'EDI_NOTARY_TEAM_ID',
-    )
+def macos_signing() -> bool:
+    """Signing is on for this macOS run (set by the installers workflow on main only)."""
+    return SYSTEM == 'macos' and os.environ.get('EDI_CODESIGN') == '1'
+
+
+def sign_macos_runtime(path: Path) -> None:
+    """Sign with the Developer ID, the hardened runtime and a timestamp, as notarisation needs."""
+    (identity,) = required_environment('EDI_CODESIGN_MAC_IDENTITY')
     run([
-        'codesign', '--force', '--deep', '--options', 'runtime', '--timestamp',
-        '--sign', identity, installer,
+        'codesign', '--force', '--options', 'runtime', '--timestamp', '--sign', identity, path,
     ])  # fmt: skip
-    run(['codesign', '--verify', '--deep', '--strict', '--verbose=2', installer])
-    upload = installer.with_name(installer.stem + '-notarise.zip')
-    run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', installer, upload])
+    run(['codesign', '--verify', '--strict', '--verbose=2', path])
+
+
+def submit_for_notarisation(archive: Path) -> None:
+    """Send a ZIP to Apple's notary service and require the status Accepted."""
+    apple_id, password, team = required_environment(
+        'EDI_NOTARY_APPLE_ID', 'EDI_NOTARY_PASSWORD', 'EDI_NOTARY_TEAM_ID'
+    )
     result = subprocess.run(
         [
-            'xcrun', 'notarytool', 'submit', upload, '--wait', '--output-format', 'json',
+            'xcrun', 'notarytool', 'submit', archive, '--wait', '--output-format', 'json',
             '--apple-id', apple_id, '--password', password, '--team-id', team,
         ],
         check=False, capture_output=True, text=True,
     )  # fmt: skip
-    upload.unlink()
     print(result.stdout, result.stderr, sep='\n', flush=True)
     try:
         status = json.loads(result.stdout).get('status')
@@ -742,6 +745,22 @@ def notarise_macos(installer: Path) -> None:
         status = None
     if result.returncode != 0 or status != 'Accepted':
         raise RuntimeError(f'Notarisation was not accepted: {status}')
+
+
+def notarise_macos(installer: Path) -> None:
+    """Sign the installer with the hardened runtime, notarise and staple it (ADR-0091)."""
+    (identity,) = required_environment('EDI_CODESIGN_MAC_IDENTITY')
+    run([
+        'codesign', '--force', '--deep', '--options', 'runtime', '--timestamp',
+        '--sign', identity, installer,
+    ])  # fmt: skip
+    run(['codesign', '--verify', '--deep', '--strict', '--verbose=2', installer])
+    upload = installer.with_name(installer.stem + '-notarise.zip')
+    run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', installer, upload])
+    try:
+        submit_for_notarisation(upload)
+    finally:
+        upload.unlink()
     run(['xcrun', 'stapler', 'staple', installer])
     run(['xcrun', 'stapler', 'validate', installer])
     run(['spctl', '--assess', '--type', 'execute', '--verbose=4', installer])
@@ -768,13 +787,6 @@ def windows_signing() -> bool:
     return SYSTEM == 'windows' and os.environ.get('EDI_CODESIGN') == '1'
 
 
-def windows_signed(path: Path) -> bool:
-    result = subprocess.run(
-        [str(signtool()), 'verify', '/pa', '/q', str(path)], check=False, capture_output=True
-    )
-    return result.returncode == 0
-
-
 def sign_windows(path: Path) -> None:
     """Sign through DigiCert KeyLocker with the smctl the signing action installed, then verify."""
     (alias,) = required_environment('EDI_CODESIGN_WIN_KEYPAIR_ALIAS')
@@ -783,46 +795,6 @@ def sign_windows(path: Path) -> None:
         '--exit-non-zero-on-fail', '--failfast',
     ])  # fmt: skip
     verify_windows_signature(path)
-
-
-# The installed maintenance tool is the running installer's executable segment, which binarycreator
-# rewrote; its signature needs a maintenance-tool component, which is not part of this change.
-UNSIGNED_INSTALLED = frozenset({'maintenancetool.exe'})
-
-
-def sign_windows_tree(root: Path, record: Path) -> None:
-    """Sign every unsigned executable under root and prove nothing else changed.
-
-    Vendor executables that already carry a valid signature keep their exact bytes, so the
-    vendor hashes checked before signing still describe them. The record lists each file signed
-    here with its hash before and after.
-    """
-    before = payload_manifest(root)
-    executables = sorted(path for path in root.rglob('*.exe') if path.is_file())
-    signed = {}
-    for path in executables:
-        if windows_signed(path):
-            continue
-        name = path.relative_to(root).as_posix()
-        sign_windows(path)
-        signed[name] = {'unsigned_sha256': before[name]['sha256'], 'sha256': sha256(path)}
-    after = payload_manifest(root)
-    if set(after) != set(before) or any(
-        after[name] != before[name] for name in before if name not in signed
-    ):
-        raise RuntimeError('Signing changed files other than the unsigned executables')
-    verify_windows_tree(root)
-    record.write_text(json.dumps(signed, indent=2) + '\n', encoding='utf-8')
-
-
-def verify_windows_tree(root: Path, unsigned: frozenset[str] = frozenset()) -> None:
-    """Every executable under root carries a valid signature, apart from the named exceptions."""
-    executables = sorted(path for path in root.rglob('*.exe') if path.is_file())
-    if not executables:
-        raise RuntimeError(f'No executables to verify under {root}')
-    for path in executables:
-        if path.name.lower() not in unsigned:
-            verify_windows_signature(path)
 
 
 def seal_installer(output: Path) -> None:
@@ -1031,7 +1003,7 @@ def exercise_installer(
         ):
             raise RuntimeError('Installed application smoke check failed')
         if windows_signing():
-            verify_windows_tree(target, UNSIGNED_INSTALLED)
+            verify_windows_signature(app)
         if SYSTEM == 'linux':
             dependencies = check_linux_dependencies(target, env)
             (output / 'dependencies.json').write_text(json.dumps(dependencies, indent=2) + '\n')

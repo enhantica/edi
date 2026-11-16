@@ -25,7 +25,7 @@ from package import (
     relocate_linux,
     run,
     sha256,
-    sign_windows_tree,
+    sign_windows,
     windows_signing,
 )
 
@@ -457,8 +457,7 @@ def build(
         sign_macos_app(stage / 'EasyDiffraction.app')
     verify_assistant_payload(stage, app / 'app/assistant-runtime-installed.json')
     if windows_signing():
-        # After the vendor runtime check, so it judged the bytes as delivered.
-        sign_windows_tree(stage, work / 'windows-signing.json')
+        sign_windows(stage / 'bin/EasyDiffraction.exe')
     (stage / 'bundle-audit.json').write_text(
         json.dumps(audit_bundle(stage), indent=2) + '\n', encoding='utf-8'
     )

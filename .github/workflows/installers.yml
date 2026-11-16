@@ -247,7 +247,7 @@ jobs:
           echo "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/client.p12"
           echo "SM_CLIENT_CERT_FILE=$(cygpath -w "$RUNNER_TEMP/client.p12")" >> "$GITHUB_ENV"
       # Without an input the action only installs smctl; build.py, standalone_cli.py and package.py
-      # sign every shipped executable with it and check each with signtool (edi ADR-0091).
+      # sign the app, the command-line edi.exe and the installers with it (edi ADR-0091).
       - name: Install the KeyLocker signing tool
         if: env.EDI_CODESIGN == '1' && runner.os == 'Windows'
         uses: digicert/code-signing-software-trust-action@v1
@@ -257,6 +257,9 @@ jobs:
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer" --collection "${{ github.workspace }}/.edi-data"
         env:
           EDI_CODESIGN_MAC_IDENTITY: ${{ runner.os == 'macOS' && vars.CODESIGN_MAC_IDENTITY || '' }}
+          EDI_NOTARY_APPLE_ID: ${{ env.EDI_CODESIGN == '1' && runner.os == 'macOS' && secrets.CODESIGN_MAC_NOTARY_APPLE_ID || '' }}
+          EDI_NOTARY_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'macOS' && secrets.CODESIGN_MAC_NOTARY_PASSWORD || '' }}
+          EDI_NOTARY_TEAM_ID: ${{ runner.os == 'macOS' && vars.CODESIGN_MAC_TEAM_ID || '' }}
           SM_HOST: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && vars.CODESIGN_WIN_KEYLOCKER_HOST || '' }}
           SM_API_KEY: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_KEYLOCKER_API_KEY || '' }}
           SM_CLIENT_CERT_PASSWORD: ${{ env.EDI_CODESIGN == '1' && runner.os == 'Windows' && secrets.CODESIGN_WIN_CERT_P12_PASSWORD || '' }}
