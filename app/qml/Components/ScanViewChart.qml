@@ -751,6 +751,8 @@ Item {
         ColourMapComboBox {
             objectName: "scanView.map.toolbar.colourMap"
             toolbarGroup: "colours"
+            // The colours and their direction live in the More popup (the owner, 2026-11-17).
+            toolbarInMore: true
             visible: chart.mode === "map"
             toolTip: qsTr("The map's colours")
             maps: chart.mapChoices
@@ -767,6 +769,7 @@ Item {
 
             objectName: "scanView.map.toolbar.direction"
             toolbarGroup: "colours"
+            toolbarInMore: true
             visible: chart.mode === "map"
             toolTip: qsTr("Direction: Auto starts the map at the chart's background in either theme")
             model: ApplicationInfo.scanMapDirectionTitles
@@ -795,6 +798,9 @@ Item {
             // (the owner, 2026-10-27).
             ChartToolButton {
                 objectName: "scanView." + chart.mode + ".toolbar.hover"
+                // On Map in the More popup; band edges, the included range and the highlight in the row (the owner,
+                // 2026-11-17).
+                toolbarInMore: chart.mode === "map"
                 fontIcon: "comment-alt"
                 toolTip: qsTr("Show coordinates tooltip on hover")
                 checked: Preferences.patternHoverShown

@@ -15,6 +15,8 @@ import edi.app
 Rectangle {
     id: button
 
+    // In the shared row's More popup even when the row has room (ToolbarLines): a view's own choice.
+    property bool toolbarInMore: false
     property string fontIcon: ""
     property string toolTip: ""
     property bool checked: false
