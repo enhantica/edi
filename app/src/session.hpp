@@ -192,6 +192,9 @@ class Session : public QObject {
     // Open a project from its folder, its project.edi or a .zip of the folder; only `file:` URLs (edi ADR-0052). An
     // archive unpacks into a temporary folder: the project has no folder of its own until Save asks where to keep it.
     Q_INVOKABLE bool openProject(const QUrl& location);
+    // Whether `path` lies in the system's temporary folder, where downloaded examples and working copies go: such a
+    // place is never a recent project (the owner, 2026-11-16).
+    Q_INVOKABLE bool isTemporaryPath(const QString& path) const;
     // Open a bundled example: extracted to this session's temporary directory, then opened whole.
     Q_INVOKABLE bool openExample(const QString& exampleId);
     // A new empty project; with a `location` it is saved there at once, so it is that folder's project from the start
