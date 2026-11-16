@@ -52,6 +52,11 @@ pdffit2, bumps, lmfit, cctbx, EasyScience, diffraction-lib, SasView and the othe
    rows are removed. The switch reads as on exactly when
    every member has its row in that form, so a hand edit of one row shows it as off. Each switch is one undoable change
    (ADR-0024 point 8). A parameter is offered only when every member has it.
+
+   *Amended 2026-11-17:* the app does not show the switch for now, neither as a column nor in a menu. The rows it
+   writes, the way it reads them back and its undo stay in the code and in files written by hand. The parametric fit
+   (a sequential series fitted as one joint fit) will offer it through the Free box, with three states: fixed, free in
+   each experiment, free and the same in all.
 4. **Phase ratios shared across patterns.** A set's Linked structures group has "Phase ratios shared". On, with `a` the
    leader, `r` its first enabled linked structure and every member linking the same structures: for each other member
    `e` and structure `p ≠ r`, the constraint `s(e,p) = s(e,r) * s(a,p) / s(a,r)` on the linked scales. Each pattern's
