@@ -167,8 +167,10 @@ SideBarGroup {
                         visible: group.scan
                         enabled: !group.series
                         checked: group.series || row.isTemplate
-                        ToolTip.visible: hovered
-                        ToolTip.text: group.series ? qsTr("Each point of the series starts from the previous point's fitted values") : qsTr("The sequential fit starts from this dataset's fitted values")
+                        EaElements.ToolTip {
+                            text: group.series ? qsTr("Each point of the series starts from the previous point's fitted values") : qsTr("The sequential fit starts from this dataset's fitted values")
+                            requested: parent.hovered
+                        }
                         onClicked: {
                             if (!group.series && !row.isTemplate)
                                 group.project.useAsTemplate(row.index);
@@ -222,23 +224,16 @@ SideBarGroup {
                         spacing: EaStyle.Sizes.fontPixelSize * 0.5
                         visible: !fileCell.empty
 
-                        EaElements.Label {
+                        EaComponents.ListViewButton {
                             objectName: `experiments.seriesToggle.${row.index}`
                             visible: group.series
-                            anchors.verticalCenter: parent.verticalCenter
-                            font.family: EaStyle.Fonts.iconsFamily
-                            color: EaStyle.Colors.themeAccent
-                            text: group.seriesOpen ? "caret-down" : "caret-right"
-                            MouseArea {
-                                anchors.fill: parent
-                                anchors.margins: -EaStyle.Sizes.fontPixelSize * 0.3
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: group.seriesOpen = !group.seriesOpen
-                            }
+                            fontIcon: group.seriesOpen ? "caret-down" : "caret-right"
+                            ToolTip.text: group.seriesOpen ? qsTr("Hide the series' points") : qsTr("Show the series' points and banks")
+                            onClicked: group.seriesOpen = !group.seriesOpen
                         }
                         EaComponents.ListViewLabel {
                             objectName: `experiments.file.${row.index}`
-                            width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0) - (counts.visible ? counts.width + parent.spacing : 0) - (moreButton.visible ? moreButton.width + parent.spacing : 0) - EaStyle.Sizes.fontPixelSize * (group.series ? 1.5 : 0))
+                            width: Math.min(implicitWidth, fileCell.width - (templateTag.visible ? templateTag.width + parent.spacing : 0) - (counts.visible ? counts.width + parent.spacing : 0) - (moreButton.visible ? moreButton.width + parent.spacing : 0) - (group.series ? EaStyle.Sizes.tableRowHeight + parent.spacing : 0))
                             height: parent.height
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideRight
@@ -285,26 +280,13 @@ SideBarGroup {
                             }
                         }
                         // ⋯: replace the data with another file, folder or collection entry.
-                        EaElements.Label {
+                        EaComponents.ListViewButton {
                             id: moreButton
                             objectName: `experiments.dataMore.${row.index}`
                             visible: !group.scan && row.experiment !== null && row.experiment.canLoadData
-                            anchors.verticalCenter: parent.verticalCenter
-                            font.family: EaStyle.Fonts.iconsFamily
-                            color: EaStyle.Colors.themeForegroundMinor
-                            text: "ellipsis-h"
-                            MouseArea {
-                                anchors.fill: parent
-                                anchors.margins: -EaStyle.Sizes.fontPixelSize * 0.3
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: group.openDataMenu(row.experiment, moreButton, true)
-                            }
-                            ToolTip.visible: moreMouse.containsMouse
+                            fontIcon: "ellipsis-h"
                             ToolTip.text: qsTr("Replace the measured data")
-                            HoverHandler {
-                                id: moreMouse
-                                readonly property bool containsMouse: hovered
-                            }
+                            onClicked: group.openDataMenu(row.experiment, moreButton, true)
                         }
                     }
                     // Load data… ▾ in an empty experiment's cell (the owner, 2026-11-16).
@@ -315,8 +297,19 @@ SideBarGroup {
                         anchors.verticalCenter: parent.verticalCenter
                         height: parent.height * 0.85
                         enabled: row.experiment !== null && row.experiment.canLoadData
-                        text: qsTr("Load data…") + " ▾"
-                        ToolTip.visible: hovered
+                        text: qsTr("Load data…")
+                        rightPadding: loadDataCaret.width + EaStyle.Sizes.fontPixelSize * 1.25
+                        // The app's caret, as the Load button below draws it (the owner, 2026-11-16).
+                        EaElements.Label {
+                            id: loadDataCaret
+                            anchors.right: parent.right
+                            anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.75
+                            anchors.verticalCenter: parent.verticalCenter
+                            font.family: EaStyle.Fonts.iconsFamily
+                            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+                            color: loadDataButton.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
+                            text: "caret-down"
+                        }
                         ToolTip.text: qsTr("Load measured data into %1 from a file, a folder of a series or the web").arg(row.name)
                         onClicked: group.openDataMenu(row.experiment, loadDataButton, false)
                     }
@@ -406,10 +399,12 @@ SideBarGroup {
                                 horizontalAlignment: Text.AlignHCenter
                                 color: EaStyle.Colors.themeForegroundMinor
                                 text: qsTr("Bank %1").arg(bankTitle.index + 1)
-                                ToolTip.visible: bankHover.hovered
-                                ToolTip.text: bankTitle.modelData
                                 HoverHandler {
                                     id: bankHover
+                                }
+                                EaElements.ToolTip {
+                                    text: bankTitle.modelData
+                                    requested: bankHover.hovered
                                 }
                             }
                         }
@@ -460,10 +455,12 @@ SideBarGroup {
                                     border.width: shown ? 2 : 0
                                     border.color: EaStyle.Colors.themeAccent
                                     radius: EaStyle.Sizes.fontPixelSize * 0.2
-                                    EaElements.Label {
-                                        anchors.centerIn: parent
-                                        color: cell.modelData === 0 ? EaStyle.Colors.green : cell.modelData === 1 ? EaStyle.Colors.orange : EaStyle.Colors.red
-                                        text: cell.modelData === 0 ? "●" : cell.modelData === 1 ? "◐" : "○"
+                                    // The app's icons, as the Fit column draws an outcome: loaded, changed, missing (a ring).
+                                    IconCell {
+                                        anchors.fill: parent
+                                        icon: cell.modelData === 0 ? "circle" : cell.modelData === 1 ? "adjust" : ""
+                                        ring: cell.modelData === 2
+                                        iconColor: String(cell.modelData === 0 ? EaStyle.Colors.green : cell.modelData === 1 ? EaStyle.Colors.orange : EaStyle.Colors.red)
                                     }
                                     MouseArea {
                                         anchors.fill: parent
@@ -482,22 +479,62 @@ SideBarGroup {
                                 elide: Text.ElideRight
                                 color: problem !== "" ? EaStyle.Colors.red : reliability !== "" ? String(FitOutcomes.color(group.project.pointOutcome(pointRow.index))) : EaStyle.Colors.themeForegroundMinor
                                 text: problem !== "" ? qsTr("not fitted") : reliability !== "" ? reliability : qsTr("not fitted")
-                                ToolTip.visible: problem !== "" && fitHover.hovered
-                                ToolTip.text: problem
                                 HoverHandler {
                                     id: fitHover
+                                }
+                                EaElements.ToolTip {
+                                    text: parent.problem
+                                    requested: fitHover.hovered
                                 }
                             }
                         }
                     }
                 }
             }
-            EaElements.Label {
+            // The legend, with the cells' own icons.
+            Flow {
                 width: parent.width
-                wrapMode: Text.Wrap
-                color: EaStyle.Colors.themeForegroundMinor
-                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
-                text: qsTr("● loaded  ◐ changed since the fit  ○ missing · a cell shows its point and bank in the charts")
+                spacing: EaStyle.Sizes.fontPixelSize * 0.5
+                Repeater {
+                    model: [{
+                            icon: "circle",
+                            ring: false,
+                            color: EaStyle.Colors.green,
+                            word: qsTr("loaded")
+                        }, {
+                            icon: "adjust",
+                            ring: false,
+                            color: EaStyle.Colors.orange,
+                            word: qsTr("changed since the fit")
+                        }, {
+                            icon: "",
+                            ring: true,
+                            color: EaStyle.Colors.red,
+                            word: qsTr("missing")
+                        }]
+                    delegate: Row {
+                        required property var modelData
+                        height: EaStyle.Sizes.tableRowHeight * 0.8
+                        spacing: EaStyle.Sizes.fontPixelSize * 0.25
+                        IconCell {
+                            width: EaStyle.Sizes.fontPixelSize * 1.2
+                            icon: parent.modelData.icon
+                            ring: parent.modelData.ring
+                            iconColor: String(parent.modelData.color)
+                        }
+                        EaElements.Label {
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: EaStyle.Colors.themeForegroundMinor
+                            text: parent.modelData.word
+                        }
+                    }
+                }
+                EaElements.Label {
+                    height: EaStyle.Sizes.tableRowHeight * 0.8
+                    verticalAlignment: Text.AlignVCenter
+                    color: EaStyle.Colors.themeForegroundMinor
+                    text: qsTr("· a cell shows its point and bank in the charts")
+                }
             }
         }
 
@@ -609,7 +646,15 @@ SideBarGroup {
         property ExperimentViewModel target: null
         property bool replacing: false
         bottomPadding: 0
-        width: EaStyle.Sizes.fontPixelSize * 24
+        // As wide as its widest item, never the row's cell: every label and hint shows whole (LoadMenuItem).
+        width: Math.max(EaStyle.Sizes.fontPixelSize * 24, implicitWidth)
+        readonly property real labelWidth: Math.max(EaStyle.Sizes.fontPixelSize * 7.5, Math.ceil(dataLabels.advanceWidth) + EaStyle.Sizes.fontPixelSize * 0.25)
+        TextMetrics {
+            id: dataLabels
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            text: qsTr("Several files as a series…")
+        }
 
         LoadMenuHeader {
             first: true
@@ -617,6 +662,7 @@ SideBarGroup {
         }
         LoadMenuItem {
             objectName: "experiments.load.dataFile"
+            labelWidth: dataMenu.labelWidth
             fontIcon: "file"
             text: qsTr("File…")
             hint: ".xye .xy .dat .txt .csv · .int .hkl"
@@ -626,8 +672,23 @@ SideBarGroup {
                 group.confirmScanReplacement(() => group.chooseData(target));
             }
         }
+        // Several files, asked as a series of joint fits first (the owner, 2026-11-16).
+        LoadMenuItem {
+            objectName: "experiments.load.dataSeries"
+            labelWidth: dataMenu.labelWidth
+            fontIcon: "clone"
+            text: qsTr("Several files as a series…")
+            hint: qsTr("Series of joint fits")
+            toolTip: qsTr("Choose the files of every point: they are grouped by name into one experiment per bank")
+            onTriggered: {
+                const target = dataMenu.target;
+                group.seriesWanted = true;
+                group.confirmScanReplacement(() => group.chooseData(target));
+            }
+        }
         LoadMenuItem {
             objectName: "experiments.load.dataFolder"
+            labelWidth: dataMenu.labelWidth
             enabled: group.project !== null && !group.project.listingDatasetFolder
             fontIcon: "folder-open"
             text: qsTr("Folder as a series…")
@@ -640,6 +701,7 @@ SideBarGroup {
         }
         LoadMenuItem {
             objectName: "experiments.load.dataWeb"
+            labelWidth: dataMenu.labelWidth
             fontIcon: "globe"
             text: qsTr("From the web…")
             hint: "EasyDiffraction"
@@ -746,6 +808,7 @@ SideBarGroup {
                 group.askDatasets(experiment, files);
                 return;
             }
+            group.seriesWanted = false;  // one file is no series
             ApplicationInfo.acceptExperimentDataFile();
         }
         onRejected: ApplicationInfo.rejectExperimentDataFile()
@@ -761,14 +824,19 @@ SideBarGroup {
     // Load N datasets as (the owner, 2026-11-04): separate experiments, each a copy of the selected experiment's setup
     // named after its file, or one experiment with a scan, the selected experiment its template and the files its
     // datasets. Up to five files default to separate experiments, more to a scan.
+    // Set by Several files as a series…: the next choice of several files is asked with that answer first.
+    property bool seriesWanted: false
     function askDatasets(experiment, files, origins = []) {
+        const series = group.seriesWanted;
+        group.seriesWanted = false;
         // Copied by default for a small set, linked above 20 files or 50 MB (the owner, 2026-11-04). Files from a data
         // collection carry their entry and digest (`origins`): linked, they are downloaded again when a fit needs them.
         const dialog = datasetsComponent.createObject(Overlay.overlay, {
             experiment: experiment,
             files: files,
             origins: origins,
-            asScan: files.length > 5,
+            asScan: !series && files.length > 5,
+            asSeries: series,
             copy: files.length <= 20 && group.project.filesBytes(files) <= 50 * 1024 * 1024
         }) as AppDialog;
         dialog.open();
