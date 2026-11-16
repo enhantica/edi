@@ -2414,13 +2414,16 @@ std::pair<std::size_t, ScanResultIndex::Row> scan_row_facts(const Project& /*pro
     }
     for (const ScanParameterColumns& parameter : index.parameters) {
         double value = 0.0, uncertainty = 0.0;
-        if (!parse_scan_number(cells[parameter.value], value) || !std::isfinite(value)) {
+        // An undefined value or s.u. is `nan` (or, in files written before it was spelled so, empty): a derived
+        // value at a moment along z or of no moment, whose angles' s.u. the data do not determine, or a moment
+        // component as the moments vanish. It is carried, not refused; only an infinite or negative cell is.
+        const std::string& value_cell = cells[parameter.value];
+        const bool value_undefined = value_cell == "nan" || value_cell.empty();
+        if (!value_undefined && (!parse_scan_number(value_cell, value) || !std::isfinite(value))) {
             refuse("has no finite value for '" + parameter.name + "'");
         }
-        // An undefined s.u. is `nan` in a converged row too: a direction the data do not determine, such as a
-        // moment component as the moments vanish. It is carried, not refused.
         const std::string& su_cell = cells[parameter.uncertainty];
-        if (su_cell != "nan" && (!number(su_cell, uncertainty) || uncertainty < 0.0)) {
+        if (su_cell != "nan" && !su_cell.empty() && (!number(su_cell, uncertainty) || uncertainty < 0.0)) {
             refuse("has no finite, non-negative uncertainty for '" + parameter.name + "'");
         }
     }
