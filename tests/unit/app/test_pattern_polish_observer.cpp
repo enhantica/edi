@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <map>
 #include "measured_layer.hpp"
+#include "scan_view_model.hpp"
 #include "project_view_model.hpp"
 
 class PatternPolishObserver final : public QObject {
@@ -69,6 +70,19 @@ public:
             banks.insert(QString::fromStdString(bank->name), bank->fit_chi_square ? QVariant(*bank->fit_chi_square) : QVariant());
         return {{"descent", QString::fromStdString(saved.fit_result.descent)},
                 {"duration", saved.fit_result.fitting_time}, {"bankChi", banks}};
+    }
+    // Actual point columns consumed by both scan renderers; never run a transform here.
+    Q_INVOKABLE QVariantList scanPoints(QObject* source) const {
+        const auto* scan = qobject_cast<edi_app::ScanViewModel*>(source);
+        QVariantList rows;
+        if (!scan) return rows;
+        for (const auto& pattern : scan->patterns()) {
+            QVariantList points;
+            for (std::size_t i = 0; i < std::min(pattern.shown.size(), pattern.intensity.size()); ++i)
+                points.append(QVariantMap{{"x", pattern.shown[i]}, {"y", pattern.intensity[i]}});
+            rows.append(QVariantMap{{"points", points}});
+        }
+        return rows;
     }
     Q_INVOKABLE QVariantList series(QObject* chart, const QString& prefix) const {
         QVariantList result;
