@@ -766,9 +766,12 @@ Item {
             shownIndex: Math.max(0, directions.indexOf(chart.mapDirection))
             onActivated: index => ApplicationInfo.scanChoice(index, 5)
         }
+        // The buttons, as the shared row takes them (ToolbarLines, toolbarUnits): the display toggles, then after a gap
+        // the zoom and the reset; each can move into the More popup by the row's one priority.
         Row {
             id: buttons
 
+            readonly property bool toolbarUnits: true
             spacing: AppSizes.toolbarSpacing
 
             // The Stacked legend, as the pattern chart's button.
@@ -825,6 +828,11 @@ Item {
                 checked: Preferences.chartHighlightSelected
                 onClicked: ApplicationInfo.scanToggle(6)
             }
+            // The gap before the zoom and the reset: a new group of the row.
+            Item {
+                width: 1
+                height: 1
+            }
             // Box zoom is the Map's; Stacked zooms by the wheel and the reset (the owner, 2026-11-16).
             ChartToolButton {
                 objectName: "scanView." + chart.mode + ".toolbar.zoom"
@@ -840,15 +848,21 @@ Item {
                 onClicked: chart.resetZoom()
             }
         }
-        // The curve count, a small caption at the controls row's right end (the owner, 2026-11-16).
-        EaElements.Label {
-            objectName: "scanView." + chart.mode + ".progress"
+        // The curve count, a small caption at the controls row's right end (the owner, 2026-11-16); in an item, so the
+        // shared row places it whole.
+        Item {
             visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.loaded < chart.scan.count) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
-            color: chart.colors.chartLabels
-            text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
+            width: progressCaption.implicitWidth
             height: EaStyle.Sizes.comboBoxHeight
-            verticalAlignment: Text.AlignVCenter
-            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+            EaElements.Label {
+                id: progressCaption
+                objectName: "scanView." + chart.mode + ".progress"
+                color: chart.colors.chartLabels
+                text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
+                height: EaStyle.Sizes.comboBoxHeight
+                verticalAlignment: Text.AlignVCenter
+                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
+            }
         }
     }
 

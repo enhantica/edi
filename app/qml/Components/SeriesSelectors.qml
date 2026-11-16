@@ -42,7 +42,7 @@ Row {
     // and its two buttons, a toolbar group's gap apart (the owner, 2026-11-16); one bank leaves the run the whole row.
     readonly property real groupGap: AppSizes.toolbarSpacing * 4
     readonly property bool twoGroups: banks.length > 1
-    readonly property real groupWidth: (width - (rowsShown ? rowsSwitch.width + groupGap : 0) - (twoGroups ? groupGap : 0)) / (twoGroups ? 2 : 1)
+    readonly property real groupWidth: Math.max(EaStyle.Sizes.fontPixelSize * 8, (width - (rowsShown ? rowsSwitch.width + groupGap : 0) - (twoGroups ? groupGap : 0)) / (twoGroups ? 2 : 1))
 
     spacing: groupGap
 

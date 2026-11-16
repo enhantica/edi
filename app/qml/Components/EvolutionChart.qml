@@ -55,8 +55,8 @@ Item {
     readonly property real toolbarRightInset: sideMargin
     // The toolbar's outer edges, its x box on the left and its view buttons on the right, where the block selector row
     // above lines up with it (the owner, 2026-11-16).
-    readonly property real toolbarSpanLeft: xBox.x
-    readonly property real toolbarSpanRightInset: width - (viewButtons.x + viewButtons.width)
+    readonly property real toolbarSpanLeft: evolutionToolbar.x + evolutionToolbar.contentSpan[0]
+    readonly property real toolbarSpanRightInset: width - (evolutionToolbar.x + evolutionToolbar.contentSpan[1])
     readonly property real titleGutter: Math.round(em * 1.6)
     readonly property real xTitleHeight: Math.round(em * 1.7)
     // The zoomed ranges, [xMin, xMax, yMin, yMax]; empty: the whole data.
@@ -124,109 +124,118 @@ Item {
         color: chart.transparentImage ? "transparent" : chart.colors.chartBackground
     }
 
-    // x: the extracted value or the file index; the closed box names its axis, as the pattern chart's do.
-    ToolbarComboBox {
-        id: xBox
+    // The controls row, the shared one of every chart (ToolbarLines; the owner, 2026-11-16): the x box, the series'
+    // Shared / Per bank and Bank boxes, the parameter, then the view buttons; what does not fit moves into More.
+    ToolbarLines {
+        id: evolutionToolbar
 
-        objectName: "evolution.toolbar.x"
-        x: chart.sideMargin
+        objectName: "evolution.toolbar"
+        x: 0
         y: chart.em
+        width: chart.width
+        height: implicitHeight
         visible: !chart.fromReport
-        enabled: chart.evolution !== null && chart.evolution.xModes.length > 1 && chart.project.scanColumns.length > 0
-        toolTip: qsTr("X axis")
-        // Each value capitalised after the lower-case prefix (the owner, 2026-10-27).
-        readonly property var entries: ApplicationInfo.evolutionXEntries(false)
-        model: entries
-        closedTexts: ApplicationInfo.evolutionXEntries(true)
-        shownIndex: chart.evolution ? chart.evolution.xMode : 0
-        onActivated: index => chart.evolution.xMode = index
-    }
+        leftEdge: chart.sideMargin
+        rightEdge: chart.width - chart.toolbarRightInset
 
-    // A series of joint fits (edi ADR-0089; the owner, 2026-11-16): its shared parameters as one curve, or each bank's
-    // own as one curve per bank in the bank's colour, the Bank box showing every bank or one.
-    ToolbarComboBox {
-        id: scopeBox
+        // x: the extracted value or the file index; the closed box names its axis, as the pattern chart's do.
+        ToolbarComboBox {
+            id: xBox
 
-        objectName: "evolution.toolbar.scope"
-        // As wide as the text it shows, as the chart's other boxes (the owner, 2026-11-16).
-        fitShown: true
-        x: xBox.x + xBox.width + AppSizes.toolbarSpacing * 4
-        y: xBox.y
-        visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series
-        toolTip: qsTr("Parameters shared by the banks, or each bank's own")
-        readonly property var entries: [qsTr("Shared"), qsTr("Per bank")]
-        model: entries
-        shownIndex: chart.evolution !== null && chart.evolution.perExperiment ? 1 : 0
-        onActivated: index => {
-            if (index === 1)
-                chart.evolution.currentExperiment = -1;
-            chart.evolution.perExperiment = index === 1;
+            objectName: "evolution.toolbar.x"
+            toolbarGroup: "axes"
+            enabled: chart.evolution !== null && chart.evolution.xModes.length > 1 && chart.project.scanColumns.length > 0
+            toolTip: qsTr("X axis")
+            // Each value capitalised after the lower-case prefix (the owner, 2026-10-27).
+            readonly property var entries: ApplicationInfo.evolutionXEntries(false)
+            model: entries
+            closedTexts: ApplicationInfo.evolutionXEntries(true)
+            shownIndex: chart.evolution ? chart.evolution.xMode : 0
+            onActivated: index => chart.evolution.xMode = index
         }
-    }
-    ToolbarComboBox {
-        id: bankBox
 
-        objectName: "evolution.toolbar.bank"
-        // As wide as the text it shows, as the chart's other boxes (the owner, 2026-11-16).
-        fitShown: true
-        x: scopeBox.x + scopeBox.width + AppSizes.toolbarSpacing
-        y: xBox.y
-        visible: scopeBox.visible && chart.evolution.perExperiment
-        toolTip: qsTr("Every bank's curve, or one bank's")
-        readonly property var entries: chart.evolution !== null ? [qsTr("All banks")].concat(chart.evolution.experiments) : []
-        model: entries
-        shownIndex: chart.evolution !== null ? chart.evolution.currentExperiment + 1 : 0
-        onActivated: index => chart.evolution.currentExperiment = index - 1
-    }
+        // A series of joint fits (edi ADR-0089; the owner, 2026-11-16): its shared parameters as one curve, or each bank's
+        // own as one curve per bank in the bank's colour, the Bank box showing every bank or one.
+        ToolbarComboBox {
+            id: scopeBox
 
-    // The parameter drawn, one of those results.csv records, with the previous and next buttons.
-    BlockSelector {
-        objectName: "evolution.parameters"
-        visible: !chart.fromReport
-        x: (bankBox.visible ? bankBox.x + bankBox.width : scopeBox.visible ? scopeBox.x + scopeBox.width : xBox.x + xBox.width) + AppSizes.toolbarSpacing * 4
-        y: xBox.y + (xBox.height - height) / 2
-        width: Math.max(0, viewButtons.x - x - AppSizes.toolbarSpacing * 4)
-        backgroundColor: chart.colors.chartBackground
-        blocks: chart.evolution ? chart.evolution.parameters : null
-        blocksTextRole: "label"
-        blockKind: "parameter"
-        blockIndex: chart.evolution ? chart.evolution.currentParameter : -1
-        onBlockActivated: index => chart.evolution.currentParameter = index
-        // The full parameter name, which a narrow box elides in the middle (the owner, 2026-11-16).
-        HoverHandler {
-            id: parameterHover
+            objectName: "evolution.toolbar.scope"
+            // As wide as the text it shows, as the chart's other boxes (the owner, 2026-11-16).
+            fitShown: true
+            toolbarGroup: "series"
+            visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series
+            toolTip: qsTr("Parameters shared by the banks, or each bank's own")
+            readonly property var entries: [qsTr("Shared"), qsTr("Per bank")]
+            model: entries
+            shownIndex: chart.evolution !== null && chart.evolution.perExperiment ? 1 : 0
+            onActivated: index => {
+                if (index === 1)
+                    chart.evolution.currentExperiment = -1;
+                chart.evolution.perExperiment = index === 1;
+            }
         }
-        EaElements.ToolTip {
-            text: chart.evolution ? chart.evolution.yTitle : ""
-            requested: parameterHover.hovered
+        ToolbarComboBox {
+            id: bankBox
+
+            objectName: "evolution.toolbar.bank"
+            // As wide as the text it shows, as the chart's other boxes (the owner, 2026-11-16).
+            fitShown: true
+            toolbarGroup: "series"
+            visible: !chart.fromReport && chart.evolution !== null && chart.evolution.series && chart.evolution.perExperiment
+            toolTip: qsTr("Every bank's curve, or one bank's")
+            readonly property var entries: chart.evolution !== null ? [qsTr("All banks")].concat(chart.evolution.experiments) : []
+            model: entries
+            shownIndex: chart.evolution !== null ? chart.evolution.currentExperiment + 1 : 0
+            onActivated: index => chart.evolution.currentExperiment = index - 1
         }
-    }
 
-    // The project's two view settings, as on the pattern chart's toolbar (the owner, 2026-11-03): the error bars, and
-    // whether the y range fits the values with their error bars or the values only, longer bars then clipped.
-    Row {
-        id: viewButtons
-
-        visible: !chart.fromReport
-        x: chart.width - chart.toolbarRightInset - width
-        y: xBox.y + (xBox.height - height) / 2
-        spacing: AppSizes.toolbarSpacing
-
-        ChartToolButton {
-            objectName: "evolution.toolbar.errorBars"
-            fontIcon: "arrows-alt-v"
-            toolTip: qsTr("Show error bars")
-            enabled: chart.project !== null
-            checked: chart.project !== null && chart.project.evolutionErrorBars
-            onClicked: chart.project.evolutionErrorBars = !chart.project.evolutionErrorBars
+        // The parameter drawn, one of those results.csv records, with the previous and next buttons.
+        // At a fixed width in the row, which shows a parameter's name as the parameter table does.
+        BlockSelector {
+            objectName: "evolution.parameters"
+            visible: !chart.fromReport
+            width: chart.em * 18
+            backgroundColor: chart.colors.chartBackground
+            blocks: chart.evolution ? chart.evolution.parameters : null
+            blocksTextRole: "label"
+            blockKind: "parameter"
+            blockIndex: chart.evolution ? chart.evolution.currentParameter : -1
+            onBlockActivated: index => chart.evolution.currentParameter = index
+            // The full parameter name, which a narrow box elides in the middle (the owner, 2026-11-16).
+            HoverHandler {
+                id: parameterHover
+            }
+            EaElements.ToolTip {
+                text: chart.evolution ? chart.evolution.yTitle : ""
+                requested: parameterHover.hovered
+            }
         }
-        ChartToolButton {
-            objectName: "evolution.toolbar.range"
-            fontIcon: "expand"
-            toolTip: qsTr("Fit the range to the error bars too")
-            enabled: chart.project !== null
-            checked: chart.project !== null && chart.project.evolutionRangeWithSu
-            onClicked: chart.project.evolutionRangeWithSu = !chart.project.evolutionRangeWithSu
+
+        // The project's two view settings, as on the pattern chart's toolbar (the owner, 2026-11-03): the error bars, and
+        // whether the y range fits the values with their error bars or the values only, longer bars then clipped.
+        Row {
+            id: viewButtons
+
+            readonly property bool toolbarUnits: true
+            visible: !chart.fromReport
+            spacing: AppSizes.toolbarSpacing
+
+            ChartToolButton {
+                objectName: "evolution.toolbar.errorBars"
+                fontIcon: "arrows-alt-v"
+                toolTip: qsTr("Show error bars")
+                enabled: chart.project !== null
+                checked: chart.project !== null && chart.project.evolutionErrorBars
+                onClicked: chart.project.evolutionErrorBars = !chart.project.evolutionErrorBars
+            }
+            ChartToolButton {
+                objectName: "evolution.toolbar.range"
+                fontIcon: "expand"
+                toolTip: qsTr("Fit the range to the error bars too")
+                enabled: chart.project !== null
+                checked: chart.project !== null && chart.project.evolutionRangeWithSu
+                onClicked: chart.project.evolutionRangeWithSu = !chart.project.evolutionRangeWithSu
+            }
         }
     }
 
@@ -234,7 +243,7 @@ Item {
     EaElements.Label {
         objectName: chart.fromReport ? "report.evolution.title" : ""
         x: chart.sideMargin
-        y: xBox.y + (xBox.height - height) / 2
+        y: evolutionToolbar.y + (AppSizes.toolbarControlSize - height) / 2
         width: chart.width - 2 * chart.sideMargin
         visible: chart.fromReport
         elide: Text.ElideRight
@@ -247,7 +256,7 @@ Item {
 
         objectName: "evolution.view"
         visible: chart.fitted
-        y: xBox.y + xBox.height + chart.sideMargin
+        y: evolutionToolbar.y + evolutionToolbar.height + chart.sideMargin
         width: parent.width
         height: parent.height - y - chart.xTitleHeight - chart.em
         marginLeft: chart.sideMargin + chart.titleGutter

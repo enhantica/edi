@@ -43,18 +43,20 @@ Item {
     // The lines' outer edges once laid out, in this item's coordinates: where the block selector row above lines up
     // (the owner, 2026-11-16). Counted up after each layout, so the edges are read again.
     property int laidOut: 0
+    // Over the placed controls and the More button: a control moved into the popup is no longer the row's.
     function extent() {
         let low = Infinity, high = -Infinity;
-        for (let i = 0; i < children.length; ++i) {
-            const child = children[i];
-            if (!child.visible || child.width <= 0)
+        const items = units.map(unit => unit.item).concat([moreButton]);
+        for (const item of items) {
+            // A control in the popup stays a child, parked far to the left (ToolbarRow.place).
+            if (!item || !item.visible || item.width <= 0 || item.parent !== lines || item.x < -1000 || overflow.indexOf(item) >= 0)
                 continue;
-            low = Math.min(low, child.x);
-            high = Math.max(high, child.x + child.width);
+            low = Math.min(low, item.x);
+            high = Math.max(high, item.x + item.width);
         }
-        return isFinite(low) ? [low, high] : [leftEdge, rightEdge];
+        return isFinite(low) && high > low ? [low, high] : [leftEdge, rightEdge];
     }
-    readonly property var contentSpan: laidOut >= 0 && width >= 0 ? extent() : [leftEdge, rightEdge]
+    readonly property var contentSpan: laidOut >= 0 && units.length >= 0 && overflow.length >= 0 && width >= 0 ? extent() : [leftEdge, rightEdge]
 
     onMeasureChanged: Qt.callLater(lines.layout)
     Component.onCompleted: Qt.callLater(lines.collect)
