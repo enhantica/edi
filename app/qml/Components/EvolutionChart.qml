@@ -53,10 +53,6 @@ Item {
     readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
     readonly property int yTicks: Math.max(2, Math.min(6, Math.floor((height - em * 7 - xTitleHeight) / (em * 2.5))))
     readonly property real toolbarRightInset: sideMargin
-    // The toolbar's outer edges, its x box on the left and its view buttons on the right, where the block selector row
-    // above lines up with it (the owner, 2026-11-16).
-    readonly property real toolbarSpanLeft: evolutionToolbar.x + evolutionToolbar.contentSpan[0]
-    readonly property real toolbarSpanRightInset: width - (evolutionToolbar.x + evolutionToolbar.contentSpan[1])
     readonly property real titleGutter: Math.round(em * 1.6)
     readonly property real xTitleHeight: Math.round(em * 1.7)
     // The zoomed ranges, [xMin, xMax, yMin, yMax]; empty: the whole data.
