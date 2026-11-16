@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T03:12:31Z
+# measured_utc = 2026-11-16T03:43:40Z
 #
-# Recorded from: measured test run (5 node(s) measured once, 176637 banked, 0 stale row(s) dropped)
-# Collected tests: 245418; with a reported duration: 77413
-# Module-scoped fixture costs recorded: 202
+# Recorded from: measured test run (6 node(s) measured once, 176638 banked, 0 stale row(s) dropped)
+# Collected tests: 245427; with a reported duration: 77415
+# Module-scoped fixture costs recorded: 203
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245418
+# inventory_python = 245427
 # inventory_cpp = 0
-# inventory_measured = 176637
-# inventory_unmeasured = 68781
+# inventory_measured = 176644
+# inventory_unmeasured = 68783
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 86113
+# inventory_pr_python = 86122
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -234799,8 +234799,13 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_query_operation_ownership.py:
 2.470	tests/system/py/test_rendering_setup.py::test_normal_app_reports_its_actual_rendering_setup_at_startup
 0.000	tests/system/py/test_rendering_setup.py::test_user_override_controls_the_renderer_after_a_complete_restart[gpu]
 0.000	tests/system/py/test_rendering_setup.py::test_user_override_controls_the_renderer_after_a_complete_restart[software]
-0.003	tests/system/py/test_report_browser_readiness.py::test_report_observer_waits_for_drawing_without_animation_frames[delayed-render]
+0.000	tests/system/py/test_report_browser_readiness.py::test_report_observer_waits_for_drawing_without_animation_frames[delayed-render]
 0.000	tests/system/py/test_report_browser_readiness.py::test_report_observer_waits_for_drawing_without_animation_frames[never-rendered]
+3.670	tests/system/py/test_report_completion.py::test_report_full_table_reaches_its_final_input_row
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_completion.py::test_report_preview_supported_buttons_perform_real_actions[pattern]
+UNMEASURED:failed-in-this-run	tests/system/py/test_report_completion.py::test_report_preview_supported_buttons_perform_real_actions[structure]
+4.440	tests/system/py/test_report_completion.py::test_saved_html_full_tables_buttons_and_powder_styling[narrow]
+4.698	tests/system/py/test_report_completion.py::test_saved_html_full_tables_buttons_and_powder_styling[wide]
 0.030	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_parent_keeps_the_caller_selected_link_policy[linked-root-saved]
 0.000	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_parent_keeps_the_caller_selected_link_policy[linked-root-unsaved]
 UNMEASURED:failed-in-this-run	tests/system/py/test_report_explicit_output_path.py::test_explicit_html_parent_keeps_the_caller_selected_link_policy[missing-under-linked-root-saved]
@@ -245215,6 +245220,10 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_report_json_numbers_have_shortest_roundtrip_bits[negative-zero]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_report_json_numbers_have_shortest_roundtrip_bits[subnormal]
 UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_report_json_utf8_nulls_and_fixed_generated_roundtrip
+0.000	tests/unit/py/test_report_observer_head.py::test_structure_observation_refuses_missing_or_duplicate_actual_heads[<body>no head</body>]
+0.000	tests/unit/py/test_report_observer_head.py::test_structure_observation_refuses_missing_or_duplicate_actual_heads[<head></head><head></head>]
+0.000	tests/unit/py/test_report_observer_head.py::test_structure_observer_preserves_actual_html_before_and_after_the_head[<!doctype html><html><head>]
+0.000	tests/unit/py/test_report_observer_head.py::test_structure_observer_preserves_actual_html_before_and_after_the_head[<!doctype html>\n<html>\n<head>]
 0.000	tests/unit/py/test_saved_calculation_bytes.py::test_derived_reflection_adapter_refuses_each_numeric_and_original_data_escape[extra]
 0.000	tests/unit/py/test_saved_calculation_bytes.py::test_derived_reflection_adapter_refuses_each_numeric_and_original_data_escape[index]
 0.000	tests/unit/py/test_saved_calculation_bytes.py::test_derived_reflection_adapter_refuses_each_numeric_and_original_data_escape[measured]
@@ -245599,7 +245608,8 @@ UNMEASURED:not-completed-in-this-run	tests/unit/py/test_web_science_identity.py:
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 2.940	tests/system/py/test_query_operation_ownership.py
 # module-cost: 33.845	tests/system/py/test_rendering_setup.py
-# module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
+# module-cost: 3.103	tests/system/py/test_report_browser_readiness.py
+# module-cost: 3.672	tests/system/py/test_report_completion.py
 # module-cost: 2.346	tests/system/py/test_report_index_width.py
 # module-cost: 0.115	tests/system/py/test_report_publication_failures.py
 # module-cost: 5.969	tests/system/py/test_report_renderer_contract.py
