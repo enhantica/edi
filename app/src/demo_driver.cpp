@@ -846,6 +846,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"review-03-experiment-stacked-byrun", {"mainArea.tab.stacked"}});
         steps_.push_back({"review-04-experiment-stacked-bybank", {"mainArea.series.rows", "choose:by bank"}});
         steps_.push_back({"review-05-experiment-map-bybank", {"mainArea.tab.map"}});
+        steps_.push_back({"review-05m-experiment-map-more", {"scanView.map.toolbar.more"}});
+        steps_.push_back({"review-05n-experiment-map-more-closed", {"scanView.map.toolbar.more"}});
         steps_.push_back({"review-06-experiment-map-byrun", {"mainArea.series.rows", "choose:by run"}});
         steps_.push_back({"review-06b-experiment-map-byrun-q", {"scanView.map.toolbar.xaxis", "choose:x: Q"}});
         steps_.push_back({"review-06c-experiment-map-bybank-q", {"mainArea.series.rows", "choose:by bank"}});
