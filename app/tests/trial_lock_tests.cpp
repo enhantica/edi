@@ -97,6 +97,39 @@ private slots:
         ProjectViewModel project(bare, nullptr);
         QVERIFY(project.assistantProject() != nullptr);
     }
+    // A CIF from outside edi, with no edi item: a powder pattern loads as an experiment, its beam mode read from its
+    // 2θ column and its profile at the defaults; a structure CIF given as an experiment is named as one.
+    void externalCifLoadsAsExperiment() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString pattern = dir.filePath("pattern.cif");
+        {
+            QFile file(pattern);
+            QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+            file.write("data_pattern\n_diffrn_radiation_wavelength.wavelength 1.5\nloop_\n_pd_meas.2theta_scan\n"
+                       "_pd_meas.intensity_total\n_pd_meas.intensity_total_su\n10.0 100 10\n10.1 110 10.5\n10.2 120 11\n");
+        }
+        const edi::BraggPdExperiment experiment = edi::load_experiment_file(pattern.toStdString());
+        QVERIFY(experiment.data.has_value());
+        QCOMPARE(experiment.data->intensity_meas.get().size(), std::size_t{3});
+        QCOMPARE(experiment.data->intensity_meas.get()[2], 120.0);
+        QCOMPARE(experiment.effective_beam_mode(), edi::BeamModeEnum::CONSTANT_WAVELENGTH);
+        const QString structure = dir.filePath("structure.cif");
+        {
+            QFile file(structure);
+            QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+            file.write("data_lbco\n_cell.length_a 3.88\n_cell.length_b 3.88\n_cell.length_c 3.88\n_cell.angle_alpha 90\n"
+                       "_cell.angle_beta 90\n_cell.angle_gamma 90\n_space_group.name_H-M_alt 'P m -3 m'\nloop_\n"
+                       "_atom_site.label\n_atom_site.type_symbol\n_atom_site.fract_x\n_atom_site.fract_y\n"
+                       "_atom_site.fract_z\nLa La 0 0 0\n");
+        }
+        try {
+            (void)edi::load_experiment_file(structure.toStdString());
+            QFAIL("a structure CIF loaded as an experiment");
+        } catch (const std::exception& refusal) {
+            QVERIFY2(QString::fromUtf8(refusal.what()).contains("no measured pattern"), refusal.what());
+        }
+    }
     void stopKeepsOriginalOwner() {
         ProjectViewModel project(model(), nullptr);
         candidate(project);

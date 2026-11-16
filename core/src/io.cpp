@@ -3522,10 +3522,19 @@ BraggPdExperiment load_experiment_edi_file(const std::string& path) { return loa
 
 
 BraggPdExperiment load_experiment_file(const std::string& path, const WarningSink& on_warning) {
-    const Block block = edi_text_block(read_file(path), path, true, on_warning);
+    const std::string text = read_file(path);
+    const Block block = edi_text_block(text, path, true, on_warning);
     require_edi_schema(block, path);
-    // The file must say what it is: all four type axes, read from the block itself, because the
-    // builder would supply an absent one (beam mode from `_peak.type`, the others by default).
+    // An edi file must say what it is: all four type axes, read from the block itself, because the
+    // builder would supply an absent one (beam mode from `_peak.type`, the others by default). A CIF
+    // from outside edi rarely names them; it takes the builder's defaults, its beam mode read from its axis.
+    std::vector<std::string> tags;
+    for (const Token& token : tokenize(text, path)) {
+        if (is_tag(token)) {
+            tags.push_back(token.text);
+        }
+    }
+    const bool cif = detail::is_cif_names(tags);
     std::string missing;
     for (const char* tag : {"_experiment_type.sample_form", "_experiment_type.beam_mode",
                             "_experiment_type.radiation_probe", "_experiment_type.scattering_type"}) {
@@ -3533,13 +3542,14 @@ BraggPdExperiment load_experiment_file(const std::string& path, const WarningSin
             missing += (missing.empty() ? "" : ", ") + std::string(tag);
         }
     }
-    if (!missing.empty()) {
+    if (!missing.empty() && !cif) {
         throw IoError(path + ": an experiment file must declare its experiment type; missing " +
                       missing);
     }
     // A declared type edi's experiment class does not implement is refused by axis (an unknown
     // token is left to the builder's own message).
-    if (*block.find("_experiment_type.scattering_type") == "total") {
+    if (const std::string* scattering = block.find("_experiment_type.scattering_type");
+        scattering != nullptr && *scattering == "total") {
         throw IoError(path + ": _experiment_type.scattering_type 'total' is not implemented - edi "
                              "experiments are powder + bragg");
     }
