@@ -38,7 +38,7 @@ extra_css:
   - assets/site-components.css?v=tables-5
   - assets/experiment-tags.css?v=5
   - assets/parameter-reference.css?v=3
-  - assets/about/about.css?v=1
+  - assets/about/about.css?v=2
 extra_javascript:
   - assets/example-catalogue.js?v=7
   # Written by build.py from the app's settings.
