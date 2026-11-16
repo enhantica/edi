@@ -38,12 +38,14 @@ extra_css:
   - assets/site-components.css?v=tables-5
   - assets/experiment-tags.css?v=5
   - assets/parameter-reference.css?v=3
+  - assets/about/about.css?v=1
 extra_javascript:
   - assets/example-catalogue.js?v=7
   # Written by build.py from the app's settings.
   - assets/feedback-form.js
   - assets/contact-form.js?v=3
-  - assets/survey/survey.js?v=9
+  - assets/survey/survey.js?v=10
+  - assets/about/email-link.js?v=1
   - assets/code-breaks.js?v=2
 extra:
   interface_icons:

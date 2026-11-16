@@ -2,9 +2,6 @@
 icon: fa5/info-circle
 ---
 
-<link rel="stylesheet" href="../assets/about/about.css">
-<script src="../assets/about/email-link.js" defer></script>
-
 # About
 
 Hi, I'm Andrew Sazonov. I work at the [European Spallation Source (ESS)](https://ess.eu), in the [Data Management & Scientific Computing centre (DMSC)](https://ess.eu/data-management-scientific-computing). I started EasyDiffraction and still lead its development, together with the people who contribute code, ideas and feedback.
