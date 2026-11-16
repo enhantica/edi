@@ -14,7 +14,7 @@
   --ed-contributor-border: color-mix(in srgb, var(--md-default-fg-color) 18%, var(--md-default-bg-color));
   display: flex; align-items: center; margin-left: 0.6rem;
 }
-.md-typeset .ed-contributors-stack { display: flex; align-items: center; padding: 0 12px; }
+.md-typeset .ed-contributors-stack { display: flex; align-items: center; }
 .md-typeset .ed-contributor { position: relative; display: block; margin-left: -30px; transition: transform 0.18s ease; }
 .md-typeset .ed-contributor:first-child { margin-left: 0; }
 .md-typeset .ed-signature .ed-contributor img {
@@ -40,5 +40,5 @@
 .md-typeset .ed-contributor:hover .ed-contributor-name,
 .md-typeset .ed-contributor:focus-visible .ed-contributor-name { display: block; }
 .md-typeset .ed-contributors-label {
-  margin-left: 16px; color: var(--md-default-fg-color--light); font-size: 0.9em; line-height: 1.45;
+  margin-left: 1rem; color: var(--md-default-fg-color--light); font-size: 0.9em; line-height: 1.45;
 }

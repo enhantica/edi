@@ -34,7 +34,7 @@ presented as people who took part in the project with code, ideas and work, not 
 
 - Each is an avatar at the photo's height (72 px), overlapping the previous one by 30 px, with a thin border in the
   tooltip's border grey. Each links to the person's GitHub profile, with the name as its accessible label. The text
-  "and / contributors" stands on two lines after the last avatar.
+  "and / contributors" stands on two lines after the last avatar, as far from it as the name from the photo.
 - On hover the avatar comes to the top; the avatars left of it step 12 px left and those right of it 12 px right; all
   others fade under a half-transparent layer of the background colour. Avatars right of the hovered one stack the other
   way, so none is overlapped from both sides. A tooltip below shows the name in the weight and size of the owner's
@@ -48,8 +48,8 @@ presented as people who took part in the project with code, ideas and work, not 
 never loads from GitHub. `pixi run site-contributors` (`website/contributors.py`) downloads each from
 `https://github.com/<login>.png?size=144` with a 10 s timeout. It replaces a file only when the download is a PNG or
 JPEG image (GitHub serves either; browsers read both under the `.png` name), keeps the old file and warns otherwise.
-The website deploy workflow runs it before the site build, and that step never fails the deploy. The download function is
-passed in, so a test replaces it and never uses the network.
+The website deploy workflow runs it before the site build, and that step never fails the deploy. The download
+function is passed in, so a test replaces it and never uses the network.
 
 ### Measured contributions
 
