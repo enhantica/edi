@@ -24,30 +24,19 @@ after changing the installed components.
 ## Install and update
 
 EasyDiffraction comes with all required application dependencies. Download and extract the
-whole ZIP for your platform. The online installer needs an internet connection. The
-installers are not signed yet: on macOS, open the installer once, then select **Open Anyway** in
-**System Settings → Privacy & Security**.
+whole ZIP for your platform. The online installer needs an internet connection. The macOS and
+Windows installers are signed by the European Spallation Source, and Apple has checked the macOS
+installer, so both open without a security warning.
 
 === "macOS"
 
     1. Open the extracted installer app.
-    2. If macOS blocks it, click **Done**. In **System Settings → Privacy & Security**,
-       scroll to **Security**, select **Open Anyway**, and confirm. This applies to the
-       installer you just opened. [Apple’s instructions](https://support.apple.com/en-gb/102445)
-    3. Follow setup. The suggested folder is `/Applications/EasyDiffraction`.
+    2. Follow setup. The suggested folder is `/Applications/EasyDiffraction`.
 
 === "Windows"
 
     1. Right-click the ZIP and select **Extract All**, then open the installer `.exe`.
-    2. If Microsoft Defender SmartScreen warns about the installer, use **More info → Run
-       anyway** if Windows offers it and you downloaded the installer using the links above.
-       Smart App Control can block unsigned apps without offering a per-app exception.
-       [Microsoft’s Smart App Control guide](https://support.microsoft.com/en-gb/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions)
-    3. If there is no **Run anyway** (common on managed office laptops), start the installer from
-       Command Prompt instead: open **Command Prompt**, go to the extracted folder with
-       `cd %USERPROFILE%\Downloads\<extracted folder>`, then type the installer's file name, for example
-       `EasyDiffraction-<version>-windows-x86_64-online.exe`, and press Enter.
-    4. Follow setup to choose the installation folder.
+    2. Follow setup to choose the installation folder.
 
 === "Linux"
 
