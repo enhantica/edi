@@ -833,15 +833,25 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // (`--demo-only review-`).
     if (only.startsWith(QLatin1String("review-"))) {
         const QString experimentTab = QStringLiteral("appBar.tab.experiment");
+        // Before the fit: the Map on Q by bank (the owner's empty map, 2026-11-16), then back to d.
+        steps_.push_back({"review-00a-prefit-map-bybank-q",
+                          {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"),
+                           experimentTab, basic, "mainArea.tab.map", "mainArea.series.rows", "choose:by bank",
+                           "scanView.map.toolbar.xaxis", "choose:x: Q"}});
         steps_.push_back({"review-00-fitted",
-                          {"resize:1480x800", "open-project:" + qEnvironmentVariable("EDI_DEMO_SCAN_PROJECT"), analysis,
-                           basic, "statusBar.fit.button", "wait-files:100", "wait-fit", "choose:OK"}});
+                          {"scanView.map.toolbar.xaxis", "choose:x: d-spacing", "mainArea.series.rows", "choose:by run",
+                           analysis, basic, "statusBar.fit.button", "wait-files:100", "wait-fit", "choose:OK"}});
         steps_.push_back({"review-01-experiment-pattern", {experimentTab, basic, "mainArea.tab.pattern"}});
         steps_.push_back({"review-02-experiment-meascalc", {"mainArea.tab.measCalc"}});
         steps_.push_back({"review-03-experiment-stacked-byrun", {"mainArea.tab.stacked"}});
         steps_.push_back({"review-04-experiment-stacked-bybank", {"mainArea.series.rows", "choose:by bank"}});
         steps_.push_back({"review-05-experiment-map-bybank", {"mainArea.tab.map"}});
         steps_.push_back({"review-06-experiment-map-byrun", {"mainArea.series.rows", "choose:by run"}});
+        steps_.push_back({"review-06b-experiment-map-byrun-q", {"scanView.map.toolbar.xaxis", "choose:x: Q"}});
+        steps_.push_back({"review-06c-experiment-map-bybank-q", {"mainArea.series.rows", "choose:by bank"}});
+        steps_.push_back({"review-06d-experiment-stacked-bybank-q", {"mainArea.tab.stacked"}});
+        steps_.push_back({"review-06e-back-to-d", {"scanView.stacked.toolbar.xaxis", "choose:x: d-spacing",
+                                                   "mainArea.series.rows", "choose:by run"}});
         steps_.push_back({"review-07-analysis-pattern", {analysis, basic, "mainArea.tab.pattern"}});
         steps_.push_back({"review-08-analysis-meascalc", {"mainArea.tab.measCalc"}});
         steps_.push_back({"review-09-analysis-structure", {"mainArea.tab.structure"}});
