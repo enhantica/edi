@@ -584,6 +584,10 @@ class Edit {
     static Edit assign(std::optional<int>& field, std::optional<int> value) {
         return Edit([&field, value] { field = value; });
     }
+    // A structure's bond cutoffs (`_geom`), which record their writes.
+    static Edit assign(detail::Written<std::optional<double>>& field, std::optional<double> value) {
+        return Edit([&field, value] { field = value; });
+    }
     static Edit assign(detail::WrittenText& field, std::string value) {
         return Edit([&field, value = std::move(value)] { field = value; });
     }

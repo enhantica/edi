@@ -688,7 +688,82 @@ const std::vector<std::string>& new_site_elements() {
     return elements;
 }
 
+// The types one source's table holds: a neutron table's keys with a scattering length, or an X-ray form-factor
+// table's elements and ions (spelled "Fe3+", "O1-"), found by asking the table for each, as it lists none.
+const std::vector<std::string>& source_atom_types(bool xray, const std::string& source) {
+    static std::map<std::pair<bool, std::string>, std::vector<std::string>> cache;
+    static std::mutex mutex;
+    const std::lock_guard lock(mutex);
+    const auto [at, added] = cache.try_emplace({xray, source});
+    if (!added) {
+        return at->second;
+    }
+    std::vector<std::string>& out = at->second;
+    if (!xray) {
+        for (const auto& [type, length] : crysta::neutron_scattering(source).b_c) {
+            if (std::isfinite(length)) {
+                out.push_back(type);
+            }
+        }
+        return out;
+    }
+    const auto held = [&source](const std::string& type) {
+        try {
+            crysta::xray_scattering({source, "none", 0.0}, {type});
+            return true;
+        } catch (const std::exception&) {
+            return false;
+        }
+    };
+    for (const ElementStyle& style : element_style_table()) {
+        if (!held(style.symbol)) {
+            continue;
+        }
+        out.push_back(style.symbol);
+        for (const char sign : {'+', '-'}) {
+            for (char charge = '1'; charge <= '9'; ++charge) {
+                if (const std::string ion = style.symbol + charge + sign; held(ion)) {
+                    out.push_back(ion);
+                }
+            }
+        }
+    }
+    return out;
+}
+
 }  // namespace
+
+std::vector<std::string> atom_types(const Project& project, const Structure& structure) {
+    std::set<std::string> types;
+    bool linked = false;
+    for (const auto& experiment : project.experiments) {
+        const bool links = std::any_of(experiment->linked_structures.begin(), experiment->linked_structures.end(),
+                                       [&structure](const auto& link) {
+                                           return link->structure_id.value() == structure.name.value();
+                                       });
+        if (!links) {
+            continue;
+        }
+        linked = true;
+        const bool xray = experiment->experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY;
+        const ScatteringSourceItem item =
+            xray ? ScatteringSourceItem::XRAY_FORM_FACTOR : ScatteringSourceItem::NEUTRON_SCATTERING_LENGTH;
+        std::string source = scattering_source_value(*experiment, item);  // crysta takes the file's quotes
+        if (source.empty()) {
+            source = supported_scattering_sources(item).front();
+        }
+        try {
+            const std::vector<std::string>& held = source_atom_types(xray, source);
+            types.insert(held.begin(), held.end());
+        } catch (const std::exception&) {
+            // A source crysta does not know adds nothing: the loader has already reported it.
+        }
+    }
+    if (!linked) {
+        return new_site_elements();
+    }
+    return {types.begin(), types.end()};
+}
 
 std::string detail::inferred_wyckoff_letter(const Structure& structure,const AtomSite& site) {
     if (!takes_wyckoff_letter(structure)) {

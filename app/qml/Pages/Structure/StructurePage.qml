@@ -34,7 +34,8 @@ WorkflowPage {
             "magnetic_form_factor": magneticFormFactorsContent,
             "space_group_magn": magneticSpaceGroupContent,
             "parent_propagation_vector": propagationVectorsContent,
-            "scattering_length": scatteringLengthsContent
+            "scattering_length": scatteringLengthsContent,
+            "geom": geomContent
         })
 
     pageName: "structure"
@@ -126,6 +127,12 @@ WorkflowPage {
     Component {
         id: magneticFormFactorsContent
         MagneticFormFactorsGroup {
+            structure: page.structure
+        }
+    }
+    Component {
+        id: geomContent
+        GeomGroup {
             structure: page.structure
         }
     }
