@@ -322,9 +322,10 @@ EaElements.StatusBar {
             readonly property string outcome: bar.fit ? bar.fit.outcome : ""
             readonly property bool outdated: bar.fit !== null && bar.fit.outOfDate
             shown: fitArea.summary && outcome !== ""
-            showKey: bar.keysFit
+            // The state alone with its icon, never a "Status" key (the owner, 2026-11-16).
+            showKey: false
             keyIcon: outdated ? "history" : FitOutcomes.icon(outcome)
-            keyText: qsTr("Status")
+            keyText: ""
             valueText: outdated ? qsTr("Outdated") : FitOutcomes.word(outcome)
             iconColor: outdated ? EaStyle.Colors.orange : FitOutcomes.color(outcome, EaStyle.Colors.statusBarIconForeground)
             valueColor: outdated ? EaStyle.Colors.orange : FitOutcomes.textColor(outcome)
