@@ -592,7 +592,7 @@ void ExperimentViewModel::setReflnsAbsences(const QString& token) {
 
 void ExperimentViewModel::toggleExcludedReflection(int h, int k, int l) {
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply_unread(edi::Edit::toggle_excluded_reflection(experiment, h, k, l)));
+    setLastError(editor_.apply_unread(edi::Edit::toggle_excluded_reflection(project_, experiment, h, k, l)));
 }
 
 // The admission is crysta's, computed again on each change: it reads the exclusions, the merge mode, the

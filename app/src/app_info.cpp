@@ -9655,8 +9655,20 @@ void ApplicationInfo::singleRedraw() const {
     const auto f = panelUsageEngine(this); projectInvoke(f, "chart", "updateLegend");
     if (panelUsageTruth(assistantContextField(f, "chart", "stacked"))) { projectInvoke(f, "chart", "redrawStacked"); return; }
     if (panelUsageTruth(assistantContextField(f, "chart", "reportMode"))) {
+        const auto data = assistantContextField(f, "chart", "reportData");
+        const auto used = assistantContextField(f, "chart", "reportUsed");
+        if (panelUsageTruth(assistantContextField(f, "chart", "calculated")) && !used.isNull() && !used.isUndefined()) {
+            // A report with its admission: the reflections its fit uses, and those it leaves out dimmed, as the
+            // Experiment page's chart draws them.
+            const QJSValueList all{panelUsageRead(f, data, "calc"), panelUsageRead(f, data, "meas"), panelUsageRead(f, data, "su")};
+            const auto kept = panelUsageGlobalCall(f, "part", {all[0], all[1], all[2], used, QJSValue(true)});
+            const auto left = panelUsageGlobalCall(f, "part", {all[0], all[1], all[2], used, QJSValue(false)});
+            panelUsageMemberCall(f, panelUsageContextRead(f, "layer"), "setPoints", {textIndex(f, kept, QJSValue(0)), textIndex(f, kept, QJSValue(1)), textIndex(f, kept, QJSValue(2))});
+            panelUsageMemberCall(f, panelUsageContextRead(f, "leftOutLayer"), "setPoints", {textIndex(f, left, QJSValue(0)), textIndex(f, left, QJSValue(1)), textIndex(f, left, QJSValue(2))});
+            return;
+        }
         if (panelUsageTruth(assistantContextField(f, "chart", "calculated"))) {
-            const auto layer = panelUsageContextRead(f, "layer"); const QJSValueList args{panelUsageRead(f, assistantContextField(f, "chart", "reportData"), "calc"), panelUsageRead(f, assistantContextField(f, "chart", "reportData"), "meas"), panelUsageRead(f, assistantContextField(f, "chart", "reportData"), "su")}; panelUsageMemberCall(f, layer, "setPoints", args);
+            const auto layer = panelUsageContextRead(f, "layer"); const QJSValueList args{panelUsageRead(f, data, "calc"), panelUsageRead(f, data, "meas"), panelUsageRead(f, data, "su")}; panelUsageMemberCall(f, layer, "setPoints", args);
         } else singleEmptyPoints(f, panelUsageContextRead(f, "layer"));
         singleEmptyPoints(f, panelUsageContextRead(f, "leftOutLayer")); return;
     }

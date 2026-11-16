@@ -193,7 +193,8 @@ DataTable {
             objectName: `singleCrystal.reflections.fitUse.${row.index}`
             icon: used ? FitOutcomes.icon("success") : status === "x" ? "eraser" : "minus-circle"
             iconColor: String(used ? EaStyle.Colors.green : EaStyle.Colors.themeForegroundMinor)
-            toolTip: (status === "x" ? qsTr("Left out of the fit: excluded by its indices or a range") : status === "-" ? qsTr("Left out of the fit: a systematic absence") : used ? (isNaN(cutoff) ? qsTr("Used by the fit (no cutoff: every reflection)") : qsTr("Used by the fit: F² > %1 s.u.").arg(Session.display("refine_ls.threshold_sigma", cutoff))) : qsTr("Left out of the fit: F² at most %1 s.u.").arg(Session.display("refine_ls.threshold_sigma", cutoff))) + (table.measured ? "\n" + qsTr("Click to exclude or include this reflection") : "")
+            readonly property string reason: row.model.reason || (used ? "used" : "below_cutoff")
+            toolTip: (reason === "excluded_indices" ? qsTr("Left out of the fit: excluded by its indices") : reason === "excluded_range" ? qsTr("Left out of the fit: in an excluded range") : reason === "absent" ? qsTr("Left out of the fit: a systematic absence") : used ? (isNaN(cutoff) ? qsTr("Used by the fit (no cutoff: every reflection)") : qsTr("Used by the fit: F² > %1 s.u.").arg(Session.display("refine_ls.threshold_sigma", cutoff))) : isNaN(cutoff) ? qsTr("Left out of the fit") : qsTr("Left out of the fit: F² at most %1 s.u.").arg(Session.display("refine_ls.threshold_sigma", cutoff))) + (table.measured ? "\n" + qsTr("Click to exclude or include this reflection") : "")
 
             clickable: table.measured
 

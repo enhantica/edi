@@ -729,6 +729,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // An information entry for the Messages: why an estimate with the calculated peaks set to auto subtracted or
     // ignored them (the owner, 2026-10-20).
     void information(const QString& text);
+    // A Text-tab apply's warnings about the project's other files (each with its file, relative to the project): they
+    // do not block the apply and are listed in Messages until an apply no longer reports them.
+    void otherFileWarnings(const QStringList& files, const QStringList& texts);
     void pathChanged();
     void modifiedChanged();
     void savingChanged();
@@ -830,8 +833,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::shared_ptr<WidgetCreationInput> prepareWidgetCreation(const CreationAction&);
     void finishWidgetCreation(const std::shared_ptr<WidgetCreationInput>&) noexcept;
     QString apply_creation_control(const edi::Edit&, bool structural, const CreationAction&) override;
-    void noteUnscaled(const edi::ExperimentBase& experiment, bool scaled);
-    void rescaleLoaded(const edi::Project& current, edi::Project& next);
+    void noteUnscaled(const edi::ExperimentBase& experiment, const edi::CommonScaleOutcome& scaled);
+    void rescaleLoaded(edi::Project& next, const std::vector<std::size_t>& produced);
     struct WidgetFileInput {
         std::function<bool()> source_current;
         QUrl reader_path; // Internal immutable-byte stage for the original path-only SDK measurement reader.

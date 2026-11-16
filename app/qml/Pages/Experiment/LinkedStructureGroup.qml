@@ -166,13 +166,41 @@ Column {
         }
     }
 
-    EaElements.SideBarButton {
-        objectName: "linkedStructure.append"
-        wide: true
-        enabled: group.rows !== null && group.rows.canAppend
-        fontIcon: "plus-circle"
-        text: qsTr("Add linked structure")
-        ToolTip.text: enabled ? "" : qsTr("Every structure of the project is linked already: create or load another on the Structure page")
-        onClicked: group.rows.append()
+    // Add linked structure, and Estimate: the phase scales brought to the measured peak heights again, one undo step
+    // (the owner, 2026-11-17), placed and styled as the Background group's. Two at equal widths.
+    Row {
+        id: linkButtons
+
+        readonly property real buttonWidth: (EaStyle.Sizes.sideBarContentWidth - spacing) / 2
+        readonly property bool measured: group.experiment !== null && !group.experiment.calculationOnly
+
+        spacing: EaStyle.Sizes.fontPixelSize
+
+        EaElements.SideBarButton {
+            objectName: "linkedStructure.append"
+            width: linkButtons.buttonWidth
+            enabled: group.rows !== null && group.rows.canAppend
+            fontIcon: "plus-circle"
+            text: qsTr("Add linked structure")
+            ToolTip.text: enabled ? "" : qsTr("Every structure of the project is linked already: create or load another on the Structure page")
+            onClicked: group.rows.append()
+        }
+        // A disabled button takes no hover, so its tooltip, which then says why, hangs on the item around it.
+        Item {
+            width: linkButtons.buttonWidth
+            implicitHeight: estimateScale.implicitHeight
+
+            EaElements.SideBarButton {
+                id: estimateScale
+
+                objectName: "linkedStructure.estimate"
+                width: parent.width
+                enabled: group.rows !== null && linkButtons.measured
+                fontIcon: "magic"
+                text: qsTr("Estimate")
+                ToolTip.text: linkButtons.measured ? qsTr("Scale the linked structures to the measured peak heights") : qsTr("Estimate needs measured data: load data into this experiment first")
+                onClicked: group.rows.estimateScale()
+            }
+        }
     }
 }

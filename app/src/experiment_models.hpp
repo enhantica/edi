@@ -258,6 +258,8 @@ class SingleCrystalReflectionModel : public RowTableModel {
     // Per measured reflection its `_refln.include_status` code from crysta's admission, taken on each edit (sync),
     // never per fit frame: a frame changes no exclusion.
     std::vector<char> status_;
+    // Per measured reflection why it is used or not (ReflectionAdmission::reason), with the status.
+    std::vector<std::string> reason_;
     const edi::ExperimentBase& experiment_;
     const edi::Project& project_;
     QList<double> calculated_;
@@ -336,6 +338,8 @@ class LinkedStructureListModel : public RowTableModel {
     Q_INVOKABLE bool setEnabled(int row, bool enabled);
     Q_INVOKABLE void append();
     Q_INVOKABLE void remove(int row);
+    // The common scale estimated again (the Estimate beside Add linked structure), one undo step.
+    Q_INVOKABLE void estimateScale();
 
    protected:
     bool setRole(int row, const QString& role, const QVariant& value) override {

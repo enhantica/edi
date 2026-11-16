@@ -154,6 +154,10 @@ SideBarGroup {
                         currentIndex = Qt.binding(() => datablockPicker.selectedIndex);
                     }
                     objectName: "parameters.datablock"
+                    // Shown disabled until an experiment has measured data, as the free/fixed picker and the Free
+                    // column are (the owner, 2026-11-15).
+                    enabled: group.measured
+                    ToolTip.text: enabled ? "" : qsTr("The parameter pickers apply once an experiment has measured data")
                     width: filters.third
                     model: parameterFilter.datablockGroups
                     textRole: "title"
@@ -201,6 +205,8 @@ SideBarGroup {
                         currentIndex = Qt.binding(() => categoryPicker.selectedIndex);
                     }
                     objectName: "parameters.category"
+                    enabled: group.measured
+                    ToolTip.text: enabled ? "" : qsTr("The parameter pickers apply once an experiment has measured data")
                     width: filters.third
                     model: parameterFilter.categoryGroups
                     textRole: "title"

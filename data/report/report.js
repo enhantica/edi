@@ -604,18 +604,27 @@ function drawSingleCrystal(figure, crystal) {
   const frame = pageStyle('--chartframe');
   const range = crystal.browser.range;
   const axis = { automargin: true, showline: true, mirror: true, linecolor: frame, gridcolor: grid, zeroline: false, range };
-  const points = {
-    type: 'scatter',
-    mode: 'markers',
-    name: crystal.name,
-    x: crystal.calc,
-    y: crystal.meas,
-    error_y: { type: 'data', array: crystal.su, visible: true, thickness: 1, width: 0, color: crystal.browser.color },
-    // Each point's hover as the core writes it: its indices and values by the dictionary's labels and formats.
-    text: crystal.hover,
-    hovertemplate: '%{text}<extra></extra>',
-    marker: { color: crystal.browser.color, size: 5 },
+  // The reflections the fit uses, and those it leaves out (an exclusion, an absence or the cutoff) dimmed beside
+  // them; a report without the reasons has every reflection used. Each point's hover is the core's, its reason
+  // included.
+  const reason = crystal.reason || [];
+  const subset = (left) => {
+    const pick = (values) => values.filter((_, i) => (reason[i] || '') !== '' === left);
+    return {
+      type: 'scatter',
+      mode: 'markers',
+      name: crystal.name,
+      x: pick(crystal.calc),
+      y: pick(crystal.meas),
+      error_y: { type: 'data', array: pick(crystal.su), visible: true, thickness: 1, width: 0, color: crystal.browser.color },
+      text: pick(crystal.hover),
+      hovertemplate: '%{text}<extra></extra>',
+      marker: { color: crystal.browser.color, size: 5 },
+      opacity: left ? 0.35 : 1,
+    };
   };
+  const points = subset(false);
+  const leftOut = subset(true);
   const diagonal = {
     type: 'scatter',
     mode: 'lines',
@@ -626,18 +635,19 @@ function drawSingleCrystal(figure, crystal) {
   };
   const layout = {
     height: figure.clientHeight,
-    margin: { l: 16, r: 16, t: 36, b: 16 },
+    margin: { l: 16, r: 16, t: crystal.statistics ? 54 : 36, b: 16 },
     font: { family: font, color: pageStyle('--chart-ink') || undefined },
     showlegend: false,
     hovermode: 'closest',
-    annotations: crystal.title
-      ? [{ text: crystal.title, xref: 'paper', yref: 'paper', x: 0, y: 1, xanchor: 'left', yanchor: 'bottom',
-           showarrow: false, font: { family: font, color: pageStyle('--chart-ink') || undefined } }]
+    annotations: crystal.title || crystal.statistics
+      ? [{ text: [crystal.title, crystal.statistics].filter(Boolean).join('<br>'), xref: 'paper', yref: 'paper', x: 0, y: 1,
+           xanchor: 'left', yanchor: 'bottom', showarrow: false,
+           font: { family: font, color: pageStyle('--chart-ink') || undefined } }]
       : [],
     xaxis: { ...axis, title: { text: crystal.x_title } },
     yaxis: { ...axis, title: { text: crystal.y_title } },
   };
-  window.Plotly.newPlot(figure, [diagonal, points], sizedChart(layout), { responsive: true, displaylogo: false, modeBarButtons: MODEBAR });
+  window.Plotly.newPlot(figure, [diagonal, leftOut, points], sizedChart(layout), { responsive: true, displaylogo: false, modeBarButtons: MODEBAR });
 }
 
 // One of a scan's evolution charts (edi ADR-0036): a parameter at each fitted dataset with its s.u. as an error bar,

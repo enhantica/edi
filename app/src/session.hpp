@@ -65,6 +65,8 @@ class WarningListModel : public RowTableModel {
     void post(const QString& key, const QString& text, const QString& severity);
     void withdraw(const QString& key);
     QStringList keys(const QString& prefix) const;
+    // Whether a message with this text is listed, under any key.
+    bool listsText(const QString& text) const;
     int unviewedCount() const { return unviewed_; }
     Q_INVOKABLE void markViewed();
     // Remove one warning (by its row) or all of them.

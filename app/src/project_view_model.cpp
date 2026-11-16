@@ -919,34 +919,39 @@ std::shared_ptr<ProjectViewModel::WidgetCreationInput> ProjectViewModel::prepare
 void ProjectViewModel::finishWidgetCreation(const std::shared_ptr<WidgetCreationInput>& input) noexcept {
     if (widget_creation_input_ == input) widget_creation_input_.reset();
 }
-// Data loaded by replacing the project: each experiment of `next` that is new or whose data source changed, and that
-// holds measured data, takes the common scale factor before the replacement, so it is the same undo step.
-void ProjectViewModel::rescaleLoaded(const edi::Project& current, edi::Project& next) {
-    for (std::size_t i = 0; i < next.experiments.size(); ++i) {
+// Data loaded by replacing the project: each experiment the load produced or reloaded (`produced`, indices into
+// `next`) that holds measured data takes the common scale factor before the replacement, so the factor and the load are
+// one undo step. A saved project's opening and a collection's background fetch never come here.
+void ProjectViewModel::rescaleLoaded(edi::Project& next, const std::vector<std::size_t>& produced) {
+    for (const std::size_t i : produced) {
+        if (i >= next.experiments.size()) continue;
         const edi::BraggPdExperiment& bank = *next.experiments[i];
         const bool measured = bank.reflections ? !bank.reflections->index_h.get().empty()
                                                : bank.data.has_value() && !bank.calculation_only;
-        if (!measured) continue;
-        const auto key = edi::KeyTraits<edi::BraggPdExperiment>::canonical(bank.name);
-        const auto same = std::find_if(current.experiments.begin(), current.experiments.end(), [&](const auto& held) {
-            return edi::KeyTraits<edi::BraggPdExperiment>::canonical(held->name) == key;
-        });
-        const bool fresh = same == current.experiments.end() || (*same)->data_file != bank.data_file ||
-                           (*same)->data_path != bank.data_path || (*same)->collection_id != bank.collection_id ||
-                           (*same)->calculation_only;
-        if (fresh) noteUnscaled(bank, edi::apply_common_scale(next, i));
+        if (measured) noteUnscaled(bank, edi::apply_common_scale(next, i));
     }
 }
 
 // An experiment with measured data whose phase scales the common factor left as they were: one line in Messages.
 // Without measured data there is nothing to bring the calculation to, so nothing is said.
-void ProjectViewModel::noteUnscaled(const edi::ExperimentBase& experiment, bool scaled) {
+// Calculated peaks that miss the measured ones (overlap below one half) are a warning naming the likely causes; the
+// scale still matches the peak heights, which does not need the positions to agree.
+void ProjectViewModel::noteUnscaled(const edi::ExperimentBase& experiment, const edi::CommonScaleOutcome& scaled) {
     const bool measured = experiment.reflections ? !experiment.reflections->index_h.get().empty()
                                                  : experiment.data.has_value() && !experiment.calculation_only;
-    if (scaled || !measured) return;
-    emit information(tr("Phase scales of %1 were left as they were: the calculation could not be brought to the "
-                        "data's level (nothing calculated, or no factor above zero)")
-                         .arg(QString::fromStdString(experiment.name)));
+    if (!measured) return;
+    const QString name = QString::fromStdString(experiment.name);
+    if (scaled.background_started)
+        emit information(tr("%1 had no background points: one was added at the measured baseline").arg(name));
+    if (scaled.overlap && *scaled.overlap < 0.5)
+        emit information(tr("Warning: the calculated peaks of %1 do not line up with the measured ones (overlap %2). "
+                            "Check the wavelength, the zero shift and the cell")
+                             .arg(name)
+                             .arg(*scaled.overlap, 0, 'f', 2));
+    if (!scaled.applied)
+        emit information(tr("Phase scales of %1 were left as they were: the calculation could not be brought to the "
+                            "data's level (nothing calculated, or no factor above zero)")
+                             .arg(name));
 }
 
 QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool structural, const CreationAction& actual) {
@@ -978,16 +983,17 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
     });
     using Kind=CreationAction::Kind;
     const bool scalar_control=actual.kind==Kind::AbsorptionType || actual.kind==Kind::ExtinctionType || actual.kind==Kind::MosaicDistribution || actual.kind==Kind::CutoffFwhm || actual.kind==Kind::DatasetWeight;
+    // PhaseScale is the Estimate beside Add linked structure: no membership change, the common scale alone.
     const bool phase_control=actual.kind==Kind::PhaseAppend || actual.kind==Kind::PhaseRetarget ||
-        actual.kind==Kind::PhaseEnabled || actual.kind==Kind::PhaseRemove;
+        actual.kind==Kind::PhaseEnabled || actual.kind==Kind::PhaseRemove || actual.kind==Kind::PhaseScale;
     const bool experiment_control=phase_control || scalar_control || actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend ||
         actual.kind==Kind::ExclusionStart || actual.kind==Kind::ExclusionEnd || actual.kind==Kind::ExclusionRemove;
     if(experiment_control) {
         edi::ExperimentBase* experiment=nullptr;const edi::ExcludedRegion* region=nullptr;const edi::LinkedStructure* link=nullptr;
         for(const auto& held:project_->experiments) {
-            if((scalar_control || actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend || actual.kind==Kind::PhaseAppend) && held.get()==actual.row)experiment=held.get();
+            if((scalar_control || actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend || actual.kind==Kind::PhaseAppend || actual.kind==Kind::PhaseScale) && held.get()==actual.row)experiment=held.get();
             if(!phase_control)for(const auto& row:held->excluded_regions)if(row.get()==actual.row){experiment=held.get();region=row.get();}
-            if(phase_control && actual.kind!=Kind::PhaseAppend)
+            if(phase_control && actual.kind!=Kind::PhaseAppend && actual.kind!=Kind::PhaseScale)
                 for(const auto& row:held->linked_structures)if(row.get()==actual.row){experiment=held.get();link=row.get();}
         }
         if(!experiment) {
@@ -1044,7 +1050,7 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
         EditOutcome result;
         // A phase added, removed, switched on or off or replaced brings the calculation to the data's level again
         // (the common scale factor); the links' undo above restores every scale with the membership.
-        const auto scaled=std::make_shared<bool>(false);
+        const auto scaled=std::make_shared<edi::CommonScaleOutcome>();
         try {result=applyEdit(phase_control?edi::Edit::rescaled(*project_,*experiment,change,scaled):change,structural);}
         catch(...){if(self)undo_history_.pop_back();throw;}
         if(self && phase_control && result.applied)noteUnscaled(*experiment,*scaled);
@@ -2368,8 +2374,8 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
     const edi::BraggPdExperiment& source = *base.experiments[static_cast<std::size_t>(index)];
     const auto fileName = [](const QUrl& url) { return QFileInfo(url.toLocalFile()).fileName(); };
     // The replacement published as one undoable change.
-    const auto replace = [&](edi::Project next) {
-        rescaleLoaded(project, next);
+    const auto replace = [&](edi::Project next, const std::vector<std::size_t>& produced) {
+        rescaleLoaded(next, produced);
         auto before = std::make_shared<const edi::Project>(project);
         const QString error = apply(edi::Edit::replace_project(project, std::move(next)), true);
         if (!self || retired_) return false;
@@ -2432,7 +2438,10 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         } catch (const std::exception& problem) {
             return refuse(tr("%1 could not be loaded: %2").arg(fileName(files.front()), QString::fromUtf8(problem.what())));
         }
-        if (!replace(std::move(next))) return false;
+        // The template took the file's first dataset; its further datasets joined at the end.
+        std::vector<std::size_t> produced{static_cast<std::size_t>(index)};
+        for (std::size_t i = base.experiments.size(); i < next.experiments.size(); ++i) produced.push_back(i);
+        if (!replace(std::move(next), produced)) return false;
         qCInfo(lcApp, "a scan replaced by one dataset");
         return true;
     }
@@ -2465,10 +2474,35 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
             next.experiments.assign(std::move(held));
             next.adopt_experiments();
             next.fitting_mode = "joint";
-            if (!replace(std::move(next))) return false;
+            std::vector<std::size_t> produced;
+            for (std::size_t i = base.experiments.size(); i < next.experiments.size(); ++i) produced.push_back(i);
+            if (!replace(std::move(next), produced)) return false;
             setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
             qCInfo(lcApp, "a scan replaced by %d datasets as experiments", static_cast<int>(files.size()));
             return true;
+        }
+        // Each new experiment's scales brought to its data's level as if it were already in the project, before it is
+        // added: the factor and the addition are one undo step.
+        {
+            edi::Project probe(project);
+            const std::size_t first = probe.experiments.size();
+            std::vector<edi::ItemVec<edi::BraggPdExperiment>::Ptr> held(probe.experiments.begin(), probe.experiments.end());
+            for (const auto& bank : batch) held.push_back(std::make_shared<edi::BraggPdExperiment>(bank));
+            try {
+                probe.experiments.assign(std::move(held));
+                probe.adopt_experiments();
+                std::vector<std::size_t> produced;
+                for (std::size_t i = first; i < probe.experiments.size(); ++i) produced.push_back(i);
+                rescaleLoaded(probe, produced);
+                for (std::size_t i = 0; i < batch.size(); ++i) {
+                    const auto& scaled = probe.experiments[first + i]->linked_structures;
+                    auto& links = batch[i].linked_structures;
+                    for (std::size_t l = 0; l < links.size() && l < scaled.size(); ++l)
+                        links[l]->scale.value = scaled[l]->scale.value.get();
+                }
+            } catch (const std::exception&) {
+                // A batch the project cannot take is refused by the addition below, unscaled.
+            }
         }
         const std::size_t before = project.experiments.size();
         QString error;
@@ -2525,7 +2559,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         } catch (const std::exception& problem) {
             return refuse(tr("%1 could not be loaded: %2").arg(names.front(), QString::fromUtf8(problem.what())));
         }
-        if (!replace(std::move(next))) return false;
+        if (!replace(std::move(next), {0})) return false;
         emit missingDataFolderChanged();
         qCInfo(lcApp, "%d datasets linked as a scan in %s", static_cast<int>(files.size()), qPrintable(parent));
         return true;
@@ -2583,7 +2617,7 @@ bool ProjectViewModel::loadDatasets(ExperimentViewModel* experiment, const QList
         discard();
         return refuse(tr("%1 could not be loaded: %2").arg(names.front(), QString::fromUtf8(problem.what())));
     }
-    if (!replace(std::move(next))) {
+    if (!replace(std::move(next), {0})) {
         if (self) discard();
         return false;
     }
@@ -2908,7 +2942,7 @@ QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacem
         // Loaded data brings the calculation to its level (the common scale factor), in the same undo step; an undo
         // restores the experiment as it was.
         edi::Edit load = edi::Edit::load_data(project, *before, std::move(replacement));
-        const auto scaled = std::make_shared<bool>(false);
+        const auto scaled = std::make_shared<edi::CommonScaleOutcome>();
         const EditOutcome result = restoring ? applyEdit(load, true, true)
                                              : applyEdit(edi::Edit::rescaled(project, *before, std::move(load), scaled), true, false);
         if (self && !restoring && result.applied && static_cast<std::size_t>(index) < project.experiments.size())
@@ -3034,7 +3068,7 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         try {
             next.experiments.assign(std::move(held));
             next.adopt_experiments();
-            rescaleLoaded(project, next);
+            rescaleLoaded(next, produced);
             auto before = std::make_shared<const edi::Project>(project);
             // The admitted original file keeps its receipt: its outcome and the experiments it produced are this one
             // change's, recorded by the edit itself before anything is published.
@@ -5849,18 +5883,30 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
             return tr("Unknown category '_%1'").arg(QString::fromStdString(id));
         }
     }
-    // What the reader only warns about (an item it does not know, a value it reads in another way) is not applied
-    // either: the text is applied only as it is read.
+    // What the reader only warns about in this file (an item it does not know, a value it reads in another way) is
+    // not applied either: the text is applied only as it is read. A warning about another file (a value of another
+    // block outside its range, say) does not block this one: it goes to Messages, once, and leaves when it no longer
+    // occurs. A warning no one file is the source of counts as this file's.
     std::optional<edi::Project> read;
     QStringList warnings;
+    QStringList other_files;
+    QStringList other_texts;
+    const std::string applied = file.toStdString();
     try {
-        read = edi::project_with_file_text(*project_, file.toStdString(), text.toStdString(),
-                                           [&warnings](const std::string& warning) {
-                                               warnings.append(QString::fromStdString(warning));
-                                           });
+        read = edi::project_with_file_text(
+            *project_, applied, text.toStdString(),
+            edi::SourcedWarningSink([&](const std::string& source, const std::string& warning) {
+                if (source.empty() || source == applied) {
+                    warnings.append(QString::fromStdString(warning));
+                } else {
+                    other_files.append(QString::fromStdString(source));
+                    other_texts.append(QString::fromStdString(warning));
+                }
+            }));
     } catch (const std::exception& refusal) {
         return QString::fromUtf8(refusal.what());
     }
+    emit otherFileWarnings(other_files, other_texts);
     if (!warnings.isEmpty()) {
         return warnings.join(QLatin1Char('\n'));
     }
@@ -6073,10 +6119,11 @@ void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& 
     const bool changed = edi::adopt_values(saved, staged);
     // A shown dataset is the template with that dataset's values over it, as a view builds it: built again over the
     // template the save adopted.
-    if (scan_template_ && scan.shown && !project_->experiments.empty() && project_->experiment().data) {
-        const auto& shown_data = project_->experiment().data;
-        edi::Edit::scan_view(*project_, project_->experiment(), std::move(*scan.shown), *shown_data)();
-        project_->refresh_calculated_pattern(edi::DueEstimates::Defer);
+    if (scan_template_ && scan.shown && !project_->experiments.empty()) {
+        if (const auto& shown_data = project_->experiment().data; shown_data) {
+            edi::Edit::scan_view(*project_, project_->experiment(), std::move(*scan.shown), *shown_data)();
+            project_->refresh_calculated_pattern(edi::DueEstimates::Defer);
+        }
     }
     if (changed) {
         // Calculated with due background estimates deferred, as the staged save was (ADR-0040).

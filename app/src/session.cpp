@@ -120,6 +120,10 @@ void WarningListModel::withdraw(const QString& key) {
     }
 }
 
+bool WarningListModel::listsText(const QString& text) const {
+    return std::any_of(messages_.begin(), messages_.end(), [&text](const Message& message) { return message.text == text; });
+}
+
 QStringList WarningListModel::keys(const QString& prefix) const {
     QStringList found;
     for (const Message& message : messages_) {
@@ -2027,6 +2031,23 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         connect(project_, &ProjectViewModel::information, this, [this](const QString& text) {
             warnings_->post(QStringLiteral("project:%1").arg(++project_messages_), text, QStringLiteral("information"));
         });
+        // Another file's warnings from a Text-tab apply: each listed once (not again when the open already listed
+        // it), and those an apply no longer reports withdrawn.
+        connect(project_, &ProjectViewModel::otherFileWarnings, this,
+                [this](const QStringList& files, const QStringList& texts) {
+                    const QString prefix = QStringLiteral("text-apply:");
+                    QStringList reported;
+                    for (qsizetype i = 0; i < files.size() && i < texts.size(); ++i) {
+                        const QString key = prefix + files[i] + QLatin1Char(':') + texts[i];
+                        reported.append(key);
+                        if (warnings_->keys(key).isEmpty() && !warnings_->listsText(texts[i])) {
+                            warnings_->post(key, texts[i], QStringLiteral("warning"));
+                        }
+                    }
+                    for (const QString& key : warnings_->keys(prefix)) {
+                        if (!reported.contains(key)) warnings_->withdraw(key);
+                    }
+                });
     }
     syncCalculationMessages();  // the new project calculated before it was connected
     if(!current() || project_!=target)return false;

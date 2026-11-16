@@ -46,6 +46,9 @@ Item {
     // The report's input (edi ADR-0036): an experiment's `single_crystal` from the report model's JSON.
     property var reportData: null
     readonly property bool reportMode: reportData !== null
+    // Which of a report's reflections the fit uses, by their reasons (empty for a used one); null for a report
+    // without them, whose reflections are all used.
+    readonly property var reportUsed: reportMode && reportData.reason ? reportData.reason.map(reason => reason === "") : null
     // How faint the reflections the fit leaves out are drawn.
     readonly property real leftOutOpacity: 0.3
     readonly property bool calculated: ApplicationInfo.singleCalculated()
@@ -201,14 +204,15 @@ Item {
         color: chart.colors.chartLabels
         text: (chart.reportMode || chart.reflections) && !chart.calculated ? qsTr("Not calculated yet") : ""
     }
-    // A report figure's reliability (edi::reliability_text), above its plot at the left, as the pattern chart's.
+    // A report figure's reliability (edi::reliability_text) and its reflections' admission line, above its plot at
+    // the left, as the pattern chart's.
     EaElements.Label {
         objectName: "singleCrystal.reliability"
         visible: chart.reportMode && text !== ""
         x: view.x + view.plotArea.x
         y: Math.max(0, view.y + view.plotArea.y - height - Math.round(chart.em * 0.25))
         color: chart.colors.chartLabels
-        text: chart.reportMode ? chart.reportData.title : ""
+        text: chart.reportMode ? [chart.reportData.title, chart.reportData.statistics || ""].filter(line => line !== "").join("\n") : ""
     }
 
     // The toolbar line, centred as the pattern chart's: what both axes plot, then the pattern chart's buttons.

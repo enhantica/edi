@@ -3,8 +3,14 @@
 #include <QDir>
 #include <QEvent>
 #include <QPointer>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <optional>
+#include <vector>
 
 #include "assistant_view_model.hpp"
 #include "edi/io.hpp"
@@ -93,7 +99,7 @@ private slots:
         while (!bare.experiments.empty()) bare.experiments.erase_at(0);  // every experiment removed
         QVERIFY(!edi::reflection_admission(bare, 0).has_value());
         QVERIFY(!edi::common_scale_factor(bare, 0).has_value());
-        QVERIFY(!edi::apply_common_scale(bare, 0));
+        QVERIFY(!edi::apply_common_scale(bare, 0).applied);
         ProjectViewModel project(bare, nullptr);
         QVERIFY(project.assistantProject() != nullptr);
     }
@@ -129,6 +135,92 @@ private slots:
         } catch (const std::exception& refusal) {
             QVERIFY2(QString::fromUtf8(refusal.what()).contains("no measured pattern"), refusal.what());
         }
+    }
+    // The common scale on data load and phase changes (lbco + HRPT, the owner's cases, 2026-11-17). The expectation is
+    // the closed form the owner chose, computed here from the arrays: the measured maximum above the 10th percentile
+    // of the measured points over the calculated maximum above the background. Once scaled it is 1.
+    static double peakRatioOf(const edi::Project& held) {
+        edi::Project copy = held;
+        copy.refresh_calculated_pattern();
+        const auto& data = *copy.experiments[0]->data;
+        const auto& meas = data.intensity_meas.get();
+        std::vector<double> levels;
+        double calculated = -std::numeric_limits<double>::infinity();
+        for (std::size_t i = 0; i < meas.size() && i < data.intensity_calc.size(); ++i) {
+            const double net = data.intensity_calc[i] - (i < data.intensity_bkg.size() ? data.intensity_bkg[i] : 0.0);
+            if (!std::isfinite(net) || !std::isfinite(meas[i])) continue;
+            levels.push_back(meas[i]);
+            calculated = std::max(calculated, net);
+        }
+        if (levels.empty() || !(calculated > 0.0)) return 0.0;
+        const double highest = *std::max_element(levels.begin(), levels.end());
+        std::sort(levels.begin(), levels.end());
+        return (highest - levels[levels.size() / 10]) / calculated;
+    }
+    static double tenthPercentile(const edi::Project& held) {
+        std::vector<double> levels = held.experiments[0]->data->intensity_meas.get();
+        std::sort(levels.begin(), levels.end());
+        return levels[levels.size() / 10];
+    }
+    // The shipped LBCO project (HRPT's 1.494 Å) before any data, its phase scale back at 1 and no background points,
+    // as a new experiment starts; `wavelength` replaces the instrument's.
+    static edi::Project lbcoProject(std::optional<double> wavelength) {
+        const QString root = QString::fromUtf8(EDI_SOURCE_DIR);
+        edi::Project value =
+            edi::load_project((root + "/docs/user/cli/pd-neut-cwl_lbco_simulation/project/project.edi").toStdString());
+        edi::ExperimentBase& experiment = *value.experiments[0];
+        experiment.background.clear();
+        experiment.linked_structures[0]->scale.value = 1.0;
+        if (wavelength) (*experiment.instrument.setup_wavelength).value = *wavelength;
+        return value;
+    }
+    void dataLoadAndPhaseChangesKeepTheLevel() {
+        const QUrl data = QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/app/tutorials/files/hrpt.xye");
+        ProjectViewModel project(lbcoProject(std::nullopt), nullptr);  // HRPT's LBCO wavelength, 1.494 Å
+        QSignalSpy notes(&project, &ProjectViewModel::information);
+        QVERIFY(project.loadData(0, data));
+        edi::Project& model = *project.assistantProject();
+        edi::ExperimentBase& experiment = *model.experiments[0];
+        QVERIFY(std::abs(peakRatioOf(model) - 1.0) < 1e-6);
+        QVERIFY(std::abs(experiment.linked_structures[0]->scale.value.get() - 1.0) > 0.01);
+        // One background point at the measured baseline, said in Messages; peaks that line up raise no warning.
+        QCOMPARE(experiment.background.size(), std::size_t(1));
+        QVERIFY(std::abs(experiment.background[0]->intensity.value.get() - tenthPercentile(model)) < 1e-9);
+        bool warned = false;
+        for (const auto& note : notes) warned = warned || note.at(0).toString().contains("do not line up");
+        QVERIFY(!warned);
+        edi::Structure second = *model.structures[0];
+        second.name = "second";
+        model.structures.push_back(second);
+        edi::LinkedStructure link;
+        link.structure_id = "second";
+        edi::Edit::rescaled(model, experiment, edi::Edit::append(experiment.linked_structures, link))();
+        QVERIFY(std::abs(peakRatioOf(model) - 1.0) < 1e-6);
+        QCOMPARE(experiment.background.size(), std::size_t(1));  // an existing background is never replaced
+        edi::Edit::rescaled(model, experiment, edi::Edit::erase(experiment.linked_structures, 1))();
+        QVERIFY(std::abs(peakRatioOf(model) - 1.0) < 1e-6);
+        // A phase change's undo takes back a background point the scale started.
+        experiment.background.clear();
+        auto before = edi::capture_experiment_links(model, experiment);
+        edi::Edit::rescaled(model, experiment, edi::Edit::append(experiment.linked_structures, link))();
+        QCOMPARE(experiment.background.size(), std::size_t(1));
+        edi::Edit::restore_experiment_controls(model, std::move(before))();
+        QCOMPARE(experiment.background.size(), std::size_t(0));
+        QCOMPARE(experiment.linked_structures.size(), std::size_t(1));
+        QVERIFY(project.loadData(0, data));  // the same file again is still a load
+        QVERIFY(std::abs(peakRatioOf(*project.assistantProject()) - 1.0) < 1e-6);
+    }
+    // The owner's first case: the experiment's default 1 Å wavelength, so the calculated peaks miss HRPT's. The peak
+    // heights still set the level, and Messages warns about the positions.
+    void defaultWavelengthWarnsAndStillScales() {
+        const QUrl data = QUrl::fromLocalFile(QString::fromUtf8(EDI_SOURCE_DIR) + "/app/tutorials/files/hrpt.xye");
+        ProjectViewModel project(lbcoProject(1.0), nullptr);  // the 1 Å a new experiment starts at
+        QSignalSpy notes(&project, &ProjectViewModel::information);
+        QVERIFY(project.loadData(0, data));
+        QVERIFY(std::abs(peakRatioOf(*project.assistantProject()) - 1.0) < 1e-6);
+        bool warned = false;
+        for (const auto& note : notes) warned = warned || note.at(0).toString().contains("do not line up");
+        QVERIFY(warned);
     }
     void stopKeepsOriginalOwner() {
         ProjectViewModel project(model(), nullptr);

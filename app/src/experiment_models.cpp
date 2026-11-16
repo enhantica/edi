@@ -240,7 +240,7 @@ bool same(const T& a, const T& b) {
 // The reflection table's columns, in the order the delegates read them.
 const QStringList kSingleCrystalReflectionRoles{"h",        "k",        "l",          "dSpacing", "sinThetaOverLambda",
                                                 "intensityMeas", "intensityMeasSu", "intensityCalc", "residual",
-                                                "wavelength", "fitUse", "status"};
+                                                "wavelength", "fitUse", "status", "reason"};
 }  // namespace
 
 SingleCrystalReflectionModel::SingleCrystalReflectionModel(const edi::ExperimentBase& experiment,
@@ -287,6 +287,7 @@ void SingleCrystalReflectionModel::publish() {
 void SingleCrystalReflectionModel::sync() {
     frame_.reset();
     status_.clear();
+    reason_.clear();
     std::size_t index = project_.experiments.size();
     for (std::size_t i = 0; i < project_.experiments.size(); ++i) {
         if (project_.experiments[i].get() == &experiment_) {
@@ -296,9 +297,11 @@ void SingleCrystalReflectionModel::sync() {
     try {
         if (const auto admission = edi::reflection_admission(project_, index)) {
             status_ = admission->status;
+            reason_ = admission->reason;
         }
     } catch (const std::exception&) {
         status_.clear();  // a project crysta cannot take yet: the cutoff alone decides, as before
+        reason_.clear();
     }
     refresh();
 }
@@ -343,6 +346,9 @@ void SingleCrystalReflectionModel::refresh(bool table) {
             // taken; else the cutoff on the row's own F².
             const char status = i < status_.size() ? status_[i] : (!cutoff.has_value() || meas > *cutoff * sigma ? 'o' : '<');
             const bool fitted = status == 'o';
+            const QString reason = i < reason_.size() ? QString::fromStdString(reason_[i])
+                                   : fitted          ? QStringLiteral("used")
+                                                     : QStringLiteral("below_cutoff");
             used.append(fitted);
             // The table's rows (and their columns that only the table shows) are built only when the table is: a held
             // slider's step draws the chart alone (edi ADR-0070).
@@ -356,7 +362,7 @@ void SingleCrystalReflectionModel::refresh(bool table) {
                               column(reflections->d_spacing), column(reflections->sin_theta_over_lambda), meas, sigma,
                               value, residual,
                               i < reflections->wavelength.size() ? reflections->wavelength[i] : qQNaN(),
-                              fitted ? 1.0 : 0.0, QString(QChar::fromLatin1(status))}});
+                              fitted ? 1.0 : 0.0, QString(QChar::fromLatin1(status)), reason}});
             }
             calculated.append(value);
             measured.append(meas);
@@ -389,7 +395,8 @@ void SingleCrystalReflectionModel::refresh(bool table) {
                 rows.append({reinterpret_cast<const void*>(i + 1),
                              {reflections->generated_index_h[i], reflections->generated_index_k[i],
                               reflections->generated_index_l[i], spacings ? reflections->d_spacing[i] : qQNaN(),
-                              position, qQNaN(), qQNaN(), value, qQNaN(), qQNaN(), 1.0, QStringLiteral("o")}});
+                              position, qQNaN(), qQNaN(), value, qQNaN(), qQNaN(), 1.0, QStringLiteral("o"),
+                              QStringLiteral("used")}});
             }
             calculated.append(value);
             measured.append(qQNaN());
@@ -511,9 +518,22 @@ QString SingleCrystalReflectionModel::hoverText(int row, bool squared) const {
                                                                project_.su_rule)) {
         lines.append(QString::fromStdString(line));
     }
+    // Why a reflection is left out, from the admission: an exclusion or an absence is named as such; only one below
+    // the fit's cutoff names the cutoff, and only when there is one.
     if (at < used_.size() && !used_.at(at)) {
-        lines.append(QStringLiteral("left out of the fit: F² at most %1 s.u.")
-                         .arg(QString::fromStdString(edi::shown_text("refine_ls.threshold_sigma", fit_cutoff_))));
+        const std::string reason = index < reason_.size() ? reason_[index] : std::string("below_cutoff");
+        if (reason == "excluded_indices") {
+            lines.append(QStringLiteral("left out of the fit: excluded by its indices"));
+        } else if (reason == "excluded_range") {
+            lines.append(QStringLiteral("left out of the fit: in an excluded range"));
+        } else if (reason == "absent") {
+            lines.append(QStringLiteral("left out of the fit: a systematic absence"));
+        } else if (!std::isnan(fit_cutoff_)) {
+            lines.append(QStringLiteral("left out of the fit: F² at most %1 s.u.")
+                             .arg(QString::fromStdString(edi::shown_text("refine_ls.threshold_sigma", fit_cutoff_))));
+        } else {
+            lines.append(QStringLiteral("left out of the fit"));
+        }
     }
     return lines.join(QStringLiteral("<br>"));
 }
@@ -685,6 +705,10 @@ void LinkedStructureListModel::append() {
             return;
         }
     }
+}
+
+void LinkedStructureListModel::estimateScale() {
+    editor_.apply_creation_control(edi::Edit::unchanged(),true,{ProjectEditor::CreationAction::Kind::PhaseScale,&experiment_,{},{}});
 }
 
 void LinkedStructureListModel::remove(int row) {
