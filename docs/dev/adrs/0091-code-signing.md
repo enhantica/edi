@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-16
-- **Implementation:** ⬜ Not implemented
+- **Implementation:** ✅ Implemented
 - **Priority:** High
 
 ## Context
@@ -32,8 +32,8 @@ secrets with `CODESIGN_<OS>_` names, listed in its organisation discussion on Gi
 | Installer component, AI assistant | `org.easyscience.edi.assistant` | `org.easydiffraction.app.assistant` |
 | Settings organisation (`app/main.cpp`) | `EasyScience` | `EasyDiffraction` |
 
-The ids change together with signing, because signing gives the app a new identity on macOS anyway. The
-first signed release reads settings from the old location when the new one is empty, and its installer
+The ids change in their own change, together with the settings migration, not with the signing steps. The
+first release with the new ids reads settings from the old location when the new one is empty, and its installer
 replaces the old components, so existing users keep their preferences and update in place.
 
 **Secrets and variables** (GitHub Actions, repository level on edi). The names follow easyscience's:
@@ -48,11 +48,12 @@ replaces the old components, so existing users keep their preferences and update
 | `CODESIGN_MAC_IDENTITY` | variable | the signing identity above |
 | `CODESIGN_WIN_CERT_P12_BASE64` | secret | base64 of the KeyLocker client authentication `.p12` (not the signing key, which stays in KeyLocker) |
 | `CODESIGN_WIN_CERT_P12_PASSWORD` | secret | its password |
-| `CODESIGN_WIN_KEYLOCKER_HOST` | secret | `https://clientauth.one.digicert.com` |
+| `CODESIGN_WIN_KEYLOCKER_HOST` | variable | `https://clientauth.one.digicert.com` |
 | `CODESIGN_WIN_KEYLOCKER_API_KEY` | secret | the KeyLocker API key |
-| `CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS` | secret | the key pair alias, `key_…` |
+| `CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS` | variable | the key pair alias, `key_…` |
 
-The team id and identity are variables, not secrets, because every signed app shows them.
+The team id, identity, KeyLocker host and key pair alias are variables, not secrets: the first two are shown
+by every signed app, and the last two are useless without the client certificate and API key.
 
 **Preparing the secrets.** Done once per certificate, and again when one expires.
 
@@ -80,36 +81,42 @@ Windows, with the DigiCert ONE account:
    `[Convert]::ToBase64String([IO.File]::ReadAllBytes("cert.p12")) | Set-Content cert.b64` writes it without
    them; on macOS or Linux, `base64 -i cert.p12 -o cert.b64` does the same.
 3. Store the result in `CODESIGN_WIN_CERT_P12_BASE64` and the password in `CODESIGN_WIN_CERT_P12_PASSWORD`.
-4. From DigiCert ONE, store the API key in `CODESIGN_WIN_KEYLOCKER_API_KEY` and the key pair alias in
-   `CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS`; `CODESIGN_WIN_KEYLOCKER_HOST` is
+4. From DigiCert ONE, store the API key in the secret `CODESIGN_WIN_KEYLOCKER_API_KEY` and the key pair alias
+   in the variable `CODESIGN_WIN_KEYLOCKER_KEYPAIR_ALIAS`; the variable `CODESIGN_WIN_KEYLOCKER_HOST` is
    `https://clientauth.one.digicert.com`.
 5. Delete `cert.p12` and `cert.b64` from the disk.
 
-The workflow `.github/workflows/codesign-check.yml` checks the macOS entries without building anything:
-it imports the certificate, signs a test file and logs in to the notary service.
+The workflow `.github/workflows/codesign-check.yml` checks every entry without building anything: on macOS it
+imports the certificate, signs a test file and logs in to the notary service; on Windows it signs a test `.exe`
+through KeyLocker and verifies it.
 
-**macOS steps**, in the installer job:
+**macOS steps**, in the installer job of `.github/workflows/installers.yml`:
 
-1. Import the `.p12` into a temporary keychain that the job deletes at the end.
-2. Sign every executable and library inside the app bundle, then the bundle, with
-   `codesign --options runtime --timestamp`; the hardened runtime is required for notarisation.
-3. Build the installer app with Qt Installer Framework and sign it the same way, then build and sign the
-   `.dmg`.
-4. Notarise with `xcrun notarytool submit --wait`, using the Apple ID, app-specific password and team id.
-5. Staple the ticket with `xcrun stapler staple`, then check with `spctl --assess` and `codesign --verify`.
+1. `apple-actions/import-codesign-certs` imports the `.p12` into a temporary keychain.
+2. `tools/installer/build.py` signs every executable and library inside the app bundle, then the bundle, with
+   the identity and `--timestamp`, without the hardened runtime. The app is not notarised: the installer
+   writes it to disk, so it is never quarantined, as with EasyDiffractionBeta.
+3. Qt Installer Framework builds the installer app. `tools/installer/package.py seal` signs it with
+   `codesign --options runtime --timestamp`, notarises it with `xcrun notarytool submit --wait` and requires the
+   status `Accepted`, staples the ticket with `xcrun stapler staple`, checks it with `codesign --verify` and
+   `spctl --assess`, and archives it again. This runs for the offline and the online installer.
 
-**Windows steps**, in the installer job:
+**Windows steps**, in the same job:
 
-1. Install DigiCert's tools with the `digicert/ssm-code-signing` action, pinned to a release.
-2. Decode the client `.p12` and set `SM_HOST`, `SM_API_KEY`, `SM_CLIENT_CERT_FILE` and
-   `SM_CLIENT_CERT_PASSWORD` for the job.
-3. Sign every shipped `.exe` (the app, the maintenance tool and the installer) with
-   `smctl sign --keypair-alias`, using the configuration file the action installs.
-4. Check with `signtool verify /pa`.
+1. Decode the client `.p12` and set `SM_CLIENT_CERT_FILE`; `SM_HOST`, `SM_API_KEY` and
+   `SM_CLIENT_CERT_PASSWORD` are set only on the signing steps.
+2. `digicert/code-signing-software-trust-action@v1` in simple-signing mode signs the app and the Qt Installer
+   Framework template `installerbase.exe`, before packaging. The maintenance tool is written from that
+   template, so it carries the signature too. After packaging, the same action signs each installer `.exe`.
+3. `signtool verify /pa` checks the app and the template, and `package.py seal` checks each installer before
+   archiving it again.
 
-**When signing runs.** Only on release builds and pushes to `main`, never on pull requests, so a pull
-request from a fork can never reach the credentials. A pull request build stays unsigned and still runs every
-installer check. Linux installers are not signed.
+**When signing runs.** Only for runs of the installer workflow on `main` in this repository: pushes to `main`
+and the release builds started there. `EDI_CODESIGN` is set for those runs and every signing step depends on
+it, so a pull request never reaches the credentials. A pull request build stays unsigned, signs the app ad hoc
+as before and still runs every installer check. When signing is on, a missing credential, a refused signature
+or a rejected notarisation fails the job, and nothing is uploaded or published. Linux installers are not
+signed. Every installer check runs on the signed installers.
 
 ## Consequences
 
