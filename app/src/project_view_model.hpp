@@ -139,6 +139,7 @@ class ExperimentListModel : public RowTableModel {
         QStringList extracted;
         bool is_template = false;
         QString reliability;  // its fit's χ², as the selector's line shows it; empty before it is fitted
+        QString name;         // the row's name in place of the experiment's (a series' one row)
     };
     // A scan's `count` datasets. The rows hold only their keys: a row's values are built from `row` when it is read,
     // so a scan of many files keeps no text per file (the session holds its facts).
@@ -241,6 +242,20 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // datasets, and the current experiment index the shown dataset. `scanColumns`: one heading per extract
     // rule, with its unit ("temperature (K)").
     Q_PROPERTY(bool scan READ scan NOTIFY scanChanged)
+    // A series of joint fits (ADR-0088): a scan whose points each hold one file per experiment, its banks. The
+    // Experiments group shows it as one row with a points × banks grid; the charts choose a point (the series
+    // variable, currentExperimentIndex as for a scan) and a bank (currentBank, the experiment the side bar shows).
+    Q_PROPERTY(bool series READ series NOTIFY scanChanged)
+    Q_PROPERTY(int currentBank READ currentBank WRITE setCurrentBank NOTIFY currentBankChanged)
+    Q_PROPERTY(QStringList bankLabels READ bankLabels NOTIFY seriesChanged)
+    // The series' name (its experiment set, else its first structure), what its points record ("Temperature (K)",
+    // or "Run" when nothing is recorded), how many points it lists (incomplete ones last) and its one-line summary.
+    Q_PROPERTY(QString seriesName READ seriesName NOTIFY seriesChanged)
+    Q_PROPERTY(QString seriesVariable READ seriesVariable NOTIFY seriesChanged)
+    Q_PROPERTY(int seriesPointCount READ seriesPointCount NOTIFY seriesChanged)
+    Q_PROPERTY(QString seriesSummary READ seriesSummary NOTIFY seriesChanged)
+    // Counted up whenever a point's facts change, so a binding reading pointCells or pointFit reads them again.
+    Q_PROPERTY(int seriesRevision READ seriesRevision NOTIFY seriesChanged)
     Q_PROPERTY(QString missingDataFolder READ missingDataFolder NOTIFY missingDataFolderChanged)
     Q_PROPERTY(QString missingDataFile READ missingDataFile NOTIFY missingDataFileChanged)
     Q_PROPERTY(QString pendingCollectionData READ pendingCollectionData NOTIFY pendingCollectionDataChanged)
@@ -385,6 +400,29 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool canLoadStructure() const { return true; }
     bool canCreateExperiment() const;
     bool scan() const { return scan_; }
+    bool series() const;
+    int currentBank() const { return current_experiment_; }
+    void setCurrentBank(int bank);
+    QStringList bankLabels() const;
+    QString seriesName() const;
+    QString seriesVariable() const;
+    int seriesPointCount() const;
+    QString seriesSummary() const;
+    int seriesRevision() const { return series_revision_; }
+    // A point's label for the selectors: its number and what it records ("3 · 15.9 K"), or its key.
+    Q_INVOKABLE QString pointLabel(int point) const;
+    // The series' files: loaded, changed since their point's fit, missing (an incomplete point's absent files).
+    Q_INVOKABLE QVariantList seriesCounts() const;
+    // Each bank's file at the point: 0 loaded, 1 changed since its fit, 2 missing. Incomplete points come after the
+    // fitted ones and have every file missing.
+    Q_INVOKABLE QVariantList pointCells(int point) const;
+    // The point's fit, as the grid shows it: its outcome token and its χ² text ("" before it is fitted).
+    Q_INVOKABLE QString pointOutcome(int point) const;
+    Q_INVOKABLE QString pointReliability(int point) const;
+    // Why an incomplete point is not fitted; empty for a complete one.
+    Q_INVOKABLE QString pointProblem(int point) const;
+    // Shows the point and the bank in the charts: the bank becomes the current experiment.
+    Q_INVOKABLE void showPointBank(int point, int bank);
     QStringList scanColumns() const { return scan_columns_; }
     EvolutionViewModel* evolution() const { return evolution_; }
     ScanViewModel* scanViews() const { return scan_views_; }
@@ -774,6 +812,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void calculationStarted();
     void templateIndexChanged();
     void scanChanged();
+    void seriesChanged();
+    void currentBankChanged();
     void listingDatasetFolderChanged();
     void missingDataFolderChanged();
     void missingDataFileChanged();
@@ -1091,6 +1131,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     StructureViewOptions* structure_view_options_;
     int current_structure_ = -1;
     int current_experiment_ = -1;
+    int series_revision_ = 0;
+    std::vector<bool> series_changed_;  // per listed point, whether a file changed since its fit
+    void syncSeries();
     // A scan project (edi ADR-0017 §19, ADR-0026): its results (the session), the dataset shown, and the template.
     // While a dataset is shown the model holds that dataset's projection (its data, the template's parameters with
     // its results row over them) and `scan_template_` holds the template, which is what a save writes and what a

@@ -25,6 +25,8 @@ Item {
     property string mode: "stacked"
     property bool shown: true
     readonly property ScanViewModel scan: project ? project.scanViews : null
+    // The row marked current: a series by bank marks the shown bank, every other view the shown dataset or point.
+    readonly property int currentRow: project === null ? -1 : scan !== null && scan.series && scan.rowsByBank ? project.currentBank : project.currentExperimentIndex
     readonly property bool scanProject: project !== null && (project.scan || (scan !== null && scan.joint))
     readonly property bool joint: scan !== null && scan.joint
     // Rows labelled left of the plot instead of a numeric scale: always on the Stacked view, and on the Map when the
@@ -325,7 +327,7 @@ Item {
             includedOnly: Preferences.chartIncludedOnly
             subtractBackground: Preferences.chartSubtractBackground
             dark: chart.colors.isDarkPalette
-            current: chart.project ? chart.project.currentExperimentIndex : -1
+            current: chart.currentRow
             // A view on a page or tab not shown draws again only once it is shown.
             active: chart.shown && chart.visible
             // The row labels' choice (shownLabels): only while the view is shown and labels its rows; a label's text item is
@@ -494,7 +496,7 @@ Item {
             // On Stacked (the owner, 2026-10-27): highlighting, the shown dataset's label keeps its colour and every
             // other is disabled-coloured; not highlighting, all keep their colours and the shown one is bold. On the
             // Map, not highlighting, the shown one is bold in the accent colour.
-            readonly property bool current: chart.project !== null && chart.project.currentExperimentIndex === dataset
+            readonly property bool current: chart.currentRow === dataset
             readonly property bool marked: !Preferences.chartHighlightSelected && current
             readonly property color stackedColour: Preferences.chartHighlightSelected && !current ? chart.colors.themeForegroundDisabled : colour
             // The icon takes the text's colour, so a new colour changes no piece of the line.
@@ -536,7 +538,7 @@ Item {
     // A map whose rows stand at their scan values keeps its numeric scale and labels no row; the shown dataset is still
     // marked by its bold label inside the plot's left edge at its row, with highlighting on too (the owner, 2026-10-27).
     IconLine {
-        readonly property int dataset: chart.project !== null ? chart.project.currentExperimentIndex : -1
+        readonly property int dataset: chart.currentRow
         readonly property real at: dataset >= 0 && chart.scan !== null && chart.scan.revision >= 0 ? layer.rowOf(dataset) : NaN
 
         objectName: "scanView." + chart.mode + ".rowLabel." + dataset
@@ -691,21 +693,6 @@ Item {
             closedTexts: ApplicationInfo.scanClosedTexts(1)
             shownIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
             onActivated: index => ApplicationInfo.scanChoice(index, 1)
-        }
-        // A series of joint fits' rows (edi ADR-0089 point 5): every experiment of a point merged on d, each divided by
-        // its fitted scale, or one experiment's pattern of each point.
-        ToolbarComboBox {
-            objectName: "scanView." + chart.mode + ".toolbar.experiments"
-            toolbarGroup: "axes"
-            visible: chart.scan !== null && chart.scan.series
-            toolTip: qsTr("Rows: every experiment merged, or one experiment")
-            readonly property var entries: chart.scan !== null ? [qsTr("All experiments merged")].concat(chart.scan.seriesExperiments) : []
-            model: entries
-            shownIndex: chart.scan !== null ? chart.scan.rowsExperiment + 1 : 0
-            onActivated: index => {
-                if (chart.scan !== null)
-                    chart.scan.rowsExperiment = index - 1;
-            }
         }
         ToolbarComboBox {
             objectName: "scanView." + chart.mode + ".toolbar.yscale"

@@ -97,6 +97,9 @@ class ScanViewModel : public QObject {
     Q_PROPERTY(bool series READ series NOTIFY seriesChanged)
     Q_PROPERTY(QStringList seriesExperiments READ seriesExperiments NOTIFY seriesChanged)
     Q_PROPERTY(int rowsExperiment READ rowsExperiment WRITE setRowsExperiment NOTIFY rowsExperimentChanged)
+    // The Rows switch (the owner, 2026-11-16): rows by the series variable (one bank across the series, the bank
+    // `rowsExperiment`) or by bank (every bank at the point `bankPoint`, each its own row on d).
+    Q_PROPERTY(bool rowsByBank READ rowsByBank WRITE setRowsByBank NOTIFY rowsByBankChanged)
 
    public:
     explicit ScanViewModel(QObject* parent);
@@ -124,6 +127,11 @@ class ScanViewModel : public QObject {
     QStringList seriesExperiments() const { return series_experiments_; }
     int rowsExperiment() const { return rows_experiment_; }
     void setRowsExperiment(int experiment);
+    bool rowsByBank() const { return rows_by_bank_; }
+    void setRowsByBank(bool on);
+    // The point and the bank the series' charts show: by bank the rows are the point's banks, by the variable the
+    // rows are the bank's points.
+    void setSeriesFocus(int point, int bank);
     bool nativeShared() const { return native_shared_; }
     QStringList rowLabels() const { return row_labels_; }
     QString valueTitle() const { return has_values_ ? extracted_title_ : QString(); }
@@ -220,6 +228,7 @@ class ScanViewModel : public QObject {
     void jointChanged();
     void seriesChanged();
     void rowsExperimentChanged();
+    void rowsByBankChanged();
     void nativeSharedChanged();
     void rowLabelsChanged();
     void backgroundAvailableChanged();
@@ -282,6 +291,11 @@ class ScanViewModel : public QObject {
     bool native_shared_ = true, included_only_ = false, rows_by_value_ = false;
     bool series_ = false;
     int rows_experiment_ = -1;
+    bool rows_by_bank_ = false;
+    int bank_point_ = 0;
+    bool listing_values_ = false;  // whether the listing extracts a value, which rows by bank do not use
+    // How many rows the reads fill: the points, or a point's banks.
+    std::size_t units() const { return rows_by_bank_ && series_ ? static_cast<std::size_t>(series_experiments_.size()) : files_.size(); }
     QStringList series_experiments_;
     std::shared_ptr<const edi::ScanDatasets> datasets_;  // a series' points and their files
     void restartReads();

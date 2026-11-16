@@ -164,12 +164,13 @@ void ScanViewModel::setScan(const ScanSession* session, const edi::Project* proj
         mode_ = project->experiment().effective_beam_mode();
         emit timeOfFlightChanged();
     }
-    has_values_ = source_ != nullptr && !source_->sequential_fit.extract.empty() && !extracted_title.isEmpty();
+    listing_values_ = source_ != nullptr && !source_->sequential_fit.extract.empty() && !extracted_title.isEmpty();
+    has_values_ = listing_values_ && !(rows_by_bank_ && series_);
     extracted_title_ = extracted_title;
     emit valueTitleChanged();
-    patterns_.assign(files_.size(), {});
-    values_.assign(files_.size(), kNaN);
-    value_texts_.assign(files_.size(), QString());
+    patterns_.assign(units(), {});
+    values_.assign(units(), kNaN);
+    value_texts_.assign(units(), QString());
     placeAxis();
     placeRows();
     emit countChanged();
@@ -302,9 +303,14 @@ void ScanViewModel::restartReads() {
     loaded_ = 0;
     publish(failed_, 0, &ScanViewModel::failedChanged);
     publish(error_, QString(), &ScanViewModel::errorChanged);
-    patterns_.assign(files_.size(), {});
+    has_values_ = listing_values_ && !(rows_by_bank_ && series_);
+    emit valueTitleChanged();
+    patterns_.assign(units(), {});
+    values_.assign(units(), kNaN);
+    value_texts_.assign(units(), QString());
     placeAxis();
     placeRows();
+    emit countChanged();
     emit loadedChanged();
     ++revision_;
     emit revisionChanged();
@@ -324,8 +330,35 @@ void ScanViewModel::setWanted(bool wanted) {
     }
 }
 
+void ScanViewModel::setRowsByBank(bool on) {
+    if (on == rows_by_bank_) {
+        return;
+    }
+    rows_by_bank_ = on;
+    emit rowsByBankChanged();
+    if (series_) {
+        restartReads();
+    }
+}
+
+void ScanViewModel::setSeriesFocus(int point, int bank) {
+    if (!series_) {
+        bank_point_ = std::max(0, point);
+        return;
+    }
+    if (rows_by_bank_) {
+        if (point >= 0 && point != bank_point_) {
+            bank_point_ = point;
+            restartReads();
+        }
+        return;
+    }
+    bank_point_ = std::max(0, point);
+    setRowsExperiment(bank);
+}
+
 void ScanViewModel::start() {
-    if (started_ || files_.empty()) {
+    if (started_ || units() == 0) {
         return;
     }
     started_ = true;
@@ -340,19 +373,26 @@ void ScanViewModel::stop() {
 }
 
 void ScanViewModel::readNext() {
-    if (next_ >= files_.size()) {
+    const std::size_t units = this->units();
+    if (next_ >= units) {
         return;
     }
     const std::size_t first = next_;
-    const std::size_t last = std::min(files_.size(), first + kBatch);
+    const std::size_t last = std::min(units, first + kBatch);
     next_ = last;
     const QPointer<ScanViewModel> self(this);
     const std::uint64_t generation = generation_;
     const std::shared_ptr<std::atomic<bool>> stop = stop_;
-    std::vector<std::string> batch(files_.begin() + static_cast<std::ptrdiff_t>(first),
-                                   files_.begin() + static_cast<std::ptrdiff_t>(last));
+    // By bank the units are the banks at one point; otherwise the points (or a scan's files).
+    const bool by_bank = rows_by_bank_ && series_;
+    const std::size_t at_point = by_bank ? std::min<std::size_t>(static_cast<std::size_t>(bank_point_), files_.empty() ? 0 : files_.size() - 1) : 0;
+    std::vector<std::string> batch;
+    for (std::size_t unit = first; unit < last; ++unit) {
+        batch.push_back(by_bank ? files_.at(at_point) : files_.at(unit));
+    }
     run_in_background([self, generation, stop, first, batch = std::move(batch), source = source_, directory = directory_,
-                       mode = mode_, values = has_values_, datasets = datasets_, chosen = rows_experiment_] {
+                       mode = mode_, values = has_values_, datasets = datasets_, chosen = rows_experiment_, by_bank,
+                       at_point] {
         std::vector<Read> done;
         for (std::size_t k = 0; k < batch.size(); ++k) {
             const std::string& key = batch[k];
@@ -361,13 +401,14 @@ void ScanViewModel::readNext() {
             }
             Read read;
             // A series' row is its point on d; its place along the series comes from the first experiment's file.
-            const std::size_t point = first + k;
+            const std::size_t point = by_bank ? at_point : first + k;
             const std::string file = datasets ? datasets->point_files.at(point).front() : key;
             if (datasets) {
                 try {
                     std::vector<std::size_t> experiments;
                     for (std::size_t e = 0; e < datasets->experiments.size(); ++e) {
-                        if (chosen < 0 || static_cast<std::size_t>(chosen) == e) experiments.push_back(e);
+                        if (by_bank ? e == first + k : chosen < 0 || static_cast<std::size_t>(chosen) == e)
+                            experiments.push_back(e);
                     }
                     edi::SeriesRowPattern row = edi::series_row_pattern(
                         *source, *datasets, point, experiments, edi::series_point_scales(*source, key));
@@ -502,6 +543,8 @@ void ScanViewModel::placeRows() {
             texts.append(unit.isEmpty() ? value : value + QLatin1Char(' ') + unit);
         } else if (joint_) {
             texts.append(static_cast<qsizetype>(i) < row_labels_.size() ? row_labels_[static_cast<qsizetype>(i)] : QString());
+        } else if (rows_by_bank_ && series_) {
+            texts.append(static_cast<qsizetype>(i) < series_experiments_.size() ? series_experiments_[static_cast<qsizetype>(i)] : QString());
         } else {
             texts.append(i < files_.size() ? QFileInfo(QString::fromStdString(files_[i])).fileName() : QString());
         }

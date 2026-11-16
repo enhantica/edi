@@ -197,6 +197,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/IconLine.qml
         qml/Components/IconTabButton.qml
         qml/Components/MainAreaBlockSelector.qml
+        qml/Components/SeriesSelectors.qml
         qml/Components/MainView.qml
         qml/Components/MeasCalcChart.qml
         qml/Components/NumberLabel.qml
@@ -279,7 +280,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/ExperimentsGroup.qml
         qml/Pages/Experiment/InstrumentGroup.qml
         qml/Pages/Experiment/LinkedStructureGroup.qml
-        qml/Pages/Experiment/MeasuredDataGroup.qml
+        qml/Pages/Experiment/DataStatusRows.qml
         qml/Pages/Experiment/MeasuredRangeGroup.qml
         qml/Pages/Experiment/PeakExtrasGroup.qml
         qml/Pages/Experiment/BackgroundExtrasGroup.qml

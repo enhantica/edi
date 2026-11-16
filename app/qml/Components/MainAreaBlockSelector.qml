@@ -49,11 +49,22 @@ Item {
         color: EaStyle.Colors.chartBackground
     }
 
+    // A series of joint fits chooses a point and a bank in place of an experiment (SeriesSelectors).
+    readonly property bool series: blockKind === "experiment" && Session.project !== null && Session.project.series
+
     BlockSelector {
         id: selector
         objectName: "mainArea.blocks"
+        visible: !placement.series
         width: placement.width
         backgroundColor: EaStyle.Colors.chartBackground
         onBlockActivated: index => placement.blockActivated(index)
+    }
+    SeriesSelectors {
+        objectName: "mainArea.series"
+        visible: placement.series
+        width: placement.width
+        project: placement.series ? Session.project : null
+        viewKey: AppState.mainView ? AppState.mainView.currentKey : ""
     }
 }
