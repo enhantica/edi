@@ -66,7 +66,27 @@ EaElements.ParamComboBox {
     // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
     Component.onCompleted: FieldTitles.align(selector)
 
-    onActivated: index => ApplicationInfo.activateSelector(index, () => {
+    // The base's menu item, greyed for an option the other choices rule out (OptionListModel's `enabled`).
+    delegate: EaElements.MenuItem {
+        width: parent !== null ? parent.width : 0
+        height: EaStyle.Sizes.comboBoxHeight
+        font.family: selector.font.family
+        textFormat: selector.textFormat
+        elide: selector.elide
+        text: model.label ?? ""
+        enabled: model.enabled !== false
+        highlighted: selector.highlightedIndex === index
+        hoverEnabled: selector.hoverEnabled
+    }
+
+    onActivated: index => {
+        // A ruled-out option reached by key or wheel is not taken.
+        if (options && !options.isEnabled(options.tokenAt(index))) {
             currentIndex = Qt.binding(() => options && options.revision >= 0 ? options.indexOf(selector.token) : -1);
-        })
+            return;
+        }
+        ApplicationInfo.activateSelector(index, () => {
+            currentIndex = Qt.binding(() => options && options.revision >= 0 ? options.indexOf(selector.token) : -1);
+        });
+    }
 }

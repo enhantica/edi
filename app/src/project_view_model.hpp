@@ -104,6 +104,7 @@ struct UncertaintyText {
 };
 
 class ParameterRegistry;
+class ParameterItem;
 
 // The project's structures: roles `name`, `label` (`name · file`, the file the structure is saved as),
 // `structure` (StructureViewModel), `colorIndex`.
@@ -613,6 +614,18 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // data set to `token`: the experiment is made anew with that type, keeping its name, its link and,
     // within one beam mode, its range.
     Q_INVOKABLE bool setExperimentType(int index, const QString& axis, const QString& token);
+    // ADR-0087's switches for the experiment at `index` and the experiments it is tied to (its set, else the
+    // project's): "Phase ratios shared" and "Same for all experiments" for a parameter named without its datablock.
+    // Each turn is one undoable step; a refusal writes nothing and is reported.
+    Q_INVOKABLE bool phaseRatiosShared(int index) const;
+    Q_INVOKABLE bool setPhaseRatiosShared(int index, bool on);
+    Q_INVOKABLE bool sameForAllExperiments(int index, const QString& path) const;
+    Q_INVOKABLE bool setSameForAllExperiments(int index, const QString& path, bool on);
+    // The same switch for a Parameters table row: whether it applies (an experiment's parameter in a project of
+    // several experiments), whether it is on, and turning it.
+    Q_INVOKABLE bool sameForAllApplies(edi_app::ParameterItem* parameter) const;
+    Q_INVOKABLE bool sameForAll(edi_app::ParameterItem* parameter) const;
+    Q_INVOKABLE bool setSameForAll(edi_app::ParameterItem* parameter, bool on);
     // The place of the structure of this name in the project, or -1: its colour (edi ADR-0017 §8).
     Q_INVOKABLE int structureIndex(const QString& name) const;
 

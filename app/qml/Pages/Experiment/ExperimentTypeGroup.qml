@@ -11,6 +11,8 @@ import edi.app
 // table: the selected experiment's four type axes, editable while it has no measured data and fixed once it has
 // (its data sets them), and its dimensionality and polarisation, each with the one value it admits (ADR-0054). A choice makes the experiment anew with that type
 // (ProjectViewModel.setExperimentType). The four axes show their values by the dictionary's names (edi ADR-0051).
+// Each axis lists every option; one no type crysta computes allows with the other choices is greyed and cannot be
+// picked (Time-of-flight greys X-ray, X-ray greys Time-of-flight and single crystal; the owner, 2026-11-16).
 // A grid three wide, so each name fits (edi ADR-0017 §2): each box sets its own width, as the base's divides the
 // row by its parent's children.
 Grid {
@@ -23,7 +25,6 @@ Grid {
     // reflections loaded yet.
     readonly property bool editable: experiment !== null && experiment.calculationOnly
     readonly property string fixedReason: experiment === null ? qsTr("Add an experiment first") : qsTr("Fixed by the measured data: an experiment without data can change its type")
-    readonly property bool singleCrystal: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
     readonly property real cellWidth: (EaStyle.Sizes.sideBarContentWidth - (row.columns - 1) * row.columnSpacing) / row.columns
 
     // A choice on one axis makes the experiment anew; the selector returns to the stored value otherwise.
@@ -58,8 +59,6 @@ Grid {
         disabledReason: row.fixedReason
         onSelected: token => row.choose("beamMode", token)
     }
-    // A single crystal is computed for neutrons only for now: its probe box is fixed, its tooltip saying so (the owner,
-    // 2026-10-22).
     SelectorField {
         id: radiationProbe
         objectName: "experimentType.radiationProbe"
@@ -67,11 +66,10 @@ Grid {
         uid: "experiment_type.radiation_probe"
         options: row.experiment ? row.experiment.radiationProbeOptions : null
         token: row.experiment ? row.experiment.radiationProbeToken : ""
-        enabled: row.editable && !row.singleCrystal
-        disabledReason: !row.editable ? row.fixedReason : qsTr("Single crystals are neutron only for now")
+        enabled: row.editable
+        disabledReason: row.fixedReason
         onSelected: token => row.choose("radiationProbe", token)
     }
-    // Disabled while edi computes one choice only, its tooltip saying so (the owner, 2026-10-08, note 44).
     SelectorField {
         id: scatteringType
         objectName: "experimentType.scatteringType"
@@ -79,8 +77,8 @@ Grid {
         uid: "experiment_type.scattering_type"
         options: row.experiment ? row.experiment.scatteringTypeOptions : null
         token: row.experiment ? row.experiment.scatteringTypeToken : ""
-        enabled: false
-        disabledReason: qsTr("Only Bragg scattering is supported for now")
+        enabled: row.editable
+        disabledReason: row.fixedReason
         onSelected: token => row.choose("scatteringType", token)
     }
     // One admitted value each, so the boxes show it and take no choice: the dimensionality, and the polarisation of
@@ -95,10 +93,13 @@ Grid {
         enabled: false
         disabledReason: qsTr("Only one value is supported for now")
     }
+    // The neutron's polarisation, so hidden for X-rays (the owner, 2026-11-16).
     SelectorField {
         id: polarisation
         objectName: "experimentType.polarisation"
+        visible: row.experiment !== null && row.experiment.radiationProbeToken !== "xray"
         width: row.cellWidth
+        label: qsTr("Neutron polarisation")
         uid: "experiment_type.polarisation"
         options: row.experiment ? row.experiment.polarisationOptions : null
         token: row.experiment ? row.experiment.polarisationToken : ""

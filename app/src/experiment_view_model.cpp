@@ -186,6 +186,36 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
                                        std::pair{polarisation_options_, "experiment_type.polarisation"}}) {
         options->setItemOptions(uid, option_tokens(uid));
     }
+    // An option of one type axis is offered only where some type crysta computes combines it with the other three
+    // axes' current choices; the rest show greyed (the owner, 2026-11-16).
+    {
+        const std::vector<edi::ExperimentTypeTokens> supported = edi::supported_experiment_types();
+        const edi::ExperimentTypeTokens current{sampleFormToken().toStdString(), beamModeToken().toStdString(),
+                                                radiationProbeToken().toStdString(),
+                                                scatteringTypeToken().toStdString()};
+        using Axis = std::string edi::ExperimentTypeTokens::*;
+        const std::pair<OptionListModel*, Axis> axes[] = {
+            {sample_form_options_, &edi::ExperimentTypeTokens::sample_form},
+            {beam_mode_options_, &edi::ExperimentTypeTokens::beam_mode},
+            {radiation_probe_options_, &edi::ExperimentTypeTokens::radiation_probe},
+            {scattering_type_options_, &edi::ExperimentTypeTokens::scattering_type}};
+        for (const auto& [options, axis] : axes) {
+            QStringList disabled;
+            for (int row = 0; row < options->count(); ++row) {
+                edi::ExperimentTypeTokens wanted = current;
+                wanted.*axis = options->tokenAt(row).toStdString();
+                const bool allowed = std::any_of(supported.begin(), supported.end(), [&wanted](const auto& type) {
+                    return type.sample_form == wanted.sample_form && type.beam_mode == wanted.beam_mode &&
+                           type.radiation_probe == wanted.radiation_probe &&
+                           type.scattering_type == wanted.scattering_type;
+                });
+                if (!allowed) {
+                    disabled.append(options->tokenAt(row));
+                }
+            }
+            options->setDisabledTokens(disabled);
+        }
+    }
     peak_type_options_->setItemOptions("peak.type", edi::supported_peak_profiles(mode), edi::default_peak_profile(mode));
     absorption_type_options_->setItemOptions("absorption.type", edi::supported_absorption_families(mode));
     extinction_type_options_->setOptions(edi::extinction_type_tokens(), "none", edi::extinction_type_choice_labels());

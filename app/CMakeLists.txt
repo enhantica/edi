@@ -278,6 +278,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Experiment/ExperimentsGroup.qml
         qml/Pages/Experiment/InstrumentGroup.qml
         qml/Pages/Experiment/LinkedStructureGroup.qml
+        qml/Pages/Experiment/MeasuredDataGroup.qml
         qml/Pages/Experiment/MeasuredRangeGroup.qml
         qml/Pages/Experiment/PeakExtrasGroup.qml
         qml/Pages/Experiment/BackgroundExtrasGroup.qml

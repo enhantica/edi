@@ -47,6 +47,7 @@
 #include "edi/model.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/selectors.hpp"
+#include "edi/sharing.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/categories.hpp"
 
@@ -997,6 +998,20 @@ class Edit {
         return Edit([&constraint, id = std::move(id)] {
             require_model_owner<ParameterConstraint>(constraint.id, "the constraint");
             constraint.id = id;
+        });
+    }
+    // ADR-0087's switches, each the alias and constraint rows it writes or removes (edi/sharing.hpp): "Phase ratios
+    // shared" for `experiment`'s set, and "Same for all experiments" for the leader's parameter `path`.
+    static Edit phase_ratios_shared(Project& project, std::string experiment, bool on) {
+        return Edit([&project, experiment = std::move(experiment), on] { share_phase_ratios(project, experiment, on); });
+    }
+    static Edit same_for_all_experiments(Project& project, std::string experiment, std::string path, bool on) {
+        return Edit([&project, experiment = std::move(experiment), path = std::move(path), on] {
+            if (on) {
+                share_across_experiments(project, experiment, path);
+            } else {
+                unshare_across_experiments(project, experiment, path);
+            }
         });
     }
     static Edit rename_scattering_length(Structure& structure, std::string from, std::string to) {

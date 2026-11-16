@@ -466,7 +466,6 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 StructurePage {
                     current: structureLoader.SwipeView.isCurrentItem
-                    ownBorderHidden: mainViewFrame.visible
                     assistantCovered: window.assistantPanelVisible
                 }
             }
@@ -480,7 +479,6 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 ExperimentPage {
                     current: experimentLoader.SwipeView.isCurrentItem
-                    ownBorderHidden: mainViewFrame.visible
                     assistantCovered: window.assistantPanelVisible
                 }
             }
@@ -494,7 +492,6 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 AnalysisPage {
                     current: analysisLoader.SwipeView.isCurrentItem
-                    ownBorderHidden: mainViewFrame.visible
                     assistantCovered: window.assistantPanelVisible
                 }
             }
@@ -512,47 +509,6 @@ EaComponents.ApplicationWindow {
             }
         }
     ]
-
-    // The one main view of the Structure, Experiment and Analysis pages (MainView; the owner, 2026-11-10), over their
-    // main areas in the pages' view, which stays put while the pages slide: only the sidebar changes from page to
-    // page. Placed where a loaded workflow page has its main area.
-    Rectangle {
-        id: mainViewFrame
-
-        readonly property Item area: [structureLoader, experimentLoader, analysisLoader].map(loader => loader.item).find(page => page !== null && page !== undefined)?.mainArea ?? null
-        readonly property int page: EaGlobals.Vars.appBarCurrentIndex
-
-        parent: structureLoader.SwipeView.view
-        z: 2
-        x: area ? area.x : 0
-        y: area ? area.y : 0
-        width: area ? area.width : 0
-        height: area ? area.height : 0
-        visible: area !== null && Session.project !== null && page >= AppState.Page.Structure && page <= AppState.Page.Analysis
-        color: EaStyle.Colors.contentBackground
-        clip: true
-
-        MainView {
-            id: mainView
-
-            shown: mainViewFrame.visible
-            page: mainViewFrame.page
-            Component.onCompleted: AppState.mainView = mainView
-        }
-    }
-    // The border between the main view and the sidebar belongs to the fixed main view, so it stays put while a page
-    // slides; the pages' own sidebar borders are hidden meanwhile (edi ADR-0017 §2).
-    Rectangle {
-        objectName: "mainArea.divider"
-        parent: mainViewFrame.parent
-        z: 3
-        x: Preferences.sideBarOnLeft ? mainViewFrame.x - width : mainViewFrame.x + mainViewFrame.width
-        y: mainViewFrame.y
-        width: EaStyle.Sizes.borderThickness
-        height: mainViewFrame.height
-        visible: mainViewFrame.visible
-        color: EaStyle.Colors.appBorder
-    }
 
     statusBar: StatusBar {
         assistantChatShown: window.assistantPanelVisible && window.assistantPanelShown

@@ -44,6 +44,9 @@ projects:
   - id: pd-neut-tof_ncaf-wish-5bank_start-fullprof
     # The same project started at every value of FullProf's own .pcr.
     executing: true
+  - id: pd-neut-tof_ncaf-wish-5bank_scan-6p
+    # A series of joint fits: six points, one file per bank per point.
+    executing: true
   - id: pd-neut-tof_si-sepd_start-2
     executing: true
   - id: pd-neut-tof_si-sepd_start-5

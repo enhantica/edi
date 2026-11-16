@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "edi/model.hpp"
+#include "edi/scan_views.hpp"
 
 namespace edi {
 
@@ -21,12 +22,36 @@ namespace edi {
 /// `analysis/results.csv`. Listing reads only the directory; no data file is opened until one is asked for.
 struct ScanDatasets {
     std::string directory;           ///< The scan's data directory, resolved as the driver resolves it.
-    std::vector<std::string> files;  ///< The file names in fitting order.
+    std::vector<std::string> files;  ///< The file names in fitting order; a series of joint fits' point keys.
+    /// A series of joint fits (several experiments, one file pattern each): its experiments in project order and,
+    /// per point, one file per experiment. Empty for a scan of one experiment.
+    std::vector<std::string> experiments;
+    std::vector<std::vector<std::string>> point_files;
+    /// A series' incomplete points: some experiment has no file for the point, or two. Listed with the files the
+    /// point has and why, never fitted.
+    struct IncompletePoint {
+        std::string key;
+        std::vector<std::string> files;
+        std::string reason;
+    };
+    std::vector<IncompletePoint> incomplete;
+    bool joint() const { return !experiments.empty(); }
 };
 
 /// The datasets of `project`'s declared scan (crysta::sequential_scan_files). Throws with the driver's message on
 /// an undeclared scan, a project with no directory, a missing directory or no matching file.
 ScanDatasets scan_datasets(const Project& project);
+
+/// Every file of the scan's folder its datasets name: a scan's files, or a series' files of every point, incomplete
+/// points included. What copying a linked scan into the project carries and what its size counts (ADR-0088 point 3).
+std::vector<std::string> scan_data_files(const ScanDatasets& datasets);
+
+/// ADR-0088 point 4: for each point key of a series of joint fits, whether a file it was fitted from has changed since:
+/// a `results_experiments.csv` row of the point records a size or modification time the file no longer has, or the
+/// file is gone. A point without rows is not changed. Only the named points' files are looked at; nothing is read
+/// from them. All false for a scan of one experiment or without the file.
+std::vector<bool> scan_points_changed(const Project& project, const ScanDatasets& datasets,
+                                      const std::vector<std::string>& points);
 
 /// The scan's template dataset in effect: `_sequential_fit.template_file` when declared, else the first file of the
 /// scan's listing; empty when there is neither. A scan's report is this dataset's, and its fit record keeps this
@@ -162,6 +187,53 @@ void evolution_series(const Project& project, const ScanPlaces& places, const Sc
 void evolution_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
                       const std::vector<std::string>& parameters, bool by_value,
                       const std::function<void(std::size_t, const EvolutionPoint&)>& visit);
+
+/// ADR-0088 point 1: files of a series of joint fits grouped by name, one group per experiment. In each name the
+/// first run of digits that differs between the names becomes `*`; names sharing the result form a group, in the
+/// order their first file comes. Names that do not split this way (one name, no differing digits, or a different
+/// number of digit runs) come back as one group per name, with the name as its pattern.
+struct SeriesGroup {
+    std::string pattern;
+    std::vector<std::string> files;
+};
+std::vector<SeriesGroup> group_series_files(const std::vector<std::string>& names);
+
+/// ADR-0088 point 1: declares `project` a series of joint fits over the folder `data_dir`, one experiment per group:
+/// the experiment `template_experiment` takes the first group's pattern and each further group a copy of it, named
+/// after its pattern (the `*` and the extension dropped, the ends trimmed of `_` and `-`, a `_copy` suffix when
+/// taken). The experiments form the experiment set `set_id`, the template first. No data file is read. Returns the
+/// experiments' names in group order. Throws std::invalid_argument for an unknown template, no group, a project of
+/// more than one experiment, or a set id or membership already taken, and changes nothing when it throws.
+std::vector<std::string> declare_series_of_joint_fits(Project& project, const std::string& template_experiment,
+                                                      const std::string& data_dir,
+                                                      const std::vector<SeriesGroup>& groups,
+                                                      const std::string& set_id);
+
+/// ADR-0089 point 4: each experiment's divisor in a series' merged d view at the point `point`: its first enabled
+/// linked structure's scale as `analysis/results_experiments.csv` records it for the point, else the template's
+/// value; 1 where neither is a positive finite number. In project order.
+std::vector<double> series_point_scales(const Project& project, const std::string& point);
+
+/// ADR-0089 point 5: the summary of one Map or Stacked row of a series over [d_min, d_max] at `columns` columns: the
+/// point's pattern of each experiment in `experiments` (places in project order), read from its file on the d axis by
+/// that experiment's calibration as fitted at the point (the template's before; crysta's rule for `_data.d_spacing`)
+/// and divided by its entry in `scales`; for one
+/// experiment its columns, for several their merge (All experiments merged). Each pattern is released once summarised.
+/// Throws std::out_of_range for a point or experiment the datasets do not hold, and as read_scan_dataset does.
+ScanColumns series_row_columns(const Project& project, const ScanDatasets& datasets, std::size_t point,
+                               const std::vector<std::size_t>& experiments, const std::vector<double>& scales,
+                               double d_min, double d_max, std::size_t columns);
+
+/// A series of joint fits' per-experiment parameters (ADR-0089): the value columns of `analysis/results_experiments.csv`,
+/// by their names without the datablock, in the file's order; empty for a scan of one experiment or without the file.
+std::vector<std::string> evolution_experiment_parameters(const Project& project);
+
+/// Visits each point of a per-experiment parameter of a series of joint fits, read from
+/// `analysis/results_experiments.csv`: the experiment's place in project order and the point, its x as
+/// evolution_series takes it from the point's `results.csv` row. A refused point has no points.
+void evolution_experiment_series(const Project& project, const ScanPlaces& places, const ScanResultIndex& index,
+                                 const std::string& parameter, bool by_value,
+                                 const std::function<void(std::size_t, const EvolutionPoint&)>& visit);
 
 /// The template dataset (`_sequential_fit.template_file`): `file` must be one of the scan's files as its listing
 /// names them. Throws, naming the file, for anything else (crysta::check_sequential_template_file); reads no file.

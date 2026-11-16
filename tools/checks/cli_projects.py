@@ -31,9 +31,9 @@ allowed resumes, though every value has settled. Every other fit must end ``done
 
 A quantity is a key of the machine record (``param.<label>.value`` included), or
 ``results[<x>].<column>`` — the ``analysis/results.csv`` row a scan wrote whose ``diffrn.*`` value
-is ``<x>``, or, when ``<x>`` is not a number, the row of the data file named ``<x>``.
-Scan pins are compared to raw terminal results of fresh completed prefixes; each written
-CSV cell must also equal its declared reporting projection. Every non-null
+is ``<x>``, or, when ``<x>`` is not a number, the row of the data file or series point named
+``<x>``. Scan pins are compared to raw terminal results of fresh completed prefixes; each
+written CSV cell must also equal its declared reporting projection. Every non-null
 ``tol_abs``/``tol_rel`` bound must hold; a fit's record must say ``status=done``. Every
 deviation is reported, never only the first, and any deviation is red.
 
@@ -398,10 +398,15 @@ def _results_row(project: Path, key: str) -> dict[str, str]:
         rows = list(csv.DictReader(handle))
     target = _float_or_none(key)
     if target is None:
-        # A scan whose files carry no diffrn.* value names its row by the data file.
-        matches = [row for row in rows if Path(row.get('file_path', '')).name == key]
+        # A scan whose files carry no diffrn.* value names its row by the data file; a series of
+        # joint fits by its point.
+        matches = [
+            row
+            for row in rows
+            if Path(row.get('file_path', '')).name == key or row.get('point') == key
+        ]
         if len(matches) != 1:
-            raise KeyError(f'{len(matches)} results.csv rows fit the file {key}')
+            raise KeyError(f'{len(matches)} results.csv rows fit the file or point {key}')
         return matches[0]
     matches = [
         row

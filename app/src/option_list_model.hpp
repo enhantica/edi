@@ -12,7 +12,8 @@ namespace edi_app {
 
 // The options one selector offers: always the core's supported set for the block's type, never a
 // list written in the app. Roles `token` (the verbatim `.edi` token),
-// `label` (what the combo shows: the dictionary's name for the token, else the token) and `isDefault`.
+// `label` (what the combo shows: the dictionary's name for the token, else the token), `isDefault` and `enabled`
+// (false for an option the other choices rule out: shown greyed and not pickable).
 class OptionListModel : public QAbstractListModel {
     Q_OBJECT
     QML_ELEMENT
@@ -21,7 +22,7 @@ class OptionListModel : public QAbstractListModel {
     Q_PROPERTY(quint64 revision READ revision NOTIFY revisionChanged)
 
    public:
-    enum Role { TokenRole = Qt::UserRole + 1, LabelRole, IsDefaultRole };
+    enum Role { TokenRole = Qt::UserRole + 1, LabelRole, IsDefaultRole, EnabledRole };
 
     explicit OptionListModel(QObject* parent = nullptr);
 
@@ -33,6 +34,9 @@ class OptionListModel : public QAbstractListModel {
     // dictionary (edi ADR-0051), the token itself where the dictionary has none.
     void setItemOptions(const std::string& uid, const std::vector<std::string>& tokens,
                         const std::string& default_token = {});
+    // The options the other choices rule out; every option is enabled otherwise.
+    void setDisabledTokens(const QStringList& tokens);
+    Q_INVOKABLE bool isEnabled(const QString& token) const { return !disabled_.contains(token); }
     int count() const { return static_cast<int>(tokens_.size()); }
     quint64 revision() const { return revision_; }
     Q_INVOKABLE int indexOf(const QString& token) const { return static_cast<int>(tokens_.indexOf(token)); }
@@ -50,6 +54,7 @@ class OptionListModel : public QAbstractListModel {
     QStringList tokens_;
     QStringList labels_;
     QString default_token_;
+    QStringList disabled_;
     quint64 revision_ = 0;
 };
 

@@ -2868,6 +2868,89 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
     return true;
 }
 
+bool ProjectViewModel::phaseRatiosShared(int index) const {
+    if (index < 0 || index >= experiment_models_.size()) {
+        return false;
+    }
+    try {
+        return edi::phase_ratios_shared(*project_, project_->experiments[static_cast<std::size_t>(index)]->name);
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+bool ProjectViewModel::setPhaseRatiosShared(int index, bool on) {
+    if (index < 0 || index >= experiment_models_.size()) {
+        return false;
+    }
+    const std::string name = project_->experiments[static_cast<std::size_t>(index)]->name;
+    const QString refusal = apply_relation_edit(edi::Edit::phase_ratios_shared(*project_, name, on));
+    if (!refusal.isEmpty()) {
+        emit refused(refusal);
+        return false;
+    }
+    return true;
+}
+
+bool ProjectViewModel::sameForAllExperiments(int index, const QString& path) const {
+    if (index < 0 || index >= experiment_models_.size()) {
+        return false;
+    }
+    try {
+        return edi::shared_across_experiments(
+            *project_, project_->experiments[static_cast<std::size_t>(index)]->name, path.toStdString());
+    } catch (const std::exception&) {
+        return false;
+    }
+}
+
+bool ProjectViewModel::setSameForAllExperiments(int index, const QString& path, bool on) {
+    if (index < 0 || index >= experiment_models_.size()) {
+        return false;
+    }
+    const std::string name = project_->experiments[static_cast<std::size_t>(index)]->name;
+    const QString refusal =
+        apply_relation_edit(edi::Edit::same_for_all_experiments(*project_, name, path.toStdString(), on));
+    if (!refusal.isEmpty()) {
+        emit refused(refusal);
+        return false;
+    }
+    return true;
+}
+
+namespace {
+// A table row's parameter by its unique name without the datablock (`peak.broad_gauss_u`), empty when it is not an
+// experiment's parameter a constraint can name.
+QString shared_path(const edi::Project& project, const ParameterItem* item) {
+    if (item == nullptr || item->blockKind() != QLatin1String("experiment")) {
+        return {};
+    }
+    for (const edi::NamedParameter& named : edi::named_parameters(project)) {
+        if (named.parameter == item->parameter()) {
+            const auto dot = named.unique_name.find('.');
+            return dot == std::string::npos ? QString() : QString::fromStdString(named.unique_name.substr(dot + 1));
+        }
+    }
+    return {};
+}
+}  // namespace
+
+bool ProjectViewModel::sameForAllApplies(ParameterItem* parameter) const {
+    return project_->experiments.size() > 1 && !shared_path(*project_, parameter).isEmpty();
+}
+
+bool ProjectViewModel::sameForAll(ParameterItem* parameter) const {
+    return sameForAllApplies(parameter) &&
+           sameForAllExperiments(parameter->blockIndex(), shared_path(*project_, parameter));
+}
+
+bool ProjectViewModel::setSameForAll(ParameterItem* parameter, bool on) {
+    if (!sameForAllApplies(parameter)) {
+        return false;
+    }
+    return setSameForAllExperiments(parameter->blockIndex(), shared_path(*project_, parameter), on);
+}
+
 void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after) {
     for (UndoRecord& record : undo_history_) {
         if (auto* added = std::get_if<AddedExperiments>(&record)) {

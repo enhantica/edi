@@ -13,9 +13,9 @@ import edi.app
 
 // Experiments (N) (easydiffractionbeta Pages/Experiment/SideBarBasic/Experiments.qml): the project's
 // experiments, one current, each with how the last fit ended on it (Fit) and the file its data is in; under
-// the table the selected experiment's type (ExperimentTypeGroup), then Load experiment (`.edi` block files,
-// several at once, each with its type, data and parameters) and Create experiment (a new experiment without
-// data, a simulation). A row made with Create experiment reads Load data… in its Data file cell until data is loaded
+// the table the selected experiment's type (ExperimentTypeGroup), then Create experiment (a new experiment without
+// data, a simulation) and Load experiment (`.edi` block files, several at once, each with its type, data and
+// parameters); measured data comes in through the Measured data group below. A row made with Create experiment reads Load data… in its Data file cell until data is loaded
 // into it: a plain two- or three-column file whose rows become its measured data. Clicking a file name loads another
 // file in its place. Create, Load and Load data are each one undoable step.
 SideBarGroup {
@@ -262,97 +262,9 @@ SideBarGroup {
             onClicked: group.project.useAsTemplate(group.project.currentExperimentIndex)
         }
 
-        // A scan whose data folder cannot be found (ADR-0069): the project still opens; this line says which folder
-        // and Locate folder… points the scan at its new place.
-        Row {
-            objectName: "experiments.dataNotFound"
-            visible: group.project !== null && group.project.missingDataFolder !== ""
-            spacing: EaStyle.Sizes.fontPixelSize
-            EaElements.Label {
-                anchors.verticalCenter: parent.verticalCenter
-                width: EaStyle.Sizes.sideBarContentWidth - locateButton.width - parent.spacing
-                wrapMode: Text.Wrap
-                color: EaStyle.Colors.red
-                text: group.project !== null ? qsTr("Data not found: %1").arg(group.project.missingDataFolder) : ""
-            }
-            EaElements.Button {
-                id: locateButton
-                objectName: "experiments.locateFolder"
-                text: qsTr("Locate folder…")
-                onClicked: {
-                    // The chooser belongs to the project it was opened for: an answer after a change does nothing.
-                    locateDialog.project = group.project;
-                    locateDialog.missing = group.project.missingDataFolder;
-                    locateDialog.open();
-                }
-            }
-        }
-        // A linked experiment whose data file cannot be found: the same line for the selected
-        // experiment, and Locate file… reads it from where it is now.
-        Row {
-            objectName: "experiments.dataFileNotFound"
-            visible: group.project !== null && group.project.missingDataFile !== ""
-            spacing: EaStyle.Sizes.fontPixelSize
-            EaElements.Label {
-                anchors.verticalCenter: parent.verticalCenter
-                width: EaStyle.Sizes.sideBarContentWidth - locateFileButton.width - parent.spacing
-                wrapMode: Text.Wrap
-                color: EaStyle.Colors.red
-                text: group.project !== null ? qsTr("Data not found: %1").arg(group.project.missingDataFile) : ""
-            }
-            EaElements.Button {
-                id: locateFileButton
-                objectName: "experiments.locateFile"
-                text: qsTr("Locate file…")
-                onClicked: {
-                    locateFileDialog.project = group.project;
-                    locateFileDialog.experiment = group.project.currentExperiment;
-                    locateFileDialog.open();
-                }
-            }
-        }
-        // Data from a collection that is not here yet (edi ADR-0069): it is downloaded when a fit starts, or now.
-        Row {
-            objectName: "experiments.collectionDataPending"
-            visible: group.project !== null && group.project.pendingCollectionData !== ""
-            spacing: EaStyle.Sizes.fontPixelSize
-            EaElements.Label {
-                anchors.verticalCenter: parent.verticalCenter
-                width: EaStyle.Sizes.sideBarContentWidth - downloadButton.width - parent.spacing
-                wrapMode: Text.Wrap
-                text: group.project !== null ? qsTr("Not downloaded yet: %1. It is downloaded when a fit starts.").arg(group.project.pendingCollectionData) : ""
-            }
-            EaElements.Button {
-                id: downloadButton
-                objectName: "experiments.downloadData"
-                text: qsTr("Download")
-                onClicked: group.project.downloadCollectionData()
-            }
-        }
-        FileDialog {
-            id: locateFileDialog
-            property ProjectViewModel project: null
-            property ExperimentViewModel experiment: null
-            title: qsTr("Locate the experiment's data file")
-            fileMode: FileDialog.OpenFile
-            onAccepted: {
-                if (project !== null && project === group.project)
-                    project.locateDataFile(experiment, selectedFile);
-            }
-        }
-        FolderDialog {
-            id: locateDialog
-            property ProjectViewModel project: null
-            property string missing: ""
-            title: qsTr("Locate the scan's data folder")
-            onAccepted: {
-                if (project !== null && project === group.project)
-                    project.locateDataFolder(selectedFolder, missing);
-            }
-        }
-
-        // Load ▾, Create and Duplicate side by side at equal widths (the owner, 2026-10-11, 2026-11-03). The Load menu
-        // holds a full experiment and measured data for the selected experiment, each from a file or from the web.
+        // Create, Load ▾ and Duplicate side by side at equal widths, Create first (the owner, 2026-10-11, 2026-11-03,
+        // 2026-11-14). Load brings a full experiment from a file or from the web; measured data for the selected
+        // experiment is the Measured data group's (MeasuredDataGroup).
         Row {
             id: buttons
 
@@ -361,12 +273,21 @@ SideBarGroup {
             spacing: EaStyle.Sizes.fontPixelSize
 
             EaElements.SideBarButton {
+                objectName: "experiments.create"
+                width: buttons.buttonWidth
+                enabled: group.project !== null && group.project.canCreateExperiment
+                fontIcon: "plus-circle"
+                text: qsTr("Create experiment")
+                ToolTip.text: enabled ? qsTr("Add an experiment without data, to calculate its pattern or load data into") : qsTr("A scan project fits its one template experiment")
+                onClicked: group.project.createExperiment()
+            }
+            EaElements.SideBarButton {
                 id: loadButton
                 objectName: "experiments.load"
                 width: buttons.buttonWidth
                 enabled: group.project !== null
                 fontIcon: "upload"
-                text: group.project && group.project.listingDatasetFolder ? qsTr("Listing datasets…") : qsTr("Load")
+                text: qsTr("Load")
 
                 // The menu's caret, from the icon font: the text fonts have no such character.
                 EaElements.Label {
@@ -378,7 +299,7 @@ SideBarGroup {
                     color: loadButton.enabled ? EaStyle.Colors.themeForeground : EaStyle.Colors.themeForegroundDisabled
                     text: "caret-down"
                 }
-                ToolTip.text: qsTr("Load a full experiment, or measured data into the selected one, from a file or from the web")
+                ToolTip.text: qsTr("Load a full experiment, with its type, data and parameters, from a file or from the web")
                 onClicked: loadMenu.open()
 
                 EaElements.Menu {
@@ -388,8 +309,6 @@ SideBarGroup {
                     // Nothing below the last item (the owner, 2026-11-04).
                     bottomPadding: 0
                     width: Math.max(loadButton.width, EaStyle.Sizes.fontPixelSize * 24)
-
-                    readonly property ExperimentViewModel selected: group.project ? group.project.currentExperiment : null
 
                     LoadMenuHeader {
                         first: true
@@ -412,57 +331,7 @@ SideBarGroup {
                         toolTip: qsTr("Search EasyDiffraction's collection for a full experiment and open it")
                         onTriggered: onlineLoad.openFor("experiment", null)
                     }
-                    // Measured data goes into the selected experiment, or replaces what it holds (the owner, 2026-11-04):
-                    // a new experiment always starts from Create experiment. With none selected the line says so and
-                    // the two items are greyed.
-                    readonly property bool dataIntoSelected: loadMenu.selected !== null && loadMenu.selected.canLoadData
-                    readonly property bool replacing: loadMenu.selected !== null && !loadMenu.selected.calculationOnly
-                    LoadMenuHeader {
-                        objectName: "experiments.load.dataHeader"
-                        // Guidance in the warning orange, as the Messages count (the owner, 2026-11-04).
-                        color: loadMenu.selected === null ? EaStyle.Colors.red : EaStyle.Colors.themeForeground
-                        text: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : loadMenu.replacing ? qsTr("Replace measured data of %1").arg(loadMenu.selected.name) : qsTr("Load measured data into %1").arg(loadMenu.selected.name)
-                    }
-                    LoadMenuItem {
-                        objectName: "experiments.load.dataFile"
-                        enabled: loadMenu.dataIntoSelected
-                        fontIcon: "file"
-                        text: qsTr("From file…")
-                        hint: ".xye .xy .dat .txt .csv · .int .hkl"
-                        toolTip: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : loadMenu.replacing ? qsTr("Replace the measured data of %1 with a file's; its type and parameters stay, Undo brings the data back").arg(loadMenu.selected.name) : qsTr("Load a measured pattern or reflection list into %1").arg(loadMenu.selected.name)
-                        onTriggered: group.confirmScanReplacement(() => group.chooseDataForSelected())
-                    }
-                    LoadMenuItem {
-                        objectName: "experiments.load.dataFolder"
-                        enabled: loadMenu.dataIntoSelected && group.project !== null && !group.project.listingDatasetFolder
-                        fontIcon: "folder-open"
-                        text: qsTr("From folder…")
-                        hint: Session.optionLabel("fitting_mode.type", "sequential")
-                        toolTip: qsTr("Load all datasets in a folder; fit the template first, then choose Sequential in Analysis")
-                        onTriggered: group.confirmScanReplacement(() => ApplicationInfo.chooseDatasetFolder(dataFolderDialog, group.project, loadMenu.selected))
-                    }
-                    LoadMenuItem {
-                        objectName: "experiments.load.dataWeb"
-                        enabled: loadMenu.dataIntoSelected
-                        fontIcon: "globe"
-                        text: qsTr("From web…")
-                        hint: "EasyDiffraction"
-                        toolTip: loadMenu.selected === null ? qsTr("Create an experiment first to load data into it") : qsTr("Search EasyDiffraction's collection for measured data for %1").arg(loadMenu.selected.name)
-                        onTriggered: {
-                            const target = loadMenu.selected;
-                            group.confirmScanReplacement(() => onlineLoad.openFor("data", target));
-                        }
-                    }
                 }
-            }
-            EaElements.SideBarButton {
-                objectName: "experiments.create"
-                width: buttons.buttonWidth
-                enabled: group.project !== null && group.project.canCreateExperiment
-                fontIcon: "plus-circle"
-                text: qsTr("Create experiment")
-                ToolTip.text: enabled ? qsTr("Add an experiment without data, to calculate its pattern or load data into") : qsTr("A scan project fits its one template experiment")
-                onClicked: group.project.createExperiment()
             }
             // A copy of the selected experiment with its data, named <name>_copy; its Data file cell then loads
             // another file in place of the copied one.
@@ -498,6 +367,18 @@ SideBarGroup {
             proceed: proceed
         }) as AppDialog;
         dialog.open();
+    }
+
+    // Measured data for the selected experiment from a folder of datasets or from the web (MeasuredDataGroup).
+    function chooseFolderForSelected() {
+        if (project !== null && project.currentExperiment !== null)
+            ApplicationInfo.chooseDatasetFolder(dataFolderDialog, project, project.currentExperiment);
+    }
+    function chooseWebDataForSelected() {
+        if (project !== null && project.currentExperiment !== null) {
+            const target = project.currentExperiment;
+            confirmScanReplacement(() => onlineLoad.openFor("data", target));
+        }
     }
 
     function chooseDataForSelected() {
