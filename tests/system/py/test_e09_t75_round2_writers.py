@@ -17,6 +17,7 @@ import tomllib
 import pytest
 import yaml
 
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e09_t75_sdk_consumer import ROOT, SHA, consumer
 
 
@@ -32,10 +33,12 @@ def test_all_prefix_writers_respect_an_existing_producer(tmp_path, caller):
         # Reachability stops at the native compiler boundary, whose effects are outside this gate.
         for tool in ('clang', 'clang++', 'llvm-profdata', 'llvm-cov'):
             binary = base / 'bin' / tool
-            binary.write_text('#!/bin/sh\nexit 91\n')
+            binary.write_text('#!/bin/sh\nexit 91\n', newline='\n')
             binary.chmod(0o755)
         cmake = base / 'bin/cmake'
-        cmake.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$SDK_COMMANDS"\nexit 91\n')
+        cmake.write_text(
+            '#!/bin/sh\nprintf "%s\\n" "$*" >> "$SDK_COMMANDS"\nexit 91\n', newline='\n'
+        )
         return env, repo, sdk
 
     if caller == 'sdk-task':
@@ -51,7 +54,7 @@ def test_all_prefix_writers_respect_an_existing_producer(tmp_path, caller):
 
     def run(env, repo):
         return subprocess.run(
-            ['bash', '-eu', '-c', command],
+            [environment_bash(), '-eu', '-c', command],
             cwd=repo,
             env=env,
             capture_output=True,

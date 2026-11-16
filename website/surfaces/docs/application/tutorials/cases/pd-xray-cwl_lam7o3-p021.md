@@ -6,6 +6,13 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. Its structure and experiment come from EasyDiffraction's collection with **Load ▾ From web…**, and each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+Fit the high-entropy perovskite La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O₃, seven cations on one site, to
+synchrotron X-ray powder data from P02.1 at PETRA III.
+
+The project is the catalogue case `pd-xray-cwl_lam7o3-p021`, the one the command line and the
+app's Examples open. The seven metals sharing one site have one displacement, held by
+constraints from the start.
+
 ## Create a project
 
 Press **Start** on Home, then **Create a new project**, and give it a name.

@@ -270,13 +270,23 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
             fail("the requested selector option is unavailable: " + action);
             return false;
         }
-        if (item->property("token").toString() == token) return true;
+        // Picking an option closes the list, as a click on it would; left open, the list would take the next
+        // action's click.
+        const auto close_list = [item] {
+            if (auto* popup = item->property("popup").value<QObject*>(); popup && popup->property("visible").toBool())
+                QMetaObject::invokeMethod(popup, "close");
+        };
+        if (item->property("token").toString() == token) {
+            close_list();
+            return true;
+        }
         // Chosen as the selector's own list does, through its `selected` signal: keys reach it only with focus.
         QMetaObject::invokeMethod(item, "selected", Q_ARG(QString, token));
         if (item->property("token").toString() != token) {
             fail("the selector did not retain the requested token: " + action);
             return false;
         }
+        close_list();
         return true;
     }
     if (action.startsWith("fill:")) {
@@ -312,7 +322,10 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
             QKeyEvent up(QEvent::KeyRelease, 0, Qt::NoModifier, QString(character));
             QCoreApplication::sendEvent(&window_, &up);
         }
-        if (item->property("text").toString() != text) { fail("form field did not retain the requested value"); return false; }
+        if (const auto shown = item->property("text").toString(); shown != text) {
+            fail("form field did not retain the requested value: typed '" + text + "', it shows '" + shown + "'");
+            return false;
+        }
         return true;
     }
     if (action.startsWith("import-data:")) {

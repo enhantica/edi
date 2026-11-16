@@ -24,6 +24,7 @@
 #include <atomic>
 #include <cmath>
 #include <filesystem>
+#include <deque>
 #include <limits>
 #include <numeric>
 #include <optional>
@@ -31,11 +32,13 @@
 #include <variant>
 #include <vector>
 
+#include "scan_progress.hpp"
 #include "edi/online_fetch.hpp"
 #include "edi/online_index.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
 #include "edi/display.hpp"
+#include "edi/edit.hpp"
 #include "edi/edits.hpp"
 #include "edi/fittability.hpp"
 #include "edi/io.hpp"
@@ -55,6 +58,8 @@
 #include "edi/version.hpp"
 
 #include <iomanip>
+#include <locale>
+#include <map>
 #include <sstream>
 #include "collection_views.hpp"
 #include "model_views_registry.hpp"
@@ -2307,6 +2312,8 @@ NB_MODULE(_edi, m) {
           "Show messages at this level and above: 'error', 'warning' (the default), 'info' or 'debug'. "
           "Errors always show.");
     m.def("log_level", [] { return edi::log_level(); }, "The current message level.");
+    m.def("_set_engine_threads", &edi::set_engine_threads, "count"_a);
+    m.def("_set_scan_workers", &edi::set_scan_workers, "count"_a);
     m.def("_collection_defaults", [] {
         return nb::make_tuple(edi::online::default_collection_sources(), edi::online::default_tutorials_source());
     });
@@ -3669,6 +3676,43 @@ NB_MODULE(_edi, m) {
             },
             nb::keep_alive<0, 1>(), "The linked structures (phases), keyed by structure_id.")
         .def_rw("dataset_weight", &edi::ExperimentBase::dataset_weight);
+    // The scattering tables (`_scattering_source`), as the app's Experiment page chooses them: each
+    // reads the table the calculation uses, None when the item is of the other probe; setting None
+    // goes back to the default.
+    struct ScatteringSourceAttribute {
+        const char* name;
+        edi::ScatteringSourceItem item;
+        const char* doc;
+    };
+    for (const ScatteringSourceAttribute& source : {
+             ScatteringSourceAttribute{"neutron_scattering_length", edi::ScatteringSourceItem::NEUTRON_SCATTERING_LENGTH,
+                                       "The neutron scattering lengths: rauch2003ext (the default) or sears1992; "
+                                       "None on an X-ray experiment."},
+             ScatteringSourceAttribute{"xray_form_factor", edi::ScatteringSourceItem::XRAY_FORM_FACTOR,
+                                       "The X-ray form factors: wk1995 (the default) or it1992; None on a neutron "
+                                       "experiment."},
+             ScatteringSourceAttribute{"xray_dispersion", edi::ScatteringSourceItem::XRAY_DISPERSION,
+                                       "The X-ray anomalous dispersion: cromer-liberman (the default), sasaki1989, "
+                                       "it1992 or none; None on a neutron experiment."}}) {
+        const edi::ScatteringSourceItem item = source.item;
+        experiment.def_prop_rw(
+            source.name,
+            [item](const edi::ExperimentBase& self) -> std::optional<std::string> {
+                const auto applies = edi::scattering_source_items(self.experiment_type.effective_radiation_probe());
+                if (std::find(applies.begin(), applies.end(), item) == applies.end()) {
+                    return std::nullopt;
+                }
+                const std::optional<std::string>& field =
+                    item == edi::ScatteringSourceItem::XRAY_FORM_FACTOR  ? self.xray_form_factor
+                    : item == edi::ScatteringSourceItem::XRAY_DISPERSION ? self.xray_dispersion
+                                                                         : self.neutron_scattering_length;
+                return field ? *field : edi::supported_scattering_sources(item).front();
+            },
+            [item](edi::ExperimentBase& self, const std::optional<std::string>& token) {
+                edi::select_scattering_source(self, item, token.value_or(std::string{}));
+            },
+            nb::arg("value").none(), source.doc);
+    }
 
     // The abstract intermediates: the powder base homes the pd-shared members exactly where upstream
     // places them; the single-crystal base exists and refuses construction until its physics arrives.
@@ -3740,14 +3784,17 @@ NB_MODULE(_edi, m) {
                          return out;
                      },
                      nb::keep_alive<0, 1>())
-        // A single crystal's calculation range (diffraction-lib ScDataRange); None for a powder.
+        // The calculation range (diffraction-lib ScDataRange, CwlPdDataRange or TofPdDataRange).
         .def_prop_ro(
             "data_range",
             [](edi::ExperimentBase& self) -> nb::object {
-                if (!self.reflections) {
-                    return nb::none();
+                if (self.reflections) {
+                    return nb::cast(edi::views::ScDataRangeNode{&self});
                 }
-                return nb::cast(edi::views::ScDataRangeNode{&self});
+                if (self.effective_beam_mode() == edi::BeamModeEnum::CONSTANT_WAVELENGTH) {
+                    return nb::cast(edi::views::CwlPdDataRangeNode{{&self}});
+                }
+                return nb::cast(edi::views::TofPdDataRangeNode{{&self}});
             },
             nb::keep_alive<0, 1>())
         // A single crystal's extinction; None for a powder.
@@ -4233,6 +4280,38 @@ NB_MODULE(_edi, m) {
             nb::arg("value").none(),
             "The resolution limit of a single crystal without measured reflections, in 1/angstrom: it calculates the "
             "reflections its space group allows up to this sin(theta)/lambda. None: no limit.");
+    // A powder's calculation range (edi::pd_calculation_range owns its rules): setting one value builds the grid
+    // again from it and the other two.
+    const auto def_pd_range = [](auto& cls, const char* axis_name) {
+        using Node = typename std::remove_reference_t<decltype(cls)>::Type;
+        const std::string prefix = axis_name;
+        static const edi::PdRangeValue values[] = {edi::PdRangeValue::Min, edi::PdRangeValue::Max,
+                                                   edi::PdRangeValue::Step};
+        for (int which = 0; which < 3; ++which) {
+            static const char* const suffixes[] = {"_min", "_max", "_inc"};
+            static std::deque<std::string> names;  // nanobind keeps the name pointer; a deque never moves it
+            names.push_back(prefix + suffixes[which]);
+            const edi::PdRangeValue value = values[which];
+            cls.def_prop_rw(
+                names.back().c_str(),
+                [value](const Node& self) {
+                    const auto range = edi::pd_calculation_range(*self.experiment);
+                    return value == edi::PdRangeValue::Min   ? range.min
+                           : value == edi::PdRangeValue::Max ? range.max
+                                                             : range.step.value_or(std::nan(""));
+                },
+                [value](Node& self, double number) { edi::set_pd_calculation_range(*self.experiment, value, number); });
+        }
+        cls.def_prop_ro("x_min", [](const Node& self) { return edi::pd_calculation_range(*self.experiment).min; });
+        cls.def_prop_ro("x_max", [](const Node& self) { return edi::pd_calculation_range(*self.experiment).max; });
+        cls.def_prop_ro("x_step", [](const Node& self) { return edi::pd_calculation_range(*self.experiment).step; });
+    };
+    nb::class_<edi::views::CwlPdDataRangeNode> cwl_pd_data_range(
+        m, "CwlPdDataRange", "A constant-wavelength powder's calculation range (diffraction-lib CwlPdDataRange).");
+    def_pd_range(cwl_pd_data_range, "two_theta");
+    nb::class_<edi::views::TofPdDataRangeNode> tof_pd_data_range(
+        m, "TofPdDataRange", "A time-of-flight powder's calculation range (diffraction-lib TofPdDataRange).");
+    def_pd_range(tof_pd_data_range, "time_of_flight");
     nb::class_<edi::views::ScReflnView>(m, "ReflnDataBase")
         .def_prop_ro("index_h",
                      [simulated](const edi::views::ScReflnView& self) -> nb::object {
@@ -4362,6 +4441,11 @@ NB_MODULE(_edi, m) {
           "The sample form a fit's metrics are named by: `single crystal` for a single-crystal fit, else empty.");
     // Scan renderers: the core owns every line; a surface only chooses the emission mode (in
     // place on a TTY, one line per file otherwise) and supplies the injected-clock elapsed.
+    m.def("_scan_progress_heading", &edi::detail::scan_progress_heading);
+    m.def("_scan_progress_row", &edi::detail::scan_progress_row, "completed"_a, "total_files"_a.none(),
+          "elapsed_seconds"_a, "measured_completed"_a, "ok_count"_a, "fail_count"_a, "reduced_chi_square"_a,
+          "chi2_low"_a, "chi2_high"_a, "file_name"_a, "columns"_a, "final_row"_a = false);
+    m.def("_scan_progress_rewrite", &edi::detail::scan_progress_rewrite);
     m.def("scan_progress_line", &edi::scan_progress_line, "completed"_a,
           "total_files"_a.none() = nb::none(), "elapsed_seconds"_a, "measured_completed"_a,
           "ok_count"_a, "fail_count"_a, "file_name"_a, "reduced_chi_square"_a,
@@ -4702,6 +4786,52 @@ NB_MODULE(_edi, m) {
         .def_prop_rw(
             "_template_file", [](const edi::Project& self) { return self.sequential_fit.template_file; },
             [](edi::Project& self, const std::string& file) { edi::set_scan_template_file(self, file); })
+        // The scan block (`_sequential_fit`), as the loader takes it, for the analysis facade's
+        // sequential_fit and sequential_fit_extract.
+        .def_prop_rw(
+            "_sequential_data_dir", [](const edi::Project& self) { return self.sequential_fit.data_dir; },
+            [](edi::Project& self, const std::string& data_dir) {
+                edi::validate_sequential_data_dir(data_dir, " (sequential_fit.data_dir)");
+                self.sequential_fit.data_dir = data_dir;
+            })
+        .def_prop_rw(
+            "_sequential_file_pattern", [](const edi::Project& self) { return self.sequential_fit.file_pattern; },
+            [](edi::Project& self, const std::string& pattern) {
+                if (pattern.empty()) {
+                    throw std::invalid_argument("sequential_fit.file_pattern is empty");
+                }
+                self.sequential_fit.file_pattern = pattern;
+            })
+        .def_prop_rw(
+            "_sequential_reverse", [](const edi::Project& self) { return self.sequential_fit.reverse; },
+            [](edi::Project& self, bool reverse) { self.sequential_fit.reverse = reverse; })
+        .def(
+            "_sequential_extract_create",
+            [](edi::Project& self, const std::string& id, const std::string& target, const std::string& pattern,
+               bool required) {
+                if (id.empty() || target.empty() || pattern.empty()) {
+                    throw std::invalid_argument("a sequential_fit_extract rule needs an id, a target and a pattern");
+                }
+                for (const auto& rule : self.sequential_fit.extract) {
+                    if (rule->id.value() == id) {
+                        throw std::invalid_argument("sequential_fit_extract already has a rule '" + id + "'");
+                    }
+                }
+                edi::SequentialExtractRule rule;
+                rule.id = id;
+                rule.target = target;
+                rule.pattern = pattern;
+                rule.required = required;
+                self.sequential_fit.extract.push_back(std::move(rule));
+            },
+            "id"_a, "target"_a, "pattern"_a, "required"_a)
+        .def_prop_ro("_sequential_extract_rows", [](const edi::Project& self) {
+            std::vector<std::tuple<std::string, std::string, std::string, bool>> rows;
+            for (const auto& rule : self.sequential_fit.extract) {
+                rows.emplace_back(rule->id.value(), rule->target.value(), rule->pattern.value(), rule->required.get());
+            }
+            return rows;
+        })
         .def_prop_rw(
             "fitting_mode", [](const edi::Project& self) { return self.fitting_mode; },
             [](edi::Project& self, const std::string& value) {

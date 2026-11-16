@@ -11,6 +11,7 @@ import sys
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e09_t75_sdk_consumer import consumer
 from tests.system.py.test_e09_t75_native_execution import restore
 from tests.system.py.test_e09_t75_sdk_update import update
@@ -45,7 +46,7 @@ def test_semantic_pin_readers_share_source_boundary_admission(tmp_path, reader, 
 
         def run(root, childenv):
             return subprocess.run(
-                ['bash', 'tools/ci/crysta-source.sh'],
+                [environment_bash(), 'tools/ci/crysta-source.sh'],
                 cwd=root,
                 env={**childenv, 'GITHUB_EVENT_NAME': 'push'},
                 capture_output=True,

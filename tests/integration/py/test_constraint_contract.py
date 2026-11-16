@@ -78,7 +78,7 @@ def test_angle_units_require_the_explicit_degree_conversion(tmp_path):
     aliases = [*ALIASES, ('gamma', 'phase.cell.angle_gamma')]
     directory = MATERIALIZE(tmp_path, aliases, ['b = a * sin(gamma * pi / 180)'])
     source = directory / 'structures/phase.edi'
-    source.write_text(source.read_text().replace('angle_gamma 90', 'angle_gamma 37'))
+    source.write_text(source.read_text().replace('angle_gamma 90', 'angle_gamma 37'), newline='\n')
     project = engine.Project.load(directory)
     project.analysis.calculate()
     assert pair(project)[1].value == pytest.approx(0.3 * math.sin(math.radians(37)), abs=2e-14), (
@@ -274,7 +274,7 @@ def free_case(tmp_path, source, *, loaded=False):
             text = text.replace(
                 'A La a Biso .25193 .25193 .25193', 'A La a Biso .25193 .25193() .25193'
             )
-        path.write_text(text)
+        path.write_text(text, newline='\n')
     return engine.Project.load(directory)
 
 
@@ -365,7 +365,9 @@ def test_background_address_uses_row_id_after_reordering(tmp_path):
     assert pair(project)[1].value == pytest.approx(0.9), (
         'the declared background key must resolve at its supplied row'
     )
-    path.write_text(path.read_text().replace('left 20 3\nright 100 9', 'right 100 9\nleft 20 3'))
+    path.write_text(
+        path.read_text().replace('left 20 3\nright 100 9', 'right 100 9\nleft 20 3'), newline='\n'
+    )
     project = engine.Project.load(directory)
     project.analysis.calculate()
     assert pair(project)[1].value == pytest.approx(0.9), (
@@ -535,7 +537,8 @@ def test_loaded_disabled_target_keeps_its_ordinary_free_flag_without_warning(tmp
         path
         .read_text()
         .replace('_constraint.expression\n', '_constraint.expression\n_constraint.enabled\n')
-        .replace('"b = 2*a + 1"\n', '"b = 2*a + 1" false\n')
+        .replace('"b = 2*a + 1"\n', '"b = 2*a + 1" false\n'),
+        newline='\n',
     )
     with warnings.catch_warnings(record=True) as messages:
         warnings.simplefilter('always')
@@ -564,7 +567,8 @@ def test_disabled_edge_is_excluded_from_cycle_detection(tmp_path):
         .read_text()
         .replace('_constraint.expression\n', '_constraint.expression\n_constraint.enabled\n')
         .replace('"a = b"\n', '"a = b" true\n')
-        .replace('"b = a"\n', '"b = a" false\n')
+        .replace('"b = a"\n', '"b = a" false\n'),
+        newline='\n',
     )
     project = engine.Project.load(directory)
     project.analysis.calculate()

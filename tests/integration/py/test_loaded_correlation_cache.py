@@ -1,13 +1,25 @@
 """Observe loaded-number reuse and invalidation through both production view entry points."""
 
 import json
+import os
+import shutil
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 import edi
 import pytest
 
 from tests.conftest import crysta_reference_prefix
+from tests.fixtures.loaded_correlation_cache.build_probe import (
+    build_runtime_path,
+    probe_environment,
+)
+from tests.fixtures.native_process import (
+    fresh_pixi_environment,
+    native_executable,
+    native_static_library,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = [
@@ -30,11 +42,16 @@ CASES = [
 @pytest.fixture(scope='module')
 def cache_probe(tmp_path_factory):
     build = tmp_path_factory.mktemp('loaded-correlation-cache')
-    core = Path(edi._edi.__file__).resolve().parents[2] / 'core/libedi_core.a'
+    core = native_static_library(
+        Path(edi._edi.__file__).resolve().parents[2] / 'core/libedi_core.a'
+    )
+    pixi = shutil.which('pixi')
+    assert pixi, 'The native view observer requires the selected Pixi environment manager'
     subprocess.run(
         [
-            'pixi',
+            pixi,
             'run',
+            '--frozen',
             '-e',
             'app',
             'python',
@@ -49,8 +66,20 @@ def cache_probe(tmp_path_factory):
             str(core),
         ],
         check=True,
+        env=fresh_pixi_environment(),
     )
-    return build / 'cmake/cache_probe'
+    directory = (build / 'cmake/qt-runtime-dir.txt').read_text(encoding='utf-8').strip()
+    assert directory and Path(directory).is_absolute() and Path(directory).is_dir(), (
+        'The native build publishes the existing absolute Qt runtime directory it actually links'
+    )
+    build_runtime_path(build)
+    environment = probe_environment(build)
+    if os.name == 'nt':
+        print('CACHE_PROBE_PATH ' + environment['PATH'], flush=True)
+    return SimpleNamespace(
+        binary=native_executable(build / 'cmake/cache_probe'),
+        environment=environment,
+    )
 
 
 def cells(frame):
@@ -63,7 +92,11 @@ def test_loaded_numeric_cache_tracks_current_rows_and_recorded_coefficient_write
     cache_probe, channel, scenario
 ):
     observed = json.loads(
-        subprocess.check_output([str(cache_probe), channel, scenario], text=True)
+        subprocess.check_output(
+            [str(cache_probe.binary), channel, scenario],
+            text=True,
+            env=cache_probe.environment,
+        )
     )
     frames = observed['frames']
     assert observed['sameOwner'], 'The alias escapes must reach genuinely shared ownership blocks'

@@ -569,3 +569,48 @@ short.
 The pin then advances to e7e096ff. A click on a spin box's plus or minus button reports the change as the user's, as
 Qt's own buttons do, so a caller that keeps the value on `valueModified` keeps it; and tooltips open after 1000 ms by
 default.
+
+
+#### Load-menu action and hint columns
+
+`LoadMenuItem` reserves one shared action-label width before the grey hint, for Structure
+and Experiment menus alike. The hint therefore starts at the same position for file,
+folder and web choices. Both columns elide within the menu width; longer guidance uses
+the existing tooltip rather than widening or overflowing the menu. No model-wide width
+scan or imperative QML measurement is involved.
+
+### Image and source-tag boundary repair
+
+Save-image and download-image invokables accept the actual `QImage` carried by
+Qt's grab result. They do not expose an untyped QVariant wrapper. Online-source
+kind chips reuse the existing Examples `TagChip` record as a registered QML value
+with label, glyph and theme colours; its invokable returns a typed list. Examples
+and Preferences therefore share the tag shape instead of adding a dictionary
+exception to the typed boundary. The existing icon values and tones are preserved.
+
+The scan-refresh standalone test depends on the same explicitly app-qualified
+app build as other app tests. A clean full verification must configure/build
+before invoking that target, and a failed build must prevent it. The existing
+no-build task dispatcher substitutes these scan executables after resolving their
+real dependencies; it never invokes CMake from an orchestration-only witness.
+
+Catalogue facet choices also expose a typed `FacetOption` list with value and
+title, retaining count text, sorting and filtering. ComboBoxMetrics observes its
+typed QObject control's model notification internally rather than exporting a
+QVariant model property. Its bounded native model sampling and role-change
+filter remain the same; changing controls disconnects the old model observer.
+Actual Qt controls exercise data changes, model replacement and disconnection.
+
+The parameter table compares its two numeric width lists through a typed native
+helper rather than serializing both as JSON. List order/length, zero and each
+finite width remain exact; the previous JSON-null treatment of nonfinite interim
+widths is preserved. The existing queued application of new widths is unchanged.
+
+Load-menu decoration labels are excluded from the accessibility children; the
+action text stays exposed and the format hint becomes its accessible description.
+Qt 6.11.2's WebAssembly menu mapping sets the requested name as HTML `title`,
+which loses to descendant text in the browser name computation. The actual 8f
+browser AX tree proved that icon and hint text polluted that name despite the
+explicit QML Accessible.name. The shared control now gives both desktop and web
+one action name while preserving hint information as a description.
+Upstream: [Qt WebAssembly accessibility implementation](https://github.com/qt/qtbase/blob/v6.11.2/src/plugins/platforms/wasm/qwasmaccessibility.cpp).

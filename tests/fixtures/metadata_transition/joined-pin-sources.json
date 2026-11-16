@@ -1,0 +1,49 @@
+{
+  "claim": "Committed source-stage receipt only; no numerical fit or recapture",
+  "before_revision": "42491216b12ea0d676a680e2606e513835c8f42d",
+  "intermediate_revision": "9d4162bb35cc1f361daf5e1e2fc0860b0def62cd",
+  "after_revision": "b2c6d9b1547ed6506d2bc36cae5f9a43b748895a",
+  "files": {
+    "docs/user/cli/pd-neut-cwl_cosio-d20/expected.json": {
+      "before_sha256": "12e45149be7ad5e2557cd524ce61774dcdae3ec1d7cf05e09871474c9afff37b",
+      "after_sha256": "c49388668e369669fca4902c8b9eea3a7f601777a917ca37efa9a529b4e6c2f8"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/expected.json": {
+      "before_sha256": "4f9a9586ac70c93392dd6bdb47b8e49e29a5b79202bc12a8b10016b9dab84835",
+      "after_sha256": "c7cac5b0f36476bcb07b932067dc1ac7ad5724cd1c224280ae7bcaede74923d2"
+    },
+    "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/expected.json": {
+      "before_sha256": "85d5c0aeebc606e4c9eba69d50c37563e96cc2c2d20b7b5523f61fffe92b25aa",
+      "after_sha256": "5fef88ddb461fe3238fb4a5c8d4dd188564e20797c9a4259cc8a4549d58b06fc"
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/expected.json": {
+      "before_sha256": "fb6b43996e590403b9d4a71376e94bae5e5c1ea988fec30ee1117e6844294a61",
+      "after_sha256": "d0fac3cc46897af042ddb5a3aa1877e93a1932b3052787ef5f1b1e50933ecf66"
+    },
+    "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/expected.json": {
+      "before_sha256": "f83a2d487d2ed68f570b52d0e25797f4a9ee89f30dc5b0eb98087d1d95027b1f",
+      "after_sha256": "550ed032830678784988b0e17e5d53c02ac0b424ddb27945c921026ce3ab6a4c"
+    },
+    "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/expected.json": {
+      "before_sha256": "6c7ed9153239ca571c04fac7099170fe32bf457c5e1f7ca7e4fcf202c6ec9ae0",
+      "after_sha256": "b867a85f8abf9fb0319756b0bf0689805117cc3d212ecac4dc5d6a090aaa8dea"
+    },
+    "docs/user/cli/pd-neut-tof_si-sepd_start-5/expected.json": {
+      "before_sha256": "ce8a290da8ac854830dde54c0a03f8ddece533d6e871f040cb865c360cdb3e99",
+      "after_sha256": "610feebb5648eaf0cc3647e5651bf3a9000282f68b5af38717f45b25ad43cd5e"
+    },
+    "docs/user/cli/pd-xray-cwl_lam7o3-p021/expected.json": {
+      "before_sha256": "6d5479fba55591b9557b5c3da40bca5474dda6c015d50180994856053196ac3b",
+      "after_sha256": "d21589a03e5794fdcb157d6cdb736bca3064c606ff1fbe52313d2910b44d4244"
+    },
+    "docs/user/cli/pd-xray-cwl_latp_scan-4f/expected.json": {
+      "before_sha256": "520268873c457caf36ddc7046e33856ce83d954fcce505ee5ba0368d1e5f68ab",
+      "after_sha256": "f717885cf443d8b83a3277399833fb1ed1f6965a9f0af0800324298ae5e92970",
+      "intermediate_sha256": "7204ecfaf1a055212f4273b81a2bbb453562b4d70ba22ed528da2181916f4725"
+    },
+    "docs/user/cli/pd-xray-cwl_pbso4-lab/expected.json": {
+      "before_sha256": "81b2095d856afcef4813627bd8b0cfcfe23b35477d218e515709fd0f149923eb",
+      "after_sha256": "1e330a6e61ef768f886f791074f663c0d5276a07df48bac505c9d534d6e69ee1"
+    }
+  }
+}

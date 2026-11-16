@@ -59,7 +59,9 @@ public:
     Q_INVOKABLE void injectChangelog(const QString& json) {
         qputenv("EDI_CHANGELOG_JSON", json.toUtf8());
     }
+    Q_INVOKABLE qint64 clockElapsed() const { return clock_ ? clock_->elapsed() : -1; }
     Q_INVOKABLE void startClock() {
+        if (clock_) return;
         clock_ = std::make_unique<OnboardingClock>();
         clock_->install();
     }
@@ -106,6 +108,10 @@ public:
     Q_INVOKABLE QString clipboard() const { return QGuiApplication::clipboard()->text(); }
     Q_INVOKABLE QVariant citation() const {
         return QJsonDocument::fromJson(qgetenv("EDI_ONBOARDING_CITATION_JSON")).toVariant();
+    }
+    Q_INVOKABLE QString bundledTutorialManifest() const {
+        QFile file(QStringLiteral(":/edi/tutorials/manifest.json"));
+        return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString{};
     }
     Q_INVOKABLE QString sourceText(const QString& relative) const {
         const auto root = QDir(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath()).absoluteFilePath("../../..");

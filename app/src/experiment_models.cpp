@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_models.hpp"
+#include "label_case.hpp"
 #include <string_view>
 
 #include <cmath>
@@ -39,7 +40,7 @@ void ParameterListModel::sync() {
         const ParameterItem* item = registry_.find(field.parameter);
         rows.append({field.parameter,
                      {parameter_role(registry_, field.parameter), QString::fromStdString(field.name),
-                      spec != nullptr ? QString::fromStdString(edi::label(edi::uid_of(*spec))) : QString::fromStdString(field.name),
+                      spec != nullptr ? label_case(QString::fromStdString(edi::label(edi::uid_of(*spec)))) : QString::fromStdString(field.name),
                       item != nullptr ? item->shortName() : QString::fromStdString(field.name),
                       spec != nullptr ? QString::fromStdString(edi::units_label(edi::uid_of(*spec))) : QString(), field.used_by_profile}});
     }

@@ -3,6 +3,8 @@
 
   crysta_sdk.py fetch --platform P    reuse or unpack the pinned commit's SDK, check it
   crysta_sdk.py check --sdk DIR --platform P    the fingerprint check alone (CRYSTA_SDK_DIR)
+  crysta_sdk.py preflight --source-lock PATH --platform P --lockfile PATH --environment ENV
+      compare producer and consumer ABI package locks before compiling a cold SDK
   crysta_sdk.py pins pixi.toml    the pinned commit
 
 The pin is `CRYSTA_COMMIT` under `[activation.env]` in pixi.toml. edi's own CI builds that commit's
@@ -15,7 +17,7 @@ one. Nothing is downloaded from crysta. Every refusal exits 1 naming its cause.
 from __future__ import annotations
 
 import argparse
-import fcntl
+import contextlib
 import hashlib
 import json
 import os
@@ -24,11 +26,12 @@ import shutil
 import sys
 import tarfile
 import tomllib
+from collections.abc import Iterator
 from pathlib import Path
 from typing import NoReturn
 
 ROOT = Path(__file__).resolve().parents[2]
-PLATFORMS = ('linux-64', 'osx-arm64')
+PLATFORMS = ('linux-64', 'osx-arm64', 'win-64')
 MANIFEST = 'share/crysta-sdk/manifest.json'
 
 
@@ -64,10 +67,15 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def lock_packages(env: str, platform: str) -> dict[str, tuple[str, str]]:
+def lock_packages(
+    env: str, platform: str, lockfile: Path | None = None
+) -> dict[str, tuple[str, str]]:
     """Return ``{name: (version, build)}`` pixi.lock resolves for ``env`` on ``platform``."""
-    lines = (ROOT / 'pixi.lock').read_text(encoding='utf-8').splitlines()
-    head = lines[: next(i for i, x in enumerate(lines) if x.startswith('environments:'))]
+    lines = (lockfile or ROOT / 'pixi.lock').read_text(encoding='utf-8').splitlines()
+    environments_at = next((i for i, line in enumerate(lines) if line == 'environments:'), None)
+    if environments_at is None:
+        refuse(f'{lockfile or ROOT / "pixi.lock"}: missing lock environments')
+    head = lines[:environments_at]
     plats: dict[str, str] = {}  # lock platform name -> conda subdir (without `subdir:`, its name)
     name = None
     for ln in head:
@@ -118,8 +126,65 @@ REQUIRED = {
         'sleef',
     },
 }
+REQUIRED['win-64'] = {'vs2022_win-64', 'vc14_runtime', 'vcomp14', 'eigen'}
 TESTED = ('lib/libcrysta_core.a', 'bin/crysta')  # the qualified bytes the manifest's hashes bind
 RUNTIME = 'lib/crysta-runtime'  # The env libraries the SDK's CLI carries
+
+
+def preflight(source_lock: Path, platform: str, lockfile: Path, environment: str) -> None:
+    """Refuse incompatible locked ABI packages before an uncached SDK is compiled."""
+    producer = lock_packages('cpp-ci', platform, source_lock)
+    consumer = lock_packages(environment, platform, lockfile)
+    differences = []
+    for name in sorted(REQUIRED[platform]):
+        built, used = producer.get(name), consumer.get(name)
+        if built is None or used is None or built != used:
+            differences.append(f'{name}: producer {built!r}, consumer {used!r}')
+    if differences:
+        refuse(
+            f'SDK package locks differ for {platform}, environment {environment!r}: '
+            + '; '.join(differences)
+        )
+
+
+def tested_paths(platform: str) -> tuple[str, str]:
+    """The actual qualified library and CLI layout for the target."""
+    return ('lib/crysta_core.lib', 'bin/crysta.exe') if platform == 'win-64' else TESTED
+
+
+def runtime_paths(sdk_dir: Path, platform: str) -> set[str]:
+    """Every runtime file carried by the SDK."""
+    if platform == 'win-64':
+        return {
+            p.relative_to(sdk_dir).as_posix()
+            for p in (sdk_dir / 'bin').iterdir()
+            if p.suffix.lower() == '.dll'
+        }
+    return {p.relative_to(sdk_dir).as_posix() for p in (sdk_dir / RUNTIME).glob('*')}
+
+
+@contextlib.contextmanager
+def acquisition_lock(path: Path) -> Iterator[None]:
+    """Serialize acquisitions using the native file lock on either host."""
+    with path.open('a+b') as lock:
+        if os.name == 'nt':
+            import msvcrt  # noqa: PLC0415 - Windows-only standard library
+
+            if lock.seek(0, os.SEEK_END) == 0:
+                lock.write(b'0')
+                lock.flush()
+            lock.seek(0)
+            msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+            try:
+                yield
+            finally:
+                lock.seek(0)
+                msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl  # noqa: PLC0415 - Unix-only standard library
+
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            yield
 
 
 def untested_allowed() -> bool:
@@ -149,9 +214,37 @@ def qualified(sdk_dir: Path, tested: dict) -> None:
                 )
             continue
         if not (
-            isinstance(t.get('total'), int) and t['total'] > 0 and t.get('passed') == t['total']
+            type(t.get('total')) is int
+            and type(t.get('passed')) is int
+            and t['total'] > 0
+            and t['passed'] == t['total']
         ):
             refuse(f'{sdk_dir}: the {tier} qualification is not complete ({t})')
+
+
+def windows_shape(sdk_dir: Path, manifest: dict, carried: dict) -> None:
+    """Validate the case-insensitive DLL namespace and configured MSVC ABI."""
+    if len({p.lower() for p in carried}) != len(carried):
+        refuse(f'{sdk_dir}: Windows runtime names have case aliases')
+    for rel in carried:
+        if not re.fullmatch(r'bin/[A-Za-z0-9_.-]+\.dll', rel, re.IGNORECASE):
+            refuse(f'{sdk_dir}: unsafe Windows runtime name {rel!r}')
+
+    compiler = manifest['fingerprint'].get('compiler', {})
+    profile_error = f'{sdk_dir}: Windows SDK lacks its qualified MSVC DLL runtime/compiler'
+    if (
+        not carried
+        or not isinstance(compiler, dict)
+        or not isinstance(compiler.get('version'), str)
+    ):
+        refuse(profile_error)
+    if (
+        compiler.get('id') != 'MSVC'
+        or compiler.get('architecture') != 'x64'
+        or compiler.get('runtime') != 'MultiThreadedDLL'
+        or not re.fullmatch(r'19\.[0-9]+\.[0-9]+(?:\.[0-9]+)?', compiler['version'])
+    ):
+        refuse(profile_error)
 
 
 def shape(sdk_dir: Path, manifest: dict, platform: str) -> None:
@@ -168,21 +261,24 @@ def shape(sdk_dir: Path, manifest: dict, platform: str) -> None:
     tested = manifest.get('tested') or {}
     qualified(sdk_dir, tested)
     # Absent bytes and an absent record never qualify each other
-    for rel in TESTED:
+    for rel in tested_paths(platform):
         want = (tested.get('sha256') or {}).get(rel)
         if not (isinstance(want, str) and re.fullmatch(r'[0-9a-f]{64}', want)):
             refuse(f'{sdk_dir}: the manifest records no sha256 for the tested {rel}')
         if not (sdk_dir / rel).is_file() or sha256(sdk_dir / rel) != want:
             refuse(f'{sdk_dir}: {rel} is missing or not the qualified binary the manifest records')
     # The runtime the CLI loads is the qualified one, nothing else beside it
-    carried = {
-        k: v for k, v in (tested.get('sha256') or {}).items() if k.startswith(RUNTIME + '/')
-    }
-    present = {p.relative_to(sdk_dir).as_posix() for p in (sdk_dir / RUNTIME).glob('*')}
+    hashes = tested.get('sha256') or {}
+    carried = (
+        {k: v for k, v in hashes.items() if (k.startswith('bin/') and k.lower().endswith('.dll'))}
+        if platform == 'win-64'
+        else {k: v for k, v in hashes.items() if k.startswith(RUNTIME + '/')}
+    )
+    present = runtime_paths(sdk_dir, platform)
+    if platform == 'win-64':
+        windows_shape(sdk_dir, manifest, carried)
     if present != set(carried):
-        refuse(
-            f'{sdk_dir}: {RUNTIME} holds {sorted(present)}, not the qualified {sorted(carried)}'
-        )
+        refuse(f'{sdk_dir}: runtime holds {sorted(present)}, not the qualified {sorted(carried)}')
     for rel, want in carried.items():
         if sha256(sdk_dir / rel) != want:
             refuse(f'{sdk_dir}: {rel} is not the qualified runtime the manifest records')
@@ -193,22 +289,40 @@ def compatible(sdk: dict, got: tuple[str, str] | None) -> bool:
     return got == (sdk['version'], sdk['build'])
 
 
-def check(sdk_dir: Path, platform: str) -> dict:
+def macos_target(value: object) -> tuple[int, int, int] | None:
+    """A declared numeric deployment target, normalized for version ordering."""
+    if not isinstance(value, str) or not re.fullmatch(r'[0-9]+(?:\.[0-9]+){0,2}', value):
+        return None
+    parts = [int(part) for part in value.split('.')]
+    return tuple((parts + [0, 0])[:3])
+
+
+def check(
+    sdk_dir: Path,
+    platform: str,
+    *,
+    lockfile: Path | None = None,
+    environment: str | None = None,
+) -> dict:
     """Refuse an SDK built for another platform or toolchain (I25); return its manifest."""
     manifest = json.loads((sdk_dir / MANIFEST).read_text(encoding='utf-8'))
     if manifest.get('platform') != platform:
         refuse(f'{sdk_dir} is a {manifest.get("platform")} SDK, not {platform}')
     shape(sdk_dir, manifest, platform)
-    env = os.environ.get('PIXI_ENVIRONMENT_NAME') or 'default'
-    locked = lock_packages(env, platform)
+    env = environment or os.environ.get('PIXI_ENVIRONMENT_NAME') or 'default'
+    locked = lock_packages(env, platform, lockfile) if lockfile else lock_packages(env, platform)
     bad = [
         f'{p["name"]} {p["version"]} {p["build"]} (locked {locked.get(p["name"])})'
         for p in manifest['fingerprint']['packages']
         if not compatible(p, locked.get(p['name']))
     ]
     target = manifest['fingerprint'].get('macos_deployment_target')
-    if target != (os.environ.get('MACOSX_DEPLOYMENT_TARGET') or None):
-        here = os.environ.get('MACOSX_DEPLOYMENT_TARGET')
+    here = os.environ.get('MACOSX_DEPLOYMENT_TARGET') or None
+    if platform == 'osx-arm64':
+        sdk_target, consumer_target = macos_target(target), macos_target(here)
+        if sdk_target is None or consumer_target is None or sdk_target > consumer_target:
+            bad.append(f'deployment target {target} (this environment {here})')
+    elif target != here:
         bad.append(f'deployment target {target} (this environment {here})')
     if bad:
         refuse(f'the SDK fingerprint does not resolve in environment {env!r}: {"; ".join(bad)}')
@@ -221,8 +335,7 @@ def fetch(platform: str) -> Path:
     home = ROOT / 'build' / 'crysta-sdk' / f'{sha}-{platform}'
     home.parent.mkdir(parents=True, exist_ok=True)
     # One acquisition at a time into the cache every environment shares
-    with (home.parent / '.lock').open('w') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with acquisition_lock(home.parent / '.lock'):
         marker = home / '.sdk-sha256'
         if marker.is_file() and (home / MANIFEST).is_file():
             kept = json.loads((home / MANIFEST).read_text(encoding='utf-8'))
@@ -243,6 +356,14 @@ def fetch(platform: str) -> Path:
         home.mkdir(parents=True)
         with tarfile.open(tarball) as tar:
             tar.extractall(home, filter='data')
+        manifest = json.loads((home / MANIFEST).read_text(encoding='utf-8'))
+        if not isinstance(manifest, dict):
+            refuse(f'{tarball}: SDK manifest is not an object; requested {sha} on {platform}')
+        if manifest.get('source_sha') != sha or manifest.get('platform') != platform:
+            refuse(
+                f'{tarball}: SDK source {manifest.get("source_sha")!r} on '
+                f'{manifest.get("platform")!r} differs from requested source {sha} on {platform}'
+            )
         marker.write_text(sha256(tarball) + '\n', encoding='utf-8')
         return home
 
@@ -251,16 +372,25 @@ def main(argv: list[str]) -> int:
     """Dispatch a subcommand; a refusal exits 1."""
     parser = argparse.ArgumentParser(prog='crysta_sdk.py', description=__doc__)
     sub = parser.add_subparsers(dest='cmd', required=True)
-    sub.add_parser('fetch').add_argument('--platform', required=True, choices=PLATFORMS)
+    fetch_parser = sub.add_parser('fetch')
+    fetch_parser.add_argument('--platform', required=True, choices=PLATFORMS)
+    pre = sub.add_parser('preflight')
+    pre.add_argument('--source-lock', required=True, type=Path)
+    pre.add_argument('--platform', required=True, choices=PLATFORMS)
+    pre.add_argument('--lockfile', required=True, type=Path)
+    pre.add_argument('--environment', required=True)
     # The pinned commit
     sub.add_parser('pins').add_argument('pixi_toml', type=Path)
     p = sub.add_parser('check')
     p.add_argument('--sdk', required=True, type=Path)
     p.add_argument('--platform', required=True, choices=PLATFORMS)
+    for command in (fetch_parser, p):
+        command.add_argument('--lockfile', type=Path)
+        command.add_argument('--environment')
     a = parser.parse_args(argv)
     try:
         run(a)
-    except (RefusedError, OSError, KeyError, ValueError) as refusal:
+    except (RefusedError, OSError, KeyError, ValueError, tarfile.TarError) as refusal:
         print(f'crysta_sdk.py {a.cmd}: REFUSED — {refusal}', file=sys.stderr)
         return 1
     return 0
@@ -271,8 +401,15 @@ def run(a: argparse.Namespace) -> None:
     if a.cmd == 'pins':
         print(pinned(a.pixi_toml.read_text(encoding='utf-8')))
         return
+    if a.cmd == 'preflight':
+        preflight(a.source_lock, a.platform, a.lockfile, a.environment)
+        print(f'crysta: SDK ABI package locks match {a.platform} / {a.environment}')
+        return
     home = fetch(a.platform) if a.cmd == 'fetch' else a.sdk.resolve()
-    manifest = check(home, a.platform)
+    options = {
+        key: getattr(a, key) for key in ('lockfile', 'environment') if getattr(a, key, None)
+    }
+    manifest = check(home, a.platform, **options)
     digest = (home / '.sdk-sha256').read_text().strip() if a.cmd == 'fetch' else 'diagnostic'
     print(  # line 1: the provenance line build-crysta.sh prints; line 2: the SDK's directory
         f'crysta: using SDK build-{manifest["source_sha"]} tree {manifest["source_tree"]} '

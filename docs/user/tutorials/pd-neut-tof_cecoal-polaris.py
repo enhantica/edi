@@ -5,28 +5,81 @@
 # Fit CeCoAl₃ to time-of-flight neutron powder data from POLARIS at ISIS: structure and profile,
 # with a 24-term Chebyshev background.
 #
-# The project is the catalogue case `pd-neut-tof_cecoal-polaris`, the one the command line and the
-# app's Examples open.
+# It builds the catalogue case `pd-neut-tof_cecoal-polaris` step by step: the same project the
+# command line fits and the app's Examples open.
+
+# %% [markdown]
+# ## Import the library
 
 # %%
 import easydiffraction as edi
 
 # %% [markdown]
-# ## Load the project
+# ## Define the project
+#
+# A new project is empty: it holds no structure and no experiment until you add them.
 
 # %%
-project_path = edi.download_data('pd-neut-tof_cecoal-polaris', destination='data')
-project = edi.Project.load(project_path)
-structure = project.structures['cecoal']
-experiment = project.experiments['polaris']
+project = edi.Project(name='pd-neut-tof_cecoal-polaris')
 
 # %% [markdown]
-# The project marks what its fit frees. The fit below frees it in stages, so start with all of it
-# fixed.
+# ## Define the structure
+#
+# Load the structure from EasyDiffraction's collection. Its CIF gives the space group, the cell and
+# the atom sites.
 
 # %%
-for parameter in project.free_parameters:
-    parameter.free = False
+path = edi.download_data('pd-neut-tof_cecoal-polaris-cecoal', destination='data')
+project.structures.add_from_cif_path(path)
+structure = project.structures['cecoal']
+
+# %%
+project.display.structure('cecoal')
+
+# %% [markdown]
+# ## Define the experiment
+#
+# Create the experiment from the measured data in EasyDiffraction's collection, then describe the
+# instrument, the peak profile, the background and the structure it links.
+
+# %%
+data_path = edi.download_data('pd-neut-tof_cecoal-polaris-polaris-data', destination='data')
+project.experiments.add_from_data_path(
+    name='polaris',
+    data_path=data_path,
+    sample_form='powder',
+    beam_mode='time-of-flight',
+    radiation_probe='neutron',
+    scattering_type='bragg',
+)
+experiment = project.experiments['polaris']
+experiment.neutron_scattering_length = 'sears1992'
+experiment.peak.type = 'tof-jorgensen-von-dreele'
+experiment.absorption.type = 'cylinder'
+experiment.background.type = 'chebyshev'
+experiment.instrument.name = 'POLARIS'
+experiment.instrument.facility = 'ISIS'
+experiment.peak.cutoff_fwhm = 4.2
+experiment.peak.rise_alpha_1 = 0.2971
+experiment.peak.decay_beta_0 = 0.043085
+experiment.peak.decay_beta_1 = 0.002867
+experiment.peak.broad_gauss_sigma_1 = 40
+experiment.peak.broad_lorentz_gamma_1 = 5
+experiment.instrument.setup_twotheta_bank = 145.0
+experiment.instrument.calib_d_to_tof_linear = 6176.03076
+experiment.instrument.calib_d_to_tof_quadratic = -1.92194
+experiment.background_x_min = 3001.5891
+experiment.background_x_max = 19004.6582
+experiment.excluded_regions.create(start=2000.1, end=3000.0)
+experiment.excluded_regions.create(start=19000.0, end=20000.0)
+experiment.linked_structures.create(structure_id='cecoal', scale=20000)
+terms = []
+for coef in (25000.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0):
+    term = edi.PolynomialTerm()
+    term.order = len(terms)
+    term.coef = coef
+    terms.append(term)
+experiment.background_terms = terms
 
 # %%
 project.display.pattern('polaris')
@@ -160,8 +213,16 @@ project.display.fit.correlations()
 project.display.structure('cecoal')
 
 # %% [markdown]
+# ## Report
+#
+# The HTML report draws the measured, calculated and difference patterns with the reflection
+# positions, and lists the structures, the experiments and the fit. Open it in a browser.
+
+# %%
+project.report.save_html('pd-neut-tof_cecoal-polaris.html')
+
+# %% [markdown]
 # ## Save the project
 
 # %%
 project.save_as('pd-neut-tof_cecoal-polaris')
-project.report.save_html('pd-neut-tof_cecoal-polaris.html')

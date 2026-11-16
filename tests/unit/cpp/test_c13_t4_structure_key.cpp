@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <limits>
@@ -14,9 +15,9 @@
 
 TEST_CASE("C13-T4 adapter validates the raw texture structure key") {
     // Direct C++ insertion bypasses PrefOrientsView and the file loader.
-    const std::string fixture =
-        std::string(__FILE__).substr(0, std::string(__FILE__).find("tests/unit/")) +
-        "tests/fixtures/c13_t4_march/model.edi";
+    const auto fixture =
+        std::filesystem::path(__FILE__).parent_path().parent_path().parent_path() /
+        "fixtures/c13_t4_march/model.edi";
     std::ifstream input(fixture);
     REQUIRE_MESSAGE(input.good(), " native adapter gate must read the independent fixture");
     const std::string text((std::istreambuf_iterator<char>(input)), {});
@@ -52,9 +53,9 @@ TEST_CASE("C13-T4 adapter validates the raw texture structure key") {
 }
 
 TEST_CASE("C13-T4 adapter refuses raw March domains before conversion") {
-    const std::string fixture =
-        std::string(__FILE__).substr(0, std::string(__FILE__).find("tests/unit/")) +
-        "tests/fixtures/c13_t4_march/model.edi";
+    const auto fixture =
+        std::filesystem::path(__FILE__).parent_path().parent_path().parent_path() /
+        "fixtures/c13_t4_march/model.edi";
     std::ifstream input(fixture);
     REQUIRE_MESSAGE(input.good(), " raw domain gate requires its independent fixture");
     const std::string text((std::istreambuf_iterator<char>(input)), {});

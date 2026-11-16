@@ -8,7 +8,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from plan import markdown_note, note_interfaces, release_body
+from plan import markdown_note, note_interfaces, release_body, release_title
 from promote import ROOT, components_validator, digest, validate_cli, validate_wheel
 from publish_assets import (
     check_existing,
@@ -131,7 +131,7 @@ def publish(repo: str, release: dict, notes: str, archives: list[tuple[Path, str
     notes = release_body(notes, release['date'])
     version = release['version']
     tag = 'v' + version
-    title = 'edi ' + version
+    title = release_title(version, release['date'], preview=True)
     command = ['gh', 'release']
 
     existing = find_release(repo, tag, title)

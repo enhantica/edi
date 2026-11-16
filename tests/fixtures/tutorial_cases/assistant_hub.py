@@ -93,16 +93,27 @@ def plain(node):
 def availability_flag(cell):
     text = ' '.join(cell.get_text(' ', strip=True).casefold().split())
     checks = cell.select('input[type=checkbox]')
-    if checks:
-        assert len(checks) == 1, 'Gate 3/4: one availability cell contains one check state'
-        return checks[0].has_attr('checked')
+    assert len(checks) <= 1, 'Gate 3/4: one availability cell contains at most one check state'
     tokens = {
         text,
-        *(node.get('aria-label', '').casefold() for node in cell.select('[aria-label]')),
+        *((node.get('aria-label') or '').casefold() for node in cell.select('[aria-label]')),
     }
+    states = {check.has_attr('checked') for check in checks}
+    states.update(
+        not label.startswith('not ')
+        for label in tokens
+        if re.fullmatch(r'(?:not )?(?:available|supported):\s*\S.*', label)
+    )
     if tokens & {'✓', '✔', '☑', 'yes', 'available', 'supported', 'check'}:
-        return True
-    if text in {'', '—', '\u2013', '-', 'no', 'not available', 'not supported', '✗', '✕', 'times'}:
+        states.add(True)
+    if tokens & {'—', '\u2013', '-', 'no', 'not available', 'not supported', '✗', '✕', 'times'}:
+        states.add(False)
+    assert len(states) <= 1, (
+        'Gate 3/4: visible, checkbox and accessible availability states must not contradict'
+    )
+    if states:
+        return states.pop()
+    if not any(tokens):
         return False
     raise AssertionError(
         'Gate 3/4: the availability table exposes an unambiguous check state: ' + text

@@ -20,6 +20,11 @@ sites:
     catalogue: true
   - file: tests/system/py/test_tutorial_command_line_stages.py
     tutorial_stages: true
+    why: Positive and damaged-input controls retain the actual tutorial-origin admission boundary after the full workflows move to nightly.
+    assertion_feed: Invalid-operand admission controls, exact catalogue input bytes, native measured arrays and refusal of redirected or extra inputs.
+    audit: 2026-11-15; the unchanged controls never enter a solver with their deliberately invalid operand.
+  - file: tests/system/py/test_tutorial_command_line_workflows.py
+    tutorial_stages: true
     why: Owner 4cf15ae54 requires successive visible file edits and actual CLI fits of the declared tutorial catalogue.
     assertion_feed: Labelled regression pins and Python stage order; admission freezes canonical input bytes and the actual measured arrays.
     audit: 2026-11-09; exact registered file only, canonical .edi path set, unchanged measured coordinates, intensities and uncertainties after loading.
@@ -125,6 +130,10 @@ sites:
   - file: tests/integration/py/test_phase_scan.py
     case: multiphase-scales
     why: Authored two-phase scan controls recover known linear coefficients and compare each file with its single multiphase fit.
+
+  - file: tests/system/py/test_phase_scan_parity.py
+    case: multiphase-scales
+    why: The same authored scan/single parity and reopen workflow moved to system, preserving its exact corpus identity and PR core cadence.
 
 
   - file: tests/integration/py/test_phase_scan_class_boundaries.py
@@ -303,3 +312,13 @@ sites:
     case: single-crystal-cwl-tbti-basic
     why: Fit a byte-identical copy of the pinned measured project.
     assertion_feed: Independent FullProf structure factors and weighted normal equations from the corpus reference.
+
+  - file: tests/system/py/test_cli_performance_options.py
+    case: cosio-d20-scan-3f
+    why: Both real CLI hosts fit disposable copies of the pinned three-file scan to exercise process performance selections.
+    assertion_feed: Existing getter state, scan-start group invariants, exact scientific output invariance and native/Python reporting parity.
+
+  - file: tests/system/py/test_cli_progress_table.py
+    case: cosio-d20-scan-3f
+    why: Both real CLI hosts fit a disposable pinned scan to exercise pipe and PTY progress routing.
+    assertion_feed: Actual completion cardinality, fixed numeric fields, bounded terminal writes and saved failure totals.

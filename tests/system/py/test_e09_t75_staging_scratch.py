@@ -13,6 +13,7 @@ import pytest
 
 from tests.fixtures.e09_t75_commands import COMMANDS
 from tests.fixtures.e09_t75_scratch import HOLD, directories, exercise
+from tests.fixtures.native_process import environment_bash
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -25,7 +26,8 @@ def program(path, body):
         + '\nimport os,sys\nfrom pathlib import Path\n'
         + COMMANDS
         + HOLD
-        + body
+        + body,
+        newline='\n',
     )
     path.chmod(0o755)
 
@@ -64,7 +66,7 @@ def ui_capture(tmp_path, ending):
     env = {k: v for k, v in os.environ.items() if k not in {'QT_QPA_PLATFORM', 'DISPLAY'}}
     env.update(PATH=str(bindir) + ':' + os.defpath, CONDA_PREFIX=str(tmp_path))
     directories(tmp_path, env)
-    exercise(['bash', 'tools/ci/app-ui-test.sh'], repo, env, ending)
+    exercise([environment_bash(), 'tools/ci/app-ui-test.sh'], repo, env, ending)
 
 
 @pytest.mark.parametrize('route', ['corpus-policy', 'cli-settings', 'cli-execution'])

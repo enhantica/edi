@@ -14,12 +14,16 @@ ComboBoxMetrics::ComboBoxMetrics(QObject* parent) : QObject(parent) {
     connect(this, &ComboBoxMetrics::countChanged, this, &ComboBoxMetrics::invalidate);
     connect(this, &ComboBoxMetrics::textRoleChanged, this, &ComboBoxMetrics::invalidate);
     connect(this, &ComboBoxMetrics::displayTextChanged, this, &ComboBoxMetrics::schedule);
-    connect(this, &ComboBoxMetrics::modelChanged, this, &ComboBoxMetrics::observeModel);
 }
 
 void ComboBoxMetrics::setComboBox(QObject* control) {
     if (control != control_) {
+        disconnect(control_model_connection_);
         control_ = control;
+        if (control_) {
+            control_model_connection_ = connect(control_, SIGNAL(modelChanged()), this, SLOT(observeModel()));
+        }
+        observeModel();
         emit comboBoxChanged();
     }
 }
@@ -33,7 +37,7 @@ void ComboBoxMetrics::observeModel() {
         disconnect(connection);
     }
     model_connections_.clear();
-    model_object_ = qobject_cast<QAbstractItemModel*>(model_.value<QObject*>());
+    model_object_ = control_ ? qobject_cast<QAbstractItemModel*>(control_->property("model").value<QObject*>()) : nullptr;
     if (auto* model = model_object_.data()) {
         model_connections_.append(connect(model, &QAbstractItemModel::dataChanged, this,
             [this, model](const QModelIndex& first, const QModelIndex& last, const QList<int>& roles) {

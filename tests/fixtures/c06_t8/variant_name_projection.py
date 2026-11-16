@@ -4,12 +4,15 @@ import hashlib
 import json
 from pathlib import Path
 
+from tests.fixtures.path_keys import repository_key
+
 
 def restore_variant_name(relative, raw):
+    relative = repository_key(relative)
     rows = json.loads(Path(__file__).with_name('variant-name-projection.json').read_text())[
         'files'
     ]
-    row = rows.get(str(relative))
+    row = rows.get(relative)
     if row is None:
         return raw
     assert hashlib.sha256(raw).hexdigest() == row['after_sha256'], (

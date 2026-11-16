@@ -3,9 +3,12 @@
 import re
 
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.project_categories.historical_bytes import native_edi_bytes
 
 
 def without_calculator(name, saved):
+    if name.endswith('.edi'):
+        saved = native_edi_bytes(saved)
     if not (name.startswith('experiments/') and name.endswith('.edi')):
         return saved
     declaration = b'_calculator.type crysta\n\n'

@@ -6,6 +6,13 @@ template: gui.html
 
 The same staged fit as the Python and Command line tutorials, in the app. A scan's patterns come with its project, so open it from EasyDiffraction's collection with **Project → Examples**; each stage frees its parameters in the **Parameters** table on **Analysis** before the fit.
 
+Fit three phases, LATP and two AlPO₄ forms, to 73 synchrotron X-ray patterns from BM01 at ESRF,
+one after another, with linked displacement parameters.
+
+It builds the catalogue case `pd-xray-cwl_latp-bm01_scan` step by step: the same project the
+command line fits and the app's Examples open. Al shares Ti's site, coordinate and displacement,
+and the impurity phase's displacements are shared.
+
 ## Open the example
 
 Press **Start** on Home, search **Examples** on **Project** for **pd-xray-cwl_latp-bm01_scan** and open it.
@@ -14,6 +21,10 @@ Press **Start** on Home, search **Examples** on **Project** for **pd-xray-cwl_la
 <a class="gui-image-link" href="../../../assets/gui/cases/pd-xray-cwl_latp-bm01_scan/example-open.webp?v=b5d61c71d63e" data-gui-dark="a20959e04ea9" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Open the example from Examples"><svg class="gui-capture" data-gui-view="overview" viewBox="0 0 1480 800" width="1480" height="800" role="img" aria-label="Open the example from Examples"><title>Open the example from Examples</title><defs><clipPath id="gui-clip-example-open-overview"><rect width="1480" height="800" rx="17.76" /></clipPath></defs><image href="../../../assets/gui/cases/pd-xray-cwl_latp-bm01_scan/example-open.webp?v=b5d61c71d63e" data-gui-dark="a20959e04ea9" width="1480" height="800" clip-path="url(#gui-clip-example-open-overview)" /><rect class="gui-image-frame" width="1480" height="800" rx="17.76" /><path class="is-active" data-gui-region="example-open-overview-1" data-gui-area="main" data-gui-parts="[[0,77,770,681]]" d="M1.000 82.000 Q1.000 78.000 5.000 78.000 L765.000 78.000 Q769.000 78.000 769.000 82.000 L769.000 753.000 Q769.000 757.000 765.000 757.000 L5.000 757.000 Q1.000 757.000 1.000 753.000 Z" /><path data-gui-navigation data-gui-area="navigation" data-gui-parts="[[595.46875,0,59.734375,77]]" d="M596.469 5.000 Q596.469 1.000 600.469 1.000 L650.203 1.000 Q654.203 1.000 654.203 5.000 L654.203 72.000 Q654.203 76.000 650.203 76.000 L600.469 76.000 Q596.469 76.000 596.469 72.000 Z" /></svg></a>
 
 </figure>
+
+## The example's constraints
+
+The example comes with the constraints the project keeps from the start. On **Analysis → Extra**, **Constraints** lists them: **z_Al1 = z_Ti1**, **b_Al1 = b_Ti1**, **b2_P1 = b2_Al1**, **b2_O1 = b2_Al1**, **b2_O2 = b2_Al1**.
 
 ## Start with nothing free
 
@@ -37,7 +48,7 @@ On **Analysis → Extra**, set the fitting mode to single, so the stages fit the
 
 The three phases' scales and cells and the zero shift.
 
-Filter the **Linked structures** parameters of **bm01**, choosing each in the datablock filter using the category filter and the **Cell** parameters of ****, choosing each in the datablock filter using the category filter, click the **Free** column header and choose **Free · all**; then tick **Free** for the **Instrument** rows the stage names of **bm01**, choosing each in the datablock filter, then press **Fit** in the status bar.
+Filter the **Cell** parameters using the category filter and the **Linked structures** parameters of **bm01**, choosing each in the datablock filter using the category filter, click the **Free** column header and choose **Free · all**; then tick **Free** for the **Instrument** rows the stage names of **bm01**, choosing each in the datablock filter, then press **Fit** in the status bar.
 
 <figure class="gui-figure" data-gui-figure>
 <a class="gui-image-link" href="../../../assets/gui/cases/pd-xray-cwl_latp-bm01_scan/stage-1-fit.webp?v=5184e5d5538e" data-gui-dark="a0b5fdcd3a68" data-gui-open aria-haspopup="dialog" aria-label="Enlarge screenshot: Fit: Scales, 2θ zero and cells"><svg class="gui-capture" data-gui-view="overview" viewBox="0 0 1480 800" width="1480" height="800" role="img" aria-label="Fit: Scales, 2θ zero and cells"><title>Fit: Scales, 2θ zero and cells</title><defs><clipPath id="gui-clip-stage-1-fit-overview"><rect width="1480" height="800" rx="17.76" /></clipPath></defs><image href="../../../assets/gui/cases/pd-xray-cwl_latp-bm01_scan/stage-1-fit.webp?v=5184e5d5538e" data-gui-dark="a0b5fdcd3a68" width="1480" height="800" clip-path="url(#gui-clip-stage-1-fit-overview)" /><rect class="gui-image-frame" width="1480" height="800" rx="17.76" /><path class="is-active" data-gui-region="stage-1-fit-overview-1" data-gui-area="main" data-gui-parts="[[0,77,770,681]]" d="M1.000 82.000 Q1.000 78.000 5.000 78.000 L765.000 78.000 Q769.000 78.000 769.000 82.000 L769.000 753.000 Q769.000 757.000 765.000 757.000 L5.000 757.000 Q1.000 757.000 1.000 753.000 Z" /><path class="" data-gui-region="stage-1-fit-overview-2" data-gui-area="sidebar" data-gui-parts="[[770,119,710,609.5]]" d="M771.000 124.000 Q771.000 120.000 775.000 120.000 L1475.000 120.000 Q1479.000 120.000 1479.000 124.000 L1479.000 723.500 Q1479.000 727.500 1475.000 727.500 L775.000 727.500 Q771.000 727.500 771.000 723.500 Z" /><path data-gui-navigation data-gui-area="navigation" data-gui-parts="[[812.359375,0,67.84375,77]]" d="M813.359 5.000 Q813.359 1.000 817.359 1.000 L875.203 1.000 Q879.203 1.000 879.203 5.000 L879.203 72.000 Q879.203 76.000 875.203 76.000 L817.359 76.000 Q813.359 76.000 813.359 72.000 Z" /></svg></a>

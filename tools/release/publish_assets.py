@@ -7,7 +7,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from plan import markdown_notes, release_body, release_date, validate_history
+from plan import markdown_notes, release_body, release_date, release_title, validate_history
 from prepare import published_history
 
 
@@ -212,7 +212,8 @@ def publish(repo: str, folder: Path, *, finalize: bool = False) -> None:
         with path.open('rb') as stream:
             assets[path.name] = hashlib.file_digest(stream, 'sha256').hexdigest()
     tag = 'v' + release['version']
-    existing = find_release(repo, tag, 'edi ' + release['version'])
+    title = release_title(release['version'], release['date'])
+    existing = find_release(repo, tag, title)
     if existing is not None:
         existing = restore_tag(repo, existing, tag, release['commit'])
     if existing is None:
@@ -225,14 +226,14 @@ def publish(repo: str, folder: Path, *, finalize: bool = False) -> None:
             {
                 'tag_name': tag,
                 'target_commitish': release['commit'],
-                'name': 'edi ' + release['version'],
+                'name': title,
                 'body': body,
                 'prerelease': False,
                 'make_latest': 'false',
             },
         )
     existing = claim_reservation(repo, existing, release['commit'], body)
-    if existing['prerelease'] or existing['name'] != 'edi ' + release['version']:
+    if existing['prerelease'] or existing['name'] != title:
         raise ValueError('Release tag already names a different release')
     found = check_existing(existing, release, body, assets)
     if finalize:

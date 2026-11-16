@@ -3,14 +3,10 @@
 import re
 from pathlib import Path
 
+from tests.fixtures.captions.contract import check_caption
 from tests.integration.py.test_status_columns import LEXICAL, mask
 
 QML = Path(__file__).resolve().parents[3] / 'app/qml'
-# Case-significant notation from the crystallographic controls and table columns.
-SYMBOLS = re.compile(
-    r'^(?:2θ|TOF|s\.u\.|h k l|μR|\u03c3[₀₁₂]²|x[123]{2}|[abcdfhklqrxyz\u03b1-\u03b3φθ])'
-    r'(?=$|[\s(:/\u2032])'
-)
 BLOCK = re.compile(r'(?:(?P<kind>[\w.]+)\s*)?\{|\}')
 PROPERTY = re.compile(
     r'(?m)(?:^|[;{])[ \t]*(?:(?:readonly )?property \w+ )?'
@@ -28,11 +24,6 @@ FIELD_TYPES = {
     'ValueField',
 }
 COLUMN_LABEL_TYPES = {'HeaderLabel', 'ListViewLabel', 'Label'}
-
-
-def check_caption(text):
-    first_letter = next((char for char in text if char.isalpha()), '')
-    return not first_letter or first_letter.isupper() or SYMBOLS.match(text)
 
 
 def source_captions(path):

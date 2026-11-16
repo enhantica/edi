@@ -300,6 +300,13 @@
       "status": "implemented"
     },
     {
+      "id": "auto",
+      "category": "descent",
+      "scope": "least-squares; selected strategies have bound restrictions",
+      "explanation_url": "minimization/#eq-lm",
+      "status": "implemented"
+    },
+    {
       "id": "ladder",
       "category": "descent",
       "scope": "least-squares; selected strategies have bound restrictions",

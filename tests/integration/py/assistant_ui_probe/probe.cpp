@@ -119,12 +119,23 @@ struct CodexAgentTestAccess {
 }
 static_assert(!std::is_default_constructible_v<edi_app::Session>, "E11 I5 QML must resolve the prepared per-engine Session factory");
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
-// Observe actual window delivery; never replace or consume an app input.
+// Passively observe the original window's mouse input and its focused editor's
+// actual key/IME delivery. InputMethod is sent directly to the editor, not the window.
 class UiInputObserver final:public QObject {
 public:
+    QPointer<QQuickWindow> window;
     std::function<void(const QString&,QEvent*)> observe;
-    bool eventFilter(QObject*,QEvent* event) override {
+    bool eventFilter(QObject* receiver,QEvent* event) override {
         QString kind;
+        const bool mouse=event->type()==QEvent::MouseButtonPress || event->type()==QEvent::MouseButtonRelease;
+        const bool keyboard=event->type()==QEvent::KeyPress || event->type()==QEvent::InputMethod;
+        if(!window || (!mouse && !keyboard))return false;
+        if(mouse && receiver!=window)return false;
+        if(keyboard) {
+            auto* focus=QGuiApplication::focusObject();
+            auto* item=qobject_cast<QQuickItem*>(focus);
+            if(receiver!=focus || !item || item->window()!=window)return false;
+        }
         if(event->type()==QEvent::MouseButtonPress)kind="mouse_press";
         else if(event->type()==QEvent::MouseButtonRelease)kind="mouse_release";
         else if(event->type()==QEvent::KeyPress)kind="key_press";
@@ -1087,7 +1098,7 @@ int main(int argc,char** argv) {
     ui_inputs.observe=[&](const QString& kind, QEvent* event) {
         if (dispatch_trace) dispatch_trace->mouse_receipt(event, window);
         ui_record(kind, event);
-    };window->installEventFilter(&ui_inputs);
+    };ui_inputs.window=window;QCoreApplication::instance()->installEventFilter(&ui_inputs);
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerShown,&ui_inputs,[&]{ui_record("pointer_shown");});
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerMoved,&ui_inputs,[&]{ui_record("pointer_moved");});
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerPressed,&ui_inputs,[&]{ui_record("pointer_pressed");});

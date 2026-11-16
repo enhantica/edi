@@ -46,9 +46,10 @@ def test_heidi_example_uses_independent_experiments_without_a_scan():
             gemmi.cif.as_string(dataset.find_value('_experiment_type.sample_form'))
             == 'single crystal'
         ), 'Each HEiDi dataset is a single-crystal experiment'
-        assert dataset.find_value('_experiment_type.radiation_probe') == 'neutron', (
-            'Each HEiDi dataset retains its neutron-scattering measurement'
-        )
+        assert (
+            gemmi.cif.as_string(dataset.find_value('_experiment_type.radiation_probe'))
+            == 'neutron'
+        ), 'Each HEiDi dataset retains its neutron-scattering measurement'
         links = list(dataset.find_values('_linked_structure.structure_id'))
         assert len(links) == 1, 'Each independent HEiDi dataset links exactly its own structure'
         linked.extend(links)

@@ -171,6 +171,18 @@ def main():
         'reference/tolerance retained',
         'files': entries,
     }
+    committed = json.loads(
+        subprocess.check_output(
+            ['git', 'show', 'HEAD:tests/fixtures/c06_t8/seed-updates.json'], cwd=ROOT, text=True
+        )
+    )['files']
+    for name, row in output['files'].items():
+        previous = committed.get(name)
+        if previous is not None and {
+            key: value for key, value in row.items() if key != 'source_commits'
+        } == {key: value for key, value in previous.items() if key != 'source_commits'}:
+            # A merge's history simplification cannot rewrite an unchanged source receipt.
+            output['files'][name] = previous
     (HERE / 'seed-updates.json').write_text(json.dumps(output, indent=2) + '\n')
 
 

@@ -2,26 +2,34 @@
 
 import ast
 import re
+from collections import UserDict
+from contextlib import suppress
+from pathlib import Path
 
 from tests.fixtures.tutorial_cases.install_cell import python_syntax
 
 
 def group(path):
-    value = path.casefold()
+    value = '.' + path.casefold()
     for token, name in [
         ('adp_iso', 'isotropic displacement'),
         ('adp_', 'anisotropic displacement'),
         ('fract_', 'positions'),
         ('occupancy', 'occupancies'),
+        ('magnetic_form_factor', 'magnetic form factor'),
         ('moment', 'magnetic moments'),
+        ('absorption', 'absorption'),
+        ('background_terms', 'background'),
         ('extinction', 'extinction'),
         ('background', 'background'),
         ('point.intensity', 'background'),
         ('calib_twotheta_offset', 'zero shift'),
         ('calib_', 'calibration'),
+        ('asym_', 'peak asymmetry'),
+        ('rise_alpha_', 'peak asymmetry'),
+        ('decay_beta_', 'peak asymmetry'),
         ('.peak.', 'peak widths'),
         ('broad_', 'peak widths'),
-        ('asym_', 'peak asymmetry'),
         ('.cell.', 'cell'),
         ('.scale', 'scale'),
     ]:
@@ -30,10 +38,73 @@ def group(path):
     return 'other: ' + path
 
 
-def observe(source):  # noqa: PLR0915 - finite AST effects kept in execution order
+def observe(source, bindings=None):
+    project = (bindings or {}).get('project')
+    original = [
+        (site, site.adp_type)
+        for block in getattr(project, 'structures', [])
+        for site in block.atom_sites
+    ]
+    try:
+        return _observe(source, bindings)
+    finally:
+        for site, selected in original:
+            site.adp_type = selected
+
+
+def _observe(source, bindings=None):  # noqa: PLR0914, PLR0915 - finite AST effects kept in execution order
     source = python_syntax(source)
     tree = ast.parse(source)
     aliases = {}
+    objects = dict(bindings or {})
+    # Read the saved starting model locally; never download data or execute tutorial code.
+    downloads = re.findall(r"download_data\(['\"]([^'\"]+)", source)
+    case = next(
+        (
+            directory.name
+            for name in downloads
+            for directory in sorted(
+                (Path(__file__).resolve().parents[3] / 'docs/user/cli').iterdir(),
+                key=lambda p: -len(p.name),
+            )
+            if name.startswith(directory.name) and (directory / 'project').is_dir()
+        ),
+        None,
+    )
+    if case and 'project' not in objects:
+        import edi  # noqa: PLC0415
+
+        saved = Path(__file__).resolve().parents[3] / 'docs/user/cli' / case / 'project'
+        objects['project'] = edi.Project.load(str(saved))
+
+    def value(node):  # noqa: PLR0911 - finite expression evaluator
+        if isinstance(node, ast.Constant):
+            return node.value
+        if isinstance(node, ast.Name):
+            return objects[node.id]
+        if isinstance(node, ast.Attribute):
+            return getattr(value(node.value), node.attr)
+        if isinstance(node, ast.Subscript):
+            return value(node.value)[value(node.slice)]
+        if isinstance(node, ast.Slice):
+            return slice(*(value(n) if n else None for n in (node.lower, node.upper, node.step)))
+        if isinstance(node, (ast.Tuple, ast.List)):
+            return [value(item) for item in node.elts]
+        if isinstance(node, ast.Compare) and len(node.ops) == 1:
+            left, right = value(node.left), value(node.comparators[0])
+            if isinstance(node.ops[0], ast.NotEq):
+                return left != right
+            if isinstance(node.ops[0], ast.Eq):
+                return left == right
+            raise ValueError('Unsupported tutorial comparison')
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+            return not value(node.operand)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            constructor = {'range': range, 'list': list, 'tuple': tuple}.get(node.func.id)
+            if constructor:
+                return constructor(*(value(item) for item in node.args))
+        raise ValueError('Unsupported tutorial expression: ' + ast.unparse(node))
+
     events = []
     cycles = []
     free_before = []
@@ -41,7 +112,14 @@ def observe(source):  # noqa: PLR0915 - finite AST effects kept in execution ord
     freed = []
     fixed = []
     constraints = []
+    loaded_project = any(
+        isinstance(node, ast.Call) and ast.unparse(node.func).endswith('.Project.load')
+        for node in ast.walk(tree)
+    )
+    if loaded_project and 'project' in objects:
+        constraints = [str(row.expression) for row in objects['project'].analysis.constraints]
     constraint_aliases = {}
+    previous_active = set()
 
     def path(node):
         value = ast.unparse(node)
@@ -51,33 +129,89 @@ def observe(source):  # noqa: PLR0915 - finite AST effects kept in execution ord
             )
         return value
 
-    def visit(statements, context=''):  # noqa: PLR0912, PLR0915 - explicit supported AST nodes
-        for node in statements:
+    def visit(statements, context=''):  # noqa: PLR0912, PLR0914, PLR0915 - explicit supported AST nodes
+        nonlocal previous_active
+        for node in statements:  # noqa: PLR1702 - ordered AST statement effects
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 continue  # A definition is not an executed teaching stage.
             if isinstance(node, ast.For):
                 iterable = node.iter
-                count = 1
-                if (
-                    isinstance(iterable, ast.Call)
-                    and isinstance(iterable.func, ast.Name)
-                    and iterable.func.id == 'range'
-                ) and all(
-                    isinstance(item, ast.Constant) and type(item.value) is int
-                    for item in iterable.args
+                if ast.unparse(iterable).endswith('.items()') and not any(
+                    (isinstance(item, ast.Attribute) and item.attr == 'free')
+                    or (
+                        isinstance(item, ast.Call)
+                        and any(
+                            token in ast.unparse(item.func)
+                            for token in ['fit', 'display', 'constraints', 'aliases']
+                        )
+                    )
+                    for statement in node.body
+                    for item in ast.walk(statement)
                 ):
-                    count = len(range(*(item.value for item in iterable.args)))
-                if isinstance(node.target, ast.Name):
-                    aliases[node.target.id] = ast.unparse(iterable) + '[*]'
-                for _ in range(count):
-                    visit(node.body, context + ' ' + ast.unparse(iterable))
+                    continue  # Data-file construction has no stage effect.
+
+                if path(iterable) == 'project.free_parameters':
+                    members = [(parameter, None) for parameter in sorted(active)]
+                    if not members:
+                        continue
+                elif isinstance(iterable, (ast.Tuple, ast.List)):
+                    members = []
+                    for item in iterable.elts:
+                        try:
+                            obj = value(item)
+                        except KeyError:
+                            obj = None
+                        members.append((path(item), obj))
+                else:
+                    try:
+                        population = list(value(iterable))
+                    except KeyError:
+                        population = None
+                    if population is None:
+                        members = [(path(iterable) + '[*]', None)]
+                    else:
+                        members = []
+                        base = iterable
+                        if isinstance(base, ast.Subscript) and isinstance(base.slice, ast.Slice):
+                            base = base.value
+                        if (
+                            isinstance(base, ast.Call)
+                            and isinstance(base.func, ast.Name)
+                            and base.func.id in {'list', 'tuple'}
+                        ):
+                            base = base.args[0]
+                        for i, obj in enumerate(population):
+                            if isinstance(obj, (str, int, float, bool)):
+                                member = repr(obj)
+                            else:
+                                key = (
+                                    i
+                                    if path(base).endswith(('.background', '.background_terms'))
+                                    else getattr(obj, 'id', getattr(obj, 'name', i))
+                                )
+                                member = f'{path(base)}[{key!r}]'
+                            members.append((member, obj))
+                old_aliases, old_objects = aliases.copy(), objects.copy()
+                for parameter, obj in members:
+                    if not isinstance(node.target, ast.Name):
+                        raise TypeError('Tutorial loop target must be a name')
+                    aliases[node.target.id] = parameter
+                    if obj is not None:
+                        objects[node.target.id] = obj
+                    visit(node.body, context + ' ' + path(iterable))
+                aliases.clear()
+                aliases.update(old_aliases)
+                objects.clear()
+                objects.update(old_objects)
                 visit(node.orelse, context)
                 continue
             if isinstance(node, ast.If):
                 # Source conditionals with two different fit paths need an explicit tutorial
                 # adaptation; preserve both lexical branches rather than silently dropping one.
-                visit(node.body, context)
-                visit(node.orelse, context)
+                if 'importlib.util.find_spec' in ast.unparse(node.test):
+                    continue  # Notebook installation is outside the scientific stage sequence.
+                condition = value(node.test)
+                visit(node.body if condition else node.orelse, context)
                 continue
             if isinstance(node, (ast.With, ast.AsyncWith)):
                 visit(node.body, context)
@@ -88,16 +222,32 @@ def observe(source):  # noqa: PLR0915 - finite AST effects kept in execution ord
                         node.value, (ast.Name, ast.Attribute, ast.Subscript)
                     ):
                         aliases[target.id] = path(node.value)
-                    if (
-                        isinstance(target, ast.Attribute)
-                        and target.attr == 'free'
-                        and isinstance(node.value, ast.Constant)
-                    ):
+                        with suppress(KeyError):
+                            objects[target.id] = value(node.value)
+                    if isinstance(target, ast.Attribute) and target.attr == 'adp_type':
+                        site_path = path(target.value)
+                        selected = value(node.value)
+                        value(target.value).adp_type = selected
+                        prefix = (
+                            site_path.replace('.atom_sites[', '.atom_site_aniso[') + '.'
+                            if selected in {'Biso', 'Uiso'}
+                            else site_path + '.adp_iso'
+                        )
+                        removed = {p for p in active if p.startswith(prefix)}
+                        active.difference_update(removed)
+                        events.append({
+                            'kind': 'replace',
+                            'line': node.lineno,
+                            'retired': sorted(removed),
+                        })
+                    if isinstance(target, ast.Attribute) and target.attr == 'free':
                         parameter = path(target.value)
                         category = group(parameter + ' ' + context)
-                        if node.value.value is True:
+                        setting = value(node.value)
+                        if setting is True:
+                            if parameter not in active:
+                                freed.append(category)
                             active.add(parameter)
-                            freed.append(category)
                             events.append({
                                 'kind': 'free',
                                 'group': category,
@@ -105,9 +255,10 @@ def observe(source):  # noqa: PLR0915 - finite AST effects kept in execution ord
                                 'parameter': parameter,
                                 'collective': bool(context.strip()),
                             })
-                        elif node.value.value is False:
+                        elif setting is False:
+                            if parameter in active:
+                                fixed.append(category)
                             active.discard(parameter)
-                            fixed.append(category)
                             events.append({
                                 'kind': 'fix',
                                 'group': category,
@@ -122,16 +273,30 @@ def observe(source):  # noqa: PLR0915 - finite AST effects kept in execution ord
                     and '.display.' not in name
                 ):
                     cycles.append({
-                        'freed': sorted(set(freed)),
-                        'fixed': sorted(set(fixed)),
+                        'freed': sorted({group(p) for p in active - previous_active}),
+                        'fixed': sorted({group(p) for p in previous_active - active}),
                         'active': sorted({group(value) for value in active}),
                         'constraints': len(constraints),
                     })
+                    previous_active = active.copy()
                     free_before.append(sorted(active))
                     freed.clear()
                     fixed.clear()
                     constraints.clear()
-                    events.append({'kind': 'fit', 'line': call.lineno})
+                    events.append({
+                        'kind': 'fit',
+                        'line': call.lineno,
+                        'operation': name.rsplit('.', 1)[-1],
+                    })
+                elif name.endswith('.background.auto_estimate'):
+                    prefix = path(call.func.value) + '['
+                    retired = {p for p in active if p.startswith(prefix)}
+                    active.difference_update(retired)
+                    events.append({
+                        'kind': 'replace',
+                        'line': call.lineno,
+                        'retired': sorted(retired),
+                    })
                 elif name.endswith('.display.pattern'):
                     events.append({'kind': 'pattern', 'line': call.lineno})
                 elif name.endswith(('.display.fit.correlations', '.display.correlations')):
@@ -160,12 +325,38 @@ def observe(source):  # noqa: PLR0915 - finite AST effects kept in execution ord
                     })
 
     visit(tree.body)
-    return {'events': events, 'cycles': cycles, 'free_before': free_before}
+    return {
+        'events': events,
+        'cycles': cycles,
+        'free_before': free_before,
+        'source': source,
+        'independent': any(
+            isinstance(n, ast.Assign)
+            and isinstance(n.value, ast.Constant)
+            and n.value.value == 'independent'
+            and any(ast.unparse(t).endswith('.analysis.fitting_mode') for t in n.targets)
+            for n in ast.walk(tree)
+        ),
+    }
+
+
+def assert_template_batches(plan):
+    fits = [event for event in plan['events'] if event['kind'] == 'fit']
+    for index, event in enumerate(fits):
+        if event.get('operation') == 'fit_sequential':
+            assert index and plan['free_before'][index] == plan['free_before'][index - 1], (
+                'Gate 3: a sequential batch reuses its already validated free-parameter template'
+            )
 
 
 def assert_teaching_stages(plan):
+    assert_template_batches(plan)
     events = plan['events']
-    fits = [index for index, item in enumerate(events) if item['kind'] == 'fit']
+    fits = [
+        index
+        for index, item in enumerate(events)
+        if item['kind'] == 'fit' and item.get('operation') != 'fit_sequential'
+    ]
     assert len(fits) >= 2, 'Gate 3: a fitting tutorial teaches at least two actual fit stages'
     assert any(item['kind'] == 'pattern' for item in events[: fits[0]]), (
         'Gate 3: the pattern at starting values is displayed before the first fit'
@@ -197,74 +388,472 @@ def assert_correlation_lesson(plan):
     )
 
 
-def app_cycles(steps):
-    active, freed, fixed = set(), set(), set()
-    pending_constraints = 0
-    cycles = []
+APP_CATEGORIES = {
+    'Cell': 'cell',
+    'Linked structures': 'scale',
+    'Instrument': 'calibration',
+    'Background': 'background',
+    'Atomic coordinates': 'positions',
+    'Atomic displacement': 'isotropic displacement',
+    'Atomic occupancies': 'occupancies',
+    'Peak broadening': 'peak widths',
+    'Peak asymmetry': 'peak asymmetry',
+    'Magnetic moments': 'magnetic moments',
+    'Extinction': 'extinction',
+}
+
+
+class AppPopulation(UserDict):
+    """Offered member metadata, with its disposable source model for type-selector changes."""
+
+    def __init__(self, project):
+        super().__init__()
+        self.project = project
+        self.table_names = set()
+        self.table_members = {}
+        self.datablock_names = {
+            str(block.name)
+            for blocks in [project.structures, project.experiments]
+            for block in blocks
+        }
+
+
+def app_population(case=None, *, project=None):  # noqa: PLR0912 - explicit category ownership and eligibility
+    """Read offered members from the saved model, independently of replay expectations."""
+    import edi  # noqa: PLC0415
+
+    root = Path(__file__).resolve().parents[3]
+    if project is None:
+        project = edi.Project.load(str(root / 'docs/user/cli' / case / 'project'))
+    population = AppPopulation(project)
+    reference = (root / 'tests/fixtures/dictionary_display/metadata_reference.hpp').read_text()
+    labels = dict(
+        re.findall(
+            r'\{"([^"\n]+)", "([^"\n]+)", "[^"\n]*", "[^"\n]*"\}',
+            reference,
+        )
+    )
+    adp_labels = dict(re.findall(r'\{"atom_site.adp_type", "([^"\n]+)", "([^"\n]+)"\}', reference))
+    for kind, blocks in [('structure', project.structures), ('experiment', project.experiments)]:  # noqa: PLR1702 - finite model walk
+        for block in blocks:
+            for owner in [
+                'cell',
+                'atom_sites',
+                'atom_site_aniso',
+                'atom_site_moment',
+                'magnetic_form_factor',
+                'instrument',
+                'peak',
+                'linked_structures',
+                'background',
+                'background_terms',
+                'extinction',
+                'absorption',
+            ]:
+                holder = getattr(block, owner, None)
+                if holder is None:
+                    continue
+                try:
+                    items = [
+                        (str(getattr(item, 'id', getattr(item, 'structure_id', i))), item)
+                        for i, item in enumerate(holder)
+                    ]
+                except TypeError:
+                    items = [('', holder)]
+                for row, item in items:
+                    for name in dir(item):
+                        if name.startswith('_'):
+                            continue
+                        parameter = getattr(item, name)
+                        owner_id = {
+                            'atom_sites': 'atom_site',
+                            'linked_structures': 'linked_structure',
+                            'background_terms': 'background',
+                        }.get(owner, owner)
+                        label = labels.get(owner_id + '.' + name)
+                        if owner == 'atom_sites' and name == 'adp_iso':
+                            label = adp_labels.get(str(item.adp_type), label)
+                        if label and hasattr(parameter, 'free'):
+                            population.table_names.add(' '.join(v for v in [row, label] if v))
+                            population.table_names.add(
+                                ' '.join(v for v in [block.name, row, label] if v)
+                            )
+                            if owner in {'background', 'background_terms'}:
+                                population.table_names.add('Background ' + row + ' ' + label)
+                        if (
+                            owner == 'atom_sites'
+                            and name == 'adp_iso'
+                            and str(item.adp_type) not in {'Biso', 'Uiso'}
+                        ):
+                            continue
+                        if owner == 'atom_site_aniso':
+                            site = block.atom_sites[row]
+                            if str(site.adp_type) in {'Biso', 'Uiso'}:
+                                continue
+                        if (
+                            not hasattr(parameter, 'free')
+                            or parameter.symmetry_constrained
+                            or parameter.user_constrained
+                        ):
+                            continue
+                        prefix = kind if len(blocks) == 1 else block.name
+                        path = '.'.join(v for v in [prefix, owner, row, name] if v)
+                        population[path] = (group(path), block.name)
+                        if label:
+                            for visible in {
+                                ' '.join(v for v in [row, label] if v),
+                                ' '.join(v for v in [block.name, row, label] if v),
+                                *(
+                                    ['Background ' + row + ' ' + label]
+                                    if owner in {'background', 'background_terms'}
+                                    else []
+                                ),
+                            }:
+                                population.table_members.setdefault(visible, set()).add(path)
+    return population
+
+
+def app_cycles(steps, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - ordered manifest effects
+    def canonical(value):
+        value = re.sub(r"\[['\"]?([^]\"']+)['\"]?\]", r'.\1', value)
+        if model is not None:
+            value = re.sub(r'^(?:structures|experiments)\.', '', value)
+            for kind, blocks in [
+                ('structure', model.structures),
+                ('experiment', model.experiments),
+            ]:
+                if len(blocks) == 1 and value.startswith(blocks[0].name + '.'):
+                    value = kind + value[len(blocks[0].name) :]
+        return value
+
+    model = getattr(population, 'project', None)
+    population = dict(population or {})
     for step in steps:
         check = step.get('check', '')
-        for prefix, target in [('free:', freed), ('fixed:', fixed)]:
-            if check.startswith(prefix):
-                groups = {group('parameter.' + value) for value in check[len(prefix) :].split(',')}
-                target.update(groups)
-                if prefix == 'free:':
-                    active.update(groups)
+        if check.startswith(('tick:', 'untick:', 'free:', 'fixed:')):
+            for spelling in check.split(':', 1)[1].split(','):
+                parameter = canonical(spelling)
+                population.setdefault(parameter, (group(parameter), ''))
+    active, freed, fixed = set(), set(), set()
+    expressions, pending, seen = {}, set(), set()
+    cycles = []
+    previous_active = set()
+    awaiting_completion = False
+    scan_state = None
+    population_dirty = False
+    for step in steps:
+        check = step.get('check', '')
+        type_change = re.fullmatch(r'pick:atomSiteAdp\.type\.(\d+)=(.+)', check)
+        if type_change:
+            if model is None or len(model.structures) != 1:
+                raise ValueError(
+                    'ADP type steps require the independently observed selected structure'
+                )
+            site = model.structures[0].atom_sites[int(type_change[1])]
+            if str(site.adp_type) != type_change[2]:
+                site.adp_type = type_change[2]
+                population_dirty = True
+        if population_dirty and (
+            check.startswith(('tick:', 'untick:', 'free:', 'fixed:', 'free-choice:'))
+            or check in {'fit-done', 'fitted'}
+            or step.get('target') == 'statusBar.fit.button'
+        ):
+            population = app_population(project=model)
+            active.intersection_update(population)
+            population_dirty = False
+        if check.startswith(('tick:', 'untick:', 'free:', 'fixed:', 'free-choice:')):
+            if check.startswith('free-choice:'):
+                _, action, category, *block = check.split(':')
+                if category == 'All categories':
+                    parameters = set(population) | active
                 else:
-                    active.difference_update(groups)
+                    if category not in APP_CATEGORIES:
+                        raise ValueError('Unknown app free category: ' + category)
+                    parameters = {
+                        p
+                        for p, (g, b) in population.items()
+                        if (
+                            g == APP_CATEGORIES[category]
+                            or (category == 'Atomic displacement' and 'displacement' in g)
+                            or (category == 'Instrument' and g == 'zero shift')
+                        )
+                        and (not block or b == block[0])
+                    }
+                    if not parameters:
+                        raise ValueError('No independently observed members for ' + check)
+                setting = action == 'free'
+            else:
+                action, parameters = check.split(':', 1)
+                parameters = {canonical(p) for p in parameters.split(',')}
+                setting = action in {'tick', 'free'}
+            categories = {
+                population[p][0]
+                for p in parameters
+                if (p not in active if setting else p in active)
+            }
+            (freed if setting else fixed).update(categories)
+            if setting:
+                active.update(parameters)
+            else:
+                active.difference_update(parameters)
+        if check.startswith('field:constraint.expression.'):
+            row, expression = check.removeprefix('field:constraint.expression.').split('=', 1)
+            expression = expression.strip()
+            if re.fullmatch(r'[^=]+=[^=]+', expression):
+                expressions[row] = expression
+            else:
+                expressions.pop(row, None)
         if check.startswith('constraint:'):
-            pending_constraints += 1
-        if step.get('target') == 'statusBar.fit.button' or check in {'fitted', 'fit-done'}:
+            expression = check.split(':', 1)[1].strip()
+            if re.fullmatch(r'[^=]+=[^=]+', expression):
+                pending.add(expression)
+        button = step.get('target') == 'statusBar.fit.button'
+        if check == 'fit-stopped':
+            if not button or scan_state != 'running':
+                raise ValueError('A scan stop follows its own actual running fit')
+            scan_state = 'stopped'
+            continue
+        if button and check == 'fit-done' and scan_state == 'stopped':
+            if active != previous_active or pending or (set(expressions.values()) - seen):
+                raise ValueError('A scan resume retains its exact template and constraints')
+            scan_state = None
+            awaiting_completion = False
+        if check == 'fit-running':
+            if not button or scan_state is not None:
+                raise ValueError('A scan starts once before its own stop or completion')
+            scan_state = 'running'
+        completed = check in {'fitted', 'fit-done'}
+        if completed and scan_state == 'running':
+            scan_state = None
+        if completed and awaiting_completion and not button:
+            awaiting_completion = False
+            continue
+        if button or completed:
             cycles.append({
-                'freed': sorted(freed),
-                'fixed': sorted(fixed),
-                'active': sorted(active),
-                'constraints': pending_constraints,
+                'freed': sorted({population[p][0] for p in active - previous_active}),
+                'fixed': sorted({group(p) for p in previous_active - active}),
+                'active': sorted({population[p][0] for p in active}),
+                'constraints': len(pending | (set(expressions.values()) - seen)),
             })
+            previous_active = active.copy()
             freed.clear()
             fixed.clear()
-            pending_constraints = 0
+            pending.clear()
+            seen.update(expressions.values())
+            awaiting_completion = button and not completed
     return cycles
 
 
-def prose_cycles(source):
-    # Observe imperative app instructions, never a heading or prose saying "fit results".
-    source = re.sub(r'[*`_]', '', source)
+def prose_cycles(source, population=None):  # noqa: PLR0912, PLR0914, PLR0915 - finite written instruction grammar
+    """Observe literal instructions on eligible members; markup never supplies actions."""
+    source = re.sub(r'<(?:figure|svg)\b.*?</(?:figure|svg)>', '', source, flags=re.DOTALL)
+    source = re.sub(r'<[^>]+>', '', source)
+    source = re.sub(r'[*`]', '', source)
     phrases = [
-        ('isotropic displacement', r'\b(?:isotropic|adp.iso|biso)\b'),
+        ('isotropic displacement', r'\b(?:isotropic|adp.iso|b\s*iso)\b'),
         ('anisotropic displacement', r'\b(?:anisotropic|adp.11|bij)\b'),
         ('positions', r'\b(?:positions?|coordinates|fract.[xyz])\b'),
         ('occupancies', r'\boccupanc'),
-        ('magnetic moments', r'\b(?:moments?|magnetic)\b'),
+        ('magnetic moments', r'\b(?:moments?|magnetic model)\b'),
+        ('magnetic form factor', r'\b(?:j2|form factor)\b'),
         ('extinction', r'\bextinction\b'),
+        ('absorption', r'\babsorption\b'),
         ('background', r'\bbackground\b'),
         ('zero shift', r'\b(?:zero|offset)\b'),
         ('calibration', r'\bcalibration\b'),
-        ('peak widths', r'\b(?:widths?|profile|peaks?)\b'),
+        ('peak widths', r'\b(?:widths?|peak profile|peak broadening|peak mixing)\b'),
+        ('peak asymmetry', r'\b(?:peak asymmetry|asymmetry)\b'),
         ('cell', r'\bcell\b'),
-        ('scale', r'\bscale\b'),
+        ('scale', r'\b(?:scales?|linked structures)\b'),
     ]
-    active, freed, fixed = set(), set(), set()
+    model = getattr(population, 'project', None)
+    members = dict(population or {})
+    active, previous, explicitly_fixed = set(), set(), set()
     pending_constraints = 0
+    seen_constraints = set()
+    context = heading = ''
     cycles = []
+
+    def categories(paths):
+        return sorted({members[path][0] for path in paths})
+
     for paragraph in source.split('\n\n'):
-        lower = paragraph.casefold()
-        groups = {name for name, pattern in phrases if re.search(pattern, lower)}
-        if re.search(r'\bfree\b', lower):
-            active.update(groups)
-            freed.update(groups)
-        if re.search(r'\bfix\b', lower):
-            active.difference_update(groups)
-            fixed.update(groups)
-        if re.search(r'\b(?:add|create)\b.*\bconstraint\b', lower):
+        lower = paragraph.casefold().strip()
+        if lower.startswith('#'):
+            context = heading = lower.lstrip('# ')
+            if context == 'add the relations' and model is not None:
+                declared = {
+                    re.sub(r'\s+', '', str(row.expression)) for row in model.analysis.constraints
+                }
+                pending_constraints += len(declared - seen_constraints)
+                seen_constraints.update(declared)
+            continue
+        expressions = {
+            re.sub(r'\s+', '', expression)
+            for expression in re.findall(
+                r'\b[A-Za-z_]\w*\s*=\s*[A-Za-z_]\w*\b',
+                paragraph,
+            )
+        }
+        pending_constraints += len(expressions - seen_constraints)
+        seen_constraints.update(expressions)
+        if re.search(r'\bfix\s+(?:all|every)\s+param', lower):
+            active.clear()
+        if not expressions and re.search(r'\bconstrain\s+.+?\bfollow\b', lower, re.DOTALL):
             pending_constraints += 1
+            if 'displacement' in lower:
+                explicitly_fixed.add('isotropic displacement')
+        setting_type = re.search(r'choose\s+(biso|uiso|beta|bani)\s+as every site', lower)
+        if setting_type and model is not None:
+            selected = {'biso': 'Biso', 'uiso': 'Uiso', 'beta': 'beta', 'bani': 'Bani'}[
+                setting_type[1]
+            ]
+            changed = False
+            for structure in model.structures:
+                for site in structure.atom_sites:
+                    if str(site.adp_type) != selected:
+                        site.adp_type = selected
+                        changed = True
+            if changed:
+                members = dict(app_population(project=model))
+                active.intersection_update(members)
+        context += '\n' + lower
+        # Separate explicit instructions so each datablock/category selector retains its scope.
+        selected_block = None
+        for command in re.split(r';\s*(?:then\s+)?', lower):
+            selector = re.search(r'choose\s+(\w+)\s+in the datablock filter', command)
+            if selector:
+                selected_block = selector[1]
+            instruction = re.search(
+                r'\b(?:tick|clear|untick)\s+free\s+for\b|\bfree\s*[·:]?\s*all\b'
+                r'|^(?:[-•]\s*)?(?:free|fix)\s+'
+                r'|\b(?:first|second|third|fourth|last|this) stage frees\b',
+                command,
+            )
+            if not instruction:
+                continue
+            groups = {name for name, pattern in phrases if re.search(pattern, command)}
+            if 'instrument' in command:
+                groups.add(
+                    'zero shift' if re.search(r'zero|2θ.*offset', heading) else 'calibration'
+                )
+            if re.search(r'atomic displacements?', command):
+                groups.update(g for g, _ in members.values() if 'displacement' in g)
+                if not members:
+                    groups.add(
+                        'anisotropic displacement'
+                        if 'anisotropic' in context
+                        else 'isotropic displacement'
+                    )
+            if 'peak profile' in command and 'asymmetry' in heading:
+                groups.discard('peak widths')
+                groups.add('peak asymmetry')
+            # Population comes from the saved model, never from Python's expected free list.
+            candidates = set()
+            blocks = {str(b).casefold() for _, b in members.values() if b}
+            for category in groups:
+                offered = {p for p, (g, _) in members.items() if g == category}
+                # A category owns its following selector, not an earlier category's block.
+                pattern = next((pattern for name, pattern in phrases if name == category), '')
+                position = re.search(pattern, command) if pattern else None
+                segment = command[position.end() :] if position else command
+                next_category = [
+                    m.start()
+                    for name, pattern in phrases
+                    if name != category
+                    for m in [re.search(pattern, segment)]
+                    if m
+                ]
+                if next_category:
+                    segment = segment[: min(next_category)]
+                named_blocks = {
+                    b
+                    for b in blocks
+                    if re.search(r'(?<![\w])' + re.escape(b) + r'(?![\w])', segment)
+                }
+                if named_blocks or selected_block:
+                    offered = {
+                        p
+                        for p in offered
+                        if members[p][1].casefold() in (named_blocks or {selected_block})
+                    }
+                if 'rows the stage names' in command and category.endswith('displacement'):
+                    if re.search(r'\bisotropic\b', context + ' ' + lower):
+                        offered = {p for p in offered if category == 'isotropic displacement'}
+                    elif 'anisotropic' in context:
+                        offered = {p for p in offered if category == 'anisotropic displacement'}
+                if (
+                    category == 'positions'
+                    and 'rows the stage names' in command
+                    and model is not None
+                ):
+                    elements = {
+                        symbol
+                        for name, symbol in [
+                            ('oxygen', 'O'),
+                            ('lead', 'Pb'),
+                            ('sulphur', 'S'),
+                            ('sulfur', 'S'),
+                        ]
+                        if re.search(r'\b' + name + r'\b', heading)
+                    }
+                    if elements:
+                        structures = {str(block.name): block for block in model.structures}
+                        offered = {
+                            path
+                            for path in offered
+                            if '.atom_sites.' in path
+                            and str(
+                                structures[members[path][1]]
+                                .atom_sites[path.split('.')[-2]]
+                                .type_symbol
+                            )
+                            in elements
+                        }
+                candidates.update(offered)
+            # A named Gaussian/Lorentzian/rise/decay stage selects only those members.
+            if 'rows the stage names' in command:
+                tokens = []
+                if 'gaussian' in heading:
+                    tokens = ['broad_gauss', 'sigma_']
+                elif 'lorentzian' in heading:
+                    tokens = ['broad_lorentz', 'gamma_']
+                elif 'decay' in heading and 'rise' not in heading:
+                    tokens = ['decay_beta']
+                if tokens:
+                    candidates = {
+                        p
+                        for p in candidates
+                        if members[p][0] not in {'peak widths', 'peak asymmetry'}
+                        or any(t in p for t in tokens)
+                    }
+            first = re.search(r'first (\d+) background coefficients', command)
+            if first:
+                candidates = {p for p in candidates if int(p.split('.')[-2]) < int(first[1])}
+            if not population:
+                # Standalone synthetic controls have no model; distinct named subgroups
+                # still need distinct identities before reducing them to category names.
+                for name in groups:
+                    key = name + (
+                        ':' + context if name in {'peak widths', 'peak asymmetry'} else ''
+                    )
+                    members[key] = (name, '')
+                    candidates.add(key)
+            if re.search(r'^(?:[-•]\s*)?fix\s+|\b(?:clear|untick)\s+free\s+for', command):
+                active.difference_update(candidates)
+            else:
+                active.update(candidates)
         if re.search(r'\b(?:click|press|run|perform)\s+(?:the\s+)?fit\b(?!\s+results)', lower):
             cycles.append({
-                'freed': sorted(freed),
-                'fixed': sorted(fixed),
-                'active': sorted(active),
+                'freed': categories(active - previous),
+                'fixed': sorted(
+                    explicitly_fixed
+                    | {group(p) if p not in members else members[p][0] for p in previous - active}
+                ),
+                'active': categories(active),
                 'constraints': pending_constraints,
             })
-            freed.clear()
-            fixed.clear()
+            previous = active.copy()
+            explicitly_fixed.clear()
             pending_constraints = 0
     return cycles

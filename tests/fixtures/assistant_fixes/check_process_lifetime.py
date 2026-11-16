@@ -34,6 +34,9 @@ def _alive(pid: int) -> bool:
     stat = Path(f'/proc/{pid}/stat')
     try:
         return stat.read_text(encoding='utf-8').split(')', 1)[1].split()[0] != 'Z'
+    except ProcessLookupError:
+        # The process exited between the signal check and the read: Linux answers ESRCH.
+        return False
     except FileNotFoundError:
         return not sys.platform.startswith('linux')
 

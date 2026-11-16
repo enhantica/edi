@@ -34,6 +34,7 @@ from tests.fixtures.constraint_expressions.ncaf_follower_bytes import historical
 from tests.fixtures.cwl_family.historical import original_tokens
 from tests.fixtures.example_catalogue.retained_bytes import retained_bytes
 from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
+from tests.fixtures.metadata_transition import retired_source_fields
 from tests.fixtures.table_display.metadata_bytes import restore
 from tests.integration.py.ci_runner_contract import self_hosted_runners
 
@@ -172,6 +173,21 @@ def _assert_live_stop_rules(live_directory):
     )
 
 
+def _assert_historical_stop_rule(live_directory, name):
+    _assert_live_stop_rules(live_directory)
+    declared = retired_source_fields.previous_bytes(
+        (live_directory / name).relative_to(ROOT).as_posix(),
+        (live_directory / name).read_bytes(),
+    )
+    assert [
+        line.strip()
+        for line in declared.decode().splitlines()
+        if line.startswith('_minimizer.stop_rule ')
+    ] == ['_minimizer.stop_rule shift_su'], (
+        'Each retained seed declares the owner-selected Shift/s.u. rule exactly once'
+    )
+
+
 @pytest.mark.parametrize('project_id', sorted(SOURCE['projects']))
 def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, tmp_path):
     expected = SOURCE['projects'][project_id]
@@ -183,7 +199,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
     live_directory = directory
     directory = restore(directory, tmp_path / 'retained-seed')
     paths = {
-        str(path.relative_to(directory)): path
+        path.relative_to(directory).as_posix(): path
         for path in (directory / 'project').rglob('*')
         if path.is_file()
     }
@@ -241,7 +257,7 @@ def test_seed_regression_pin_tree_is_byte_identical_to_crysta_main(project_id, t
                     for line in expected_lines
                 ]
             contents = path.read_bytes()
-            _assert_live_stop_rules(live_directory)
+            _assert_historical_stop_rule(live_directory, name)
             if project_id == 'cosio-d20-scan-3f':
                 contents = legacy_seed('analysis/analysis.edi', contents)
             assert retained_lines(contents.decode()) == expected_lines, (
@@ -532,7 +548,7 @@ def test_pull_request_ci_and_verify_execute_the_complete_registry():
 
 def assert_registry_wiring(manifest, workflow):
     # : before, string-only dependencies and any one CI invocation sufficed.
-    # After, resolve environment-qualified edges and require both real OS runners.
+    # After, resolve environment-qualified edges and require every native OS runner.
     runner = 'tools/checks/cli_projects.py'
     for name in ('verify', 'verify-quick', 'verify-full'):
         commands = task_commands(manifest, name)
@@ -586,7 +602,7 @@ def assert_registry_wiring(manifest, workflow):
                 commands = task_commands(manifest, invoked[1])
                 if any(runner in item and '--project' not in item for item in commands):
                     platforms.update(runner[1] for runner in self_hosted_runners(job))
-    assert platforms == {'Linux', 'macOS'}, (
+    assert platforms == {'Linux', 'macOS', 'Windows'}, (
         'required private or trusted public pull-request CI executes the full CLI registry '
         'on every OS'
     )
@@ -739,11 +755,12 @@ def test_executing_registry_accepts_lowercase_page_stems_and_seed_variants(tmp_p
         'disabled-step',
         'conditional-step',
         'wrong-os',
+        'missing-windows',
     ],
 )
 def test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes(escape):
     # Independent contract fixture: the approved standard runners and positive SDK
-    # fork boundary must execute the complete registry on both desktop platforms.
+    # fork boundary must execute the complete registry on every desktop platform.
     manifest = tomllib.loads((ROOT / 'pixi.toml').read_text())
     job = {
         'runs-on': '${{ matrix.runner }}',
@@ -754,6 +771,7 @@ def test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes(esca
                 'include': [
                     {'platform': 'Linux', 'runner': 'ubuntu-24.04'},
                     {'platform': 'macOS', 'runner': 'macos-15'},
+                    {'platform': 'Windows', 'runner': 'windows-2022'},
                 ]
             }
         },
@@ -779,6 +797,8 @@ def test_hosted_registry_wiring_refuses_optional_and_wrong_platform_escapes(esca
         job['steps'][0]['if'] = 'some.optional.condition'
     elif escape == 'wrong-os':
         job['strategy']['matrix']['include'][1]['runner'] = 'ubuntu-24.04'
+    elif escape == 'missing-windows':
+        job['strategy']['matrix']['include'].pop()
     with pytest.raises(AssertionError):
         assert_registry_wiring(manifest, workflow)
 

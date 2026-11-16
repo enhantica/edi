@@ -11,6 +11,7 @@
 #include <QMetaProperty>
 #include <QQmlEngine>
 #include <QSignalSpy>
+#include <QSet>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QGuiApplication>
@@ -59,6 +60,45 @@ public:
         objects.prepend(root);
         for (auto *object : objects)
             if (object->property(name.toUtf8().constData()).isValid()) result.append(QVariant::fromValue(object));
+        return result;
+    }
+    // Filter before crossing the QML boundary: wrapping the whole ownership tree
+    // just to select one control makes the observer dominate the native row.
+    Q_INVOKABLE QVariantList visualObjectsNamed(QQuickItem *root, const QString &name,
+                                                bool prefix = false) const {
+        QVariantList result;
+        if (!root) return result;
+        QList<QQuickItem *> pending{root};
+        while (!pending.isEmpty()) {
+            auto *item = pending.takeLast();
+            if (prefix ? item->objectName().startsWith(name) : item->objectName() == name)
+                result.append(QVariant::fromValue(item));
+            const auto children = item->childItems();
+            for (auto it = children.crbegin(); it != children.crend(); ++it)
+                pending.append(*it);
+        }
+        return result;
+    }
+    Q_INVOKABLE QVariantList objectsNamed(QObject *root, const QString &name) const {
+        QVariantList result;
+        if (!root) return result;
+        QSet<QObject *> seen;
+        auto objects = root->findChildren<QObject *>();
+        objects.prepend(root);
+        for (auto *object : objects) {
+            seen.insert(object);
+            if (object->objectName() == name)
+                result.append(QVariant::fromValue(object));
+        }
+        auto *visual = qobject_cast<QQuickItem *>(root->property("contentItem").value<QObject *>());
+        if (!visual) visual = qobject_cast<QQuickItem *>(root);
+        for (const auto &entry : visualObjectsNamed(visual, name)) {
+            auto *object = entry.value<QObject *>();
+            if (!seen.contains(object)) {
+                seen.insert(object);
+                result.append(entry);
+            }
+        }
         return result;
     }
     Q_INVOKABLE int cursorShape(QObject *object) const {

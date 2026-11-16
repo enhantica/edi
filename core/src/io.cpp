@@ -27,9 +27,6 @@
 #include "assistant_project_io.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
 #include "number_token.hpp"
-#include "crysta/descent.hpp"
-#include "crysta/magnetic.hpp"
-#include "crysta/single_crystal.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -341,6 +338,10 @@ std::vector<Token> tokenize(const std::string& text, const std::string& where) {
             std::string token;
             bool closed = false;
             while (index < size) {
+                // CRLF is one physical line ending inside a CIF text field.
+                if (text[index] == '\r' && index + 1 < size && text[index + 1] == '\n') {
+                    ++index;
+                }
                 if (text[index] == '\n' && index + 1 < size && text[index + 1] == ';') {
                     index += 2;  // closing newline + ';'
                     closed = true;
@@ -2063,19 +2064,19 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
     // its space group allows up to it. Measured reflections are what it calculates otherwise, so beside them, or
     // on a time-of-flight one, the limit is refused.
     const Loop* declared_refln = block.loop_with("_refln.index_h");
-    if (const std::string* limit = block.find(crysta::kSinThetaOverLambdaMaxKey)) {
+    if (const std::string* limit = block.find(detail::single_crystal_resolution_key())) {
         if (!cw) {
             fail_domain(where, "resolution-limit",
-                        std::string(crysta::kSinThetaOverLambdaMaxKey) +
+                        std::string(detail::single_crystal_resolution_key()) +
                             " on a time-of-flight single crystal, which has no one wavelength to generate reflections for");
         }
         if (declared_refln != nullptr && !declared_refln->rows.empty()) {
             fail_domain(where, "resolution-limit",
-                        std::string(crysta::kSinThetaOverLambdaMaxKey) +
+                        std::string(detail::single_crystal_resolution_key()) +
                             " beside measured reflections, which are what it calculates; remove the limit");
         }
         try {
-            experiment.sin_theta_over_lambda_max = crysta::read_sin_theta_over_lambda_max(*limit);
+            experiment.sin_theta_over_lambda_max = detail::read_single_crystal_resolution(*limit);
         } catch (const std::invalid_argument& error) {
             fail_domain(where, "resolution-limit", error.what());
         }
@@ -2685,9 +2686,9 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
         }
         experiment.background.assign(std::move(points));
     }
-    if (block.find(crysta::kSinThetaOverLambdaMaxKey) != nullptr) {  // the resolution limit
+    if (block.find(detail::single_crystal_resolution_key()) != nullptr) {  // the resolution limit
         fail_domain(where, "resolution-limit",
-                    std::string(crysta::kSinThetaOverLambdaMaxKey) +
+                    std::string(detail::single_crystal_resolution_key()) +
                         ", a single crystal's limit, on a powder; a powder declares its range by its axis' _min, "
                         "_max and _step");
     }
@@ -3907,7 +3908,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         if (const std::string* descent = block.find("_minimizer.descent")) {
             // An older file may name a descent crysta has since retired: it loads as fast descent,
             // says so once, and a save writes fast_descent.
-            if (crysta::is_retired_descent(*descent)) {
+            if (detail::is_retired_descent(*descent)) {
                 warn("_minimizer.descent " + *descent + " is retired; the fit runs fast_descent instead");
                 project.descent = "fast_descent";
             } else {

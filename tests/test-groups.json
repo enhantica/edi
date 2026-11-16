@@ -6,17 +6,19 @@
         "unit/py",
         "unit/cpp",
         "integration/py",
-        "system"
+        "system/py"
       ],
       "task": "group-quick",
       "gap_to_merge": "CI on a pull request leaves out the nightly-only group's files, which only the nightly schedule runs, and the weekly-only group's, which only the Sunday schedule runs; merge-only JOBS (the macOS leg) differ otherwise"
     },
     "app": {
       "tiers": [
-        "integration/app"
+        "integration/app",
+        "system/app"
       ],
       "paths": [
-        "tests/integration/app"
+        "tests/integration/app",
+        "tests/system/app"
       ],
       "task": "group-app",
       "gap_to_merge": "none: app-verify and both app CI jobs run this group after app-build in the app environment"
@@ -26,7 +28,7 @@
         "unit/py",
         "unit/cpp",
         "integration/py",
-        "system"
+        "system/py"
       ],
       "task": "group-full",
       "gap_to_merge": "the merge selection itself"
@@ -50,7 +52,10 @@
         "tests/system/py/test_scan_native_boundary.py",
         "tests/system/py/test_scan_correlation_save_stability.py",
         "tests/system/py/test_shared_correlation_app_state.py",
-        "tests/system/py/test_project_transactions.py"
+        "tests/system/py/test_project_transactions.py",
+        "tests/system/py/test_tutorial_command_line_workflows.py",
+        "tests/system/py/test_tutorial_recipe_native_states.py",
+        "tests/system/py/test_tutorial_assistant_create.py"
       ],
       "app_builders": [
         "tests/fixtures/plain_data/build_probe.py",
@@ -72,6 +77,16 @@
       ],
       "task": "group-weekly-only",
       "gap_to_merge": "Pull requests, main pushes, the nightly schedule and manual runs omit this file; only the Sunday schedule runs the CIF import matrix, about two hours serial."
+    },
+    "browser": {
+      "tiers": [
+        "system"
+      ],
+      "paths": [
+        "tests/system/py/test_survey_events.py"
+      ],
+      "task": "group-browser",
+      "gap_to_merge": "none: browser cases run on every PR in app-wasm after wasm-toolchain; both local verification cadences run group-browser with the same declared prerequisite."
     }
   },
   "cadence": {
@@ -80,7 +95,7 @@
     "before-review": "quick (pixi run verify-quick; what CI runs on a pull request)",
     "ready-to-merge": "full, once (pixi run verify-full == pixi run verify; the mount verify and the x-ship gate; what CI runs on merge)"
   },
-  "note": ": quick and full name WHEN verification runs; app names the Qt environment required by integration/app, not another cadence. Core tasks retain their prior selections outside integration/app; app-verify and both app CI jobs execute group-app after app-build. Both verify cadences retain all app cases, and each platform's combined full core/app jobs cover the complete collection. Default pytest collection retains every tier for the runtime inventory. Groups name paths, never predicates over runtime; edi declares no fitting corpus. The per-tier audit refuses marker-based deselection.",
+  "note": ": quick and full name WHEN verification runs; app names the Qt environment required by integration/app, not another cadence. Core tasks retain their prior selections outside integration/app; app-verify and both app CI jobs execute group-app after app-build. Both verify cadences retain all app cases, and each platform's combined full core/app jobs cover the complete collection. Default pytest collection retains every tier for the runtime inventory. Groups name paths, never predicates over runtime; edi declares no fitting corpus. The per-tier audit refuses marker-based deselection. Large single-crystal tutorial relation-graph observations in tests/system/py/test_tutorial_large_population_stages.py retain quick/full system cadence; complete CLI, recipe and native Create/save journeys have explicit nightly-only paths. Whole tutorial exclusion filesystem and checker workflows retain quick/full integration cadence in tests/integration/py/test_tutorial_exclusion_workflows.py. Actual runtime publication configure/permission workflows retain system tier in tests/system/py/test_runtime_publication_reuse.py and their original PR core-job cadence through tools/ci/core-tests.sh. End-to-end phase scan/single-fit parity and reopen workflows live in tests/system/py/test_phase_scan_parity.py and remain explicitly selected in the PR core job by tools/ci/core-tests.sh. Survey event dates on authored and generated assets share one browser worker in group-browser, whose wasm-toolchain prerequisite supplies Playwright and Chrome; core and system shards delegate these exact paths to the app-wasm job. The real public snapshot/workflow mutation journey in tests/system/py/test_public_content_workflows.py retains PR core cadence via core-tests.sh; its former integration measurement exceeded the 1 s tier bound. NCAF and ferrite field navigation keep the same system cadence in their dedicated lesson modules; each module shares one real Home entry and declared project, while every row still drives and asserts its own original Qt input.",
   "local_gap_to_merge": {
     "statement": "no gap: the review-time quick run (pixi run verify-quick) runs every ruled tier that the merge-time full run and CI-on-merge run; the surfaces differ only in platform (CI adds the macOS runner; CI leaves out the nightly-only group except on the nightly schedule, and the weekly-only group except on the Sunday schedule), not in tiers",
     "omitted_tiers": [],

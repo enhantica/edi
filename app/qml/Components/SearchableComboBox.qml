@@ -40,7 +40,6 @@ EaElements.ComboBox {
     ComboBoxMetrics {
         id: widthMetrics
         comboBox: control
-        model: control.model
         count: control.count
         textRole: control.textRole
         displayText: control.displayText

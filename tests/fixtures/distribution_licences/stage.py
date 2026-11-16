@@ -53,7 +53,13 @@ def stage_cli(destination):
 
 
 def stage_web(destination):
-    shutil.copytree(ROOT / 'build/wasm/site', destination / 'web', dirs_exist_ok=True)
+    source = ROOT / 'build/wasm/site'
+    target = destination / 'web'
+    if not source.is_dir() or source.resolve() == target.resolve():
+        raise ValueError('Web licence staging requires its built site and a distinct destination')
+    if target.exists():
+        shutil.rmtree(target)
+    shutil.copytree(source, target)
 
 
 def parse_surfaces(value):

@@ -1,21 +1,17 @@
 name: crysta SDK
 description: >-
-  Restore the pinned crysta commit's SDK and source, built once by .github/workflows/crysta-sdk.yml
+  Download this run's qualified SDK and source from .github/workflows/crysta-sdk.yml
   (edi ADR-0083), and point the build at them. A job using it needs the crysta-sdk job.
 inputs:
   platform:
-    description: linux-64 or osx-arm64
+    description: linux-64, osx-arm64 or win-64
     required: true
 runs:
   using: composite
   steps:
-    - id: pin
-      shell: bash
-      run: bash tools/ci/crysta-source.sh
-    - uses: actions/cache/restore@v4
+    - uses: actions/download-artifact@v4
       with:
+        name: crysta-sdk-${{ inputs.platform }}
         path: crysta-sdk-archives
-        key: crysta-sdk-v2-${{ inputs.platform }}-${{ steps.pin.outputs.sha }}
-        fail-on-cache-miss: true
     - shell: bash
       run: echo "CRYSTA_SDK_ARCHIVES=$GITHUB_WORKSPACE/crysta-sdk-archives" >>"$GITHUB_ENV"

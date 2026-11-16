@@ -94,7 +94,7 @@ def _assert_red(case: Path, *, channel: str, required_path: str) -> None:
     assert result.returncode != 0, (
         f' weakref capability channel {channel} must be rejected; output={output}'
     )
-    assert required_path in output, (
+    assert str(Path(required_path)) in output, (
         f' weakref rejection for {channel} must identify the reached production path; '
         f'output={output}'
     )

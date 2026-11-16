@@ -42,7 +42,7 @@
   "tutorials": {
     "python": "docs/user/tutorials/{case}.ipynb",
     "app": "{case}",
-    "app_docs": "docs/user/app/{case}.md",
+    "app_docs": "website/surfaces/docs/application/tutorials/cases/{case}.md",
     "cli_docs": "docs/user/cli/{case}/index.md"
   }
 }

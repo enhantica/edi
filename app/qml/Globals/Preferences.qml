@@ -102,6 +102,10 @@ QtObject {
         RunLog.level = loggingLevel;
         ApplicationInfo.setMessageLevel(loggingLevel);
         loadToolTips();
+        if (Qt.platform.os === "wasm") {
+            introAnimation = ApplicationInfo.introAnimationStored();
+            introAnimationRead = true;
+        }
     }
     // How a followed scan redraws the pattern (Analysis, Settings; edi ADR-0029): FitViewModel.patternUpdates, 2 is
     // adaptive. The open project's fit takes it, whichever project is open.
@@ -129,6 +133,15 @@ QtObject {
     property string colourScheme: "main"
     // How the structure view colours the magnetic moment arrows: "atom", "greyed" (the default) or "single" (edi ADR-0078).
     property string momentColours: "greyed"
+    // The Home page's intro at start (Appearance, General, "Intro animation"; the owner, 2026-11-14). Never in a demo
+    // or test run (ApplicationInfo.homeIntroAllowed), so their images stay still.
+    property bool introAnimation: true
+    // In the browser the start page plays the intro instead of the app, so the app never does; the choice is the
+    // page's stored one (ApplicationInfo.introAnimationStored), read with the other settings and written back.
+    readonly property bool introAnimationOn: introAnimation && ApplicationInfo.homeIntroAllowed && Qt.platform.os !== "wasm"
+    property bool introAnimationRead: false
+    onIntroAnimationChanged: if (Qt.platform.os === "wasm" && introAnimationRead)
+        ApplicationInfo.storeIntroAnimation(introAnimation)
     // The patterns' palette stored before the one palette (the owner, 2026-10-22, until 2026-10-26): read once into
     // colourScheme, then cleared, so a choice made there carries over.
     property string patternColourScheme: ""
@@ -181,6 +194,7 @@ QtObject {
         // After colourScheme: the settings load in this order, so the earlier patterns' choice wins once.
         property alias patternColourScheme: preferences.patternColourScheme
         property alias momentColours: preferences.momentColours
+        property alias introAnimation: preferences.introAnimation
     }
 
     property Settings assistantSettings: Settings {

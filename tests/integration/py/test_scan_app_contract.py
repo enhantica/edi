@@ -6,13 +6,13 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 
 from tests.fixtures.native_ui_script.job_controls import check_job_requirements
 from tests.fixtures.native_ui_script.runner import run_javascript
+from tests.fixtures.node_runtime import environment_node
 
 ROOT = Path(__file__).resolve().parents[3]
 APP = ROOT / 'app'
@@ -227,7 +227,7 @@ def control_type(text, name):
 
 
 def javascript(program):
-    node = Path(sys.prefix) / 'bin/node'
+    node = environment_node()
     assert node.is_file(), 'Scan wiring: the declared Python environment supplies Node'
     result = run_javascript(program, timeout=5)
     assert result.returncode == 0, (
@@ -931,7 +931,7 @@ def test_data_free_experiment_type_has_a_write_boundary(axis):
     program = (
         """const Qt={binding:f=>f()}; let calls=[];
 const row={experimentIndex:3,project:{setExperimentType:(...args)=>calls.push(args)}};
-const options={tokenAt:index=>['old','chosen','other'][index],
+const options={revision:0,tokenAt:index=>['old','chosen','other'][index],
                indexOf:value=>['old','chosen','other'].indexOf(value)};
 const editorLife={alive:true}; let activation=null;
 const selector={token:'old',options,get activation(){return activation}};

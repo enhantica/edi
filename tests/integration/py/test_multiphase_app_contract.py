@@ -129,50 +129,25 @@ def test_shared_block_selector_has_bounded_square_icon_steps_and_file_labels():
         or 'filename' in selector + model
         or 'key + QStringLiteral(".edi")' in model
     ), 'Selector labels must combine datablock and file names'
-    # Before the owner's GUI round, Analysis had a sidebar selector; all pages now share
-    # the single main-area placement while preserving the complete collection and activation.
-    workflow = code('app/qml/Components/WorkflowPage.qml')
-    assert 'MainAreaBlockSelector {' in workflow and (
-        'visible: page.blockSelectorShown && page.blocks !== null && page.blocks.count > 0'
-        in workflow
-    ), 'The shared workflow must host the selector only while its page has blocks'
-    assert all(
-        binding in workflow
-        for binding in (
-            'blocks: page.blocks',
-            'blockKind: page.blockKind',
-            'blockIndex: page.blockIndex',
-            'onBlockActivated: index => page.blockActivated(index)',
-        )
-    ), 'The shared selector must forward the page collection, selection and activation'
+    # ADR-0017 now places one persistent view beside all three sidebar pages.
+    main = code('app/qml/Components/MainView.qml')
+    assert main.count('MainAreaBlockSelector {') == 1, (
+        'The shared main view owns one block selector for every browsing page'
+    )
+    assert_structure_selector(main)
     placement = code('app/qml/Components/MainAreaBlockSelector.qml')
     assert placement.count('BlockSelector {') == 1 and (
         'onBlockActivated: index => placement.blockActivated(index)' in placement
-    ), 'The main-area placement must compose one selector and forward its original index'
-    assert 'BlockSelector {' in placement and (
-        'onBlockActivated: index => placement.blockActivated(index)' in placement
-    ), 'The main-area selector must forward choices from the shared block control'
-    assert (
-        'MainAreaBlockSelector {' in workflow and 'visible: page.blockSelectorShown' in workflow
-    ), 'The shared workflow main area must host the enabled block selector'
-    for page_name, kind, collection in (
-        ('Experiment', 'Experiment', 'experiments'),
-        ('Structure', 'Structure', 'structures'),
-        ('Analysis', 'Experiment', 'experiments'),
-    ):
+    ), 'The main-area placement composes one selector and preserves its original index'
+    for page_name in ('Experiment', 'Structure', 'Analysis'):
         page = code(f'app/qml/Pages/{page_name}/{page_name}Page.qml')
-        assert 'WorkflowPage {' in page and 'blockSelectorShown: true' in page, (
-            'Every browsing page must enable the shared workflow selector'
+        assert 'WorkflowPage {' in page and 'blockSelectorShown: true' not in page, (
+            'Every browsing sidebar leaves selection to the shared persistent main view'
         )
-        if page_name == 'Structure':
-            assert_structure_selector(page)
-            continue
-        assert f'blocks: project ? project.{collection} : null' in page, (
-            'Each browsing page must supply its own complete block collection'
-        )
-        assert f'onBlockActivated: index => page.project.current{kind}Index = index' in page, (
-            'Each browsing page must apply shared selector activation to its own selection'
-        )
+    window = code('app/qml/Main.qml')
+    assert window.count('MainView {') == 1, (
+        'The application mounts the shared view exactly once across sidebar page switches'
+    )
 
 
 def test_linked_structure_rows_use_available_names_and_add_remove_disable_actions():

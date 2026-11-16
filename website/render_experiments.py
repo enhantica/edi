@@ -516,7 +516,9 @@ ASSISTANT_TAG = {'facet': 'interface', 'value': 'assistant', 'label': 'AI assist
 
 def _assistant_records(records: list[dict]) -> list[dict]:
     section = 'Getting started'
-    case = next(record for record in records if record['id'] == ASSISTANT_CASE)
+    case = next((record for record in records if record['id'] == ASSISTANT_CASE), None)
+    if case is None:
+        return []
     return [
         {
             **row,
@@ -602,6 +604,14 @@ def _tutorial_rows(
             )
             # The case record's title, as the tutorials and the navigation name the case.
             title = record['title'] or ' / '.join(entry['samples'])
+            declared = record.get('interfaces', list(RECORD_INTERFACES))
+            if 'pages' not in record and set(declared) != set(RECORD_INTERFACES):
+                names = [
+                    INTERFACES[RECORD_INTERFACES[key]][0]
+                    for key in RECORD_INTERFACES
+                    if key in declared
+                ]
+                title = ' + '.join(names) + ' only: ' + title
             labels = ' '.join(
                 badge(tag['facet'], tag['value'], prefix='../../') for tag in record['tags'] or []
             )

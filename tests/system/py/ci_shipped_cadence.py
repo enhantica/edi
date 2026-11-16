@@ -12,6 +12,7 @@ import tomllib
 
 import yaml
 
+from tests.fixtures.native_process import environment_bash
 from tests.system.py.ci_execution_contract import (
     contexts,
     prerequisites_ready,
@@ -60,13 +61,14 @@ def invoke_step(tmp_path, workflow, job, step, ctx, *, failure=''):
         'with open(os.environ["CADENCE_CALLS"], "a") as f:\n'
         ' f.write(json.dumps({"argv":sys.argv[1:], "nightly":{k:v for k,v in os.environ.items() '
         'if k.endswith("_SKIP_NIGHTLY_GROUP") or k == "EDI_RUN_NIGHTLY_ONLY"}})+"\\n")\n'
-        'sys.exit(23 if os.environ["CADENCE_FAILURE"] in sys.argv[1:] else 0)\n'
+        'sys.exit(23 if os.environ["CADENCE_FAILURE"] in sys.argv[1:] else 0)\n',
+        newline='\n',
     )
     program.chmod(0o755)
     _shell, env = run_settings(workflow, job, step, ctx)
     result = subprocess.run(
         [
-            '/bin/bash',
+            environment_bash(),
             '--noprofile',
             '--norc',
             '-e',

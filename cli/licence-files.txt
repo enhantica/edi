@@ -1,1 +1,7 @@
+crysta-LICENSE
+SLEEF-LICENSE
+Eigen-LICENSE
 libgomp-LICENSE
+llvm-openmp-LICENSE
+libc++-LICENSE
+miniz-LICENSE

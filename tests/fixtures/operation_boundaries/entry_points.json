@@ -301,6 +301,11 @@
           "proof": "tests/system/py/test_linked_experiment_payloads.py",
           "overloads": 1
         },
+        "loadDatasetFolder": {
+          "domain": "dataset-load",
+          "proof": "tests/system/py/test_browser_dataset_copy.py",
+          "overloads": 1
+        },
         "loadDataIntoNewExperiment": {
           "domain": "dataset-admission",
           "proof": "tests/system/py/test_linked_experiment_payloads.py",
@@ -399,6 +404,11 @@
         "applyText": {
           "domain": "model-publication",
           "proof": "tests/system/py/test_operation_contracts.py",
+          "overloads": 1
+        },
+        "readyForEdit": {
+          "domain": "read-only query",
+          "proof": null,
           "overloads": 1
         },
         "parameterNamed": {

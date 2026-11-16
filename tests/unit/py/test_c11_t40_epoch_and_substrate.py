@@ -150,7 +150,7 @@ def test_c11_t40_every_reachable_parameter_has_surviving_metadata(
         absorption_paths = {path for path, _ in parameters if '.absorption.' in path}
         expected_paths = {'experiment.absorption.abscor1'} if selector == 'cylinder' else set()
         assert absorption_paths == expected_paths, (
-            'only the cylinder family contributes its complete live absorption parameter set',
+            'only the cylinder family contributes its active TOF absorption parameter',
             selector,
         )
         for path, parameter in parameters:

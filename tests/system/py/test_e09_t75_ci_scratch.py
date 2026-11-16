@@ -7,6 +7,7 @@ import sys
 import pytest
 
 from tests.fixtures.e09_t75_scratch import directories, exercise, observe_tool
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e09_t75_sdk_consumer import consumer
 from tests.system.py.test_e09_t75_pin_currency import currency_world
 
@@ -16,10 +17,15 @@ def test_currency_clone_lifetime_crosses_the_public_check(tmp_path, ending):
     build, _ = currency_world(tmp_path, 'unpaired-ancestor')
     directories(tmp_path, build.env)
     git = tmp_path / 'bin/git'
-    git.write_text('#!/bin/sh\nexec ' + build.git + ' "$@"\n')
+    git.write_text('#!/bin/sh\nexec ' + build.git + ' "$@"\n', newline='\n')
     git.chmod(0o755)
     observe_tool(git, "'clone' in a")
-    exercise(['bash', 'tools/ci/crysta-source.sh', '--currency'], build.edi, build.env, ending)
+    exercise(
+        [environment_bash(), 'tools/ci/crysta-source.sh', '--currency'],
+        build.edi,
+        build.env,
+        ending,
+    )
 
 
 @pytest.mark.parametrize('ending', ['finish', 'fail', 'term', 'kill'])

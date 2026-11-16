@@ -40,8 +40,12 @@ def test_progress_work_per_file_stays_flat_through_5184_events(monkeypatch):
             return SimpleNamespace()
 
     monkeypatch.setattr(cli.sys, 'stdout', io.StringIO())
+    monkeypatch.setattr(cli.edi._edi, '_metric_variant', lambda _project: 'powder')
     cli._run_human(
-        SimpleNamespace(analysis=Analysis()), edi.VerbosityEnum.COMPACT, 'cost', clock=lambda: 1.0
+        SimpleNamespace(analysis=Analysis(), fitting_mode='sequential', _scan_declared=True),
+        edi.VerbosityEnum.COMPACT,
+        'cost',
+        clock=lambda: 1.0,
     )
     assert len(work) == 5184, ' gate 5: the cost probe must consume the full scan cardinality'
     assert sum(work[-648:]) <= 1.05 * max(sum(work[:648]), 648), (

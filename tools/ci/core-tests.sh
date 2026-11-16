@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # The nightly-only and weekly-only cohorts are declared once, alongside the other execution groups.
 set -euo pipefail
-command=(python -m pytest tests/unit tests/integration --ignore=tests/integration/app -q)
+# Actual publication/cache-permission workflows belong to system tier, and retain their
+# original PR core-job execution even where the ordinary system shards do not run on PRs.
+command=(python -m pytest tests/unit tests/integration tests/system/py/test_runtime_publication_reuse.py tests/system/py/test_phase_scan_parity.py tests/system/py/test_public_content_workflows.py --ignore=tests/integration/app -q)
 leave_out() {
   local paths
-  paths="$(python -c 'import json, sys; print("\n".join(json.load(open("tests/test-groups.json"))["groups"][sys.argv[1]]["paths"]))' "$1")"
+  paths="$(python -c 'import json, sys; sys.stdout.reconfigure(newline="\n"); print("\n".join(json.load(open("tests/test-groups.json"))["groups"][sys.argv[1]]["paths"]))' "$1")"
   [ -n "$paths" ] || { echo "core-tests: the $1 group names no files" >&2; exit 2; }
   while IFS= read -r path; do command+=("--ignore=$path"); done <<< "$paths"
 }

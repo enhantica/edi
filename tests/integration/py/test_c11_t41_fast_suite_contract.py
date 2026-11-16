@@ -16,6 +16,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
+
 
 def _repo_root() -> Path:
     result = subprocess.run(
@@ -184,6 +186,7 @@ def _worker_build_sandbox(root: Path) -> tuple[Path, Path, Path]:
         'mkdir -p build/shared-worker-artifact\n'
         'exit 91\n',
         encoding='utf-8',
+        newline='\n',
     )
     stand_in.chmod(0o755)
     return marker, shared, root / 'tools/ci/core-build.sh'
@@ -254,6 +257,7 @@ def test_c11_t41_edi_uses_only_the_ruled_category_language_layout() -> None:
             'tests/integration/py/',
             'tests/integration/app/',
             'tests/system/py/',
+            'tests/system/app/',
         ))
     ]
     assert not misplaced, f'test modules outside repo/category/language layout: {misplaced}'
@@ -321,7 +325,8 @@ def _partition_transport(groups, omitted, *, core=False, weekly_omitted=True):
             '#!' + sys.executable + '\nimport json, subprocess, sys\n'
             'if sys.argv[1] == "-c":\n'
             '    sys.exit(subprocess.call([sys.executable, *sys.argv[1:]]))\n'
-            'print(json.dumps(sys.argv[1:]))\n'
+            'print(json.dumps(sys.argv[1:]))\n',
+            newline='\n',
         )
         shim.chmod(0o755)
         env = {
@@ -333,9 +338,9 @@ def _partition_transport(groups, omitted, *, core=False, weekly_omitted=True):
         }
         result = subprocess.run(
             (
-                ['/bin/bash', str(ROOT / 'tools/ci/core-tests.sh'), '--collect-only']
+                [environment_bash(), str(ROOT / 'tools/ci/core-tests.sh'), '--collect-only']
                 if core
-                else ['/bin/bash', str(ROOT / 'tools/ci/system-tests-part.sh'), '1', '3']
+                else [environment_bash(), str(ROOT / 'tools/ci/system-tests-part.sh'), '1', '3']
             ),
             cwd=replay,
             env=env,
@@ -401,7 +406,14 @@ def _assert_licence_delivery(jobs, active):
         )
         for event in ('push', 'schedule', 'workflow_dispatch'):
             for core_state in ('success', 'failure'):
-                context = {'states': {'changes': 'success', 'core': core_state}}
+                context = {
+                    'states': {'changes': 'success', 'core': core_state, 'crysta-sdk': 'success'},
+                    'outputs': {
+                        ('inputs', 'run'): 'true',
+                        ('apphost', 'outcome'): 'success',
+                        ('site', 'outcome'): 'success',
+                    },
+                }
                 assert active(job, event, **context), (
                     'Delegated licence checks remain reachable on main, nightly '
                     'and full manual runs'
@@ -423,7 +435,14 @@ def _assert_licence_steps(job, positions, name, event, context, active):
                     'if': condition.replace('matrix.platform', repr(platform)),
                 }
                 expected = name == 'app-wasm' or platform == 'Linux'
-                assert active(platform_step, event, **context) is expected, (
+                selected = {
+                    **context,
+                    'outputs': {
+                        **context['outputs'],
+                        ('surfaces', 'outcome'): 'success' if expected else 'skipped',
+                    },
+                }
+                assert active(platform_step, event, **selected) is expected, (
                     'Delegated licence staging and checks execute after preceding '
                     'failures on their declared build platform'
                 )
@@ -521,6 +540,9 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
                 'pytest',
                 'tests/unit',
                 'tests/integration',
+                'tests/system/py/test_runtime_publication_reuse.py',
+                'tests/system/py/test_phase_scan_parity.py',
+                'tests/system/py/test_public_content_workflows.py',
                 '--ignore=tests/integration/app',
                 '-q',
                 *ignores,
@@ -530,7 +552,11 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
                 'The production core runner excludes exactly the declared nightly and weekly '
                 'files unless their respective inclusion switches are true'
             )
-        ignores.append('--ignore=' + LICENCE_MODULE)
+        ignores.extend([
+            '--ignore=tests/system/app',
+            '--ignore=' + LICENCE_MODULE,
+            '--ignore=tests/system/py/test_survey_events.py',
+        ])
         assert json.loads(result.stdout) == [
             '-m',
             'pytest',
@@ -548,7 +574,7 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
             '--store-durations',
         ], (
             'Production partitions retain the complete tier '
-            'with exactly the nightly omissions and the staged-artifact licence delegation'
+            'with exactly the nightly omissions, staged licences and browser-job delegation'
         )
 
     assert tasks['nightly-only-tests']['cmd'] == [
@@ -571,8 +597,8 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
         self_hosted_runners,
     )
 
-    jobs = yaml.safe_load(workflow)['jobs']
     declared = yaml.safe_load(workflow)
+    jobs = declared['jobs']
     triggers = declared.get('on', declared.get(True))
     assert {'pull_request', 'push', 'schedule', 'workflow_dispatch'} <= set(triggers), (
         'complete system selections retain PR, main, nightly and on-demand workflow triggers'
@@ -595,13 +621,16 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
     for group in ('quick', 'full'):
         task = groups[group]['task']
         assert task in tasks, 'both cadences retain a declared executable local test-group task'
-        assert {'unit/py', 'unit/cpp', 'integration/py', 'system'} <= set(
+        assert {'unit/py', 'unit/cpp', 'integration/py', 'system/py'} <= set(
             groups[group]['tiers']
-        ), 'Both CI cadences must retain the complete unit, integration and system selections'
+        ), 'Both cadences retain all core unit, integration and system Python selections'
         if 'system' not in jobs:
             assert 'pixi run ' + task in workflow, (
                 'Both PR and merge CI must invoke their declared executable test-group tasks'
             )
+    assert {'integration/app', 'system/app'} <= set(groups['app']['tiers']), (
+        'The Qt-qualified app cohort retains both native integration and system cases'
+    )
     if 'system' in jobs:
         # Before: one event-selected aggregator. After the parallel-jobs
         # decision: the exact same tier selection across required core and parts.
@@ -614,8 +643,13 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
         )
 
         for group, python_task in (('quick', 'quick-tests'), ('full', 'test')):
-            assert tasks[groups[group]['task']]['depends-on'] == [python_task, 'cpp-test'], (
-                'both local declared groups retain their executable Python and C++ selections'
+            assert tasks[groups[group]['task']]['depends-on'] == [
+                python_task,
+                'cpp-test',
+                'group-browser',
+            ], (
+                'Both local cadences retain all Python and C++ selections '
+                'plus their browser-provisioned survey group'
             )
         assert tasks['quick-tests']['cmd'] == [
             'python',
@@ -625,18 +659,32 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
             'tests/integration',
             'tests/system',
             '--ignore=tests/integration/app',
+            '--ignore=tests/system/app',
+            '--ignore=tests/system/py/test_survey_events.py',
             '-q',
         ], 'the unsplit local group and split CI jobs must retain identical tier selections'
         assert tasks['test']['cmd'] == [
             'bash',
             'tools/ci/pytest-lenient.sh',
             '--ignore=tests/integration/app',
+            '--ignore=tests/system/app',
+            '--ignore=tests/system/py/test_survey_events.py',
         ], 'the local merge group retains its complete default collection outside the app tier'
         assert tasks['core-tests']['cmd'] == ['bash', 'tools/ci/core-tests.sh'], (
             'The split core task uses the runner that preserves the explicit nightly selection'
         )
         assert tasks['system-tests-part']['cmd'] == ['bash', 'tools/ci/system-tests-part.sh'], (
             'each system part invokes the actual declared partition executable'
+        )
+        assert groups['browser']['paths'] == ['tests/system/py/test_survey_events.py'], (
+            'The complete survey browser module belongs to the browser-provisioned group'
+        )
+        assert tasks['group-browser']['depends-on'] == [
+            'core-build',
+            {'task': 'wasm-toolchain', 'environment': 'app'},
+        ], (
+            'Both local verification cadences provision Playwright and Chrome '
+            'before real survey browsers'
         )
         partition = (ROOT / 'tools/ci/system-tests-part.sh').read_text()
         assert re.search(r'exec python -m pytest tests/system -q "\$@"\s*\\', partition), (
@@ -658,9 +706,18 @@ def test_c11_t41_edi_ci_tiers_name_pr_merge_and_local_surfaces() -> None:
             for platform in ('linux-64', 'osx-arm64'):
                 public_build_boundary(jobs, name, platform)
             for event in ('pull_request', 'push', 'schedule', 'workflow_dispatch'):
-                assert active(jobs[name], event, states={'changes': 'success'}) == (
-                    name == 'core' or event != 'pull_request'
-                ), 'PRs execute core; full events also execute every system part'
+                assert active(
+                    jobs[name],
+                    event,
+                    states={
+                        'changes': 'success',
+                        'native': 'success',
+                        'app': 'success',
+                        'crysta-sdk': 'success',
+                    },
+                ) == (name == 'core' or event != 'pull_request'), (
+                    'PRs execute core; full events also execute every system part'
+                )
         durations = jobs['system-durations']
         assert (
             durations.get('if') == "github.event_name == 'push'" and durations['needs'] == 'system'

@@ -13,10 +13,12 @@ Column {
 
     property string link: ""  // opened by a click on the mark, when set
     property string versionObjectName: ""
+    readonly property Wordmark wordmark: wordmarkItem
 
     spacing: versionMetrics.xHeight
 
     Wordmark {
+        id: wordmarkItem
         anchors.horizontalCenter: parent.horizontalCenter
         markDiameter: AppSizes.homeMarkDiameter
         link: block.link

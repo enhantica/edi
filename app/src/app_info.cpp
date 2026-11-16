@@ -38,7 +38,10 @@
 #include <QImage>
 #include <QDir>
 #include <QFile>
+#include <QDateTime>
+#include <QEvent>
 #include <QGuiApplication>
+#include <QStyleHints>
 #include <QJSManagedValue>
 #include <QJSPrimitiveValue>
 #include <QJsonDocument>
@@ -108,7 +111,20 @@
 #include <omp.h>
 #endif
 #ifdef Q_OS_WASM
+#include <emscripten.h>
 #include <emscripten/val.h>
+
+// The start page's intro choice (app/web/intro.js), kept in the page's storage: "off", or absent for on. A page whose
+// storage is blocked reads on and keeps nothing.
+EM_JS(int, edi_intro_animation_stored, (), {
+    try { return localStorage.getItem("edi.introAnimation") === "off" ? 0 : 1; } catch (e) { return 1; }
+});
+EM_JS(void, edi_store_intro_animation, (int on), {
+    try {
+        if (on) localStorage.removeItem("edi.introAnimation");
+        else localStorage.setItem("edi.introAnimation", "off");
+    } catch (e) {}
+});
 #endif
 
 namespace QV4 {
@@ -206,6 +222,47 @@ bool assistant_device_available() {
 ApplicationInfo::ApplicationInfo(QObject* parent)
     : QObject(parent), assistant_available_(assistant_device_available()) {
     edi_app::UserActionLog::install();
+    if (QCoreApplication* app = QCoreApplication::instance()) app->installEventFilter(this);
+}
+
+bool ApplicationInfo::homeIntroAllowed() const {
+    const QString given = qEnvironmentVariable("EDI_HOME_INTRO");
+    if (given == QStringLiteral("1")) return true;
+    if (given == QStringLiteral("0")) return false;
+    return edi_app::fresh_settings_dir().isEmpty() &&
+           !QCoreApplication::arguments().contains(QStringLiteral("--test-observer"));
+}
+
+bool ApplicationInfo::mergedTitleBar() const {
+#if defined(Q_OS_MACOS) || defined(Q_OS_WIN)
+    const QString given = qEnvironmentVariable("EDI_MERGED_TITLE_BAR");
+    if (given == QStringLiteral("1")) return true;
+    if (given == QStringLiteral("0")) return false;
+    return edi_app::fresh_settings_dir().isEmpty() &&
+           !QCoreApplication::arguments().contains(QStringLiteral("--test-observer"));
+#else
+    return false;
+#endif
+}
+
+bool ApplicationInfo::eventFilter(QObject* watched, QEvent* event) {
+    switch (event->type()) {
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseMove:
+        case QEvent::Wheel:
+        case QEvent::KeyPress:
+        case QEvent::TouchBegin: {
+            const qint64 now = QDateTime::currentMSecsSinceEpoch();
+            if (now - last_input_ >= 500) {
+                last_input_ = now;
+                emit userInput();
+            }
+            break;
+        }
+        default:
+            break;
+    }
+    return QObject::eventFilter(watched, event);
 }
 
 bool ApplicationInfo::assistantAvailable() const { return assistant_available_; }
@@ -794,8 +851,7 @@ void ApplicationInfo::setMessageLevel(const QString& level) const {
 
 namespace {
 
-QImage croppedImage(const QVariant& image, double cut) {
-    const QImage picture = image.value<QImage>();
+QImage croppedImage(const QImage& picture, double cut) {
     if (picture.isNull() || cut <= 0 || cut >= 1) return picture;
     const int top = static_cast<int>(std::lround(cut * picture.height()));
     return picture.copy(0, top, picture.width(), picture.height() - top);
@@ -803,12 +859,12 @@ QImage croppedImage(const QVariant& image, double cut) {
 
 }  // namespace
 
-bool ApplicationInfo::saveImage(const QVariant& image, const QUrl& file, double cut) const {
+bool ApplicationInfo::saveImage(const QImage& image, const QUrl& file, double cut) const {
     const QImage picture = croppedImage(image, cut);
     return !picture.isNull() && picture.save(file.toLocalFile(), "PNG");
 }
 
-bool ApplicationInfo::downloadImage(const QVariant& image, const QString& name, double cut) const {
+bool ApplicationInfo::downloadImage(const QImage& image, const QString& name, double cut) const {
     const QImage picture = croppedImage(image, cut);
     QByteArray data;
     QBuffer buffer(&data);
@@ -816,7 +872,15 @@ bool ApplicationInfo::downloadImage(const QVariant& image, const QString& name, 
     return edi_app::WebFiles::download(data, name);
 }
 
-QVariantList ApplicationInfo::sourceKindTags(const QStringList& kinds) const {
+bool ApplicationInfo::sameColumnWidths(const QList<double>& current, const QList<double>& wanted) const {
+    return current.size() == wanted.size() &&
+           std::equal(current.cbegin(), current.cend(), wanted.cbegin(), [](double a, double b) {
+               // The previous JSON comparison represented every nonfinite width as null.
+               return a == b || (!std::isfinite(a) && !std::isfinite(b));
+           });
+}
+
+QList<edi_app::TagChip> ApplicationInfo::sourceKindTags(const QStringList& kinds) const {
     // The tones of the Examples list's tags.
     static const QJsonObject tones = [] {
         QFile file(QStringLiteral(":/edi/examples/tags.json"));
@@ -833,13 +897,12 @@ QVariantList ApplicationInfo::sourceKindTags(const QStringList& kinds) const {
                           {"experiment", tr("Experiments"), QStringLiteral("microscope"), "technique"},
                           {"data", tr("Measured data"), QString::fromStdString(edi::category_icon("data")), "neutral"},
                           {"project", tr("Projects"), QStringLiteral("archive"), "mode"}};
-    QVariantList tags;
+    QList<edi_app::TagChip> tags;
     for (const QString& kind : kinds) {
         for (const Kind& k : known) {
             if (kind != QLatin1String(k.token)) continue;
             const QJsonObject tone = tones.value(QLatin1String(k.tone)).toObject();
-            tags.append(QVariantMap{{"label", k.label}, {"icon", k.icon}, {"light", tone.value("light").toString()},
-                                    {"dark", tone.value("dark").toString()}});
+            tags.append({k.label, k.icon, tone.value("light").toString(), tone.value("dark").toString()});
         }
     }
     return tags;
@@ -4337,6 +4400,7 @@ void ApplicationInfo::loadFormFiles(bool experiments) const {
     if (panelUsageTruth(assistantContextField(f, "WebFiles", "available"))) {
         const auto group = panelUsageContextRead(f, "group");
         const auto project = assistantContextField(f, "group", "project");
+        assistantMemberWrite(f, group, "webRequest", QJSValue(0));
         assistantMemberWrite(f, group, "webRequestProject", project);
         if (experiments) projectWrite(f, "group", "webDataExperiment", consentNull());
         const auto requestOwner = panelUsageContextRead(f, "group");
@@ -4399,6 +4463,18 @@ void ApplicationInfo::chooseDatasetFolder(QObject* picker, QObject* project, QOb
     auto* owner = qobject_cast<edi_app::ProjectViewModel*>(project);
     auto* target = qobject_cast<edi_app::ExperimentViewModel*>(experiment);
     if (!picker || !owner || !target || owner->listingDatasetFolder()) return;
+    if (edi_app::WebFiles::available()) {
+        const auto f = panelUsageEngine(this);
+        const auto currentProject = assistantContextField(f, "group", "project");
+        const auto selected = panelUsageRead(f, currentProject, "currentExperiment");
+        if (currentProject.toQObject() != owner || selected.toQObject() != target) return;
+        projectWrite(f, "group", "webRequest", QJSValue(0));
+        projectWrite(f, "group", "webRequestProject", currentProject);
+        projectWrite(f, "group", "webDataExperiment", selected);
+        const auto request = projectInvoke(f, "WebFiles", "openDatasetFolder");
+        projectWrite(f, "group", "webRequest", request);
+        return;
+    }
     dataset_folder_picker_ = picker;
     dataset_folder_project_ = owner;
     dataset_folder_experiment_ = target;
@@ -4417,6 +4493,7 @@ void ApplicationInfo::acceptDatasetFolder(QObject* picker, QObject* currentProje
 void ApplicationInfo::chooseExperimentData(const QJSValue& experiment) const {
     const auto f = panelUsageEngine(this);
     if (panelUsageTruth(assistantContextField(f, "WebFiles", "available"))) {
+        projectWrite(f, "group", "webRequest", QJSValue(0));
         projectWrite(f, "group", "webRequestProject", assistantContextField(f, "group", "project"));
         projectWrite(f, "group", "webDataExperiment", experiment);
         const auto group = panelUsageContextRead(f, "group");
@@ -4433,6 +4510,18 @@ void ApplicationInfo::chooseExperimentData(const QJSValue& experiment) const {
         projectWrite(f, "dataDialog", "project", assistantContextField(f, "group", "project"));
         projectInvoke(f, "dataDialog", "open");
     }
+}
+void ApplicationInfo::formDatasetFolderOpened(const QJSValue& request, const QJSValue& folder) const {
+    const auto f = panelUsageEngine(this);
+    if (!projectFieldIs(f, "group", "webRequest", request)) return;
+    const auto target = assistantContextField(f, "group", "webDataExperiment");
+    const auto owner = assistantContextField(f, "group", "webRequestProject");
+    projectWrite(f, "group", "webRequest", QJSValue(0));
+    projectWrite(f, "group", "webDataExperiment", consentNull());
+    const auto current = assistantContextField(f, "group", "project");
+    if (current.isNull() || target.isNull() || !current.strictlyEquals(owner)
+        || !current.strictlyEquals(assistantContextField(f, "Session", "project"))) return;
+    panelUsageMemberCall(f, current, "loadDatasetFolder", {target, folder, QJSValue(true)});
 }
 void ApplicationInfo::formFilesOpened(const QJSValue& request, const QJSValue& files, bool experiments) const {
     const auto f = panelUsageEngine(this);
@@ -11029,6 +11118,12 @@ QJSValue ApplicationInfo::windowUnsavedText() const {
     });
 }
 
+void ApplicationInfo::applyColorScheme(int theme) const {
+    // The owner, 2026-11-15: edi's Light and Dark override the platform's scheme; System follows it.
+    const auto scheme = theme == 0 ? Qt::ColorScheme::Light : theme == 1 ? Qt::ColorScheme::Dark : Qt::ColorScheme::Unknown;
+    QGuiApplication::styleHints()->setColorScheme(scheme);
+}
+
 void ApplicationInfo::finishUiEvent(int kind, const QJSValue& value) const {
     const auto f = panelUsageEngine(this);
     if (kind == 0) { projectWrite(f, "control", "enterFlash", QJSValue(true)); projectInvoke(f, "enterFlashTimer", "start"); return; }
@@ -11851,6 +11946,14 @@ void ApplicationInfo::storeWindowGeometry(QObject* window, QObject* settings) co
         messageScriptWrite(engine, target, QString::fromLatin1(field), value);
         if (!messageScriptReady(engine)) return;
     }
+#ifdef Q_OS_WIN
+    // With the title bar merged into the app bar, Qt still counts its strip as frame on Windows, so the
+    // window's own position and the restored one disagree by that strip; keep the frame's position instead.
+    if (auto* merged = qobject_cast<QWindow*>(window); merged && merged->flags().testFlag(Qt::ExpandedClientAreaHint)) {
+        messageScriptWrite(engine, target, QStringLiteral("x"), QJSValue(merged->framePosition().x()));
+        messageScriptWrite(engine, target, QStringLiteral("y"), QJSValue(merged->framePosition().y()));
+    }
+#endif
 }
 
 void ApplicationInfo::restoreWindowGeometry(QObject* window, QObject* settings) const {
@@ -11899,6 +12002,11 @@ void ApplicationInfo::restoreWindowGeometry(QObject* window, QObject* settings) 
             messageScriptWrite(engine, view, QString::fromLatin1(field), value);
             if (!messageScriptReady(engine)) return;
         }
+#ifdef Q_OS_WIN
+        // The kept position is the frame's (storeWindowGeometry); put the frame back there.
+        if (auto* merged = qobject_cast<QWindow*>(window); merged && merged->flags().testFlag(Qt::ExpandedClientAreaHint))
+            merged->setFramePosition(QPoint(read(position, "x").toInt(), read(position, "y").toInt()));
+#endif
     }
     messageScriptWrite(engine, view, QStringLiteral("geometryRestored"), QJSValue(true));
     if (!messageScriptReady(engine)) return;
@@ -11920,6 +12028,22 @@ int ApplicationInfo::scanWorkersMaximum() const { return std::max(1, QThread::id
 void ApplicationInfo::setScanWorkers(int count) const { edi::set_scan_workers(count); }
 
 void ApplicationInfo::storeSettings() const { edi_app::store_settings_now(); }
+
+bool ApplicationInfo::introAnimationStored() const {
+#ifdef Q_OS_WASM
+    return edi_intro_animation_stored() != 0;
+#else
+    return true;
+#endif
+}
+
+void ApplicationInfo::storeIntroAnimation(bool on) const {
+#ifdef Q_OS_WASM
+    edi_store_intro_animation(on ? 1 : 0);
+#else
+    Q_UNUSED(on);
+#endif
+}
 
 #if EDI_APP_ASSISTANT
 void ApplicationInfo::assistantToolbarActivated(const QJSValue& window, const QJSValue& toggle,

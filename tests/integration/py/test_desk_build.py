@@ -5,10 +5,10 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
+from tests.fixtures.native_process import environment_bash
 from tests.integration.py.test_e04_t1_app_contract import GUI_ARCHIVE_SHA256, GUI_PIN
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -22,61 +22,63 @@ def sdk_module():
 
 
 @pytest.mark.parametrize('exported', [None, 'GITHUB_TOKEN', 'GH_TOKEN'])
-def test_sdk_uses_cli_login_when_no_token_was_exported(monkeypatch, exported):
-    module = sdk_module()
-    calls = []
-    for name in ('GITHUB_TOKEN', 'GH_TOKEN'):
-        monkeypatch.delenv(name, raising=False)
+def test_qualified_desk_sdk_needs_no_exported_or_cli_login(tmp_path, exported):
+    from tests.integration.py.test_e09_t75_sdk_consumer import consumer  # noqa: PLC0415
+
+    env, root, _ = consumer(tmp_path, prepare_only=True)
     if exported:
-        monkeypatch.setenv(exported, 'authored-environment-token')
-    monkeypatch.setattr(
-        module.shutil, 'which', lambda name: '/authored/gh' if name == 'gh' else None
+        env[exported] = 'private-synthetic-token'
+    result = subprocess.run(
+        [environment_bash(), str(root / 'tools/ci/build-crysta.sh')],
+        cwd=root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
+    )
+    assert result.returncode == 0, (
+        'Qualified desk sdk needs no exported or cli login. Observed: '
+        + str(result.stdout + result.stderr)
+    )
+    assert not (tmp_path / 'commands').exists(), (
+        'ADR-0083: a qualified local SDK never calls gh, curl, Git or a compiler'
+    )
+    assert 'private-synthetic-token' not in result.stdout + result.stderr, (
+        'Qualified desk sdk needs no exported or cli login.'
     )
 
-    def run(argv, **kwargs):
-        calls.append((argv, kwargs))
-        return SimpleNamespace(returncode=0, stdout='authored-login-token\n')
 
-    monkeypatch.setattr(module.subprocess, 'run', run)
-    assert module.token() == (
-        'authored-environment-token' if exported else 'authored-login-token'
-    ), 'SDK authentication must use an explicit token or the desktop CLI login without an export'
-    assert bool(calls) == (exported is None), (
-        'An explicit token must avoid an unnecessary CLI subprocess'
+@pytest.mark.parametrize('login', ['missing', 'failed', 'empty', 'timeout'])
+def test_unusable_login_is_irrelevant_to_a_qualified_local_sdk(tmp_path, login):
+    from tests.integration.py.test_e09_t75_sdk_consumer import consumer  # noqa: PLC0415
+
+    env, root, _ = consumer(tmp_path, prepare_only=True)
+    gh = tmp_path / 'bin/gh'
+    if login == 'missing':
+        gh.unlink()
+    else:
+        # Any invocation is forbidden, irrespective of what the obsolete login
+        # path would return; no artificial timeout or sleep is needed.
+        gh.write_text('#!/bin/sh\necho forbidden > "$SDK_COMMANDS"\nexit 91\n', newline='\n')
+    result = subprocess.run(
+        [environment_bash(), str(root / 'tools/ci/build-crysta.sh')],
+        cwd=root,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=10,
     )
-    if calls:
-        assert calls[0][0] == ['gh', 'auth', 'token'] and 0 < calls[0][1]['timeout'] <= 30, (
-            'The desktop login fallback must invoke the CLI token command with a bounded wait'
-        )
-
-
-@pytest.mark.parametrize('failure', ['missing', 'failed', 'empty', 'timeout'])
-def test_missing_desktop_login_refuses_without_disclosing_output(monkeypatch, failure):
-    module = sdk_module()
-    for name in ('GITHUB_TOKEN', 'GH_TOKEN'):
-        monkeypatch.delenv(name, raising=False)
-    monkeypatch.setattr(
-        module.shutil, 'which', lambda _name: None if failure == 'missing' else '/authored/gh'
+    assert result.returncode == 0, (
+        'Unusable login is irrelevant to a qualified local sdk. Observed: '
+        + str(result.stdout + result.stderr)
     )
-
-    def run(_argv, **_kwargs):
-        if failure == 'timeout':
-            raise subprocess.TimeoutExpired('gh', 30, output='private-login-output')
-        return SimpleNamespace(
-            returncode=1 if failure == 'failed' else 0,
-            stdout='' if failure == 'empty' else 'private-login-output',
-        )
-
-    monkeypatch.setattr(module.subprocess, 'run', run)
-    with pytest.raises(module.RefusedError) as error:
-        module.token()
-    assert 'private-login-output' not in str(error.value), (
-        'SDK authentication refusals must preserve CLI output privacy'
-    )
+    assert not (tmp_path / 'commands').exists(), 'SDK-only consumption must not try authentication'
 
 
 def executable(path, text):
-    path.write_text('#!/bin/bash\n' + text)
+    path.write_text('#!/bin/bash\n' + text, newline='\n')
     path.chmod(0o755)
 
 
@@ -108,7 +110,7 @@ exit 0
     for name in ('EDI_GUI_COMPONENTS_SRC', 'GH_TOKEN', 'GITHUB_TOKEN', 'EDI_CRYSTA_PREFIX', 'CI'):
         env.pop(name, None)
     env.update(PATH=f'{bin_dir}:/usr/bin:/bin', CONDA_PREFIX=str(prefix), CXX=str(bin_dir / 'c++'))
-    command = ['bash', 'tools/ci/app-build.sh']
+    command = [environment_bash(), 'tools/ci/app-build.sh']
     failed = subprocess.run(
         command, cwd=root, env=env, capture_output=True, text=True, timeout=10, check=False
     )
@@ -164,7 +166,8 @@ endfunction()
 """)
     program = tmp_path / 'observe.cmake'
     program.write_text(
-        f'set(CMAKE_MODULE_PATH "{modules}")\ninclude("{ROOT / "cmake/EdiGuiBase.cmake"}")\n'
+        f'set(CMAKE_MODULE_PATH "{modules.as_posix()}")\n'
+        f'include("{(ROOT / "cmake/EdiGuiBase.cmake").as_posix()}")\n'
     )
     result = subprocess.run(
         ['cmake', '-P', str(program)],

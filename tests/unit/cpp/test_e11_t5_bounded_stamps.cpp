@@ -5,7 +5,7 @@
 #include "../../fixtures/c34_t28_allocation_failure.hpp"
 // Independently frozen from dev e782 before the bounded implementation existed.
 // Comparing two new overloads alone would conceal shared byte-codec regressions.
-#include "../../fixtures/assistant_dev_integration/prechange_stamp_codec.inc"
+#include "../../fixtures/assistant_dev_integration/active_stamp_codec.inc"
 
 namespace {
 edi::WorkStamps prechange(const edi::Project& live) {
@@ -78,6 +78,22 @@ TEST_CASE("E11 bounded stamps link and preserve pre-change codec across powder a
         CHECK_MESSAGE((editor_before.edits && editor_before.edits==editor_after.edits &&
             editor_before.edits_at!=editor_after.edits_at && !edi::unchanged_since(project,editor_before)),
             " E11 F3 real owner edits preserve their record and renew its publication generation");
+    }
+    for(const bool tof:{false,true}) {
+        auto project=edi::load_project(tof?
+            "docs/user/cli/pd-neut-tof_si-sepd_start-2/project":
+            "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project");
+        auto& absorption=project.experiment().absorption;
+        absorption.type=tof?"cylinder":"cylinder-hewat";
+        absorption.abscor1.reset();absorption.mu_r.reset();
+        auto& coefficient=tof?absorption.abscor1:absorption.mu_r;
+        coefficient.emplace(0.2375);
+        check_capture(project);
+        const auto before=edi::work_stamps(project,std::size_t{16}*1024*1024);
+        coefficient->value=1.125;
+        CHECK_MESSAGE(!edi::unchanged_since(project,before),
+            " E11 active TOF and CW absorption writes invalidate the original source stamp");
+        check_capture(project);
     }
 }
 TEST_CASE("E11 bounded stamps retain original alias relation source and collection identities") {
