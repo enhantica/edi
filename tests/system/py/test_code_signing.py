@@ -2,6 +2,7 @@
 """Offline installer contract from ADR-0091 and the release signing decisions."""
 
 import ast
+import copy
 import re
 from pathlib import Path
 from types import SimpleNamespace
@@ -303,7 +304,7 @@ def test_macos_installer_is_hardened_timestamped_notarised_stapled_and_verified(
     )
 
 
-def test_windows_uses_digicert_simple_signing_and_verifies_all_shipped_executables():
+def test_windows_uses_digicert_simple_signing_and_verifies_declared_executables():
     selected = [s for s in signing_steps() if 'digicert/' in s.get('uses', '')]
     assert selected, 'Windows releases must sign with the DigiCert action'
     assert all(s['uses'] == 'digicert/code-signing-software-trust-action@v1' for s in selected), (
@@ -403,24 +404,149 @@ def test_app_signing_omits_hardened_runtime_while_installer_requires_it():
     ), 'The downloaded installer must be signed with hardened runtime and a timestamp'
 
 
-def test_windows_signing_covers_recursive_executables_before_and_after_packaging():
-    text = executable_text() + str(signing_steps())
-    assert any(pattern in text for pattern in ['*.exe', '**/*.exe']), (
-        'Windows signing must select every shipped executable, not only a named installer'
+REQUIRED_SIGNED = (
+    'windows-app',
+    'windows-cli',
+    'windows-offline',
+    'windows-online',
+    'macos-app',
+    'macos-cli',
+    'macos-offline',
+    'macos-online',
+)
+
+
+def signed_members(sources, workflow_steps):
+    functions = {
+        node.name: node
+        for text in sources.values()
+        for node in ast.parse(text).body
+        if isinstance(node, ast.FunctionDef)
+    }
+
+    def words(name, seen=None):
+        seen = set() if seen is None else seen
+        if name in seen or name not in functions:
+            return set()
+        seen.add(name)
+        result = set()
+        for node in ast.walk(functions[name]):
+            if isinstance(node, (ast.List, ast.Tuple)):
+                result.update(
+                    item.value
+                    for item in node.elts
+                    if isinstance(item, ast.Constant) and isinstance(item.value, str)
+                )
+                result.update(
+                    item.func.id
+                    for item in node.elts
+                    if isinstance(item, ast.Call) and isinstance(item.func, ast.Name)
+                )
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id != 'build_cli'
+            ):
+                result.update(words(node.func.id, seen))
+        return result
+
+    def windows(tokens):
+        return {'smctl', 'sign', 'verify', '/pa'} <= tokens
+
+    def macos(tokens, *, notarised=False):
+        required = {'codesign', '--sign', '--timestamp', '--verify'}
+        if notarised:
+            required |= {'notarytool', 'submit', '--wait'}
+        return required <= tokens
+
+    observed = set()
+    build = functions.get('build')
+    if build is not None:
+        for call in ast.walk(build):
+            if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.args):
+                continue
+            if 'stage' not in ast.unparse(call.args[0]):
+                continue
+            tokens = words(call.func.id)
+            if windows(tokens):
+                observed.add('windows-app')
+            if macos(tokens):
+                observed.add('macos-app')
+    cli = words('build_cli')
+    if windows(cli):
+        observed.add('windows-cli')
+    if macos(cli, notarised=True):
+        observed.add('macos-cli')
+    seal = words('seal_installer')
+    for kind, folder in [('offline', 'package'), ('online', 'online')]:
+        selected = [
+            step
+            for step in workflow_steps
+            if re.search(r'package[.]py.*\bseal\b', step.get('run', ''))
+            and f'build/installer/{folder}' in step.get('run', '')
+        ]
+        if selected and windows(seal):
+            observed.add('windows-' + kind)
+        if selected and macos(seal, notarised=True):
+            observed.add('macos-' + kind)
+    return observed
+
+
+@pytest.mark.parametrize('member', REQUIRED_SIGNED)
+def test_owner_declared_app_cli_and_installer_signatures(member):
+    sources = {
+        name: (ROOT / 'tools/installer' / name).read_text()
+        for name in ('build.py', 'package.py', 'standalone_cli.py')
+    }
+    assert member in signed_members(sources, steps()), (
+        'The owner-declared signed set requires the app, CLI and both installer kinds on each '
+        'platform, including notarisation of the macOS CLI and installers: ' + member
     )
-    assert any(word in text for word in ['rglob', '-Recurse', 'recurse', '**/*.exe']), (
-        'Windows signing must cover executables in nested payload folders'
-    )
-    windows = [s for s in signing_steps() if 'digicert/' in s.get('uses', '')]
-    packaging = [
-        i
-        for i, step in enumerate(steps())
-        if 'package.py' in step.get('run', '') and ' package ' in step.get('run', '')
+
+
+@pytest.mark.parametrize('omitted', REQUIRED_SIGNED)
+def test_signature_coverage_refuses_each_omitted_required_member(omitted):
+    sources = {
+        'control.py': """
+def sign_windows(path):
+    run(['smctl', 'sign', path])
+    run(['signtool', 'verify', '/pa', path])
+def sign_macos_app(path):
+    run(['codesign', '--sign', 'identity', '--timestamp', path])
+    run(['codesign', '--verify', path])
+def notarise_macos(path):
+    sign_macos_app(path)
+    run(['xcrun', 'notarytool', 'submit', path, '--wait'])
+def build():
+    sign_windows(stage / 'bin/EasyDiffraction.exe')
+    sign_macos_app(stage / 'EasyDiffraction.app')
+def build_cli():
+    sign_windows(binary)
+    notarise_macos(binary)
+def seal_installer():
+    sign_windows(installer)
+    notarise_macos(installer)
+"""
+    }
+    workflow_steps = [
+        {'run': 'python tools/installer/package.py seal --output build/installer/package'},
+        {'run': 'python tools/installer/package.py seal --output build/installer/online'},
     ]
-    assert windows and packaging, 'Windows release packaging must retain signed payload assembly'
-    assert min(steps().index(s) for s in windows) < min(packaging), (
-        'App and maintenance executables must be signed before they enter installer payloads'
+    assert signed_members(sources, workflow_steps) == set(REQUIRED_SIGNED), (
+        'The authored positive route control must cover the whole owner-declared signed set'
     )
-    assert max(steps().index(s) for s in windows) > max(packaging), (
-        'Both generated installers must be signed after package assembly'
+    changed = copy.deepcopy(workflow_steps)
+    if omitted.endswith(('offline', 'online')):
+        index = 0 if omitted.endswith('offline') else 1
+        changed.pop(index)
+    else:
+        tree = ast.parse(sources['control.py'])
+        target = 'build_cli' if omitted.endswith('cli') else 'build'
+        function = next(node for node in tree.body if node.name == target)
+        index = 0 if omitted.startswith('windows') else 1
+        function.body.pop(index)
+        sources['control.py'] = ast.unparse(tree)
+    assert omitted not in signed_members(sources, changed), (
+        'Omitting a required signing route must remain detectable for each declared member: '
+        + omitted
     )
