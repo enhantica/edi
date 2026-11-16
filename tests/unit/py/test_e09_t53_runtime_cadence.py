@@ -1,8 +1,8 @@
-"""gates for the owner-ruled test cadence and runtime measurement policy.
+"""Gates for test cadence and runtime measurement policy.
 
-The independent authority is development hub's committed 2026-08-28 owner rulings: aggregate
-suite budgets are retired, unchanged collections keep their banked measurements,
-and only newly collected nodes are measured once against fixed per-test bounds.
+Quick/full verification retains every environment cohort. Aggregate suite budgets
+are retired, unchanged collections keep their banked measurements, and only newly
+collected nodes are measured once against fixed per-test bounds.
 """
 
 from __future__ import annotations
@@ -88,8 +88,8 @@ def test_owner_cadence_has_only_quick_and_full_entry_points() -> None:
     }
     assert len(quick) == 1, 'the cadence needs exactly one quick/CI-PR group'
     assert len(full) == 1, 'the cadence needs exactly one full/merge group'
-    assert set(groups) == quick | full | {'app', 'nightly-only', 'weekly-only'}, (
-        'Quick/full retain cadence; app, nightly and weekly cohorts name execution groups'
+    assert set(groups) == quick | full | {'app', 'browser', 'nightly-only', 'weekly-only'}, (
+        'Quick/full retain cadence; app, browser, nightly and weekly are execution cohorts'
     )
     assert groups['nightly-only']['tiers'] == ['integration/py', 'system'], (
         'the nightly cohort retains its declared integration and system tiers'
@@ -126,14 +126,30 @@ def test_owner_cadence_has_only_quick_and_full_entry_points() -> None:
         'cmd': ['python', '-m', 'pytest', *groups['weekly-only']['paths'], '-q'],
         'depends-on': ['core-build'],
     }, 'The weekly entry point builds core and collects the complete CIF matrix without selectors'
-    assert groups['app']['tiers'] == ['integration/app'], (
-        ': only app-dependent Python integration tests belong to the app group'
+    assert groups['app']['tiers'] == ['integration/app', 'system/app'], (
+        'The app cohort retains its Qt-dependent integration and end-to-end system cases'
     )
     assert groups['app']['task'] == 'group-app', (
         ': the app group declares the entry point shared by app CI and local verification'
     )
+    assert (
+        groups['browser']['tiers'],
+        groups['browser']['paths'],
+        groups['browser']['task'],
+    ) == (
+        ['system'],
+        ['tests/system/py/test_survey_events.py'],
+        'group-browser',
+    ), 'The browser cohort retains exactly the survey system cases and their execution task'
+    assert tasks['group-browser'] == {
+        'cmd': ['python', '-m', 'pytest', *groups['browser']['paths'], '-q'],
+        'depends-on': ['core-build', {'task': 'wasm-toolchain', 'environment': 'app'}],
+    }, 'The browser cohort declares the core build and actual browser toolchain prerequisites'
     quick_task = groups[next(iter(quick))]['task']
     full_task = groups[next(iter(full))]['task']
+    assert all('group-browser' in _strings(tasks[task]) for task in (quick_task, full_task)), (
+        'Both verification cadences retain the browser cohort without adding another cadence'
+    )
     assert quick_task in _strings(tasks['verify-quick']), (
         'the quick verification entry point must execute the declared quick group'
     )

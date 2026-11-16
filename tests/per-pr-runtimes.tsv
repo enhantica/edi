@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T00:46:31Z
+# measured_utc = 2026-11-16T02:35:41Z
 #
-# Recorded from: Scoped rendered caption census and eight original streamed-actor startup/request escapes on local Linux; product-caption failures and the pre-existing global actor-inventory refusal remain explicitly unmeasured
-# Collected tests: 245451; with a reported duration: 77740
+# Recorded from: Scoped cadence execution-cohort and exact Windows-key seed-authentication refusal adaptations; completed serial local Linux observations, unchanged tier bounds
+# Collected tests: 245451; with a reported duration: 77741
 # Module-scoped fixture costs recorded: 206
 #
 # Breaches are decided PER TIER against the table
@@ -167851,7 +167851,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_plain_data_picker.py::te
 0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[False]
 0.470	tests/integration/py/test_plain_data_picker.py::test_single_crystal_picker_retains_int_admission_and_owner_routing[True]
 0.060	tests/integration/py/test_platform_fixture_runtime.py::test_authored_python_spy_reaches_declared_and_refused_argv_without_an_ambient_tool
-0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[path]
+0.010	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[path]
 0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_manifest_keys_retain_the_entire_reviewed_pin_and_reject_byte_changes[string]
 0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_native_consumer_uses_release_executable_and_honours_exact_override
 0.000	tests/integration/py/test_platform_fixture_runtime.py::test_windows_node_uses_the_interpreter_environment_root
