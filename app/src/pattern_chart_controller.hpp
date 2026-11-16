@@ -109,6 +109,8 @@ class PatternChartController : public QObject {
     Q_PROPERTY(bool thinBars READ thinBars WRITE setThinBars NOTIFY thinBarsChanged)
     // A bar's width in pixels: each bar's fill is a line this wide (the band panes' bottom series).
     Q_PROPERTY(double barWidth READ barWidth NOTIFY barWidthChanged)
+    // The structure curves are drawn as bars: a single crystal's nuclear and magnetic parts (the owner, 2026-11-16).
+    Q_PROPERTY(bool componentBars READ componentBars NOTIFY componentBarsChanged)
     // Whether the x axis is d-spacing; setting it chooses d-spacing or the native axis.
     Q_PROPERTY(bool dSpacing READ dSpacing WRITE setDSpacing NOTIFY dSpacingChanged)
     // Whether the shown experiment has a current d column: until a calculation gives one, d cannot be chosen.
@@ -232,6 +234,7 @@ class PatternChartController : public QObject {
     bool thinBars() const { return thin_bars_; }
     void setThinBars(bool on);
     double barWidth() const { return bar_width_; }
+    bool componentBars() const { return component_bars_; }
     bool dSpacing() const { return axis_ == edi::PatternAxis::DSpacing; }
     bool dAvailable() const { return d_available_; }
     void setDSpacing(bool on);
@@ -344,6 +347,7 @@ class PatternChartController : public QObject {
     void squaredChanged();
     void thinBarsChanged();
     void barWidthChanged();
+    void componentBarsChanged();
     void dAvailableChanged();
     void includedOnlyChanged();
     void subtractBackgroundChanged();
@@ -457,6 +461,7 @@ class PatternChartController : public QObject {
     bool squared_ = true;
     bool thin_bars_ = false;
     double bar_width_ = 1.0;
+    bool component_bars_ = false;
     // What the chart draws: a single crystal's reflections on Q or sinθ/λ, else the experiment's pattern on the axis.
     const edi::PatternSource& shownSource() const;
     // The view: unset means the data's full x range, and y ranges fitted to what is presented.

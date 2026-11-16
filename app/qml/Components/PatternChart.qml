@@ -586,7 +586,7 @@ Item {
         AreaSeries {
             id: calculatedBars
             objectName: "chart.series.calc.bars"
-            color: Qt.alpha(chart.singleCrystal ? chart.structureColor : controller.calculatedColor, 0.3)
+            color: Qt.alpha(chart.singleCrystal ? chart.structureColor : controller.calculatedColor, chart.singleCrystal ? 0.6 : 0.3)
             borderWidth: 0
             upperSeries: LineSeries {}
             lowerSeries: LineSeries {}
@@ -689,10 +689,13 @@ Item {
             readonly property bool drawn: controller.structureCurves && area.index < controller.structureCurveColors.length
             readonly property color lineColour: controller.structureCurveColors[index] ?? "transparent"
             readonly property color fillColour: controller.structureCurveFills[index] ?? "transparent"
+            // As bars (a single crystal's nuclear and magnetic parts), the line is each bar's fill, as wide as the bar and
+            // opaque enough to tell the two parts apart, or a thin line in the part's colour.
             property LineSeries outline: LineSeries {
                 objectName: "chart.series.structure.outline." + area.index
-                color: area.drawn ? area.lineColour : "transparent"
-                width: 1.5
+                color: !area.drawn ? "transparent" : controller.componentBars && !controller.thinBars ? Qt.alpha(area.lineColour, 0.6) : area.lineColour
+                width: controller.componentBars ? controller.barWidth : 1.5
+                capStyle: controller.componentBars ? Qt.FlatCap : Qt.SquareCap
             }
 
             objectName: "chart.series.structure." + area.index

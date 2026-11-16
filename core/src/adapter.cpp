@@ -5420,6 +5420,51 @@ bool engine_folds_reflections(const Project& project) {
     return crysta::folds_reflections(engine);
 }
 
+std::vector<double> single_crystal_nuclear_share(const Project& project, std::size_t experiment_index) {
+    if (experiment_index >= project.experiments.size() || !project.experiments[experiment_index]->reflections) {
+        return {};
+    }
+    // The calculated F² with the moments as they are, or all at zero.
+    const auto f_squared = [&](bool zero_moments) {
+        const BuiltExperiments banks = calculation_banks(project.experiments);
+        crysta::Project engine(to_crysta_structures(project), experiment_list(banks));
+        fill_crysta_relations(project, engine);
+        bool moments = false;
+        for (crysta::Structure& structure : engine.structures) {
+            for (crysta::AtomSiteMoment& row : structure.atom_site_moment) {
+                for (crysta::Parameter& component : row.moment) {
+                    moments = moments || component.value() != 0.0;
+                    if (zero_moments) {
+                        component.set_value(0.0);
+                    }
+                }
+            }
+        }
+        if (!moments) {
+            return std::vector<double>();
+        }
+        const crysta::Column<double>& column =
+            crysta::current(engine, engine.experiments.at(experiment_index), crysta::DueEstimates::Defer)
+                .refln()
+                .f_squared_calc;
+        return std::vector<double>(column.begin(), column.end());
+    };
+    try {
+        const std::vector<double> total = f_squared(false);
+        const std::vector<double> nuclear = total.empty() ? total : f_squared(true);
+        if (total.empty() || nuclear.size() != total.size()) {
+            return {};
+        }
+        std::vector<double> share(total.size());
+        for (std::size_t i = 0; i < share.size(); ++i) {
+            share[i] = total[i] > 0.0 ? std::clamp(nuclear[i] / total[i], 0.0, 1.0) : 1.0;
+        }
+        return share;
+    } catch (const std::exception&) {
+        return {};
+    }
+}
+
 std::uint64_t engine_structure_factor_evaluations() noexcept {
     return crysta::structure_factor_evaluations();
 }

@@ -1180,6 +1180,8 @@ void PatternChartController::refresh() {
     // so bars widen when zoomed in, or one pixel at any zoom with thin bars (the owner, 2026-11-16). Its fill is a line
     // barWidth wide (the bottom series) and its outline is drawn round it. One area for all the bars was not used:
     // Qt Graphs filled the gaps between them as slivers fanned from the first point.
+    const bool component_bars = bars && !structure_curves.empty();
+    publish(component_bars_, component_bars, &PatternChartController::componentBarsChanged);
     const auto fill_bars = [&](const edi::PatternSeries* series, std::size_t pane, double low_edge, double high_edge) {
         if (pane >= band_series_.size() || (held && pane == 0)) return;
         const BandSeries& target = band_series_[pane];
@@ -1197,13 +1199,17 @@ void PatternChartController::refresh() {
             }
         }
         QList<QPointF> fill, outline;
-        if (bars && series != nullptr && half > 0.0) {
+        // With its parts drawn as bars of their own, the total is its outline alone; in thin lines, the parts alone.
+        const bool parts = pane == 2 && component_bars;
+        if (bars && series != nullptr && half > 0.0 && !(parts && thin_bars_)) {
             for (const auto& point : series->points) {
                 if (!std::isfinite(point.x) || !std::isfinite(point.y)) continue;
                 const double low = std::min(point.y, zero), high = std::max(point.y, zero);
-                fill.append(QPointF(point.x, low));
-                fill.append(QPointF(point.x, high));
-                fill.append(QPointF(nan, nan));
+                if (!parts) {
+                    fill.append(QPointF(point.x, low));
+                    fill.append(QPointF(point.x, high));
+                    fill.append(QPointF(nan, nan));
+                }
                 for (const QPointF& corner : {QPointF(point.x - half, low), QPointF(point.x - half, high),
                                               QPointF(point.x + half, high), QPointF(point.x + half, low),
                                               QPointF(point.x - half, low), QPointF(nan, nan)}) {
@@ -1242,6 +1248,23 @@ void PatternChartController::refresh() {
         const double lift = plot_height_ > 0.0 ? 0.05 * (shown_y_max_ - shown_y_min_) / plot_height_ : 0.0;
         const QList<QPointF> curve = points_of(series);
         const StructureSeries& target = structure_series_[static_cast<qsizetype>(index)];
+        if (component_bars) {
+            // Each part a bar from what it stands on to its top, drawn as a line barWidth wide.
+            QList<QPointF> segments;
+            const double nan = std::numeric_limits<double>::quiet_NaN();
+            for (std::size_t k = 0; k < series.points.size(); ++k) {
+                const double x = series.points[k].x, y = series.points[k].y;
+                const double low = k < series.bar_low.size() && std::isfinite(series.bar_low[k]) ? series.bar_low[k] : 0.0;
+                if (!std::isfinite(x) || !std::isfinite(y) || y == low) continue;
+                segments.append(QPointF(x, low));
+                segments.append(QPointF(x, y));
+                segments.append(QPointF(nan, nan));
+            }
+            replace(target.upper, {});
+            replace(target.lower, {});
+            replace(target.outline, segments);
+            continue;
+        }
         if (clear_fills) {
             replace(target.upper, {});
             replace(target.lower, {});

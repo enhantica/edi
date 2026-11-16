@@ -216,10 +216,11 @@ Item {
     }
 
     // The toolbar line, centred as the pattern chart's: what both axes plot, then the pattern chart's buttons.
+    // Hidden while the reflections are drawn on an axis: the pattern chart below has its own.
     Row {
         id: toolbar
 
-        visible: !chart.reportMode
+        visible: !chart.reportMode && !chart.onAxis
         x: Math.round(chart.toolbarLeft + (chart.width - chart.toolbarRightInset - chart.toolbarLeft - width) / 2)
         y: chart.topMargin
         spacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing

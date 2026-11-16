@@ -867,7 +867,11 @@ const edi::PatternSource& ExperimentViewModel::singleCrystalPattern(edi::Pattern
     DerivedSource& kept = single_crystal_patterns_[(axis == edi::PatternAxis::Q ? 0 : 2) + (squared ? 0 : 1)];
     const std::size_t colour = colourPlace();
     if (!kept.source || kept.revision != pattern_generation_ || kept.place != colour) {
-        kept.source = edi::single_crystal_pattern(project_, place(), axis, squared);
+        if (nuclear_share_revision_ != pattern_generation_) {
+            nuclear_share_ = edi::single_crystal_nuclear_share(project_, place());
+            nuclear_share_revision_ = pattern_generation_;
+        }
+        kept.source = edi::single_crystal_pattern(project_, place(), axis, squared, nuclear_share_);
         kept.source->experiment_place = colour;
         kept.revision = pattern_generation_;
         kept.place = colour;
