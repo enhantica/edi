@@ -66,15 +66,17 @@ EaElements.ParamComboBox {
     // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
     Component.onCompleted: FieldTitles.align(selector)
 
-    // The base's menu item, greyed for an option the other choices rule out (OptionListModel's `enabled`).
+    // The base's menu item for an option the other choices rule out (OptionListModel's `enabled`): not pickable, and
+    // drawn in the disabled colour, which the base's item does not do itself (the owner, 2026-11-16).
     delegate: EaElements.MenuItem {
+        readonly property bool allowed: model.enabled !== false
         width: parent !== null ? parent.width : 0
         height: EaStyle.Sizes.comboBoxHeight
         font.family: selector.font.family
-        textFormat: selector.textFormat
+        textFormat: Text.RichText
         elide: selector.elide
-        text: model.label ?? ""
-        enabled: model.enabled !== false
+        text: allowed ? (model.label ?? "") : `<font color="${EaStyle.Colors.themeForegroundDisabled}">${model.label ?? ""}</font>`
+        enabled: allowed
         highlighted: selector.highlightedIndex === index
         hoverEnabled: selector.hoverEnabled
     }
