@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T02:56:27Z
+# measured_utc = 2026-11-16T03:05:08Z
 #
-# Recorded from: measured test run (4 node(s) measured once, 176633 banked, 0 stale row(s) dropped)
-# Collected tests: 245409; with a reported duration: 77413
+# Recorded from: measured test run (4 node(s) measured once, 176637 banked, 0 stale row(s) dropped)
+# Collected tests: 245413; with a reported duration: 77413
 # Module-scoped fixture costs recorded: 202
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245409
+# inventory_python = 245413
 # inventory_cpp = 0
 # inventory_measured = 176637
-# inventory_unmeasured = 68772
+# inventory_unmeasured = 68776
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 86104
+# inventory_pr_python = 86108
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -237824,6 +237824,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_
 UNMEASURED:failed-in-this-run	tests/system/py/test_status_fit_controls.py::test_status_fit_contract[test_visibility_tracks_analysis_on_every_page]
 0.000	tests/system/py/test_structure_backend.py::test_structure_view_matches_actual_backend_capability[graphics-api]
 0.000	tests/system/py/test_structure_backend.py::test_structure_view_matches_actual_backend_capability[software]
+UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_active_probe_types_and_element_colour_regression_pin:neutron-sears]
+UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_active_probe_types_and_element_colour_regression_pin:neutron]
+UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_active_probe_types_and_element_colour_regression_pin:xray]
+UNMEASURED:failed-in-this-run	tests/system/py/test_structure_bonds_and_types.py::test_real_structure_bonds_and_probe_types[test_bond_cutoffs_change_displayed_cubic_distances_and_persist]
 0.590	tests/system/py/test_structure_cif_refusal_app.py::test_load_cif_imports_supported_values_and_refuses_ambiguous_blocks[dot]
 0.420	tests/system/py/test_structure_cif_refusal_app.py::test_load_cif_imports_supported_values_and_refuses_ambiguous_blocks[multiblock]
 0.420	tests/system/py/test_structure_cif_refusal_app.py::test_load_cif_imports_supported_values_and_refuses_ambiguous_blocks[underscore]
