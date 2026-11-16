@@ -92,8 +92,7 @@ jobs:
   installers:
     needs: [preview-version, crysta-sdk]
     if: >-
-      github.repository == 'enhantica/edi' && github.event.pull_request.head.repo.fork == false && !cancelled()
-      && inputs.preview_run == ''
+      github.event.pull_request.head.repo.fork == false && !cancelled() && inputs.preview_run == ''
       && (needs.preview-version.result == 'success' || needs.preview-version.result == 'skipped')
     name: installer · ${{ matrix.runner == 'windows-2022' && 'Windows' || matrix.runner == 'macos-15' && 'macOS' || 'Linux' }}
     # A signing run takes the codesign environment (main only); every other run, pull requests included, keeps
@@ -245,13 +244,13 @@ jobs:
       - name: Fetch the data collection for the offline copy
         run: git clone --depth 1 https://github.com/enhantica/edi-data "${{ github.workspace }}/.edi-data"
       - name: Import the macOS signing certificate
-        if: env.EDI_CODESIGN == '1' && runner.os == 'macOS'
+        if: github.event.pull_request.head.repo.fork == false && env.EDI_CODESIGN == '1' && runner.os == 'macOS'
         uses: apple-actions/import-codesign-certs@v7
         with:
           p12-file-base64: ${{ secrets.CODESIGN_MAC_CERT_P12_BASE64 }}
           p12-password: ${{ secrets.CODESIGN_MAC_CERT_P12_PASSWORD }}
       - name: Decode the KeyLocker client certificate
-        if: env.EDI_CODESIGN == '1' && runner.os == 'Windows'
+        if: github.event.pull_request.head.repo.fork == false && env.EDI_CODESIGN == '1' && runner.os == 'Windows'
         shell: bash
         env:
           P12_BASE64: ${{ secrets.CODESIGN_WIN_CERT_P12_BASE64 }}
@@ -261,11 +260,12 @@ jobs:
       # Without an input the action only installs smctl; build.py, standalone_cli.py and package.py
       # sign the app, the command-line edi.exe and the installers with it (edi ADR-0091).
       - name: Install the KeyLocker signing tool
-        if: env.EDI_CODESIGN == '1' && runner.os == 'Windows'
+        if: github.event.pull_request.head.repo.fork == false && env.EDI_CODESIGN == '1' && runner.os == 'Windows'
         uses: digicert/code-signing-software-trust-action@v1
         with:
           simple-signing-mode: true
       - name: Build desktop bundle and CLI with the qualified SDK
+        if: github.event.pull_request.head.repo.fork == false
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/build.py" --crysta-source "${{ github.workspace }}/.crysta" --work "${{ github.workspace }}/build/installer" --collection "${{ github.workspace }}/.edi-data"
         env:
           EDI_CODESIGN_MAC_IDENTITY: ${{ runner.os == 'macOS' && vars.CODESIGN_MAC_IDENTITY || '' }}
@@ -310,7 +310,7 @@ jobs:
       - name: Create the offline qualification installer
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/package"
       - name: Sign the offline installer and archive it again
-        if: env.EDI_CODESIGN == '1' && runner.os != 'Linux'
+        if: github.event.pull_request.head.repo.fork == false && env.EDI_CODESIGN == '1' && runner.os != 'Linux'
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" seal --output "${{ github.workspace }}/build/installer/package"
         env:
           EDI_CODESIGN_MAC_IDENTITY: ${{ runner.os == 'macOS' && vars.CODESIGN_MAC_IDENTITY || '' }}
@@ -329,7 +329,7 @@ jobs:
       - name: Create the online distribution installer
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" package --kind online --stage "${{ github.workspace }}/build/installer/stage" --tools "${{ github.workspace }}/build/installer/ifw/tools" --output "${{ github.workspace }}/build/installer/online"
       - name: Sign the online installer and archive it again
-        if: env.EDI_CODESIGN == '1' && runner.os != 'Linux'
+        if: github.event.pull_request.head.repo.fork == false && env.EDI_CODESIGN == '1' && runner.os != 'Linux'
         run: pixi run --manifest-path tools/installer/pixi.toml python "${{ github.workspace }}/tools/installer/package.py" seal --output "${{ github.workspace }}/build/installer/online"
         env:
           EDI_CODESIGN_MAC_IDENTITY: ${{ runner.os == 'macOS' && vars.CODESIGN_MAC_IDENTITY || '' }}
