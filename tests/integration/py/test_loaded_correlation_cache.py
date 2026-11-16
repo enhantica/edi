@@ -1,6 +1,7 @@
 """Observe loaded-number reuse and invalidation through both production view entry points."""
 
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -10,7 +11,10 @@ import edi
 import pytest
 
 from tests.conftest import crysta_reference_prefix
-from tests.fixtures.loaded_correlation_cache.build_probe import probe_environment
+from tests.fixtures.loaded_correlation_cache.build_probe import (
+    build_runtime_path,
+    probe_environment,
+)
 from tests.fixtures.native_process import (
     fresh_pixi_environment,
     native_executable,
@@ -68,9 +72,13 @@ def cache_probe(tmp_path_factory):
     assert directory and Path(directory).is_absolute() and Path(directory).is_dir(), (
         'The native build publishes the existing absolute Qt runtime directory it actually links'
     )
+    build_runtime_path(build)
+    environment = probe_environment(build)
+    if os.name == 'nt':
+        print('CACHE_PROBE_PATH ' + environment['PATH'], flush=True)
     return SimpleNamespace(
         binary=native_executable(build / 'cmake/cache_probe'),
-        environment=probe_environment(build),
+        environment=environment,
     )
 
 
