@@ -4,6 +4,7 @@
 import ast
 import re
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import yaml
@@ -40,7 +41,13 @@ def signing_steps():
     return [
         step
         for step in steps()
-        if re.search(r'CODESIGN_|codesign|notarytool|stapler|digicert/|signing[.]py', str(step))
+        if re.search(
+            r'secrets[.]CODESIGN_|digicert/|apple-actions/import-codesign-certs', str(step)
+        )
+        or re.search(
+            r'package[.]py.*\bseal\b|verify_windows_signature|notarytool|stapler',
+            step.get('run', ''),
+        )
     ]
 
 
@@ -58,22 +65,14 @@ def executable_text():
     return text
 
 
-def condition(step, event, ref, release, platform):
-    value = str(step.get('if', 'true')).strip().removeprefix('${{').removesuffix('}}')
-    atoms = {
-        'github.event_name': event,
-        'github.ref': ref,
-        'runner.os': platform,
-        'inputs.release_plan_run': '1234' if release else '',
-        'env.EDI_RELEASE_PLAN': '/release-plan' if release else '',
-    }
-    for name, item in atoms.items():
+def expression(value, atoms):
+    value = str(value).strip().removeprefix('${{').removesuffix('}}')
+    for name, item in sorted(atoms.items(), key=lambda pair: len(pair[0]), reverse=True):
         value = re.sub(r'\b' + re.escape(name) + r'\b', repr(item), value)
     value = value.replace('&&', ' and ').replace('||', ' or ')
     value = re.sub(r'!(?!=)', ' not ', value)
     value = re.sub(r'\btrue\b', 'True', value)
     value = re.sub(r'\bfalse\b', 'False', value)
-    value = value.replace('success()', 'True').replace('cancelled()', 'False')
     tree = ast.parse(value.strip(), mode='eval')
     allowed = (
         ast.Expression,
@@ -88,9 +87,36 @@ def condition(step, event, ref, release, platform):
         ast.Constant,
     )
     assert all(isinstance(node, allowed) for node in ast.walk(tree)), (
-        'Signing conditions must resolve from the event, branch, release input and platform'
+        'Signing conditions must resolve from actual event, repository, branch and environment'
     )
-    return bool(condition_value(tree.body))
+    return condition_value(tree.body)
+
+
+def condition(step, event, ref, release, platform, *, repository='enhantica/edi', failed=False):
+    atoms = {
+        'github.event_name': event,
+        'github.repository': repository,
+        'github.ref': ref,
+        'runner.os': platform,
+        'inputs.release_plan_run': '1234' if release else '',
+        'env.EDI_RELEASE_PLAN': '/release-plan' if release else '',
+    }
+    job = workflow()['jobs']['installers']
+    guard = job.get('env', {}).get('EDI_CODESIGN', '')
+    atoms['env.EDI_CODESIGN'] = expression(guard, atoms) if guard else ''
+    if 'EDI_CODESIGN' in step.get('env', {}):
+        atoms['env.EDI_CODESIGN'] = expression(step['env']['EDI_CODESIGN'], atoms)
+    value = str(step.get('if', 'success()'))
+    if not re.search(r'\b(?:success|failure|cancelled|always)\(', value) and failed:
+        return False
+    for name, result in [
+        ('success', not failed),
+        ('failure', failed),
+        ('cancelled', False),
+        ('always', True),
+    ]:
+        value = value.replace(name + '()', repr(result))
+    return bool(expression(value, atoms))
 
 
 def condition_value(node):
@@ -99,11 +125,22 @@ def condition_value(node):
     if isinstance(node, ast.UnaryOp):
         return not condition_value(node.operand)
     if isinstance(node, ast.BoolOp):
-        values = [condition_value(item) for item in node.values]
-        return all(values) if isinstance(node.op, ast.And) else any(values)
+        result = condition_value(node.values[0])
+        for item in node.values[1:]:
+            if isinstance(node.op, ast.And) and not result:
+                break
+            if isinstance(node.op, ast.Or) and result:
+                break
+            result = condition_value(item)
+        return result
     values = [condition_value(item) for item in [node.left, *node.comparators]]
     return all(
-        (left == right) == isinstance(operator, ast.Eq)
+        (
+            left.casefold() == right.casefold()
+            if isinstance(left, str) and isinstance(right, str)
+            else left == right
+        )
+        == isinstance(operator, ast.Eq)
         for left, operator, right in zip(values, node.ops, values[1:], strict=False)
     )
 
@@ -118,17 +155,85 @@ def test_signing_is_present_and_never_reaches_pull_requests_or_other_branches(pl
     assert any(
         condition(s, 'workflow_dispatch', 'refs/heads/main', True, platform) for s in selected
     ), 'Release dispatches on main must sign each supported installer platform'
-    for event, ref, release in [
-        ('pull_request', 'refs/pull/53/merge', False),
-        ('pull_request', 'refs/heads/main', True),
-        ('push', 'refs/heads/feature', False),
-        ('workflow_dispatch', 'refs/heads/feature', True),
-        ('workflow_dispatch', 'refs/heads/main', False),
-        ('schedule', 'refs/heads/main', False),
-    ]:
-        assert not any(condition(s, event, ref, release, platform) for s in selected), (
-            'Only release dispatches on main and main pushes may access signing credentials'
+    denied = [
+        ('pull_request', 'refs/pull/53/merge', False, 'enhantica/edi'),
+        ('pull_request', 'refs/heads/main', True, 'enhantica/edi'),
+        ('push', 'refs/heads/feature', False, 'enhantica/edi'),
+        ('workflow_dispatch', 'refs/heads/feature', True, 'enhantica/edi'),
+        ('workflow_dispatch', 'refs/heads/main', False, 'enhantica/edi'),
+        ('schedule', 'refs/heads/main', False, 'enhantica/edi'),
+        ('pull_request', 'refs/pull/53/merge', False, 'outside/edi'),
+        ('push', 'refs/heads/main', False, 'outside/edi'),
+        ('workflow_dispatch', 'refs/heads/main', True, 'outside/edi'),
+    ]
+    violations = [
+        (event, ref, release, repository, step.get('name', step.get('uses', '')))
+        for event, ref, release, repository in denied
+        for step in selected
+        if condition(step, event, ref, release, platform, repository=repository)
+    ]
+    assert not violations, (
+        'Only release dispatches on main and main pushes in the original repository may '
+        'access signing credentials; forbidden routes reached: ' + repr(violations)
+    )
+
+
+def test_condition_observer_keeps_guard_values_and_refuses_unknown_context():
+    assert expression("true && '1' || ''", {}) == '1', (
+        'Actions boolean operators must retain the selected guard value'
+    )
+    disabled = expression("false && '1' || ''", {})
+    assert isinstance(disabled, str) and not disabled, (
+        'A disabled guard must remain an empty value rather than a truthy string'
+    )
+    with pytest.raises(AssertionError, match='Signing conditions must resolve'):
+        expression("env.UNRECOGNISED == '1'", {})
+
+
+def test_pull_request_bundle_build_keeps_the_internal_ad_hoc_path():
+    candidates = [
+        step
+        for step in steps()
+        if 'tools/installer/build.py' in step.get('run', '')
+        and '--collection' in step.get('run', '')
+    ]
+    assert len(candidates) == 1, 'PR installer checks must retain the ordinary bundle build'
+    build = candidates[0]
+    assert build not in signing_steps(), (
+        'A public signing identity alone must not classify the ordinary build as private access'
+    )
+    assert condition(build, 'pull_request', 'refs/pull/53/merge', False, 'macOS'), (
+        'The ordinary macOS bundle build must still run on pull requests'
+    )
+    assert not re.search(r'secrets[.]CODESIGN_', str(build)), (
+        'PR bundle construction must not receive private signing credentials'
+    )
+    tree = ast.parse((ROOT / 'tools/installer/build.py').read_text())
+    function = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == 'macos_signing_args'
+    )
+    for node in ast.walk(function):
+        if isinstance(node, ast.Call):
+            assert ast.unparse(node.func) in {'os.environ.get', 'RuntimeError'}, (
+                'The isolated signing-argument observer may only read config and raise errors'
+            )
+    namespace = {'os': SimpleNamespace(environ={})}
+    module = ast.fix_missing_locations(ast.Module(body=[function], type_ignores=[]))
+    exec(compile(module, '<isolated signing arguments>', 'exec'), namespace)  # noqa: S102 - calls restricted above
+    for enabled in ('', '0'):
+        namespace['os'].environ = {'EDI_CODESIGN': enabled, 'EDI_CODESIGN_MAC_IDENTITY': 'public'}
+        assert namespace['macos_signing_args']() == ['--sign', '-'], (
+            'An unsigned PR build must choose ad hoc signing even with a public identity present'
         )
+    namespace['os'].environ = {'EDI_CODESIGN': '1', 'EDI_CODESIGN_MAC_IDENTITY': 'public'}
+    assert namespace['macos_signing_args']() == ['--timestamp', '--sign', 'public'], (
+        'Enabled application signing must use the identity and timestamp without hardened runtime'
+    )
+    namespace['os'].environ = {'EDI_CODESIGN': '1'}
+    with pytest.raises(RuntimeError, match='identity'):
+        namespace['macos_signing_args']()
 
 
 def test_signing_entries_keep_the_exact_secret_and_variable_split():
@@ -219,6 +324,11 @@ def test_signing_failure_cannot_upload_release_artifacts():
     for step in selected:
         assert not re.search(r'\|\|\s*(?:true|:)|continue-on-error', step.get('run', '')), (
             'Signing commands must propagate failures instead of suppressing them'
+        )
+
+    for upload in uploads:
+        assert not condition(upload, 'push', 'refs/heads/main', False, 'Windows', failed=True), (
+            'A failed signing predecessor must block delivery and component uploads'
         )
 
 
