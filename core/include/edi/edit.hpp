@@ -61,8 +61,8 @@ struct ScanViewValue {
 // The existing scan-view operation split at its real write boundary. Scan Undo
 // prepares it before reversing files; ordinary Edit still resolves at execution.
 struct PreparedScanView {
-    struct Target { Parameter* parameter; double value; std::optional<double> uncertainty; };
-    ExperimentBase* experiment;
+    struct Target { Parameter* parameter = nullptr; double value = 0.0; std::optional<double> uncertainty; };
+    ExperimentBase* experiment = nullptr;
     std::optional<PdDataBase> data;
     std::vector<Target> targets;
     void commit() noexcept {
@@ -886,7 +886,7 @@ class Edit {
             if (magnetic && !found) {
                 AtomSiteMoment moment;
                 moment.id = site.id.value();
-                structure.atom_site_moment.push_back(std::move(moment));
+                structure.atom_site_moment.push_back(moment);
             } else if (!magnetic && found) {
                 structure.atom_site_moment.erase_at(*found);
             }
@@ -921,7 +921,7 @@ class Edit {
         }
         MagneticFormFactor added;
         added.id = type_symbol;
-        structure.magnetic_form_factors.push_back(std::move(added));
+        structure.magnetic_form_factors.push_back(added);
         return *structure.magnetic_form_factors.back();
     }
     // Removes an atom type's form-factor row when it holds only defaults: no ion, `j0`, every coefficient 0 and
@@ -1005,15 +1005,13 @@ class Edit {
     // One row added to, or removed from, one of the model's collections, by its own row type: atom
     // sites, background points, texture rows, linked structures, aliases and constraints are added;
     // those, structures and experiments are removed. `erase` refuses a row that is not there.
-    static Edit append(ItemVec<AtomSite>& rows, AtomSite row) { return appending(rows, std::move(row)); }
-    static Edit append(ItemVec<LineSegment>& rows, LineSegment row) { return appending(rows, std::move(row)); }
-    static Edit append(ItemVec<PrefOrient>& rows, PrefOrient row) { return appending(rows, std::move(row)); }
-    static Edit append(ItemVec<LinkedStructure>& rows, LinkedStructure row) {
-        return appending(rows, std::move(row));
-    }
-    static Edit append(ItemVec<ParameterAlias>& rows, ParameterAlias row) { return appending(rows, std::move(row)); }
-    static Edit append(ItemVec<ParameterConstraint>& rows, ParameterConstraint row) {
-        return appending(rows, std::move(row));
+    static Edit append(ItemVec<AtomSite>& rows, const AtomSite& row) { return appending(rows, row); }
+    static Edit append(ItemVec<LineSegment>& rows, const LineSegment& row) { return appending(rows, row); }
+    static Edit append(ItemVec<PrefOrient>& rows, const PrefOrient& row) { return appending(rows, row); }
+    static Edit append(ItemVec<LinkedStructure>& rows, const LinkedStructure& row) { return appending(rows, row); }
+    static Edit append(ItemVec<ParameterAlias>& rows, const ParameterAlias& row) { return appending(rows, row); }
+    static Edit append(ItemVec<ParameterConstraint>& rows, const ParameterConstraint& row) {
+        return appending(rows, row);
     }
     // A site of a structure goes with its tensor row (erase_atom_site); any other row alone.
     static Edit erase(ItemVec<AtomSite>& rows, std::size_t index) {
@@ -1040,9 +1038,9 @@ class Edit {
                     tensor->id = id;
                 }
             }
-            structure.atom_sites.push_back(std::move(site));
+            structure.atom_sites.push_back(site);
             if (tensor) {
-                structure.atom_site_aniso.push_back(std::move(*tensor));
+                structure.atom_site_aniso.push_back(*tensor);
             }
         });
     }
@@ -1109,10 +1107,10 @@ class Edit {
         });
     }
     // A single crystal's region is on its d or sin(theta)/lambda axis, named on every row.
-    static Edit append_excluded_region(ExperimentBase& experiment, double start, double end, std::string axis) {
+    static Edit append_excluded_region(ExperimentBase& experiment, double start, double end, const std::string& axis) {
         ExcludedRegion region(start, end);
         region.axis = check_excluded_region_axis(experiment, axis);
-        return appending(experiment.excluded_regions, std::move(region));
+        return appending(experiment.excluded_regions, region);
     }
     static Edit excluded_region_axis(ExperimentBase& experiment, std::size_t row, std::string axis) {
         return Edit([&experiment, row, axis = std::move(axis)] {
@@ -1158,7 +1156,7 @@ class Edit {
     // target unless the edit reports the experiment it produced (Load data replaces it).
     // `scaled`, when given, is set to whether a factor was applied.
     static Edit rescaled(Project& project, const ExperimentBase& experiment, Edit change,
-                         std::shared_ptr<bool> scaled = nullptr) {
+                         const std::shared_ptr<bool>& scaled = nullptr) {
         return Edit(ResultOperation{}, [&project, &experiment, change = std::move(change), scaled] {
             AppliedResult applied = change.apply_result();
             const ExperimentBase* target = applied.experiment != nullptr ? applied.experiment : &experiment;
@@ -1196,8 +1194,8 @@ class Edit {
 
     // --- Loaded blocks ----------------------------------------------------------------------------
     // A loaded structure added (add_loaded_structure's rule: its name is not taken).
-    static Edit add_structure(Project& project, Structure structure) {
-        return Edit(ResultOperation{}, [&project, structure = std::make_shared<Structure>(std::move(structure))] {
+    static Edit add_structure(Project& project, const Structure& structure) {
+        return Edit(ResultOperation{}, [&project, structure = std::make_shared<Structure>(structure)] {
             add_loaded_structure(project, *structure);
             const auto* inserted=project.structures.back().get();
             return AppliedResult{inserted, nullptr,
@@ -1246,7 +1244,7 @@ class Edit {
     }
     // The same replacement, admitting a file of several datasets: its result names the experiments at `produced`
     // (indices into `replacement`'s experiments), the first the load's target, as members of the project after it.
-    static Edit replace_project(Project& project, Project replacement, std::vector<std::size_t> produced) {
+    static Edit replace_project(Project& project, Project replacement, const std::vector<std::size_t>& produced) {
         auto next = std::make_shared<const Project>(std::move(replacement));
         return Edit(ResultOperation{}, [&project, next, produced] {
             replace_into(project, Project(*next));
@@ -1295,7 +1293,7 @@ class Edit {
         }
         project = std::move(read);
         for (auto& [held, content] : structure_content) {
-            *held = std::move(content);
+            *held = content;
         }
         for (auto& [held, content] : experiment_content) {
             *held = std::move(content);
@@ -1325,9 +1323,11 @@ class Edit {
             links.reserve(experiments.size()); textures.reserve(experiments.size());
             for (const auto& rows : before->experiments) {
                 std::vector<ItemVec<LinkedStructure>::Ptr> linked;
+                linked.reserve(rows.links.size());
                 for (const auto& row : rows.links) linked.push_back(std::make_shared<LinkedStructure>(row));
                 links.emplace_back(std::move(linked));
                 std::vector<ItemVec<PrefOrient>::Ptr> texture;
+                texture.reserve(rows.texture.size());
                 for (const auto& row : rows.texture) texture.push_back(std::make_shared<PrefOrient>(row));
                 textures.emplace_back(std::move(texture));
             }
@@ -1643,10 +1643,12 @@ class Edit {
                 targets.emplace_back(found->second, &state);
             }
             std::vector<std::shared_ptr<ParameterAlias>> aliases;
+            aliases.reserve(before.aliases.size());
             for (const ParameterAlias& row : before.aliases) {
                 aliases.push_back(std::make_shared<ParameterAlias>(row));
             }
             std::vector<std::shared_ptr<ParameterConstraint>> constraints;
+            constraints.reserve(before.constraints.size());
             for (const ParameterConstraint& row : before.constraints) {
                 constraints.push_back(std::make_shared<ParameterConstraint>(row));
             }
@@ -1666,8 +1668,8 @@ class Edit {
 
     // FIRST ordinary relation edits: complete the prospective declaration inside
     // serialized execution, after Input observers and BEFORE the live assignment.
-    static Edit constraint_append(Project& project, ParameterConstraint complete) {
-        return Edit(ResultOperation{}, [&project, complete = std::make_shared<ParameterConstraint>(std::move(complete))] {
+    static Edit constraint_append(Project& project, const ParameterConstraint& complete) {
+        return Edit(ResultOperation{}, [&project, complete = std::make_shared<ParameterConstraint>(complete)] {
             {
                 Project candidate = project;
                 candidate.constraints.push_back(std::make_shared<ParameterConstraint>(*complete));
@@ -1743,8 +1745,8 @@ class Edit {
     // undo_fit_to's write: the first of `first` and `second` whose experiments and parameters
     // match `restored` gives every parameter's value, s.u., free flag and saved fit start, the relations and the fit
     // record; `restored` is then written onto `project`. Answers whether a state was found.
-    static bool restore_kept_state(Project& project, Project restored, std::shared_ptr<const Project> first,
-                                   std::shared_ptr<const Project> second) {
+    static bool restore_kept_state(Project& project, Project restored, const std::shared_ptr<const Project>& first,
+                                   const std::shared_ptr<const Project>& second) {
         const auto matches = [&restored](Project& kept) {
             if (kept.experiments.size() != restored.experiments.size()) return false;
             for (std::size_t i = 0; i < kept.experiments.size(); ++i)
@@ -1806,8 +1808,8 @@ class Edit {
     // The row factories' one body each, for the model row types above only: nothing outside this
     // class names them.
     template <typename Row>
-    static Edit appending(ItemVec<Row>& rows, Row row) {
-        return Edit(ResultOperation{}, [&rows, row = std::make_shared<Row>(std::move(row))] {
+    static Edit appending(ItemVec<Row>& rows, const Row& row) {
+        return Edit(ResultOperation{}, [&rows, row = std::make_shared<Row>(row)] {
             auto inserted=std::make_shared<Row>(*row);
             rows.push_back(inserted);
             if constexpr (std::is_same_v<Row,AtomSite>) return AppliedResult{nullptr,nullptr,inserted.get()};

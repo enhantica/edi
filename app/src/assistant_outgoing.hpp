@@ -65,7 +65,7 @@ inline void complete_result_maximum(QJsonObject& maximum) {
     maximum.insert("code",QLatin1StringView(code.data(),static_cast<qsizetype>(code.size())));
 }
 enum class Type { Text, FitReason, ActionError, ActionField, RecipeField, RecipeReason, RecipeGuidance, Number, Boolean, Object, Array, TextArray, NumberArray };
-struct Field { const char* name; Type type; Role child=Role::Result; };
+struct Field { const char* name = nullptr; Type type = Type::Text; Role child=Role::Result; };
 inline const Field* fields(Role role, std::size_t& count) {
 #define ROWS(...) static constexpr Field rows[]={__VA_ARGS__}; count=std::size(rows); return rows
 #define T(n) Field{n,Type::Text}
@@ -264,7 +264,7 @@ inline QJsonValue walk(const QJsonValue& value,Role role,quint64& size,bool mate
             // Only app-owned closed first-gate codes survive. Unknown source
             // messages/codes keep the original generic status projection.
             for(std::size_t i=static_cast<std::size_t>(ResultCode::RequestStale);i<result_codes.size();++i)
-                if(source.value("code")==QLatin1StringView(result_codes[i].data())) {code=result_codes[i].data();break;}
+                if(source.value("code")==QLatin1StringView(result_codes[i].data(),static_cast<qsizetype>(result_codes[i].size()))) {code=result_codes[i].data();break;}
         }
         if(code) {if(comma)add(size,1);add(size,sizeof("\"code\":")-1+std::char_traits<char>::length(code)+2);if(materialize)result.insert("code",QLatin1StringView(code));}
     }

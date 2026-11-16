@@ -361,7 +361,7 @@ void adopt_scan_file_result(FitResultRecord& record, const std::string& file,
 // and each other file's rows in `rows`, as read, move into that file's bundle, unless a fit gave the file one. A read
 // row so keeps its id however the template's rows are numbered (I6, I7). Rows of the template file and rows naming no
 // file are dropped.
-void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrelation> template_rows,
+void hold_template_rows(FitResultRecord& record, const std::vector<FitParameterCorrelation>& template_rows,
                         const std::vector<FitParameterCorrelation>& rows, const std::string& template_file);
 
 // Correlation pairs as a record holds them (FitResultRecord::correlations), each keeping its id; a pair with no id, or

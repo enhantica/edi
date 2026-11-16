@@ -342,12 +342,14 @@ quint64 skill_json_string_bytes(QStringView text, quint64 cap = edi::assistant::
     quint64 bytes=2;
     for(qsizetype i=0;i<text.size();++i) {
         const auto c=text[i].unicode();quint64 next=0;
+        // NOLINTNEXTLINE(bugprone-branch-clone): a JSON escape and a two-byte UTF-8 character both take two bytes
         if(c=='"' || c=='\\' || c==8 || c==12 || c==10 || c==13 || c==9)next=2;
         else if(c<0x20)next=6;
         else if(c<0x80)next=1;
         else if(c<0x800)next=2;
         else if(QChar::isHighSurrogate(c)) {
-            if(++i>=text.size() || !text[i].isLowSurrogate())throw std::runtime_error("Skill text has invalid Unicode");
+            ++i;
+            if(i>=text.size() || !text[i].isLowSurrogate())throw std::runtime_error("Skill text has invalid Unicode");
             next=4;
         } else if(QChar::isLowSurrogate(c))throw std::runtime_error("Skill text has invalid Unicode");
         else next=3;
@@ -660,9 +662,8 @@ QString command_human_description(const Object& source) {
             for(qsizetype i=0;valid && i<purpose.size();++i) {
                 const auto c=purpose.at(i).unicode();
                 if(c<0x20 || (c>=0x7f && c<=0x9f) || c==0x2028 || c==0x2029 || c==0xfeff || c==0x061c || c==0x200e || c==0x200f ||
-                   (c>=0x202a && c<=0x202e) || (c>=0x2066 && c<=0x2069))valid=false;
-                else if(QChar::isHighSurrogate(c)){if(++i>=purpose.size() || !purpose.at(i).isLowSurrogate())valid=false;}
-                else if(QChar::isLowSurrogate(c))valid=false;
+                   (c>=0x202a && c<=0x202e) || (c>=0x2066 && c<=0x2069) || QChar::isLowSurrogate(c))valid=false;
+                else if(QChar::isHighSurrogate(c)){++i;if(i>=purpose.size() || !purpose.at(i).isLowSurrogate())valid=false;}
             }
             if(valid)return purpose;
         }
@@ -848,7 +849,7 @@ class Rows : public RowTableModel {
             setTableRows(rows);
             if (!alive) return;
             if (pending_) continue;
-            struct Change { int first, last; QList<int> roles; };
+            struct Change { int first = 0, last = 0; QList<int> roles; };
             QList<Change> changes;
             for(qsizetype i=0;i<visible_.size();++i) {
                 const auto before=i<announced_.size()?announced_.at(i).toObject():Object{};
@@ -1754,7 +1755,7 @@ struct AssistantViewModel::State {
     quint64 settings_observation_begin(const FileProjection& proof) noexcept {
         try {
             // An existing admitted exchange is not erased by another deferred entry.
-            if(generic_connecting && settings_observation_current())return settings_observation->serial;
+            if(const auto current=generic_connecting?settings_observation_current():0)return current;
             settings_observation.reset();settings_observation_unavailable=false;
             if(settings_observation_serial==UINT64_MAX){settings_observation_unavailable=true;return 0;}
             SettingsObservation seen;seen.proof=proof;seen.transport=agent.get();
@@ -1771,7 +1772,7 @@ struct AssistantViewModel::State {
         }catch(...){settings_observation.reset();settings_observation_unavailable=true;return 0;}
     }
     template<class Value> void settings_observe(quint64 serial,const char* field,const Value& value) noexcept {
-        try {if(settings_observation_owns(serial))settings_observation->fields[QLatin1StringView(field)]=value;}
+        try {if(settings_observation && settings_observation_owns(serial))settings_observation->fields[QLatin1StringView(field)]=value;}
         catch(...){settings_observation_unavailable=true;}
     }
     quint64 settings_observation_current() const noexcept {
@@ -1780,7 +1781,7 @@ struct AssistantViewModel::State {
     }
     quint64 settings_observation_reply_entry(const QString& id) const noexcept {
         try {
-            const auto serial=settings_observation_current();if(!serial)return 0;
+            const auto serial=settings_observation_current();if(!serial || !settings_observation)return 0;
             const auto& fields=settings_observation->fields;const auto rpc=fields.value("request_id").toString();
             return fields.value("reply_id")==id &&
                 ((!rpc.isEmpty() && rpc==id) || (rpc.isEmpty() && settings_observation->request_in_flight)) &&
@@ -1788,7 +1789,7 @@ struct AssistantViewModel::State {
         }catch(...){return 0;}
     }
     void settings_observe_request_enter(quint64 serial) noexcept {
-        try {if(settings_observation_owns(serial)) {
+        try {if(settings_observation && settings_observation_owns(serial)) {
             settings_observation->request_in_flight=true;
             settings_observation->fields["stage"]="request_call_entered";
         }}catch(...){settings_observation_unavailable=true;}
@@ -1802,7 +1803,7 @@ struct AssistantViewModel::State {
     }
     template<class Value> void settings_observe_receipt(quint64 serial,const QString& id,const char* field,const Value& value) noexcept {
         try {
-            if(!serial || settings_observation_reply_entry(id)!=serial)return;
+            if(!serial || settings_observation_reply_entry(id)!=serial || !settings_observation)return;
             auto& seen=*settings_observation;
             if(seen.fields.value("request_id").toString().isEmpty())
                 seen.provisional_receipt[QLatin1StringView(field)]=value; // Private until actual return-ID binding.
@@ -1811,7 +1812,7 @@ struct AssistantViewModel::State {
     }
     void settings_observe_reply(const QString& id,const Object& reply) noexcept {
         try {
-            const auto serial=settings_observation_current();if(!serial)return;
+            const auto serial=settings_observation_current();if(!serial || !settings_observation)return;
             auto& fields=settings_observation->fields;const auto rpc=fields.value("request_id").toString();
             if((rpc.isEmpty() && !settings_observation->request_in_flight) || (!rpc.isEmpty() && rpc!=id))return;
             const auto previous=fields.value("reply_id").toString();
@@ -1826,7 +1827,7 @@ struct AssistantViewModel::State {
     }
     void settings_observe_request_return(quint64 serial,const QString& id) noexcept {
         try {
-            if(!settings_observation_owns(serial))return;
+            if(!settings_observation || !settings_observation_owns(serial))return;
             settings_observation->request_in_flight=false;
             auto& fields=settings_observation->fields;fields["request_id"]=id;
             fields["stage"]=id.isEmpty()?"request_returned_empty":"request_returned_id";
@@ -1844,7 +1845,7 @@ struct AssistantViewModel::State {
     }
     void settings_observe_terminal(CodexAgent::FailureKind kind) noexcept {
         try {
-            const auto serial=settings_observation_current();if(!serial)return;
+            const auto serial=settings_observation_current();if(!serial || !settings_observation)return;
             const auto& fields=settings_observation->fields;
             if(fields.value("settlement")=="ordinary_settle_returned" || fields.value("terminal")!="not_observed")return;
             settings_observe(serial,"terminal",kind==CodexAgent::FailureKind::OperationDeadline?"operation_deadline":
@@ -2034,7 +2035,8 @@ struct AssistantViewModel::State {
     // The automatic reopen of the last conversation at startup failed. It is retired, so Connect no longer repeats it;
     // the saved association is kept; the reason is shown in plain words; and the ordinary Connect ChatGPT offer,
     // with its consent to exactly what is shared, is the way on. Nothing connects or approves a context by itself.
-    void startup_reopen_failed(const QString reason) noexcept {
+    // cppcheck-suppress passedByValue ; by value, a caller may pass the fields this clears
+    void startup_reopen_failed(const QString reason) noexcept {  // NOLINT(performance-unnecessary-value-param): by value, a caller may pass the fields this clears
         try {
             // Nothing of the failed reopen may continue behind Connect: no resume of it, no pending selection.
             const auto target=restore_last_target;
@@ -2063,7 +2065,8 @@ struct AssistantViewModel::State {
     // A conversation selection failed after it began (account check, project Open, preparation or continuation): it
     // settles once, under its own operation, with the actual cause (fail_session_operation ends a startup reopen too).
     // A manual Sessions selection also shows its error and can be retried.
-    void settle_reopen_failure(quint64 operation,const QString target,const QString reason) noexcept {
+    // cppcheck-suppress passedByValue ; by value, a caller may pass the fields this clears
+    void settle_reopen_failure(quint64 operation,const QString target,const QString reason) noexcept {  // NOLINT(performance-unnecessary-value-param): by value, a caller may pass the fields this clears
         const bool automatic=!target.isEmpty() && restore_last_target==target && operation==session_operation;
         const QPointer<AssistantViewModel> receiver(&owner);
         fail_session_operation(operation,target,reason);
@@ -2541,7 +2544,8 @@ struct AssistantViewModel::State {
             modified>=-8640000000000.0 && modified<=8640000000000.0;
     }
     // By value: a caller may pass the selection fields this clears.
-    void fail_session_operation(quint64 operation,const QString target,const QString reason) noexcept {
+    // cppcheck-suppress passedByValue ; by value, a caller may pass the fields this clears
+    void fail_session_operation(quint64 operation,const QString target,const QString reason) noexcept {  // NOLINT(performance-unnecessary-value-param): by value, a caller may pass the fields this clears
         // A startup reopen's failure ends that reopen even when its selection has already been cleared.
         const bool startup=!target.isEmpty() && restore_last_target==target && operation==session_operation;
         if(operation!=session_operation || (!sessions_loading && session_selection_target.isEmpty()) || (!target.isEmpty() && !session_selection_target.isEmpty() && session_selection_target!=target)) {
@@ -2818,7 +2822,7 @@ struct AssistantViewModel::State {
         if(account_confirmation_pending && it->kind!="name" && it->kind!="history" && it->kind!="archive") {
             it->account_reply=reply;it->account_method=method;return;
         }
-        const auto request=it.value();session_requests.erase(it);
+        const auto request=it.value();session_requests.erase(it);  // NOLINT(performance-unnecessary-copy-initialization): the entry is erased next
         const QPointer<AssistantViewModel> receiver(&owner);const QPointer<CodexAgent> transport(agent.get());
         const auto current=[&] {return receiver && receiver->state_.get()==this && transport && agent.get()==transport && session_request_current(request);};
         if(!current())return;
@@ -2913,6 +2917,7 @@ struct AssistantViewModel::State {
             history_for_session(id);
             if(!proof.input_current())return;
             restore_runtime_history(id);
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
             if(!receiver || receiver->state_.get()!=this || !proof.input_current() || operation!=session_operation || !generic_authenticated || generic_thread!=id)return;
             sessions_loading=false;sessions_error.clear();emit owner.sessionsChanged();
             if(receiver && receiver->state_.get()==this && proof.input_current() && operation==session_operation && generic_thread==id)emit owner.sessionSelected(id);
@@ -2956,7 +2961,9 @@ struct AssistantViewModel::State {
         try {
             if(!resume_checkpoint || resume_checkpoint->attempted || generic_connecting || generic_retiring || generic_busy ||
                 native_call || native_fit || native_worker_admitted() || !agent || agent->outputOwnerState()!=CodexAgent::OutputOwnerState::Released)return;
-            if(!resume_identity_current()) {
+            const bool identity_current=resume_identity_current();
+            if(!resume_checkpoint)return;
+            if(!identity_current) {
                 const auto target=resume_checkpoint->thread;resume_checkpoint.reset();
                 fail_session_operation(session_operation,target,QObject::tr("The original project or disclosure changed before this conversation could resume."));return;
             }
@@ -2993,7 +3000,7 @@ struct AssistantViewModel::State {
     edi::assistant::Revision disclosure_revision;
     QByteArray disclosure_capabilities;
     bool generic_context_reuse = false;
-    static constexpr quint64 disclosure_shell_bytes = sizeof(DisclosureScope) + 4 * 32;
+    static constexpr quint64 disclosure_shell_bytes = sizeof(DisclosureScope) + 4 * quint64{32};
     void work_merge(const QString& rowId,const Object& fields,bool newlyCommitted=false) noexcept {
         if(!work_reports.collecting() || rowId.isEmpty())return;
         const auto savedError=error;
@@ -3224,7 +3231,7 @@ struct AssistantViewModel::State {
         QCryptographicHash hash(QCryptographicHash::Sha256);
         scope_integer(hash, files.size());
         for (auto it = files.constBegin(); it != files.constEnd(); ++it) {
-            if (it.key().size() > static_cast<qsizetype>(Limits::id_bytes) || it.value().size() > 2 * QCryptographicHash::hashLength(QCryptographicHash::Sha256))
+            if (it.key().size() > static_cast<qsizetype>(Limits::id_bytes) || it.value().size() > 2 * qsizetype{QCryptographicHash::hashLength(QCryptographicHash::Sha256)})
                 throw std::length_error("Selected input identity exceeds capacity");
             scope_integer(hash, it.key().size()); scope_bytes(hash, reinterpret_cast<const char*>(it.key().utf16()), it.key().size() * sizeof(QChar));
             scope_integer(hash, it.value().size()); scope_bytes(hash, it.value().constData(), it.value().size());
@@ -3247,10 +3254,10 @@ struct AssistantViewModel::State {
             // do not reconstruct schema arrays merely to fingerprint scope.
             if (!context.value("native_actions").isArray()) throw std::runtime_error("The native capability scope is unavailable");
             const auto tools = context.value("native_actions").toArray();
-            const auto tool_bytes = generic_size(tools, Limits::context_bytes);
+            (void)generic_size(tools, Limits::context_bytes);
             hash.addData(QJsonDocument(tools).toJson(QJsonDocument::Compact)); disclosure_capabilities = hash.result();
         }
-        const auto context_bytes = generic_measured_size(context);
+        (void)generic_measured_size(context);
         const auto inputs = raw_input_identity(target);
         const auto selected = selected_input_identity(files);
         // Projection keeps a subset of the complete context fields. Admit its
@@ -3390,7 +3397,8 @@ struct AssistantViewModel::State {
                     if(bytes>Limits::context_bytes-wire)throw std::length_error("Interface category row exceeds capacity");
                     wire+=bytes;text_units+=text.size();
                 }
-                constexpr auto keys=sizeof("pagemember_idcategory_idtieradmitted")*sizeof(QChar);
+                constexpr std::size_t key_units=sizeof("pagemember_idcategory_idtieradmitted");
+                constexpr auto keys=key_units*sizeof(QChar);
                 const auto owned_row=sizeof(Object)+10*sizeof(QJsonValue)+keys+4*minimum+2*(text_units+4)*sizeof(QChar);
                 // New row/input and both old/replacement growing array owners
                 // coexist until append returns. Retain their joint role with context.
@@ -3427,8 +3435,6 @@ struct AssistantViewModel::State {
             }
             const auto* pattern=view?view->pattern():nullptr;
             const auto error=pattern?pattern->calculationError():QString{}; // Implicit shared copy of existing published text.
-            const auto units=std::min<quint64>(static_cast<quint64>(error.size()),Limits::error_bytes);
-            const auto error_bytes=std::min<quint64>(3*units,Limits::error_bytes);
             if(!current())throw std::runtime_error("The original calculation read owner changed");
             Object row{{"dataset_id",QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(held->name.value()))},
                 {"pattern_available",bool(pattern)}};
@@ -3436,7 +3442,8 @@ struct AssistantViewModel::State {
                 const auto text=bounded_error(error);
                 const bool sc=held->experiment_type.effective_sample_form()==edi::SampleFormEnum::SINGLE_CRYSTAL;
                 const bool nativeCurrent=held->computed_current();
-                const auto points=sc?(nativeCurrent && held->reflections?held->reflections->intensity_calc.size():0):pattern->calculatedPointCount();
+                const auto& reflections=held->reflections;
+                const auto points=sc?(nativeCurrent && reflections?reflections->intensity_calc.size():0):pattern->calculatedPointCount();
                 if(points>(quint64(1)<<std::numeric_limits<double>::digits))
                     throw std::length_error("Calculation point count is not exactly representable");
                 row["stale"]=!nativeCurrent || (!sc && pattern->stale());row["calculated_points"]=static_cast<double>(points);
@@ -3566,6 +3573,7 @@ struct AssistantViewModel::State {
         QString path;QByteArray settings_digest;
         bool invalid_configuration=false;
         const auto invalid=[&](const char* message) -> void {
+            // cppcheck-suppress throwInNoexceptFunction ; every call is inside the try block below, which catches it
             invalid_configuration=true;throw std::runtime_error(message);
         };
         const auto validated=[&](auto&& check) -> decltype(auto) {
@@ -3638,7 +3646,7 @@ struct AssistantViewModel::State {
                 validated([&] {validate_source_configuration(rows);});
             } else {
                 // The absent-key default is explicit, not an error fallback.
-                const auto default_bytes=generic_size(skill_source_invalid_rows,Limits::context_bytes);
+                (void)generic_size(skill_source_invalid_rows,Limits::context_bytes);
                 rows=skill_source_invalid_rows;
                 auto builtin=rows[0].toObject();builtin["enabled"]=true;rows[0]=builtin;
             }
@@ -3711,7 +3719,7 @@ struct AssistantViewModel::State {
             const auto source = value.toObject();
             return source.value("enabled").toBool() && !source.value("builtin").toBool();
         })) return skill_inventory;
-        const QPointer<CodexAgent> transport(agent.get());const auto output_generation=transport?transport->outputGeneration():0;
+        const QPointer<CodexAgent> transport(agent.get());
 
         auto next=capture_skill_sources(skill_source_rows);
         if(!proof.input_current() || skill_source_serial!=serial)throw std::runtime_error("Skill source owner changed during capture");
@@ -3729,14 +3737,14 @@ struct AssistantViewModel::State {
         validate_source_configuration(rows);
         const auto path=settings_file_path();if(path.isEmpty() || path!=skill_source_store)throw std::runtime_error("The original settings store changed");
         // Validate/stage from a closed snapshot before persisting the selection.
-        const QPointer<CodexAgent> transport(agent.get());const auto output_generation=transport?transport->outputGeneration():0;
+        const QPointer<CodexAgent> transport(agent.get());
 
         auto snapshot=capture_skill_sources(rows);
         const auto rows_bytes=generic_size(rows,Limits::context_bytes);
         constexpr auto wrapper_bytes=sizeof("{\"schema\":\"edi.assistant.skill-sources/1\",\"sources\":}")-1;
         if(rows_bytes>Limits::context_bytes-wrapper_bytes)throw std::length_error("Skill source configuration exceeds capacity");
         const Object object{{"schema","edi.assistant.skill-sources/1"},{"sources",rows}};
-        const auto bytes=generic_size(object,Limits::context_bytes);
+        (void)generic_size(object,Limits::context_bytes);
         const auto encoded=QJsonDocument(object).toJson(QJsonDocument::Compact);
          // Complete owning admission before the settings write.
         if(!proof.input_current() || !skill_source_loaded || skill_source_serial!=serial || owner.canCancel())return false;
@@ -3791,7 +3799,6 @@ struct AssistantViewModel::State {
     Object outgoing_context(std::shared_ptr<const AssistantSkillInventory> captured = {}) {
         const auto original=file_projection();
         const QPointer<CodexAgent> context_transport(agent.get());
-        const auto context_generation=context_transport?context_transport->outputGeneration():0;
 
         QElapsedTimer elapsed;
         const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
@@ -4031,7 +4038,7 @@ struct AssistantViewModel::State {
     struct NativeCreation;
     struct NativeCreateWidget {
         struct Input {
-            AssistantWidgetInput::Kind kind; QString target, text; int option = -1, section = -1, row = -1;
+            AssistantWidgetInput::Kind kind{}; QString target, text; int option = -1, section = -1, row = -1;
             std::optional<ProjectEditor::CreationAction::Kind> structure_action;
             QString field;
         };
@@ -4144,7 +4151,7 @@ struct AssistantViewModel::State {
     std::uint64_t control_start(const NativeCall& call,ControlField field,AssistantWidgetInput::Request request) {
         const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<AssistantWidgetInput> input(widget_input.get());
-        const auto original=call;
+        const auto original=call;  // NOLINT(performance-unnecessary-copy-initialization): a snapshot; a reentrant call may replace the original
         if(!receiver || receiver->state_.get()!=this)return 0;
         if(!input || widget_input.get()!=input || !native_call || native_call->record!=original.record ||
             native_call->receipt!=original.receipt || native_call->rpc!=original.rpc)
@@ -4183,7 +4190,7 @@ struct AssistantViewModel::State {
             project == run->project && project && (((run->tool=="edit_relation" && !run->relation_visible) || (run->tool=="undo_fit" && !run->fit_undo_visible)) || (action_window == run->window && action_window));
     }
     bool widget_current(const std::shared_ptr<NativeWidget>& run) const {
-        return widget_owned(run) && !native_call->resolved && !native_call->retiring &&
+        return widget_owned(run) && native_call && !native_call->resolved && !native_call->retiring &&
             !run->call.record->answered && !run->call.record->retired && !run->call.record->completed &&
             (native_current(run->call.receipt) || native_post_edit_current(run->call.receipt,run->relation_input));
     }
@@ -4212,7 +4219,7 @@ struct AssistantViewModel::State {
     bool widget_entry_current(const std::shared_ptr<NativeWidget>& run, const NativeWidget::ParameterEntry* entry) const {
         if (!widget_entry_owned(run, entry)) return false;
         const bool current = widget_current(run);
-        if (!widget_entry_owned(run, entry) || !current) return false;
+        if (!current) return false;
         if(run->tool=="estimate_background" && !native_estimate_target_current(run->call))return false;
         if(run->background_experiment) {
             const auto view=run->project->currentExperiment();
@@ -4560,7 +4567,7 @@ struct AssistantViewModel::State {
 
             }
             // Everything below uses captured exact-token QPointers only, even if charge/helper signals replaced State.
-            auto form = save_form;
+            auto form = save_form;  // NOLINT(performance-unnecessary-copy-initialization): a snapshot; a reentrant call may replace the original
             if (save_session) try { save_session->cancelAssistantSaveAs(run->save_intent); } catch (...) {}
             if (run->save_manual_takeover) {
                 // Queue only exact-token projection: the genuine event sees its unchanged target/draft.
@@ -4605,10 +4612,10 @@ struct AssistantViewModel::State {
         if (const auto parent = run->create_parent.lock()) {
             if (!widget_owned(run)) return;
             const auto receiver = run->receiver;
-            if (run->tool == "edit_background" && lcAssistantWidgetLookup().isDebugEnabled() && create_widget_owned(parent) &&
+            if (run->tool == "edit_background" && lcAssistantWidgetLookup().isDebugEnabled() && create_widget_owned(parent) && native_call &&
                 !run->call.record->answered && !run->call.record->discarded && !run->call.record->completed) {
                 // Snapshot only retained facts before child cleanup; never query a control for logging.
-                const auto original = run;
+                const auto original = run;  // NOLINT(performance-unnecessary-copy-initialization): a snapshot; a reentrant call may replace the original
                 const auto record = run->call.record; const auto receipt = run->call.receipt;
                 const auto active_receipt = native_receipt;
                 const auto index = parent->step; const auto step = run->background_step;
@@ -4640,7 +4647,7 @@ struct AssistantViewModel::State {
                     original->background_input != background || original->input != parameter ||
                     original->call.record != record || original->call.receipt != receipt || native_receipt != active_receipt ||
                     record->answered || record->discarded || record->completed || record->retired != retired || receipt->retired != receipt_retired ||
-                    native_call->retiring != retiring || native_call->resolved != resolved ||
+                    !native_call || native_call->retiring != retiring || native_call->resolved != resolved ||
                     generation != binding || native_serial != serial || usage_epoch != account) return;
             }
             try {
@@ -4650,7 +4657,7 @@ struct AssistantViewModel::State {
             } catch (...) {
                 if (!receiver || !create_widget_owned(parent)) return;
                 create_widget_capture_child(parent, run);
-                native_call->may_have_written = native_call->may_have_written || parent->completed_steps > 0;
+                if (native_call) native_call->may_have_written = native_call->may_have_written || parent->completed_steps > 0;
                 if (widget_owned(run)) widget_end(run);
                 if (receiver && create_widget_owned(parent)) create_widget_refuse(parent, widget_outcome_error, true, "child-catch");
             }
@@ -4675,11 +4682,11 @@ struct AssistantViewModel::State {
             return;
         }
         if ((run->tool == "set_parameters" || run->tool == "set_free") && run->call.record && run->call.receipt &&
-            run->call.record->tool == run->tool && !native_call->finishing &&
+            run->call.record->tool == run->tool && native_call && !native_call->finishing &&
             !run->call.record->answered && !run->call.record->discarded && !run->call.record->completed &&
             lcAssistantWidgetLookup().isDebugEnabled()) {
             // Retained facts only, before refusal cleanup can release the input.
-            const auto original = run;
+            const auto original = run;  // NOLINT(performance-unnecessary-copy-initialization): a snapshot; a reentrant call may replace the original
             const auto record = run->call.record; const auto receipt = run->call.receipt;
             const auto active_receipt = native_receipt; const auto input = run->input;
             const auto* entry = widget_parameter_entry(run);
@@ -4707,7 +4714,7 @@ struct AssistantViewModel::State {
                 (input && (int(input->consumed) != consumed || int(input->outcome.applied) != input_applied || int(input->outcome.published) != published)) ||
                 widget_input.get() != helper || bool(helper) != helper_present ||
                 record->answered || record->discarded || record->completed || record->retired != retired || receipt->retired != receipt_retired ||
-                native_call->finishing || native_call->retiring != retiring || native_call->resolved != resolved ||
+                !native_call || native_call->finishing || native_call->retiring != retiring || native_call->resolved != resolved ||
                 generation != binding || native_serial != serial || usage_epoch != account || file_epoch != files) return;
         }
         try {
@@ -4728,11 +4735,11 @@ struct AssistantViewModel::State {
                 run->project->fit()->discardNativePreparation(run->fit_token);
                 if (native_fit == run->project->fit()) native_fit.clear();
             }
-            if (!receiver || !widget_owned(run)) return;
-            native_call->may_have_written = run->parameter_applied || run->parameter_uncertain || ((run->input && run->input->outcome.applied) || (run->parameter_entries.empty() && run->completed_steps > 0) || (run->relation_input && run->relation_input->outcome.applied) || (run->background_input && run->background_input->outcome.applied));
+            if (!receiver || !widget_owned(run) || !native_call) return;
+            if (native_call) native_call->may_have_written = run->parameter_applied || run->parameter_uncertain || ((run->input && run->input->outcome.applied) || (run->parameter_entries.empty() && run->completed_steps > 0) || (run->relation_input && run->relation_input->outcome.applied) || (run->background_input && run->background_input->outcome.applied));
             if (run->tool == "add_relations" || run->tool == "edit_relation" || run->tool == "edit_background" || run->tool=="background_names" || !run->parameter_entries.empty()) {
                 widget_sequence_retain(run);
-                native_call->may_have_written = run->parameter_applied || run->parameter_uncertain || (run->input && run->input->outcome.applied) ||
+                if (native_call) native_call->may_have_written = run->parameter_applied || run->parameter_uncertain || (run->input && run->input->outcome.applied) ||
                     (run->parameter_entries.empty() && (run->completed_steps > 0 ||
                      (run->relation_input && run->relation_input->outcome.applied) || (run->background_input && run->background_input->outcome.applied)));
                 native_finish(false, widget_sequence_progress(run, message)); return;
@@ -4743,7 +4750,7 @@ struct AssistantViewModel::State {
             if (!receiver || !widget_owned(run)) return;
             // Already admitted uncertainty/row/response roles survive failure
             // of this newly allocated diagnostic. Do not manufacture a result.
-            native_call->may_have_written = run->parameter_applied || run->parameter_uncertain || ((run->input && run->input->outcome.applied) || (run->parameter_entries.empty() && run->completed_steps > 0) || (run->relation_input && run->relation_input->outcome.applied) || (run->background_input && run->background_input->outcome.applied));
+            if (native_call) native_call->may_have_written = run->parameter_applied || run->parameter_uncertain || ((run->input && run->input->outcome.applied) || (run->parameter_entries.empty() && run->completed_steps > 0) || (run->relation_input && run->relation_input->outcome.applied) || (run->background_input && run->background_input->outcome.applied));
             native_fence();
             if (!receiver || !widget_owned(run)) return;
             native_finish(false, run->call.record->outcome);
@@ -4796,7 +4803,7 @@ struct AssistantViewModel::State {
             } catch (...) {
                 if (!receiver || !create_widget_owned(parent)) return;
                 create_widget_capture_child(parent, run);
-                native_call->may_have_written = native_call->may_have_written || parent->completed_steps > 0;
+                if (native_call) native_call->may_have_written = native_call->may_have_written || parent->completed_steps > 0;
                 if (widget_owned(run)) widget_end(run);
                 if (receiver && create_widget_owned(parent)) create_widget_refuse(parent, widget_outcome_error, true, "child-delivery-catch");
             }
@@ -4828,7 +4835,7 @@ struct AssistantViewModel::State {
                 if(run->parameter_group) {
                     const auto input=run->input;
                     if(!widget_entry_owned(run,entry))return;
-                    if(input && input->outcome.applied){run->parameter_applied=true;native_call->may_have_written=true;}
+                    if(input && input->outcome.applied){run->parameter_applied=true;if(native_call)native_call->may_have_written=true;}
                     bool actual=input && !input->members.empty();
                     const auto member=[&](const NativeWidget::ParameterEntry& expected) {
                         return input && std::count(input->members.begin(),input->members.end(),expected.member)==1;
@@ -4845,11 +4852,11 @@ struct AssistantViewModel::State {
                     run->parameter_uncertain=input && input->outcome.applied;
                     if(delivered && !settled)control_failure(run,ControlCause::Commit);
                     widget_sequence_retain(run);
-                    if(!widget_entry_owned(run,entry))return;
+                    if(!widget_entry_owned(run,entry) || !native_call)return;
                     if(!settled){widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
                     const auto call=*native_call;native_refresh(call);
                     if(!widget_entry_current(run,entry)){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);return;}
-                    run->completed_steps+=next-run->parameter_at;
+                    run->completed_steps+=static_cast<qsizetype>(next-run->parameter_at);
                     run->parameter_at=next;run->parameter_uncertain=false;run->parameter_group=false;run->input.reset();
                     widget_parameter_next(run);return;
                 }
@@ -4857,7 +4864,7 @@ struct AssistantViewModel::State {
                 const auto& input=run->input;
                 if (input && input->outcome.applied) {
                     run->parameter_applied=true;
-                    native_call->may_have_written=true;
+                    if (native_call) native_call->may_have_written=true;
                 }
                 const bool actual=entry && widget_parameter_binding_current(*entry) &&
                     (run->tool=="set_parameters" ? entry->parameter->value()==entry->value && entry->member->value.get()==entry->value :
@@ -4867,7 +4874,7 @@ struct AssistantViewModel::State {
                 if(input && input->consumed && !input->outcome.applied && delivered)run->parameter_uncertain=false;
                 if(delivered && !settled)control_failure(run,ControlCause::Commit);
                 widget_sequence_retain(run); // Factual applied prefix survives refresh/notification failure.
-                if (!widget_entry_owned(run,entry)) return;
+                if (!widget_entry_owned(run,entry) || !native_call) return;
                 if (!settled) { widget_refuse(run,message.isEmpty()?widget_outcome_error:message); return; }
                 const auto refreshed_call=*native_call;
                 native_refresh(refreshed_call); // A reentrant retirement cannot destroy this call argument.
@@ -4924,6 +4931,7 @@ struct AssistantViewModel::State {
             } else throw std::runtime_error("No scientific background control is prepared at this step");
         } else if (run->tool == "add_relations" || run->tool == "edit_relation") {
             const auto receiver=run->receiver;const QPointer<ProjectViewModel> target(run->project);
+            // cppcheck-suppress nullPointerRedundantCheck ; taken from the live run just above; the later check is for re-entry
             const auto input=target->prepareWidgetRelations(run->relation_action);
             run->relation_input = input;run->step_counted = false;
              // Own the exact original row action before its ordinary method.
@@ -4941,7 +4949,7 @@ struct AssistantViewModel::State {
                 : run->project->prepareWidgetFree(*run->parameter->parameter(), run->free);
         }
         if(!run->parameter_entries.empty())run->parameter_uncertain=true;
-        native_call->may_have_written = true; // Immediately before the genuine final event, not during typing.
+        if (native_call) native_call->may_have_written = true; // Immediately before the genuine final event, not during typing.
     }
     void widget_resume_revealed(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
@@ -5002,7 +5010,7 @@ struct AssistantViewModel::State {
         const auto row_index=run->relation_row, field_index=run->relation_field, prefix=run->completed_steps;
         const auto steps=run->reveal_steps; const bool constraint=run->relation_constraint;
         const auto input=run->relation_input;
-        const bool retiring=native_call->retiring, resolved=native_call->resolved;
+        const bool retiring=native_call && native_call->retiring, resolved=native_call && native_call->resolved;
         const bool answered=record->answered, retired=record->retired, completed=record->completed;
         const auto original=[&] {
             return receiver && receiver->state_.get()==this && widget_entry_owned(run,entry) &&
@@ -5664,7 +5672,8 @@ struct AssistantViewModel::State {
         return eligible>1 && eligible==range.second-range.first;
     }
     void widget_free_group(const std::shared_ptr<NativeWidget>& run,bool opened,
-            QPointer<QQuickItem> originalHeader={},QPointer<QObject> originalMenu={},QPointer<ParameterFilterModel> originalFilter={}) {
+            const QPointer<QQuickItem>& originalHeader={},const QPointer<QObject>& originalMenu={},
+            const QPointer<ParameterFilterModel>& originalFilter={}) {
         const auto* entry=widget_parameter_entry(run);
         if(!widget_input || !entry || !widget_entry_current(run,entry) || !widget_page_selected(run)) {widget_refuse(run,widget_outcome_error);return;}
         const QPointer<QQuickItem> header(opened?originalHeader.data():widget_named("parameters.freeHeader"));
@@ -5758,10 +5767,11 @@ struct AssistantViewModel::State {
             members.push_back(expected.member);
         }
         run->edit_scope=begin_own_edit();
+        // cppcheck-suppress nullPointerRedundantCheck ; taken from the live run just above; the later check is for re-entry
         const auto input=target->prepareWidgetFreeGroup(std::move(members),entry->free);run->input=input;
         run->parameter_group=true;run->parameter_uncertain=true;
         if(!receiver || receiver->state_.get()!=this || !target || !popupCurrent() || !widget_entry_current(run,entry))return false;
-        native_call->may_have_written=true;
+        if (native_call) native_call->may_have_written=true;
         return popupCurrent();
     }
     void widget_apply_parameter(const std::shared_ptr<NativeWidget>& run,bool group,const QPointer<QObject>& menu={},
@@ -5809,6 +5819,7 @@ struct AssistantViewModel::State {
             try {widget_commit_ready(run);}
             catch(...) {input=run->input;scope=run->edit_scope;throw;}
             input=run->input;scope=run->edit_scope;
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
             if(!receiver || receiver->state_.get()!=this || !widget_entry_current(run,entry) || !parameter)return;
             if(run->tool=="edit_background") {
                 if(!widget_background_current(run) || !widget_background_member_current(run))return;
@@ -5885,6 +5896,7 @@ struct AssistantViewModel::State {
             bool scoped=false,owned=false,otherTier=false;
             for(QPointer<QQuickItem> a=item;a;a=a->parentItem()) {
                 if(a->objectName()=="group.parameters")owned=a->property("project").value<ProjectViewModel*>()==run->project;
+                // cppcheck-suppress nullPointerRedundantCheck ; the loop condition checks it; the later check is for re-entry
                 if(a->objectName()=="workflow.analysis.manualSidebar")scoped=true;
                 if(!widget_owned(run) || !candidate || !a)return nullptr;
                 const auto tier=a->property("shownTier");
@@ -5949,7 +5961,7 @@ struct AssistantViewModel::State {
         run->parameter_filter_pending=true;
         if(!widget_reveal_parameter(run,target))return;
         AssistantWidgetInput::Request request;
-        request.kind=AssistantWidgetInput::Kind::Choose;request.target=target;request.option=option;
+        request.kind=AssistantWidgetInput::Kind::Choose;request.target=target;request.option=static_cast<int>(option);
         auto captured_current=[this,run,entry,table,filter,target,option] {
             return widget_entry_current(run,entry) && table && filter && target &&
                 widget_analysis_control(run,"parameters.list")==table && table->property("sourceModel").value<QObject*>()==filter &&
@@ -6148,7 +6160,7 @@ struct AssistantViewModel::State {
                 fact["clip"]=item->clip()?work_rect(item->clipRect(),"item"):work_report_missing("not_present");
                 fact["scene_bounds"]=work_rect(item->mapRectToScene(QRectF(0,0,item->width(),item->height())),"scene");}
             if(i==4) {
-                const QPointer<QQuickItem> viewport(items[i]);
+                const auto& viewport=items[i];
                 for(const char* key:{"interactive","atYBeginning","atYEnd","flickableDirection","contentY","contentHeight","originY"}) {
                     fact[QLatin1StringView(key)]=m;
                     if(!viewport)continue;
@@ -6321,6 +6333,7 @@ struct AssistantViewModel::State {
         QPointer<QQuickItem> found;
         for(auto* candidate:widget_items()) {
             const QPointer<QQuickItem> item(candidate);
+            // cppcheck-suppress nullPointerRedundantCheck ; just taken from the live item list; the later check is for re-entry
             if(item->objectName()!=QStringLiteral("sideBar.tab.")+suffix || item->window()!=run->window)continue;
             if(!original() || !item)return nullptr;
             if(!page->isAncestorOf(item))continue;
@@ -6359,7 +6372,8 @@ struct AssistantViewModel::State {
         return page && page->property("current").toBool() && page->isEnabled() && page->property("project").value<ProjectViewModel*>()==expected;
     }
     template<class Frame,class Current,class Resume,class Refuse>
-    bool widget_wait_workflow_page(const std::shared_ptr<Frame>& run,const QPointer<QQuickItem>& tab,Current current,Resume resume,Refuse refuse) {
+    bool widget_wait_workflow_page(const std::shared_ptr<Frame>& run,const QPointer<QQuickItem>& tab,const Current& current,const Resume& resume,
+                                   const Refuse& refuse) {
         if(!tab){refuse(QObject::tr("The original workflow tab is unavailable"));return true;}
         if(!current()){refuse(QObject::tr("The original workflow navigation owner changed"),ControlCause::Superseded);return true;}
         if(!tab->property("preparing").toBool()) {
@@ -6432,12 +6446,13 @@ struct AssistantViewModel::State {
             native_finish(false,{{"status","refused"},{"applied",false},{"published",false},{"complete",false},{"steps_completed",0},
                 {"message","The originally requested Estimate experiment changed before its native edit; no estimate was applied"}});return;
         }
+        // cppcheck-suppress nullPointerRedundantCheck ; taken from the live run just above; the later check is for re-entry
         auto result=target->estimateBackgroundFor(original.record->estimate_member,receipt.get());
         if(!receiver || receiver->state_.get()!=this)return;
         end_own_edit(scope);
         if(!native_call || native_call->record!=original.record || native_call->receipt!=original.receipt)return;
-        native_call->may_have_written=result.applied;
-        if(result.applied && target && project==target)native_refresh(*native_call);
+        if (native_call) native_call->may_have_written=result.applied;
+        if(result.applied && target && project==target && native_call)native_refresh(*native_call);
         if(!receiver || receiver->state_.get()!=this || !native_call || native_call->record!=original.record || native_call->receipt!=original.receipt)return;
         if(result.applied && !native_estimate_selection_current(original,target)) {
             result.published=false;
@@ -6476,7 +6491,7 @@ struct AssistantViewModel::State {
                         const auto close=qScopeGuard([receiver,this,edit_scope]{if(receiver && receiver->state_.get()==this)end_own_edit(edit_scope);});
                         const auto input=target->prepareWidgetBackgroundNames(*original.record->estimate_member);
                         const auto finish=qScopeGuard([target,input]{if(target)target->finishWidgetBackground(input);});
-                        if(owns() && !native_call->retiring && native_estimate_target_current(original)) {
+                        if(owns() && native_call && !native_call->retiring && native_estimate_target_current(original)) {
                             const bool accepted=target->namePointsByPosition();
                             names_applied=input->outcome.applied;
                             names_complete=accepted && input->consumed && (equal || (names_applied && input->outcome.published));
@@ -6485,9 +6500,9 @@ struct AssistantViewModel::State {
                     }
                 }
                 if(!owns())return;
-                if(names_applied && target && project==target)native_refresh(*native_call);
+                if(names_applied && target && project==target && native_call)native_refresh(*native_call);
                 if(!owns())return;
-                names_complete=names_complete && native_estimate_target_current(original) && !native_call->retiring;
+                names_complete=names_complete && native_estimate_target_current(original) && native_call && !native_call->retiring;
                 if(names_complete) {
                     const auto names=edi::position_point_ids(*original.record->estimate_member);
                     const auto& points=original.record->estimate_member->background;
@@ -6657,7 +6672,7 @@ struct AssistantViewModel::State {
             run->edit_scope=begin_own_edit();
             run->background_input=run->project->prepareWidgetBackgroundNames(*run->background_experiment);
             if(!widget_entry_current(run,nullptr))return false;
-            native_call->may_have_written=true;return true;
+            if (native_call) native_call->may_have_written=true;return true;
         };
         auto captured_finishCommit=[this,run] {
             if(run->project)run->project->finishWidgetBackground(run->background_input);
@@ -6792,9 +6807,10 @@ struct AssistantViewModel::State {
             (run->input && run->input->consumed && run->input->outcome.applied);
         const bool published = run->background_input ? run->background_input->outcome.published : run->input && run->input->outcome.published;
         if (!applied) { if(delivered)control_failure(run,ControlCause::Commit); widget_refuse(run, message.isEmpty() ? QObject::tr("The original background control refused its change") : message); return; }
-        ++run->completed_steps; run->step_counted = true; native_call->may_have_written = true;
+        ++run->completed_steps; run->step_counted = true; if (native_call) native_call->may_have_written = true;
         widget_sequence_retain(run);
         if (!delivered || !published) { if(delivered)control_failure(run,ControlCause::Commit); widget_refuse(run, widget_outcome_error); return; }
+        if (!native_call) return;
         const auto original_call=*native_call;native_refresh(original_call);
         if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
         if (!widget_background_current(run)) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); return; }
@@ -7057,7 +7073,7 @@ struct AssistantViewModel::State {
             widget_refuse(run, message.isEmpty() ? QObject::tr("The original relation control refused its edit") : message); return;
         }
         ++run->completed_steps; run->step_counted = true;
-        native_call->may_have_written = true;
+        if (native_call) native_call->may_have_written = true;
         widget_sequence_retain(run);
         bool actual = true;
         const auto& declaration = *run->project->assistantProject();
@@ -7082,7 +7098,7 @@ struct AssistantViewModel::State {
         default: actual = false;
         }
         if (!delivered || !input->outcome.published || !actual) { if(delivered)control_failure(run,ControlCause::Commit); widget_refuse(run, widget_outcome_error); return; }
-        native_refresh(*native_call);
+        if (native_call) native_refresh(*native_call);
         if (!widget_relation_current(run)) { if (widget_owned(run)) widget_refuse(run, widget_outcome_error); return; }
         const auto& model = *run->project->assistantProject();
         const auto at = run->relation_base + run->relation_row;
@@ -7174,6 +7190,7 @@ struct AssistantViewModel::State {
         if(run->relation_row==rows.size()) { native_finish(true,widget_sequence_progress(run,QObject::tr("Relations edited through the existing rows; each edit has its ordinary Undo"),true)); return; }
         if(run->relation_row<0 || run->relation_row>=rows.size()) {widget_refuse(run,widget_outcome_error);return;}
         const auto receiver=run->receiver; const QPointer<ProjectViewModel> target(run->project);
+        // cppcheck-suppress nullPointerRedundantCheck ; taken from the live run just above; the later check is for re-entry
         const QPointer<ConstraintListModel> model(target->analysis()->constraints());
         const QPointer<QQuickItem> control(widget_relation_named(run,QStringLiteral("constraints.append")));
         if(!model || !control){widget_refuse(run,widget_outcome_error);return;}
@@ -7288,7 +7305,7 @@ struct AssistantViewModel::State {
         default:throw std::logic_error("The original relation operation is unavailable");
         }
         if(!receiver || receiver->state_.get()!=this || !widget_owned(run) || !target || project!=target)return;
-        if(native_call->resolved || native_call->retiring || run->call.record->answered || run->call.record->discarded ||
+        if(!native_call || native_call->resolved || native_call->retiring || run->call.record->answered || run->call.record->discarded ||
             run->call.record->completed || run->call.record->retired)return;
         if(!single) {
             // The original compound completion retains an applied step BEFORE
@@ -7300,7 +7317,7 @@ struct AssistantViewModel::State {
                 run->relation_key==key && run->relation_constraint==constraint)widget_relation_done(run,true,{});
             return;
         }
-        native_call->may_have_written=input->outcome.applied;
+        if (native_call) native_call->may_have_written=input->outcome.applied;
         bool actual=false;
         const auto& model=*target->assistantProject();
         if(expected.kind==K::AliasRemove || expected.kind==K::ConstraintRemove) {
@@ -7359,7 +7376,7 @@ struct AssistantViewModel::State {
             const auto options=target->property("model").toStringList();
             if(!receiver || receiver->state_.get()!=this || !target || !widget_relation_row_current(run) ||
                 run->relation_row!=row || run->relation_field!=field || run->relation_base!=base || run->relation_key!=key || run->relation_constraint!=constraint)return;
-            option=options.indexOf(run->relation_action.text);
+            option=static_cast<int>(options.indexOf(run->relation_action.text));
             if(option<0 || options.count(run->relation_action.text)!=1){control_failure(run,ControlCause::Unavailable); widget_refuse(run,QObject::tr("The exact original alias parameter is unavailable"));return;}
         }
         AssistantWidgetInput::Request request;request.kind=physicalChoice?(target->property("searchable").toBool()?AssistantWidgetInput::Kind::SearchChoice:AssistantWidgetInput::Kind::Choose):AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
@@ -7384,7 +7401,7 @@ struct AssistantViewModel::State {
                     const bool actual=target && input && input->consumed && input->outcome.applied && input->outcome.published &&
                         widget_relation_edit_member(run) && run->project->assistantProject()->aliases[base]->parameter_unique_name.value()==run->relation_action.text.toStdString();
                     const bool complete=delivered && actual && native_owner(run->call.receipt);
-                    native_call->may_have_written=input && input->outcome.applied;
+                    if (native_call) native_call->may_have_written=input && input->outcome.applied;
                     if(complete)run->completed_steps=1;
                     native_finish(complete,widget_relation_edit_result(run,complete));return;
                 }
@@ -7425,6 +7442,7 @@ struct AssistantViewModel::State {
         }
         if (!receiver || receiver->state_.get() != this || !widget_current(run)) return;
         const QPointer<ProjectViewModel> target(run->project);
+        // cppcheck-suppress nullPointerRedundantCheck ; taken from the live run just above; the later check is for re-entry
         const auto input = target->prepareFitUndo();
         undo->input = input;
 
@@ -7444,7 +7462,7 @@ struct AssistantViewModel::State {
         if (!widget_current(run) || !target->fitUndoAvailable()) return;
         target->undo(); // SAME original appbar method; its fit branch owns scientific restoration and history.
         if (!receiver || receiver->state_.get() != this || !target || !widget_owned(run) || project != target) return;
-        native_call->may_have_written = input->outcome.applied;
+        if (native_call) native_call->may_have_written = input->outcome.applied;
         const bool complete = input->consumed && input->started && input->outcome.applied && input->outcome.published &&
             native_owner(run->call.receipt);
         target->finishFitUndo(input);
@@ -7518,6 +7536,7 @@ struct AssistantViewModel::State {
         const auto projection=file_projection();
         // Original admission already validates operands and optional purpose;
         // no later reader may turn omitted reporting metadata into a refusal.
+        if(!native_call)throw ActionRefusal("target_unavailable","relation");
         auto run=std::make_shared<NativeWidget>();run->call=*native_call;run->receiver=&owner;run->project=project;
         run->tool=QStringLiteral("edit_relation");run->tab=QStringLiteral("appBar.tab.analysis");run->relation_args=args;
         run->relation_visible=show_actions;run->window=show_actions?action_window:nullptr;
@@ -7780,6 +7799,7 @@ struct AssistantViewModel::State {
         if(page.isEmpty())return true; // Equal values require no page navigation.
         if (widget_input && widget_input->manualDraftPresent())
             throw std::runtime_error("Finish the current manual input before assistant page navigation");
+        if (!native_call) return false;
         const auto original = *native_call;
         const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<ProjectViewModel> target = project;
@@ -8079,8 +8099,8 @@ struct AssistantViewModel::State {
         const QPointer<CodexAgent> transport(agent.get());
         const auto transport_generation=transport?transport->outputGeneration():0;
         const auto record=native_call && native_call->finishing?native_call->record:nullptr;
-        const auto receipt=record?native_call->receipt:nullptr;
-        const auto rpc=record?native_call->rpc:QJsonValue();
+        const auto receipt=record && native_call?native_call->receipt:nullptr;
+        const auto rpc=record && native_call?native_call->rpc:QJsonValue();
         const auto bytes=outgoing::size(outcome,outgoing::Role::Result);
         const auto projected=outgoing::project(outcome,outgoing::Role::Result,bytes);
         const auto encoded=QJsonDocument(projected).toJson(QJsonDocument::Compact);
@@ -8304,7 +8324,6 @@ struct AssistantViewModel::State {
             std::optional<edi::WorkStamps> stamps;
 
             const QPointer<CodexAgent> transport(agent.get());
-            const auto transport_generation = transport ? transport->outputGeneration() : 0;
 
             if (project) {
                 stamps = edi::work_stamps(*project->assistantProject());
@@ -8368,7 +8387,7 @@ struct AssistantViewModel::State {
                 (!native_call || (native_call->record == record && native_call->receipt == receipt && native_call->rpc == rpc));
         };
     }
-    std::function<void(const edi::FitReport&, bool)> native_fit_callback(QPointer<FitViewModel> captured, NativeCall original_call) {
+    std::function<void(const edi::FitReport&, bool)> native_fit_callback(const QPointer<FitViewModel>& captured, const NativeCall& original_call) {
         const QPointer<AssistantViewModel> receiver(&owner);
         return [this, receiver, captured, original_call](const edi::FitReport& report, bool presented) noexcept {
                     // Reentrant replacement may already have retired this exact
@@ -8401,7 +8420,7 @@ struct AssistantViewModel::State {
         const auto undo = original.record->fit_undo;
         if (!undo || !undo->receiver || undo->receiver->state_.get() != this || undo->project != original.receipt->project ||
             !undo->ready || !undo->input || !undo->input->outcome.applied) return NativeUndoFacts::Unknown;
-        native_call->may_have_written = true;
+        if (native_call) native_call->may_have_written = true;
         bool typed = false;
         if (proposed) {
             const auto& input = *undo->input;
@@ -8439,10 +8458,13 @@ struct AssistantViewModel::State {
         if(!success && native_call && native_call->record && native_call->record->tool==QLatin1StringView("run_fit") &&
            settle_trial(project,generation,false))settled["accepted_restored"]=true;
         const Object& outcome=settled;
-        if(native_call && native_call->record->estimate_receipt && native_call->record->estimate_receipt->applied)
-            native_call->may_have_written=true;
+        if(native_call) {
+            NativeCall& held_call=*native_call;
+            if(held_call.record->estimate_receipt && held_call.record->estimate_receipt->applied)held_call.may_have_written=true;
+        }
         if (!native_call || native_call->finishing) return;
         const auto undo_facts = native_retain_fit_undo(*native_call, &outcome, success);
+        if (!native_call) return;
         native_call->finishing = true; // Sequential/reentrant publication belongs to this original call only.
         const QPointer<AssistantViewModel> receiver(&owner);
         auto call = *native_call; // Stable owner across synchronous transport failure/reentrant retirement.
@@ -8804,7 +8826,7 @@ struct AssistantViewModel::State {
             const auto size=descriptor.value("bytes");
             const bool available=found && size.isDouble() && std::isfinite(size.toDouble()) && size.toDouble()>=0 &&
                 std::floor(size.toDouble())==size.toDouble() && size.toDouble()<=B::file_bytes && !path.isEmpty() &&
-                expected.size()==2*QCryptographicHash::hashLength(QCryptographicHash::Sha256) &&
+                expected.size()==2*qsizetype{QCryptographicHash::hashLength(QCryptographicHash::Sha256)} &&
                 generic_input_hashes.value(file_id)==expected;
             const auto total=available?static_cast<quint64>(size.toDouble()):0;
             const auto count=available && offset<=total?std::min(requested,total-offset):0;
@@ -8988,14 +9010,12 @@ struct AssistantViewModel::State {
             // Existing source/cache payload limits are separate from concurrent
             // metadata, native result and transport ownership. Every field here
             // names an actual bounded container or read buffer, not extra wire room.
-            const quint64 memberMetadata=sizeof(edi::assistant::SelectedFile)+Bounds::name_bytes*sizeof(QChar)+
-                Bounds::name_bytes+Limits::id_bytes*sizeof(QChar)+2*QCryptographicHash::hashLength(QCryptographicHash::Sha256);
             const auto old=file_context();
             const auto oldFiles=old.value("files").toArray();
             quint64 total=0;
             for(const auto& value:oldFiles) {
                 const auto bytes=value.toObject().value("bytes").toDouble(-1);
-                if(!std::isfinite(bytes) || bytes<0 || std::floor(bytes)!=bytes || bytes>Bounds::collection_bytes-total)
+                if(!std::isfinite(bytes) || bytes<0 || std::floor(bytes)!=bytes || bytes>static_cast<double>(Bounds::collection_bytes-total))
                     throw std::length_error("Existing local inputs exceed capacity");
                 total+=static_cast<quint64>(bytes);
             }
@@ -9097,7 +9117,7 @@ struct AssistantViewModel::State {
 
             selected_reply=std::move(result.value);selected_rows_dirty=true;
             originalCall.record->outcome=outcome;originalCall.record->response.swap(response);originalCall.record->terminal.swap(row);originalCall.record->outcome_ready=true;
-            native_call->may_have_written=true;
+            if (native_call) native_call->may_have_written=true;
             if(!owned() || !publication.input_current())return;
             const auto actual=file_context();
             if(actual.value("collection_id")!=collection)throw std::runtime_error("The committed input collection is unavailable");
@@ -9247,7 +9267,8 @@ struct AssistantViewModel::State {
         const auto original_receipt = native_receipt;
         auto reason=outgoing::ResultCode::RequestStale;
         if (!(inspecting ? native_owner(original_receipt,&reason) : native_current(original_receipt,&reason))) {
-            reply(false, {{"status", "refused"}, {"code", QLatin1StringView(outgoing::result_code(reason).data())},
+            const auto code = outgoing::result_code(reason);
+            reply(false, {{"status", "refused"}, {"code", QLatin1StringView(code.data(), static_cast<qsizetype>(code.size()))},
                 {"message",reason==outgoing::ResultCode::RetentionBlocked?native_capacity_error:QStringLiteral("No current settled native request is available.")}}); return;
         }
         if (native_action_mode_pending()) {
@@ -9392,7 +9413,7 @@ struct AssistantViewModel::State {
             if (!publication.input_current() || !native_call || native_call->receipt != original_receipt || native_call->record->call != id) return;
         }
         if (readonly) {
-            if(name=="inspect_data" && !native_data_current(native_call->inspection)) {
+            if(name=="inspect_data" && (!native_call || !native_data_current(native_call->inspection))) {
                 native_finish(false,{{"status","refused"},{"code","request_stale"},{"message","The original dataset publication changed before its numerical response; inspect current state."}});return;
             }
             native_finish(true, read_result); return;
@@ -9420,19 +9441,21 @@ struct AssistantViewModel::State {
             const auto* selected=project->currentExperiment();
             if(!selected || QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(selected->experiment()->name.value()))!=args.value("experiment").toString())
                 throw std::invalid_argument("Estimate requires the exact current experiment ID");
+            if(!native_call)throw std::runtime_error("The original native request is no longer current");
             native_call->record->estimate_view=project->currentExperiment();
             for(const auto& member:project->assistantProject()->experiments)
                 if(member.get()==selected->experiment())native_call->record->estimate_member=member.get();
             if(!native_call->record->estimate_member)throw std::runtime_error("The requested Estimate member is no longer owned by this project");
             native_call->record->estimate_id=args.value("experiment").toString();
         }
-        if (name == "run_fit") native_call->fit_attempt = fit_attempt;
+        if (name == "run_fit" && native_call) native_call->fit_attempt = fit_attempt;
         if (!native_follow_page(name, args)) return;
         if (show_actions) {
             edit.reset(); // Actual visible controls own their corresponding native edits.
             if (name == "run_fit" && (!project->fit()->available() || edi::fits_a_scan(*project->assistantProject()))) {
                 native_finish(false, {{"status", "unavailable"}, {"message", "Only an available single/joint fit has a visible native route"}}); return;
             }
+            if (!native_call) return;
             const auto original = *native_call;
             const auto original_scope = native_settlement_scope(original);
             try { native_start_widget(name, args); }
@@ -9451,13 +9474,14 @@ struct AssistantViewModel::State {
         if(name=="estimate_background"){native_apply_estimate();return;}
         if (name == "edit_background") {
             const auto background = assistant_native_background(*project->assistantProject(), args);
+            if (!native_call) return;
             const auto original = *native_call;
             const QPointer<ProjectViewModel> target(project);
             const QPointer<AssistantViewModel> receiver(&owner);
             const auto edit_scope = begin_own_edit();
             ProjectViewModel::EditOutcome result;
             bool unchanged_names=false;
-            native_call->may_have_written = true;
+            if (native_call) native_call->may_have_written = true;
             try {
                 if(background.names) {
                     const auto count=background.experiment->background.size();
@@ -9479,7 +9503,7 @@ struct AssistantViewModel::State {
             if (!receiver) return;
             end_own_edit(edit_scope);
             if (!target || project != target || !native_call || native_call->record != original.record || native_call->receipt != original.receipt) return;
-            native_call->may_have_written = result.applied;
+            if (native_call) native_call->may_have_written = result.applied;
             if(unchanged_names){native_finish(true,{{"status","unchanged"},{"message","Background IDs already match their positions; no Undo was needed"}});return;}
             Object outcome{{"status", !result.applied ? "refused" : result.published ? "edited" : "applied_unconfirmed"},
                 {"calculation_pending", target->calculating()}, {"message", result.message.isEmpty() ? QString("Background edited with Undo; calculation is asynchronous") : bounded_error(result.message)}};
@@ -9492,6 +9516,7 @@ struct AssistantViewModel::State {
         }
         if (edit) {
             const auto edit_scope = begin_own_edit();
+            if (!native_call) return;
             native_call->may_have_written = true;
             const auto original_record = native_call->record;
             const auto original_receipt = native_call->receipt;
@@ -9516,23 +9541,28 @@ struct AssistantViewModel::State {
             auto* handle = project->fit();
             QPointer<FitViewModel> captured = handle;
             native_fit = handle;
+            if (!native_call) return;
             const auto original_call = *native_call;
             const auto receipt = original_call.receipt;
             const auto original_scope = native_settlement_scope(original_call);
-            native_call->may_have_written = true;
+            if (native_call) native_call->may_have_written = true;
             try {
                 handle->startNative(native_fit_callback(captured, original_call), original_call.fit_attempt);
             } catch (...) {
                 if (captured && captured->nativeRunning()) {
-                    if (native_call && native_call->record == original_call.record && native_call->receipt == receipt && native_call->rpc == original_call.rpc)
-                        native_call->may_have_written = true;
+                    if (native_call) {
+                        NativeCall& held_call = *native_call;
+                        if (held_call.record == original_call.record && held_call.receipt == receipt && held_call.rpc == original_call.rpc) held_call.may_have_written = true;
+                    }
                     captured->cancel();
                     if (original_scope()) native_fence();
                     return;
                 }
                 if (native_fit == captured) native_fit.clear();
-                if (native_call && native_call->record == original_call.record && native_call->receipt == receipt && native_call->rpc == original_call.rpc)
-                    native_call->may_have_written = false;
+                if (native_call) {
+                    NativeCall& held_call = *native_call;
+                    if (held_call.record == original_call.record && held_call.receipt == receipt && held_call.rpc == original_call.rpc) held_call.may_have_written = false;
+                }
                 throw; // Preparation failed before actual submission; no future report is owed.
             }
             if (!captured || native_fit != captured || !native_call || native_call->record != original_call.record ||
@@ -9843,7 +9873,7 @@ struct AssistantViewModel::State {
 #else
             throw std::runtime_error("Selected input proof handoff is unavailable on this platform");
 #endif
-            prepared.insert(id,std::move(next));
+            prepared.insert(id,next);
         }
         return prepared;
     }
@@ -9860,7 +9890,6 @@ struct AssistantViewModel::State {
                 if (!current()) throw std::runtime_error("The original creation attachment retired");
 
                 const QPointer<CodexAgent> transport(agent.get());
-                const auto transport_generation = transport ? transport->outputGeneration() : 0;
 
                 auto attachment = std::make_unique<NativeAttachment>();
                 attachment->creation = creation; attachment->target = target; attachment->active = std::make_shared<bool>(false);
@@ -9874,7 +9903,6 @@ struct AssistantViewModel::State {
 
                 const auto context_publication=file_projection();
                 const QPointer<CodexAgent> context_transport(agent.get());
-                const auto context_generation=context_transport?context_transport->outputGeneration():0;
 
                 auto context = object(attachment->prepared_controller->context());
                 if (!current()) throw std::runtime_error("The original creation attachment retired");
@@ -9982,7 +10010,7 @@ struct AssistantViewModel::State {
                     creation->adopted = creation->population->committed();
                     if (!receiver) return;
                     end_own_edit(edit_scope);
-                    if (original_call()) native_call->may_have_written = creation->adopted;
+                    if (original_call() && native_call) native_call->may_have_written = creation->adopted;
                     throw;
                 }
                 creation->adopted = creation->population->committed();
@@ -9992,7 +10020,7 @@ struct AssistantViewModel::State {
                 }
                 if (!receiver || receiver->state_.get()!=this) return;
                 end_own_edit(edit_scope);
-                if (original_call()) native_call->may_have_written = creation->adopted;
+                if (original_call() && native_call) native_call->may_have_written = creation->adopted;
                 // Actual commit was latched inside the closed operation before any UI
                 // observer; cancellation/replacement cannot relabel it as no write.
                 auto outcome = creation->population_outcome;
@@ -10027,7 +10055,7 @@ struct AssistantViewModel::State {
                     estimated=created_target->estimateBackgroundFor(estimateMember,creation->estimate_outcome.get());
                     if(receiver && receiver->state_.get()==this) {
                         end_own_edit(scope);
-                        if(effect_current(created_target))native_refresh(*native_call);
+                        if(effect_current(created_target) && native_call)native_refresh(*native_call);
                     }
                 }
                 // Session observers can genuinely admit B before returning to A.
@@ -10094,7 +10122,7 @@ struct AssistantViewModel::State {
         const auto wait=task->format_wait;task->format_wait.clear();
         if(wait){wait->stop();wait->deleteLater();}
     }
-    void native_save_finished(std::shared_ptr<NativeSave> task) noexcept {
+    void native_save_finished(std::shared_ptr<NativeSave> task) noexcept {  // NOLINT(performance-unnecessary-value-param): keeps the task alive across native_save.reset()
         const auto receiver=task->receiver;
         if(!receiver || receiver->state_.get()!=this || native_save!=task || task->submitting)return;
         native_save_end_wait(task);
@@ -10198,7 +10226,7 @@ struct AssistantViewModel::State {
         }
         const auto replacement=session->replacement_generation_;const auto own=begin_own_edit(true);
         const auto release=qScopeGuard([this,receiver,own]{if(receiver && receiver->state_.get()==this)end_own_edit(own);});
-        task->submitting=true;task->visible_pending=false;task->call.may_have_written=true;native_call->may_have_written=true;
+        task->submitting=true;task->visible_pending=false;task->call.may_have_written=true;if (native_call) native_call->may_have_written=true;
         session->assistant_save_origin_=own;task->project->assistant_save_origin_=own;
         const auto origin=qScopeGuard([session,target=task->project,own]{if(session && session->assistant_save_origin_==own)session->assistant_save_origin_=0;if(target && target->assistant_save_origin_==own)target->assistant_save_origin_=0;});
         const auto retain_failure=[task](const QString& message) noexcept {
@@ -10225,7 +10253,7 @@ struct AssistantViewModel::State {
         const auto message=task->failure_size?QString::fromUtf8(task->failure.data(),static_cast<qsizetype>(task->failure_size)):
             saved?QObject::tr("Project saved."):QObject::tr("Save could not confirm its result. Inspect the current project before repeating.");
         const auto outcome=native_save_outcome(*task,message);
-        task->call.record->outcome=outcome;task->call.record->outcome_ready=true;
+        if(task->call.record){task->call.record->outcome=outcome;task->call.record->outcome_ready=true;}
         // Optional navigation proof comes ONLY from this actual committed Save,
         // never from provider text, a cached activity payload or a guessed path.
         try {
@@ -10410,9 +10438,11 @@ struct AssistantViewModel::State {
         if(!normal_project_create_current(creation)){native_finish_normal_project(creation,false);return;}
         (void)normal_project_defaults(creation);
         if(!normal_project_create_current(creation))return;
+        if(!native_call)return;
+        const auto call=*native_call;
         auto run=make_creation_frame();run->ordinary=true;run->normal_project_only=true;
         run->id=creation->ordinary_intent;run->epoch=creation->epoch;run->project=project;
-        run->receiver=&owner;run->window=action_window;run->owner_handoff=creation;run->call=*native_call;
+        run->receiver=&owner;run->window=action_window;run->owner_handoff=creation;run->call=call;
         using Kind=AssistantWidgetInput::Kind;
         run->inputs={{Kind::Navigate,"appBar.tab.project"},{Kind::Navigate,"sideBar.tab.basic"},{Kind::Navigate,"project.create"},
             {Kind::FormText,"createProject.name",creation->ordinary_name},{Kind::FormText,"createProject.title",creation->ordinary_title},
@@ -10433,7 +10463,8 @@ struct AssistantViewModel::State {
     }
     bool native_save_guarded_original(const std::shared_ptr<NativeCreation>& creation) {
         if(!normal_project_create_current(creation) || !creation->ordinary_waiting || !creation->ordinary_guard ||
-            !creation->ordinary_save || creation->ordinary_guard->property("result").toInt()!=1 || !project || !result_session() || result_session()->needsSaveAs())return false;
+            !creation->ordinary_save || creation->ordinary_guard->property("result").toInt()!=1 || !project || !result_session() || result_session()->needsSaveAs() ||
+            !native_call)return false;
         const QPointer<AssistantViewModel> receiver(&owner);
         auto task=std::make_shared<NativeSave>();task->receiver=&owner;task->project=project;
         task->epoch=creation->epoch;task->ordinary_current=true;task->current_destination=true;
@@ -10446,7 +10477,7 @@ struct AssistantViewModel::State {
             creation->prior_saved=saved->committed;creation->prior_save_attempted=saved->call.may_have_written;
             creation->prior_save_uncertain=!saved->committed && saved->call.may_have_written;
             if(saved->committed && saved->active && !creation->cancelled && project==creation->original_project &&
-                result_session() && result_session()->assistantOwner(creation->epoch,creation->original_project))native_refresh(*native_call);
+                result_session() && result_session()->assistantOwner(creation->epoch,creation->original_project) && native_call)native_refresh(*native_call);
         };
         // Only the FIRST dialog's accepted Save role reaches this owner. The
         // original QML handler retains continuation/abandonment (including SaveAs).
@@ -10508,7 +10539,7 @@ struct AssistantViewModel::State {
                 recipe.type.radiation_probe!="neutron" || recipe.type.scattering_type!="bragg" ||
                 edi::project_name_has_separator(recipe.project_name) || !edi::persistable_name(recipe.experiment_name) || recipe.wavelength<=0 || recipe.phase_scale<=0)
                 throw std::invalid_argument("Supply supported explicit CW/neutron/Bragg values and valid project/experiment names");
-            double previous=-INFINITY;for(const auto& anchor:recipe.background) {
+            double previous=-std::numeric_limits<double>::infinity();for(const auto& anchor:recipe.background) {
                 if(anchor.first<=previous)throw std::invalid_argument("Background anchors require increasing finite positions");previous=anchor.first;
             }
             for(const auto& range:recipe.exclusions)if(range.first>range.second)throw std::invalid_argument("Exclusion limits require ordered finite pairs");
@@ -10989,7 +11020,7 @@ struct AssistantViewModel::State {
         else if(op=="exclusion_end")run->operation_view->excludedRegions()->setEnd(row,run->arguments.value("value").toDouble());
         else run->operation_view->excludedRegions()->remove(row);
         if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
-        create_widget_capture_step(run);native_call->may_have_written=run->completed_steps>0;
+        create_widget_capture_step(run);if (native_call) native_call->may_have_written=run->completed_steps>0;
         const bool confirmed=run->control_input->consumed && run->control_input->outcome.applied && run->control_input->outcome.published &&
             individual_member_current(run) && (op=="phase_append"?run->result_phase!=nullptr:op=="phase_remove"?experiment_phase_index(run)<0:
             op=="exclusion_append"?run->result_region!=nullptr:op=="exclusion_remove"?experiment_region_index(run)<0:experiment_action_equal(run));
@@ -11078,7 +11109,7 @@ struct AssistantViewModel::State {
         apply_structure_control(run,action);
         if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
         create_widget_capture_step(run);
-        native_call->may_have_written=run->completed_steps>0;
+        if (native_call) native_call->may_have_written=run->completed_steps>0;
         const bool confirmed=run->control_input->consumed && run->control_input->outcome.applied && run->control_input->outcome.published &&
             individual_member_current(run) && structure_postcondition(run,action);
         native_finish(confirmed,structure_progress(run,confirmed));
@@ -11209,7 +11240,7 @@ struct AssistantViewModel::State {
                 const auto completed=run->completed_steps;
                 const auto active_receipt=native_receipt;
                 const auto* file=run->file_input.get();const auto* control=run->control_input.get();const auto* parameter=run->parameter_input.get();
-                const bool retiring=native_call->retiring, resolved=native_call->resolved;
+                const bool retiring=native_call && native_call->retiring, resolved=native_call && native_call->resolved;
                 const bool retired=original_record->retired, receipt_retired=original_receipt->retired;
                 const bool answered=original_record->answered, discarded=original_record->discarded, finished=original_record->completed;
                 try {
@@ -11223,7 +11254,7 @@ struct AssistantViewModel::State {
                     run->step!=index || run->completed_steps!=completed || generation!=binding || native_serial!=serial || usage_epoch!=account ||
                     widget_input.get()!=original_helper || run->window!=original_window || run->project!=original_project ||
                     run->file_input.get()!=file || run->control_input.get()!=control || run->parameter_input.get()!=parameter ||
-                    native_call->retiring!=retiring || native_call->resolved!=resolved || original_record->retired!=retired ||
+                    !native_call || native_call->retiring!=retiring || native_call->resolved!=resolved || original_record->retired!=retired ||
                     original_receipt->retired!=receipt_retired || original_record->answered!=answered ||
                     original_record->discarded!=discarded || original_record->completed!=finished)return;
             }
@@ -11401,7 +11432,8 @@ struct AssistantViewModel::State {
         else run->project->setExperimentType(individual_member_index(run),run->arguments.value("axis").toString(),run->arguments.value("token").toString());
         if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
         create_widget_capture_step(run);
-        native_call->may_have_written=run->completed_steps>0;
+        if (native_call) native_call->may_have_written=run->completed_steps>0;
+        // cppcheck-suppress nullPointerRedundantCheck ; a create step holds a file or a control input
         const auto& outcome=run->file_input?run->file_input->outcome:run->control_input->outcome;
         if(!outcome.applied || !outcome.published || !individual_member_current(run)) {
             auto result=individual_progress(run,false);
@@ -11560,6 +11592,7 @@ struct AssistantViewModel::State {
                     args.value("field")=="label"?"atomSite.label.%1":args.value("field")=="typeSymbol"?"atomSite.typeSymbol.%1":"atomSite.wyckoffLetter.%1").arg(structure_atom_index(run));
                 run->inputs.push_back({Kind::FileLoadCue,target});
             } else if(run->operation_member && !weight)run->inputs.push_back({Kind::Navigate,QString("experiments.row.%1").arg(individual_member_index(run))});
+            // NOLINTNEXTLINE(bugprone-branch-clone): the empty branches only end the chain
             if(selection_action(run)) {} // The original target row gets one visual cue, never a device selection.
             else if(name=="edit_experiment") {
                 const auto op=args.value("operation");
@@ -11600,7 +11633,7 @@ struct AssistantViewModel::State {
             native_call->record == run->call.record && native_call->receipt == run->call.receipt && native_call->rpc == run->call.rpc;
     }
     bool create_widget_current(const std::shared_ptr<NativeCreateWidget>& run) const {
-        if (!create_widget_owned(run) || native_call->resolved || native_call->retiring || run->call.record->answered ||
+        if (!create_widget_owned(run) || !native_call || native_call->resolved || native_call->retiring || run->call.record->answered ||
             run->call.record->retired || run->call.record->completed ||
             !(native_current(run->call.receipt) || native_post_edit_current(run->call.receipt,run->control_input))) return false;
         const auto* session = result_session();
@@ -11737,7 +11770,7 @@ struct AssistantViewModel::State {
                 controlPublished=control?int(control->outcome.published):-1;
             const int parameterConsumed=parameter?int(parameter->consumed):-1, parameterApplied=parameter?int(parameter->outcome.applied):-1,
                 parameterPublished=parameter?int(parameter->outcome.published):-1;
-            const bool retiring=native_call->retiring, resolved=native_call->resolved,
+            const bool retiring=native_call && native_call->retiring, resolved=native_call && native_call->resolved,
                 retired=run->call.record->retired, receiptRetired=run->call.receipt->retired;
             try {
                 qCDebug(lcAssistantWidgetLookup) << "creation refusal" << "branch" << branch << "index" << index << "kind" << kind
@@ -11749,7 +11782,7 @@ struct AssistantViewModel::State {
             // A synchronous message handler can retire A or admit B.
             if (!receiver || receiver->state_.get()!=this || !create_widget_owned(run) || run->step!=index ||
                 run->call.record->answered || run->call.record->discarded || run->call.record->completed ||
-                native_call->retiring!=retiring || native_call->resolved!=resolved ||
+                !native_call || native_call->retiring!=retiring || native_call->resolved!=resolved ||
                 run->call.record->retired!=retired || run->call.receipt->retired!=receiptRetired ||
                 generation!=binding || native_serial!=serial || usage_epoch!=account ||
                 run->file_input.get()!=file || run->control_input.get()!=control || run->parameter_input.get()!=parameter) return;
@@ -11762,11 +11795,11 @@ struct AssistantViewModel::State {
         if (!uncertain) try {
             if (run->ordinary) {
                 create_widget_capture_step(run);
-                if(run->completed_steps)native_call->may_have_written=true;
+                if(run->completed_steps && native_call)native_call->may_have_written=true;
                 else if (!run->individual_tool.isEmpty() &&
                     ((run->file_input && run->file_input->result_identity_refused) ||
                      (run->control_input && run->control_input->result_identity_refused)))
-                    native_call->may_have_written=false; // The original pre-Edit refusal proves no write.
+                    if (native_call) native_call->may_have_written=false; // The original pre-Edit refusal proves no write.
                 create_widget_retain(run);
                 auto outcome=create_widget_progress(run,false,message);
                 if(!run->individual_tool.isEmpty() && !run->completed_steps && !run->origin_unavailable &&
@@ -11783,7 +11816,7 @@ struct AssistantViewModel::State {
         catch (...) { uncertain = true; }
         if (uncertain) {
             if (!receiver || !create_widget_owned(run)) return;
-            native_call->may_have_written = native_call->may_have_written || run->completed_steps > 0;
+            if (native_call) native_call->may_have_written = native_call->may_have_written || run->completed_steps > 0;
             if (run->fallback_ready && !run->call.record->answered && !run->call.record->discarded) {
                 run->call.record->outcome.swap(run->fallback_outcome);
                 run->call.record->response.swap(run->fallback_response);
@@ -11800,14 +11833,14 @@ struct AssistantViewModel::State {
         if (!create_widget_owned(run)) return;
         const auto input = run->file_input;
         create_widget_capture_step(run);
-        if (input && input->outcome.applied) native_call->may_have_written=true;
+        if (input && input->outcome.applied && native_call) native_call->may_have_written=true;
         if (!delivered || !input || !input->consumed || !input->outcome.applied || !input->outcome.published) {
             create_widget_refuse(run, message.isEmpty() ? widget_outcome_error : message, false, "file-completion", int(delivered)); return;
         }
         create_widget_retain(run);
         run->file_input.reset();
         const auto receiver = run->receiver;
-        native_refresh(*native_call); // Only this genuinely applied original editor advances its stamps.
+        if (native_call) native_refresh(*native_call); // Only this genuinely applied original editor advances its stamps.
         if (!receiver || !create_widget_current(run)) return;
         ++run->step; run->step_counted = false; run->reveal_steps = 0;
         QTimer::singleShot(500, &owner, [this, run] {
@@ -12027,13 +12060,13 @@ struct AssistantViewModel::State {
     }
     void create_widget_take_child(const std::shared_ptr<NativeCreateWidget>& parent, const std::shared_ptr<NativeWidget>& child) {
         create_widget_capture_child(parent, child);
-        if (create_widget_owned(parent) && parent->completed_steps > 0) native_call->may_have_written = true;
+        if (create_widget_owned(parent) && parent->completed_steps > 0 && native_call) native_call->may_have_written = true;
         create_widget_retain(parent);
     }
     void create_widget_advance(const std::shared_ptr<NativeCreateWidget>& run) {
         if (!create_widget_owned(run)) return;
         const auto receiver = run->receiver;
-        if (run->completed_steps) { native_call->may_have_written = true; native_refresh(*native_call); }
+        if (run->completed_steps && native_call) { native_call->may_have_written = true; native_refresh(*native_call); }
         if (!receiver || !create_widget_current(run)) return;
         ++run->step; run->step_counted = false; run->reveal_steps = 0;
         QTimer::singleShot(500, &owner, [this, run] {
@@ -12215,7 +12248,7 @@ struct AssistantViewModel::State {
         } else return true;
 
         if (!create_widget_current(run)) return false;
-        native_call->may_have_written = true; return true;
+        if (native_call) native_call->may_have_written = true; return true;
     }
     void create_widget_finish_control(const std::shared_ptr<NativeCreateWidget>& run) {
         if (run->project) { run->project->finishWidgetCreation(run->control_input); run->project->finishWidgetInput(run->parameter_input); }
@@ -12574,6 +12607,7 @@ struct AssistantViewModel::State {
         };
         run->setup_sites.resize(structure.atom_sites.size(),nullptr);
         emit_plan();
+        if(!native_call)throw std::runtime_error("The original native request is no longer current");
         run->call=*native_call;run->fallback_outcome=run->call.record->outcome;run->fallback_response=run->call.record->response;run->fallback_row=run->call.record->terminal;run->fallback_ready=true;
         const auto cif=args.contains("mapped_structure")?QString{}:generic_id(args.value("cif_file_id"));const auto data=generic_id(args.value("data_file_id"));
         // FIRST original visible originPaths / standalone pathRole: admit
@@ -12795,7 +12829,7 @@ struct AssistantViewModel::State {
         FileProjection projection;
         try {
             projection = file_projection();
-            const auto original_explanation = explanation;
+            const auto original_explanation = explanation;  // NOLINT(performance-unnecessary-copy-initialization): a snapshot; a reentrant call may replace the original
             settings_observe_terminal(kind);
             const auto browserOperation=session_operation;const auto browserTarget=session_selection_target;
             capture_resume_checkpoint();generic_resuming=false;
@@ -13303,7 +13337,7 @@ struct AssistantViewModel::State {
             if(!proof.input_current() || account_confirmation_pending)return;
             const auto found=session_requests.constFind(id);
             if(found==session_requests.cend() || found->account_method.isEmpty() || found->account_issuing)continue;
-            const auto held=found.value();
+            const auto held=found.value();  // NOLINT(performance-unnecessary-copy-initialization): the entry may be removed next
             if(held.account_unwritten) {
                 session_requests.remove(id);
                 if(!session_request_current(held))continue;
@@ -13420,6 +13454,7 @@ struct AssistantViewModel::State {
                 if (publication.input_current()) {
                     print_event_failure(diagnostic);
                     const auto explanation=retain_event_failure(diagnostic);
+                    // cppcheck-suppress oppositeInnerCondition ; the call above can re-enter and leave the input stale
                     if(!publication.input_current())return;
                     const auto local=std::string_view(diagnostic.first_class)=="ALLOCATION" || std::string_view(diagnostic.first_class)=="CAPACITY";
                     if(local) {
@@ -13521,7 +13556,7 @@ struct AssistantViewModel::State {
         // Authentication/resume may use the captured local scope without granting
         // permission to send new project data on this retained conversation.
         approved_scope.reset();
-        if(!resume || resume_checkpoint->share_approved)approved_scope=std::move(approval);
+        if(!resume || (resume_checkpoint && resume_checkpoint->share_approved))approved_scope=std::move(approval);
         consented_context.clear();
         generic_prepare_workspace();
         if(!projection.input_current())return;
@@ -13537,7 +13572,7 @@ struct AssistantViewModel::State {
         notify();
     }
     const AssistantSkillInventory::File& declared_skill_instruction(const AssistantSkillInventory& inventory,const Object& declaration) {
-        const auto units=skill_json_text_units(declaration.value("id"))+skill_json_text_units(declaration.value("path"))+skill_json_text_units(declaration.value("sha256"));
+        (void)skill_json_text_units(declaration.value("id"));(void)skill_json_text_units(declaration.value("path"));(void)skill_json_text_units(declaration.value("sha256"));
         const auto id=declaration.value("id").toString(),path=declaration.value("path").toString();
         // Only the exact immutable declaration is an instruction exception.
         // Other captured package resources stay local even when they are UTF-8.
@@ -13566,19 +13601,19 @@ struct AssistantViewModel::State {
         const auto publication=file_projection();const auto inventory=staged_skill_inventory;
         if(!publication.input_current())return false;
         const auto registration_scope=skill_registration_scope();
+        // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
         if(!publication.input_current())return false;
         const bool staged=staged_skills_match(registration_scope);
         if(!inventory || !staged || staged_skill_inventory!=inventory)throw std::runtime_error("Captured skill inventory changed");
 
         const QPointer<CodexAgent> transport(agent.get());
-        const auto transport_generation=transport?transport->outputGeneration():0;
 
         auto catalog=std::make_shared<NativeSkillCatalog>();
         for(const auto& value:inventory->declarations) {
             const auto declaration=value.toObject();const auto id=declaration.value("id").toString();const auto path=declaration.value("path").toString();
             const auto& captured=declared_skill_instruction(*inventory,declaration);
             const auto& bytes=captured.bytes;
-            const auto decoded=skill_utf16_units(std::string_view(bytes.constData(),bytes.size()))*sizeof(QChar);
+            (void)skill_utf16_units(std::string_view(bytes.constData(),bytes.size()));
             const auto encoded=edi::json::encoded_string_size(std::string_view(bytes.constData(),bytes.size()),Limits::context_bytes);
             quint64 row_size=sizeof("{\"id\":,\"title\":,\"version\":\"See content\",\"summary\":\"Captured task guidance\",\"path\":,\"content\":,\"available\":true,\"blocked_reason\":\"\",\"references\":[]}")-1+encoded;
             for(const auto text:{QStringView(id),QStringView(id),QStringView(path)}) {
@@ -13625,17 +13660,20 @@ struct AssistantViewModel::State {
             // Keep Controller, input identity and disclosure token; only execution restarts.
             const auto approval=approved_scope;
             const auto actual=current_disclosure();
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
             if(!publication.input_current() || !originalTransportCurrent() || !viewed_session_current(*viewed) ||
                 !approval || approved_scope!=approval || !same_disclosure(approval,actual))return false;
             auto login=std::make_shared<DisclosureScope>(*approval);
             ResumeCheckpoint checkpoint{viewed->thread,generic_workspace,viewed->email,project,approval,
                 generation,bool(project),viewed->had_input,false,true};
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
             if(!publication.input_current() || !viewed_session_current(*viewed) || !session_switch_idle() || sessions_loading)return false;
             resume_checkpoint=std::move(checkpoint);login_scope=std::move(login);generic_resuming=true;resume_metadata_thread.clear();
             retire_session_history(); // The retired process cannot complete its original history waiter.
             generic_authenticated=false;usage_account_ready=false;usage_unavailable();
             if(!publication.input_current() || !originalTransportCurrent() || !viewed_session_current(*viewed) ||
                 !resume_checkpoint || resume_checkpoint->thread!=viewed->thread || resume_checkpoint->disclosure!=approval)return false;
+            // cppcheck-suppress nullPointerRedundantCheck ; checked by originalTransportCurrent() just above
             originalTransport->retire();
             if(!publication.input_current() || !originalTransport || agent.get()!=originalTransport.data() ||
                 !resume_checkpoint || resume_checkpoint->thread!=viewed->thread || resume_checkpoint->disclosure!=approval)return false;
@@ -13749,25 +13787,26 @@ struct AssistantViewModel::State {
                 const auto& file=declared_skill_instruction(*inventory,value.toObject());
                 // The decoded body coexists with the already reserved final
                 // instruction buffer; its role ends only after the text dies.
-                const auto decode_units=skill_utf16_units(std::string_view(file.bytes.constData(),file.bytes.size()));
+                (void)skill_utf16_units(std::string_view(file.bytes.constData(),file.bytes.size()));
                 const auto decoded=QString::fromUtf8(file.bytes);
                 instructions+=decoded;instructions+='\n';
             }
             if(!publication.input_current() || staged_skill_inventory!=inventory || !staged_skills_match(bootstrap_scope))return;
-            params["developerInstructions"]=std::move(instructions);
+            params["developerInstructions"]=instructions;
         }
         if (!model.isEmpty()) params["model"] = model;
         if(generic_resuming) {
-            if(!resume_identity_current())throw std::runtime_error("The original session recovery identity changed");
-            if(resume_metadata_thread!=resume_checkpoint->thread) {
-                generic_request("thread/read",{{"threadId",resume_checkpoint->thread},{"includeTurns",false}});return;
+            if(!resume_identity_current() || !resume_checkpoint)throw std::runtime_error("The original session recovery identity changed");
+            const auto resume_thread=resume_checkpoint->thread;
+            if(resume_metadata_thread!=resume_thread) {
+                generic_request("thread/read",{{"threadId",resume_thread},{"includeTurns",false}});return;
             }
-            Object resumed{{"threadId",resume_checkpoint->thread},{"excludeTurns",true}};
+            Object resumed{{"threadId",resume_thread},{"excludeTurns",true}};
             for(const auto* field:{"cwd","sandbox","approvalPolicy","approvalsReviewer","modelProvider","model","config","developerInstructions"})
                 if(params.contains(field))resumed[field]=params.value(field);
             if(startup_restore_pending()) {
                 startup_restore_observation["prepared_method"]="thread/resume";
-                startup_restore_observation["prepared_target"]=resume_checkpoint->thread;
+                startup_restore_observation["prepared_target"]=resume_thread;
                 startup_restore_observation["operation"]=QString::number(session_operation);
             }
             generic_request("thread/resume",resumed);
@@ -13783,7 +13822,7 @@ struct AssistantViewModel::State {
         if(method=="thread/read" && generic_resuming && resume_checkpoint && !session_requests.contains(id)) {
             if(reply.contains("error"))throw std::runtime_error("The original runtime conversation is unavailable");
             const auto thread=reply.value("result").toObject().value("thread").toObject();
-            if(!owned_session(thread) || thread.value("id")!=resume_checkpoint->thread || !resume_identity_current())
+            if(!owned_session(thread) || thread.value("id")!=resume_checkpoint->thread || !resume_identity_current() || !resume_checkpoint)
                 throw std::runtime_error("The original runtime conversation identity could not be confirmed");
             const auto status=thread.value("status").toObject().value("type").toString();
             if(status!="idle" && status!="notLoaded")throw std::runtime_error("The original conversation still has active work; no action was replayed");
@@ -14063,7 +14102,7 @@ struct AssistantViewModel::State {
             const auto declarations=generic_skill_declarations;
             const auto inventory=staged_skill_inventory;
 
-            const QPointer<CodexAgent> transport(agent.get());const auto output_generation=transport?transport->outputGeneration():0;
+            const QPointer<CodexAgent> transport(agent.get());
 
             auto catalog=std::make_shared<NativeSkillCatalog>();
             quint64 catalog_bytes=2;
@@ -14193,7 +14232,7 @@ struct AssistantViewModel::State {
             if(!resumed && !native_blocked && !generic_context_retention_pending)native_first_failure={}; // Same-thread once ledger survives reconnect.
             const auto policy=verified_runtime_policy(result.value("ediPolicy"),actual_thread,QJsonValue(QJsonValue::Null));
             if(!publication.input_current())return;
-            generic_thread = actual_thread;generic_thread_has_input=resumed && resume_checkpoint->had_input;
+            generic_thread = actual_thread;generic_thread_has_input=resumed && resume_checkpoint && resume_checkpoint->had_input;
             if(owned_session(thread))session_metadata[actual_thread]=thread;
             generic_durable=true;generic_resuming=false;
             generic_native["resume_status"]=resumed?QStringLiteral("resumed"):QStringLiteral("started");
@@ -14533,7 +14572,7 @@ struct AssistantViewModel::State {
     }
 
     Object generic_item_snapshot(const QString& id) const {
-        const auto value = generic_items.value(id);
+        auto value = generic_items.value(id);
         if (!value.isEmpty() || !generic_final_items.contains(id)) return value;
         // A released registry value borrows its exact original bounded owner;
         // no digest, summary or reconstructed identity replaces equality.
@@ -14560,7 +14599,7 @@ struct AssistantViewModel::State {
             bool private_reasoning=false;
             quint64 private_reasoning_next=0;
             {
-                const auto value = it.value();
+                const auto value = it.value();  // NOLINT(performance-unnecessary-copy-initialization): a snapshot; the item may change during the calls below
                 const auto type = value.value("type");
                 if (type == "reasoning") {
                     // ALL item frames must have unwound, including synchronous
@@ -14703,6 +14742,7 @@ struct AssistantViewModel::State {
                 if (native_fit) native_fit->cancel();
                 if (!publication.input_current()) return;
                 native_cancel_creation();
+                // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
                 if (!publication.input_current()) return;
                 native_cancel_save();
                 return; // The stored originating scope remains valid even after visible thread retirement.
@@ -14723,6 +14763,7 @@ struct AssistantViewModel::State {
             generic_turn = id; agent->activity();
             if (!publication.input_current()) return;
             generic_advance_clear();
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
             if (!publication.input_current()) return;
             notify(); return;
         }
@@ -14929,6 +14970,7 @@ struct AssistantViewModel::State {
         diagnostic.stage = "EVENT_PRESENT";
         if (!publication.input_current()) return;
         generic_advance_clear();
+        // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
         if (!publication.input_current()) return;
         notify();
     }
@@ -15158,6 +15200,7 @@ struct AssistantViewModel::State {
             const bool still_approved=disclosure_approved();
             if(!projection.current())return {};
             if (still_approved) {
+                // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
                 if (!generic_prepare_thread() || !projection.current()) return {};
                 if(generic_resuming && resume_checkpoint && viewed_session && resume_checkpoint->thread==viewed_session->thread) {
                     if(accountWaiting)*accountWaiting=true;return {}; // No turn/input admitted; original draft waits for this exact resume.
@@ -15269,7 +15312,7 @@ struct AssistantViewModel::State {
             agent->beginOperation(0,0); // Work continues until actual completion, Stop or owner retirement.
         }
         if (!settings_current()) return {}; // beginOperation can synchronously supersede original input/settings.
-        const auto publicId = row.value("id").toString();
+        auto publicId = row.value("id").toString();
         const auto originalThread = generic_thread, originalTurn = generic_turn;
         const auto originalApproval = approved_scope, originalBackend = backend_scope;
 
@@ -15558,7 +15601,7 @@ struct AssistantViewModel::State {
         bool admitted = false;
         try {
             if (!claim_file_projection(projection)) return false;
-            if (!file_current(*file_selection)) { retire_file_selection(); return false; }
+            if (!file_selection || !file_current(*file_selection)) { retire_file_selection(); return false; }
             auto scope = std::move(*file_selection); file_selection.reset();
             file_staging = true; // No notification occurs until this original staging interval has ended.
             try {
@@ -15751,7 +15794,6 @@ struct AssistantViewModel::State {
                 throw std::length_error("Selected-file name exceeds limit");
 #ifndef __EMSCRIPTEN__
             if(!proofs)throw std::runtime_error("Selected input proof owner is unavailable");
-            const auto pathBytes=static_cast<quint64>(physicalPath.capacity())*sizeof(QChar);
             auto proof=std::make_shared<LocalInputSource>();proof->selected=url.toLocalFile();proof->physical=physicalPath;
 #if defined(Q_OS_UNIX)
             proof->descriptor=duplicate_input_descriptor(file.handle());
@@ -16393,7 +16435,7 @@ struct AssistantViewModel::State {
         if (!failure_slot || !failure_slot->pending) return true;
         auto next = history; next.append(failure_slot->row);
         if (!publish(std::move(next))) return false;
-        error = failure_slot->row.value("payload").toObject().value("message").toString();
+        if (failure_slot) error = failure_slot->row.value("payload").toObject().value("message").toString();
         failure_slot.reset(); return true;
     }
     void retain_failure(const Object& scope, const QString& code, const QString& message) {
@@ -16409,6 +16451,7 @@ struct AssistantViewModel::State {
         for (const auto* field : {"connection_id", "turn_id", "request_id", "code"})
             if (static_cast<std::uint64_t>(payload.value(field).toString().toUtf8().size()) > Limits::id_bytes)
                 throw std::length_error("Assistant failure identity exceeds its bound");
+        if (!failure_slot) throw std::runtime_error("Assistant failure capacity is unavailable");
         failure_slot->row.swap(row); failure_slot->pending = true;
         if (!flush_failure()) { error = storage_error; (void)queue_render(); }
     }
@@ -16723,7 +16766,7 @@ struct AssistantViewModel::State {
         return reply;
     }
     std::unique_ptr<edi::assistant::Controller> make_controller(ProjectViewModel* target, std::uint64_t binding,
-                                                               std::shared_ptr<bool> active = {}) {
+                                                               const std::shared_ptr<bool>& active = {}) {
         const QPointer<AssistantViewModel> receiver(&owner);
         const auto preparation=file_projection();
         const QPointer<ProjectViewModel> bound_project(target);
@@ -16797,7 +16840,7 @@ struct AssistantViewModel::State {
             (bound_project && bound_project->assistantProject()!=prepared_model))throw std::runtime_error("Native project attachment was superseded");
         return prepared;
     }
-    void connect_project(ProjectViewModel* target, std::uint64_t binding, std::shared_ptr<bool> active = {}) {
+    void connect_project(ProjectViewModel* target, std::uint64_t binding, const std::shared_ptr<bool>& active = {}) {
         const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<ProjectViewModel> bound_project(target);
         if (target) {
@@ -16904,6 +16947,7 @@ struct AssistantViewModel::State {
             auto context=object(setupController->context());append_outgoing_context(context,target,approved_scope->skills);
             generic_measured_size(context);setupScope=prepare_disclosure_scope(target,context,generic_input_hashes);
             setupConsent=QJsonDocument(context).toJson(QJsonDocument::Compact);
+            // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
             if(!proof.input_current())return false;
         }
 #endif
@@ -17328,6 +17372,7 @@ void AssistantViewModel::finishOrdinaryProjectCreation(ProjectViewModel* target,
         try {normal->ordinary_edit_scope=s->begin_own_edit(true);target->assistant_save_origin_=normal->ordinary_edit_scope;}catch(...) {}
         return;
     }
+    // cppcheck-suppress nullPointerRedundantCheck ; state_ is always set
     const auto run = s->native_create_widget;
     if (!run || !run->ordinary || run->id != intent || !run->owner_handoff) return;
     const auto creation = run->owner_handoff;
@@ -17364,7 +17409,7 @@ bool AssistantViewModel::commitNativeProject(ProjectViewModel* target) noexcept 
         a->creation->receipt->approved_context.swap(a->context);
         a->creation->receipt->selected_context.swap(a->selected_context);
         a->creation->record->outcome.swap(a->outcome); a->creation->record->response.swap(a->response); a->creation->record->terminal.swap(a->row);
-        s.native_call->may_have_written = true;
+        if (s.native_call) s.native_call->may_have_written = true;
     }
     s.approved_scope = a->disclosure; s.backend_scope = a->disclosure; s.disclosure_cache.reset();
     a->creation->receipt->disclosure = a->disclosure;
@@ -17453,6 +17498,7 @@ void AssistantViewModel::setShowActions(bool value) {
     original->show_actions=value;
 #endif
     emit showActionsChanged();
+    // cppcheck-suppress mismatchingContainers ; compares state pointers, not iterators
     if(self && self->state_.get()==original)original->notify();
 }
 void AssistantViewModel::setActionWindow(QQuickWindow* window) {
@@ -17464,6 +17510,7 @@ void AssistantViewModel::setActionWindow(QQuickWindow* window) {
 #ifndef __EMSCRIPTEN__
     auto* const original_state=state_.get();
     if(state_->generic_question_had_window && state_->generic_question_window==original_window) {
+        // cppcheck-suppress mismatchingContainers ; compares state pointers, not iterators
         if(!state_->generic_retire_question() || !self || self->state_.get()!=original_state ||
             state_->action_window!=original_window || state_->generation!=binding)return;
     }
@@ -17494,10 +17541,11 @@ void AssistantViewModel::setActionWindow(QQuickWindow* window) {
             try {state_->native_window_wait(helper,original);}catch(...){}
         });
         state_->action_window_destroyed=connect(window,&QObject::destroyed,this,[this,helper] {
-            const QPointer<AssistantViewModel> receiver(this);auto* const original_state=state_.get();
+            auto* const original_state=state_.get();const QPointer<AssistantViewModel> receiver(this);
             try {
                 if(state_->widget_input.get()!=helper)return;
                 if(state_->generic_question_had_window && !state_->generic_question_window) {
+                    // cppcheck-suppress mismatchingContainers ; compares state pointers, not iterators
                     if(!state_->generic_retire_question() || !receiver || receiver->state_.get()!=original_state)return;
                 }
                 state_->native_window_wait(helper,{});
@@ -17562,10 +17610,7 @@ bool AssistantViewModel::eventFilter(QObject* watched, QEvent* event) {
             case QEvent::MouseMove:
                 if (static_cast<QMouseEvent*>(event)->buttons() != Qt::NoButton) target = delivered_item;
                 break;
-            case QEvent::Wheel:
-                target = delivered_item;
-                break;
-            case QEvent::TouchBegin:
+            case QEvent::Wheel: case QEvent::TouchBegin:
                 target = delivered_item;
                 break;
             default: break;
@@ -17977,6 +18022,7 @@ QString AssistantViewModel::beginSkillSourceSelection() {
         const bool loaded=state_->load_source_preference();
         if(!proof.input_current())return {};
         if(!loaded)throw std::runtime_error("Skill source preparation is temporarily unavailable");
+        // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
         if(!proof.input_current() || canCancel() || state_->skill_source_selection)return {};
         const auto token=QUuid::createUuid().toString(QUuid::WithoutBraces);
         state_->skill_source_selection.emplace(State::SkillSourceSelection{token,proof,state_->skill_source_serial});
@@ -18004,7 +18050,7 @@ bool AssistantViewModel::addSkillSource(const QString& token,const QUrl& folder)
         if(!state_->skill_source_loaded || serial!=state_->skill_source_serial || canCancel())return false;
 #if defined(Q_OS_UNIX)
 
-        const QPointer<CodexAgent> transport(state_->agent.get());const auto transport_generation=transport?transport->outputGeneration():0;
+        const QPointer<CodexAgent> transport(state_->agent.get());
 
         auto source=selected_skill_source(folder);
         auto rows=state_->skill_source_rows;
@@ -18065,7 +18111,7 @@ bool AssistantViewModel::addWebSkillSource(const QString& token,const QUrl& url)
         original->release_skill_source_selection(token);emit skillSourcesChanged();return false;
     }
     try {
-        auto task=AssistantSkillWebImport::start(this,url,[receiver,original,proof,serial,token](std::unique_ptr<QTemporaryDir> folder,QString label,QString failure) {
+        auto task=AssistantSkillWebImport::start(this,url,[receiver,original,proof,serial,token](std::unique_ptr<QTemporaryDir> folder,const QString& label,const QString& failure) {
             if(!receiver || receiver->state_.get()!=original)return;
             const auto owned=[&]{return proof.input_current() && serial==original->skill_source_serial &&
                 original->skill_source_selection && original->skill_source_selection->id==token;};
@@ -18139,6 +18185,7 @@ bool AssistantViewModel::setSkillSourceEnabled(const QString& id,bool enabled,co
         const bool loaded=state_->load_source_preference();
         if(!proof.input_current())return false;
         if(!loaded)throw std::runtime_error("Skill source preparation is temporarily unavailable");
+        // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
         if(!proof.input_current() || (!revision.isEmpty() && revision!=skillSourceRevision()))return false;serial=state_->skill_source_serial;
  // true -> false JSON spelling grows by exactly one byte.
         auto rows=state_->skill_source_rows;bool found=false;
@@ -18165,6 +18212,7 @@ bool AssistantViewModel::removeSkillSource(const QString& id,const QString& revi
         const bool loaded=state_->load_source_preference();
         if(!proof.input_current())return false;
         if(!loaded)throw std::runtime_error("Skill source preparation is temporarily unavailable");
+        // cppcheck-suppress identicalConditionAfterEarlyExit ; the call above can re-enter and leave the input stale
         if(!proof.input_current() || (!revision.isEmpty() && revision!=skillSourceRevision()))return false;serial=state_->skill_source_serial;
         auto rows=state_->skill_source_rows;
         for(qsizetype i=0;i<rows.size();++i) if(rows[i].toObject().value("id")==id) {rows.removeAt(i);return state_->commit_source_configuration(std::move(rows),proof,serial);}
@@ -18375,6 +18423,7 @@ void AssistantViewModel::setProject(ProjectViewModel* project) { state_->bind(pr
 bool AssistantViewModel::attachProject(ProjectViewModel* project, bool managedResult, bool ordinaryEmptyCreate, const std::shared_ptr<ProjectResetInputs>& resetInputs) {
     const QPointer<AssistantViewModel> receiver(this);
     auto* const original = state_.get();
+    // cppcheck-suppress mismatchingContainers ; compares state pointers, not iterators
     const auto receiver_current = [&] { return receiver && receiver->state_.get() == original; };
     const QPointer<ProjectViewModel> target(project);
     const bool has_target = project != nullptr;
@@ -18453,6 +18502,7 @@ AssistantViewModel::AttachmentClear AssistantViewModel::drainAttachmentClear() n
         return AttachmentClear::NotRequested;
     const QPointer<AssistantViewModel> receiver(this);
     auto* const original = state_.get();
+    // cppcheck-suppress mismatchingContainers ; compares state pointers, not iterators
     const auto receiver_current = [&] { return receiver && receiver->state_.get() == original; };
     state_->attachment_clear_requested = false;
     state_->attachment_clear_draining = true;
@@ -18707,6 +18757,7 @@ void AssistantViewModel::nativeProjectCreateSaveChoice(const QString& intent,QOb
 #ifndef __EMSCRIPTEN__
     const QPointer<AssistantViewModel> receiver(this);auto* s=state_.get();const auto creation=s->native_creation;
     const QPointer<QObject> guard(form);const QPointer<QQuickItem> target(qobject_cast<QQuickItem*>(button));
+    // cppcheck-suppress nullPointerRedundantCheck ; state_ is always set
     const QPointer<QQuickWindow> window(s->action_window);
     if(!creation || creation->ordinary_intent!=intent || !creation->ordinary_waiting || creation->ordinary_guard ||
         !guard || guard->objectName()!=QStringLiteral("unsavedChanges") || !target || !window || target->window()!=window ||
@@ -18736,6 +18787,7 @@ void AssistantViewModel::nativeProjectCreateSaveChoice(const QString& intent,QOb
             if(!receiver || receiver->state_.get()!=s || s->native_creation!=creation || creation->ordinary_guard_accepted)return;
             if(!delivered || !creation->ordinary_guard_accepted){creation->ordinary_failure=QObject::tr("The original unsaved-work Save choice did not complete; no new project was created.");s->native_finish_normal_project(creation,false);}
         };
+        if(!s->native_call)throw std::runtime_error("The original native request is no longer current");
         s->control_start(*s->native_call,ControlField::Project,std::move(request));
     }catch(const std::exception& error) {
         if(receiver && receiver->state_.get()==s && s->native_creation==creation){creation->ordinary_failure=State::bounded_error(QString::fromUtf8(error.what()));s->native_finish_normal_project(creation,false);}
@@ -18943,14 +18995,15 @@ bool AssistantViewModel::resumeConnection() {
 #ifndef __EMSCRIPTEN__
     auto* s=state_.get();const QPointer<AssistantViewModel> receiver(this);const auto operation=s->session_operation;const auto target=s->session_selection_target;
     try {
-        if(!s->resume_identity_current()) {
+        if(!s->resume_identity_current() || !s->resume_checkpoint) {
             const auto target=s->session_selection_target;
             s->fail_session_operation(s->session_operation,target,tr("The original conversation scope changed before reconnecting."));
             return false;
         }
         if(s->generic_connecting)return true;
-        s->resume_checkpoint->attempted=true;
-        auto proof=s->file_projection();auto approval=std::make_shared<State::DisclosureScope>(*s->resume_checkpoint->disclosure);
+        auto& checkpoint=*s->resume_checkpoint;
+        checkpoint.attempted=true;
+        auto proof=s->file_projection();auto approval=std::make_shared<State::DisclosureScope>(*checkpoint.disclosure);
         approval->account=s->usage_epoch;
         s->generic_sign_in(std::move(approval),proof);
         return true;
@@ -19175,9 +19228,6 @@ void AssistantViewModel::clearHistory() {
         state_->notify();
         return;
     }
-#ifndef __EMSCRIPTEN__
-    if (!publication.input_current()) return;
-#endif
     if (!publication.input_current()) return;
     const QPointer<AssistantViewModel> receiver(this);
     const auto intent=QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -19296,7 +19346,7 @@ QString AssistantViewModel::beginFileSelection(bool requireSignedIn) {
         const auto check = state_->controller->update_selected_files(scope.next_collection_id.toStdString(), scope.selection_generation, {}, {});
         if (!projection.current()) return {};
         if (!check.ok) { state_->error = state_->input_refusal(State::bounded_error(object(check.value).value("message").toString())); state_->notify(); return {}; }
-        const auto id = scope.id;
+        auto id = scope.id;
         projection.files = scope.epoch; // Only this exact, already-prepared retirement is expected.
         state_->retire_file_selection();
         if (!projection.current() || state_->file_selection) return {};

@@ -441,7 +441,7 @@ void ReportViewModel::saveReport(const QString& fontFamily) {
     if (!rows.empty()) {
         if (project_.fit() != nullptr) project_.fit()->noteTrialFile(reports.filePath(QStringLiteral("report.edi")));
         try {
-            project_.recordReportFiles(std::move(rows), true);
+            project_.recordReportFiles(rows, true);
         } catch (const std::exception& error) {
             emit saveFailed(QString::fromUtf8(error.what()));
             failed = true;

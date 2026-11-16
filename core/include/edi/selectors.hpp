@@ -188,8 +188,8 @@ void set_sin_theta_over_lambda_max(ExperimentBase& experiment, std::optional<dou
 // window 0.5 to 10 angstrom through the instrument, with 1000 points; a measured pattern's range is its own. No
 // step for a single point or an uneven grid.
 struct PdCalculationRange {
-    double min;
-    double max;
+    double min = 0.0;
+    double max = 0.0;
     std::optional<double> step;
 };
 enum class PdRangeValue { Min, Max, Step };

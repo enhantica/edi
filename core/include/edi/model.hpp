@@ -72,6 +72,8 @@ struct HolderSlot {
     Structure* structure = nullptr;
     HolderSlot() noexcept = default;
     HolderSlot(const HolderSlot& /*other*/) noexcept {}
+    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp): keeps its own holder, so self-assignment is a no-op
+    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     HolderSlot& operator=(const HolderSlot& /*other*/) noexcept { return *this; }
     ~HolderSlot() = default;
     friend bool operator==(const HolderSlot& /*a*/, const HolderSlot& /*b*/) noexcept { return true; }
@@ -117,6 +119,7 @@ class RowLink {
    public:
     RowLink() = default;
     RowLink(const RowLink&) noexcept {}
+    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp): keeps its own link, so self-assignment is a no-op
     RowLink& operator=(const RowLink&) noexcept { return *this; }
     ~RowLink() = default;
 
@@ -466,7 +469,7 @@ class Written {
     // The value, or an optional's contained value, read-only.
     decltype(auto) operator*() const {
         if constexpr (is_optional<T>::value) {
-            return (*state_.v());
+            return (*state_.v());  // NOLINT(bugprone-unchecked-optional-access): unchecked as std::optional's own operator*
         } else {
             return (state_.v());
         }
@@ -759,6 +762,7 @@ class Written {
                 other.drained();
             }
         }
+        // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
         State& operator=(const State& other) noexcept(
             std::is_nothrow_copy_constructible_v<T> && std::is_nothrow_move_assignable_v<T> &&
             std::is_nothrow_copy_constructible_v<Table> &&
@@ -772,6 +776,7 @@ class Written {
             renew();  // a self-assignment is a write too
             return *this;
         }
+        // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
         State& operator=(State&& other) noexcept(std::is_nothrow_move_assignable_v<T>) {
             if (this != &other) {
                 v() = std::move(other.v());
@@ -1083,6 +1088,7 @@ class WrittenText {
                 other.renew();
             }
         }
+        // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
         TextState& operator=(const TextState& other) {
             if (this != &other) {
                 v() = other.v();
@@ -1090,6 +1096,7 @@ class WrittenText {
             renew();
             return *this;
         }
+        // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
         TextState& operator=(TextState&& other) noexcept {
             if (this != &other) {
                 v() = std::move(other.v());
@@ -1136,6 +1143,7 @@ class DataSource {
     DataSource() = default;
     DataSource(const DataSource& /*other*/) noexcept {}
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — keeps its own link
+    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     DataSource& operator=(const DataSource& /*other*/) noexcept { return *this; }
     ~DataSource() = default;
 
@@ -1159,6 +1167,8 @@ class CategoryRef {
    public:
     CategoryRef() = default;
     CategoryRef(const CategoryRef&) noexcept {}
+    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp): keeps its own attachment, so self-assignment is a no-op
+    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     CategoryRef& operator=(const CategoryRef&) noexcept { return *this; }
     ~CategoryRef() = default;
 
@@ -1467,9 +1477,12 @@ class ProjectAnchor {
    protected:
     ProjectAnchor() { open(); }
     ProjectAnchor(const ProjectAnchor& /*other*/) { open(); }
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor): a move opens a fresh record, which allocates
     ProjectAnchor(ProjectAnchor&& /*other*/) { open(); }
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — keeps its own record
+    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     ProjectAnchor& operator=(const ProjectAnchor& /*other*/) noexcept { return *this; }
+    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     ProjectAnchor& operator=(ProjectAnchor&& /*other*/) noexcept { return *this; }
     ~ProjectAnchor();
 
@@ -1489,10 +1502,12 @@ class ProjectTail {
     ProjectTail(const ProjectTail& /*other*/) { close(); }
     ProjectTail(ProjectTail&& /*other*/) noexcept { close(); }
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — relinks its own project
+    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     ProjectTail& operator=(const ProjectTail& /*other*/) noexcept {
         relink();
         return *this;
     }
+    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     ProjectTail& operator=(ProjectTail&& /*other*/) noexcept {
         relink();
         return *this;
@@ -1526,7 +1541,9 @@ class KeyedBase {
     KeyedBase(const KeyedBase& /*other*/) noexcept {}
     KeyedBase(KeyedBase&& /*other*/) noexcept {}
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — keeps its own host
+    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     KeyedBase& operator=(const KeyedBase& /*other*/) noexcept { return *this; }
+    // cppcheck-suppress operatorEqVarError ; the assignment copies values and keeps this object's own holder and links
     KeyedBase& operator=(KeyedBase&& /*other*/) noexcept { return *this; }
     virtual ~KeyedBase() = default;
     // Admit renaming `key` — the id of one of this collection's items — to `next`, or throw. Returns
@@ -2160,7 +2177,7 @@ class ItemVec final : public detail::KeyedBase {
     // taken or another live collection holds it.
     void push_back(Ptr item) {
         std::vector<Ptr> candidate = store_.items();
-        candidate.push_back(item);
+        candidate.push_back(std::move(item));
         DefaultIds defaults(candidate);
         require_admissible(candidate, "insertion");
         std::shared_ptr<detail::Membership> record = first_record();
@@ -2168,7 +2185,7 @@ class ItemVec final : public detail::KeyedBase {
         Table& table = made ? *made : *table_;
         std::shared_ptr<crysta::detail::RowAnchor> anchor =
             crysta::detail::AnchorList::fresh(&table, &Table::anchors);
-        std::shared_ptr<detail::RowHold> hold = Table::record_of(*item, 1);
+        std::shared_ptr<detail::RowHold> hold = Table::record_of(*candidate.back(), 1);
         table.holds.reserve(candidate.size());
         typename Table::Columns columns = detail::CellHold::columns_of<T>(candidate);
         table.anchors.add_slot();  // the last step that can throw; nothing has changed yet
@@ -2181,6 +2198,7 @@ class ItemVec final : public detail::KeyedBase {
         defaults.commit();
     }
     // Appends a copy of a value.
+    // NOLINTNEXTLINE(performance-unnecessary-value-param): moved into the row for the types that move (experiments)
     void push_back(T value) { push_back(std::make_shared<T>(std::move(value))); }
     // Replaces the item at `i` (the old one is detached; a held reference survives).
     void replace_at(std::size_t i, Ptr item) {
@@ -4191,12 +4209,14 @@ class EditLog {
    public:
     EditLog() : record_(std::make_shared<EditRecord>()) {}
     EditLog(const EditLog& /*other*/) : EditLog() {}
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor): the moved-from log gets a fresh record, which allocates
     EditLog(EditLog&& other) : record_(std::exchange(other.record_, std::make_shared<EditRecord>())) {}
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp) — an assignment is an edit
     EditLog& operator=(const EditLog& /*other*/) noexcept {
         renew();
         return *this;
     }
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor): the moved-from log gets a fresh record, which allocates
     EditLog& operator=(EditLog&& other) {
         if (this != &other) {
             record_ = std::exchange(other.record_, std::make_shared<EditRecord>());
@@ -5616,11 +5636,14 @@ inline void follow_site_references(Project* project, Structure* structure, const
         const auto block = datablock_key(structure->name.value(), "structure") + ".";
         rename_scan_results(project->fit_result, [&](const std::string& name) -> std::optional<std::string> {
             for (const char* category : {"atom_site.", "atom_site_aniso.", "atom_site_moment."}) {
-                const auto root = block + category + from + ".";
+                std::string root = block;
+                root.append(category).append(from).append(".");
                 if (name.starts_with(root)) {
                     const std::string field = name.substr(root.size());
                     if (field.find('.') == std::string::npos) {
-                        return block + category + to + "." + field;
+                        std::string renamed = block;
+                        renamed.append(category).append(to).append(".").append(field);
+                        return renamed;
                     }
                 }
             }
@@ -6251,7 +6274,7 @@ inline InstrumentBase::InstrumentBase() {
 
 // The parameter walks. Inline for the same TU-list reason as the spec attachments.
 namespace detail {
-inline std::vector<Parameter*> free_of(std::vector<Parameter*> all) {
+inline std::vector<Parameter*> free_of(const std::vector<Parameter*>& all) {
     std::vector<Parameter*> free;
     for (Parameter* parameter : all) {
         if (parameter->free) {
@@ -6479,15 +6502,21 @@ inline std::string peak_slots_mismatch(const ExperimentBase& experiment) {
                                                                         : profile.beba;
         const bool required = tag.rfind("_peak.broad_gauss_", 0) == 0 || (lorentz && profile.lorentz_xy);
         if (field.has_value() && !carried) {
-            return where + tag + " is not a parameter of _peak.type '" + declared +
-                   "': each profile carries only its own parameters";
+            std::string message = where;
+            message.append(tag).append(" is not a parameter of _peak.type '").append(declared);
+            message.append("': each profile carries only its own parameters");
+            return message;
         }
         if (!field.has_value() && required) {
-            return where + "_peak.type '" + declared + "' requires " + tag;
+            std::string message = where;
+            message.append("_peak.type '").append(declared).append("' requires ").append(tag);
+            return message;
         }
         if (field.has_value() && field->spec != nullptr && field->spec != slot.spec) {
-            return where + "the parameter in " + tag + " carries the metadata of '" + field->spec->name +
-                   "', another parameter";
+            std::string message = where;
+            message.append("the parameter in ").append(tag).append(" carries the metadata of '");
+            message.append(field->spec->name).append("', another parameter");
+            return message;
         }
     }
     return {};

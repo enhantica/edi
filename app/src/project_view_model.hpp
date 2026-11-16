@@ -310,7 +310,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Save report's record (ADR-0036 §7): the rows of the reports it wrote, each replacing the row of the same name,
     // then `reports/report.edi` written alone. Not an edit: no model value changes and nothing is marked modified.
     // Throws when the file cannot be written, the open project's rows then as they were.
-    void recordReportFiles(std::vector<edi::ReportFile> rows);
+    void recordReportFiles(const std::vector<edi::ReportFile>& rows);
     void setReportCorrelationThreshold(double threshold);
     bool patternDSpacing() const;
     void setPatternDSpacing(bool on);
@@ -789,7 +789,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     std::uint64_t assistant_save_origin_=0, project_edit_origin_=0;
     void notifyProjectEdited(std::uint64_t origin=0);
     struct WidgetParameterInput {
-        enum class Field { Value, Free, FreeGroup } field;
+        enum class Field { Value, Free, FreeGroup } field = Field::Value;
         const edi::Parameter* parameter = nullptr;
         std::vector<const edi::Parameter*> members; // Original exact free-header set; no QObject ownership.
         double value = 0;
@@ -914,7 +914,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // `ownSave`: the save operation holding the project asks for its own write, which its hold admits.
     QString criticalEditRefusal(bool restoring = false, bool trial = false, bool ownSave = false) const;
     QString saveRefusal(bool admitted) const;
-    void recordReportFiles(std::vector<edi::ReportFile> rows, bool admitted);
+    void recordReportFiles(const std::vector<edi::ReportFile>& rows, bool admitted);
     // The trial lock's own plain message while an assistant trial is open, else empty (edi ADR-0055).
     QString trialLockRefusal() const;
     // The assistant edit in progress (its own-edit identity), which the trial lock admits.

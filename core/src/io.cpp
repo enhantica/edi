@@ -223,13 +223,11 @@ std::optional<std::size_t> first_invalid_utf8_offset(const std::string& text) {
         } else if (lead == 0xE0) {
             continuations = 2;
             first_low = 0xA0;
-        } else if (lead >= 0xE1 && lead <= 0xEC) {
+        } else if ((lead >= 0xE1 && lead <= 0xEC) || (lead >= 0xEE && lead <= 0xEF)) {
             continuations = 2;
         } else if (lead == 0xED) {
             continuations = 2;
             first_high = 0x9F;  // no surrogates
-        } else if (lead >= 0xEE && lead <= 0xEF) {
-            continuations = 2;
         } else if (lead == 0xF0) {
             continuations = 3;
             first_low = 0x90;
@@ -932,7 +930,8 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
                 const std::string value = cell(tag.c_str());
                 if (!value.empty()) {
                     // A refusal names the atom type and the coefficient, as for a moment component.
-                    const std::string at = where + ": type '" + form_factor.id.value() + "' " + tag;
+                    std::string at = where;
+                    at.append(": type '").append(form_factor.id.value()).append("' ").append(tag);
                     read_into(*coefficients[n], parse_parameter(value, at), at);
                 }
             }
@@ -940,7 +939,7 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
             form_factor.approximation =
                 !approximation.empty() ? approximation
                                        : (cell("_magnetic_form_factor.j2_coefficient").empty() ? "j0" : "dipole");
-            structure.magnetic_form_factors.push_back(std::move(form_factor));
+            structure.magnetic_form_factors.push_back(form_factor);
         }
     }
     if (!magnetic.empty()) {
@@ -958,7 +957,8 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
             for (std::size_t k = 0; k < 3; ++k) {
                 // A refusal names the site and the component, as crysta's reader does.
                 const std::string tag = specs[k]->edi_names[0];
-                const std::string at = where + ": site '" + moment.id.value() + "' " + tag;
+                std::string at = where;
+                at.append(": site '").append(moment.id.value()).append("' ").append(tag);
                 read_into(*components[k], parse_parameter(loop_cell(*loop, row, tag, where), at), at);
             }
             moment.symmform = given(*loop, row, "_atom_site_moment.symmform");
@@ -970,7 +970,7 @@ void read_magnetic(const Block& block, Structure& structure, const std::string& 
                             "_atom_site_moment.label '" + moment.id.value() + "': _atom_site_moment row '" +
                                 moment.id.value() + "' names no atom site");
             }
-            structure.atom_site_moment.push_back(std::move(moment));
+            structure.atom_site_moment.push_back(moment);
         }
     }
 }
@@ -1161,7 +1161,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
             }
         }
         read_into(site.adp_iso, adp, where);
-        structure.atom_sites.push_back(std::move(site));
+        structure.atom_sites.push_back(site);
     }
 
     // The anisotropic sites' tensors, one row per anisotropic site.
@@ -1185,7 +1185,7 @@ Structure structure_from_block(const Block& block, const std::string& where) {
                                           where),
                           where);
             }
-            structure.atom_site_aniso.push_back(std::move(tensor));
+            structure.atom_site_aniso.push_back(tensor);
         }
     }
     for (const auto& tensor : structure.atom_site_aniso) {
@@ -1355,8 +1355,8 @@ const char* family_name(BeamModeEnum mode) {
 struct ResolvedExperimentKind {
     std::string peak_type;                // the verbatim token (for error text and family checks)
     std::optional<std::string> declared;  // the token iff the block carried `_peak.type`
-    BeamModeEnum mode;
-    bool beam_declared;  // whether the block carried `_experiment_type.beam_mode`
+    BeamModeEnum mode = BeamModeEnum::CONSTANT_WAVELENGTH;
+    bool beam_declared = false;  // whether the block carried `_experiment_type.beam_mode`
 };
 
 ResolvedExperimentKind resolve_experiment_kind(const Block& block, const std::string& where) {
@@ -2401,7 +2401,7 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
                 found->uncertainty = std::nullopt;
                 found->spec = polarization_spec;
             }
-            *slot = std::move(found);
+            *slot = found;
         }
         // The pair's domain (K in [0, 1], 2theta_m in [0, 180] degrees) is a physical one the engine
         // enforces at calculate, fit and save, refused at load as crysta's loader refuses it, in its
@@ -2679,6 +2679,7 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
     if (const Loop* refln = block.loop_with("_refln.id"); refln != nullptr) {
         CarriedLoop carried;
         std::vector<std::string> columns;
+        columns.reserve(refln->tags.size());
         for (const std::string& tag : refln->tags) {
             columns.push_back(tag.rfind("_refln.", 0) == 0 ? tag.substr(7) : tag);
         }
@@ -2736,7 +2737,7 @@ BraggPdExperiment parse_experiment_block(const Block& block, const std::string& 
                       parse_parameter(loop_cell(*terms, row, spec::background_coef.edi_names[0], where), where),
                       where);
             term.id = loop_cell(*terms, row, "_background.id", where);
-            experiment.background_terms.push_back(std::move(term));
+            experiment.background_terms.push_back(term);
         }
     }
 
@@ -2895,13 +2896,13 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr, const
         if(selected && value.size()>maximum_name_bytes)throw std::length_error("Parameter spelling source exceeds capacity");
         if(scratch_bytes && value.size()>(scratch_limit-*scratch_bytes)/16)
             throw std::length_error("Relation spelling scratch exceeds capacity");
-        return value;
+        return value;  // NOLINT(bugprone-return-const-ref-from-parameter): called only on the project's own names
     };
     if(selected)slots.reserve(1);
     const auto add = [&slots,selected,scratch_bytes,scratch_limit](ParameterPtr parameter,const auto& names) {
         if(selected && parameter!=selected)return; // No unrelated member formatting/allocation.
         if(selected && !slots.empty())throw std::invalid_argument("Parameter spelling member is ambiguous");
-        if(scratch_bytes && scratch_limit-*scratch_bytes<8*sizeof(std::string)+8*64)throw std::length_error("Relation spelling scratch exceeds capacity");
+        if(scratch_bytes && scratch_limit-*scratch_bytes<8*sizeof(std::string)+std::size_t{8}*64)throw std::length_error("Relation spelling scratch exceeds capacity");
         auto pair=names();
         if(scratch_bytes) {
             // Original slot vector, returned named vector and lookup map overlap.
@@ -3260,10 +3261,7 @@ std::optional<std::time_t> star_timestamp_seconds(const std::string& stamp) {
 }
 }  // namespace
 
-ProjectMetadata::ProjectMetadata() {
-    created = star_timestamp_now();
-    last_modified = created;
-}
+ProjectMetadata::ProjectMetadata() : created(star_timestamp_now()), last_modified(created) {}
 
 // Strictly advancing: a save landing in the same STAR-format clock tick as the stored stamp
 // (1 s resolution) still advances `last_modified`, stepping one second past the stored value
@@ -3346,7 +3344,8 @@ static void refuse_adp_spellings(const Block& written, const std::string& where)
                 if (found != site_types.end() && !found->second.has_value()) {
                     continue;
                 }
-                const std::string type = found != site_types.end() ? *found->second : std::string("Biso");
+                const std::string type =
+                    found != site_types.end() && found->second.has_value() ? *found->second : std::string("Biso");
                 const std::string form = lower(type);
                 if (isotropic_value && (form == "uani" || form == "bani" || form == "beta")) {
                     continue;
@@ -3355,11 +3354,13 @@ static void refuse_adp_spellings(const Block& written, const std::string& where)
                                  [&](const std::string& token) { return lower(token) == lower(type); })) {
                     std::string allowed = variants.front();
                     for (std::size_t index = 1; index < variants.size(); ++index) {
-                        allowed += " or " + variants[index];
+                        allowed.append(" or ").append(variants[index]);
                     }
-                    fail_schema(where, "adp-name-disagrees-with-type",
-                                "site '" + site + "' is " + type + ", but its column " + loop.tags[column] +
-                                    " holds a value for " + allowed + ": the type and the name disagree");
+                    std::string message = "site '";
+                    message.append(site).append("' is ").append(type).append(", but its column ");
+                    message.append(loop.tags[column]).append(" holds a value for ").append(allowed);
+                    message.append(": the type and the name disagree");
+                    fail_schema(where, "adp-name-disagrees-with-type", message);
                 }
             }
         }
@@ -3600,7 +3601,7 @@ void add_loaded_structure(Project& project, Structure structure) {
         throw IoError("a structure named '" + detail::printable_id(structure.name) +
                       "' is already in the project");
     }
-    project.structures.push_back(std::move(structure));
+    project.structures.push_back(structure);
 }
 
 void require_held_links(const Project& project, const BraggPdExperiment& experiment, const std::string& where,
@@ -3799,7 +3800,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                           datablock_key(structure.name, "structure") + "' (" + file.string() +
                           "): a project's structures need distinct names");
         }
-        project.structures.push_back(std::move(structure));
+        project.structures.push_back(structure);
     }
 
     // A project may hold experiments with measured data and experiments with a calculation grid side by
@@ -3896,7 +3897,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     file.saved = loop_cell(*files, row, "_report_file.saved", where);
                     file.project_last_modified = loop_cell(*files, row, "_report_file.project_last_modified", where);
                     file.digest = loop_cell(*files, row, "_report_file.digest", where);
-                    project.report_files.push_back(std::move(file));
+                    project.report_files.push_back(file);
                 }
             }
         } catch (const std::invalid_argument& error) {
@@ -4097,7 +4098,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                                                       "_sequential_fit_extract.required",
                                                       analysis_file.string()),
                                             "_sequential_fit_extract.required");
-                project.sequential_fit.extract.push_back(std::move(rule));
+                project.sequential_fit.extract.push_back(rule);
             }
         }
         if (const Loop* aliases = block.loop_with("_alias.id")) {
@@ -4108,7 +4109,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 const std::string name = loop_cell(*aliases, row, "_alias.parameter_unique_name", analysis_file.string());
                 refuse_older_parameter_name(project, name);
                 alias.parameter_unique_name = name;
-                project.aliases.push_back(std::move(alias));
+                project.aliases.push_back(alias);
             }
         }
         if (const Loop* constraints = block.loop_with("_constraint.expression")) {
@@ -4142,9 +4143,10 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     }
                     for (const auto& other : project.constraints) {
                         if (other->id.value() == id) {
-                            refuse("crysta.domain.constraint_target",
-                                   "parameter '" + id + "' is set by two constraints, '" +
-                                       other->expression.value() + "' and '" + text + "'");
+                            std::string message = "parameter '";
+                            message.append(id).append("' is set by two constraints, '");
+                            message.append(other->expression.value()).append("' and '").append(text).append("'");
+                            refuse("crysta.domain.constraint_target", message);
                         }
                     }
                 }
@@ -4154,7 +4156,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                         loop_cell(*constraints, row, "_constraint.enabled", analysis_file.string()),
                         "_constraint.enabled");
                 }
-                project.constraints.push_back(std::move(constraint));
+                project.constraints.push_back(constraint);
             }
         }
         // edi ADR-0081: independent without a scan fits each experiment alone; only sequential needs one.
@@ -4256,16 +4258,16 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                         bank = experiment_item->name == id ? experiment_item.get() : bank;
                     }
                     if (bank == nullptr) {
-                        throw IoError("_fit_result_bank row '" + id + "' names no experiment of the project: " + where);
+                        throw IoError(std::string("_fit_result_bank row '").append(id).append("' names no experiment of the project: ").append(where));
                     }
                     if (!seen.insert(bank).second) {
-                        throw IoError("_fit_result_bank has two rows for experiment '" + id + "': " + where);
+                        throw IoError(std::string("_fit_result_bank has two rows for experiment '").append(id).append("': ").append(where));
                     }
                     const std::string& points = loop_cell(*banks, row, "_fit_result_bank.n_data_points", where);
                     if (points != ".") {
                         const double value = to_double(points, where);
                         if (!(value >= 0.0) || value > 2.0e9 || value != std::floor(value)) {
-                            throw IoError("malformed _fit_result_bank.n_data_points '" + points + "': " + where);
+                            throw IoError(std::string("malformed _fit_result_bank.n_data_points '").append(points).append("': ").append(where));
                         }
                         bank->fit_n_data_points = static_cast<int>(value);
                     }
@@ -4301,12 +4303,12 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                         }
                     }
                     if (phase == nullptr) {
-                        throw IoError("_fit_result_phase row ('" + experiment_id + "', '" + structure_id +
-                                      "') names no linked structure of the project: " + where);
+                        throw IoError(std::string("_fit_result_phase row ('").append(experiment_id).append("', '").append(structure_id)
+                                          .append("') names no linked structure of the project: ").append(where));
                     }
                     if (!seen.insert(phase).second) {
-                        throw IoError("_fit_result_phase has two rows for ('" + experiment_id + "', '" + structure_id +
-                                      "'): " + where);
+                        throw IoError(std::string("_fit_result_phase has two rows for ('").append(experiment_id).append("', '")
+                                          .append(structure_id).append("'): ").append(where));
                     }
                     phase->fit_bragg_r_factor = cell(*phases, row, "_fit_result_phase.bragg_r_factor");
                     phase->fit_f_r_factor = cell(*phases, row, "_fit_result_phase.f_r_factor");
@@ -4334,8 +4336,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 const std::string& text = loop_cell(*correlations, row, "_fit_parameter_correlation.correlation", where);
                 const double value = to_double(text, where);
                 if (std::isnan(value) || value < -1.0 || value > 1.0) {
-                    throw IoError("_fit_parameter_correlation row '" + pair->id.value() + "' has correlation '" + text +
-                                  "' outside [-1, 1]: " + where);
+                    throw IoError(std::string("_fit_parameter_correlation row '").append(pair->id.value()).append("' has correlation '")
+                                      .append(text).append("' outside [-1, 1]: ").append(where));
                 }
                 pair->correlation = value;
                 if (per_file) {
@@ -4538,8 +4540,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 }
                 if (tag_is(item, su_rule_tag)) {
                     if (declared_su_rule.has_value()) {
-                        throw IoError("project.edi declares " + su_rule_tag +
-                                      " more than once: " + record_where);
+                        throw IoError(std::string("project.edi declares ").append(su_rule_tag).append(" more than once: ").append(record_where));
                     }
                     declared_su_rule = lexical_value(item.value, 0, su_rule_tag);
                     continue;
@@ -4556,15 +4557,14 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     // A duplicated field is ambiguous about what the record holds — refuse,
                     // the `_fit_parameter` duplicate rule's shape.
                     if (restored.count(tag) != 0) {
-                        throw IoError("project.edi declares " + tag +
-                                      " more than once: " + record_where);
+                        throw IoError(std::string("project.edi declares ").append(tag).append(" more than once: ").append(record_where));
                     }
                     // A long description is a semicolon text field after its tag, as crysta writes it (crysta's
                     // ADR on display metadata, item 12): a line break inside a paragraph is a space, and an empty
                     // line a paragraph break.
                     if (item.text_field) {
                         if (!item.text_closed)
-                            throw IoError("project.edi " + tag + " has an unterminated text field: " + record_where);
+                            throw IoError(std::string("project.edi ").append(tag).append(" has an unterminated text field: ").append(record_where));
                         restored.emplace(tag, text_field_paragraphs(item.text));
                         break;
                     }
@@ -5077,7 +5077,7 @@ std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     return rows;
 }
 
-void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrelation> template_rows,
+void hold_template_rows(FitResultRecord& record, const std::vector<FitParameterCorrelation>& template_rows,
                         const std::vector<FitParameterCorrelation>& rows, const std::string& template_file) {
     std::map<std::string, std::vector<std::shared_ptr<const FitParameterCorrelation>>> read;
     for (const FitParameterCorrelation& row : rows) {
@@ -5093,8 +5093,8 @@ void hold_template_rows(FitResultRecord& record, std::vector<FitParameterCorrela
     }
     std::vector<ItemVec<FitParameterCorrelation>::Ptr> loop;
     loop.reserve(template_rows.size());
-    for (FitParameterCorrelation& row : template_rows) {
-        loop.push_back(std::make_shared<FitParameterCorrelation>(std::move(row)));
+    for (const FitParameterCorrelation& row : template_rows) {
+        loop.push_back(std::make_shared<FitParameterCorrelation>(row));
     }
     record.correlations.assign(std::move(loop));
 }
@@ -5331,8 +5331,8 @@ std::vector<std::function<void()>> hold_calculation(Project& project) {
             keep(link->fit_bragg_r_factor);
             keep(link->fit_f_r_factor);
         }
-        if (experiment->data.has_value()) {
-            PdDataBase& data = *experiment->data;
+        if (std::optional<PdDataBase>& held = experiment->data; held.has_value()) {
+            PdDataBase& data = *held;
             keep(data.d_spacing);
             keep(data.intensity_calc);
             keep(data.intensity_bkg);
@@ -5343,13 +5343,14 @@ std::vector<std::function<void()>> hold_calculation(Project& project) {
             keep(data.component_order);
             keep(data.residual);
         }
-        if (experiment->reflections.has_value()) {
-            keep(experiment->reflections->d_spacing);
-            keep(experiment->reflections->sin_theta_over_lambda);
-            keep(experiment->reflections->intensity_calc);
-            keep(experiment->reflections->generated_index_h);
-            keep(experiment->reflections->generated_index_k);
-            keep(experiment->reflections->generated_index_l);
+        if (std::optional<ReflnDataBase>& held = experiment->reflections; held.has_value()) {
+            ReflnDataBase& reflections = *held;
+            keep(reflections.d_spacing);
+            keep(reflections.sin_theta_over_lambda);
+            keep(reflections.intensity_calc);
+            keep(reflections.generated_index_h);
+            keep(reflections.generated_index_k);
+            keep(reflections.generated_index_l);
         }
         keep(experiment->refln);
         keep(experiment->computed_source);

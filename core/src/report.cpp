@@ -75,8 +75,11 @@ std::string item_of(const std::string& path) {
     const auto item = [&name](const std::string& category) {
         for (const std::string& candidate :
              {category, category.ends_with('s') ? category.substr(0, category.size() - 1) : std::string()}) {
-            if (!candidate.empty() && has_item(candidate + "." + name)) {
-                return candidate + "." + name;
+            if (candidate.empty()) continue;
+            std::string uid = candidate;
+            uid.append(".").append(name);
+            if (has_item(uid)) {
+                return uid;
             }
         }
         return std::string();
@@ -285,9 +288,10 @@ std::optional<int> whole_su_place(const std::string& su) {
 // An s.u. shown alone: a decimal inside the range, else in its own power of ten with its own digits ("0.00025" is
 // "2.5×10⁻⁴", "1600" is "1.6×10³").
 std::string su_alone(const std::string& su, bool display) {
+    if (su.empty()) return su;
     char* end = nullptr;
-    const double number = su.empty() ? 0.0 : std::strtod(su.c_str(), &end);
-    if (su.empty() || end == su.c_str() || *end != '\0' || number == 0.0 || in_decimal_range(number)) return su;
+    const double number = std::strtod(su.c_str(), &end);
+    if (end == su.c_str() || *end != '\0' || number == 0.0 || in_decimal_range(number)) return su;
     const int power = power_of(number);
     std::string mantissa = shifted(su, power);
     if (const std::optional<int> place = whole_su_place(su); place.has_value()) mantissa = cut(mantissa, power - *place);
@@ -511,7 +515,7 @@ constexpr int kScanBarCells = 14;
 std::string scan_duration(double seconds) {
     if (!std::isfinite(seconds) || seconds < 0 ||
         seconds >= static_cast<double>(std::numeric_limits<long long>::max()) - 1) return "-";
-    const long long total = static_cast<long long>(seconds + 0.5);
+    const long long total = std::llround(seconds);
     char buffer[48];
     if (total < 60) {
         std::snprintf(buffer, sizeof buffer, "%llds", total);
@@ -690,6 +694,7 @@ void scan_fixed_widths(ScanTableState& state, std::optional<int> total, const st
     state.widths.resize(reserve.size(), 0);
     for (std::size_t i = 0; i < kScanFile; ++i) {
         state.widths[i] = std::max({state.widths[i], reserve[i], text_width(kScanHeadings[i]),
+                                    // cppcheck-suppress containerOutOfBounds ; values[i] is read only below values.size()
                                     i < values.size() ? text_width(values[i]) : std::size_t{0}});
     }
 }
@@ -709,8 +714,7 @@ std::string scan_progress_line(int completed, std::optional<int> total_files,
                                double reduced_chi_square) {
     std::string line;
     if (total_files.has_value() && *total_files > 0) {
-        const int filled = static_cast<int>(
-            kScanBarCells * static_cast<double>(completed) / *total_files + 0.5);
+        const int filled = static_cast<int>(std::lround(kScanBarCells * static_cast<double>(completed) / *total_files));
         std::string bar = "[";
         for (int cell = 0; cell < filled; ++cell) {
             bar += "█";
@@ -722,7 +726,7 @@ std::string scan_progress_line(int completed, std::optional<int> total_files,
         append_scan_part(line, bar);
         append_scan_part(line, std::to_string(completed) + "/" + std::to_string(*total_files));
         const int percent =
-            static_cast<int>(100.0 * completed / *total_files + 0.5);
+            static_cast<int>(std::lround(100.0 * completed / *total_files));
         append_scan_part(line, std::to_string(percent) + "%");
     } else {
         // N unknown: a bare count, NO percentage and NO eta — degrade rather than guess.
@@ -773,7 +777,7 @@ std::string scan_progress_row(int completed, std::optional<int> total_files,
     std::string progress;
     if (known) {
         const double fraction = std::clamp(static_cast<double>(completed) / *total_files, 0.0, 1.0);
-        const int filled = static_cast<int>(kScanTableBarCells * fraction + 0.5);
+        const int filled = static_cast<int>(std::lround(kScanTableBarCells * fraction));
         for (int cell = 0; cell < kScanTableBarCells; ++cell) progress += cell < filled ? "█" : "░";
         std::ostringstream percent;
         percent.imbue(std::locale::classic());
@@ -814,9 +818,10 @@ std::string scan_progress_row(int completed, std::optional<int> total_files,
             state.narrow_since[i].reset();
             changed = true;
         } else if (wanted < state.widths[i]) {
-            if (!state.narrow_since[i]) {
-                state.narrow_since[i] = elapsed_seconds;
-            } else if (elapsed_seconds - *state.narrow_since[i] >= kScanTableShrinkDelay) {
+            std::optional<double>& since = state.narrow_since[i];
+            if (!since) {
+                since = elapsed_seconds;
+            } else if (elapsed_seconds - *since >= kScanTableShrinkDelay) {
                 state.widths[i] = wanted;
                 state.narrow_since[i].reset();
                 changed = true;
@@ -1078,11 +1083,11 @@ std::string parameter_table(const FitResultBase& outcome, const Project* project
                 reasons += (reasons.empty() ? "" : "; ") + su_correlated_text(mark->second);
             }
         }
-        if (!reasons.empty()) flagged.push_back(path + ": " + reasons);
-        rows.push_back({name, path,
-                        (in_decimal_range(start) ? number_of(uid, start, 13, variant)
-                                                 : padded_left(table_number(start, {}, false), 13)) +
-                            value_cell + su_cell + (reasons.empty() ? "   " : " ! ") + format_change(value, start)});
+        if (!reasons.empty()) flagged.push_back(std::string(path).append(": ").append(reasons));
+        std::string line = in_decimal_range(start) ? number_of(uid, start, 13, variant)
+                                                   : padded_left(table_number(start, {}, false), 13);
+        line.append(value_cell).append(su_cell).append(reasons.empty() ? "   " : " ! ").append(format_change(value, start));
+        rows.push_back({name, path, line});
     }
     out << "  ";
     append_padded(out, "name", name_width);
