@@ -648,9 +648,9 @@ def human_fit(
         # The last row is the scan's summary at the count it reached, every column filled and
         # no time left (the core owns its format): a run that fitted no new file prints it once
         # from what the earlier runs left; on a terminal it replaces the in-place row whatever
-        # the throttle kept back (a partial or cancelled scan included).
+        # the throttle kept back (a partial or cancelled scan included). Its time is the one
+        # read at the last completed file, so the count and the time describe the same moment.
         if tally.completed == prior[0] or tty:
-            state['elapsed'] = clock() - started
             measured = tally.completed - prior[0]
             final = _row(tally.last_chi2, tally.last_file, measured, final_row=True)
             sys.stdout.write(final + '\n')
