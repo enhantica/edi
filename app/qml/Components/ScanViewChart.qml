@@ -47,9 +47,6 @@ Item {
     readonly property real sideMargin: AppSizes.mainAreaMargin
     // Where the toolbar and the block selector row above it end, from the chart's right edge.
     readonly property real toolbarRightInset: sideMargin
-    // The toolbar line's outer edges, where the block selector row above lines up with it (the owner, 2026-11-16).
-    readonly property real toolbarSpanLeft: scanToolbar.x + scanToolbar.contentSpan[0]
-    readonly property real toolbarSpanRightInset: width - (scanToolbar.x + scanToolbar.contentSpan[1])
     readonly property real titleGutter: Math.round(em * 1.6)
     // The toolbar line at the top, as the pattern chart's, and the room under it: enough for the notes above the plot
     // and for the colour bar's top label, centred on the bar's end.
@@ -235,6 +232,17 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: chart.transparentImage ? "transparent" : chart.colors.chartBackground
+    }
+
+    // The curve count, just above the plot frame at its right edge, in the axis labels' font (the owner, 2026-11-16).
+    EaElements.Label {
+        objectName: "scanView." + chart.mode + ".progress"
+        visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.loaded < chart.scan.count) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
+        x: view.x + view.plotArea.x + view.plotArea.width - width
+        y: view.y + view.plotArea.y - height - chart.em * 0.2
+        color: chart.colors.chartLabels
+        font.pixelSize: chart.em
+        text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
     }
 
     GraphsView {
@@ -833,35 +841,12 @@ Item {
                 width: 1
                 height: 1
             }
-            // Box zoom is the Map's; Stacked zooms by the wheel and the reset (the owner, 2026-11-16).
-            ChartToolButton {
-                objectName: "scanView." + chart.mode + ".toolbar.zoom"
-                visible: chart.mode === "map"
-                fontIcon: "expand"
-                toolTip: qsTr("Box zoom: drag over the plot (always on here)")
-                checked: true
-            }
+            // No box zoom: the views zoom by the wheel and reset by Home (the owner, 2026-11-16).
             ChartToolButton {
                 objectName: "scanView." + chart.mode + ".toolbar.reset"
                 fontIcon: "home"
                 toolTip: qsTr("Reset axes")
                 onClicked: chart.resetZoom()
-            }
-        }
-        // The curve count, a small caption at the controls row's right end (the owner, 2026-11-16); in an item, so the
-        // shared row places it whole.
-        Item {
-            visible: chart.scan !== null && ((chart.scan.wanted && chart.scan.loaded < chart.scan.count) || (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count))
-            width: progressCaption.implicitWidth
-            height: EaStyle.Sizes.comboBoxHeight
-            EaElements.Label {
-                id: progressCaption
-                objectName: "scanView." + chart.mode + ".progress"
-                color: chart.colors.chartLabels
-                text: chart.scan ? ((chart.scan.wanted && chart.scan.loaded < chart.scan.count ? qsTr("Reading patterns: %1 of %2").arg(chart.scan.loaded).arg(chart.scan.count) : "") + (chart.mode === "stacked" && layer.drawnDatasetCount < chart.scan.count ? (chart.scan.loaded < chart.scan.count ? " · " : "") + qsTr("Showing %1 of %2 curves").arg(layer.drawnDatasetCount).arg(chart.scan.count) : "")) : ""
-                height: EaStyle.Sizes.comboBoxHeight
-                verticalAlignment: Text.AlignVCenter
-                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.9
             }
         }
     }
