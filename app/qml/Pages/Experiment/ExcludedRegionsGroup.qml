@@ -106,7 +106,12 @@ Column {
                     model: group.axisOptions
                     textRole: "label"
                     currentIndex: group.axisOptions ? group.axisOptions.indexOf(row.axis) : -1
-                    onActivated: index => group.regions.setAxis(row.index, group.axisOptions.tokenAt(index))
+                    // The change rebuilds this table: it runs after the popup has closed.
+                    onActivated: index => {
+                        const at = row.index;
+                        const token = group.axisOptions.tokenAt(index);
+                        Qt.callLater(() => group.regions.setAxis(at, token));
+                    }
                 }
             }
             EaComponents.ListViewButton {

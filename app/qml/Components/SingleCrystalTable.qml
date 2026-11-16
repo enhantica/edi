@@ -195,12 +195,12 @@ DataTable {
             iconColor: String(used ? EaStyle.Colors.green : EaStyle.Colors.themeForegroundMinor)
             toolTip: (status === "x" ? qsTr("Left out of the fit: excluded by its indices or a range") : status === "-" ? qsTr("Left out of the fit: a systematic absence") : used ? (isNaN(cutoff) ? qsTr("Used by the fit (no cutoff: every reflection)") : qsTr("Used by the fit: F² > %1 s.u.").arg(Session.display("refine_ls.threshold_sigma", cutoff))) : qsTr("Left out of the fit: F² at most %1 s.u.").arg(Session.display("refine_ls.threshold_sigma", cutoff))) + (table.measured ? "\n" + qsTr("Click to exclude or include this reflection") : "")
 
-            TapHandler {
-                enabled: table.measured
-                onTapped: {
-                    row.activated();
-                    table.experiment.toggleExcludedReflection(row.model.h, row.model.k, row.model.l);
-                }
+            clickable: table.measured
+
+            onClicked: {
+                row.activated();
+
+                table.experiment.toggleExcludedReflection(row.model.h, row.model.k, row.model.l);
             }
         }
     }
