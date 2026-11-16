@@ -5,6 +5,7 @@
 
 #include <QAnimationDriver>
 #include <QCoreApplication>
+#include <QImageReader>
 #include <QCryptographicHash>
 #include <QDebug>
 #include <QDir>
@@ -703,6 +704,28 @@ public:
     }
     static bool localDirectory(const QUrl& project) {
         return absoluteLocalFileUrl(project) && QFileInfo(project.toLocalFile()).isDir();
+    }
+    // Observe the actual stored PNG, without changing its bytes or using the exporter's image.
+    Q_INVOKABLE QVariantMap savedImageFacts(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {{"valid", false}};
+        QImageReader reader(location.toLocalFile());
+        const QByteArray format = reader.format();
+        const QImage image = reader.read();
+        if (image.isNull()) return {{"valid", false}};
+        quint64 transparent = 0, opaque = 0, partial = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                const int alpha = image.pixelColor(x, y).alpha();
+                if (alpha == 0) ++transparent;
+                else if (alpha == 255) ++opaque;
+                else ++partial;
+            }
+        }
+        return {{"valid", true}, {"format", QString::fromLatin1(format)},
+                {"width", image.width()}, {"height", image.height()},
+                {"transparent", QVariant::fromValue(transparent)},
+                {"opaque", QVariant::fromValue(opaque)},
+                {"partial", QVariant::fromValue(partial)}};
     }
     Q_INVOKABLE QVariantMap fileObservation(const QUrl& project, const QString& relative) const {
         if (!localDirectory(project)) return {{"error", "An absolute local directory URL is required"}};

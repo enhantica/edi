@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-16T02:53:45Z
+# measured_utc = 2026-11-16T02:56:27Z
 #
-# Recorded from: measured test run (8 node(s) measured once, 176625 banked, 0 stale row(s) dropped)
-# Collected tests: 245405; with a reported duration: 77409
+# Recorded from: measured test run (4 node(s) measured once, 176633 banked, 0 stale row(s) dropped)
+# Collected tests: 245409; with a reported duration: 77413
 # Module-scoped fixture costs recorded: 202
 #
 # Breaches are decided PER TIER against the table
@@ -29,12 +29,12 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 245405
+# inventory_python = 245409
 # inventory_cpp = 0
-# inventory_measured = 176633
+# inventory_measured = 176637
 # inventory_unmeasured = 68772
 # Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
-# inventory_pr_python = 86100
+# inventory_pr_python = 86104
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -235502,6 +235502,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_save_snapshot_contract.py::te
 UNMEASURED:failed-in-this-run	tests/system/py/test_save_snapshot_contract.py::test_every_save_writes_its_planned_snapshot_or_replans[web-zip-question-model]
 1.200	tests/system/py/test_save_snapshot_contract.py::test_every_save_writes_its_planned_snapshot_or_replans[web-zip-question-remove-file]
 UNMEASURED:failed-in-this-run	tests/system/py/test_save_snapshot_contract.py::test_every_save_writes_its_planned_snapshot_or_replans[web-zip-question-same-size]
+2.700	tests/system/py/test_saved_image_background.py::test_real_saved_image_background[chart-pattern]
+3.110	tests/system/py/test_saved_image_background.py::test_real_saved_image_background[chart-structure]
+2.260	tests/system/py/test_saved_image_background.py::test_real_saved_image_background[default-pattern]
+4.310	tests/system/py/test_saved_image_background.py::test_real_saved_image_background[default-structure]
 0.000	tests/system/py/test_saved_spelling_compatibility.py::test_historical_comparison_still_rejects_unapproved_byte_changes[comment]
 0.000	tests/system/py/test_saved_spelling_compatibility.py::test_historical_comparison_still_rejects_unapproved_byte_changes[duplicate-rule]
 0.000	tests/system/py/test_saved_spelling_compatibility.py::test_historical_comparison_still_rejects_unapproved_byte_changes[fixed-value]
